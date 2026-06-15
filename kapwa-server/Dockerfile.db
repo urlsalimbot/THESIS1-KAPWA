@@ -1,0 +1,12 @@
+FROM postgres:16
+
+RUN apt-get update && apt-get install -y postgresql-16-pgaudit \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN echo "shared_preload_libraries = 'pgaudit'" >> /etc/postgresql/postgresql.conf
+RUN echo "pgaudit.log = 'all'" >> /etc/postgresql/postgresql.conf
+
+# Install pgAudit extension via SQL
+RUN echo "CREATE EXTENSION IF NOT EXISTS pgaudit;" >> /docker-entrypoint-initdb.d/init.sql
+
+COPY init.sh /docker-entrypoint-initdb.d/

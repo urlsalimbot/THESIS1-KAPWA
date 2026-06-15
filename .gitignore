@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+kapwa-server/node_modules/
+kapwa-client/node_modules/
+
+# Build outputs
+kapwa-server/dist/
+kapwa-client/dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+server.log
+npm-debug.log*
+
+# Coverage
+coverage/
+kapwa-server/coverage/
+kapwa-client/coverage/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Testing
+.playwright-mcp/
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# TypeScript
+*.tsbuildinfo
+kapwa-server/tsconfig.tsbuildinfo
+kapwa-client/tsconfig.tsbuildinfo

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "explore",
+  "agent": {
+    "e2e-tester": {
+      "description": "Automated E2E + integration testing using Playwright MCP and vitest. Use when the user says run tests, e2e, browser test, test the UI, automated testing, or asks about test coverage.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "deny",
+        "bash": "allow"
+      }
+    }
+  },
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "enabled": true,
+      "env": {
+        "BROWSER": "chromium",
+        "HEADLESS": "true"
+      }
+    }
+  },
+  "permission": {
+    "edit": "deny",
+    "bash": "allow",
+    "external_directory": {
+      "/home/typwtypw/Documents/NC/THESIS1-KAPWA/**": "allow",
+      "*": "ask"
+    }
+  }
+}
