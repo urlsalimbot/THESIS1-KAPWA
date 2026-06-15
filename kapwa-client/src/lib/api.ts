@@ -1,7 +1,7 @@
-const API = 'http://localhost:3000/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('kapwa_token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
@@ -56,4 +56,35 @@ export async function getPrograms() {
 
 export async function getConsentLedger(beneficiaryId: string) {
   return apiFetch(`/beneficiaries/${beneficiaryId}/consent`);
+}
+
+// ===== CSR =====
+export async function getCsrRecords() {
+  return apiFetch('/csr');
+}
+export async function getCsrRecord(id: string) {
+  return apiFetch(`/csr/${id}`);
+}
+export async function createCsrRecord(data: any) {
+  return apiFetch('/csr', { method: 'POST', body: JSON.stringify(data) });
+}
+export async function updateCsrRecord(id: string, data: any) {
+  return apiFetch(`/csr/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+export async function deleteCsrRecord(id: string) {
+  return apiFetch(`/csr/${id}`, { method: 'DELETE' });
+}
+export async function downloadCsrPdf(controlNo: string) {
+  const token = localStorage.getItem('kapwa_token');
+  const res = await fetch(`${API}/csr/${controlNo}/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('PDF download failed');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = `CSR-${controlNo}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

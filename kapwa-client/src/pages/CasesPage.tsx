@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { SlidersHorizontal, Download, Search } from 'lucide-react';
-import '../index.css';
 import { getCases } from '../lib/api';
+import { Search, SlidersHorizontal, Download } from 'lucide-react';
+import '../index.css';
 
 interface CaseRow {
   no: number;
@@ -20,6 +20,7 @@ export function CasesPage() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ barangay: false, status: false, category: false });
 
   useEffect(() => { loadCases(); }, []);
 
@@ -45,10 +46,30 @@ export function CasesPage() {
     setLoading(false);
   }
 
-  const [filters, setFilters] = useState({ barangay: false, status: false, category: false } as { barangay: boolean; status: boolean; category: boolean });
-  const toggleFilter = (key: keyof typeof filters) => setFilters({ ...filters, [key]: !filters[key] });
+  const toggleFilter = (key: keyof typeof filters) =>
+    setFilters({ ...filters, [key]: !filters[key] });
+
+  const filteredCases = cases.filter(c => {
+    if (search && !c.surname.toLowerCase().includes(search.toLowerCase()) && !c.first.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filters.barangay && !c.barangay) return false;
+    if (filters.category && !c.category) return false;
+    return true;
+  });
+
+  function exportCSV() {
+    const headers = ['No.','Surname','First','Middle','Gender','Age Range','Category','Barangay','Remarks','Date'];
+    const rows = filteredCases.map(c => [c.no, c.surname, c.first, c.middle, c.gender, c.ageRange, c.category, c.barangay, c.remarks, c.date]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = window.document.createElement('a');
+    a.href = url; a.download = 'cases-export.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   if (loading) return <div className="p-8 text-center text-style-body">Loading cases...</div>;
+
+  const uniqueBarangays = [...new Set(cases.map(c => c.barangay).filter(Boolean))];
 
   return (
     <div>
@@ -63,7 +84,7 @@ export function CasesPage() {
             <SlidersHorizontal size={16} />
             Filter
           </button>
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={exportCSV}>
             <Download size={16} />
             Export CSV
           </button>
@@ -77,63 +98,55 @@ export function CasesPage() {
       </div>
 
       <div className="filter-pills">
-        <span className="text-style-label" style={{ fontSize: '12px', textTransform: 'uppercase', color: '#707070' }}>FILTERS:</span>
-        <button className={`filter-pill ${filters.barangay ? 'bg-[#E8F0F7] border-[#2E5C8A]' : ''}`} onClick={() => toggleFilter('barangay')}>
-          Barangay
-          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        <button className={`filter-pill ${filters.barangay ? 'active' : ''}`} onClick={() => toggleFilter('barangay')}>
+          By Barangay {filters.barangay && `(${uniqueBarangays.length})`}
         </button>
-        <button className={`filter-pill ${filters.status ? 'bg-[#E8F0F7] border-[#2E5C8A]' : ''}`} onClick={() => toggleFilter('status')}>
-          Status
-          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        <button className={`filter-pill ${filters.category ? 'active' : ''}`} onClick={() => toggleFilter('category')}>
+          By Category
         </button>
-        <button className={`filter-pill ${filters.category ? 'bg-[#E8F0F7] border-[#2E5C8A]' : ''}`} onClick={() => toggleFilter('category')}>
-          Category
-          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <button className="clear-btn">Clear Filters</button>
+        {Object.values(filters).some(Boolean) && (
+          <button className="filter-pill clear" onClick={() => setFilters({ barangay: false, status: false, category: false })}>
+            Clear
+          </button>
+        )}
       </div>
 
       <div className="table-container">
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th className="text-style-label" style={{ width: '50px' }}>No.</th>
-                <th className="text-style-label">Surname</th>
-                <th className="text-style-label">First</th>
-                <th className="text-style-label">Middle</th>
-                <th className="text-style-label">Gender</th>
-                <th className="text-style-label">Age Range</th>
-                <th className="text-style-label">Category</th>
-                <th className="text-style-label">Barangay</th>
-                <th className="text-style-label">Intervention/Remarks</th>
-                <th className="text-style-label frozen-col" style={{ minWidth: '140px' }}>Date</th>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th className="text-style-label" style={{ width: '50px' }}>No.</th>
+              <th className="text-style-label">Surname</th>
+              <th className="text-style-label">First</th>
+              <th className="text-style-label">Middle</th>
+              <th className="text-style-label">Gender</th>
+              <th className="text-style-label">Age Range</th>
+              <th className="text-style-label">Category</th>
+              <th className="text-style-label">Barangay</th>
+              <th className="text-style-label">Intervention/Remarks</th>
+              <th className="text-style-label frozen-col" style={{ minWidth: '140px' }}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCases.map(c => (
+              <tr key={c.no}>
+                <td className="text-style-body" style={{ color: '#707070' }}>{c.no}</td>
+                <td className="text-style-body" style={{ color: '#1A1A1A', fontWeight: 500 }}>{c.surname}</td>
+                <td className="text-style-body">{c.first}</td>
+                <td className="text-style-body" style={{ color: '#707070' }}>{c.middle}</td>
+                <td className="text-style-body">{c.gender}</td>
+                <td><span className="badge-age">{c.ageRange}</span></td>
+                <td><span className="badge-category">{c.category}</span></td>
+                <td className="text-style-body">{c.barangay}</td>
+                <td className="text-style-body" style={{ fontSize: '13px' }}>{c.remarks}</td>
+                <td className="text-style-body frozen-col" style={{ fontSize: '13px', color: '#707070', minWidth: '140px' }}>{c.date}</td>
               </tr>
-            </thead>
-            <tbody>
-              {cases.filter(c => {
-                if (search && !c.surname.toLowerCase().includes(search.toLowerCase()) && !c.first.toLowerCase().includes(search.toLowerCase())) return false;
-                return true;
-              }).map(c => (
-                <tr key={c.no}>
-                  <td className="text-style-body" style={{ color: '#707070' }}>{c.no}</td>
-                  <td className="text-style-body" style={{ color: '#1A1A1A', fontWeight: 500 }}>{c.surname}</td>
-                  <td className="text-style-body">{c.first}</td>
-                  <td className="text-style-body" style={{ color: '#707070' }}>{c.middle}</td>
-                  <td className="text-style-body">{c.gender}</td>
-                  <td><span className="badge-age">{c.ageRange}</span></td>
-                  <td><span className="badge-category">{c.category}</span></td>
-                  <td className="text-style-body">{c.barangay}</td>
-                  <td className="text-style-body" style={{ fontSize: '13px' }}>{c.remarks}</td>
-                  <td className="text-style-body frozen-col" style={{ fontSize: '13px', color: '#707070', minWidth: '140px' }}>{c.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="pagination">
-          <span>Showing {cases.length} cases</span>
-        </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="pagination">
+        <span>Showing {filteredCases.length} cases</span>
       </div>
     </div>
   );

@@ -12,7 +12,6 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasContent, setHasContent] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -42,7 +41,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
     ctx.stroke();
 
     setHasContent(false);
-    setIsEmpty(true);
+    setHasContent(true);
     if (onClear) onClear();
   }
 
@@ -84,7 +83,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
     setHasContent(true);
-    setIsEmpty(false);
+    setHasContent(false);
   }
 
   function stopDrawing(e: React.MouseEvent | React.TouchEvent) {
@@ -96,7 +95,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
 
   function handleSave() {
     const canvas = canvasRef.current;
-    if (!canvas || isEmpty) return;
+    if (!canvas || !hasContent) return;
     const dataUrl = canvas.toDataURL('image/png');
     onSave(dataUrl);
   }
@@ -124,7 +123,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
         <button
           type="button"
           onClick={handleSave}
-          disabled={isEmpty}
+          disabled={!hasContent}
           className="rounded bg-[#2E5C8A] px-3 py-1 text-xs text-white hover:bg-[#1e3d5e] disabled:opacity-40"
         >
           Save Signature

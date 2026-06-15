@@ -28,7 +28,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   return user ? JSON.parse(user) : null;
 }
 
-export async function clearAuth(): Promise<void> {
+export function clearAuth(): void {
   localStorage.removeItem(AUTH_KEY);
   localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(USER_KEY);

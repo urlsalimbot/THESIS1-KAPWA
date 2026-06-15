@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike, In } from 'typeorm';
 import { Beneficiary } from './beneficiary.entity';
 import { ConsentLedger } from './consent-ledger.entity';
 import { Household } from './household.entity';
 import { FamilyMember } from './family-member.entity';
+import { Case } from '../cases/case.entity';
+import { Intervention } from '../interventions/intervention.entity';
 
 @Injectable()
 export class BeneficiariesService {
@@ -17,6 +19,10 @@ export class BeneficiariesService {
     private householdRepo: Repository<Household>,
     @InjectRepository(FamilyMember)
     private familyMemberRepo: Repository<FamilyMember>,
+    @InjectRepository(Case)
+    private caseRepo: Repository<Case>,
+    @InjectRepository(Intervention)
+    private intRepo: Repository<Intervention>,
   ) {}
 
   async createBeneficiary(data: Partial<Beneficiary>) {
@@ -47,7 +53,7 @@ export class BeneficiariesService {
 
   async findAll(barangay?: string) {
     if (barangay) {
-      return this.benRepo.find({ where: { address: barangay } });
+      return this.benRepo.find({ where: { address: ILike(`%${barangay}%`) } });
     }
     return this.benRepo.find({ relations: ['household'] });
   }
@@ -80,6 +86,24 @@ export class BeneficiariesService {
     }
 
     return { primary: ben, household: ben.household, members };
+  }
+
+  async getMyServices(userId: string) {
+    const ben = await this.benRepo.findOne({ where: { userId } });
+    if (!ben) return { services: [], caseStatus: 'No active case' };
+    const cases = await this.caseRepo.find({ where: { beneficiaryId: ben.id } });
+    const latestCase = cases[cases.length - 1];
+    const services = await this.intRepo.find({ where: { caseId: In(cases.map(c => c.id)) }, order: { loggedAt: 'DESC' } });
+    return {
+      services: services.map(s => ({ id: s.id, type: s.interventionType, date: s.serviceDate, amount: s.amount, status: 'completed' })),
+      caseStatus: latestCase ? latestCase.status.replace('_', ' ') : 'No active case',
+    };
+  }
+
+  async getMyConsent(userId: string) {
+    const ben = await this.benRepo.findOne({ where: { userId } });
+    if (!ben) return [];
+    return this.consentRepo.find({ where: { beneficiaryId: ben.id }, order: { grantedAt: 'DESC' } });
   }
 
   async checkConsent(beneficiaryId: string, purpose: string): Promise<boolean> {

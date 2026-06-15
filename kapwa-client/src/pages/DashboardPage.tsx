@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, RefreshCw, Clock, DollarSign } from 'lucide-react';
 import '../index.css';
 import { getDashboard } from '../lib/api';
@@ -49,6 +50,7 @@ export function DashboardPage() {
 
   if (loading) return <div className="p-8 text-center text-style-body">Loading dashboard...</div>;
 
+  const navigate = useNavigate();
   return (
     <div>
       <div className="page-header">
@@ -109,7 +111,7 @@ export function DashboardPage() {
         </div>
         <div className="pagination">
           <span>Showing {cases.length} recent cases</span>
-          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px' }}>View All Cases</button>
+          <button className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "13px" }} onClick={() => navigate("/cases")}>View All Cases</button>
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ import { JwtService } from '@nestjs/jwt';
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private userSockets = new Map<string, string[]>();
+  private rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
   constructor(
     private readonly chatService: ChatService,
@@ -37,6 +38,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       const payload = this.jwtService.verify(token as string);
       const userId = payload.sub || payload.id;
+      if (!userId) { client.emit('error', 'Invalid token payload'); client.disconnect(); return; }
       client.data.userId = userId;
 
       const existing = this.userSockets.get(userId) || [];
@@ -60,11 +62,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  private rateLimitCheck(client: Socket): boolean {
+    const userId = client.data.userId;
+    if (!userId) return false;
+    const now = Date.now();
+    const entry = this.rateLimitMap.get(userId) || { count: 0, resetAt: now + 60000 };
+    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 60000; }
+    entry.count++;
+    this.rateLimitMap.set(userId, entry);
+    return entry.count <= 30;
+  }
+
   @SubscribeMessage('send_message')
   async handleMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { recipientId: string; content: string; senderName: string },
   ) {
+    if (!this.rateLimitCheck(client)) return { error: 'Rate limited' };
     const senderId = client.data.userId;
     if (!senderId) return { error: 'Not authenticated' };
 

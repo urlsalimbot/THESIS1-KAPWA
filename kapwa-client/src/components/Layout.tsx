@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import { getCurrentUser } from '../lib/auth-context';
 import { FilePlus, LayoutDashboard, Users, CheckCircle, FolderOpen, FileText, Settings, ClipboardList, Bell, HelpCircle, MessageSquare, Search, Shield, UserCircle } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -14,13 +14,11 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/cases', label: 'Case Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
   { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
   { path: '/interventions', label: 'Interventions', icon: <CheckCircle size={20} />, roles: ['admin', 'social_worker'] },
+  { path: '/csr', label: 'CSR Generator', icon: <FileText size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/filing', label: 'Digital Filing', icon: <FolderOpen size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/messages', label: 'Messages', icon: <MessageSquare size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
-  { path: '/irf', label: 'Confidential IRF', icon: <FileText size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/admin', label: 'Admin Panel', icon: <Shield size={20} />, roles: ['admin'] },
   { path: '/my-dashboard', label: 'My Dashboard', icon: <UserCircle size={20} />, roles: ['claimant'] },
-  { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'claimant'] },
-  { path: '/audit', label: 'Audit Log', icon: <ClipboardList size={20} />, roles: ['admin', 'auditor'] },
 ];
 
 export function Layout({ children }: { children?: React.ReactNode }) {
@@ -66,10 +64,10 @@ export function Layout({ children }: { children?: React.ReactNode }) {
             {visibleNav.map(item => {
               const isActive = location.pathname === item.path;
               return (
-                <a key={item.path} href={item.path} className={`nav-link ${isActive ? 'active' : ''}`}>
+                <Link key={item.path} to={item.path} className={`nav-link ${isActive ? 'active' : ''}`}>
                   {item.icon}
                   <span>{item.label}</span>
-                </a>
+                </Link>
               );
             })}
           </nav>

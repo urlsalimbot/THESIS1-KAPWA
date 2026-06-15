@@ -4,6 +4,7 @@ import { Search, Send } from 'lucide-react';
 import '../index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const safeDecodeJWT = (token: string) => { try { const b = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(atob(b)); } catch { return {}; } };
 
 interface Conversation {
   userId: string; name: string; lastMessage: string; lastTime: Date; unread: number;
@@ -31,7 +32,7 @@ export function MessagesPage() {
     if (token) {
       const sock = connectSocket(token);
       sock.on('new_message', (msg: ChatMsg) => {
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         fetchConversations();
       });
     }
@@ -92,8 +93,8 @@ export function MessagesPage() {
     e.preventDefault();
     if (!text.trim() || !activeConv) return;
     const token = localStorage.getItem('kapwa_token');
-    const name = JSON.parse(atob(token!.split('.')[1])).fullName || 'User';
-    sendMessage(activeConv, text.trim(), name);
+    const payload = safeDecodeJWT(token!); const name = payload.fullName || payload.sub || 'User';
+    sendMessage(activeConv, text.trim());
     setText('');
   }
 
@@ -190,7 +191,7 @@ export function MessagesPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map(msg => {
                 const token = localStorage.getItem('kapwa_token');
-                const myId = token ? JSON.parse(atob(token.split('.')[1])).sub : '';
+                const decoded = token ? safeDecodeJWT(token) : {}; const myId = decoded.sub || "";
                 const isMine = msg.senderId === myId;
 
                 return (

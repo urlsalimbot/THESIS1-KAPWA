@@ -12,7 +12,7 @@ export class SyncController {
   constructor(private readonly syncService: SyncService) {}
 
   @Post('v1')
-  @Roles('admin', 'coordinator', 'worker')
+  @Roles('admin', 'coordinator', 'social_worker')
   async processDelta(
     @Body(new ZodPipe(SyncRequestSchema)) body: any,
   ) {
@@ -20,7 +20,7 @@ export class SyncController {
   }
 
   @Post('pull')
-  @Roles('admin', 'coordinator', 'worker')
+  @Roles('admin', 'coordinator', 'social_worker')
   async pullFromServer(@Body() body: { deviceId: string; versionVectors: any[] }) {
     return this.syncService.pullFromServer(body.deviceId, body.versionVectors);
   }

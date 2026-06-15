@@ -14,7 +14,7 @@ async function seed() {
   await dataSource.initialize();
   const q = dataSource.createQueryRunner();
 
-  await q.query('TRUNCATE TABLE consent_ledger, access_card_services, case_tracker_log, interventions, cases, family_members, households, beneficiaries, users, programs CASCADE');
+  await q.query('TRUNCATE TABLE consent_ledger, access_card_services, case_tracker_log, interventions, cases, family_members, households, beneficiaries, users, programs, sync_queue, chat_messages, csr_reports, irf_cases, notifications, version_vectors CASCADE');
 
   const adminPass = await bcrypt.hash('admin123', 12);
   const workerPass = await bcrypt.hash('worker123', 12);

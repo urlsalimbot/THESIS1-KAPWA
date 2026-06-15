@@ -4,8 +4,8 @@ import { useAuth } from '../lib/auth-context';
 import '../index.css';
 
 export function LoginPage() {
-  const [email, setEmail] = useState('admin@mswdo.test');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export function LoginPage() {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError('Invalid credentials. Try admin@mswdo.test / admin123');
+      setError('Invalid email or password');
     }
   }
 
@@ -46,7 +46,7 @@ export function LoginPage() {
           <button type="submit" className="btn btn-primary w-full">Sign In</button>
         </form>
 
-        <p className="text-center text-xs text-[#707070] mt-6">Admin: admin@mswdo.test / admin123</p>
+        
       </div>
     </div>
   );

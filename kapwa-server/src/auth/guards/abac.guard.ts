@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AbacService, ResourceSensitivity } from '../services/abac.service';
 import { RESOURCE_SENSITIVITY_KEY } from '../decorators/resource-sensitivity.decorator';
@@ -15,7 +15,7 @@ export class AbacGuard implements CanActivate {
     if (!user) return false;
 
     // Admin bypass
-    if (user.role === 'admin' || user.role === 'mayor' || user.role === 'auditor') return true;
+    if (user.role === 'admin') return true;
 
     const resourceSensitivity = this.reflector.getAllAndOverride<ResourceSensitivity>(
       RESOURCE_SENSITIVITY_KEY,
@@ -44,6 +44,12 @@ export class AbacGuard implements CanActivate {
     // Client/claimant scoping
     if (user.role === 'claimant') {
       if (resourceSensitivity !== 'public') return false;
+      return true;
+    }
+
+    // Mayor/auditor: treat as social_worker scope + restricted access requires legal basis
+    if (user.role === 'mayor' || user.role === 'auditor') {
+      if (resourceSensitivity === 'restricted' && !query?.legalBasis) return false;
       return true;
     }
 

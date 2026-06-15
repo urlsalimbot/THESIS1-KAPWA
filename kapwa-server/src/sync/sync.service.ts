@@ -8,6 +8,39 @@ import { ConflictResolver } from './conflict-resolver';
 import { SyncRequestInput } from './dto/sync.zod';
 
 const IDEMPOTENCY_TTL_MS = 86_400_000; // 24h
+const MAX_CACHE_SIZE = 10_000;
+
+const ALLOWED_COLUMNS = new Set([
+  "id","name","surname","first_name","middle_name","gender","dob","address","phone",
+  "email","password","role","full_name","assigned_barangay","permitted_barangays",
+  "is_active","device_id","category","waiting_period_days","required_documents",
+  "fund_sources","approval_workflow","form_template","created_at","updated_at","barangay",
+  "estimated_income","verified_by","status","control_no","beneficiary_id",
+  "service_requested","requirements_checklist","certificate_url","petty_cash_voucher_url",
+  "assigned_worker_id","case_id","intervention_type","amount","fund_source","agency",
+  "service_date","voucher_no","or_reference","worker_signature_url","logged_by","hash",
+  "philsys_number","access_card_code","consent_status","search_vector","household_id",
+  "age","status_income","is_primary","blotter_entry_number","case_category",
+  "datetime_reported","datetime_incident","item_a_reporting_person","item_b_person_reported",
+  "encrypted_narration","case_disposition","msdw_signature_url","reporting_signature_url",
+  "recipient_id","title","message","channel","phone","sent","sent_at","is_read","reference_id",
+  "sender_id","content","conversation_id","read_at","purpose","table_name","record_id",
+  "operation","payload","client_updated_at","idempotency_key","conflict_reason","resolved_at",
+  "local_version","server_version","last_synced_at","social_worker_name",
+  "social_worker_position","referral_origin","reason_for_referral","problem_presented",
+  "family_background","socio_economic_profile","assessment_analysis","recommendation",
+  "intervention_plan","client_signature_url","worker_signature_url","finalized","created_by",
+  "daily_seq_num","transaction_date","age_range","client_category","intervention_remarks",
+  "full_name","relationship"
+]);
+
+function sanitizePayload(payload: Record<string, any>): Record<string, any> {
+  const sanitized: Record<string, any> = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (ALLOWED_COLUMNS.has(k)) sanitized[k] = v;
+  }
+  return sanitized;
+}
 
 @Injectable()
 export class SyncService {
@@ -216,29 +249,30 @@ export class SyncService {
 
     try {
       const tableNameFull = this.resolveTableName(tableName);
+      const safePayload = sanitizePayload(payload);
 
       if (operation === 'INSERT') {
-        payload.id = recordId;
-        if (!payload.created_at) payload.created_at = new Date().toISOString();
-        payload.updated_at = new Date().toISOString();
+        safePayload.id = recordId;
+        if (!safePayload.created_at) safePayload.created_at = new Date().toISOString();
+        safePayload.updated_at = new Date().toISOString();
 
-        const columns = Object.keys(payload).join(', ');
-        const values = Object.values(payload);
+        const columns = Object.keys(safePayload).join(', ');
+        const values = Object.values(safePayload);
         const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+        const updateSet = Object.keys(safePayload).map(k => `"${k}" = EXCLUDED."${k}"`).join(', ');
 
         await queryRunner.query(
-          `INSERT INTO "${tableNameFull}" (${columns}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${Object.keys(payload).map((k, i) => `"${k}" = EXCLUDED."${k}"`).join(', ')}`,
+          `INSERT INTO "${tableNameFull}" (${columns}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${updateSet}`,
           values,
         );
       } else if (operation === 'UPDATE') {
-        payload.updated_at = new Date().toISOString();
-        const setClause = Object.keys(payload).map((k, i) => `"${k}" = $${i + 1}`).join(', ');
-        const values = Object.values(payload);
+        safePayload.updated_at = new Date().toISOString();
+        const keys = Object.keys(safePayload);
+        const setClause = keys.map((k, i) => `"${k}" = $${i + 1}`).join(', ');
+        const values = Object.values(safePayload);
 
         await queryRunner.query(
-          `UPDATE "${tableNameFull}" SET ${setClause} WHERE id = $${
-            Object.keys(payload).length + 1
-          }`,
+          `UPDATE "${tableNameFull}" SET ${setClause} WHERE id = $${keys.length + 1}`,
           [...values, recordId],
         );
       } else if (operation === 'DELETE') {
@@ -357,21 +391,23 @@ export class SyncService {
     changes: any[],
   ): boolean {
     try {
-      // Ed25519 verification using Node crypto
-      const crypto = require('crypto');
+      const crypto = require("crypto");
       const message = JSON.stringify({ deviceId, changes });
       const keyBuffer = Buffer.from(deviceId, 'hex');
 
-      // If deviceId isn't a valid Ed25519 public key, skip verification
-      if (keyBuffer.length !== 32) {
-        // Fallback: accept if signature matches expected pattern
-        return signature.length > 0;
-      }
+      if (keyBuffer.length !== 32) return false;
+
+      const derPrefix = Buffer.from('302a300506032b6570032100', 'hex');
+      const pubKey = crypto.createPublicKey({
+        key: Buffer.concat([derPrefix, keyBuffer]),
+        format: 'der',
+        type: 'spki',
+      });
 
       return crypto.verify(
-        'ed25519',
+        null,
         Buffer.from(message, 'utf-8'),
-        keyBuffer,
+        pubKey,
         Buffer.from(signature, 'hex'),
       );
     } catch {
@@ -380,6 +416,11 @@ export class SyncService {
   }
 
   private getIdempotencyResult(key: string): any | null {
+    if (this.processedKeys.size > MAX_CACHE_SIZE) {
+      const entries = [...this.processedKeys.entries()];
+      const toDelete = entries.slice(0, entries.length - MAX_CACHE_SIZE);
+      for (const [k] of toDelete) this.processedKeys.delete(k);
+    }
     const cached = this.processedKeys.get(key);
     if (cached && Date.now() - cached.timestamp < IDEMPOTENCY_TTL_MS) {
       return cached.result;
@@ -389,13 +430,10 @@ export class SyncService {
   }
 
   private cacheIdempotencyResult(key: string, result: any): void {
-    this.processedKeys.set(key, { result, timestamp: Date.now() });
-
-    // Cleanup old entries
-    for (const [k, v] of this.processedKeys) {
-      if (Date.now() - v.timestamp > IDEMPOTENCY_TTL_MS) {
-        this.processedKeys.delete(k);
-      }
+    if (this.processedKeys.size >= MAX_CACHE_SIZE) {
+      const oldest = this.processedKeys.keys().next().value;
+      if (oldest) this.processedKeys.delete(oldest);
     }
+    this.processedKeys.set(key, { result, timestamp: Date.now() });
   }
 }

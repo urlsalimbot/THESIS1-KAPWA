@@ -26,7 +26,7 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getMe(@Request() req: any) {
-    return { user: req.user };
+    const { password, ...safeUser } = req.user; return { user: safeUser };
   }
 
   @Post('refresh')

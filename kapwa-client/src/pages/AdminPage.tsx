@@ -13,25 +13,43 @@ interface SyncEntry {
   status: string; conflictReason: string; createdAt: string;
 }
 
+interface AppUser {
+  id: string; email: string; fullName: string; role: string;
+  assignedBarangay: string; isActive: boolean; createdAt: string;
+}
+
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<'programs' | 'users' | 'sync' | 'audit'>('programs');
   const [programs, setPrograms] = useState<Program[]>([]);
   const [syncEntries, setSyncEntries] = useState<SyncEntry[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [userSearch, setUserSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [editUser, setEditUser] = useState<AppUser | null>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   useEffect(() => {
     if (activeTab === 'programs') fetchPrograms();
+    if (activeTab === 'users') fetchUsers();
     if (activeTab === 'sync') fetchSyncEntries();
+    if (activeTab === 'audit') fetchAuditLogs();
   }, [activeTab]);
 
   async function fetchPrograms() {
     setLoading(true);
     try {
       const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/programs`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API_URL}/programs`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setPrograms(await res.json());
+    } catch {} finally { setLoading(false); }
+  }
+
+  async function fetchUsers() {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      const res = await fetch(`${API_URL}/users`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setUsers(await res.json().then(d => d.data || d));
     } catch {} finally { setLoading(false); }
   }
 
@@ -39,11 +57,56 @@ export function AdminPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/sync/conflicts/all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API_URL}/sync/conflicts/admin`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setSyncEntries(await res.json());
     } catch {} finally { setLoading(false); }
+  }
+
+  async function fetchAuditLogs() {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      const [coaRes, hashRes] = await Promise.all([
+        fetch(`${API_URL}/audit/coa-export?startDate=2026-01-01&endDate=2026-12-31`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/audit/hash-chain`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const coa = coaRes.ok ? await coaRes.json() : null;
+      const hash = hashRes.ok ? await hashRes.json() : null;
+      setAuditLogs([coa, hash].filter(Boolean));
+    } catch {} finally { setLoading(false); }
+  }
+
+  async function toggleUserStatus(user: AppUser) {
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      await fetch(`${API_URL}/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ isActive: !user.isActive }),
+      });
+      fetchUsers();
+    } catch {}
+  }
+
+  async function updateUserRole(user: AppUser, role: string) {
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      await fetch(`${API_URL}/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role }),
+      });
+      fetchUsers();
+    } catch {}
+  }
+
+  async function deleteUser(id: string) {
+    if (!confirm('Delete this user?')) return;
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      await fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      fetchUsers();
+    } catch {}
   }
 
   const tabs = [
@@ -52,6 +115,8 @@ export function AdminPage() {
     { key: 'sync' as const, label: 'Sync Queue', icon: '🔄' },
     { key: 'audit' as const, label: 'Audit Log', icon: '📜' },
   ];
+
+  const filteredUsers = users.filter(u => !userSearch || u.email.toLowerCase().includes(userSearch.toLowerCase()) || (u.fullName || '').toLowerCase().includes(userSearch.toLowerCase()));
 
   return (
     <div>
@@ -74,7 +139,6 @@ export function AdminPage() {
         <div className="rounded-lg border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
             <h3 className="font-semibold text-sm text-[#2E5C8A]">Program Configurator</h3>
-            <button className="rounded bg-[#2E5C8A] px-3 py-1 text-xs text-white hover:bg-[#1e3d5e]">+ Add Program</button>
           </div>
           {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
             <div className="divide-y divide-gray-100">
@@ -96,33 +160,53 @@ export function AdminPage() {
       )}
 
       {activeTab === 'users' && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-sm text-[#2E5C8A]">User Management</h3>
-          <table className="min-w-full text-sm">
-            <thead><tr className="border-b border-gray-100">
-              <th className="text-left py-2 text-xs font-medium text-gray-500">Email</th>
-              <th className="text-left py-2 text-xs font-medium text-gray-500">Role</th>
-              <th className="text-left py-2 text-xs font-medium text-gray-500">Barangay</th>
-              <th className="text-left py-2 text-xs font-medium text-gray-500">Status</th>
-            </tr></thead>
-            <tbody>
-              <tr className="border-b border-gray-50">
-                <td className="py-2">admin@mswdo.test</td><td className="py-2">admin</td><td className="py-2">All</td>
-                <td className="py-2"><span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span></td>
-              </tr>
-              <tr className="border-b border-gray-50">
-                <td className="py-2">worker@mswdo.test</td><td className="py-2">social_worker</td><td className="py-2">Bigte, Matictic</td>
-                <td className="py-2"><span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span></td>
-              </tr>
-              <tr className="border-b border-gray-50">
-                <td className="py-2">coordinator@mswdo.test</td><td className="py-2">coordinator</td><td className="py-2">Partida</td>
-                <td className="py-2"><span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span></td>
-              </tr>
-              <tr><td className="py-2">claimant@test.com</td><td className="py-2">claimant</td><td className="py-2">—</td>
-                <td className="py-2"><span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Active</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+            <h3 className="font-semibold text-sm text-[#2E5C8A]">User Management</h3>
+            <input type="text" placeholder="Search users..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="rounded border border-gray-300 px-3 py-1.5 text-sm w-64" />
+          </div>
+          {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead><tr className="border-b border-gray-100">
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Email</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Name</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Role</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Barangay</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Status</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Actions</th>
+                </tr></thead>
+                <tbody>
+                  {filteredUsers.map(u => (
+                    <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="px-4 py-2.5">{u.email}</td>
+                      <td className="px-4 py-2.5">{u.fullName || '—'}</td>
+                      <td className="px-4 py-2.5">
+                        <select value={u.role} onChange={e => updateUserRole(u, e.target.value)} className="rounded border border-gray-200 px-2 py-0.5 text-xs">
+                          <option value="admin">admin</option>
+                          <option value="social_worker">social_worker</option>
+                          <option value="coordinator">coordinator</option>
+                          <option value="claimant">claimant</option>
+                          <option value="mayor">mayor</option>
+                          <option value="auditor">auditor</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-2.5">{u.assignedBarangay || '—'}</td>
+                      <td className="px-4 py-2.5">
+                        <button onClick={() => toggleUserStatus(u)} className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {u.isActive ? 'Active' : 'Inactive'}
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <button onClick={() => deleteUser(u.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredUsers.length === 0 && <div className="p-8 text-center text-gray-400 text-sm">No users found</div>}
+            </div>
+          )}
         </div>
       )}
 
@@ -157,16 +241,35 @@ export function AdminPage() {
       {activeTab === 'audit' && (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <h3 className="mb-4 font-semibold text-sm text-[#2E5C8A]">Audit Log (RA 10173 / COA)</h3>
-          <p className="text-sm text-gray-500 mb-4">All data access and modifications are logged via pgAudit triggers and hash-chain integrity checks.</p>
-          <div className="rounded bg-gray-50 p-4 text-xs font-mono text-gray-600">
-            <p>{'[2026-06-15 08:00:00] LOGIN admin@mswdo.test from 192.168.1.100'}</p>
-            <p>{'[2026-06-15 08:05:23] CREATE case NORZ-2024-0056 by worker@mswdo.test'}</p>
-            <p>{'[2026-06-15 08:12:47] READ beneficiary f47ac10b by worker@mswdo.test (consent: active)'}</p>
-            <p>{'[2026-06-15 09:00:00] UPDATE case NORZ-2024-0002 → disbursed by admin@mswdo.test'}</p>
-            <p>{'[2026-06-15 09:15:00] CREATE intervention FA on case c2 by worker@mswdo.test'}</p>
-            <p>{'[2026-06-15 10:00:00] SYNC device-abc123 push 3 changes, 0 conflicts'}</p>
-            <p className="mt-2 text-green-600">{'✓ Hash chain integrity verified: all 1,247 entries valid'}</p>
-          </div>
+          {loading ? <div className="p-4 text-center text-gray-400 text-sm">Loading audit data...</div> : (
+            <>
+              {auditLogs.map((log, idx) => log && (
+                <div key={idx} className="mb-4 rounded bg-gray-50 p-4 text-xs font-mono text-gray-600">
+                  {log.generatedAt && (
+                    <>
+                      <p className="mb-2 font-semibold text-gray-800">COA Export Report</p>
+                      <p>Generated: {new Date(log.generatedAt).toLocaleString()}</p>
+                      <p>Period: {log.period?.startDate} – {log.period?.endDate}</p>
+                      <p>Total Interventions: {log.summary?.count || 0}</p>
+                      <p>Total Amount: ₱{(log.summary?.totalAmount || 0).toLocaleString()}</p>
+                      {log.interventions?.slice(0, 10).map((i: any) => (
+                        <p key={i.id} className="pl-4">{i.type} · ₱{Number(i.amount || 0).toLocaleString()} · {i.date ? new Date(i.date).toLocaleDateString() : ''}</p>
+                      ))}
+                    </>
+                  )}
+                  {log.valid !== undefined && (
+                    <>
+                      <p className="mt-2 mb-1 font-semibold text-gray-800">Hash Chain Verification</p>
+                      <p className={log.valid ? 'text-green-600' : 'text-red-600'}>
+                        {log.valid ? '✓ Hash chain integrity verified' : '✗ Hash chain broken!'} {log.brokenAt && `at ${log.brokenAt}`}
+                      </p>
+                    </>
+                  )}
+                </div>
+              ))}
+              {auditLogs.length === 0 && <p className="text-sm text-gray-400">No audit data available</p>}
+            </>
+          )}
         </div>
       )}
     </div>

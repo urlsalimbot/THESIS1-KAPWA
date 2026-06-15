@@ -11,10 +11,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @InjectRepository(User)
     private userRepo: Repository<User>,
   ) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.warn('WARNING: JWT_SECRET not set. Set a strong JWT_SECRET in production.');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'kapwa-secret-key',
+      secretOrKey: secret || 'change-me-in-production-kapwa-jwt-2026',
     });
   }
 

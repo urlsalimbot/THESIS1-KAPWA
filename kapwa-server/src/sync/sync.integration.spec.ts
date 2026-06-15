@@ -7,6 +7,15 @@ import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
 import { SyncRequestInput } from './dto/sync.zod';
 
+const crypto = require('crypto');
+const keyPair = crypto.generateKeyPairSync('ed25519');
+const pubKeyRaw = keyPair.publicKey.export({ type: 'spki', format: 'der' }).subarray(-32).toString('hex');
+
+function signMsg(deviceId: string, changes: any[]): string {
+  const msg = JSON.stringify({ deviceId, changes });
+  return crypto.sign(null, Buffer.from(msg), keyPair.privateKey).toString('hex');
+}
+
 const INSERT = 'INSERT' as const;
 const UPDATE = 'UPDATE' as const;
 
@@ -78,19 +87,20 @@ describe('Sync Integration: conflict scenarios', () => {
   });
 
   it('should process valid sync batch end-to-end', async () => {
+    const changes = [{
+      id: 'c1',
+      tableName: 'beneficiaries',
+      recordId: 'b1',
+      operation: INSERT,
+      payload: { surname: 'Doe', first_name: 'John' },
+      clientUpdatedAt: '2026-06-15T10:00:00Z',
+    }];
     const result = await service.processDelta({
-      deviceId: 'device-1',
-      changes: [{
-        id: 'c1',
-        tableName: 'beneficiaries',
-        recordId: 'b1',
-        operation: INSERT,
-        payload: { surname: 'Doe', first_name: 'John' },
-        clientUpdatedAt: '2026-06-15T10:00:00Z',
-      }],
+      deviceId: pubKeyRaw,
+      changes,
       versionVectors: [{ tableName: 'beneficiaries', localVersion: 1, serverVersion: 0 }],
       idempotencyKey: 'e2e-ik-1',
-      signature: 'test-sig',
+      signature: signMsg(pubKeyRaw, changes),
     });
     expect(result.status).toBe('processed');
     expect(result.results[0].status).toBe('applied');
@@ -99,19 +109,20 @@ describe('Sync Integration: conflict scenarios', () => {
   });
 
   it('should handle duplicate idempotency key idempotently', async () => {
+    const changes = [{
+      id: 'c2',
+      tableName: 'beneficiaries',
+      recordId: 'b2',
+      operation: INSERT,
+      payload: { surname: 'Smith', first_name: 'Jane' },
+      clientUpdatedAt: '2026-06-15T10:00:00Z',
+    }];
     const batch: SyncRequestInput = {
-      deviceId: 'device-1',
-      changes: [{
-        id: 'c2',
-        tableName: 'beneficiaries',
-        recordId: 'b2',
-        operation: INSERT,
-        payload: { surname: 'Smith', first_name: 'Jane' },
-        clientUpdatedAt: '2026-06-15T10:00:00Z',
-      }],
+      deviceId: pubKeyRaw,
+      changes,
       versionVectors: [],
       idempotencyKey: 'e2e-ik-dup',
-      signature: 'test-sig',
+      signature: signMsg(pubKeyRaw, changes),
     };
     const first = await service.processDelta(batch);
     const second = await service.processDelta(batch);
@@ -120,16 +131,18 @@ describe('Sync Integration: conflict scenarios', () => {
 
   it('should reject changed payload under same idempotency key', async () => {
     const baseBatch: SyncRequestInput = {
-      deviceId: 'device-1',
+      deviceId: pubKeyRaw,
       changes: [],
       versionVectors: [],
       idempotencyKey: 'e2e-ik-fixed',
-      signature: 'test-sig',
+      signature: signMsg(pubKeyRaw, []),
     };
     const first = await service.processDelta(baseBatch);
+    const dupChanges = [{ id: 'c3', tableName: 'programs', recordId: 'p1', operation: INSERT, payload: {}, clientUpdatedAt: '2026-06-15T10:00:00Z' }];
     const dupBatch: SyncRequestInput = {
       ...baseBatch,
-      changes: [{ id: 'c3', tableName: 'programs', recordId: 'p1', operation: INSERT, payload: {}, clientUpdatedAt: '2026-06-15T10:00:00Z' }],
+      changes: dupChanges,
+      signature: signMsg(pubKeyRaw, dupChanges),
     };
     const second = await service.processDelta(dupBatch);
     expect(second).toEqual(first);
@@ -151,25 +164,26 @@ describe('Sync Integration: conflict scenarios', () => {
     }).compile();
     const svc2 = mod.get<SyncService>(SyncService);
 
+    const changes = [{
+      id: 'c4',
+      tableName: 'beneficiaries',
+      recordId: 'b-conflict',
+      operation: UPDATE,
+      payload: { surname: 'Client' },
+      clientUpdatedAt: '2026-06-15T10:00:00Z',
+    }];
     const result = await svc2.processDelta({
-      deviceId: 'device-1',
-      changes: [{
-        id: 'c4',
-        tableName: 'beneficiaries',
-        recordId: 'b-conflict',
-        operation: UPDATE,
-        payload: { surname: 'Client' },
-        clientUpdatedAt: '2026-06-15T10:00:00Z',
-      }],
+      deviceId: pubKeyRaw,
+      changes,
       versionVectors: [],
       idempotencyKey: 'e2e-ik-conflict',
-      signature: 'test-sig',
+      signature: signMsg(pubKeyRaw, changes),
     });
     expect(['conflict', 'applied']).toContain(result.results[0].status);
   });
 
   it('should pull server changes since last sync', async () => {
-    const result = await service.pullFromServer('device-1', [
+    const result = await service.pullFromServer(pubKeyRaw, [
       { tableName: 'beneficiaries', serverVersion: 0 },
     ]);
     expect(result.serverChanges).toBeDefined();
@@ -178,9 +192,9 @@ describe('Sync Integration: conflict scenarios', () => {
 
   it('should list conflicts for device', async () => {
     queueRepo.find.mockResolvedValue([
-      { id: 'conf-a', deviceId: 'device-1', status: 'conflict', conflictReason: 'server newer' },
+      { id: 'conf-a', deviceId: pubKeyRaw, status: 'conflict', conflictReason: 'server newer' },
     ]);
-    const conflicts = await service.getConflicts('device-1');
+    const conflicts = await service.getConflicts(pubKeyRaw);
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0].status).toBe('conflict');
   });

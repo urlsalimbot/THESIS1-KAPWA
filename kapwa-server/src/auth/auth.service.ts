@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from './user.entity';
+import { User, UserRole } from './user.entity';
 
 @Injectable()
 export class AuthService {
@@ -21,7 +21,7 @@ export class AuthService {
     const user = this.userRepo.create({
       email: data.email,
       password: hashed,
-      role: (data.role as any) || 'social_worker',
+      role: UserRole.SW,
       fullName: data.fullName,
       isActive: true,
     });

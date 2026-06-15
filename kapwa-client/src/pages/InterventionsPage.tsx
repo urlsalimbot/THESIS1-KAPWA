@@ -8,7 +8,7 @@ export function InterventionsPage() {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ caseId: '', type: '', description: '', provider: '' });
+  const [form, setForm] = useState<Record<string, string>>({ caseId: '', type: '', description: '', provider: '', workerSignatureUrl: '' });
 
   useEffect(() => { load(); }, []);
 
@@ -36,7 +36,7 @@ export function InterventionsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await createIntervention({ ...form, workerSignatureUrl: 'sig-placeholder.png' });
+    await createIntervention({ ...form, workerSignatureUrl: form.workerSignatureUrl || '' });
     setShowForm(false);
     setForm({ caseId: '', type: '', description: '', provider: '' });
     load();

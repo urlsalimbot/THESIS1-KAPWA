@@ -64,9 +64,9 @@ export class CasesService {
   async updateStatus(id: string, newStatus: CaseStatus) {
     const c = await this.findById(id);
     const transitions: Record<CaseStatus, CaseStatus[]> = {
-      [CaseStatus.PENDING]: [CaseStatus.IN_REVIEW],
-      [CaseStatus.IN_REVIEW]: [CaseStatus.APPROVED],
-      [CaseStatus.APPROVED]: [CaseStatus.DISBURSED],
+      [CaseStatus.PENDING]: [CaseStatus.IN_REVIEW, CaseStatus.CLOSED],
+      [CaseStatus.IN_REVIEW]: [CaseStatus.APPROVED, CaseStatus.CLOSED],
+      [CaseStatus.APPROVED]: [CaseStatus.DISBURSED, CaseStatus.CLOSED],
       [CaseStatus.DISBURSED]: [CaseStatus.CLOSED],
       [CaseStatus.CLOSED]: [],
     };

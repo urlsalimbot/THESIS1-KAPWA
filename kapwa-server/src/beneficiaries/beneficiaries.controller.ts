@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { BeneficiariesService } from './beneficiaries.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
@@ -15,6 +15,18 @@ export class BeneficiariesController {
   @Roles('admin', 'social_worker', 'coordinator', 'mayor')
   async findAll(@Query('barangay') barangay?: string) {
     return this.benService.findAll(barangay);
+  }
+
+  @Get('me/services')
+  @Roles('claimant')
+  async getMyServices(@Request() req: any) {
+    return this.benService.getMyServices(req.user?.id || req.user?.sub);
+  }
+
+  @Get('me/consent')
+  @Roles('claimant')
+  async getMyConsent(@Request() req: any) {
+    return this.benService.getMyConsent(req.user?.id || req.user?.sub);
   }
 
   @Get(':id')

@@ -19,6 +19,12 @@ export class CasesController {
     return this.casesService.findAll(status);
   }
 
+  @Get('disbursed/pending-intervention')
+  @Roles('admin', 'social_worker')
+  async getPendingDisbursed() {
+    return this.casesService.getPendingDisbursed();
+  }
+
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   async findOne(@Param('id') id: string) {
@@ -35,11 +41,5 @@ export class CasesController {
   @Roles('admin')
   async updateStatus(@Param('id') id: string, @Body(new ZodPipe(UpdateStatusSchema)) body: { status: CaseStatus }) {
     return this.casesService.updateStatus(id, body.status);
-  }
-
-  @Get('disbursed/pending-intervention')
-  @Roles('admin', 'social_worker')
-  async getPendingDisbursed() {
-    return this.casesService.getPendingDisbursed();
   }
 }

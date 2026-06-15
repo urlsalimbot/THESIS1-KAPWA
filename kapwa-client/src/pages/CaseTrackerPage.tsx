@@ -96,15 +96,6 @@ export function CaseTrackerPage() {
     finally { setSubmitting(false); }
   }
 
-  function computeAgeRange(dob?: string): string {
-    if (!dob) return '';
-    const age = Math.floor((Date.now() - new Date(dob).getTime()) / 31557600000);
-    if (age <= 7) return '0-7';
-    if (age <= 17) return '8-17';
-    if (age <= 59) return '18-59';
-    return '60+';
-  }
-
   return (
     <div>
       <div className="mb-6">

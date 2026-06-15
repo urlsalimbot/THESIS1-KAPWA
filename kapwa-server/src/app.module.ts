@@ -13,6 +13,11 @@ import { IrfModule } from './irf/irf.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ChatModule } from './chat/chat.module';
 import { TrackerModule } from './tracker/tracker.module';
+import { CsrModule } from './csr/csr.module';
+import { AuditModule } from './audit/audit.module';
+import { FilingModule } from './filing/filing.module';
+import { UsersModule } from './users/users.module';
+import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { AppController } from './app.controller';
 
@@ -31,6 +36,7 @@ import { AppController } from './app.controller';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: false,
         migrationsRun: false,
+        namingStrategy: new SnakeNamingStrategy(),
         logging: ['error', 'warn'],
       }),
     }),
@@ -45,6 +51,10 @@ import { AppController } from './app.controller';
     DashboardModule,
     ChatModule,
     TrackerModule,
+    CsrModule,
+    AuditModule,
+    FilingModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [

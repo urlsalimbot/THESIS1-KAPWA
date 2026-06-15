@@ -46,6 +46,7 @@ export function IntakePage() {
     { key: 'barangay_clearance', label: 'Barangay Clearance', checked: false },
   ]);
   const [signature, setSignature] = useState<string | null>(null);
+  const [sigResetKey, setSigResetKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -178,6 +179,8 @@ export function IntakePage() {
   }
 
   function resetForm() {
+    setSignature(null);
+    setSigResetKey(k => k + 1);
     setForm({ surname: '', firstName: '', middleName: '', gender: 'Male', dob: '', address: '', phone: '', barangay: '', purok: '', serviceRequested: [], assessedBy: '', hasConsent: false });
     setFamily([]);
     setRequirements(prev => prev.map(r => ({ ...r, checked: false })));
@@ -315,7 +318,7 @@ export function IntakePage() {
             <label className="mb-1 block text-sm font-medium text-gray-700">Assessed By (MSWDO Staff) *</label>
             <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.assessedBy} onChange={e => update('assessedBy', e.target.value)} />
           </div>
-          <SignaturePad onSave={setSignature} label="Worker Signature *" />
+          <SignaturePad key={sigResetKey} onSave={setSignature} label="Worker Signature *" />
           <label className="mt-4 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.hasConsent} onChange={e => update('hasConsent', e.target.checked)} className="rounded border-gray-300 text-[#2E5C8A]" />
             <span>I confirm the beneficiary has given consent per Data Privacy Act (RA 10173) and this data will be logged in the consent ledger</span>

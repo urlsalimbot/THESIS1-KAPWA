@@ -1,37 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Program } from './program.entity';
-
-const programs: Map<string, Program> = new Map();
 
 @Injectable()
 export class ProgramsService {
+  constructor(
+    @InjectRepository(Program) private progRepo: Repository<Program>
+  ) {}
+
   async create(data: Partial<Program>) {
-    const id = crypto.randomUUID();
-    const prog: Program = {
-      id,
-      name: data.name || 'Unnamed Program',
-      category: data.category,
-      waitingPeriodDays: data.waitingPeriodDays,
-      requiredDocuments: data.requiredDocuments,
-      fundSources: data.fundSources,
-      approvalWorkflow: data.approvalWorkflow,
-      formTemplate: data.formTemplate,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    programs.set(prog.id, prog);
-    return prog;
+    const prog = this.progRepo.create(data);
+    return this.progRepo.save(prog);
   }
 
   async findAll(activeOnly = true) {
-    const all = Array.from(programs.values());
-    if (activeOnly) return all.filter(p => p.isActive);
-    return all;
+    const where = activeOnly ? { isActive: true } : {};
+    return this.progRepo.find({ where });
   }
 
   async findById(id: string) {
-    const prog = programs.get(id);
+    const prog = await this.progRepo.findOne({ where: { id } });
     if (!prog) throw new NotFoundException('Program not found');
     return prog;
   }
