@@ -33,8 +33,21 @@ export async function getDashboard() {
   return apiFetch('/dashboard');
 }
 
-export async function getBeneficiaries() {
-  return apiFetch('/beneficiaries');
+export async function getBeneficiaries(params?: {
+  search?: string;
+  category?: string;
+  barangay?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params?.search) q.set('search', params.search);
+  if (params?.category) q.set('category', params.category);
+  if (params?.barangay) q.set('barangay', params.barangay);
+  if (params?.page) q.set('page', String(params.page));
+  if (params?.limit) q.set('limit', String(params.limit));
+  const qs = q.toString();
+  return apiFetch(`/beneficiaries${qs ? '?' + qs : ''}`);
 }
 
 export async function getBeneficiary(id: string, signal?: AbortSignal) {
