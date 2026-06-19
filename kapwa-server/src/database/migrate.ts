@@ -63,6 +63,11 @@ async function migrate() {
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS user_id UUID`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS access_card_code TEXT`);
 
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS category TEXT`);
+  await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS revoked_reason TEXT`);
+
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_category_trgm ON beneficiaries USING gin (category gin_trgm_ops)`);
+
   await q.query(`CREATE INDEX IF NOT EXISTS idx_doc_case ON document_vault(case_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_doc_beneficiary ON document_vault(beneficiary_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_user ON beneficiaries(user_id)`);

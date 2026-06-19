@@ -1,13 +1,14 @@
+import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, In } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Beneficiary } from './beneficiary.entity';
 import { ConsentLedger } from './consent-ledger.entity';
-import { Household } from './household.entity';
 import { FamilyMember } from './family-member.entity';
 import { Case } from '../cases/case.entity';
 import { Intervention } from '../interventions/intervention.entity';
 
+const FAMILY_MEMBER_LIMIT = 50;
 @Injectable()
 export class BeneficiariesService {
   constructor(
@@ -15,8 +16,6 @@ export class BeneficiariesService {
     private benRepo: Repository<Beneficiary>,
     @InjectRepository(ConsentLedger)
     private consentRepo: Repository<ConsentLedger>,
-    @InjectRepository(Household)
-    private householdRepo: Repository<Household>,
     @InjectRepository(FamilyMember)
     private familyMemberRepo: Repository<FamilyMember>,
     @InjectRepository(Case)
@@ -51,11 +50,53 @@ export class BeneficiariesService {
     return ben;
   }
 
-  async findAll(barangay?: string) {
+  async findAll(
+    barangay?: string,
+    search?: string,
+    page = 1,
+    limit = DEFAULT_LIST_LIMIT,
+    category?: string,
+  ) {
+    const qb = this.benRepo.createQueryBuilder('b').leftJoinAndSelect('b.household', 'h');
     if (barangay) {
-      return this.benRepo.find({ where: { address: ILike(`%${barangay}%`) } });
+      qb.andWhere('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
     }
-    return this.benRepo.find({ relations: ['household'] });
+    if (category) {
+      qb.andWhere('b.category = :category', { category });
+    }
+    if (search && search.length >= 2) {
+      if (search.length >= 3) {
+        // Full trigram + tsvector path: similarity() for typo tolerance, ts_rank for BM25 ranking
+        qb.andWhere(
+          `(b.search_vector @@ plainto_tsquery('english', :search)
+            OR similarity(b.surname, :search) > 0.3
+            OR similarity(b.first_name, :search) > 0.3
+            OR b.category ILIKE :categoryMatch)`,
+          { search, categoryMatch: `%${search}%` },
+        );
+
+        qb.addSelect(
+          `COALESCE(ts_rank(b.search_vector, plainto_tsquery('english', :search2)), 0) +
+          COALESCE(similarity(b.surname, :search2), 0) +
+          COALESCE(similarity(b.first_name, :search2), 0)`,
+          'rank',
+        ).orderBy('rank', 'DESC');
+
+        qb.setParameters({ search, search2: search, categoryMatch: `%${search}%` });
+      } else {
+        // Short query (2 chars): tsvector + ILIKE fallback only; no trigram to avoid
+        // false positives per RESEARCH.md Pitfall 3
+        qb.andWhere(
+          `(b.search_vector @@ plainto_tsquery('english', :search)
+            OR b.surname ILIKE :like
+            OR b.first_name ILIKE :like)`,
+          { search, like: `%${search}%` },
+        );
+        qb.orderBy('ts_rank(b.search_vector, plainto_tsquery(:search))', 'DESC');
+      }
+    }
+    paginate(qb, page, limit);
+    return qb.getMany();
   }
 
   async findById(id: string) {
@@ -72,20 +113,15 @@ export class BeneficiariesService {
   }
 
   async getFamilyGraph(beneficiaryId: string) {
-    const ben = await this.benRepo.findOne({
-      where: { id: beneficiaryId },
-      relations: ['household'],
+    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id', 'householdId'] });
+    if (!ben?.householdId) return { primary: null, members: [], totalCount: 0 };
+    const members = await this.familyMemberRepo.find({
+      where: { householdId: ben.householdId },
+      order: { isPrimary: 'DESC' },
+      take: FAMILY_MEMBER_LIMIT,
     });
-    if (!ben) return null;
-
-    let members: FamilyMember[] = [];
-    if (ben.household) {
-      members = await this.familyMemberRepo.find({
-        where: { household: { id: ben.household.id } },
-      });
-    }
-
-    return { primary: ben, household: ben.household, members };
+    const primary = members.find(m => m.isPrimary) || members[0] || null;
+    return { primary, members, totalCount: members.length };
   }
 
   async getMyServices(userId: string) {
