@@ -46,3 +46,8 @@ temp/
 *.tsbuildinfo
 kapwa-server/tsconfig.tsbuildinfo
 kapwa-client/tsconfig.tsbuildinfo
+
+# Production environment template (contains placeholders but should not be tracked
+# once real values are added — use .env with actual secrets instead)
+.env.production
+infra/.env.production

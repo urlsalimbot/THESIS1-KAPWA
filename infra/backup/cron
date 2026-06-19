@@ -1,0 +1,9 @@
+# Kapwa Daily Database Backup
+# Runs backup.sh at 2:00 AM daily
+# Logs to /var/log/backup.log
+#
+# Install: sudo crontab infra/backup/cron
+# Or mount this file into a cron container with:
+#   -v ./infra/backup/cron:/etc/cron.d/kapwa-backup
+
+0 2 * * * root /opt/kapwa/backup/backup.sh >> /var/log/backup.log 2>&1

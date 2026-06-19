@@ -1,22 +1,23 @@
-version: '3.8'
-
 services:
   db:
     build:
       context: .
       dockerfile: Dockerfile.db
     container_name: kapwa-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: kapwa
-      POSTGRES_PASSWORD: kapwa
-      POSTGRES_DB: kapwa
+      POSTGRES_USER: ${DB_USER:-kapwa}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-kapwa}
+      POSTGRES_DB: ${DB_NAME:-kapwa}
+    env_file:
+      - ../infra/.env.production
     volumes:
       - kapwa-data:/var/lib/postgresql/data
       - ./init.sh:/docker-entrypoint-initdb.d/init.sh
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kapwa"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-kapwa}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,19 +27,71 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: kapwa-api
+    restart: unless-stopped
+    expose:
+      - "3000"
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: kapwa
-      DB_PASSWORD: kapwa
-      DB_NAME: kapwa
-      JWT_SECRET: kapwa-change-in-production
-      SYNC_SECRET: sync-secret-change-in-production
-    ports:
-      - "3000:3000"
+      DB_USER: ${DB_USER:-kapwa}
+      DB_PASSWORD: ${DB_PASSWORD:-kapwa}
+      DB_NAME: ${DB_NAME:-kapwa}
+      JWT_SECRET: ${JWT_SECRET}
+      SYNC_SECRET: ${SYNC_SECRET}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+    env_file:
+      - ../infra/.env.production
     depends_on:
       db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  minio:
+    image: minio/minio:latest
+    container_name: kapwa-minio
+    restart: unless-stopped
+    expose:
+      - "9000"
+      - "9001"
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    env_file:
+      - ../infra/.env.production
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: kapwa-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - ../infra/.env.production:/etc/caddy/.env:ro
+    depends_on:
+      api:
         condition: service_healthy
 
 volumes:
   kapwa-data:
+  minio-data:
+  caddy-data:
