@@ -5,9 +5,13 @@ import { SyncController } from './sync.controller';
 import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
 import { ConflictResolver } from './conflict-resolver';
+import { IntakeModule } from '../intake/intake.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SyncQueue, VersionVector])],
+  imports: [
+    TypeOrmModule.forFeature([SyncQueue, VersionVector]),
+    IntakeModule,
+  ],
   controllers: [SyncController],
   providers: [SyncService, ConflictResolver],
   exports: [SyncService],

@@ -10,7 +10,7 @@
 - [ ] **GIS-01**: Staff can conduct dual-mode GIS intake (online/offline) capturing Client Stub fields, requirements checklist, family composition, and assessment notes
 - [ ] **GIS-02**: Profile fields are editable ONLY during active GIS intake sessions — no standalone PATCH endpoints for beneficiaries
 - [ ] **GIS-03**: Intake completion generates a case with control_no and status = 'pending_assessment'
-- [ ] **GIS-04**: Staff can search beneficiaries by name, category, and barangay using trigram + BM25 with typo tolerance
+- [x] **GIS-04**: Staff can search beneficiaries by name, category, and barangay using trigram + BM25 with typo tolerance
 - [ ] **GIS-05**: Family graph visualization via recursive CTE (up to 2 degrees, consent-filtered)
 - [ ] **GIS-06**: Beneficiary categorization by type (Senior, PWD, Child, Solo Parent, etc.)
 
@@ -111,7 +111,7 @@
 | GIS-01 | Phase 2 | Pending |
 | GIS-02 | Phase 2 | Pending |
 | GIS-03 | Phase 2 | Pending |
-| GIS-04 | Phase 2 | Pending |
+| GIS-04 | Phase 2 | Complete |
 | GIS-05 | Phase 2 | Pending |
 | GIS-06 | Phase 2 | Pending |
 | INF-01 | Phase 1 | Pending |
