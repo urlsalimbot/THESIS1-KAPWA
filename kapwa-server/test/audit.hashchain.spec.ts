@@ -20,9 +20,12 @@ describe('AuditService — Hash Chain', () => {
     let prevHash: string | null = null;
     for (let i = 0; i < count; i++) {
       const id = crypto.randomUUID();
-      const hashVal: string = prevHash
-        ? crypto.createHash('sha256').update(JSON.stringify({ id, hash: prevHash })).digest('hex')
-        : crypto.createHash('sha256').update(JSON.stringify({ id })).digest('hex');
+      const prevId = i > 0 ? records[i - 1].id : id;
+      const hashInput = prevHash
+        ? JSON.stringify({ id: prevId, hash: prevHash })
+        : JSON.stringify({ id });
+      const hashVal: string = crypto.createHash('sha256').update(hashInput).digest('hex');
+
       records.push({
         id,
         hash: hashVal,
