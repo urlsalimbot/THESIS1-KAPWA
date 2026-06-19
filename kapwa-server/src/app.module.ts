@@ -23,6 +23,7 @@ import { LcrModule } from './lcr/lcr.module';
 import { SlaModule } from './sla/sla.module';
 import { OtpModule } from './otp/otp.module';
 import { MinioModule } from './minio/minio.module';
+import { IntakeModule } from './intake/intake.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -73,6 +74,7 @@ import { AppController } from './app.controller';
     SlaModule,
     OtpModule,
     MinioModule,
+    IntakeModule,
   ],
   controllers: [AppController],
   providers: [

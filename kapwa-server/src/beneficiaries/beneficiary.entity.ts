@@ -33,6 +33,9 @@ export class Beneficiary {
   @Column({ name: 'access_card_code', unique: true, nullable: true })
   accessCardCode?: string;
 
+  @Column({ type: 'tsvector', name: 'search_vector', select: false, nullable: true })
+  searchVector?: string;
+
   @Column({ name: 'user_id', nullable: true })
   userId?: string;
 
@@ -41,6 +44,9 @@ export class Beneficiary {
 
   @Column({ name: 'household_id', nullable: true })
   householdId?: string;
+
+  @Column({ name: 'category', nullable: true })
+  category?: string;
 
   @ManyToOne(() => Household, { nullable: true })
   @JoinColumn({ name: 'household_id' })

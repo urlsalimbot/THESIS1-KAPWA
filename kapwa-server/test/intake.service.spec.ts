@@ -21,6 +21,11 @@ describe('IntakeService — Consolidated Intake', () => {
   let caseRepo: jest.Mocked<Repository<Case>>;
   let consentRepo: jest.Mocked<Repository<ConsentLedger>>;
 
+  const benUuid = 'ben-uuid-1';
+  const hhUuid = 'hh-uuid-1';
+  const caseUuid = 'case-uuid-1';
+  const clUuid = 'cl-uuid-1';
+
   const validInput: IntakeInput = {
     beneficiary: {
       surname: 'Dela Cruz',
@@ -35,7 +40,6 @@ describe('IntakeService — Consolidated Intake', () => {
     },
     familyMembers: [
       { fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, statusIncome: 'Employed' },
-      { fullName: 'Jose Dela Cruz', relationship: 'Child', age: 12, statusIncome: 'Student' },
     ],
     case: {
       serviceRequested: ['FA', 'CSR'],
@@ -45,12 +49,9 @@ describe('IntakeService — Consolidated Intake', () => {
     },
   };
 
-  const mockBeneficiary = { id: 'ben-uuid-1', category: 'Senior', consentStatus: 'active', householdId: null } as unknown as Beneficiary;
-  const mockHousehold = { id: 'hh-uuid-1', primaryBeneficiaryId: 'ben-uuid-1', barangay: 'Barangay 1' } as unknown as Household;
-  const mockCase = { id: 'case-uuid-1', controlNo: 'KAPWA-2026-00001', status: CaseStatus.PENDING } as unknown as Case;
-  const mockConsentLedger = { id: 'cl-uuid-1', beneficiaryId: 'ben-uuid-1', purpose: 'registration', channel: 'web', status: 'active' } as unknown as ConsentLedger;
-
   beforeEach(async () => {
+    // Build mock query runner with proper jest.fn() for manager.save
+    const saveMock = jest.fn();
     mockQueryRunner = {
       connect: jest.fn(),
       startTransaction: jest.fn(),
@@ -58,8 +59,7 @@ describe('IntakeService — Consolidated Intake', () => {
       rollbackTransaction: jest.fn(),
       release: jest.fn(),
       manager: {
-        save: jest.fn(),
-        create: jest.fn(),
+        save: saveMock,
       },
     };
 
@@ -99,17 +99,21 @@ describe('IntakeService — Consolidated Intake', () => {
 
   // Test 1: Happy path — creates all 5 entities
   it('should create Beneficiary + Household + FamilyMembers + Case + ConsentLedger on successful intake', async () => {
-    (mockQueryRunner.manager.save as jest.Mock)
-      .mockResolvedValueOnce(mockBeneficiary)
-      .mockResolvedValueOnce(mockHousehold)
-      .mockResolvedValueOnce(mockHousehold)
-      .mockResolvedValueOnce(mockCase)
-      .mockResolvedValueOnce(mockConsentLedger);
+    const saveMock = mockQueryRunner.manager.save as jest.Mock;
+    // save order: beneficiary, household, beneficiary(update), familyMember, case, consentLedger
+    saveMock
+      .mockResolvedValueOnce({ id: benUuid, category: 'Senior', consentStatus: 'active' })
+      .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
+      .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+      .mockResolvedValueOnce({ id: 'fm-uuid-1', fullName: 'Maria Dela Cruz' })
+      .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001', status: CaseStatus.PENDING })
+      .mockResolvedValueOnce({ id: clUuid, status: 'active' });
 
-    (benRepo.create as jest.Mock).mockReturnValue(mockBeneficiary);
-    (hhRepo.create as jest.Mock).mockReturnValue(mockHousehold);
-    (caseRepo.create as jest.Mock).mockReturnValue(mockCase);
-    (consentRepo.create as jest.Mock).mockReturnValue(mockConsentLedger);
+    (benRepo.create as jest.Mock).mockReturnValue({});
+    (hhRepo.create as jest.Mock).mockReturnValue({});
+    (caseRepo.create as jest.Mock).mockReturnValue({});
+    (consentRepo.create as jest.Mock).mockReturnValue({});
+    (fmRepo.create as jest.Mock).mockReturnValue({});
 
     const result = await service.submitIntake(validInput);
 
@@ -118,25 +122,28 @@ describe('IntakeService — Consolidated Intake', () => {
     expect(mockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
     expect(mockQueryRunner.release).toHaveBeenCalled();
 
-    expect(result).toHaveProperty('beneficiaryId');
-    expect(result).toHaveProperty('caseId');
+    expect(result).toHaveProperty('beneficiaryId', benUuid);
+    expect(result).toHaveProperty('caseId', caseUuid);
     expect(result).toHaveProperty('controlNo', 'KAPWA-2026-00001');
     expect(result).toHaveProperty('status', 'pending_assessment');
   });
 
   // Test 2: control_no matches KAPWA-YYYY-XXXXX format
   it('should return control_no in KAPWA-YYYY-XXXXX format', async () => {
-    (mockQueryRunner.manager.save as jest.Mock)
-      .mockResolvedValueOnce(mockBeneficiary)
-      .mockResolvedValueOnce(mockHousehold)
-      .mockResolvedValueOnce(mockHousehold)
-      .mockResolvedValueOnce(mockCase)
-      .mockResolvedValueOnce(mockConsentLedger);
+    const saveMock = mockQueryRunner.manager.save as jest.Mock;
+    saveMock
+      .mockResolvedValueOnce({ id: benUuid })
+      .mockResolvedValueOnce({ id: hhUuid })
+      .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+      .mockResolvedValueOnce({ id: 'fm-uuid-1' })
+      .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001' })
+      .mockResolvedValueOnce({ id: clUuid });
 
-    (benRepo.create as jest.Mock).mockReturnValue(mockBeneficiary);
-    (hhRepo.create as jest.Mock).mockReturnValue(mockHousehold);
-    (caseRepo.create as jest.Mock).mockReturnValue(mockCase);
-    (consentRepo.create as jest.Mock).mockReturnValue(mockConsentLedger);
+    (benRepo.create as jest.Mock).mockReturnValue({});
+    (hhRepo.create as jest.Mock).mockReturnValue({});
+    (caseRepo.create as jest.Mock).mockReturnValue({});
+    (consentRepo.create as jest.Mock).mockReturnValue({});
+    (fmRepo.create as jest.Mock).mockReturnValue({});
 
     const result = await service.submitIntake(validInput);
     expect(result.controlNo).toMatch(/^KAPWA-\d{4}-\d{5}$/);
@@ -144,18 +151,20 @@ describe('IntakeService — Consolidated Intake', () => {
 
   // Test 3: Beneficiary category stored
   it('should store the beneficiary category value', async () => {
-    const benWithCategory = { ...mockBeneficiary, category: 'Senior' };
-    (mockQueryRunner.manager.save as jest.Mock)
-      .mockResolvedValueOnce(benWithCategory)
-      .mockResolvedValueOnce(mockHousehold)
-      .mockResolvedValueOnce(mockHousehold)
-      .mockResolvedValueOnce(mockCase)
-      .mockResolvedValueOnce(mockConsentLedger);
+    const saveMock = mockQueryRunner.manager.save as jest.Mock;
+    saveMock
+      .mockResolvedValueOnce({ id: benUuid, category: 'Senior' })
+      .mockResolvedValueOnce({ id: hhUuid })
+      .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+      .mockResolvedValueOnce({ id: 'fm-uuid-1' })
+      .mockResolvedValueOnce({ id: caseUuid })
+      .mockResolvedValueOnce({ id: clUuid });
 
-    (benRepo.create as jest.Mock).mockReturnValue(benWithCategory);
-    (hhRepo.create as jest.Mock).mockReturnValue(mockHousehold);
-    (caseRepo.create as jest.Mock).mockReturnValue(mockCase);
-    (consentRepo.create as jest.Mock).mockReturnValue(mockConsentLedger);
+    (benRepo.create as jest.Mock).mockReturnValue({});
+    (hhRepo.create as jest.Mock).mockReturnValue({});
+    (caseRepo.create as jest.Mock).mockReturnValue({});
+    (consentRepo.create as jest.Mock).mockReturnValue({});
+    (fmRepo.create as jest.Mock).mockReturnValue({});
 
     await service.submitIntake(validInput);
 
@@ -166,16 +175,19 @@ describe('IntakeService — Consolidated Intake', () => {
 
   // Test 4: Rollback on failure
   it('should rollback all entities if case creation fails', async () => {
-    (mockQueryRunner.manager.save as jest.Mock)
-      .mockResolvedValueOnce(mockBeneficiary)
-      .mockResolvedValueOnce(mockHousehold)
-      .mockResolvedValueOnce(mockHousehold)
+    const saveMock = mockQueryRunner.manager.save as jest.Mock;
+    saveMock
+      .mockResolvedValueOnce({ id: benUuid })
+      .mockResolvedValueOnce({ id: hhUuid })
+      .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+      .mockResolvedValueOnce({ id: 'fm-uuid-1' })
       .mockRejectedValueOnce(new Error('Case creation failed'));
 
-    (benRepo.create as jest.Mock).mockReturnValue(mockBeneficiary);
-    (hhRepo.create as jest.Mock).mockReturnValue(mockHousehold);
-    (caseRepo.create as jest.Mock).mockReturnValue(mockCase);
-    (consentRepo.create as jest.Mock).mockReturnValue(mockConsentLedger);
+    (benRepo.create as jest.Mock).mockReturnValue({});
+    (hhRepo.create as jest.Mock).mockReturnValue({});
+    (caseRepo.create as jest.Mock).mockReturnValue({});
+    (consentRepo.create as jest.Mock).mockReturnValue({});
+    (fmRepo.create as jest.Mock).mockReturnValue({});
 
     await expect(service.submitIntake(validInput)).rejects.toThrow('Case creation failed');
 
@@ -199,7 +211,7 @@ describe('IntakeService — Consolidated Intake', () => {
     // Invalid category enum
     const badCategory = {
       ...validInput,
-      beneficiary: { ...validInput.beneficiary, category: 'InvalidCat' },
+      beneficiary: { ...validInput.beneficiary, category: 'InvalidCat' as any },
     };
     const catResult = IntakeInputSchema.safeParse(badCategory);
     expect(catResult.success).toBe(false);

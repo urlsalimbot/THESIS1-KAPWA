@@ -22,4 +22,7 @@ export class ConsentLedger {
 
   @Column({ name: 'revoked_at', nullable: true })
   revokedAt?: Date;
+
+  @Column({ name: 'revoked_reason', nullable: true })
+  revokedReason?: string;
 }
