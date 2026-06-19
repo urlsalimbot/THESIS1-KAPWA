@@ -6,7 +6,7 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
 
 ## Phases
 
-- [ ] **Phase 1: Foundation — Deploy & Authenticate** - Infrastructure, roles, basic sync, and audit foundation
+- [x] **Phase 1: Foundation — Deploy & Authenticate** - Infrastructure, roles, basic sync, and audit foundation
 - [ ] **Phase 2: GIS Intake & Beneficiary Registration** - Dual-mode GIS intake with consent management
 - [ ] **Phase 3: Intervention Tracking & Case Management** - End-to-end case workflow with post-disbursement logging
 - [ ] **Phase 4: Access Card System** - Code# generation, service logs, loss/replacement workflow
@@ -17,7 +17,7 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
 
 ### Phase 1: Foundation — Deploy & Authenticate
 
-**Goal**: Staff can deploy the full system stack, log in with role-appropriate access, and sync infrastructure is initialized with encrypted local storage. (mvp mode)
+**Goal**: Staff can deploy the full system stack, log in with role-appropriate access, and sync infrastructure is initialized with encrypted local storage.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: INF-01, INF-02, INF-03, INF-05, ROL-01, ROL-06, SYNC-01, SYNC-04, SYNC-05, CON-06
@@ -29,19 +29,18 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
   4. Offline queue status indicator is visible in the UI with pending change count
   5. Audit trail uses SHA-256 hash chaining — admin can verify chain integrity
 
-**Plans**: 2/4 plans executed
-**UI hint**: yes
+**Plans**: 4/4 plans executed — COMPLETE
 
 Plans:
 
 - [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
 - [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
 - [x] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
-- [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
+- [x] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
 
 ### Phase 2: GIS Intake & Beneficiary Registration
 
-**Goal**: Social workers can register any walk-in or referred claimant through dual-mode GIS intake (online/offline), capturing full Client Stub fields, family composition, assessment notes, and searchable beneficiary records. (mvp mode)
+**Goal**: Social workers can register any walk-in or referred claimant through dual-mode GIS intake (online/offline), capturing full Client Stub fields, family composition, assessment notes, and searchable beneficiary records.
 **Mode:** mvp
 **Depends on**: Phase 1
 **Requirements**: GIS-01, GIS-02, GIS-03, GIS-04, GIS-05, GIS-06, CON-01, CON-02, SYNC-02
@@ -54,18 +53,14 @@ Plans:
   5. Consent ledger tracks grant/revoke per beneficiary; revoked consent = immediate masking of PII fields in UI
 
 **Plans**: TBD
-**UI hint**: yes
 
 Plans:
 
-- [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
-- [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
-- [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
+- TBD
 
 ### Phase 3: Intervention Tracking & Case Management
 
-**Goal**: Staff can move cases through the full FSM lifecycle (pending_assessment → in_review → approved → disbursed → closed) and log post-disbursement interventions with mandatory signatures, eligibility checks, and fund source tracking. (mvp mode)
+**Goal**: Staff can move cases through the full FSM lifecycle (pending_assessment → in_review → approved → disbursed → closed) and log post-disbursement interventions with mandatory signatures, eligibility checks, and fund source tracking.
 **Mode:** mvp
 **Depends on**: Phase 2
 **Requirements**: INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-08, CON-03, CON-04, SYNC-03
@@ -78,18 +73,14 @@ Plans:
   5. ABAC evaluates (role, resource_sensitivity, consent_status) on every intervention query; ARTA SLA timers auto-escalate overdue approval steps
 
 **Plans**: TBD
-**UI hint**: yes
 
 Plans:
 
-- [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
-- [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
-- [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
+- TBD
 
 ### Phase 4: Access Card System
 
-**Goal**: Every beneficiary has a unique Access Card (CODE#), interventions auto-append to the 18-row service log, and "No Card = No Voucher" is enforced at intervention logging with full loss/replacement audit trail. (mvp mode)
+**Goal**: Every beneficiary has a unique Access Card (CODE#), interventions auto-append to the 18-row service log, and "No Card = No Voucher" is enforced at intervention logging with full loss/replacement audit trail.
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: AC-01, AC-02, AC-03, AC-04, INT-07
@@ -102,18 +93,14 @@ Plans:
   5. Staff can view, print, and refill the Access Card service log from the UI
 
 **Plans**: TBD
-**UI hint**: yes
 
 Plans:
 
-- [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [ ] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
-- [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
-- [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
+- TBD
 
 ### Phase 5: Dynamic Programs & IRF Module
 
-**Goal**: Admin can configure dynamic programs with JSON Schema form templates, and staff can submit encrypted Incident Report Forms (IRF) with secure WCPD/PNP export and case disposition tracking. (mvp mode)
+**Goal**: Admin can configure dynamic programs with JSON Schema form templates, and staff can submit encrypted Incident Report Forms (IRF) with secure WCPD/PNP export and case disposition tracking.
 **Mode:** mvp
 **Depends on**: Phase 2, Phase 3
 **Requirements**: PRG-01, PRG-02, PRG-03, IRF-01, IRF-02, IRF-03, IRF-04
@@ -127,18 +114,14 @@ Plans:
   6. IRF case disposition tracks through Under Investigation → Referred → Closed
 
 **Plans**: TBD
-**UI hint**: yes
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [ ] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
-- [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
-- [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
+- TBD
 
 ### Phase 6: Dashboards, Notifications & Role Completion
 
-**Goal**: Every role sees appropriate data — Claimant self-service, Mayor's Office aggregate views, Auditor read-only logs — with consent-gated notifications and DSWD/COA-compliant exports. (mvp mode)
+**Goal**: Every role sees appropriate data — Claimant self-service, Mayor's Office aggregate views, Auditor read-only logs — with consent-gated notifications and DSWD/COA-compliant exports.
 **Mode:** mvp
 **Depends on**: Phase 4
 **Requirements**: ROL-02, ROL-03, ROL-04, ROL-05, CON-05, INF-04
@@ -152,14 +135,10 @@ Plans:
   6. Admin can export DSWD/COA-compliant reports (audit logs, service summaries, compliance data)
 
 **Plans**: TBD
-**UI hint**: yes
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [ ] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
-- [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
-- [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
+- TBD
 
 ## Progress
 
@@ -167,7 +146,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation — Deploy & Authenticate | 2/4 | In Progress|  |
+| 1. Foundation — Deploy & Authenticate | 4/4 | Complete | 2026-06-19 |
 | 2. GIS Intake & Beneficiary Registration | 0/0 | Not started | - |
 | 3. Intervention Tracking & Case Management | 0/0 | Not started | - |
 | 4. Access Card System | 0/0 | Not started | - |
