@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, Link } from 'react-router-dom';
 import { getCurrentUser } from '../lib/auth-context';
-import { FilePlus, LayoutDashboard, Users, CheckCircle, FolderOpen, FileText, Settings, ClipboardList, Bell, HelpCircle, MessageSquare, Search, Shield, UserCircle } from 'lucide-react';
+import { loadQueue } from '../lib/offline-queue';
+import { FilePlus, LayoutDashboard, Users, CheckCircle, FolderOpen, FileText, ClipboardList, HelpCircle, MessageSquare, Search, Shield, UserCircle, Stamp } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
 import '../index.css';
 
@@ -16,26 +17,53 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/interventions', label: 'Interventions', icon: <CheckCircle size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/csr', label: 'CSR Generator', icon: <FileText size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/filing', label: 'Digital Filing', icon: <FolderOpen size={20} />, roles: ['admin', 'social_worker'] },
+  { path: '/approvals', label: 'Approvals', icon: <Stamp size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/messages', label: 'Messages', icon: <MessageSquare size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
+  { path: '/settings/mfa', label: 'MFA Settings', icon: <Shield size={20} />, roles: ['admin', 'mayor', 'auditor'] },
   { path: '/admin', label: 'Admin Panel', icon: <Shield size={20} />, roles: ['admin'] },
   { path: '/my-dashboard', label: 'My Dashboard', icon: <UserCircle size={20} />, roles: ['claimant'] },
 ];
+
+function computePendingCount(): number {
+  try {
+    const queue = loadQueue();
+    return queue.filter(c => c.status === 'pending').length;
+  } catch {
+    return 0;
+  }
+}
 
 export function Layout({ children }: { children?: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(!navigator.onLine);
+  const [pendingCount, setPendingCount] = useState(0);
   const location = useLocation();
 
   useEffect(() => {
     getCurrentUser().then(u => { setUser(u); setLoading(false); });
+
+    // Read pending count from correct queue (kapwa_sync_queue, removed legacy key)
+    setPendingCount(computePendingCount());
+
     const goOnline = () => setOffline(false);
     const goOffline = () => setOffline(true);
+
+    // Listen for storage changes from other tabs/windows
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'kapwa_sync_queue') {
+        setPendingCount(computePendingCount());
+      }
+    };
+
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -47,7 +75,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
     <>
       {offline && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 px-4 py-1.5 text-center text-xs font-medium text-white">
-          You are offline — changes will sync when connection is restored
+          You are offline{pendingCount > 0 ? ` — ${pendingCount} change(s) pending sync` : ''} — changes will sync when connection is restored
         </div>
       )}
       <div className="min-h-screen bg-[#F9F9FD]">
@@ -62,11 +90,11 @@ export function Layout({ children }: { children?: React.ReactNode }) {
           <div className="header-right">
             <div className="search-bar">
               <Search className="search-icon" size={20} stroke="#6B7280" />
-              <input type="text" placeholder="Search records..." className="search-input" />
+              <input type="text" aria-label="Search records" placeholder="Search records..." className="search-input" />
             </div>
             <NotificationsDropdown />
-            <button className="icon-btn" title="Help"><HelpCircle size={20} /></button>
-            <button className="icon-btn" title="Messages"><MessageSquare size={20} /></button>
+            <button className="icon-btn" title="Help" aria-label="Help"><HelpCircle size={20} /></button>
+            <button className="icon-btn" title="Messages" aria-label="Messages"><MessageSquare size={20} /></button>
             <div className="profile-area">
               <div className="profile-avatar">{(user?.fullName || 'U').charAt(0)}</div>
             </div>
