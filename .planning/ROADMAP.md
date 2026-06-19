@@ -52,12 +52,12 @@ Plans:
   4. Family graph visualization shows relationships up to 2 degrees, filtered by consent status
   5. Consent ledger tracks grant/revoke per beneficiary; revoked consent = immediate masking of PII fields in UI
 
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 Plans:
 
-- [ ] 02-01-PLAN.md — Consolidated GIS Intake: POST /api/intake, category migration, IntakePage wiring
-- [ ] 02-02-PLAN.md — Beneficiary Search: pg_trgm + ts_rank, category/barangay filters
+- [x] 02-01-PLAN.md — Consolidated GIS Intake: POST /api/intake, category migration, IntakePage wiring
+- [x] 02-02-PLAN.md — Beneficiary Search: pg_trgm + ts_rank, category/barangay filters
 - [ ] 02-03-PLAN.md — Family Graph, Consent & PII: Recursive CTE, revoke endpoint, interceptor, UI
 - [ ] 02-04-PLAN.md — Offline Intake Sync: Sync processor for intake, offline queue consolidation
 
@@ -150,7 +150,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation — Deploy & Authenticate | 4/4 | Complete | 2026-06-19 |
-| 2. GIS Intake & Beneficiary Registration | 0/4 | Not started | - |
+| 2. GIS Intake & Beneficiary Registration | 2/4 | In Progress|  |
 | 3. Intervention Tracking & Case Management | 0/0 | Not started | - |
 | 4. Access Card System | 0/0 | Not started | - |
 | 5. Dynamic Programs & IRF Module | 0/0 | Not started | - |
