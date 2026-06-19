@@ -113,15 +113,67 @@ export class BeneficiariesService {
   }
 
   async getFamilyGraph(beneficiaryId: string) {
-    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id', 'householdId'] });
-    if (!ben?.householdId) return { primary: null, members: [], totalCount: 0 };
-    const members = await this.familyMemberRepo.find({
-      where: { householdId: ben.householdId },
-      order: { isPrimary: 'DESC' },
-      take: FAMILY_MEMBER_LIMIT,
+    const ben = await this.benRepo.findOne({
+      where: { id: beneficiaryId },
+      select: ['id', 'householdId'],
     });
-    const primary = members.find(m => m.isPrimary) || members[0] || null;
+    if (!ben) throw new NotFoundException('Beneficiary not found');
+
+    // Recursive CTE up to 2 degrees with consent filtering
+    const members = await this.familyMemberRepo.query(
+      `WITH RECURSIVE family_tree AS (
+        -- Base: direct household members
+        SELECT fm.id, fm.full_name, fm.relationship, fm.age,
+               fm.status_income, fm.is_primary, fm.household_id, 0 AS depth
+        FROM family_members fm
+        JOIN households h ON h.id = fm.household_id
+        WHERE h.primary_beneficiary_id = $1
+
+        UNION
+
+        -- Recursive: members of linked households within 2 degrees
+        SELECT fm.id, fm.full_name, fm.relationship, fm.age,
+               fm.status_income, fm.is_primary, fm.household_id, ft.depth + 1
+        FROM family_members fm
+        JOIN households h ON h.id = fm.household_id
+        JOIN family_tree ft ON ft.depth < 2
+          AND fm.household_id != ft.household_id
+          AND EXISTS (
+            SELECT 1 FROM beneficiaries b
+            WHERE b.household_id = fm.household_id
+              AND b.consent_status = 'active'
+          )
+      )
+      SELECT DISTINCT id, full_name, relationship, age,
+             status_income, is_primary, depth
+      FROM family_tree
+      ORDER BY depth, is_primary DESC, full_name
+      LIMIT $2`,
+      [beneficiaryId, FAMILY_MEMBER_LIMIT],
+    );
+
+    const primary = members.find((m: any) => m.isPrimary) || members[0] || null;
     return { primary, members, totalCount: members.length };
+  }
+
+  async revokeConsent(beneficiaryId: string, body: { reason?: string }) {
+    // Find most recent active consent ledger entry
+    const ledger = await this.consentRepo.findOne({
+      where: { beneficiaryId, status: 'active' },
+      order: { grantedAt: 'DESC' as any },
+    });
+    if (!ledger) {
+      throw new NotFoundException('No active consent found for this beneficiary');
+    }
+
+    ledger.status = 'revoked';
+    ledger.revokedAt = new Date();
+    if (body.reason) (ledger as any).revokedReason = body.reason;
+    await this.consentRepo.save(ledger);
+
+    await this.benRepo.update(beneficiaryId, { consentStatus: 'revoked' } as any);
+
+    return { status: 'revoked', revokedAt: ledger.revokedAt };
   }
 
   async getMyServices(userId: string) {
