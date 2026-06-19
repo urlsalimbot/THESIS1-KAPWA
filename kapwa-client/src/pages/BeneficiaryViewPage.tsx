@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, MapPin, Users as UsersIcon, Gift, FileText, Plus, Edit, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, User, MapPin, Users as UsersIcon, Gift, FileText, Plus, ChevronDown, ChevronRight, Shield } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getBeneficiary, getCases } from '../lib/api';
+import { getBeneficiary, getCases, getFamilyGraph } from '../lib/api';
+import { FamilyGraph } from '../components/family/FamilyGraph';
+import { ConsentManager } from '../components/consent/ConsentManager';
 import '../index.css';
 
 interface BeneficiaryDetail {
@@ -20,25 +22,38 @@ interface BeneficiaryDetail {
   interventions: { id: string; type: string; description: string; date: string }[];
 }
 
+interface FamilyMember {
+  id: string;
+  fullName: string;
+  relationship: string;
+  age: number;
+  statusIncome?: string;
+  isPrimary: boolean;
+}
+
 export function BeneficiaryViewPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [beneficiary, setBeneficiary] = useState<BeneficiaryDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [family, setFamily] = useState<FamilyMember[]>([]);
+  const [familyExpanded, setFamilyExpanded] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     if (!id) { setLoading(false); return; }
     Promise.all([
-      getBeneficiary(id).catch(() => null),
-      getCases().catch(() => []),
-    ]).then(([ben, cases]) => {
+      getBeneficiary(id, controller.signal).catch(() => null),
+      getCases(undefined, controller.signal).catch(() => []),
+      getFamilyGraph(id, controller.signal).catch(() => null),
+    ]).then(([ben, cases, famGraph]) => {
       if (ben) {
-        const age = ben.dob ? new Date().getFullYear() - new Date(ben.dob).getFullYear() : 0;
+        const age = ben.dob ? (() => { const today = new Date(); const birth = new Date(ben.dob); let a = today.getFullYear() - birth.getFullYear(); if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) a--; return a; })() : 0;
         const addrParts = (ben.address || '').split(',').map((s: string) => s.trim());
-        const beneficiaryCases = (cases || []).filter((c: any) => c.beneficiaryId === id || c.beneficiary?.id === id);
+        const beneficiaryCases = (cases || []).filter((c: Record<string, unknown>) => c.beneficiaryId === id || ((c.beneficiary as Record<string, unknown>)?.id as string) === id);
         setBeneficiary({
           id: ben.id,
-          name: `${ben.firstName || ''} ${ben.middleName || ''} ${ben.surname || ''}`.trim(),
+          name: `${ben.firstName || ''} ${ben.middleName || ''} ${ben.surname || ''}`.replace(/\s+/g, ' ').trim(),
           age,
           birthDate: ben.dob || '',
           gender: ben.gender || '',
@@ -46,35 +61,43 @@ export function BeneficiaryViewPage() {
           barangay: addrParts[addrParts.length - 1] || '',
           purok: addrParts.length > 1 ? addrParts[0] : '',
           category: ben.category || '',
-          householdSize: 1,
+          householdSize: famGraph?.totalCount || 1,
           status: ben.consentStatus || 'active',
-          cases: beneficiaryCases.map((c: any) => ({
-            id: c.controlNo || c.id,
-            program: (c.serviceRequested || []).join(', ') || 'General',
-            status: c.status || 'pending',
-            date: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
-          })),
+          cases: beneficiaryCases.map((c: Record<string, unknown>) => {
+            const sr = c.serviceRequested;
+            return {
+              id: (c.controlNo || c.id) as string,
+              program: Array.isArray(sr) ? sr.join(', ') : 'General',
+              status: (c.status as string) || 'pending',
+              date: c.createdAt ? new Date(c.createdAt as string).toLocaleDateString() : '',
+            };
+          }),
           interventions: [],
         });
+        if (famGraph?.members) setFamily(famGraph.members);
       }
       setLoading(false);
     });
   }, [id]);
 
   const statusBadge = (status: string) => {
-    const map: Record<string, { bg: string; color: string; label: string }> = {
-      approved: { bg: '#D4EDDA', color: '#155724', label: 'Approved' },
-      disbursed: { bg: '#E2E3E5', color: '#383D41', label: 'Disbursed' },
-      pending_assessment: { bg: '#FFF3CD', color: '#856404', label: 'Pending' },
-      active: { bg: '#D4EDDA', color: '#155724', label: 'Active' },
-      closed: { bg: '#E2E3E5', color: '#383D41', label: 'Closed' },
+    const map: Record<string, { className: string; label: string }> = {
+      approved: { className: 'bg-green-100 text-green-800', label: 'Approved' },
+      disbursed: { className: 'bg-gray-200 text-gray-700', label: 'Disbursed' },
+      pending_assessment: { className: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+      active: { className: 'bg-green-100 text-green-800', label: 'Active' },
+      closed: { className: 'bg-gray-200 text-gray-700', label: 'Closed' },
     };
     const s = map[status];
-    return s ? <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: s.bg, color: s.color }}>{s.label}</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">{status}</span>;
+    return s ? <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">{status}</span>;
   };
 
   if (loading) return <div className="p-8 text-center text-gray-400">Loading...</div>;
   if (!beneficiary) return <div className="p-8 text-center text-gray-400">Beneficiary not found</div>;
+
+  const handleConsentChange = useCallback((newStatus: string) => {
+    setBeneficiary(prev => prev ? { ...prev, status: newStatus } : prev);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -89,7 +112,7 @@ export function BeneficiaryViewPage() {
               {beneficiary.name.charAt(0)}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#1A1A1A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{beneficiary.name}</h2>
+              <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">{beneficiary.name}</h2>
               <p className="text-sm text-gray-500">ID: {beneficiary.id}</p>
               <div className="mt-1 flex items-center gap-3 text-sm text-gray-600">
                 <span className="flex items-center gap-1"><User size={14} /> {beneficiary.gender}, {beneficiary.age} yrs old</span>
@@ -151,6 +174,60 @@ export function BeneficiaryViewPage() {
           )}
         </div>
       </div>
+
+      {family.length > 0 && (
+        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+          <button onClick={() => setFamilyExpanded(!familyExpanded)} className="flex items-center gap-2 text-[#2E5C8A] mb-3">
+            {familyExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            <UsersIcon size={18} />
+            <h3 className="text-sm font-semibold">Family Composition ({family.length})</h3>
+          </button>
+          {familyExpanded && (
+            <div className="space-y-1">
+              {family.map(m => (
+                <div key={m.id} className="flex items-center justify-between rounded bg-gray-50 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2E5C8A]/10 text-xs font-medium text-[#2E5C8A]">
+                      {m.fullName.charAt(0)}
+                    </span>
+                    <div>
+                      <p className="font-medium text-gray-800">{m.fullName} {m.isPrimary && <span className="text-xs text-[#2E5C8A]">(Primary)</span>}</p>
+                      <p className="text-xs text-gray-500">{m.relationship} · {m.age} yrs</p>
+                    </div>
+                  </div>
+                  {m.statusIncome && (
+                    <span className="text-xs text-gray-400">{m.statusIncome}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {/* Family Graph Section */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className="mb-4 flex items-center gap-2 text-[#2E5C8A]">
+          <UsersIcon size={18} />
+          <h3 className="text-sm font-semibold">Family Tree</h3>
+        </div>
+        {id && <FamilyGraph beneficiaryId={id} />}
+      </div>
+
+      {/* Consent Management Section */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className="mb-4 flex items-center gap-2 text-[#2E5C8A]">
+          <Shield size={18} />
+          <h3 className="text-sm font-semibold">Consent & Privacy</h3>
+        </div>
+        {id && beneficiary && (
+          <ConsentManager
+            beneficiaryId={id}
+            currentConsentStatus={beneficiary.status}
+            onConsentChange={handleConsentChange}
+          />
+        )}
+      </div>
+
     </div>
   );
 }

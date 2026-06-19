@@ -15,5 +15,9 @@ export const CreateBeneficiarySchema = z.object({
 
 export const UpdateBeneficiarySchema = CreateBeneficiarySchema.partial();
 
+export const RevokeConsentSchema = z.object({
+  reason: z.string().optional(),
+});
+
 export type CreateBeneficiaryInput = z.infer<typeof CreateBeneficiarySchema>;
 export type UpdateBeneficiaryInput = z.infer<typeof UpdateBeneficiarySchema>;
