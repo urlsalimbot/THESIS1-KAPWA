@@ -1,0 +1,251 @@
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { SyncService } from '../src/sync/sync.service';
+import { ConflictResolver } from '../src/sync/conflict-resolver';
+import { SyncQueue } from '../src/sync/sync-queue.entity';
+import { VersionVector } from '../src/sync/version-vector.entity';
+import { IntakeService } from '../src/intake/intake.service';
+
+const nodeCrypto = require('crypto');
+const keyPair = nodeCrypto.generateKeyPairSync('ed25519');
+const pubKeyRaw = keyPair.publicKey.export({ type: 'spki', format: 'der' }).subarray(-32).toString('hex');
+
+function signMsg(deviceId: string, changes: any[]): string {
+  const msg = JSON.stringify({ deviceId, changes });
+  return nodeCrypto.sign(null, Buffer.from(msg), keyPair.privateKey).toString('hex');
+}
+
+function makeIntakePayload() {
+  return {
+    beneficiary: {
+      surname: 'Dela Cruz',
+      firstName: 'Juan',
+      middleName: 'Santos',
+      gender: 'Male',
+      dob: '1980-01-15',
+      barangay: 'Barangay 1',
+      purok: 'Purok A',
+      phone: '09171234567',
+      category: 'Senior',
+    },
+    familyMembers: [
+      { fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, statusIncome: 'Employed' },
+    ],
+    case: {
+      serviceRequested: ['FA', 'CSR'],
+      requirementsChecklist: { med_cert: true, indigency: false, valid_id: true },
+      assessedBy: 'MSWDO Worker',
+      assignedWorkerId: undefined,
+    },
+  };
+}
+
+describe('SyncService — Offline Intake Sync', () => {
+  let service: SyncService;
+  let queueRepoMock: any;
+  let versionRepoMock: any;
+  let conflictResolverMock: any;
+  let dataSourceMock: any;
+  let intakeServiceMock: any;
+
+  beforeEach(async () => {
+    queueRepoMock = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      create: jest.fn().mockReturnValue({}),
+      save: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+
+    versionRepoMock = {
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockReturnValue({}),
+      save: jest.fn().mockResolvedValue({}),
+    };
+
+    conflictResolverMock = {
+      resolve: jest.fn(),
+      resortToQueue: jest.fn(),
+    };
+
+    dataSourceMock = {
+      createQueryRunner: jest.fn().mockReturnValue({
+        connect: jest.fn(),
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn(),
+        rollbackTransaction: jest.fn(),
+        release: jest.fn(),
+        query: jest.fn().mockResolvedValue([]),
+      }),
+      query: jest.fn().mockResolvedValue([]),
+    };
+
+    intakeServiceMock = {
+      submitIntake: jest.fn().mockResolvedValue({
+        beneficiaryId: 'ben-uuid-1',
+        caseId: 'case-uuid-1',
+        controlNo: 'KAPWA-2026-00001',
+        status: 'pending_assessment',
+      }),
+    };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        SyncService,
+        { provide: getRepositoryToken(SyncQueue), useValue: queueRepoMock },
+        { provide: getRepositoryToken(VersionVector), useValue: versionRepoMock },
+        { provide: ConflictResolver, useValue: conflictResolverMock },
+        { provide: DataSource, useValue: dataSourceMock },
+        { provide: IntakeService, useValue: intakeServiceMock },
+      ],
+    }).compile();
+
+    service = module.get<SyncService>(SyncService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // ----------------------------------------------------------------
+  // Test 1 — Sync processor dispatches 'intake' tableName to IntakeService
+  // ----------------------------------------------------------------
+  it('should dispatch intake tableName to IntakeService.submitIntake()', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+
+    const intakePayload = makeIntakePayload();
+    const changes = [{
+      id: 'intake-ch-dispatch',
+      tableName: 'intake',
+      recordId: nodeCrypto.randomUUID(),
+      operation: 'INSERT' as const,
+      payload: intakePayload,
+      clientUpdatedAt: '2026-06-19T10:00:00Z',
+    }];
+
+    const batch = {
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-intake-dispatch',
+      signature: signMsg(pubKeyRaw, changes),
+    };
+
+    const result: any = await service.processDelta(batch);
+
+    expect(intakeServiceMock.submitIntake).toHaveBeenCalledTimes(1);
+    expect(result.results[0].status).toBe('applied');
+  });
+
+  // ----------------------------------------------------------------
+  // Test 2 — Full consolidated payload is passed to submitIntake()
+  // ----------------------------------------------------------------
+  it('should pass the full consolidated intake payload to submitIntake()', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+
+    const intakePayload = makeIntakePayload();
+    const changes = [{
+      id: 'intake-ch-payload',
+      tableName: 'intake',
+      recordId: nodeCrypto.randomUUID(),
+      operation: 'INSERT' as const,
+      payload: intakePayload,
+      clientUpdatedAt: '2026-06-19T10:00:00Z',
+    }];
+
+    const batch = {
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-intake-payload',
+      signature: signMsg(pubKeyRaw, changes),
+    };
+
+    await service.processDelta(batch);
+
+    expect(intakeServiceMock.submitIntake).toHaveBeenCalledWith(
+      expect.objectContaining({
+        beneficiary: expect.objectContaining({
+          surname: 'Dela Cruz',
+          firstName: 'Juan',
+          barangay: 'Barangay 1',
+        }),
+        familyMembers: expect.arrayContaining([
+          expect.objectContaining({ fullName: 'Maria Dela Cruz' }),
+        ]),
+        case: expect.objectContaining({
+          serviceRequested: expect.arrayContaining(['FA', 'CSR']),
+        }),
+      }),
+    );
+  });
+
+  // ----------------------------------------------------------------
+  // Test 3 — Duplicate intake sync rejected by idempotency key
+  // ----------------------------------------------------------------
+  it('should reject duplicate intake sync via idempotency key', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+
+    const intakePayload = makeIntakePayload();
+    const changes = [{
+      id: 'intake-ch-dup',
+      tableName: 'intake',
+      recordId: nodeCrypto.randomUUID(),
+      operation: 'INSERT' as const,
+      payload: intakePayload,
+      clientUpdatedAt: '2026-06-19T10:00:00Z',
+    }];
+
+    const batch = {
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-intake-dup',
+      signature: signMsg(pubKeyRaw, changes),
+    };
+
+    // First call — should process intake
+    const first: any = await service.processDelta(batch);
+    expect(intakeServiceMock.submitIntake).toHaveBeenCalledTimes(1);
+    expect(first.results[0].status).toBe('applied');
+
+    // Second call with same batch idempotency key — should return cached result
+    const second: any = await service.processDelta(batch);
+    expect(intakeServiceMock.submitIntake).toHaveBeenCalledTimes(1); // Not called again
+    expect(second.status).toBe('processed');
+    expect(second).toEqual(first);
+  });
+
+  // ----------------------------------------------------------------
+  // Test 4 — Failed sync marks queue entry as 'failed'
+  // ----------------------------------------------------------------
+  it('should mark sync result as failed when IntakeService throws', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+    intakeServiceMock.submitIntake.mockRejectedValue(new Error('Invalid intake data'));
+
+    const intakePayload = makeIntakePayload();
+    const changes = [{
+      id: 'intake-ch-fail',
+      tableName: 'intake',
+      recordId: nodeCrypto.randomUUID(),
+      operation: 'INSERT' as const,
+      payload: intakePayload,
+      clientUpdatedAt: '2026-06-19T10:00:00Z',
+    }];
+
+    const batch = {
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-intake-fail',
+      signature: signMsg(pubKeyRaw, changes),
+    };
+
+    const result: any = await service.processDelta(batch);
+
+    expect(result.results[0].status).toBe('failed');
+    expect(result.results[0].reason).toContain('Invalid intake data');
+  });
+});
