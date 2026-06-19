@@ -71,6 +71,13 @@ export async function getConsentLedger(beneficiaryId: string) {
   return apiFetch(`/beneficiaries/${beneficiaryId}/consent`);
 }
 
+export async function revokeConsent(beneficiaryId: string, reason?: string) {
+  return apiFetch(`/beneficiaries/${beneficiaryId}/consent/revoke`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
 // ===== CSR =====
 export async function getCsrRecords(signal?: AbortSignal) {
   return apiFetch('/csr', { signal });
