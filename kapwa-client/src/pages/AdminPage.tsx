@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import '../index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -18,6 +18,15 @@ interface AppUser {
   assignedBarangay: string; isActive: boolean; createdAt: string;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'MSWDO Admin',
+  social_worker: 'MSWDO Social Worker',
+  coordinator: 'Barangay Coordinator',
+  claimant: 'Claimant',
+  mayor: "Mayor's Office",
+  auditor: 'Auditor',
+};
+
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<'programs' | 'users' | 'sync' | 'audit'>('programs');
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -28,11 +37,25 @@ export function AdminPage() {
   const [editUser, setEditUser] = useState<AppUser | null>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
+  // Create user form state
+  const [formEmail, setFormEmail] = useState('');
+  const [formPassword, setFormPassword] = useState('');
+  const [formFullName, setFormFullName] = useState('');
+  const [formRole, setFormRole] = useState('social_worker');
+  const [formPhone, setFormPhone] = useState('');
+  const [formBarangay, setFormBarangay] = useState('');
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formSuccess, setFormSuccess] = useState('');
+  const [formError, setFormError] = useState('');
+  const [formPermittedBarangays, setFormPermittedBarangays] = useState('');
+
   useEffect(() => {
+    const controller = new AbortController();
     if (activeTab === 'programs') fetchPrograms();
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'sync') fetchSyncEntries();
     if (activeTab === 'audit') fetchAuditLogs();
+      return () => controller.abort();
   }, [activeTab]);
 
   async function fetchPrograms() {
@@ -41,7 +64,7 @@ export function AdminPage() {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(`${API_URL}/programs`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setPrograms(await res.json());
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
   }
 
   async function fetchUsers() {
@@ -50,7 +73,7 @@ export function AdminPage() {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(`${API_URL}/users`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setUsers(await res.json().then(d => d.data || d));
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
   }
 
   async function fetchSyncEntries() {
@@ -59,7 +82,7 @@ export function AdminPage() {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(`${API_URL}/sync/conflicts/admin`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setSyncEntries(await res.json());
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
   }
 
   async function fetchAuditLogs() {
@@ -73,7 +96,51 @@ export function AdminPage() {
       const coa = coaRes.ok ? await coaRes.json() : null;
       const hash = hashRes.ok ? await hashRes.json() : null;
       setAuditLogs([coa, hash].filter(Boolean));
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
+  }
+
+  async function createUser(e: React.FormEvent) {
+    e.preventDefault();
+    setFormSubmitting(true);
+    setFormSuccess('');
+    setFormError('');
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      const body: Record<string, any> = {
+        email: formEmail,
+        password: formPassword,
+        role: formRole,
+      };
+      if (formFullName) body.full_name = formFullName;
+      if (formPhone) body.phone = formPhone;
+      if (formBarangay) body.assigned_barangay = formBarangay;
+      if (formPermittedBarangays.trim()) {
+        body.permitted_barangays = formPermittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
+      }
+      const res = await fetch(`${API_URL}/users`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Failed to create user: ${res.status}`);
+      }
+      const data = await res.json();
+      setFormSuccess(`User ${data.user?.email || formEmail} created successfully`);
+      setFormEmail('');
+      setFormPassword('');
+      setFormFullName('');
+      setFormRole('social_worker');
+      setFormPhone('');
+      setFormBarangay('');
+      setFormPermittedBarangays('');
+      fetchUsers();
+    } catch (e: any) {
+      setFormError(e.message || 'Failed to create user');
+    } finally {
+      setFormSubmitting(false);
+    }
   }
 
   async function toggleUserStatus(user: AppUser) {
@@ -85,7 +152,7 @@ export function AdminPage() {
         body: JSON.stringify({ isActive: !user.isActive }),
       });
       fetchUsers();
-    } catch {}
+    } catch (e) { console.error("AdminPage:", e); }
   }
 
   async function updateUserRole(user: AppUser, role: string) {
@@ -97,7 +164,7 @@ export function AdminPage() {
         body: JSON.stringify({ role }),
       });
       fetchUsers();
-    } catch {}
+    } catch (e) { console.error("AdminPage:", e); }
   }
 
   async function deleteUser(id: string) {
@@ -106,7 +173,7 @@ export function AdminPage() {
       const token = localStorage.getItem('kapwa_token');
       await fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       fetchUsers();
-    } catch {}
+    } catch (e) { console.error("AdminPage:", e); }
   }
 
   const tabs = [
@@ -121,7 +188,7 @@ export function AdminPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#1A1A1A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Admin Panel</h2>
+        <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">Admin Panel</h2>
         <p className="text-sm text-gray-500">System configuration, users, and monitoring</p>
       </div>
 
@@ -160,53 +227,122 @@ export function AdminPage() {
       )}
 
       {activeTab === 'users' && (
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-            <h3 className="font-semibold text-sm text-[#2E5C8A]">User Management</h3>
-            <input type="text" placeholder="Search users..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="rounded border border-gray-300 px-3 py-1.5 text-sm w-64" />
-          </div>
-          {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead><tr className="border-b border-gray-100">
-                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Email</th>
-                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Name</th>
-                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Role</th>
-                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Barangay</th>
-                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Status</th>
-                  <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Actions</th>
-                </tr></thead>
-                <tbody>
-                  {filteredUsers.map(u => (
-                    <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="px-4 py-2.5">{u.email}</td>
-                      <td className="px-4 py-2.5">{u.fullName || '—'}</td>
-                      <td className="px-4 py-2.5">
-                        <select value={u.role} onChange={e => updateUserRole(u, e.target.value)} className="rounded border border-gray-200 px-2 py-0.5 text-xs">
-                          <option value="admin">admin</option>
-                          <option value="social_worker">social_worker</option>
-                          <option value="coordinator">coordinator</option>
-                          <option value="claimant">claimant</option>
-                          <option value="mayor">mayor</option>
-                          <option value="auditor">auditor</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-2.5">{u.assignedBarangay || '—'}</td>
-                      <td className="px-4 py-2.5">
-                        <button onClick={() => toggleUserStatus(u)} className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {u.isActive ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <button onClick={() => deleteUser(u.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredUsers.length === 0 && <div className="p-8 text-center text-gray-400 text-sm">No users found</div>}
+        <div className="space-y-6">
+          {/* Create User Form */}
+          <div className="rounded-lg border border-gray-200 bg-white">
+            <div className="border-b border-gray-100 px-4 py-3">
+              <h3 className="font-semibold text-sm text-[#2E5C8A]">Create New User</h3>
             </div>
-          )}
+            <div className="p-4">
+              {formSuccess && (
+                <div className="mb-4 rounded bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+                  {formSuccess}
+                </div>
+              )}
+              {formError && (
+                <div className="mb-4 rounded bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                  {formError}
+                </div>
+              )}
+              <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
+                  <input type="email" required value={formEmail} onChange={e => setFormEmail(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" placeholder="user@example.com" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Password *</label>
+                  <input type="password" required minLength={8} value={formPassword} onChange={e => setFormPassword(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" placeholder="Min 8 characters" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Full Name</label>
+                  <input type="text" value={formFullName} onChange={e => setFormFullName(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" placeholder="Juan Dela Cruz" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Role *</label>
+                  <select required value={formRole} onChange={e => setFormRole(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none">
+                    {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                  <input type="text" value={formPhone} onChange={e => setFormPhone(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" placeholder="09171234567" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Assigned Barangay</label>
+                  <input type="text" value={formBarangay} onChange={e => setFormBarangay(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" placeholder="Norzagaray" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Permitted Barangays (comma-separated)</label>
+                  <input type="text" value={formPermittedBarangays} onChange={e => setFormPermittedBarangays(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" placeholder="Norzagaray, Angat, San Jose" />
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <button type="submit" disabled={formSubmitting}
+                    className="rounded bg-[#2E5C8A] px-6 py-2 text-sm font-medium text-white hover:bg-[#1D4A78] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    {formSubmitting ? 'Creating...' : 'Create User'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* User Management Table */}
+          <div className="rounded-lg border border-gray-200 bg-white">
+            <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+              <h3 className="font-semibold text-sm text-[#2E5C8A]">User Management</h3>
+              <input type="text" aria-label="Search users" placeholder="Search users..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="rounded border border-gray-300 px-3 py-1.5 text-sm w-64" />
+            </div>
+            {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead><tr className="border-b border-gray-100">
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Email</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Name</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Role</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Barangay</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Status</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-gray-500">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {filteredUsers.map(u => (
+                      <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="px-4 py-2.5">{u.email}</td>
+                        <td className="px-4 py-2.5">{u.fullName || '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <select aria-label="User role" value={u.role} onChange={e => updateUserRole(u, e.target.value)} className="rounded border border-gray-200 px-2 py-0.5 text-xs">
+                            <option value="admin">admin</option>
+                            <option value="social_worker">social_worker</option>
+                            <option value="coordinator">coordinator</option>
+                            <option value="claimant">claimant</option>
+                            <option value="mayor">mayor</option>
+                            <option value="auditor">auditor</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-2.5">{u.assignedBarangay || '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <button onClick={() => toggleUserStatus(u)} className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {u.isActive ? 'Active' : 'Inactive'}
+                          </button>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <button onClick={() => deleteUser(u.id)} className="text-xs text-red-500 hover:text-red-700" aria-label="Delete User">Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {filteredUsers.length === 0 && <div className="p-8 text-center text-gray-400 text-sm">No users found</div>}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

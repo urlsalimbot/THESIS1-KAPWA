@@ -52,7 +52,7 @@
 - [ ] **ROL-03**: Claimant self-service dashboard — status tracker, service history timeline, Access Card view, consent management
 - [ ] **ROL-04**: Mayor's Office sees aggregate data only (no PII), fund utilization, SLA compliance
 - [ ] **ROL-05**: Auditor role — read-only audit logs, hash-chain verification, consent ledger access
-- [ ] **ROL-06**: MSWDO Admin — manage programs, users, consent ledger, sync queue, audit exports
+- [x] **ROL-06**: MSWDO Admin — manage programs, users, consent ledger, sync queue, audit exports
 
 ### Consent & Compliance
 
@@ -139,7 +139,7 @@
 | ROL-03 | Phase 6 | Pending |
 | ROL-04 | Phase 6 | Pending |
 | ROL-05 | Phase 6 | Pending |
-| ROL-06 | Phase 1 | Pending |
+| ROL-06 | Phase 1 | Complete |
 | SYNC-01 | Phase 1 | Pending |
 | SYNC-02 | Phase 2 | Pending |
 | SYNC-03 | Phase 3 | Pending |
@@ -147,9 +147,11 @@
 | SYNC-05 | Phase 1 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 47 total
 - Mapped to phases: 47
 - Unmapped: 0 ✓
+
 ---
 *Requirements defined: 2026-06-19*
 *Last updated: 2026-06-19 after initial definition*
