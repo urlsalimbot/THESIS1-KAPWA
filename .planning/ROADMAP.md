@@ -7,7 +7,7 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
 ## Phases
 
 - [x] **Phase 1: Foundation — Deploy & Authenticate** - Infrastructure, roles, basic sync, and audit foundation
-- [ ] **Phase 2: GIS Intake & Beneficiary Registration** - Dual-mode GIS intake with consent management
+- [x] **Phase 2: GIS Intake & Beneficiary Registration** - Dual-mode GIS intake with consent management (completed 2026-06-19)
 - [ ] **Phase 3: Intervention Tracking & Case Management** - End-to-end case workflow with post-disbursement logging
 - [ ] **Phase 4: Access Card System** - Code# generation, service logs, loss/replacement workflow
 - [ ] **Phase 5: Dynamic Programs & IRF Module** - Program configuration and encrypted incident reports
@@ -52,13 +52,13 @@ Plans:
   4. Family graph visualization shows relationships up to 2 degrees, filtered by consent status
   5. Consent ledger tracks grant/revoke per beneficiary; revoked consent = immediate masking of PII fields in UI
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 
 - [x] 02-01-PLAN.md — Consolidated GIS Intake: POST /api/intake, category migration, IntakePage wiring
 - [x] 02-02-PLAN.md — Beneficiary Search: pg_trgm + ts_rank, category/barangay filters
-- [ ] 02-03-PLAN.md — Family Graph, Consent & PII: Recursive CTE, revoke endpoint, interceptor, UI
+- [x] 02-03-PLAN.md — Family Graph, Consent & PII: Recursive CTE, revoke endpoint, interceptor, UI
 - [x] 02-04-PLAN.md — Offline Intake Sync: Sync processor for intake, offline queue consolidation
 
 ### Phase 3: Intervention Tracking & Case Management
@@ -150,7 +150,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation — Deploy & Authenticate | 4/4 | Complete | 2026-06-19 |
-| 2. GIS Intake & Beneficiary Registration | 3/4 | In Progress|  |
+| 2. GIS Intake & Beneficiary Registration | 4/4 | Complete   | 2026-06-19 |
 | 3. Intervention Tracking & Case Management | 0/0 | Not started | - |
 | 4. Access Card System | 0/0 | Not started | - |
 | 5. Dynamic Programs & IRF Module | 0/0 | Not started | - |

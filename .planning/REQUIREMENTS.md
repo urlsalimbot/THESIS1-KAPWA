@@ -11,7 +11,7 @@
 - [ ] **GIS-02**: Profile fields are editable ONLY during active GIS intake sessions — no standalone PATCH endpoints for beneficiaries
 - [ ] **GIS-03**: Intake completion generates a case with control_no and status = 'pending_assessment'
 - [x] **GIS-04**: Staff can search beneficiaries by name, category, and barangay using trigram + BM25 with typo tolerance
-- [ ] **GIS-05**: Family graph visualization via recursive CTE (up to 2 degrees, consent-filtered)
+- [x] **GIS-05**: Family graph visualization via recursive CTE (up to 2 degrees, consent-filtered)
 - [ ] **GIS-06**: Beneficiary categorization by type (Senior, PWD, Child, Solo Parent, etc.)
 
 ### Intervention Tracking
@@ -56,8 +56,8 @@
 
 ### Consent & Compliance
 
-- [ ] **CON-01**: Consent ledger with grant/revoke tracking per beneficiary
-- [ ] **CON-02**: Revoked consent = immediate UI masking or null return on PII fields
+- [x] **CON-01**: Consent ledger with grant/revoke tracking per beneficiary
+- [x] **CON-02**: Revoked consent = immediate UI masking or null return on PII fields
 - [ ] **CON-03**: ABAC evaluates (role, resource_sensitivity, consent_status, legal_basis) for every query
 - [ ] **CON-04**: ARTA SLA timers with auto-escalation for overdue approvals
 - [ ] **CON-05**: DSWD/COA-compliant report export formats
@@ -102,8 +102,8 @@
 | AC-02 | Phase 4 | Pending |
 | AC-03 | Phase 4 | Pending |
 | AC-04 | Phase 4 | Pending |
-| CON-01 | Phase 2 | Pending |
-| CON-02 | Phase 2 | Pending |
+| CON-01 | Phase 2 | Complete |
+| CON-02 | Phase 2 | Complete |
 | CON-03 | Phase 3 | Pending |
 | CON-04 | Phase 3 | Pending |
 | CON-05 | Phase 6 | Pending |
@@ -112,7 +112,7 @@
 | GIS-02 | Phase 2 | Pending |
 | GIS-03 | Phase 2 | Pending |
 | GIS-04 | Phase 2 | Complete |
-| GIS-05 | Phase 2 | Pending |
+| GIS-05 | Phase 2 | Complete |
 | GIS-06 | Phase 2 | Pending |
 | INF-01 | Phase 1 | Pending |
 | INF-02 | Phase 1 | Pending |
