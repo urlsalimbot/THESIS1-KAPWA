@@ -75,11 +75,13 @@ Plans:
   4. Each intervention requires a mandatory worker signature upload AND client receipt/liquidation scan; Case Tracker Log auto-generates with daily sequence numbering
   5. ABAC evaluates (role, resource_sensitivity, consent_status) on every intervention query; ARTA SLA timers auto-escalate overdue approval steps
 
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
 
-- TBD
+- [ ] 03-01-PLAN.md — Case FSM Lifecycle: 3-gate separation with per-gate endpoints, admin override, role-specific UI
+- [ ] 03-02-PLAN.md — Intervention Logging: signatures via MinIO, duplicate detection, fund source tracking, deferrable sig state
+- [ ] 03-03-PLAN.md — Tracker, SLA & Offline: NORZ-TRACK IDs, ARTA SLA cron, offline FSM transitions, sync conflict resolution
 
 ### Phase 4: Access Card System
 
@@ -151,7 +153,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Foundation — Deploy & Authenticate | 4/4 | Complete | 2026-06-19 |
 | 2. GIS Intake & Beneficiary Registration | 4/4 | Complete   | 2026-06-19 |
-| 3. Intervention Tracking & Case Management | 0/0 | Not started | - |
+| 3. Intervention Tracking & Case Management | 0/3 | Not started | - |
 | 4. Access Card System | 0/0 | Not started | - |
 | 5. Dynamic Programs & IRF Module | 0/0 | Not started | - |
 | 6. Dashboards, Notifications & Role Completion | 0/0 | Not started | - |
