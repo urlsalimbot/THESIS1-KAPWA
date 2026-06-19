@@ -1,10 +1,15 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  test: { 
-    globals: true, 
+  test: {
+    globals: true,
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'http://localhost',
+      },
+    },
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.test.ts']
-  }
+    include: ['tests/**/*.test.ts'],
+  },
 });
