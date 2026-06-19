@@ -65,11 +65,11 @@
 
 ### Offline Sync
 
-- [ ] **SYNC-01**: SQLCipher local cache on mobile (AES-256 encrypted)
+- [x] **SYNC-01**: SQLCipher local cache on mobile (AES-256 encrypted)
 - [ ] **SYNC-02**: All core workflows function offline; delta sync on reconnect
 - [ ] **SYNC-03**: Conflict resolution: Financial/Amount → Server Wins; Notes → Chronological Append; Consent → Server Revocation Overrides; Unclear → Conflict Queue
 - [ ] **SYNC-04**: Idempotency key enforcement on sync endpoint
-- [ ] **SYNC-05**: Offline queue status indicator and pending count display in UI
+- [x] **SYNC-05**: Offline queue status indicator and pending count display in UI
 
 ### Infrastructure & Notifications
 
@@ -140,11 +140,11 @@
 | ROL-04 | Phase 6 | Pending |
 | ROL-05 | Phase 6 | Pending |
 | ROL-06 | Phase 1 | Complete |
-| SYNC-01 | Phase 1 | Pending |
+| SYNC-01 | Phase 1 | Complete |
 | SYNC-02 | Phase 2 | Pending |
 | SYNC-03 | Phase 3 | Pending |
 | SYNC-04 | Phase 1 | Pending |
-| SYNC-05 | Phase 1 | Pending |
+| SYNC-05 | Phase 1 | Complete |
 
 **Coverage:**
 

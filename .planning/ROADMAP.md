@@ -36,7 +36,7 @@ Plans:
 
 - [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
 - [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
-- [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
+- [x] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
 - [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
 
 ### Phase 2: GIS Intake & Beneficiary Registration
@@ -59,7 +59,7 @@ Plans:
 Plans:
 
 - [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [ ] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
+- [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
 - [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
 - [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
 
@@ -82,8 +82,8 @@ Plans:
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [ ] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
+- [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
+- [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
 - [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
 - [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
 
@@ -106,7 +106,7 @@ Plans:
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
+- [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
 - [ ] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
 - [ ] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
 - [ ] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
