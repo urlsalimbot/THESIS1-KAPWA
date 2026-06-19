@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -27,6 +27,7 @@ import { IntakeModule } from './intake/intake.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { PiiMaskingInterceptor } from './beneficiaries/pii.interceptor';
 import { AppController } from './app.controller';
 
 @Module({
@@ -81,6 +82,7 @@ import { AppController } from './app.controller';
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_INTERCEPTOR, useClass: PiiMaskingInterceptor },
   ],
 })
 export class AppModule {}

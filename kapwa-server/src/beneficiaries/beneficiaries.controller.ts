@@ -6,7 +6,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { AuthenticatedRequest } from '../auth/types';
-import { CreateBeneficiarySchema, CreateBeneficiaryInput } from './dto/beneficiaries.zod';
+import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema } from './dto/beneficiaries.zod';
 
 @Controller('beneficiaries')
 @UseGuards(JwtAuthGuard, AbacGuard)
@@ -55,6 +55,21 @@ export class BeneficiariesController {
   @Roles('admin', 'social_worker')
   async getFamilyGraph(@Param('id') id: string) {
     return this.benService.getFamilyGraph(id);
+  }
+
+  @Get(':id/consent')
+  @Roles('admin', 'social_worker')
+  async getConsentHistory(@Param('id') id: string) {
+    return this.benService.getMyConsent(id);
+  }
+
+  @Post(':id/consent/revoke')
+  @Roles('admin', 'social_worker')
+  async revokeConsent(
+    @Param('id') id: string,
+    @Body(new ZodPipe(RevokeConsentSchema)) body: { reason?: string },
+  ) {
+    return this.benService.revokeConsent(id, body);
   }
 
   @Post()

@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { of, firstValueFrom } from 'rxjs';
 import { PiiMaskingInterceptor } from '../src/beneficiaries/pii.interceptor';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
 
@@ -15,14 +16,6 @@ describe('PiiMaskingInterceptor', () => {
     }),
     getClass: () => null,
     getHandler: () => null,
-  });
-
-  const createCallHandler = (data: any) => ({
-    handle: () => ({
-      pipe: (op: any) => ({
-        toPromise: async () => op({ data }),
-      }),
-    }),
   });
 
   beforeEach(async () => {
@@ -45,6 +38,16 @@ describe('PiiMaskingInterceptor', () => {
 
   afterEach(() => jest.clearAllMocks());
 
+  // Helper to extract data from interceptor using proper RxJS
+  async function interceptData(data: any): Promise<any> {
+    const mockCtx = createMockCtx();
+    const mockNext = {
+      handle: () => of(data), // Returns a proper RxJS Observable
+    };
+    const observable = interceptor.intercept(mockCtx as any, mockNext as any);
+    return firstValueFrom(observable);
+  }
+
   // Test 8: PII fields nulled when consent is revoked (single response)
   it('should null PII fields when consent is revoked for a single object', async () => {
     (consentRepo.findOne as jest.Mock).mockResolvedValue({
@@ -65,10 +68,7 @@ describe('PiiMaskingInterceptor', () => {
       gender: 'Male',
     };
 
-    const mockCtx = createMockCtx();
-    const mockNext = createCallHandler(data);
-
-    const result = await interceptor.intercept(mockCtx as any, mockNext as any);
+    const result = await interceptData(data);
 
     expect(result.surname).toBeNull();
     expect(result.firstName).toBeNull();
@@ -92,20 +92,11 @@ describe('PiiMaskingInterceptor', () => {
       address: '123 Street',
     };
 
-    const mockCtx = createMockCtx();
-    const mockNext = createCallHandler(data);
+    const result = await interceptData(data);
 
-    const result = await interceptor.intercept(mockCtx as any, mockNext as any);
-    
-    expect((result as any).then).toBeUndefined(); // Should not be a Promise
-    if (result && typeof result === 'object' && 'then' in result) {
-      const resolved = await result;
-      expect(resolved.surname).toBe('Cruz');
-      expect(resolved.firstName).toBe('Juan');
-    } else {
-      expect(result.surname).toBe('Cruz');
-      expect(result.firstName).toBe('Juan');
-    }
+    expect(result.surname).toBe('Cruz');
+    expect(result.firstName).toBe('Juan');
+    expect(result.address).toBe('123 Street');
   });
 
   // Test 10: Array response masks PII for revoked beneficiaries only
@@ -120,18 +111,11 @@ describe('PiiMaskingInterceptor', () => {
       { id: 'ben-2', surname: 'Reyes', firstName: 'Maria', address: '456 Ave' },
     ];
 
-    const mockCtx = createMockCtx();
-    const mockNext = createCallHandler(data);
+    const result = await interceptData(data);
 
-    const result = await interceptor.intercept(mockCtx as any, mockNext as any);
-    
-    if (result && typeof result === 'object' && 'then' in result) {
-      const resolved = await result;
-      expect(resolved[0].surname).toBeNull();
-      expect(resolved[1].surname).toBe('Reyes');
-    } else {
-      expect(result[0].surname).toBeNull();
-      expect(result[1].surname).toBe('Reyes');
-    }
+    expect(result[0].surname).toBeNull();
+    expect(result[0].firstName).toBeNull();
+    expect(result[1].surname).toBe('Reyes');
+    expect(result[1].firstName).toBe('Maria');
   });
 });
