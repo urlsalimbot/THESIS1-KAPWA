@@ -23,7 +23,7 @@ export interface VersionVector {
   lastSyncedAt: string | null;
 }
 
-function loadQueue(): QueuedChange[] {
+export function loadQueue(): QueuedChange[] {
   const stored = localStorage.getItem(QUEUE_KEY);
   return stored ? JSON.parse(stored) : [];
 }
@@ -70,10 +70,6 @@ export async function queueChange(
   return change;
 }
 
-export async function getQueuedChange(id: string): Promise<QueuedChange | null> {
-  const queue = loadQueue();
-  return queue.find(c => c.id === id) || null;
-}
 
 export async function getPendingChanges(): Promise<QueuedChange[]> {
   const queue = loadQueue();
@@ -112,24 +108,8 @@ export async function markFailed(id: string, error: string): Promise<void> {
   }
 }
 
-export async function getConflictChanges(): Promise<QueuedChange[]> {
-  const queue = loadQueue();
-  return queue.filter(c => c.status === 'conflict');
-}
 
-export async function resolveConflict(id: string, resolution: 'server' | 'client'): Promise<void> {
-  const queue = loadQueue();
-  const change = queue.find(c => c.id === id);
-  if (!change) return;
 
-  change.status = resolution === 'client' ? 'pending' : 'synced';
-  saveQueue(queue);
-}
-
-export async function getVersionVector(table: string): Promise<VersionVector | null> {
-  const versions = loadVersions();
-  return versions.find(v => v.tableName === table) || null;
-}
 
 export async function incrementLocalVersion(table: string): Promise<void> {
   const versions = loadVersions();
