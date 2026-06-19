@@ -109,9 +109,9 @@ describe('SyncService — Offline Intake Sync', () => {
     jest.clearAllMocks();
   });
 
-  // ----------------------------------------------------------------
+  // ============= Task 1 Tests (RED phase) =============
+
   // Test 1 — Sync processor dispatches 'intake' tableName to IntakeService
-  // ----------------------------------------------------------------
   it('should dispatch intake tableName to IntakeService.submitIntake()', async () => {
     queueRepoMock.findOne.mockResolvedValue(null);
 
@@ -139,9 +139,7 @@ describe('SyncService — Offline Intake Sync', () => {
     expect(result.results[0].status).toBe('applied');
   });
 
-  // ----------------------------------------------------------------
   // Test 2 — Full consolidated payload is passed to submitIntake()
-  // ----------------------------------------------------------------
   it('should pass the full consolidated intake payload to submitIntake()', async () => {
     queueRepoMock.findOne.mockResolvedValue(null);
 
@@ -182,9 +180,7 @@ describe('SyncService — Offline Intake Sync', () => {
     );
   });
 
-  // ----------------------------------------------------------------
   // Test 3 — Duplicate intake sync rejected by idempotency key
-  // ----------------------------------------------------------------
   it('should reject duplicate intake sync via idempotency key', async () => {
     queueRepoMock.findOne.mockResolvedValue(null);
 
@@ -218,9 +214,7 @@ describe('SyncService — Offline Intake Sync', () => {
     expect(second).toEqual(first);
   });
 
-  // ----------------------------------------------------------------
   // Test 4 — Failed sync marks queue entry as 'failed'
-  // ----------------------------------------------------------------
   it('should mark sync result as failed when IntakeService throws', async () => {
     queueRepoMock.findOne.mockResolvedValue(null);
     intakeServiceMock.submitIntake.mockRejectedValue(new Error('Invalid intake data'));
@@ -247,5 +241,95 @@ describe('SyncService — Offline Intake Sync', () => {
 
     expect(result.results[0].status).toBe('failed');
     expect(result.results[0].reason).toContain('Invalid intake data');
+  });
+
+  // ============= Task 3 Tests (additional integration) =============
+
+  // Test 5 — End-to-end sync simulation
+  it('should create queue entry with applied status after successful intake sync', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+    queueRepoMock.create.mockReturnValue({});
+
+    const intakePayload = makeIntakePayload();
+    const changes = [{
+      id: 'intake-ch-e2e',
+      tableName: 'intake',
+      recordId: nodeCrypto.randomUUID(),
+      operation: 'INSERT' as const,
+      payload: intakePayload,
+      clientUpdatedAt: '2026-06-19T10:00:00Z',
+    }];
+
+    const batch = {
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-intake-e2e',
+      signature: signMsg(pubKeyRaw, changes),
+    };
+
+    const result: any = await service.processDelta(batch);
+
+    // Verify IntakeService was called with correct payload
+    expect(intakeServiceMock.submitIntake).toHaveBeenCalledTimes(1);
+    expect(intakeServiceMock.submitIntake).toHaveBeenCalledWith(intakePayload);
+
+    // Verify queue entry was created with correct fields
+    expect(queueRepoMock.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tableName: 'intake',
+        status: 'applied',
+        idempotencyKey: 'intake-ch-e2e',
+        operation: 'INSERT',
+        payload: intakePayload,
+      }),
+    );
+    expect(queueRepoMock.save).toHaveBeenCalled();
+
+    // Verify sync result
+    expect(result.results[0].status).toBe('applied');
+    expect(result.results[0].tableName).toBe('intake');
+  });
+
+  // Test 6 — Rollback propagation
+  it('should mark sync result as failed and not create queue entry when submitIntake throws', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+    intakeServiceMock.submitIntake.mockRejectedValue(new Error('Database constraint violation'));
+    queueRepoMock.create.mockClear();
+    queueRepoMock.save.mockClear();
+
+    const intakePayload = makeIntakePayload();
+    const changes = [{
+      id: 'intake-ch-rollback',
+      tableName: 'intake',
+      recordId: nodeCrypto.randomUUID(),
+      operation: 'INSERT' as const,
+      payload: intakePayload,
+      clientUpdatedAt: '2026-06-19T10:00:00Z',
+    }];
+
+    const batch = {
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-intake-rollback',
+      signature: signMsg(pubKeyRaw, changes),
+    };
+
+    const result: any = await service.processDelta(batch);
+
+    // Verify the sync result shows failure with correct reason
+    expect(result.results[0].status).toBe('failed');
+    expect(result.results[0].reason).toContain('Database constraint violation');
+    expect(result.results[0].changeId).toBe('intake-ch-rollback');
+
+    // Verify IntakeService was called (it threw, but was called)
+    expect(intakeServiceMock.submitIntake).toHaveBeenCalledTimes(1);
+
+    // No 'applied' queue entry should be created for the failed intake
+    const appliedCreateCalls = (queueRepoMock.create as jest.Mock).mock.calls.filter(
+      (call: any[]) => call[0]?.status === 'applied'
+    );
+    expect(appliedCreateCalls.length).toBe(0);
   });
 });
