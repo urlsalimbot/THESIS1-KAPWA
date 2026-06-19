@@ -127,3 +127,7 @@ export async function createUser(data: { email: string; password: string; role: 
   if (!res.ok) throw new Error(`Failed to create user: ${res.status}`);
   return res.json();
 }
+
+export async function submitIntake(data: Record<string, unknown>) {
+  return apiFetch('/intake', { method: 'POST', body: JSON.stringify(data) });
+}

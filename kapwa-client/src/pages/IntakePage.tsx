@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { queueChange } from '../lib/offline-queue';
 import { isOnline } from '../lib/sync';
+import { submitIntake } from '../lib/api';
 import SignaturePad from '../components/forms/SignaturePad';
 import '../index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const BARANGAYS = ['Bigte','Matictic','Partida','San Mateo','Tigbe','Minuyan','San Roque','Samson','FVR','Sta. Lucia'];
-const AGE_RANGES = ['0-7','8-17','18-59','60+'];
-const CLIENT_CATEGORIES = ['Children','Youth','Women','PWD','Senior','Family'];
-const SERVICE_TYPES = ['Financial Aid','Case Study Report','PWD Referral','Medical Assistance','Burial Assistance','Food Assistance','Educational Assistance','Transportation','Others'];
+import { BARANGAYS, SERVICE_TYPES } from '../lib/constants';
+
+const CATEGORIES = ['Senior', 'PWD', 'Child', 'Solo Parent', 'Indigenous', 'Others'];
 
 interface FamilyMember {
   id: string;
@@ -33,6 +33,7 @@ export function IntakePage() {
     phone: '',
     barangay: '',
     purok: '',
+    category: '',
     serviceRequested: [] as string[],
     assessedBy: '',
     hasConsent: false,
@@ -64,7 +65,7 @@ export function IntakePage() {
     };
   }, []);
 
-  function update(field: string, value: any) {
+  function update(field: string, value: string | number | boolean | string[]) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
@@ -93,7 +94,7 @@ export function IntakePage() {
     }]);
   }
 
-  function updateFamilyMember(id: string, field: string, value: any) {
+  function updateFamilyMember(id: string, field: string, value: string | number | boolean | string[]) {
     setFamily(prev =>
       prev.map(m => m.id === id ? { ...m, [field]: value } : m)
     );
@@ -101,6 +102,34 @@ export function IntakePage() {
 
   function removeFamilyMember(id: string) {
     setFamily(prev => prev.filter(m => m.id !== id));
+  }
+
+  function buildConsolidatedPayload() {
+    return {
+      beneficiary: {
+        surname: form.surname,
+        firstName: form.firstName,
+        middleName: form.middleName,
+        gender: form.gender,
+        dob: form.dob,
+        barangay: form.barangay,
+        purok: form.purok || undefined,
+        phone: form.phone || undefined,
+        category: form.category || undefined,
+      },
+      familyMembers: family.filter(m => m.fullName.trim()).map(f => ({
+        fullName: f.fullName,
+        relationship: f.relationship,
+        age: f.age || undefined,
+        statusIncome: f.statusIncome || undefined,
+      })),
+      case: {
+        serviceRequested: form.serviceRequested,
+        requirementsChecklist: Object.fromEntries(requirements.map(r => [r.key, r.checked])),
+        assessedBy: form.assessedBy,
+        assignedWorkerId: undefined,
+      },
+    };
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -123,55 +152,21 @@ export function IntakePage() {
 
     setSubmitting(true);
 
-    const payload = {
-      beneficiary: {
-        surname: form.surname,
-        first_name: form.firstName,
-        middle_name: form.middleName,
-        gender: form.gender,
-        dob: form.dob,
-        address: `${form.purok ? form.purok + ', ' : ''}${form.barangay}`,
-        phone: form.phone,
-        barangay: form.barangay,
-      },
-      familyMembers: family.filter(m => m.fullName.trim()),
-      case: {
-        service_requested: form.serviceRequested,
-        requirements_checklist: requirements,
-        assessed_by: form.assessedBy,
-        worker_signature: signature,
-        has_consent: form.hasConsent,
-      },
-    };
+    const payload = buildConsolidatedPayload();
 
     try {
       if (offlineMode) {
-        await queueChange('cases', crypto.randomUUID(), 'INSERT', payload);
+        await queueChange('intake', crypto.randomUUID(), 'INSERT', payload);
         setSuccess('Queued for sync — will be submitted when online.');
       } else {
-        const token = localStorage.getItem('kapwa_token');
-        const res = await fetch(`${API_URL}/cases`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const err = await res.text();
-          throw new Error(err);
-        }
-
-        const data = await res.json();
-        setSuccess(`Case ${data.control_no} created successfully!`);
+        const data = await submitIntake(payload);
+        setSuccess(`Case ${data.controlNo || ''} created successfully!`);
         resetForm();
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit intake');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err) || 'Failed to submit intake');
       // fallback: queue for sync
-      await queueChange('cases', crypto.randomUUID(), 'INSERT', payload);
+      await queueChange('intake', crypto.randomUUID(), 'INSERT', payload);
       setError('Submission failed — queued for sync when online.');
     } finally {
       setSubmitting(false);
@@ -181,7 +176,7 @@ export function IntakePage() {
   function resetForm() {
     setSignature(null);
     setSigResetKey(k => k + 1);
-    setForm({ surname: '', firstName: '', middleName: '', gender: 'Male', dob: '', address: '', phone: '', barangay: '', purok: '', serviceRequested: [], assessedBy: '', hasConsent: false });
+    setForm({ surname: '', firstName: '', middleName: '', gender: 'Male', dob: '', address: '', phone: '', barangay: '', purok: '', category: '', serviceRequested: [], assessedBy: '', hasConsent: false });
     setFamily([]);
     setRequirements(prev => prev.map(r => ({ ...r, checked: false })));
     setSignature(null);
@@ -191,7 +186,7 @@ export function IntakePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-[#1A1A1A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>GIS Intake Form</h2>
+          <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">GIS Intake Form</h2>
           <p className="text-sm text-gray-500">General Intake Sheet — Client Stub + Assessment</p>
         </div>
         <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${offlineMode ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
@@ -206,44 +201,51 @@ export function IntakePage() {
       <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
         {/* Client Stub Section */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-[#2E5C8A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Client Stub / Beneficiary Information</h3>
+          <h3 className="mb-4 font-semibold text-[#2E5C8A] font-sans">Client Stub / Beneficiary Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Surname *</label>
-              <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.surname} onChange={e => update('surname', e.target.value)} />
+              <label htmlFor="surname" className="mb-1 block text-sm font-medium text-gray-700">Surname *</label>
+              <input id="surname" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.surname} onChange={e => update('surname', e.target.value)} aria-label="Surname" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">First Name *</label>
-              <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.firstName} onChange={e => update('firstName', e.target.value)} />
+              <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.firstName} onChange={e => update('firstName', e.target.value)} aria-label="First Name" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Middle Name</label>
-              <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.middleName} onChange={e => update('middleName', e.target.value)} />
+              <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.middleName} onChange={e => update('middleName', e.target.value)} aria-label="Middle Name" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Gender *</label>
-              <select className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.gender} onChange={e => update('gender', e.target.value)}>
+              <select className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.gender} onChange={e => update('gender', e.target.value)} aria-label="Gender">
                 <option>Male</option><option>Female</option>
               </select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Date of Birth *</label>
-              <input type="date" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.dob} onChange={e => update('dob', e.target.value)} />
+              <input type="date" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.dob} onChange={e => update('dob', e.target.value)} aria-label="Date of Birth" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Contact Number</label>
-              <input type="tel" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.phone} onChange={e => update('phone', e.target.value)} />
+              <input type="tel" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.phone} onChange={e => update('phone', e.target.value)} aria-label="Contact Number" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Barangay *</label>
-              <select className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.barangay} onChange={e => update('barangay', e.target.value)}>
+              <select className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.barangay} onChange={e => update('barangay', e.target.value)} aria-label="Barangay">
                 <option value="">Select...</option>
                 {BARANGAYS.map(b => <option key={b}>{b}</option>)}
               </select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Purok / Zone</label>
-              <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.purok} onChange={e => update('purok', e.target.value)} />
+              <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.purok} onChange={e => update('purok', e.target.value)} aria-label="Purok / Zone" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Category</label>
+              <select className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" value={form.category} onChange={e => update('category', e.target.value)} aria-label="Category">
+                <option value="">Select...</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
           </div>
         </div>
@@ -251,7 +253,7 @@ export function IntakePage() {
         {/* Family Composition */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-[#2E5C8A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Family Composition</h3>
+            <h3 className="font-semibold text-[#2E5C8A] font-sans">Family Composition</h3>
             <button type="button" onClick={addFamilyMember} className="rounded bg-[#2E5C8A] px-3 py-1 text-xs text-white hover:bg-[#1e3d5e]">
               + Add Member
             </button>
@@ -261,32 +263,32 @@ export function IntakePage() {
             <div key={m.id} className="mb-3 flex flex-wrap items-end gap-2 rounded border border-gray-100 bg-gray-50 p-3">
               <div className="flex-1 min-w-[140px]">
                 <label className="block text-xs text-gray-500">Full Name</label>
-                <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.fullName} onChange={e => updateFamilyMember(m.id, 'fullName', e.target.value)} />
+                <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.fullName} onChange={e => updateFamilyMember(m.id, 'fullName', e.target.value)} aria-label="Family Member Full Name" />
               </div>
               <div className="w-24">
                 <label className="block text-xs text-gray-500">Relation</label>
-                <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)}>
+                <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)} aria-label="Family Member Relation">
                   {['Spouse','Child','Parent','Sibling','Grandparent','Other'].map(r => <option key={r}>{r}</option>)}
                 </select>
               </div>
               <div className="w-16">
                 <label className="block text-xs text-gray-500">Age</label>
-                <input type="number" min="0" className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.age} onChange={e => updateFamilyMember(m.id, 'age', e.target.value === '' ? '' : Number(e.target.value))} />
+                <input type="number" min="0" className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.age} onChange={e => updateFamilyMember(m.id, 'age', e.target.value === '' ? '' : Number(e.target.value))} aria-label="Family Member Age" />
               </div>
               <div className="w-24">
                 <label className="block text-xs text-gray-500">Income Status</label>
-                <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.statusIncome} onChange={e => updateFamilyMember(m.id, 'statusIncome', e.target.value)}>
+                <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={m.statusIncome} onChange={e => updateFamilyMember(m.id, 'statusIncome', e.target.value)} aria-label="Family Member Income Status">
                   {['Employed','Unemployed','Student','PWD','Senior'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
-              <button type="button" onClick={() => removeFamilyMember(m.id)} className="rounded bg-red-100 px-2 py-1 text-xs text-red-600 hover:bg-red-200">Remove</button>
+              <button type="button" onClick={() => removeFamilyMember(m.id)} className="rounded bg-red-100 px-2 py-1 text-xs text-red-600 hover:bg-red-200" aria-label="Remove">Remove</button>
             </div>
           ))}
         </div>
 
         {/* Service Requested & Requirements */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-[#2E5C8A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Service Request & Requirements</h3>
+          <h3 className="mb-4 font-semibold text-[#2E5C8A] font-sans">Service Request & Requirements</h3>
           <div className="mb-4">
             <label className="mb-2 block text-sm font-medium text-gray-700">Service Requested *</label>
             <div className="flex flex-wrap gap-2">
@@ -313,10 +315,10 @@ export function IntakePage() {
 
         {/* Assessment & Signature */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-[#2E5C8A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Assessment</h3>
+          <h3 className="mb-4 font-semibold text-[#2E5C8A] font-sans">Assessment</h3>
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700">Assessed By (MSWDO Staff) *</label>
-            <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.assessedBy} onChange={e => update('assessedBy', e.target.value)} />
+            <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.assessedBy} onChange={e => update('assessedBy', e.target.value)} aria-label="Assessed By" />
           </div>
           <SignaturePad key={sigResetKey} onSave={setSignature} label="Worker Signature *" />
           <label className="mt-4 flex items-center gap-2 text-sm">
@@ -326,7 +328,7 @@ export function IntakePage() {
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" className="rounded bg-[#2E5C8A] px-8 py-2 text-sm font-medium text-white hover:bg-[#1e3d5e] disabled:opacity-50" disabled={submitting}>
+          <button type="submit" className="rounded bg-[#2E5C8A] px-8 py-2 text-sm font-medium text-white hover:bg-[#1e3d5e] disabled:opacity-50" disabled={submitting} aria-label="Submit Intake">
             {submitting ? 'Submitting...' : offlineMode ? 'Queue for Sync' : 'Submit Intake'}
           </button>
           <button type="button" onClick={resetForm} className="rounded border border-gray-300 bg-white px-8 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
