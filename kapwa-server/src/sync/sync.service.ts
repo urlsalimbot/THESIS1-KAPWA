@@ -1,7 +1,6 @@
-import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Logger, Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { randomUUID } from 'crypto';
 import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
 import { ConflictResolver } from './conflict-resolver';
@@ -44,7 +43,8 @@ function sanitizePayload(payload: Record<string, any>): Record<string, any> {
 
 @Injectable()
 export class SyncService {
-  private readonly processedKeys = new Map<string, { result: any; timestamp: number }>();
+  private readonly logger = new Logger(SyncService.name);
+  private readonly idempotencyCache = new Map<string, { result: unknown; timestamp: number }>();
 
   constructor(
     @InjectRepository(SyncQueue)
@@ -52,21 +52,17 @@ export class SyncService {
     @InjectRepository(VersionVector)
     private readonly versionRepo: Repository<VersionVector>,
     private readonly conflictResolver: ConflictResolver,
-    private readonly dataSource: DataSource,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   async processDelta(batch: SyncRequestInput) {
     const { deviceId, changes, versionVectors, idempotencyKey, signature } = batch;
 
-    const cached = this.getIdempotencyResult(idempotencyKey);
+    const cached = await this.getIdempotencyResult(idempotencyKey);
     if (cached) return cached;
 
     if (!this.verifySignature(signature, deviceId, changes)) {
       throw new ForbiddenException('Invalid Ed25519 signature');
-    }
-
-    if (this.processedKeys.has(idempotencyKey)) {
-      return this.processedKeys.get(idempotencyKey)!.result;
     }
 
     const results: Array<{
@@ -136,12 +132,12 @@ export class SyncService {
             status: 'applied',
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         results.push({
           changeId: change.id,
           tableName: change.tableName,
           status: 'failed',
-          reason: err.message,
+          reason: err instanceof Error ? err.message : String(err),
         });
       }
     }
@@ -158,7 +154,8 @@ export class SyncService {
       serverTimestamp: new Date().toISOString(),
     };
 
-    this.cacheIdempotencyResult(idempotencyKey, result);
+    await this.setIdempotencyResult(idempotencyKey, result);
+    await this.evictStaleEntries();
 
     return result;
   }
@@ -203,6 +200,75 @@ export class SyncService {
     }
 
     return { status: 'resolved', conflictId: id, resolution };
+  }
+
+  private async getIdempotencyResult(key: string): Promise<unknown | null> {
+    // 1. Check in-memory cache first (fast path)
+    const cached = this.idempotencyCache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < IDEMPOTENCY_TTL_MS) {
+      return cached.result;
+    }
+
+    // 2. Check DB (survives restarts)
+    if (this.idempotencyCache.has(key)) {
+      this.idempotencyCache.delete(key);
+    }
+    try {
+      const rows = await this.dataSource.query(
+        `SELECT result, created_at FROM idempotency_keys WHERE key = $1`,
+        [key]
+      );
+      if (rows.length > 0) {
+        const age = Date.now() - new Date(rows[0].created_at).getTime();
+        if (age < IDEMPOTENCY_TTL_MS) {
+          // Warm back into in-memory cache
+          this.idempotencyCache.set(key, { result: rows[0].result, timestamp: Date.now() });
+          return rows[0].result;
+        }
+        // Key expired — remove from DB
+        await this.dataSource.query(`DELETE FROM idempotency_keys WHERE key = $1`, [key]);
+      }
+    } catch (e) {
+      this.logger.warn('Idempotency DB lookup failed (table may not exist yet):', e);
+    }
+    return null;
+  }
+
+  private async setIdempotencyResult(key: string, result: unknown): Promise<void> {
+    // In-memory cache
+    if (this.idempotencyCache.size >= MAX_CACHE_SIZE) {
+      const oldest = this.idempotencyCache.keys().next().value;
+      if (oldest) this.idempotencyCache.delete(oldest);
+    }
+    this.idempotencyCache.set(key, { result, timestamp: Date.now() });
+
+    // DB persistence
+    try {
+      await this.dataSource.query(
+        `INSERT INTO idempotency_keys (key, result, created_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET result = $2`,
+        [key, JSON.stringify(result)]
+      );
+    } catch (e) {
+      this.logger.warn('Idempotency DB write failed (table may not exist yet):', e);
+    }
+  }
+
+  private async evictStaleEntries(): Promise<void> {
+    if (this.idempotencyCache.size > MAX_CACHE_SIZE) {
+      try {
+        await this.dataSource.query(
+          `DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL '24 hours'`
+        );
+      } catch (e) {
+        this.logger.warn('Idempotency DB eviction failed:', e);
+      }
+      // Clear half the in-memory cache
+      const entries = [...this.idempotencyCache.entries()];
+      for (let i = 0; i < entries.length / 2; i++) {
+        this.idempotencyCache.delete(entries[i][0]);
+      }
+    }
   }
 
   private async detectConflict(
@@ -302,7 +368,8 @@ export class SyncService {
         [recordId],
       );
       return result.length > 0 ? result[0] : null;
-    } catch {
+    } catch (e) {
+      this.logger.error("sync lookup error:", e);
       return null;
     }
   }
@@ -360,10 +427,10 @@ export class SyncService {
   private async getChangesSince(
     deviceId: string,
     clientVectors: Array<{ tableName: string; serverVersion: number }>,
-  ): Promise<any[]> {
+  ): Promise<Array<Record<string, unknown>>> {
     if (!clientVectors || clientVectors.length === 0) return [];
 
-    const changes: any[] = [];
+    const changes: Array<Record<string, unknown>> = [];
 
     for (const vec of clientVectors) {
       try {
@@ -372,13 +439,14 @@ export class SyncService {
           `SELECT * FROM "${tableNameFull}" WHERE updated_at > $1 OR updated_at IS NULL`,
           [new Date(Date.now() - IDEMPOTENCY_TTL_MS).toISOString()],
         );
-        changes.push(...rows.map((r: any) => ({
+        changes.push(...rows.map((r: Record<string, unknown>) => ({
           tableName: vec.tableName,
           recordId: r.id,
           payload: r,
           serverUpdatedAt: r.updated_at || r.created_at,
         })));
-      } catch {
+      } catch (e) {
+        this.logger.error("sync query error:", e);
       }
     }
 
@@ -388,7 +456,7 @@ export class SyncService {
   private verifySignature(
     signature: string,
     deviceId: string,
-    changes: any[],
+    changes: Array<Record<string, unknown>>,
   ): boolean {
     try {
       const crypto = require("crypto");
@@ -410,30 +478,9 @@ export class SyncService {
         pubKey,
         Buffer.from(signature, 'hex'),
       );
-    } catch {
+    } catch (e) {
+      this.logger.error("sync verify error:", e);
       return false;
     }
-  }
-
-  private getIdempotencyResult(key: string): any | null {
-    if (this.processedKeys.size > MAX_CACHE_SIZE) {
-      const entries = [...this.processedKeys.entries()];
-      const toDelete = entries.slice(0, entries.length - MAX_CACHE_SIZE);
-      for (const [k] of toDelete) this.processedKeys.delete(k);
-    }
-    const cached = this.processedKeys.get(key);
-    if (cached && Date.now() - cached.timestamp < IDEMPOTENCY_TTL_MS) {
-      return cached.result;
-    }
-    this.processedKeys.delete(key);
-    return null;
-  }
-
-  private cacheIdempotencyResult(key: string, result: any): void {
-    if (this.processedKeys.size >= MAX_CACHE_SIZE) {
-      const oldest = this.processedKeys.keys().next().value;
-      if (oldest) this.processedKeys.delete(oldest);
-    }
-    this.processedKeys.set(key, { result, timestamp: Date.now() });
   }
 }
