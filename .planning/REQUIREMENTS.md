@@ -98,59 +98,58 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GIS-01 | — | Pending |
-| GIS-02 | — | Pending |
-| GIS-03 | — | Pending |
-| GIS-04 | — | Pending |
-| GIS-05 | — | Pending |
-| GIS-06 | — | Pending |
-| INT-01 | — | Pending |
-| INT-02 | — | Pending |
-| INT-03 | — | Pending |
-| INT-04 | — | Pending |
-| INT-05 | — | Pending |
-| INT-06 | — | Pending |
-| INT-07 | — | Pending |
-| INT-08 | — | Pending |
-| AC-01 | — | Pending |
-| AC-02 | — | Pending |
-| AC-03 | — | Pending |
-| AC-04 | — | Pending |
-| IRF-01 | — | Pending |
-| IRF-02 | — | Pending |
-| IRF-03 | — | Pending |
-| IRF-04 | — | Pending |
-| PRG-01 | — | Pending |
-| PRG-02 | — | Pending |
-| PRG-03 | — | Pending |
-| ROL-01 | — | Pending |
-| ROL-02 | — | Pending |
-| ROL-03 | — | Pending |
-| ROL-04 | — | Pending |
-| ROL-05 | — | Pending |
-| ROL-06 | — | Pending |
-| CON-01 | — | Pending |
-| CON-02 | — | Pending |
-| CON-03 | — | Pending |
-| CON-04 | — | Pending |
-| CON-05 | — | Pending |
-| CON-06 | — | Pending |
-| SYNC-01 | — | Pending |
-| SYNC-02 | — | Pending |
-| SYNC-03 | — | Pending |
-| SYNC-04 | — | Pending |
-| SYNC-05 | — | Pending |
-| INF-01 | — | Pending |
-| INF-02 | — | Pending |
-| INF-03 | — | Pending |
-| INF-04 | — | Pending |
-| INF-05 | — | Pending |
+| AC-01 | Phase 4 | Pending |
+| AC-02 | Phase 4 | Pending |
+| AC-03 | Phase 4 | Pending |
+| AC-04 | Phase 4 | Pending |
+| CON-01 | Phase 2 | Pending |
+| CON-02 | Phase 2 | Pending |
+| CON-03 | Phase 3 | Pending |
+| CON-04 | Phase 3 | Pending |
+| CON-05 | Phase 6 | Pending |
+| CON-06 | Phase 1 | Pending |
+| GIS-01 | Phase 2 | Pending |
+| GIS-02 | Phase 2 | Pending |
+| GIS-03 | Phase 2 | Pending |
+| GIS-04 | Phase 2 | Pending |
+| GIS-05 | Phase 2 | Pending |
+| GIS-06 | Phase 2 | Pending |
+| INF-01 | Phase 1 | Pending |
+| INF-02 | Phase 1 | Pending |
+| INF-03 | Phase 1 | Pending |
+| INF-04 | Phase 6 | Pending |
+| INF-05 | Phase 1 | Pending |
+| INT-01 | Phase 3 | Pending |
+| INT-02 | Phase 3 | Pending |
+| INT-03 | Phase 3 | Pending |
+| INT-04 | Phase 3 | Pending |
+| INT-05 | Phase 3 | Pending |
+| INT-06 | Phase 3 | Pending |
+| INT-07 | Phase 4 | Pending |
+| INT-08 | Phase 3 | Pending |
+| IRF-01 | Phase 5 | Pending |
+| IRF-02 | Phase 5 | Pending |
+| IRF-03 | Phase 5 | Pending |
+| IRF-04 | Phase 5 | Pending |
+| PRG-01 | Phase 5 | Pending |
+| PRG-02 | Phase 5 | Pending |
+| PRG-03 | Phase 5 | Pending |
+| ROL-01 | Phase 1 | Pending |
+| ROL-02 | Phase 6 | Pending |
+| ROL-03 | Phase 6 | Pending |
+| ROL-04 | Phase 6 | Pending |
+| ROL-05 | Phase 6 | Pending |
+| ROL-06 | Phase 1 | Pending |
+| SYNC-01 | Phase 1 | Pending |
+| SYNC-02 | Phase 2 | Pending |
+| SYNC-03 | Phase 3 | Pending |
+| SYNC-04 | Phase 1 | Pending |
+| SYNC-05 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 47 total
-- Mapped to phases: 0
-- Unmapped: 47 ⚠️
-
+- Mapped to phases: 47
+- Unmapped: 0 ✓
 ---
 *Requirements defined: 2026-06-19*
 *Last updated: 2026-06-19 after initial definition*
