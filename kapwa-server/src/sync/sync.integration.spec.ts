@@ -6,6 +6,7 @@ import { ConflictResolver } from './conflict-resolver';
 import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
 import { SyncRequestInput } from './dto/sync.zod';
+import { IntakeService } from "../intake/intake.service";
 
 const crypto = require('crypto');
 const keyPair = crypto.generateKeyPairSync('ed25519');
@@ -80,6 +81,7 @@ describe('Sync Integration: conflict scenarios', () => {
         { provide: getRepositoryToken(VersionVector), useValue: versionRepo },
         { provide: ConflictResolver, useValue: conflictResolver },
         { provide: DataSource, useValue: dataSourceMock },
+        { provide: IntakeService, useValue: { submitIntake: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
 
@@ -95,7 +97,7 @@ describe('Sync Integration: conflict scenarios', () => {
       payload: { surname: 'Doe', first_name: 'John' },
       clientUpdatedAt: '2026-06-15T10:00:00Z',
     }];
-    const result = await service.processDelta({
+    const result: any = await service.processDelta({
       deviceId: pubKeyRaw,
       changes,
       versionVectors: [{ tableName: 'beneficiaries', localVersion: 1, serverVersion: 0 }],
@@ -160,6 +162,7 @@ describe('Sync Integration: conflict scenarios', () => {
         { provide: getRepositoryToken(VersionVector), useValue: versionRepo },
         { provide: ConflictResolver, useValue: conflictResolver },
         { provide: DataSource, useValue: dataSourceMock },
+        { provide: IntakeService, useValue: { submitIntake: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
     const svc2 = mod.get<SyncService>(SyncService);
@@ -172,7 +175,7 @@ describe('Sync Integration: conflict scenarios', () => {
       payload: { surname: 'Client' },
       clientUpdatedAt: '2026-06-15T10:00:00Z',
     }];
-    const result = await svc2.processDelta({
+    const result: any = await svc2.processDelta({
       deviceId: pubKeyRaw,
       changes,
       versionVectors: [],
@@ -183,7 +186,7 @@ describe('Sync Integration: conflict scenarios', () => {
   });
 
   it('should pull server changes since last sync', async () => {
-    const result = await service.pullFromServer(pubKeyRaw, [
+    const result: any = await service.pullFromServer(pubKeyRaw, [
       { tableName: 'beneficiaries', serverVersion: 0 },
     ]);
     expect(result.serverChanges).toBeDefined();
@@ -207,7 +210,7 @@ describe('Sync Integration: conflict scenarios', () => {
       operation: UPDATE,
       payload: { amount: 9999 },
     });
-    const result = await service.resolveConflict('resolve-1', 'server');
+    const result: any = await service.resolveConflict('resolve-1', 'server');
     expect(result.status).toBe('resolved');
     expect(result.resolution).toBe('server');
   });
@@ -221,7 +224,7 @@ describe('Sync Integration: conflict scenarios', () => {
       payload: { surname: 'ClientWins' },
     });
     dataSourceMock.query.mockResolvedValue([]);
-    const result = await service.resolveConflict('resolve-2', 'client');
+    const result: any = await service.resolveConflict('resolve-2', 'client');
     expect(result.status).toBe('resolved');
     expect(result.resolution).toBe('client');
   });

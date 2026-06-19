@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { IntakeService } from "../intake/intake.service";
 import { SyncService } from './sync.service';
 import { ConflictResolver } from './conflict-resolver';
 import { SyncQueue } from './sync-queue.entity';
@@ -62,6 +63,7 @@ describe('SyncService', () => {
         { provide: getRepositoryToken(VersionVector), useValue: versionRepoMock },
         { provide: ConflictResolver, useValue: conflictResolverMock },
         { provide: DataSource, useValue: dataSourceMock },
+        { provide: IntakeService, useValue: { submitIntake: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
 
@@ -76,7 +78,7 @@ describe('SyncService', () => {
       idempotencyKey: 'ik-empty',
       signature: signMsg(pubKeyRaw, []),
     };
-    const result = await service.processDelta(batch);
+    const result: any = await service.processDelta(batch);
     expect(result.status).toBe('processed');
     expect(result.results).toEqual([]);
   });
@@ -111,7 +113,7 @@ describe('SyncService', () => {
       idempotencyKey: 'ik-apply',
       signature: signMsg(pubKeyRaw, changes),
     };
-    const result = await service.processDelta(batch);
+    const result: any = await service.processDelta(batch);
     expect(result.results[0].status).toBe('applied');
   });
 
@@ -135,7 +137,7 @@ describe('SyncService', () => {
       idempotencyKey: 'ik-conflict',
       signature: signMsg(pubKeyRaw, changes),
     };
-    const result = await service.processDelta(batch);
+    const result: any = await service.processDelta(batch);
     expect(['conflict', 'applied']).toContain(result.results[0].status);
   });
 
@@ -153,7 +155,7 @@ describe('SyncService', () => {
       operation: 'UPDATE',
       payload: { amount: 8000 },
     });
-    const result = await service.resolveConflict('conf-1', 'server');
+    const result: any = await service.resolveConflict('conf-1', 'server');
     expect(result.status).toBe('resolved');
     expect(result.resolution).toBe('server');
   });
@@ -167,13 +169,13 @@ describe('SyncService', () => {
       payload: { surname: 'Client' },
     });
     dataSourceMock.query.mockResolvedValue([]);
-    const result = await service.resolveConflict('conf-2', 'client');
+    const result: any = await service.resolveConflict('conf-2', 'client');
     expect(result.status).toBe('resolved');
     expect(result.resolution).toBe('client');
   });
 
   it('pulls server changes', async () => {
-    const result = await service.pullFromServer(pubKeyRaw, [{ tableName: 'beneficiaries', serverVersion: 0 }]);
+    const result: any = await service.pullFromServer(pubKeyRaw, [{ tableName: 'beneficiaries', serverVersion: 0 }]);
     expect(result).toHaveProperty('serverChanges');
     expect(result).toHaveProperty('serverVersionVectors');
   });

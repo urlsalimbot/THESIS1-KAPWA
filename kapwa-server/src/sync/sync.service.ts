@@ -5,6 +5,7 @@ import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
 import { ConflictResolver } from './conflict-resolver';
 import { SyncRequestInput } from './dto/sync.zod';
+import { IntakeService } from '../intake/intake.service';
 
 const IDEMPOTENCY_TTL_MS = 86_400_000; // 24h
 const MAX_CACHE_SIZE = 10_000;
@@ -53,6 +54,7 @@ export class SyncService {
     private readonly versionRepo: Repository<VersionVector>,
     private readonly conflictResolver: ConflictResolver,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly intakeService: IntakeService,
   ) {}
 
   async processDelta(batch: SyncRequestInput) {
@@ -80,6 +82,30 @@ export class SyncService {
         });
 
         if (existing && existing.status === 'applied') {
+          results.push({
+            changeId: change.id,
+            tableName: change.tableName,
+            status: 'applied',
+          });
+          continue;
+        }
+
+        // Special handling for 'intake' tableName — delegate to IntakeService
+        if (change.tableName === 'intake') {
+          await this.intakeService.submitIntake(change.payload as any);
+
+          const queueEntry = this.queueRepo.create({
+            deviceId,
+            tableName: change.tableName,
+            recordId: change.recordId,
+            operation: change.operation as 'INSERT' | 'UPDATE' | 'DELETE',
+            payload: change.payload,
+            clientUpdatedAt: new Date(change.clientUpdatedAt),
+            status: 'applied',
+            idempotencyKey: change.id,
+          });
+          await this.queueRepo.save(queueEntry);
+
           results.push({
             changeId: change.id,
             tableName: change.tableName,
