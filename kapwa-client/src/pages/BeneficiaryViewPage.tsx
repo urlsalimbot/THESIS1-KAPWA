@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, User, MapPin, Users as UsersIcon, Gift, FileText, Plus, ChevronDown, ChevronRight, Shield } from 'lucide-react';
+import {
+  ArrowLeft, User, MapPin, Users as UsersIcon, Gift, FileText, Plus,
+  ChevronDown, ChevronRight, Shield, ClipboardList
+} from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getBeneficiary, getCases, getFamilyGraph } from '../lib/api';
+import { getBeneficiary, getCases, getFamilyGraph, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob } from '../lib/api';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { ConsentManager } from '../components/consent/ConsentManager';
+import SignaturePad from '../components/forms/SignaturePad';
 import '../index.css';
 
 interface BeneficiaryDetail {
@@ -38,6 +42,12 @@ export function BeneficiaryViewPage() {
   const [loading, setLoading] = useState(true);
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [familyExpanded, setFamilyExpanded] = useState(false);
+  const [interventionCaseId, setInterventionCaseId] = useState<string | null>(null);
+  const [intForm, setIntForm] = useState({ type: 'FA', amount: '', fundSource: 'Regular' });
+  const [intSigDataUrl, setIntSigDataUrl] = useState<string | null>(null);
+  const [intReceiptFile, setIntReceiptFile] = useState<File | null>(null);
+  const [intSubmitting, setIntSubmitting] = useState(false);
+  const [intError, setIntError] = useState('');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -91,6 +101,43 @@ export function BeneficiaryViewPage() {
     const s = map[status];
     return s ? <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span> : <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">{status}</span>;
   };
+
+  async function handleLogIntervention(e: React.FormEvent) {
+    e.preventDefault();
+    if (!interventionCaseId) return;
+    setIntError('');
+    setIntSubmitting(true);
+    try {
+      let workerSignatureUrl = '';
+      let receiptUrl = '';
+
+      if (intSigDataUrl) {
+        const blob = dataURItoBlob(intSigDataUrl);
+        workerSignatureUrl = await uploadSignature(blob, `sig-${Date.now()}.png`);
+      }
+
+      if (intReceiptFile) {
+        receiptUrl = await uploadReceipt(intReceiptFile, intReceiptFile.name);
+      }
+
+      await createIntervention({
+        caseId: interventionCaseId,
+        interventionType: intForm.type,
+        amount: parseFloat(intForm.amount) || 0,
+        fundSource: intForm.fundSource,
+        workerSignatureUrl: workerSignatureUrl || undefined,
+        clientReceiptUrl: receiptUrl || undefined,
+      } as any);
+
+      setInterventionCaseId(null);
+      setIntForm({ type: 'FA', amount: '', fundSource: 'Regular' });
+      setIntSigDataUrl(null);
+      setIntReceiptFile(null);
+    } catch (err: any) {
+      setIntError(err.message || 'Failed to log intervention');
+    }
+    setIntSubmitting(false);
+  }
 
   if (loading) return <div className="p-8 text-center text-gray-400">Loading...</div>;
   if (!beneficiary) return <div className="p-8 text-center text-gray-400">Beneficiary not found</div>;
@@ -150,7 +197,19 @@ export function BeneficiaryViewPage() {
                     <p className="font-medium text-gray-800">{c.program}</p>
                     <p className="text-xs text-gray-400">{c.id} · {c.date}</p>
                   </div>
-                  {statusBadge(c.status)}
+                  <div className="flex items-center gap-2">
+                    {statusBadge(c.status)}
+                    {c.status === 'disbursed' && (
+                      <button
+                        onClick={() => setInterventionCaseId(c.id === interventionCaseId ? null : c.id)}
+                        className="rounded bg-[#2E5C8A] px-2 py-1 text-xs text-white hover:bg-[#1e3d5e]"
+                        title="Log Intervention"
+                      >
+                        <ClipboardList size={12} className="inline mr-1" />
+                        Log Intervention
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -174,6 +233,65 @@ export function BeneficiaryViewPage() {
           )}
         </div>
       </div>
+
+      {/* Intervention Form (inline, shown when a disbursed case selected) */}
+      {interventionCaseId && (
+        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+          <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]">
+            <ClipboardList size={18} />
+            <h3 className="text-sm font-semibold">Log Intervention for Case {interventionCaseId}</h3>
+          </div>
+          {intError && <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{intError}</div>}
+          <form onSubmit={handleLogIntervention} className="space-y-4 max-w-lg">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="form-group">
+                <label className="form-label">Type</label>
+                <select className="form-select" value={intForm.type} onChange={e => setIntForm({ ...intForm, type: e.target.value })} aria-label="Intervention Type">
+                  <option value="FA">Financial Assistance</option>
+                  <option value="C">Counseling</option>
+                  <option value="CSR">CSR</option>
+                  <option value="R">Referral</option>
+                  <option value="H">Healthcare</option>
+                  <option value="HV">Home Visit</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Amount (₱)</label>
+                <input className="form-input" type="number" min="0" step="0.01" value={intForm.amount} onChange={e => setIntForm({ ...intForm, amount: e.target.value })} aria-label="Amount" />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Fund Source</label>
+              <select className="form-select" value={intForm.fundSource} onChange={e => setIntForm({ ...intForm, fundSource: e.target.value })} aria-label="Fund Source">
+                <option value="Regular">Regular</option>
+                <option value="PDAF">PDAF</option>
+                <option value="Legislative">Legislative</option>
+                <option value="Donation">Donation</option>
+              </select>
+            </div>
+            <SignaturePad
+              onSave={(dataUrl: string) => setIntSigDataUrl(dataUrl)}
+              label="Worker Signature"
+            />
+            <div className="form-group">
+              <label className="form-label">Client Receipt (optional photo)</label>
+              <input
+                type="file"
+                accept="image/*"
+                className="form-input"
+                onChange={e => setIntReceiptFile(e.target.files?.[0] || null)}
+                aria-label="Client Receipt"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" className="btn btn-primary" disabled={intSubmitting} aria-label="Submit Intervention">
+                {intSubmitting ? 'Saving...' : 'Submit Intervention'}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => { setInterventionCaseId(null); setIntError(''); setIntSigDataUrl(null); setIntReceiptFile(null); }} aria-label="Cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {family.length > 0 && (
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
@@ -227,7 +345,6 @@ export function BeneficiaryViewPage() {
           />
         )}
       </div>
-
     </div>
   );
 }

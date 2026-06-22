@@ -16,14 +16,14 @@
 
 ### Intervention Tracking
 
-- [ ] **INT-01**: Interventions (FA/C/CSR/R/H/HV) are loggable ONLY after case.status = 'disbursed'
-- [ ] **INT-02**: End-to-end workflow: intake → assessment → approval → disbursement → post-intervention logging
-- [ ] **INT-03**: Eligibility checks with sliding window duplicate detection (30-day household limit)
-- [ ] **INT-04**: Mandatory worker signature upload per intervention
-- [ ] **INT-05**: Mandatory client receipt/liquidation scan upload per intervention
+- [x] **INT-01**: Interventions (FA/C/CSR/R/H/HV) are loggable ONLY after case.status = 'disbursed'
+- [x] **INT-02**: End-to-end workflow: intake → assessment → approval → disbursement → post-intervention logging
+- [x] **INT-03**: Eligibility checks with sliding window duplicate detection (30-day household limit)
+- [x] **INT-04**: Mandatory worker signature upload per intervention
+- [x] **INT-05**: Mandatory client receipt/liquidation scan upload per intervention
 - [ ] **INT-06**: Case Tracker Log with daily sequencing (transaction_date + daily_seq_num unique)
 - [ ] **INT-07**: Auto-append to Access Card service records on intervention creation
-- [ ] **INT-08**: Fund source tracking (Regular/PDAF/Legislative/Donation) with balance checks
+- [x] **INT-08**: Fund source tracking (Regular/PDAF/Legislative/Donation) with balance checks
 
 ### Access Card System
 
@@ -58,7 +58,7 @@
 
 - [x] **CON-01**: Consent ledger with grant/revoke tracking per beneficiary
 - [x] **CON-02**: Revoked consent = immediate UI masking or null return on PII fields
-- [ ] **CON-03**: ABAC evaluates (role, resource_sensitivity, consent_status, legal_basis) for every query
+- [x] **CON-03**: ABAC evaluates (role, resource_sensitivity, consent_status, legal_basis) for every query
 - [ ] **CON-04**: ARTA SLA timers with auto-escalation for overdue approvals
 - [ ] **CON-05**: DSWD/COA-compliant report export formats
 - [ ] **CON-06**: SHA-256 hash chaining for audit trail integrity
@@ -104,7 +104,7 @@
 | AC-04 | Phase 4 | Pending |
 | CON-01 | Phase 2 | Complete |
 | CON-02 | Phase 2 | Complete |
-| CON-03 | Phase 3 | Pending |
+| CON-03 | Phase 3 | Complete |
 | CON-04 | Phase 3 | Pending |
 | CON-05 | Phase 6 | Pending |
 | CON-06 | Phase 1 | Pending |
@@ -119,14 +119,14 @@
 | INF-03 | Phase 1 | Pending |
 | INF-04 | Phase 6 | Pending |
 | INF-05 | Phase 1 | Pending |
-| INT-01 | Phase 3 | Pending |
-| INT-02 | Phase 3 | Pending |
-| INT-03 | Phase 3 | Pending |
-| INT-04 | Phase 3 | Pending |
-| INT-05 | Phase 3 | Pending |
+| INT-01 | Phase 3 | Complete |
+| INT-02 | Phase 3 | Complete |
+| INT-03 | Phase 3 | Complete |
+| INT-04 | Phase 3 | Complete |
+| INT-05 | Phase 3 | Complete |
 | INT-06 | Phase 3 | Pending |
 | INT-07 | Phase 4 | Pending |
-| INT-08 | Phase 3 | Pending |
+| INT-08 | Phase 3 | Complete |
 | IRF-01 | Phase 5 | Pending |
 | IRF-02 | Phase 5 | Pending |
 | IRF-03 | Phase 5 | Pending |
