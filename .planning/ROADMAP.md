@@ -31,8 +31,6 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
 
 **Plans**: 4/4 plans executed — COMPLETE
 
-Plans:
-
 - [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
 - [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
 - [x] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
@@ -53,8 +51,6 @@ Plans:
   5. Consent ledger tracks grant/revoke per beneficiary; revoked consent = immediate masking of PII fields in UI
 
 **Plans:** 4/4 plans complete
-
-Plans:
 
 - [x] 02-01-PLAN.md — Consolidated GIS Intake: POST /api/intake, category migration, IntakePage wiring
 - [x] 02-02-PLAN.md — Beneficiary Search: pg_trgm + ts_rank, category/barangay filters
@@ -77,8 +73,6 @@ Plans:
 
 **Plans:** 3/3 plans complete
 
-Plans:
-
 - [x] 03-01-PLAN.md — Case FSM Lifecycle: 3-gate separation with per-gate endpoints, admin override, role-specific UI
 - [x] 03-02-PLAN.md — Intervention Logging: signatures via MinIO, duplicate detection, fund source tracking, deferrable sig state
 - [x] 03-03-PLAN.md — Tracker, SLA & Offline: NORZ-TRACK IDs, ARTA SLA cron, offline FSM transitions, sync conflict resolution
@@ -99,8 +93,6 @@ Plans:
 
 **Plans**: 2/3 plans executed
 
-Plans:
-
 - [x] 04-01-PLAN.md — Generate & Assign Access Card (AC-01, AC-03)
 - [ ] 04-02-PLAN.md — Printable Card View & Service Log (AC-02, AC-03)
 - [x] 04-03-PLAN.md — No Card Soft Warning & Sync (AC-04, AC-02)
@@ -120,11 +112,13 @@ Plans:
   5. Victim/person-reported names are masked by default in all views; secure export to WCPD/PNP requires legal_basis_code + audit log entry
   6. IRF case disposition tracks through Under Investigation → Referred → Closed
 
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-
-- TBD
+- [ ] 05-01-PLAN.md — Dynamic Programs CRUD + JSON Schema Form Templates
+- [ ] 05-02-PLAN.md — Program Assignment & Approval Workflow FSM
+- [ ] 05-03-PLAN.md — IRF Encryption, Name Masking & Disposition FSM
+- [ ] 05-04-PLAN.md — IRF Secure Export (PDF + JSON) & Audit
 
 ### Phase 6: Dashboards, Notifications & Role Completion
 
@@ -141,12 +135,6 @@ Plans:
   5. SMS and in-app notifications are sent respecting consent preferences (opt-in/opt-out per channel)
   6. Admin can export DSWD/COA-compliant reports (audit logs, service summaries, compliance data)
 
-**Plans**: TBD
-
-Plans:
-
-- TBD
-
 ## Progress
 
 **Execution Order:** Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
@@ -157,5 +145,5 @@ Plans:
 | 2. GIS Intake & Beneficiary Registration | 4/4 | Complete   | 2026-06-19 |
 | 3. Intervention Tracking & Case Management | 3/3 | Complete   | 2026-06-22 |
 | 4. Access Card System | 3/3 | In Progress|  |
-| 5. Dynamic Programs & IRF Module | 0/0 | Not started | - |
+| 5. Dynamic Programs & IRF Module | 0/4 | Not started | - |
 | 6. Dashboards, Notifications & Role Completion | 0/0 | Not started | - |
