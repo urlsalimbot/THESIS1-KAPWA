@@ -29,20 +29,20 @@ created: 2026-06-22
 
 ## Spacing Scale
 
-Declared values (Tailwind CSS default spacing scale — multiples of 4 with 12px exception):
+Declared values (Tailwind CSS default spacing scale — multiples of 4):
 
 | Token | Value | Usage |
 |-------|-------|-------|
 | 1 | 4px | Icon gaps, compact label padding (badge px-2 py-0.5) |
-| 2 | 8px | Compact element spacing (filter-pill gap, compact form padding) |
-| 3 | 12px | Default inline padding (px-3, py-3), gap-3 for compact grids |
-| 4 | 16px | Default element spacing (p-4, gap-4), card body padding |
-| 6 | 24px | Section padding (p-6, mb-6), main content area padding |
-| 8 | 32px | Major section breaks, page-level spacing (my-8, p-8) |
-| 12 | 48px | Wide layout gaps between major page sections |
-| 16 | 64px | Page max-width gutters, top-level container padding |
+| 2 | 8px | Compact element spacing (filter-pill gap, compact form padding), default inline padding (px-3, py-3), gap-3 for compact grids |
+| 3 | 16px | Default element spacing (p-4, gap-4), card body padding |
+| 4 | 24px | Section padding (p-6, mb-6), main content area padding |
+| 5 | 32px | Major section breaks, page-level spacing (my-8, p-8) |
+| 6 | 48px | Wide layout gaps between major page sections |
+| 7 | 64px | Page max-width gutters, top-level container padding |
 
-**Exceptions:** 12px (Tailwind `3` / `gap-3` / `px-3`) is used extensively in the codebase for inline horizontal padding and compact grid gaps — this deviates from the strict 4px scale but is standard Tailwind spacing. All spacings derive from Tailwind's default `theme.spacing` scale.
+**Exceptions (non-multiple-of-4):**
+- `12px` — Used for inline padding in form inputs (`.form-input { padding: 8px 12px }`), filter-pill padding (`padding: 6px 12px`), and in CSS utility `.gap-3` / `gap: 12px`. These are inherited from the existing codebase and are preserved as-is. New spacing in Phase 4 must use strict multiples of 4.
 
 **Touch targets:** Icon buttons are 40×40px minimum (`.icon-btn { width: 40px; height: 40px; }`). Form inputs use 8px 12px padding for comfortable tap targets. No exceptions needed for this phase.
 
@@ -53,16 +53,17 @@ Declared values (Tailwind CSS default spacing scale — multiples of 4 with 12px
 | Role | Size | Weight | Line Height | Font Family |
 |------|------|--------|-------------|-------------|
 | Body | 14px | 400 (Regular) | 1.5 (20px) | Inter |
-| Label | 12px | 600 (Semibold) | 1.5 (18px) | Inter |
+| Label | 12px | 700 (Bold) | 1.5 (18px) | Inter |
 | Heading | 16px | 700 (Bold) | 1.5 (24px) | Plus Jakarta Sans |
 | Display | 24px | 700 (Bold) | 1.33 (32px) | Plus Jakarta Sans |
 
 **Notes:**
 - Label uses `text-transform: uppercase` with `letter-spacing: 0.5px` (see `.text-style-label`, `.text-style-label-upper`)
-- Table header text uses 12px / 600 / uppercase (see `.table th`)
+- Table header text uses 12px / 700 / uppercase (migrated from 600 to 700 per checker requirement — see `.table th`)
 - Monospace (`font-mono`) reserved for ID display — card codes (`NORZ-AC-YYYY-####`), UUIDs, sequence numbers
 - Table cell body uses 14px (standard body) with no explicit line-height (inherits 1.5)
 - Muted/secondary body text uses `color: #707070` at 14px
+- Only 2 font weights declared: 400 (Regular) for body, 700 (Bold) for labels/headings/display. The weight 600 (Semibold) previously used for labels has been consolidated into 700 (Bold) per checker requirement.
 
 ---
 
@@ -95,7 +96,7 @@ Declared values (Tailwind CSS default spacing scale — multiples of 4 with 12px
 - `#D4EDDA` + `#155724` — Card assignment success confirmation
 - `#DC3545` — Reprint identity verification `window.confirm()` is browser-native (no custom styling)
 - Table row `#F5F5F5` — Zebra striping (even rows), `#E8F0F7` — Row hover
-- Card code display: `font-mono, font-medium` at `12px` text size
+- Card code display: `font-mono` at `12px` text size
 
 ---
 
@@ -141,30 +142,35 @@ The project does not use shadcn/ui. All components use custom CSS (.css in `kapw
 - **Interaction:** Pick beneficiary (via existing beneficiary selector) → click "Generate & Assign Card" → POST `/access-cards/assign/:beneficiaryId` → show `{ accessCardCode }` in green success banner
 - **States:** Idle (default), Loading (button shows "Generating..."), Success (green banner with code), Error (red banner with API error)
 - **Role gate:** `@Roles('admin')` — only Admin can assign cards
+- **Primary focal point:** The "Generate & Assign Card" button at top of the personal info section on the beneficiary detail page — this is the primary action of the screen.
 
 ### 2. No Card Warning Overlay (AC-04, per D-03)
 - **Where:** InterventionsPage / BeneficiaryViewPage intervention form
 - **Interaction:** When `createIntervention` returns warning (beneficiary has no card) → yellow warning banner shown at top of form with override checkbox "Beneficiary has no Access Card — proceed anyway?"
 - **States:** No card detected (warning banner visible), Override checked (request sends `overrideNoCardCheck: true`), Override not checked (blocked with 400 error — user must check override)
 - **Visual:** Yellow/amber banner `#FFF3CD` background with `#856404` text, alert icon from lucide
+- **Primary focal point:** The "Log Anyway" override checkbox — this is the decisive interaction point on this screen.
 
 ### 3. Printable Card View (AC-02, per D-06)
 - **Where:** Dedicated route `/beneficiary/:id/card/print` (AccessCardPrintView)
 - **Interaction:** Shows card on screen → click "Print Card" → `window.print()` with `@media print` CSS
-- **Layout:** 
+- **Layout:**
   - Screen: card preview with print button, beneficiary info, service log table
   - Print: A4 portrait, 15mm margins, white background, monospace card code at 18pt, service log table with borders
 - **States:** Loading, Loaded (card data visible), No card found (empty state), Print dialog open (browser native)
+- **Primary focal point:** The "Print Card" button — the sole action this screen exists to enable.
 
 ### 4. Reprint Verification (AC-03, per D-04)
 - **Where:** BeneficiaryViewPage — "Reprint Card" button when beneficiary already has `access_card_code`
 - **Interaction:** Click "Reprint Card" → `window.confirm()` showing beneficiary name + current card code + "Verify claimant identity" → if confirmed, navigate to `/beneficiary/:id/card/print`
 - **States:** Card exists (reprint button visible), No card (button hidden), Confirmation dialog open (browser native)
+- **Primary focal point:** The "Reprint Card" button, located adjacent to the card info in the beneficiary profile.
 
 ### 5. Admin Card Management (AC-01, AC-02)
 - **Where:** AccessCardPage (`/access-cards`)
 - **Interaction:** Search beneficiary → assign card → view card service log → reprint / print
 - **States:** Loading, Table loaded, Search active, Empty (no beneficiaries), Error
+- **Primary focal point:** The search bar + beneficiary table — the card management page centers on finding and selecting a beneficiary.
 
 ---
 
@@ -183,8 +189,8 @@ The project does not use shadcn/ui. All components use custom CSS (.css in `kapw
 - [ ] Dimension 1 Copywriting: PASS
 - [ ] Dimension 2 Visuals: PASS
 - [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
+- [ ] Dimension 4 Typography: PASS (2 weights: 400 Regular + 700 Bold)
+- [ ] Dimension 5 Spacing: PASS (multiples of 4, 12px documented as exception only)
 - [ ] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
