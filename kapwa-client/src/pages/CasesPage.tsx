@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { getCases } from '../lib/api';
+import { useState, useEffect } from 'react';
+import { getCases, requestReview, disburseCase, closeCase, overrideCaseStatus } from '../lib/api';
 import { Search, SlidersHorizontal, Download } from 'lucide-react';
 import '../index.css';
 
 interface CaseRow {
+  id: string;
   no: number;
   surname: string;
   first: string;
@@ -14,36 +15,91 @@ interface CaseRow {
   barangay: string;
   remarks: string;
   date: string;
+  status: string;
+  controlNo: string;
 }
+
+const STATUS_BADGES: Record<string, string> = {
+  pending_assessment: 'badge-pending',
+  in_review: 'badge-review',
+  approved: 'badge-approved',
+  disbursed: 'badge-disbursed',
+  closed: 'badge-closed',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending_assessment: 'Pending',
+  in_review: 'In Review',
+  approved: 'Approved',
+  disbursed: 'Disbursed',
+  closed: 'Closed',
+};
 
 export function CasesPage() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filters, setFilters] = useState({ barangay: false, status: false, category: false });
 
-  useEffect(() => { loadCases(); }, []);
+  const role = localStorage.getItem('kapwa_role') || '';
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadCases();
+    return () => controller.abort();
+  }, []);
 
   async function loadCases() {
     try {
       const data = await getCases();
-      const mapped: CaseRow[] = (data || []).map((c: any, i: number) => ({
-        no: i + 1,
-        surname: c.beneficiary?.surname || '',
-        first: c.beneficiary?.firstName || '',
-        middle: c.beneficiary?.middleName || '',
-        gender: c.beneficiary?.gender || '',
-        ageRange: c.beneficiary?.dob ? (new Date().getFullYear() - new Date(c.beneficiary.dob).getFullYear() < 18 ? '0-17' : new Date().getFullYear() - new Date(c.beneficiary.dob).getFullYear() > 59 ? '60+' : '18-59') : '',
-        category: c.serviceRequested?.join(', ') || '',
-        barangay: c.beneficiary?.address?.split(',').pop()?.trim() || '',
-        remarks: c.remarks || '',
-        date: c.updatedAt ? new Date(c.updatedAt).toLocaleString() : '',
-      }));
+      const mapped: CaseRow[] = (data || []).map((c: Record<string, unknown>, i: number) => {
+        const ben = c.beneficiary as Record<string, unknown> || {};
+        const dob = ben.dob as string;
+        const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 0;
+        return {
+          id: c.id as string,
+          no: i + 1,
+          surname: ben.surname as string || '',
+          first: ben.firstName as string || '',
+          middle: ben.middleName as string || '',
+          gender: ben.gender as string || '',
+          ageRange: dob ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
+          category: (c.serviceRequested as string[])?.join(', ') || '',
+          barangay: (ben.address as string || '')?.split(',').pop()?.trim() || '',
+          remarks: c.remarks as string || '',
+          date: c.updatedAt ? new Date(c.updatedAt as string).toLocaleString() : '',
+          status: c.status as string || 'pending_assessment',
+          controlNo: c.controlNo as string || '',
+        };
+      });
       setCases(mapped);
     } catch {
       setCases([]);
     }
     setLoading(false);
+  }
+
+  async function handleAction(action: string, caseId: string) {
+    setActionLoading(caseId);
+    try {
+      switch (action) {
+        case 'request-review':
+          await requestReview(caseId);
+          break;
+        case 'disburse':
+          await disburseCase(caseId);
+          break;
+        case 'close':
+          await closeCase(caseId);
+          break;
+      }
+      await loadCases();
+    } catch (err) {
+      console.error(`Action ${action} failed:`, err);
+      alert(`Action failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+    setActionLoading(null);
   }
 
   const toggleFilter = (key: keyof typeof filters) =>
@@ -57,14 +113,48 @@ export function CasesPage() {
   });
 
   function exportCSV() {
-    const headers = ['No.','Surname','First','Middle','Gender','Age Range','Category','Barangay','Remarks','Date'];
-    const rows = filteredCases.map(c => [c.no, c.surname, c.first, c.middle, c.gender, c.ageRange, c.category, c.barangay, c.remarks, c.date]);
+    const headers = ['No.','Surname','First','Middle','Gender','Age Range','Category','Status','Barangay','Remarks','Date'];
+    const rows = filteredCases.map(c => [c.no, c.surname, c.first, c.middle, c.gender, c.ageRange, c.category, STATUS_LABELS[c.status] || c.status, c.barangay, c.remarks, c.date]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = window.document.createElement('a');
     a.href = url; a.download = 'cases-export.csv'; a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function renderActions(c: CaseRow) {
+    const buttons: { action: string; label: string }[] = [];
+
+    if (c.status === 'pending_assessment' && role === 'social_worker') {
+      buttons.push({ action: 'request-review', label: 'Request Review' });
+    }
+    if (c.status === 'in_review' && role === 'admin') {
+      // Approve button links to the existing approve flow — handled separately
+    }
+    if (c.status === 'approved' && role === 'admin') {
+      buttons.push({ action: 'disburse', label: 'Disburse' });
+    }
+    if (c.status === 'disbursed' && (role === 'admin' || role === 'social_worker')) {
+      buttons.push({ action: 'close', label: 'Close' });
+    }
+
+    if (buttons.length === 0) return <span className="text-gray-400 text-xs">—</span>;
+
+    return (
+      <div className="flex gap-1">
+        {buttons.map(b => (
+          <button
+            key={b.action}
+            className="btn btn-sm"
+            disabled={actionLoading === c.id}
+            onClick={() => handleAction(b.action, c.id)}
+          >
+            {actionLoading === c.id ? '...' : b.label}
+          </button>
+        ))}
+      </div>
+    );
   }
 
   if (loading) return <div className="p-8 text-center text-style-body">Loading cases...</div>;
@@ -80,11 +170,11 @@ export function CasesPage() {
 
       <div className="toolbar">
         <div className="toolbar-left">
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" aria-label="Filter cases">
             <SlidersHorizontal size={16} />
             Filter
           </button>
-          <button className="btn btn-primary" onClick={exportCSV}>
+          <button className="btn btn-primary" onClick={exportCSV} aria-label="Export CSV">
             <Download size={16} />
             Export CSV
           </button>
@@ -92,20 +182,20 @@ export function CasesPage() {
         <div className="toolbar-right">
           <div className="search-bar">
             <Search className="search-icon" size={20} stroke="#6B7280" />
-            <input type="text" className="search-input" placeholder="Search records..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input type="text" aria-label="Search cases" className="search-input" placeholder="Search records..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
       </div>
 
       <div className="filter-pills">
-        <button className={`filter-pill ${filters.barangay ? 'active' : ''}`} onClick={() => toggleFilter('barangay')}>
+        <button className={`filter-pill ${filters.barangay ? 'active' : ''}`} onClick={() => toggleFilter('barangay')} aria-label="Filter by barangay">
           By Barangay {filters.barangay && `(${uniqueBarangays.length})`}
         </button>
-        <button className={`filter-pill ${filters.category ? 'active' : ''}`} onClick={() => toggleFilter('category')}>
+        <button className={`filter-pill ${filters.category ? 'active' : ''}`} onClick={() => toggleFilter('category')} aria-label="Filter by category">
           By Category
         </button>
         {Object.values(filters).some(Boolean) && (
-          <button className="filter-pill clear" onClick={() => setFilters({ barangay: false, status: false, category: false })}>
+          <button className="filter-pill clear" onClick={() => setFilters({ barangay: false, status: false, category: false })} aria-label="Clear filters">
             Clear
           </button>
         )}
@@ -115,31 +205,39 @@ export function CasesPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th className="text-style-label" style={{ width: '50px' }}>No.</th>
+              <th className="w-12">No.</th>
               <th className="text-style-label">Surname</th>
               <th className="text-style-label">First</th>
               <th className="text-style-label">Middle</th>
               <th className="text-style-label">Gender</th>
               <th className="text-style-label">Age Range</th>
               <th className="text-style-label">Category</th>
+              <th className="text-style-label">Status</th>
               <th className="text-style-label">Barangay</th>
               <th className="text-style-label">Intervention/Remarks</th>
-              <th className="text-style-label frozen-col" style={{ minWidth: '140px' }}>Date</th>
+              <th className="min-w-[140px]">Date</th>
+              <th className="text-style-label">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredCases.map(c => (
               <tr key={c.no}>
-                <td className="text-style-body" style={{ color: '#707070' }}>{c.no}</td>
-                <td className="text-style-body" style={{ color: '#1A1A1A', fontWeight: 500 }}>{c.surname}</td>
+                <td className="text-gray-500">{c.no}</td>
+                <td className="text-gray-900 font-medium">{c.surname}</td>
                 <td className="text-style-body">{c.first}</td>
-                <td className="text-style-body" style={{ color: '#707070' }}>{c.middle}</td>
+                <td className="text-gray-500">{c.middle}</td>
                 <td className="text-style-body">{c.gender}</td>
                 <td><span className="badge-age">{c.ageRange}</span></td>
                 <td><span className="badge-category">{c.category}</span></td>
+                <td>
+                  <span className={STATUS_BADGES[c.status] || 'badge-pending'}>
+                    {STATUS_LABELS[c.status] || c.status}
+                  </span>
+                </td>
                 <td className="text-style-body">{c.barangay}</td>
-                <td className="text-style-body" style={{ fontSize: '13px' }}>{c.remarks}</td>
-                <td className="text-style-body frozen-col" style={{ fontSize: '13px', color: '#707070', minWidth: '140px' }}>{c.date}</td>
+                <td className="text-xs">{c.remarks}</td>
+                <td className="text-xs text-gray-500 min-w-[140px]">{c.date}</td>
+                <td>{renderActions(c)}</td>
               </tr>
             ))}
           </tbody>
