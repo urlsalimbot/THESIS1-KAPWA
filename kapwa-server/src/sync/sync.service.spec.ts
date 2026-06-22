@@ -179,4 +179,33 @@ describe('SyncService', () => {
     expect(result).toHaveProperty('serverChanges');
     expect(result).toHaveProperty('serverVersionVectors');
   });
+
+  describe('Access Card sync', () => {
+    it('processes access_card_services sync changes', async () => {
+      queueRepoMock.findOne.mockResolvedValue(null);
+      const changes = [{
+        id: 'ch-acs-1',
+        tableName: 'access_card_services',
+        recordId: 'acs-1',
+        operation: 'INSERT' as const,
+        payload: {
+          access_card_code: 'NORZ-AC-2026-0042',
+          service_rendered: 'Medical Assistance',
+          service_date: '2026-06-22',
+          cost: 500,
+          worker_name_sign: 'Juan Dela Cruz',
+        },
+        clientUpdatedAt: '2026-06-22T10:00:00Z',
+      }];
+      const batch = {
+        deviceId: pubKeyRaw,
+        changes,
+        versionVectors: [{ tableName: 'access_card_services', localVersion: 1, serverVersion: 0 }],
+        idempotencyKey: 'ik-acs',
+        signature: signMsg(pubKeyRaw, changes),
+      };
+      const result: any = await service.processDelta(batch);
+      expect(result.results[0].status).toBe('applied');
+    });
+  });
 });
