@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronRight, Shield, ClipboardList
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getBeneficiary, getCases, getFamilyGraph, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob } from '../lib/api';
+import { getBeneficiary, getCases, getFamilyGraph, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob, getCaseTrackerLog } from '../lib/api';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { ConsentManager } from '../components/consent/ConsentManager';
 import SignaturePad from '../components/forms/SignaturePad';
@@ -23,7 +23,7 @@ interface BeneficiaryDetail {
   householdSize: number;
   status: string;
   cases: { id: string; program: string; status: string; date: string; amount?: string }[];
-  interventions: { id: string; type: string; description: string; date: string }[];
+  interventions: { id: string; type: string; description: string; date: string; fundSource?: string }[];
 }
 
 interface FamilyMember {
@@ -33,6 +33,13 @@ interface FamilyMember {
   age: number;
   statusIncome?: string;
   isPrimary: boolean;
+}
+
+interface TrackerEntry {
+  id: string;
+  trackerId?: string;
+  dailySeqNum: number;
+  interventionRemarks?: string;
 }
 
 export function BeneficiaryViewPage() {
@@ -48,6 +55,7 @@ export function BeneficiaryViewPage() {
   const [intReceiptFile, setIntReceiptFile] = useState<File | null>(null);
   const [intSubmitting, setIntSubmitting] = useState(false);
   const [intError, setIntError] = useState('');
+  const [trackerEntries, setTrackerEntries] = useState<TrackerEntry[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,6 +96,15 @@ export function BeneficiaryViewPage() {
       }
       setLoading(false);
     });
+
+    // Load tracker entries
+    if (id) {
+      getCaseTrackerLog().then((entries: TrackerEntry[]) => {
+        setTrackerEntries(entries || []);
+      }).catch(() => {
+        setTrackerEntries([]);
+      });
+    }
   }, [id]);
 
   const statusBadge = (status: string) => {
@@ -226,12 +243,36 @@ export function BeneficiaryViewPage() {
                 <div key={intv.id} className="rounded bg-gray-50 p-2 text-sm">
                   <p className="font-medium text-gray-800">{intv.type}</p>
                   <p className="text-xs text-gray-400">{intv.description}</p>
+                  {intv.fundSource && <p className="text-xs font-medium text-[#2E5C8A]">Fund: {intv.fundSource}</p>}
                   <p className="text-xs text-gray-400">{intv.date}</p>
                 </div>
               ))}
             </div>
           )}
         </div>
+      </div>
+
+      {/* Case Tracker Log Section */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]">
+          <FileText size={18} />
+          <h3 className="text-sm font-semibold">Case Tracker Log</h3>
+        </div>
+        {trackerEntries.length === 0 ? (
+          <p className="text-sm text-gray-400">No tracker entries</p>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {trackerEntries.map(entry => (
+              <div key={entry.id} className="flex items-center justify-between rounded bg-gray-50 p-2 text-sm">
+                <div>
+                  <p className="font-medium text-gray-800">{entry.trackerId}</p>
+                  <p className="text-xs text-gray-400">{entry.interventionRemarks}</p>
+                </div>
+                <span className="text-xs text-gray-500">#{entry.dailySeqNum}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Intervention Form (inline, shown when a disbursed case selected) */}

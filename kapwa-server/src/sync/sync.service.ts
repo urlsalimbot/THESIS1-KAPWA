@@ -31,15 +31,34 @@ const ALLOWED_COLUMNS = new Set([
   "family_background","socio_economic_profile","assessment_analysis","recommendation",
   "intervention_plan","client_signature_url","worker_signature_url","finalized","created_by",
   "daily_seq_num","transaction_date","age_range","client_category","intervention_remarks",
-  "full_name","relationship"
+  "full_name","relationship",
+  // Allow SLA field on cases
+  "sla_overdue"
 ]);
+
+const FSM_CONTROL_FIELDS = new Set(['_fsmTransition', '_clientUpdatedAt']);
 
 function sanitizePayload(payload: Record<string, any>): Record<string, any> {
   const sanitized: Record<string, any> = {};
   for (const [k, v] of Object.entries(payload)) {
+    if (FSM_CONTROL_FIELDS.has(k)) continue; // strip FSM control fields
     if (ALLOWED_COLUMNS.has(k)) sanitized[k] = v;
   }
   return sanitized;
+}
+
+// Per D-04: valid FSM transitions for cases
+const VALID_FSM_TRANSITIONS: Record<string, string[]> = {
+  pending_assessment: ['in_review'],
+  in_review: ['approved', 'pending_assessment'],
+  approved: ['disbursed', 'in_review'],
+  disbursed: ['closed'],
+  closed: [],
+};
+
+function isValidFsmTransition(currentStatus: string, requestedStatus: string): boolean {
+  const allowed = VALID_FSM_TRANSITIONS[currentStatus];
+  return allowed ? allowed.includes(requestedStatus) : false;
 }
 
 @Injectable()
@@ -73,6 +92,8 @@ export class SyncService {
       status: 'applied' | 'conflict' | 'failed';
       serverRecord?: Record<string, any>;
       reason?: string;
+      currentState?: string;
+      requestedState?: string;
     }> = [];
 
     for (const change of changes) {
@@ -112,6 +133,17 @@ export class SyncService {
             status: 'applied',
           });
           continue;
+        }
+
+        // D-04: Pre-check FSM transitions before conflict detection
+        const isFsm = change.payload?._fsmTransition === true;
+        if (isFsm && change.tableName === 'cases') {
+          const fsmResult = await this.handleFsmTransition(change.recordId, change.payload.status, change.id);
+          if (fsmResult?.status === 'conflict') {
+            results.push(fsmResult);
+            continue;
+          }
+          // FSM transition is valid — proceed with normal apply (conflict detection still applies)
         }
 
         const conflict = await this.detectConflict(change.tableName, change.recordId, change.payload, change.clientUpdatedAt);
@@ -226,6 +258,64 @@ export class SyncService {
     }
 
     return { status: 'resolved', conflictId: id, resolution };
+  }
+
+  /**
+   * D-04: Validate an offline FSM transition against the server's current case state.
+   * Returns { status: 'conflict', ... } if the transition is invalid,
+   * or null if the transition is valid (caller should proceed with normal apply).
+   */
+  private async handleFsmTransition(
+    recordId: string,
+    requestedStatus: string,
+    changeId: string,
+  ): Promise<{
+    changeId: string;
+    tableName: string;
+    status: 'applied' | 'conflict';
+    reason?: string;
+    currentState?: string;
+    requestedState?: string;
+  } | null> {
+    try {
+      const rows = await this.dataSource.query(
+        `SELECT status FROM cases WHERE id = $1 LIMIT 1`,
+        [recordId],
+      );
+      if (rows.length === 0) return null; // record doesn't exist — let normal apply handle it
+
+      const currentStatus: string = rows[0].status || 'pending_assessment';
+
+      if (!isValidFsmTransition(currentStatus, requestedStatus)) {
+        // D-04: Transition no longer valid — case state has moved past the expected state
+        await this.queueRepo.save(this.queueRepo.create({
+          deviceId: '__rejected__', // placeholder — will be updated on conflict save
+          tableName: 'cases',
+          recordId,
+          operation: 'UPDATE' as const,
+          payload: { status: requestedStatus, _fsmTransition: true },
+          clientUpdatedAt: new Date(),
+          status: 'conflict',
+          idempotencyKey: changeId,
+          conflictReason: `FSM rejected: cannot transition from "${currentStatus}" to "${requestedStatus}"`,
+        }));
+
+        return {
+          changeId,
+          tableName: 'cases',
+          status: 'conflict',
+          reason: `Cannot transition from "${currentStatus}" to "${requestedStatus}" — the case is now in "${currentStatus}" state.`,
+          currentState: currentStatus,
+          requestedState: requestedStatus,
+        };
+      }
+
+      // Transition is valid — return null so the caller proceeds with normal apply+conflict detection
+      return null;
+    } catch (err) {
+      this.logger.error(`FSM check error for case ${recordId}:`, err);
+      return null; // Fall through to normal apply on error
+    }
   }
 
   private async getIdempotencyResult(key: string): Promise<unknown | null> {

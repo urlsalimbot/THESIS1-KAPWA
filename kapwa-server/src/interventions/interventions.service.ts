@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { Intervention, InterventionType, FundSource, SignatureStatus } from './intervention.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { MinioService } from '../minio/minio.service';
+import { TrackerService } from '../tracker/tracker.service';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 @Injectable()
@@ -16,6 +17,7 @@ export class InterventionsService {
     @InjectRepository(Case)
     private caseRepo: Repository<Case>,
     private minioService: MinioService,
+    private trackerService: TrackerService,
   ) {}
 
   async create(data: Partial<Intervention>, userId: string) {
@@ -95,6 +97,40 @@ export class InterventionsService {
     if (!saved || !saved.id) {
       throw new InternalServerErrorException('Failed to save intervention — no ID returned');
     }
+
+    // Auto-create Case Tracker Log entry
+    try {
+      const beneficiaryInfo = await this.interventionRepo.query(
+        `SELECT b.surname, b.first_name, b.middle_name, b.gender,
+                b.barangay, b.category AS client_category,
+                CASE
+                  WHEN EXTRACT(YEAR FROM AGE(b.dob)) < 18 THEN '0-17'
+                  WHEN EXTRACT(YEAR FROM AGE(b.dob)) > 59 THEN '60+'
+                  ELSE '18-59'
+                END AS age_range
+         FROM beneficiaries b
+         JOIN cases c ON c.beneficiary_id = b.id
+         WHERE c.id = $1`, [caseId]
+      );
+      const info = beneficiaryInfo?.[0];
+      if (info) {
+        await this.trackerService.createEntry({
+          transactionDate: new Date(),
+          surname: info.surname,
+          firstName: info.first_name,
+          middleName: info.middle_name,
+          gender: info.gender,
+          ageRange: info.age_range,
+          clientCategory: info.client_category,
+          barangay: info.barangay,
+          interventionRemarks: `${data.interventionType || ''} - ${data.amount || 0}`,
+        } as any);
+      }
+    } catch (err) {
+      // Non-blocking: tracker log creation failure should not fail the intervention
+      console.error('Failed to auto-create tracker entry:', err);
+    }
+
     return saved;
   }
 

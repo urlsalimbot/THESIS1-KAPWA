@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getCases, requestReview, disburseCase, closeCase, overrideCaseStatus } from '../lib/api';
-import { Search, SlidersHorizontal, Download } from 'lucide-react';
+import { Search, SlidersHorizontal, Download, AlertTriangle } from 'lucide-react';
+import { isOnline } from '../lib/sync';
+import { queueFsmTransition } from '../lib/offline-queue';
 import '../index.css';
 
 interface CaseRow {
@@ -17,6 +19,7 @@ interface CaseRow {
   date: string;
   status: string;
   controlNo: string;
+  slaOverdue?: boolean;
 }
 
 const STATUS_BADGES: Record<string, string> = {
@@ -71,6 +74,7 @@ export function CasesPage() {
           date: c.updatedAt ? new Date(c.updatedAt as string).toLocaleString() : '',
           status: c.status as string || 'pending_assessment',
           controlNo: c.controlNo as string || '',
+          slaOverdue: c.slaOverdue as boolean || false,
         };
       });
       setCases(mapped);
@@ -85,12 +89,28 @@ export function CasesPage() {
     try {
       switch (action) {
         case 'request-review':
-          await requestReview(caseId);
+          if (isOnline()) {
+            await requestReview(caseId);
+          } else {
+            // D-04: pending→in_review allowed offline
+            await queueFsmTransition(caseId, 'in_review');
+            alert('Review request queued — will sync when online.');
+          }
           break;
         case 'disburse':
+          if (!isOnline()) {
+            alert('This action requires an internet connection.');
+            setActionLoading(null);
+            return;
+          }
           await disburseCase(caseId);
           break;
         case 'close':
+          if (!isOnline()) {
+            alert('This action requires an internet connection.');
+            setActionLoading(null);
+            return;
+          }
           await closeCase(caseId);
           break;
       }
@@ -113,8 +133,8 @@ export function CasesPage() {
   });
 
   function exportCSV() {
-    const headers = ['No.','Surname','First','Middle','Gender','Age Range','Category','Status','Barangay','Remarks','Date'];
-    const rows = filteredCases.map(c => [c.no, c.surname, c.first, c.middle, c.gender, c.ageRange, c.category, STATUS_LABELS[c.status] || c.status, c.barangay, c.remarks, c.date]);
+    const headers = ['No.','Surname','First','Middle','Gender','Age Range','Category','Status','SLA','Barangay','Remarks','Date'];
+    const rows = filteredCases.map(c => [c.no, c.surname, c.first, c.middle, c.gender, c.ageRange, c.category, STATUS_LABELS[c.status] || c.status, c.slaOverdue ? 'OVERDUE' : '', c.barangay, c.remarks, c.date]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -213,6 +233,7 @@ export function CasesPage() {
               <th className="text-style-label">Age Range</th>
               <th className="text-style-label">Category</th>
               <th className="text-style-label">Status</th>
+              <th className="text-style-label">SLA</th>
               <th className="text-style-label">Barangay</th>
               <th className="text-style-label">Intervention/Remarks</th>
               <th className="min-w-[140px]">Date</th>
@@ -233,6 +254,16 @@ export function CasesPage() {
                   <span className={STATUS_BADGES[c.status] || 'badge-pending'}>
                     {STATUS_LABELS[c.status] || c.status}
                   </span>
+                </td>
+                <td>
+                  {c.slaOverdue ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                      <AlertTriangle size={12} />
+                      OVERDUE
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
                 </td>
                 <td className="text-style-body">{c.barangay}</td>
                 <td className="text-xs">{c.remarks}</td>

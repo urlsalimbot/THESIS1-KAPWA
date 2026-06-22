@@ -14,6 +14,8 @@ interface Intervention {
   verified: boolean;
   signatureStatus?: string;
   clientReceiptUrl?: string;
+  fundSource?: string;
+  amount?: number;
 }
 
 export function InterventionsPage() {
@@ -43,7 +45,9 @@ export function InterventionsPage() {
           caseId: i.caseId as string || '',
           beneficiary: beneficiary.firstName && beneficiary.surname ? `${beneficiary.firstName} ${beneficiary.surname}` : '',
           type: i.interventionType as string || '',
-          description: `${i.fundSource as string || ''} - ₱${i.amount || 0}`,
+          description: `₱${i.amount || 0}`,
+          fundSource: i.fundSource as string || 'Regular',
+          amount: (i.amount as number) || 0,
           provider: i.agency as string || 'MSWDO',
           date: i.serviceDate ? new Date(i.serviceDate as string).toLocaleDateString() : '',
           verified: !!i.workerSignatureUrl,
@@ -191,8 +195,9 @@ export function InterventionsPage() {
               <th>Case ID</th>
               <th>Beneficiary</th>
               <th>Type</th>
-              <th>Description</th>
-              <th>Provider</th>
+              <th>Amount</th>
+              <th>Fund Source</th>
+              <th>Agency</th>
               <th>Date</th>
               <th>Signature</th>
               <th>Receipt</th>
@@ -206,6 +211,7 @@ export function InterventionsPage() {
                 <td>{i.beneficiary}</td>
                 <td><span className="badge-category">{i.type}</span></td>
                 <td>{i.description}</td>
+                <td><span className="inline-block rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{i.fundSource}</span></td>
                 <td>{i.provider}</td>
                 <td>{i.date}</td>
                 <td>
