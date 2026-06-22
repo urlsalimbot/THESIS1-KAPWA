@@ -267,3 +267,57 @@ export async function decryptNarration(id: string, legalBasis: string) {
 export async function unmaskIrfNames(id: string, legalBasis: string) {
   return apiFetch(`/irf/${id}/unmask-names?legalBasis=${encodeURIComponent(legalBasis)}`);
 }
+
+// ===== Program Assignments =====
+export async function getProgramAssignments(caseId?: string) {
+  const q = caseId ? `?caseId=${caseId}` : '';
+  return apiFetch(`/program-assignments${q}`);
+}
+
+export async function getProgramAssignment(id: string) {
+  return apiFetch(`/program-assignments/${id}`);
+}
+
+export async function createProgramAssignment(data: { caseId: string; programId: string; assignedWorkerId: string }) {
+  return apiFetch('/program-assignments', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function approveAssignmentStep(id: string, stepOrder: number) {
+  return apiFetch(`/program-assignments/${id}/steps/${stepOrder}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ stepOrder }),
+  });
+}
+
+export async function rejectAssignmentStep(id: string, stepOrder: number, remarks: string) {
+  return apiFetch(`/program-assignments/${id}/steps/${stepOrder}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ stepOrder, remarks }),
+  });
+}
+
+export async function overrideAssignmentStep(id: string, stepOrder: number, overrideStatus: 'approved' | 'rejected', remarks: string) {
+  return apiFetch(`/program-assignments/${id}/steps/${stepOrder}/override`, {
+    method: 'POST',
+    body: JSON.stringify({ stepOrder, overrideStatus, remarks }),
+  });
+}
+
+export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
+  const token = localStorage.getItem('kapwa_token');
+  const res = await fetch(`${API}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = `IRF-${id}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportIrfJson(id: string, legalBasis: string) {
+  return apiFetch(`/irf/${id}/export-json?legalBasis=${encodeURIComponent(legalBasis)}`);
+}

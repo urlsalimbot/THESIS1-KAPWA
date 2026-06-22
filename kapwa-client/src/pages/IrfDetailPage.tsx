@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getIrfCase, referToPnp, referToWcpd, dismissIrf, closeIrf, decryptNarration } from '../lib/api';
+import { getIrfCase, referToPnp, referToWcpd, dismissIrf, closeIrf, decryptNarration, exportIrfPdf, exportIrfJson } from '../lib/api';
 import NameMaskToggle from '../components/irf/NameMaskToggle';
 import VictimNarrationField from '../components/irf/VictimNarrationField';
 
@@ -15,6 +15,8 @@ export function IrfDetailPage() {
   const [legalBasis, setLegalBasis] = useState('');
   const [showDecryptForm, setShowDecryptForm] = useState(false);
   const [unmaskedItemB, setUnmaskedItemB] = useState<any>(null);
+  const [exportLegalBasis, setExportLegalBasis] = useState('');
+  const [exportPassword, setExportPassword] = useState('');
 
   useEffect(() => {
     if (id) load();
@@ -54,6 +56,31 @@ export function IrfDetailPage() {
 
   function handleUnmaskNames(data: any) {
     setUnmaskedItemB(data.itemBPersonReported);
+  }
+
+  async function handleExportPdf() {
+    if (!id || !exportLegalBasis) return;
+    try {
+      await exportIrfPdf(id, exportLegalBasis, exportPassword || 'default');
+    } catch (e) {
+      alert('PDF export failed');
+    }
+  }
+
+  async function handleExportJson() {
+    if (!id || !exportLegalBasis) return;
+    try {
+      const data = await exportIrfJson(id, exportLegalBasis);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = `IRF-${id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('JSON export failed');
+    }
   }
 
   if (loading) return <div className="p-6 text-gray-400">Loading IRF details...</div>;
@@ -164,6 +191,28 @@ export function IrfDetailPage() {
             )}
           </div>
         ) : <p className="text-sm text-gray-400">No narration recorded</p>}
+      </div>
+
+      {/* Export Section */}
+      <div className="card p-4 mt-6">
+        <h3 className="font-semibold mb-2">Export</h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input className="rounded border border-gray-300 p-2 text-sm w-36"
+            placeholder="Legal basis code"
+            value={exportLegalBasis}
+            onChange={e => setExportLegalBasis(e.target.value)}
+            aria-label="Legal basis code" />
+          <input className="rounded border border-gray-300 p-2 text-sm w-32"
+            placeholder="PDF password"
+            value={exportPassword}
+            onChange={e => setExportPassword(e.target.value)}
+            type="password"
+            aria-label="PDF password" />
+          <button onClick={handleExportPdf} disabled={!exportLegalBasis}
+            className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-40">PDF</button>
+          <button onClick={handleExportJson} disabled={!exportLegalBasis}
+            className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">JSON</button>
+        </div>
       </div>
 
       {/* Metadata */}

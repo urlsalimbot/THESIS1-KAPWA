@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createIrf } from '../lib/api';
+import { createIrf, exportIrfPdf, exportIrfJson } from '../lib/api';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -23,6 +23,7 @@ export function IrfPage() {
   const [form, setForm] = useState({ caseCategory: '', narration: '', reporterName: '', reporterContact: '' });
   const [exportIrfId, setExportIrfId] = useState<string | null>(null);
   const [legalBasis, setLegalBasis] = useState('');
+  const [pdfPassword, setPdfPassword] = useState('');
   const [exporting, setExporting] = useState(false);
 
   async function load(signal?: AbortSignal) {
@@ -54,31 +55,35 @@ export function IrfPage() {
     } catch (e) { console.error(e); }
   }
 
-  async function handleExport() {
+  async function handleExportPdf() {
     if (!exportIrfId || !legalBasis) return;
     setExporting(true);
     try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API}/irf/${exportIrfId}/export-wcpd?legalBasis=${encodeURIComponent(legalBasis)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = window.document.createElement('a');
-        a.href = url;
-        a.download = `WCPD-${data.case.blotterEntryNumber || exportIrfId}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        const err = await res.text();
-        alert(`Export failed: ${err}`);
-      }
-    } catch (e) { console.error('WCPD export:', e); alert('Export failed'); }
+      await exportIrfPdf(exportIrfId, legalBasis, pdfPassword || 'default');
+      setExportIrfId(null);
+      setLegalBasis('');
+      setPdfPassword('');
+    } catch (e) { console.error('PDF export:', e); alert('PDF export failed'); }
     setExporting(false);
-    setExportIrfId(null);
-    setLegalBasis('');
+  }
+
+  async function handleExportJson() {
+    if (!exportIrfId || !legalBasis) return;
+    setExporting(true);
+    try {
+      const data = await exportIrfJson(exportIrfId, legalBasis);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = `IRF-${exportIrfId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportIrfId(null);
+      setLegalBasis('');
+      setPdfPassword('');
+    } catch (e) { console.error('JSON export:', e); alert('JSON export failed'); }
+    setExporting(false);
   }
 
   if (loading) return <div className="p-6 text-gray-400">Loading IRF cases...</div>;
@@ -120,25 +125,30 @@ export function IrfPage() {
         </form>
       )}
 
-      {/* WCPD Export Modal */}
+      {/* Export Modal */}
       {exportIrfId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-center gap-2 mb-4">
               <Shield className="text-[#2E5C8A]" size={20} />
-              <h3 className="font-semibold text-gray-800">WCPD Export</h3>
+              <h3 className="font-semibold text-gray-800">Export IRF</h3>
             </div>
             <p className="text-xs text-gray-500 mb-3">
               Legal basis code is required per DSWD AO 2020-002. This export is logged.
             </p>
             <label className="text-sm font-medium text-gray-700">Legal Basis Code</label>
-            <input className="form-input mt-1" value={legalBasis} onChange={e => setLegalBasis(e.target.value)} aria-label="Legal Basis Code" placeholder="e.g. AO-2020-002" />
+            <input className="form-input mt-1 w-full" value={legalBasis} onChange={e => setLegalBasis(e.target.value)} aria-label="Legal Basis Code" placeholder="e.g. AO-2020-002" />
+            <label className="text-sm font-medium text-gray-700 mt-2 block">PDF Password</label>
+            <input className="form-input mt-1 w-full" value={pdfPassword} onChange={e => setPdfPassword(e.target.value)} type="password" aria-label="PDF password" placeholder="PDF password (optional)" />
             <div className="flex gap-3 justify-end mt-4">
-              <button onClick={() => { setExportIrfId(null); setLegalBasis(''); }} className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50" aria-label="Cancel">
+              <button onClick={() => { setExportIrfId(null); setLegalBasis(''); setPdfPassword(''); }} className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50" aria-label="Cancel">
                 Cancel
               </button>
-              <button onClick={handleExport} disabled={!legalBasis || exporting} className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-40">
-                {exporting ? 'Exporting...' : 'Export'}
+              <button onClick={handleExportJson} disabled={!legalBasis || exporting} className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
+                Export JSON
+              </button>
+              <button onClick={handleExportPdf} disabled={!legalBasis || exporting} className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-40">
+                {exporting ? 'Exporting...' : 'Export PDF'}
               </button>
             </div>
           </div>
@@ -171,7 +181,7 @@ export function IrfPage() {
                       className="text-sm text-[#2E5C8A] hover:underline" aria-label="View Details">
                       View Details
                     </button>
-                    <button onClick={() => setExportIrfId(irf.id)} className="flex items-center gap-1 text-xs text-[#2E5C8A] hover:underline" aria-label="Export WCPD">
+                    <button onClick={() => setExportIrfId(irf.id)} className="flex items-center gap-1 text-xs text-[#2E5C8A] hover:underline" aria-label="Export IRF">
                       <Shield size={14} /> Export
                     </button>
                   </div>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Request, Res } from '@nestjs/common';
 import { z } from 'zod';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { IrfService } from './irf.service';
+import { IrfExportService } from './irf-export.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import {
   CreateIrfSchema,
@@ -17,6 +18,7 @@ import {
   DecryptNarrationInput,
   OverrideDispositionInput,
 } from './dto/irf.zod';
+import { Response } from 'express';
 
 const UPDATE_NARRATION_SCHEMA = z.object({
   narration: z.string().min(1, 'Narration is required'),
@@ -29,7 +31,10 @@ const LEGAL_BASIS_MAX_LENGTH = 50;
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 @ApiBearerAuth()
 export class IrfController {
-  constructor(private irfService: IrfService) {}
+  constructor(
+    private irfService: IrfService,
+    private irfExportService: IrfExportService,
+  ) {}
 
   @Get()
   @Roles('admin', 'social_worker')
@@ -141,6 +146,37 @@ export class IrfController {
     @Query('legalBasis', new ZodPipe(z.string().min(1).max(LEGAL_BASIS_MAX_LENGTH))) legalBasis: string
   ) {
     return this.irfService.exportWcpd(id, legalBasis);
+  }
+
+  @Get(':id/export-pdf')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Export IRF as password-protected PDF' })
+  async exportPdf(
+    @Param('id') id: string,
+    @Query('legalBasis') legalBasis: string,
+    @Query('password') password: string,
+    @Request() req: AuthenticatedRequest,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.irfExportService.exportPdf(id, legalBasis, password || 'default', req.user?.id || 'system');
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="IRF-${id}.pdf"`,
+      'Content-Length': pdf.length,
+    });
+    res.end(pdf);
+  }
+
+  @Get(':id/export-json')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Export IRF as structured JSON bundle' })
+  async exportJson(
+    @Param('id') id: string,
+    @Query('legalBasis') legalBasis: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.irfExportService.exportJson(id, legalBasis, req.user?.id || 'system');
   }
 }
 
