@@ -212,3 +212,12 @@ export async function getCaseTrackerLog(date?: string) {
   const q = date ? `?date=${date}` : '';
   return apiFetch(`/tracker/daily${q}`);
 }
+
+// ===== Access Card API =====
+export async function assignCard(beneficiaryId: string) {
+  return apiFetch(`/access-cards/assign/${beneficiaryId}`, { method: 'POST' });
+}
+
+export async function getBeneficiaryCard(beneficiaryId: string) {
+  return apiFetch(`/access-cards/beneficiary/${beneficiaryId}/card`);
+}
