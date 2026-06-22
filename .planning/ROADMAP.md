@@ -97,11 +97,13 @@ Plans:
   4. Loss/replacement workflow generates a new card code, preserves full audit trail of old card, and marks lost card as void
   5. Staff can view, print, and refill the Access Card service log from the UI
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 
-- TBD
+- [ ] 04-01-PLAN.md — Generate & Assign Access Card (AC-01, AC-03)
+- [ ] 04-02-PLAN.md — Printable Card View & Service Log (AC-02, AC-03)
+- [ ] 04-03-PLAN.md — No Card Soft Warning & Sync (AC-04, AC-02)
 
 ### Phase 5: Dynamic Programs & IRF Module
 
