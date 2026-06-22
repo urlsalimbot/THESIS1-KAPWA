@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getCases, requestReview, disburseCase, closeCase, overrideCaseStatus } from '../lib/api';
 import { Search, SlidersHorizontal, Download, AlertTriangle } from 'lucide-react';
+import { isOnline } from '../lib/sync';
+import { queueFsmTransition } from '../lib/offline-queue';
 import '../index.css';
 
 interface CaseRow {
@@ -87,12 +89,28 @@ export function CasesPage() {
     try {
       switch (action) {
         case 'request-review':
-          await requestReview(caseId);
+          if (isOnline()) {
+            await requestReview(caseId);
+          } else {
+            // D-04: pending→in_review allowed offline
+            await queueFsmTransition(caseId, 'in_review');
+            alert('Review request queued — will sync when online.');
+          }
           break;
         case 'disburse':
+          if (!isOnline()) {
+            alert('This action requires an internet connection.');
+            setActionLoading(null);
+            return;
+          }
           await disburseCase(caseId);
           break;
         case 'close':
+          if (!isOnline()) {
+            alert('This action requires an internet connection.');
+            setActionLoading(null);
+            return;
+          }
           await closeCase(caseId);
           break;
       }

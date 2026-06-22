@@ -143,3 +143,12 @@ export async function updateServerVersion(table: string, version: number): Promi
 export async function getAllVersionVectors(): Promise<VersionVector[]> {
   return loadVersions();
 }
+// Per D-04: social worker can initiate pending→in_review offline
+export async function queueFsmTransition(caseId: string, newStatus: string, payload: Record<string, unknown> = {}): Promise<QueuedChange> {
+  return queueChange('cases', caseId, 'UPDATE', {
+    ...payload,
+    status: newStatus,
+    _fsmTransition: true,
+    _clientUpdatedAt: new Date().toISOString(),
+  });
+}
