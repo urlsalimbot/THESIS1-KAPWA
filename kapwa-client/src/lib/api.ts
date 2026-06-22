@@ -67,6 +67,19 @@ export async function getPrograms() {
   return apiFetch('/programs');
 }
 
+// ===== Programs =====
+export async function createProgram(data: Record<string, unknown>) {
+  return apiFetch('/programs', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateProgram(id: string, data: Record<string, unknown>) {
+  return apiFetch(`/programs/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteProgram(id: string) {
+  return apiFetch(`/programs/${id}`, { method: 'DELETE' });
+}
+
 export async function getConsentLedger(beneficiaryId: string) {
   return apiFetch(`/beneficiaries/${beneficiaryId}/consent`);
 }
