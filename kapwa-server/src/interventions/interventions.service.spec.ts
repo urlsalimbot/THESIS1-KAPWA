@@ -109,6 +109,43 @@ describe('InterventionsService', () => {
     });
   });
 
+  describe('No Card guard', () => {
+    it('throws BadRequestException when no card and override not sent', async () => {
+      const caseEntity = { id: 'case-1', status: CaseStatus.DISBURSED, beneficiaryId: 'ben-1' } as unknown as Case;
+      caseRepoMock.findOne.mockResolvedValue(caseEntity);
+      caseRepoMock.query.mockResolvedValueOnce([{ access_card_code: null }]);
+      await expect(
+        service.create({ caseId: 'case-1', interventionType: InterventionType.FA } as any, 'user-1')
+      ).rejects.toThrow('overrideNoCardCheck');
+    });
+
+    it('returns warning when no card and overrideNoCardCheck=true', async () => {
+      const caseEntity = { id: 'case-1', status: CaseStatus.DISBURSED, beneficiaryId: 'ben-1' } as unknown as Case;
+      caseRepoMock.findOne.mockResolvedValue(caseEntity);
+      caseRepoMock.query.mockResolvedValueOnce([{ access_card_code: null }]);
+      interventionRepoMock.create.mockReturnValue({ id: 'int-1' });
+      interventionRepoMock.save.mockResolvedValue({ id: 'int-1' });
+      const result = await service.create(
+        { caseId: 'case-1', interventionType: InterventionType.FA, overrideNoCardCheck: true } as any,
+        'user-1'
+      );
+      expect(result.warning).toBeDefined();
+      expect(result.intervention).toBeDefined();
+    });
+
+    it('throws BadRequestException when no card and overrideNoCardCheck=false', async () => {
+      const caseEntity = { id: 'case-1', status: CaseStatus.DISBURSED, beneficiaryId: 'ben-1' } as unknown as Case;
+      caseRepoMock.findOne.mockResolvedValue(caseEntity);
+      caseRepoMock.query.mockResolvedValueOnce([{ access_card_code: null }]);
+      await expect(
+        service.create(
+          { caseId: 'case-1', interventionType: InterventionType.FA, overrideNoCardCheck: false } as any,
+          'user-1'
+        )
+      ).rejects.toThrow('overrideNoCardCheck');
+    });
+  });
+
   describe('uploadSignature', () => {
     it('should upload signature via MinioService', async () => {
       const result = await service.uploadSignature(Buffer.from('mock'), 'sig.png', 'image/png');
