@@ -14,8 +14,14 @@ import { CsrPage } from './pages/CsrPage';
 import { AdminPage } from './pages/AdminPage';
 import { ClaimantDashboardPage } from './pages/ClaimantDashboardPage';
 import { FilingPage } from './pages/FilingPage';
+import { ApprovalPipelinePage } from './pages/ApprovalPipelinePage';
+import { MfaSetupPage } from './pages/MfaSetupPage';
+import { IrfPage } from './pages/IrfPage';
+import { AccessCardPage } from './pages/AccessCardPage';
+import { AccessCardPrintView } from './pages/AccessCardPrintView';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   return <ProtectedRoute roles={roles}><Layout>{children}</Layout></ProtectedRoute>;
@@ -33,6 +39,11 @@ const router = createBrowserRouter([
   { path: '/csr', element: <Private roles={['admin','social_worker']}><CsrPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
   { path: '/filing', element: <Private roles={['admin','social_worker']}><FilingPage /></Private> },
+  { path: '/approvals', element: <Private roles={['admin','social_worker']}><ApprovalPipelinePage /></Private> },
+  { path: '/settings/mfa', element: <Private roles={['admin','mayor','auditor']}><MfaSetupPage /></Private> },
+  { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
+  { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
+  { path: '/beneficiaries/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator']}><MessagesPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },
   { path: '*', element: <Navigate to="/" /> },
@@ -41,7 +52,9 @@ const router = createBrowserRouter([
 export function MainRoutes() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <ErrorBoundary>
+        <RouterProvider router={router} />
+      </ErrorBoundary>
     </AuthProvider>
   );
 }

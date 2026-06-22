@@ -97,13 +97,13 @@ Plans:
   4. Reprint displays existing card after identity confirmation; code stays permanently tied to beneficiary (no replacement workflow) per D-04
   5. Staff can view, print (browser print dialog per D-06), and reprint the Access Card service log from the UI
 
-**Plans**: 3 plans
+**Plans**: 2/3 plans executed
 
 Plans:
 
-- [ ] 04-01-PLAN.md — Generate & Assign Access Card (AC-01, AC-03)
+- [x] 04-01-PLAN.md — Generate & Assign Access Card (AC-01, AC-03)
 - [ ] 04-02-PLAN.md — Printable Card View & Service Log (AC-02, AC-03)
-- [ ] 04-03-PLAN.md — No Card Soft Warning & Sync (AC-04, AC-02)
+- [x] 04-03-PLAN.md — No Card Soft Warning & Sync (AC-04, AC-02)
 
 ### Phase 5: Dynamic Programs & IRF Module
 
@@ -156,6 +156,6 @@ Plans:
 | 1. Foundation — Deploy & Authenticate | 4/4 | Complete | 2026-06-19 |
 | 2. GIS Intake & Beneficiary Registration | 4/4 | Complete   | 2026-06-19 |
 | 3. Intervention Tracking & Case Management | 3/3 | Complete   | 2026-06-22 |
-| 4. Access Card System | 0/0 | Not started | - |
+| 4. Access Card System | 3/3 | In Progress|  |
 | 5. Dynamic Programs & IRF Module | 0/0 | Not started | - |
 | 6. Dashboards, Notifications & Role Completion | 0/0 | Not started | - |
