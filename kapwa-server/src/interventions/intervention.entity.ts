@@ -17,6 +17,11 @@ export enum FundSource {
   DONATION = 'Donation'
 }
 
+export enum SignatureStatus {
+  PENDING = 'signatures_pending',
+  COLLECTED = 'signatures_collected'
+}
+
 @Entity('interventions')
 export class Intervention {
   @PrimaryGeneratedColumn('uuid')
@@ -24,6 +29,10 @@ export class Intervention {
 
   @Column({ name: 'case_id', nullable: true })
   caseId?: string;
+
+  // Denormalized for exclusion constraint (populated on create via JOIN)
+  @Column({ name: 'household_id', nullable: true })
+  householdId?: string;
 
   @Column({ name: 'intervention_type', type: 'enum', enum: InterventionType, nullable: true })
   interventionType?: InterventionType;
@@ -37,8 +46,8 @@ export class Intervention {
   @Column({ name: 'agency', nullable: true })
   agency?: string;
 
-  @Column({ name: 'service_date', type: 'date', nullable: true })
-  serviceDate?: Date;
+  @Column({ name: 'service_date', type: 'date' })
+  serviceDate!: Date;
 
   @Column({ name: 'voucher_no', nullable: true })
   voucherNo?: string;
@@ -48,6 +57,21 @@ export class Intervention {
 
   @Column({ name: 'worker_signature_url' })
   workerSignatureUrl!: string;
+
+  @Column({ name: 'client_signature_url', nullable: true })
+  clientSignatureUrl?: string;
+
+  @Column({ name: 'client_receipt_url', nullable: true })
+  clientReceiptUrl?: string;
+
+  @Column({ name: 'signature_status', type: 'enum', enum: SignatureStatus, default: SignatureStatus.COLLECTED })
+  signatureStatus!: SignatureStatus;
+
+  @Column({ name: 'hash', nullable: true })
+  hash?: string;
+
+  @Column({ name: 'prev_hash', nullable: true })
+  prevHash?: string;
 
   @Column({ name: 'logged_by', nullable: true })
   loggedById?: string;
