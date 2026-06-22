@@ -14,6 +14,7 @@ export const CreateInterventionSchema = z.object({
   agency: z.string().optional(),
   voucherNo: z.string().optional(),
   orReference: z.string().optional(),
+  overrideNoCardCheck: z.boolean().optional(),
 });
 
 export type CreateInterventionInput = z.infer<typeof CreateInterventionSchema>;
