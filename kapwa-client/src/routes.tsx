@@ -19,6 +19,7 @@ import { MfaSetupPage } from './pages/MfaSetupPage';
 import { IrfPage } from './pages/IrfPage';
 import { AccessCardPage } from './pages/AccessCardPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
+import { ProgramsPage } from './pages/ProgramsPage';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
   { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
   { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
   { path: '/beneficiaries/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
+  { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator']}><MessagesPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },
   { path: '*', element: <Navigate to="/" /> },
