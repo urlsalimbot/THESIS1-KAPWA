@@ -3,6 +3,8 @@ import { TrackerService } from './tracker.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ZodPipe } from '../common/pipes/zod.pipe';
+import { CreateTrackerEntrySchema, CreateTrackerEntryInput } from './dto/tracker.zod';
 
 @Controller('tracker')
 @UseGuards(JwtAuthGuard, AbacGuard)
@@ -27,10 +29,18 @@ export class TrackerController {
     return this.trackerService.getStats();
   }
 
+  @Get('next-id')
+  @Roles('admin', 'social_worker')
+  async getNextTrackerId(@Query('date') date?: string) {
+    const target = date ? new Date(date) : new Date();
+    const { trackerId, seqNum } = await this.trackerService.getOrCreateTrackerId(target);
+    return { trackerId, seqNum, date: target.toISOString() };
+  }
+
   @Post()
   @Roles('admin', 'social_worker')
-  async createEntry(@Body() body: any) {
-    return this.trackerService.createEntry(body);
+  async createEntry(@Body(new ZodPipe(CreateTrackerEntrySchema)) body: CreateTrackerEntryInput) {
+    return this.trackerService.createEntry(body as any);
   }
 
   @Get('sequence')
