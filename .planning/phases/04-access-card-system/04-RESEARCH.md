@@ -553,7 +553,7 @@ const tableMap: Record<string, string> = {
 
 **All remaining claims are [VERIFIED] via codebase scan (files read directly from disk).**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **No Card override field name in DTO**
    - What we know: Client sends an override flag when worker chooses to proceed without card

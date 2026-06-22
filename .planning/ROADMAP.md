@@ -9,7 +9,7 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
 - [x] **Phase 1: Foundation — Deploy & Authenticate** - Infrastructure, roles, basic sync, and audit foundation
 - [x] **Phase 2: GIS Intake & Beneficiary Registration** - Dual-mode GIS intake with consent management (completed 2026-06-19)
 - [x] **Phase 3: Intervention Tracking & Case Management** - End-to-end case workflow with post-disbursement logging (completed 2026-06-22)
-- [ ] **Phase 4: Access Card System** - Code# generation, service logs, loss/replacement workflow
+- [ ] **Phase 4: Access Card System** - One-step generate-and-assign, printable card view, soft No Card guard, reprint with identity verification
 - [ ] **Phase 5: Dynamic Programs & IRF Module** - Program configuration and encrypted incident reports
 - [ ] **Phase 6: Dashboards, Notifications & Role Completion** - Role-specific UIs, notifications, compliance exports
 
@@ -85,17 +85,17 @@ Plans:
 
 ### Phase 4: Access Card System
 
-**Goal**: Every beneficiary has a unique Access Card (CODE#), interventions auto-append to the 18-row service log, and "No Card = No Voucher" is enforced at intervention logging with full loss/replacement audit trail.
+**Goal**: Admin can generate-and-assign unique Access Cards (NORZ-AC-YYYY-####) per beneficiary, with soft-warning No Card guard at intervention logging, on-demand browser-print card view with full service log, and reprint with identity verification.
 **Mode:** mvp
 **Depends on**: Phase 3
-**Requirements**: AC-01, AC-02, AC-03, AC-04, INT-07
+**Requirements**: AC-01, AC-02, AC-03, AC-04
 **Success Criteria** (what must be TRUE):
 
-  1. Each beneficiary receives a unique Access Card code in format NORZ-AC-YYYY-#### upon intake completion
-  2. Every intervention automatically appends to the beneficiary's 18-row Access Card service record with service date, type, cost, and agency
-  3. "No Card = No Voucher" guard blocks intervention logging when the beneficiary has no active Access Card
-  4. Loss/replacement workflow generates a new card code, preserves full audit trail of old card, and marks lost card as void
-  5. Staff can view, print, and refill the Access Card service log from the UI
+  1. Admin can generate-and-assign a unique Access Card code (NORZ-AC-YYYY-####) to any beneficiary in one step — no standalone code generation
+  2. Digital service log is the source of truth with unbounded rows (no 18-row limit enforced in software) per D-02
+  3. "No Card = No Voucher" is a soft warning with override flag — worker can proceed by sending overrideNoCardCheck=true per D-03
+  4. Reprint displays existing card after identity confirmation; code stays permanently tied to beneficiary (no replacement workflow) per D-04
+  5. Staff can view, print (browser print dialog per D-06), and reprint the Access Card service log from the UI
 
 **Plans**: 3 plans
 
