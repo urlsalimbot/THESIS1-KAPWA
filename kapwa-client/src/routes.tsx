@@ -17,6 +17,7 @@ import { FilingPage } from './pages/FilingPage';
 import { ApprovalPipelinePage } from './pages/ApprovalPipelinePage';
 import { MfaSetupPage } from './pages/MfaSetupPage';
 import { IrfPage } from './pages/IrfPage';
+import { IrfDetailPage } from './pages/IrfDetailPage';
 import { AccessCardPage } from './pages/AccessCardPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
 import { ProgramsPage } from './pages/ProgramsPage';
@@ -43,6 +44,7 @@ const router = createBrowserRouter([
   { path: '/approvals', element: <Private roles={['admin','social_worker']}><ApprovalPipelinePage /></Private> },
   { path: '/settings/mfa', element: <Private roles={['admin','mayor','auditor']}><MfaSetupPage /></Private> },
   { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
+  { path: '/irf/:id', element: <Private roles={['admin','social_worker']}><IrfDetailPage /></Private> },
   { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
   { path: '/beneficiaries/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },

@@ -7,6 +7,19 @@ export enum IrfCategory {
   CRIMINAL = 'Criminal'
 }
 
+export enum IrfDisposition {
+  UNDER_INVESTIGATION = 'Under Investigation',
+  REFERRED_TO_PNP = 'Referred to PNP',
+  REFERRED_TO_WCPD = 'Referred to WCPD',
+  DISMISSED = 'Dismissed',
+  CLOSED = 'Closed',
+}
+
+export interface KeyWrap {
+  userId: string;
+  encryptedKey: string; // base64-encoded AES-256 key encrypted with master wrapping key
+}
+
 @Entity('irf_cases')
 export class IrfCase {
   @PrimaryGeneratedColumn('uuid')
@@ -30,11 +43,20 @@ export class IrfCase {
   @Column('jsonb', { nullable: true })
   itemBPersonReported?: Record<string, any>;
 
-  @Column({ type: 'bytea', nullable: true })
+  @Column({ type: 'bytea', nullable: true, name: 'encrypted_narration' })
   encryptedNarration?: Buffer;
 
-  @Column({ nullable: true })
-  caseDisposition?: string;
+  @Column({ type: 'enum', enum: IrfDisposition, default: IrfDisposition.UNDER_INVESTIGATION })
+  caseDisposition!: IrfDisposition;
+
+  @Column({ type: 'jsonb', nullable: true, name: 'key_wraps' })
+  keyWraps?: KeyWrap[];
+
+  @Column({ nullable: true, name: 'key_version', default: 1 })
+  keyVersion?: number;
+
+  @Column({ nullable: true, name: 'dismissal_reason' })
+  dismissalReason?: string;
 
   @Column({ nullable: true })
   msdwSignatureUrl?: string;
