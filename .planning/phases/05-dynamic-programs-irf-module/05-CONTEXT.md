@@ -24,12 +24,12 @@ Requirements: PRG-01, PRG-02, PRG-03, IRF-01, IRF-02, IRF-03, IRF-04
 - **D-07:** Once fully approved, the program assignment is logged as an intervention in the existing intervention system.
 
 ### IRF — Victim Narration Encryption
-- **D-08:** Full end-to-end encryption. Client encrypts victim narration before sending over HTTPS. Server stores encrypted blob. Only authorized users with decryption access can read plaintext.
-- **D-09:** Per-IRF record key — each IRF gets a unique AES-256 key. The key is encrypted with authorized users' public keys and stored alongside the record. Re-encrypt on role/consent changes.
+- **D-08:** Server-side encryption via pgcrypto. Client sends narration over HTTPS (TLS protects in transit). Server encrypts narration via pgcrypto encrypt() before storage as BYTEA. Only authorized users with decryption access can read plaintext. MVP simplification of originally considered client-side encryption — server-side is sufficient given HTTPS protects transport and pgcrypto protects data at rest.
+- **D-09:** Per-IRF record key — each IRF gets a unique AES-256 key (generated via pgcrypto gen_random_bytes(32)). The key is encrypted with a server-side master wrapping key and stored alongside the record. MVP simplification of per-user RSA key wrapping — master key approach reduces complexity while maintaining per-record isolation. Upgrade to per-user RSA in a later phase if needed.
 - **D-10:** pgcrypto extension is already available in the PostgreSQL stack — use it for server-side key wrapping and decryption operations.
 
 ### IRF — Name Masking
-- **D-11:** DB-level masking via PostgreSQL views with pgcrypto. Default views return masked names (e.g., initials only). Queries with explicit legal_basis_code + audit context access unmasked views.
+- **D-11:** Server-side name masking via IrfService with pgcrypto decryption. Default queries return masked names (existing IrfService findAll/findById pattern). Two-step legal-basis unlock provides session-level access to unmasked names. MVP deviation from originally planned PostgreSQL VIEWs -- app-layer is simpler, more testable, matches existing pattern.
 - **D-12:** Two-step unlock for unmasked names — user enters legal basis code → server validates and logs audit entry → session-level access to unmasked names for the duration of that IRF case review. Masks again when navigating away.
 - **D-13:** Any authenticated user with a valid legal basis code can unlock. Audit log tracks who accessed what and why.
 
@@ -50,7 +50,6 @@ Requirements: PRG-01, PRG-02, PRG-03, IRF-01, IRF-02, IRF-03, IRF-04
 - SLA timer implementation (DB cron vs app-level scheduling — same choice as Phase 3)
 - Approved-program-to-intervention mapping details
 - PDF export template design
-- Key management implementation details (RSA key pair generation, storage, rotation)
 
 </decisions>
 

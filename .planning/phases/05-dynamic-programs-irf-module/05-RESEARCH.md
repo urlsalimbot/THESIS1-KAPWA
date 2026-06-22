@@ -812,24 +812,24 @@ export class CasesService {
 
 **All remaining claims are [VERIFIED] via codebase scan (files read directly from disk) or [VERIFIED: CONTEXT.md].**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Per-record key vs. simplified key wrapping for MVP**
+1. **Per-record key vs. simplified key wrapping for MVP** (RESOLVED: Simplified two-tier master wrapping key adopted for MVP per D-09 update)
    - What we know: D-09 requires per-IRF AES keys wrapped with authorized users' RSA public keys. This is architecturally complex.
    - What's unclear: Should Phase 5 implement the full per-user RSA key management, or use a simplified two-tier scheme (master wrapping key + per-record keys) as an MVP stepping stone?
    - Recommendation: Implement the simplified two-tier scheme for MVP. Use a single master wrapping key (stored in env var) to encrypt per-record AES keys. Access control via existing RolesGuard + AbacGuard. Upgrade to per-user RSA key wrapping in a later phase. Flag for discuss-phase.
 
-2. **PostgreSQL VIEW-based name masking feasibility**
+2. **PostgreSQL VIEW-based name masking feasibility** (RESOLVED: Application-layer masking adopted for MVP per D-11 update)
    - What we know: D-11 requires DB-level masking via PostgreSQL views with pgcrypto. The existing application-layer approach already masks names.
    - What's unclear: VIEWs with conditional decryption require session-level parameters (`current_setting`) to be reliably set. The existing RLS infrastructure already sets `app.current_role` and `app.current_barangay` via middleware.
    - Recommendation: Start with application-layer masking (already done in IrfService). Add VIEWs only if time permits. The application approach is simpler, more testable, and already meets D-11 requirements.
 
-3. **RSA key pair generation and storage strategy**
+3. **RSA key pair generation and storage strategy** (RESOLVED: Deferred — master wrapping key used for MVP per D-09 update; per-user RSA deferred to later phase)
    - What we know: D-09 says "encrypted with authorized users' public keys." Users need RSA key pairs.
    - What's unclear: Should private keys be stored server-side (encrypted at rest with user's password hash) or kept exclusively client-side (true end-to-end)?
    - Recommendation: Server-side storage for MVP (fewer UX hurdles). Generate on user creation, store encrypted in `users` table. True end-to-end can be added later. Flag for discuss-phase.
 
-4. **PDF export template design**
+4. **PDF export template design** (RESOLVED: Structured PDF with IRF header, parties, narration, signatures — per planner discretion)
    - What we know: D-14 requires both PDF (AES password-protected via existing pdfkit) and JSON export. pdfkit is already in dependencies.
    - What's unclear: What should the PDF template look like? Is there an existing MSWDO form template that must be matched?
    - Recommendation: Generate a structured PDF with IRF header fields (blotter number, category, dates), parties section, narration text, and signature images. Flag for discuss-phase.
