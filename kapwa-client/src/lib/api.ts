@@ -117,6 +117,23 @@ export async function approveCase(id: string, status: string, signature?: string
   return apiFetch(`/cases/${id}/approve`, { method: 'PATCH', body: JSON.stringify({ status, signature }) });
 }
 
+// ===== FSM transition helpers =====
+export async function requestReview(id: string) {
+  return apiFetch(`/cases/${id}/request-review`, { method: 'PATCH' });
+}
+
+export async function disburseCase(id: string) {
+  return apiFetch(`/cases/${id}/disburse`, { method: 'PATCH', body: JSON.stringify({ status: 'disbursed' }) });
+}
+
+export async function closeCase(id: string) {
+  return apiFetch(`/cases/${id}/close`, { method: 'PATCH' });
+}
+
+export async function overrideCaseStatus(id: string, status: string, reason: string) {
+  return apiFetch(`/cases/${id}/override-status`, { method: 'PATCH', body: JSON.stringify({ status, reason }) });
+}
+
 export async function getFamilyGraph(beneficiaryId: string, signal?: AbortSignal) {
   return apiFetch(`/beneficiaries/${beneficiaryId}/family-graph`, { signal });
 }
