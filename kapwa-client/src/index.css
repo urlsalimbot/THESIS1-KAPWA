@@ -638,3 +638,16 @@ body {
 .min-h-screen { min-height: 100vh; }
 .justify-center { justify-content: center; }
 .mx-auto { margin-left: auto; margin-right: auto; }
+
+/* ===== Print Styles (Access Card Print View) ===== */
+@media print {
+  @page { size: A4 portrait; margin: 15mm; }
+  body { background: white !important; font-size: 10.5pt; color: #000; }
+  .no-print { display: none !important; }
+  .access-card { width: 100%; }
+  .access-card .card-code { font-family: monospace; font-size: 18pt; text-align: center; }
+  .access-card table { width: 100%; border-collapse: collapse; }
+  .access-card th,
+  .access-card td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
