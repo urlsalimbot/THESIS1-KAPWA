@@ -6,13 +6,29 @@ import { AccessCardService } from './access-card-service.entity';
 describe('AccessCardsService', () => {
   let service: AccessCardsService;
   let repoMock: any;
+  let queryRunnerMock: any;
 
   beforeEach(async () => {
+    queryRunnerMock = {
+      connect: jest.fn(),
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(),
+      release: jest.fn(),
+      manager: {
+        query: jest.fn(),
+      },
+    };
     repoMock = {
       query: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
       find: jest.fn(),
+      manager: {
+        connection: {
+          createQueryRunner: jest.fn().mockReturnValue(queryRunnerMock),
+        },
+      },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -27,12 +43,56 @@ describe('AccessCardsService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('generateCode', () => {
-    it('returns a formatted access card code string', async () => {
-      repoMock.query.mockResolvedValue([{ id: 42 }]);
-      const result = await service.generateCode();
-      expect(typeof result).toBe('string');
+  describe('generateAndAssign', () => {
+    it('generates code and updates beneficiary in single call', async () => {
+      queryRunnerMock.manager.query
+        .mockResolvedValueOnce([{ id: 42 }])
+        .mockResolvedValueOnce([]);
+
+      const result = await service.generateAndAssign('beneficiary-uuid');
+
       expect(result).toMatch(/^NORZ-AC-\d{4}-\d{4}$/);
+      expect(queryRunnerMock.manager.query).toHaveBeenCalledTimes(2);
+      expect(queryRunnerMock.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(queryRunnerMock.rollbackTransaction).not.toHaveBeenCalled();
+      expect(queryRunnerMock.release).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles transaction rollback on error', async () => {
+      queryRunnerMock.manager.query
+        .mockResolvedValueOnce([{ id: 42 }])
+        .mockRejectedValueOnce(new Error('UPDATE failed'));
+
+      await expect(service.generateAndAssign('beneficiary-uuid')).rejects.toThrow('UPDATE failed');
+
+      expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(queryRunnerMock.release).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('findBeneficiaryCard', () => {
+    it('returns beneficiary card data', async () => {
+      const benData = { id: 'ben-id', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John', barangay: 'Barangay' };
+      repoMock.query.mockResolvedValue([benData]);
+      repoMock.find.mockResolvedValue([]);
+
+      const result = await service.findBeneficiaryCard('ben-id');
+
+      expect(result).toEqual({
+        beneficiary: benData,
+        code: 'NORZ-AC-2026-0042',
+        services: [],
+      });
+      expect(repoMock.query).toHaveBeenCalledWith(
+        'SELECT id, access_card_code, surname, first_name, barangay FROM beneficiaries WHERE id = $1',
+        ['ben-id']
+      );
+    });
+
+    it('throws NotFoundException when beneficiary has no card', async () => {
+      repoMock.query.mockResolvedValue([{ id: 'ben-id', access_card_code: null }]);
+
+      await expect(service.findBeneficiaryCard('ben-id')).rejects.toThrow('Beneficiary has no Access Card');
     });
   });
 
@@ -59,35 +119,6 @@ describe('AccessCardsService', () => {
         order: { serviceDate: 'DESC' },
       });
       expect(result).toEqual(services);
-    });
-  });
-
-  describe('generateAndAssign', () => {
-    it('generates code and updates beneficiary in single call', async () => {
-      repoMock.query
-        .mockResolvedValueOnce([{ id: 42 }])
-        .mockResolvedValueOnce([]);
-      await expect(service.generateAndAssign('beneficiary-uuid')).rejects.toThrow();
-    });
-
-    it('handles transaction rollback on error', async () => {
-      repoMock.query
-        .mockResolvedValueOnce([{ id: 42 }])
-        .mockRejectedValueOnce(new Error('UPDATE failed'));
-      await expect(service.generateAndAssign('beneficiary-uuid')).rejects.toThrow();
-    });
-  });
-
-  describe('findBeneficiaryCard', () => {
-    it('returns beneficiary card data', async () => {
-      const result = await service.findBeneficiaryCard('ben-id');
-      expect(result).toHaveProperty('beneficiary');
-      expect(result).toHaveProperty('code');
-      expect(result).toHaveProperty('services');
-    });
-
-    it('throws NotFoundException when beneficiary has no card', async () => {
-      await expect(service.findBeneficiaryCard('ben-id')).rejects.toThrow('NotFoundException');
     });
   });
 });
