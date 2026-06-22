@@ -6,6 +6,10 @@ import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory } from '../notifications/notification.entity';
+import {
+  SATURDAY, SUNDAY,
+  PENDING_ESCALATION_DAYS, REVIEW_ESCALATION_DAYS, APPROVED_ESCALATION_DAYS,
+} from '../sla/constants';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const CONTROL_NO_PAD_WIDTH = 5;
@@ -68,16 +72,55 @@ export class CasesService {
   }
 
   async findAll(status?: CaseStatus) {
+    let cases: Case[];
     if (status) {
-      return this.caseRepo.find({ where: { status }, take: DEFAULT_LIST_LIMIT });
+      cases = await this.caseRepo.find({ where: { status }, take: DEFAULT_LIST_LIMIT });
+    } else {
+      cases = await this.caseRepo.find({ take: DEFAULT_LIST_LIMIT });
     }
-    return this.caseRepo.find({ take: DEFAULT_LIST_LIMIT });
+    return cases.map(c => ({
+      ...c,
+      slaOverdue: this.computeSlaOverdue(c),
+    }));
+  }
+
+  async getCaseWithSla(id: string) {
+    const c = await this.findById(id);
+    return {
+      ...c,
+      slaOverdue: this.computeSlaOverdue(c),
+    };
   }
 
   async findById(id: string) {
     const c = await this.caseRepo.findOne({ where: { id }, relations: ['beneficiary'] });
     if (!c) throw new NotFoundException('Case not found');
     return c;
+  }
+
+  private computeSlaOverdue(c: Case): boolean {
+    const age = this.workingDays(c.createdAt, new Date());
+    switch (c.status) {
+      case CaseStatus.PENDING:
+        return age >= PENDING_ESCALATION_DAYS;
+      case CaseStatus.IN_REVIEW:
+        return age >= REVIEW_ESCALATION_DAYS;
+      case CaseStatus.APPROVED:
+        return age >= APPROVED_ESCALATION_DAYS;
+      default:
+        return false;
+    }
+  }
+
+  private workingDays(start: Date, end: Date): number {
+    let count = 0;
+    const current = new Date(start);
+    while (current <= end) {
+      const day = current.getDay();
+      if (day !== SUNDAY && day !== SATURDAY) count++;
+      current.setDate(current.getDate() + 1);
+    }
+    return count;
   }
 
   private async logHistory(caseId: string, fromStatus: CaseStatus | undefined, toStatus: CaseStatus, changedByRole?: string, changedById?: string, remarks?: string, transitionType?: 'standard' | 'override', overrideReason?: string) {
