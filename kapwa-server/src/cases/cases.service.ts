@@ -80,7 +80,7 @@ export class CasesService {
     return c;
   }
 
-  private async logHistory(caseId: string, fromStatus: CaseStatus | undefined, toStatus: CaseStatus, changedByRole?: string, changedById?: string, remarks?: string) {
+  private async logHistory(caseId: string, fromStatus: CaseStatus | undefined, toStatus: CaseStatus, changedByRole?: string, changedById?: string, remarks?: string, transitionType?: 'standard' | 'override', overrideReason?: string) {
     await this.historyRepo.save({
       caseId,
       fromStatus,
@@ -88,6 +88,8 @@ export class CasesService {
       changedByRole,
       changedById,
       remarks,
+      transitionType: transitionType || 'standard',
+      overrideReason,
     });
   }
 
@@ -190,6 +192,80 @@ export class CasesService {
       });
     }
 
+    return c;
+  }
+
+  async requestReview(id: string, userRole?: string) {
+    const c = await this.findById(id);
+    if (c.status !== CaseStatus.PENDING) {
+      throw new BadRequestException(`Cannot request review from ${c.status}`);
+    }
+    if (userRole !== 'social_worker') {
+      throw new ForbiddenException(`Role ${userRole} cannot request review`);
+    }
+    const oldStatus = c.status;
+    c.status = CaseStatus.IN_REVIEW;
+    c.updatedAt = new Date();
+    await this.caseRepo.save(c);
+    await this.logHistory(id, oldStatus, c.status, userRole, undefined, undefined, 'standard');
+    return c;
+  }
+
+  async disburse(id: string, newStatus: CaseStatus, userRole?: string) {
+    const c = await this.findById(id);
+    if (c.status !== CaseStatus.APPROVED) {
+      throw new BadRequestException(`Cannot disburse from ${c.status}`);
+    }
+    if (userRole !== 'admin') {
+      throw new ForbiddenException(`Role ${userRole} cannot disburse`);
+    }
+    const oldStatus = c.status;
+    c.status = CaseStatus.DISBURSED;
+    c.updatedAt = new Date();
+    await this.caseRepo.save(c);
+    await this.logHistory(id, oldStatus, c.status, userRole, undefined, 'Disbursed by admin');
+    if (c.beneficiaryId) {
+      await this.notifService.create({
+        recipientId: c.beneficiaryId,
+        title: 'Disbursement Approved',
+        message: `Case ${c.controlNo} has been approved for disbursement. Please coordinate with the MSWDO office.`,
+        category: NotificationCategory.DISBURSEMENT,
+        referenceId: c.controlNo,
+      });
+    }
+    return c;
+  }
+
+  async close(id: string, newStatus: CaseStatus, userRole?: string) {
+    const c = await this.findById(id);
+    if (c.status !== CaseStatus.DISBURSED) {
+      throw new BadRequestException(`Cannot close from ${c.status}`);
+    }
+    const allowedRoles = ['admin', 'social_worker'];
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      throw new ForbiddenException(`Role ${userRole} cannot close case`);
+    }
+    const oldStatus = c.status;
+    c.status = CaseStatus.CLOSED;
+    c.updatedAt = new Date();
+    await this.caseRepo.save(c);
+    await this.logHistory(id, oldStatus, c.status, userRole);
+    return c;
+  }
+
+  async overrideStatus(id: string, targetStatus: CaseStatus, reason: string, userRole?: string) {
+    const c = await this.findById(id);
+    if (userRole !== 'admin') {
+      throw new ForbiddenException(`Role ${userRole} cannot override case status`);
+    }
+    if (!reason || reason.trim().length === 0) {
+      throw new BadRequestException('Override reason is required');
+    }
+    const oldStatus = c.status;
+    c.status = targetStatus;
+    c.updatedAt = new Date();
+    await this.caseRepo.save(c);
+    await this.logHistory(id, oldStatus, c.status, userRole, undefined, undefined, 'override', reason);
     return c;
   }
 

@@ -154,13 +154,13 @@ describe('FSM — requestReview', () => {
   it('should forbid requestReview when role is admin', async () => {
     const existing = { id: '1', status: CaseStatus.PENDING, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
-    await expect(service.requestReview('1', 'admin')).rejects.toThrow('Forbidden');
+    await expect(service.requestReview('1', 'admin')).rejects.toThrow('Role admin cannot request review');
   });
 
   it('should throw when requestReview called on non-pending case', async () => {
     const existing = { id: '1', status: CaseStatus.IN_REVIEW, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
-    await expect(service.requestReview('1', 'social_worker')).rejects.toThrow('Bad Request');
+    await expect(service.requestReview('1', 'social_worker')).rejects.toThrow('Cannot request review from');
   });
 });
 
@@ -176,7 +176,7 @@ describe('FSM — disburse', () => {
   it('should throw when disburse called by social_worker', async () => {
     const existing = { id: '1', status: CaseStatus.APPROVED, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
-    await expect(service.disburse('1', CaseStatus.DISBURSED, 'social_worker')).rejects.toThrow('Forbidden');
+    await expect(service.disburse('1', CaseStatus.DISBURSED, 'social_worker')).rejects.toThrow('Role social_worker cannot disburse');
   });
 });
 
@@ -210,8 +210,7 @@ describe('FSM — overrideStatus', () => {
   it('should throw if override reason is empty', async () => {
     const existing = { id: '1', status: CaseStatus.PENDING, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
-    await expect(service.overrideStatus('1', CaseStatus.APPROVED, '', 'admin'))
-      .rejects.toThrow('Bad Request');
+    await expect(service.overrideStatus('1', CaseStatus.APPROVED, '', 'admin')).rejects.toThrow('Override reason is required');
   });
 
   it('should record override in CaseHistory with transitionType and overrideReason', async () => {
