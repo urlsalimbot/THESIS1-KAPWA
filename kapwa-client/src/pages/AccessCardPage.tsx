@@ -18,6 +18,7 @@ export function AccessCardPage() {
   const [cardData, setCardData] = useState<{ beneficiary: any; code: string; services: any[] } | null>(null);
   const [logForm, setLogForm] = useState({ accessCardCode: '', serviceType: '', serviceDate: '', remarks: '' });
   const [successBanner, setSuccessBanner] = useState('');
+  const [printBeneficiaryId, setPrintBeneficiaryId] = useState('');
 
   async function loadServices(signal?: AbortSignal) {
     try {
@@ -114,6 +115,27 @@ export function AccessCardPage() {
         {assignError && (
           <div className="mt-2 rounded bg-red-50 p-2 text-sm text-red-700">{assignError}</div>
         )}
+      </div>
+
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-gray-700">Quick Print — Card View</h2>
+        <div className="flex items-center gap-2">
+          <input
+            placeholder="Beneficiary ID (UUID)"
+            value={printBeneficiaryId}
+            onChange={e => setPrintBeneficiaryId(e.target.value)}
+            aria-label="Print Card Beneficiary ID"
+            className="flex-1 rounded border border-gray-300 p-2 text-sm font-mono"
+          />
+          <button
+            onClick={() => navigate(`/beneficiary/${printBeneficiaryId}/card/print`)}
+            disabled={!printBeneficiaryId.trim()}
+            className="rounded bg-[#2E5C8A] px-4 py-2 text-xs text-white hover:bg-[#1e3d5e] disabled:opacity-50"
+            aria-label="Go to Print View"
+          >
+            Print Card
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">

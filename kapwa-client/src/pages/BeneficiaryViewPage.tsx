@@ -183,8 +183,8 @@ export function BeneficiaryViewPage() {
   function handleReprint() {
     if (!beneficiary) return;
     const confirmed = window.confirm(
-      `Reprint Access Card for ${beneficiary.name}?\n\n` +
-      `Current card code: ${beneficiary.accessCardCode}\n\n` +
+      `Reprint Access Card — Reprint card for ${beneficiary.name}? ` +
+      `Current code: ${beneficiary.accessCardCode} will remain valid. ` +
       `Verify claimant identity before proceeding.`
     );
     if (!confirmed) return;
@@ -210,6 +210,7 @@ export function BeneficiaryViewPage() {
         </div>
       )}
 
+      {/* Profile Card */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -229,6 +230,44 @@ export function BeneficiaryViewPage() {
         </div>
       </div>
 
+      {/* Access Card Section — standalone between profile and main grid */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]"><Shield size={18} /> <h3 className="text-sm font-semibold">Access Card</h3></div>
+        {beneficiary.accessCardCode ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500">Card Code</p>
+              <p className="font-mono text-sm font-medium text-[#2E5C8A]">
+                {beneficiary.accessCardCode}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/beneficiary/${id}/card/print`)}
+                className="rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]"
+              >
+                Print Card
+              </button>
+              <button
+                onClick={handleReprint}
+                className="rounded border border-[#2E5C8A] px-3 py-1.5 text-xs text-[#2E5C8A] hover:bg-gray-50"
+              >
+                Reprint Card
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleAssignCard}
+            disabled={assigning}
+            className="w-full rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-50"
+          >
+            {assigning ? 'Assigning...' : 'Generate & Assign Access Card'}
+          </button>
+        )}
+      </div>
+
+      {/* Main Details Grid */}
       <div className="grid grid-cols-3 gap-6">
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
           <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]"><UsersIcon size={18} /> <h3 className="text-sm font-semibold">Personal Info</h3></div>
@@ -237,41 +276,6 @@ export function BeneficiaryViewPage() {
             <div className="flex justify-between"><span className="text-gray-500">Contact</span><span>{beneficiary.contact || 'N/A'}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Category</span><span>{beneficiary.category || 'N/A'}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Household</span><span>{beneficiary.householdSize} members</span></div>
-          </div>
-          {/* Access Card Section */}
-          <div className="mt-4 border-t border-gray-100 pt-4">
-            {beneficiary.accessCardCode ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Access Card</p>
-                  <p className="font-mono text-sm font-medium text-[#2E5C8A]">
-                    {beneficiary.accessCardCode}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => navigate(`/beneficiary/${id}/card/print`)}
-                    className="rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]"
-                  >
-                    Print Card
-                  </button>
-                  <button
-                    onClick={handleReprint}
-                    className="rounded border border-[#2E5C8A] px-3 py-1.5 text-xs text-[#2E5C8A] hover:bg-gray-50"
-                  >
-                    Reprint Card
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={handleAssignCard}
-                disabled={assigning}
-                className="w-full rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-50"
-              >
-                {assigning ? 'Assigning...' : 'Generate & Assign Access Card'}
-              </button>
-            )}
           </div>
         </div>
 

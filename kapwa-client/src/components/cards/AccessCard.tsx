@@ -39,7 +39,7 @@ export function AccessCard({ beneficiary, services, printable = false }: AccessC
       ) : (
         <table className="service-log w-full mt-4 text-sm">
           <thead>
-            <tr className="text-xs font-bold uppercase text-gray-500">
+            <tr className="text-xs font-bold uppercase tracking-wider text-gray-500">
               <th className="text-left py-2 pr-2">#</th>
               <th className="text-left py-2 pr-2">Date</th>
               <th className="text-left py-2 pr-2">Service</th>
@@ -49,7 +49,7 @@ export function AccessCard({ beneficiary, services, printable = false }: AccessC
           </thead>
           <tbody className="divide-y divide-gray-100">
             {services.map((s, i) => (
-              <tr key={s.id} className="hover:bg-gray-50 even:bg-[#F5F5F5]">
+              <tr key={s.id} className="hover:bg-[#E8F0F7] even:bg-[#F5F5F5]">
                 <td className="py-2 pr-2 text-gray-600">{i + 1}</td>
                 <td className="py-2 pr-2">{new Date(s.serviceDate).toLocaleDateString()}</td>
                 <td className="py-2 pr-2">{s.serviceRendered}</td>
