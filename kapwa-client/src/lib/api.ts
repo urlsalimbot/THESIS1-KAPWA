@@ -168,3 +168,41 @@ export async function createUser(data: { email: string; password: string; role: 
 export async function submitIntake(data: Record<string, unknown>) {
   return apiFetch('/intake', { method: 'POST', body: JSON.stringify(data) });
 }
+
+// ===== Signature / Receipt upload =====
+export async function uploadSignature(file: Blob, fileName: string): Promise<string> {
+  const token = localStorage.getItem('kapwa_token');
+  const formData = new FormData();
+  formData.append('file', file, fileName);
+  const res = await fetch(`${API}/interventions/upload-signature`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Signature upload failed');
+  const data = await res.json();
+  return data.url;
+}
+
+export async function uploadReceipt(file: Blob, fileName: string): Promise<string> {
+  const token = localStorage.getItem('kapwa_token');
+  const formData = new FormData();
+  formData.append('file', file, fileName);
+  const res = await fetch(`${API}/interventions/upload-receipt`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Receipt upload failed');
+  const data = await res.json();
+  return data.url;
+}
+
+export function dataURItoBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)?.[1] || 'image/png';
+  const binary = atob(base64);
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+  return new Blob([array], { type: mime });
+}
