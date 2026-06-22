@@ -206,3 +206,9 @@ export function dataURItoBlob(dataUrl: string): Blob {
   for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
   return new Blob([array], { type: mime });
 }
+
+// ===== Case Tracker Log =====
+export async function getCaseTrackerLog(date?: string) {
+  const q = date ? `?date=${date}` : '';
+  return apiFetch(`/tracker/daily${q}`);
+}

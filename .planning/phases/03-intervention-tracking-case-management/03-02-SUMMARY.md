@@ -147,3 +147,13 @@ Both flagged routes are covered by the existing threat model (T-03-07: Signature
 
 *Phase: 03-intervention-tracking-case-management*
 *Completed: 2026-06-22*
+
+## Self-Check: PASSED
+
+- ✓ All 12 key files exist on disk
+- ✓ All 4 commits (3 task + 1 metadata) verified in git log
+- ✓ All 17 intervention tests pass
+- ✓ ConflictException found: 2 occurrences
+- ✓ no_duplicate_intervention_30d constraint found: 2 occurrences
+- ✓ TypeScript compilation succeeds (server + client)
+- ✓ Full test suite: 184/184 pass

@@ -33,7 +33,7 @@ export class CasesController {
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   async findOne(@Param('id') id: string) {
-    return this.casesService.findById(id);
+    return this.casesService.getCaseWithSla(id);
   }
 
   @Get(':id/history')
