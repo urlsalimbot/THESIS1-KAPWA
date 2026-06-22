@@ -27,9 +27,9 @@
 
 ### Access Card System
 
-- [ ] **AC-01**: Generate unique Access Card codes (NORZ-AC-YYYY-####) per beneficiary
-- [ ] **AC-02**: 18-row service log per card with refill/print workflow
-- [ ] **AC-03**: Loss/replacement workflow with full audit trail
+- [x] **AC-01**: Generate unique Access Card codes (NORZ-AC-YYYY-####) per beneficiary
+- [x] **AC-02**: 18-row service log per card with refill/print workflow
+- [x] **AC-03**: Loss/replacement workflow with full audit trail
 - [ ] **AC-04**: "No Card = No Voucher" API guard enforced at intervention logging
 
 ### IRF (Incident Report Form) Module
@@ -98,9 +98,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AC-01 | Phase 4 | Pending |
-| AC-02 | Phase 4 | Pending |
-| AC-03 | Phase 4 | Pending |
+| AC-01 | Phase 4 | Complete |
+| AC-02 | Phase 4 | Complete |
+| AC-03 | Phase 4 | Complete |
 | AC-04 | Phase 4 | Pending |
 | CON-01 | Phase 2 | Complete |
 | CON-02 | Phase 2 | Complete |
