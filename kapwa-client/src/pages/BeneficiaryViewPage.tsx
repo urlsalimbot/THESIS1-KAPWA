@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronRight, Shield, ClipboardList
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getBeneficiary, getCases, getFamilyGraph, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob, getCaseTrackerLog } from '../lib/api';
+import { getBeneficiary, getCases, getFamilyGraph, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob, getCaseTrackerLog, assignCard } from '../lib/api';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { ConsentManager } from '../components/consent/ConsentManager';
 import SignaturePad from '../components/forms/SignaturePad';
@@ -22,6 +22,7 @@ interface BeneficiaryDetail {
   category: string;
   householdSize: number;
   status: string;
+  accessCardCode?: string;
   cases: { id: string; program: string; status: string; date: string; amount?: string }[];
   interventions: { id: string; type: string; description: string; date: string; fundSource?: string }[];
 }
@@ -56,6 +57,8 @@ export function BeneficiaryViewPage() {
   const [intSubmitting, setIntSubmitting] = useState(false);
   const [intError, setIntError] = useState('');
   const [trackerEntries, setTrackerEntries] = useState<TrackerEntry[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState('');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -81,6 +84,7 @@ export function BeneficiaryViewPage() {
           category: ben.category || '',
           householdSize: famGraph?.totalCount || 1,
           status: ben.consentStatus || 'active',
+          accessCardCode: ben.accessCardCode || undefined,
           cases: beneficiaryCases.map((c: Record<string, unknown>) => {
             const sr = c.serviceRequested;
             return {
@@ -106,6 +110,13 @@ export function BeneficiaryViewPage() {
       });
     }
   }, [id]);
+
+  useEffect(() => {
+    if (assignSuccess) {
+      const t = setTimeout(() => setAssignSuccess(''), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [assignSuccess]);
 
   const statusBadge = (status: string) => {
     const map: Record<string, { className: string; label: string }> = {
@@ -156,6 +167,30 @@ export function BeneficiaryViewPage() {
     setIntSubmitting(false);
   }
 
+  async function handleAssignCard() {
+    if (!id) return;
+    setAssigning(true);
+    try {
+      const result = await assignCard(id);
+      setBeneficiary(prev => prev ? { ...prev, accessCardCode: result.accessCardCode } : prev);
+      setAssignSuccess(`Access Card assigned: ${result.accessCardCode}`);
+    } catch (err: any) {
+      setAssignSuccess('');
+    }
+    setAssigning(false);
+  }
+
+  function handleReprint() {
+    if (!beneficiary) return;
+    const confirmed = window.confirm(
+      `Reprint Access Card for ${beneficiary.name}?\n\n` +
+      `Current card code: ${beneficiary.accessCardCode}\n\n` +
+      `Verify claimant identity before proceeding.`
+    );
+    if (!confirmed) return;
+    navigate(`/beneficiary/${id}/card/print`);
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-400">Loading...</div>;
   if (!beneficiary) return <div className="p-8 text-center text-gray-400">Beneficiary not found</div>;
 
@@ -168,6 +203,12 @@ export function BeneficiaryViewPage() {
       <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-[#2E5C8A] hover:underline">
         <ArrowLeft size={16} /> Back
       </button>
+
+      {assignSuccess && (
+        <div className="rounded-lg bg-green-50 border border-green-200 p-4 text-sm font-medium text-green-700">
+          {assignSuccess}
+        </div>
+      )}
 
       <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
         <div className="flex items-start justify-between">
@@ -196,6 +237,41 @@ export function BeneficiaryViewPage() {
             <div className="flex justify-between"><span className="text-gray-500">Contact</span><span>{beneficiary.contact || 'N/A'}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Category</span><span>{beneficiary.category || 'N/A'}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Household</span><span>{beneficiary.householdSize} members</span></div>
+          </div>
+          {/* Access Card Section */}
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            {beneficiary.accessCardCode ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500">Access Card</p>
+                  <p className="font-mono text-sm font-medium text-[#2E5C8A]">
+                    {beneficiary.accessCardCode}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => navigate(`/beneficiary/${id}/card/print`)}
+                    className="rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]"
+                  >
+                    Print Card
+                  </button>
+                  <button
+                    onClick={handleReprint}
+                    className="rounded border border-[#2E5C8A] px-3 py-1.5 text-xs text-[#2E5C8A] hover:bg-gray-50"
+                  >
+                    Reprint Card
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleAssignCard}
+                disabled={assigning}
+                className="w-full rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-50"
+              >
+                {assigning ? 'Assigning...' : 'Generate & Assign Access Card'}
+              </button>
+            )}
           </div>
         </div>
 
