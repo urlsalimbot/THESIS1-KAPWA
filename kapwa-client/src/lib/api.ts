@@ -234,3 +234,36 @@ export async function assignCard(beneficiaryId: string) {
 export async function getBeneficiaryCard(beneficiaryId: string) {
   return apiFetch(`/access-cards/beneficiary/${beneficiaryId}/card`);
 }
+
+// ===== IRF =====
+export async function getIrfCase(id: string) {
+  return apiFetch(`/irf/${id}`);
+}
+
+export async function createIrf(data: Record<string, unknown>) {
+  return apiFetch('/irf', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function referToPnp(id: string) {
+  return apiFetch(`/irf/${id}/refer-pnp`, { method: 'PATCH' });
+}
+
+export async function referToWcpd(id: string) {
+  return apiFetch(`/irf/${id}/refer-wcpd`, { method: 'PATCH' });
+}
+
+export async function dismissIrf(id: string, reason: string) {
+  return apiFetch(`/irf/${id}/dismiss`, { method: 'PATCH', body: JSON.stringify({ reason }) });
+}
+
+export async function closeIrf(id: string) {
+  return apiFetch(`/irf/${id}/close`, { method: 'PATCH' });
+}
+
+export async function decryptNarration(id: string, legalBasis: string) {
+  return apiFetch(`/irf/${id}/decrypt`, { method: 'POST', body: JSON.stringify({ legalBasis }) });
+}
+
+export async function unmaskIrfNames(id: string, legalBasis: string) {
+  return apiFetch(`/irf/${id}/unmask-names?legalBasis=${encodeURIComponent(legalBasis)}`);
+}
