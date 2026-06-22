@@ -20,7 +20,7 @@ export class InterventionsService {
     private trackerService: TrackerService,
   ) {}
 
-  async create(data: Partial<Intervention>, userId: string) {
+  async create(data: Partial<Intervention> & { overrideNoCardCheck?: boolean }, userId: string) {
     const caseId = data.caseId;
     if (!caseId) throw new NotFoundException('Case required');
 
@@ -30,12 +30,21 @@ export class InterventionsService {
       throw new BadRequestException('Case must be disbursed first');
     }
 
+    // D-03: Soft warning for No Card with override
     const beneficiary = await this.caseRepo.query(
       'SELECT access_card_code FROM beneficiaries WHERE id = $1',
       [caseEntity.beneficiaryId],
     );
-    if (!beneficiary?.[0]?.access_card_code) {
-      throw new BadRequestException('Beneficiary has no Access Card — No Card, No Voucher');
+    const hasCard = !!beneficiary?.[0]?.access_card_code;
+    let warning: string | undefined;
+
+    if (!hasCard) {
+      if (!data.overrideNoCardCheck) {
+        throw new BadRequestException(
+          'Beneficiary has no Access Card. Set overrideNoCardCheck=true to proceed.'
+        );
+      }
+      warning = 'Beneficiary has no Access Card — intervention logged without card';
     }
 
     const duplicateCheck = await this.interventionRepo.query(
@@ -131,7 +140,7 @@ export class InterventionsService {
       console.error('Failed to auto-create tracker entry:', err);
     }
 
-    return saved;
+    return { intervention: saved, ...(warning ? { warning } : {}) };
   }
 
   async uploadSignature(fileBuffer: Buffer, fileName: string, mimeType: string): Promise<string> {

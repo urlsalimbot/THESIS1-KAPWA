@@ -78,7 +78,7 @@ describe('InterventionsService', () => {
         'user-1',
       );
       expect(result).toBeDefined();
-      expect(result.id).toBe('int-1');
+      expect(result.intervention.id).toBe('int-1');
     });
 
     it('should set signatureStatus to PENDING by default', async () => {
@@ -91,7 +91,7 @@ describe('InterventionsService', () => {
         { caseId: 'case-1', interventionType: InterventionType.FA } as any,
         'user-1',
       );
-      expect(result?.signatureStatus).toBe(SignatureStatus.PENDING);
+      expect(result.intervention?.signatureStatus).toBe(SignatureStatus.PENDING);
     });
 
     it('should throw ConflictException for duplicate intervention within 30 days', async () => {
