@@ -32,13 +32,13 @@ export class Notification {
   category: NotificationCategory;
 
   @Column({ name: 'reference_id', nullable: true })
-  referenceId: string;
+  referenceId?: string;
 
   @Column({ type: 'enum', enum: NotificationType, default: NotificationType.IN_APP })
   channel: NotificationType;
 
   @Column({ nullable: true })
-  phone: string;
+  phone?: string;
 
   @Column({ name: 'is_read', default: false })
   isRead: boolean;
@@ -46,8 +46,11 @@ export class Notification {
   @Column({ name: 'sent', default: false })
   sent: boolean;
 
+  @Column({ name: 'consent_skipped', default: false })
+  consentSkipped: boolean;
+
   @Column({ name: 'sent_at', nullable: true })
-  sentAt: Date;
+  sentAt?: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
