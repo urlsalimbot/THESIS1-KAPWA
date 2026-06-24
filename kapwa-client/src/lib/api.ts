@@ -302,3 +302,22 @@ export async function overrideAssignmentStep(id: string, stepOrder: number, over
     body: JSON.stringify({ stepOrder, overrideStatus, remarks }),
   });
 }
+
+export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
+  const token = localStorage.getItem('kapwa_token');
+  const res = await fetch(`${API}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = `IRF-${id}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportIrfJson(id: string, legalBasis: string) {
+  return apiFetch(`/irf/${id}/export-json?legalBasis=${encodeURIComponent(legalBasis)}`);
+}
