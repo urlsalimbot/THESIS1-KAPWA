@@ -68,7 +68,12 @@ export function DashboardPage() {
     setLoading(false);
   }
 
-  if (loading) return <div className="p-8 text-center text-style-body">Loading dashboard...</div>;
+  if (loading) return <div className="flex items-center justify-center p-12">
+    <div className="text-center">
+      <div className="spinner mx-auto mb-3" />
+      <p className="text-text-secondary text-sm">Loading dashboard...</p>
+    </div>
+  </div>;
 
   return (
     <div>
@@ -105,7 +110,7 @@ export function DashboardPage() {
                   <td className="text-gray-500">{c.id}</td>
                   <td className="font-medium text-gray-900">{c.name}</td>
                   <td><span className="badge-category">{c.category}</span></td>
-                  <td className="text-style-body">{c.barangay}</td>
+                  <td className="text-text-secondary">{c.barangay}</td>
                   <td className="text-xs">{c.remarks}</td>
                   <td><StatusBadge status={c.status} /></td>
                   <td className="text-xs text-gray-500 min-w-[140px]">{c.date}</td>

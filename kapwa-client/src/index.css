@@ -166,6 +166,8 @@
   .login-subtitle { @apply font-body text-sm text-text-secondary text-center mt-1; }
 }
 
+  .spinner { @apply inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent; }
+  .empty-state { @apply flex flex-col items-center justify-center py-12 text-text-secondary; }
 /* Print styles */
 @media print {
   @page { size: A4 portrait; margin: 15mm; }

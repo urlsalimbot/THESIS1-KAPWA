@@ -177,7 +177,12 @@ export function CasesPage() {
     );
   }
 
-  if (loading) return <div className="p-8 text-center text-style-body">Loading cases...</div>;
+  if (loading) return <div className="flex items-center justify-center p-12">
+    <div className="text-center">
+      <div className="spinner mx-auto mb-3" />
+      <p className="text-text-secondary text-sm">Loading cases...</p>
+    </div>
+  </div>;
 
   const uniqueBarangays = [...new Set(cases.map(c => c.barangay).filter(Boolean))];
 
@@ -226,28 +231,31 @@ export function CasesPage() {
           <thead>
             <tr>
               <th className="w-12">No.</th>
-              <th className="text-style-label">Surname</th>
-              <th className="text-style-label">First</th>
-              <th className="text-style-label">Middle</th>
-              <th className="text-style-label">Gender</th>
-              <th className="text-style-label">Age Range</th>
-              <th className="text-style-label">Category</th>
-              <th className="text-style-label">Status</th>
-              <th className="text-style-label">SLA</th>
-              <th className="text-style-label">Barangay</th>
-              <th className="text-style-label">Intervention/Remarks</th>
+              <th className="text-text-primary">Surname</th>
+              <th className="text-text-primary">First</th>
+              <th className="text-text-primary">Middle</th>
+              <th className="text-text-primary">Gender</th>
+              <th className="text-text-primary">Age Range</th>
+              <th className="text-text-primary">Category</th>
+              <th className="text-text-primary">Status</th>
+              <th className="text-text-primary">SLA</th>
+              <th className="text-text-primary">Barangay</th>
+              <th className="text-text-primary">Intervention/Remarks</th>
               <th className="min-w-[140px]">Date</th>
-              <th className="text-style-label">Actions</th>
+              <th className="text-text-primary">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredCases.map(c => (
+            {filteredCases.length === 0 ? (
+              <tr><td colSpan={13} className="text-center py-8 text-text-secondary text-sm">No cases found matching your filters</td></tr>
+            ) : (
+              filteredCases.map(c => (
               <tr key={c.no}>
                 <td className="text-gray-500">{c.no}</td>
                 <td className="text-gray-900 font-medium">{c.surname}</td>
-                <td className="text-style-body">{c.first}</td>
+                <td className="text-text-secondary">{c.first}</td>
                 <td className="text-gray-500">{c.middle}</td>
-                <td className="text-style-body">{c.gender}</td>
+                <td className="text-text-secondary">{c.gender}</td>
                 <td><span className="badge-age">{c.ageRange}</span></td>
                 <td><span className="badge-category">{c.category}</span></td>
                 <td>
@@ -265,12 +273,13 @@ export function CasesPage() {
                     <span className="text-xs text-gray-400">—</span>
                   )}
                 </td>
-                <td className="text-style-body">{c.barangay}</td>
+                <td className="text-text-secondary">{c.barangay}</td>
                 <td className="text-xs">{c.remarks}</td>
                 <td className="text-xs text-gray-500 min-w-[140px]">{c.date}</td>
                 <td>{renderActions(c)}</td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
         </table>
       </div>
