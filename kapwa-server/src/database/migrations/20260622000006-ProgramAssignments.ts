@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ProgramAssignments20260622000006 implements MigrationInterface {
-  name = 'ProgramAssignments20260622000006';
+export class ProgramAssignments2026062200006 implements MigrationInterface {
+  name = 'ProgramAssignments2026062200006';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Create program_assignments table

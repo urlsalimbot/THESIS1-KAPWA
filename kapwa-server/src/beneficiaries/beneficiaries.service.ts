@@ -99,6 +99,10 @@ export class BeneficiariesService {
     return qb.getMany();
   }
 
+  async findByUserId(userId: string) {
+    return this.benRepo.findOne({ where: { userId } });
+  }
+
   async findById(id: string) {
     const ben = await this.benRepo.findOne({ where: { id }, relations: ['household'] });
     if (!ben) throw new NotFoundException('Beneficiary not found');
@@ -192,6 +196,23 @@ export class BeneficiariesService {
     const ben = await this.benRepo.findOne({ where: { userId } });
     if (!ben) return [];
     return this.consentRepo.find({ where: { beneficiaryId: ben.id }, order: { grantedAt: 'DESC' } });
+  }
+
+  async getAccessCard(userId: string) {
+    const ben = await this.benRepo.findOne({ where: { userId } });
+    if (!ben || !ben.accessCardCode) {
+      throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
+    }
+    const services = await this.intRepo.query(
+      `SELECT service_date, service_rendered, agency FROM access_card_services WHERE access_card_code = $1 ORDER BY service_date DESC LIMIT 18`,
+      [ben.accessCardCode]
+    );
+    return {
+      code: ben.accessCardCode,
+      beneficiary: { name: ben.firstName + ' ' + ben.surname, barangay: (ben.address || '').split(',').pop()?.trim() },
+      services,
+      remainingSlots: 18 - services.length,
+    };
   }
 
   async checkConsent(beneficiaryId: string, purpose: string): Promise<boolean> {

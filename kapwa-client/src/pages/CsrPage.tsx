@@ -36,12 +36,12 @@ export function CsrPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [msg, setMsg] = useState('');
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { const ac = new AbortController(); load(ac.signal); return () => ac.abort(); }, []);
 
-  async function load() {
+  async function load(signal?: AbortSignal) {
     setLoading(true);
     try {
-      const data = await getCsrRecords();
+      const data = await getCsrRecords(signal);
       setRecords(data || []);
     } catch { setRecords([]); }
     setLoading(false);
@@ -66,7 +66,7 @@ export function CsrPage() {
     setShowForm(true);
   }
 
-  function updateForm(field: keyof CsrForm, value: any) {
+  function updateForm(field: keyof CsrForm, value: string | number | boolean | string[]) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
@@ -75,16 +75,16 @@ export function CsrPage() {
     setMsg('');
     try {
       if (editingId) {
-        await updateCsrRecord(editingId, form);
+        await updateCsrRecord(editingId, form as unknown as Record<string, unknown>);
         setMsg('CSR updated');
       } else {
-        await createCsrRecord(form);
+        await createCsrRecord(form as unknown as Record<string, unknown>);
         setMsg('CSR created');
       }
       setShowForm(false);
       load();
-    } catch (err: any) {
-      setMsg(err.message || 'Error saving CSR');
+    } catch (err: unknown) {
+      setMsg(err instanceof Error ? err.message : 'Error saving CSR');
     }
   }
 
@@ -112,10 +112,10 @@ export function CsrPage() {
 
       <div className="toolbar">
         <div className="toolbar-left">
-          <button className="btn btn-primary" onClick={openNew}>+ New CSR</button>
+          <button className="btn btn-primary" onClick={openNew} aria-label="+ New CSR">+ New CSR</button>
         </div>
         <div className="toolbar-right">
-          <input type="text" placeholder="Search CSR..." className="form-input max-w-xs" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search CSR..." className="form-input max-w-xs" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} aria-label="Search CSR" />
         </div>
       </div>
 
@@ -124,72 +124,72 @@ export function CsrPage() {
           <h3 className="font-heading font-semibold mb-4">{editingId ? 'Edit CSR' : 'New CSR Report'}</h3>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">I. Case Reference</h4>
+              <h4 className="mb-3 text-sm font-semibold text-primary">I. Case Reference</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="form-group">
                   <label className="form-label">Case ID *</label>
-                  <input className="form-input" required value={form.caseId} onChange={e => updateForm('caseId', e.target.value)} placeholder="Case UUID" />
+                  <input className="form-input" required value={form.caseId} onChange={e => updateForm('caseId', e.target.value)} placeholder="Case UUID" aria-label="Case ID" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Social Worker *</label>
-                  <input className="form-input" required value={form.socialWorkerName} onChange={e => updateForm('socialWorkerName', e.target.value)} />
+                  <input className="form-input" required value={form.socialWorkerName} onChange={e => updateForm('socialWorkerName', e.target.value)} aria-label="Social Worker" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Position</label>
-                  <input className="form-input" value={form.socialWorkerPosition} onChange={e => updateForm('socialWorkerPosition', e.target.value)} placeholder="e.g. SWO I" />
+                  <input className="form-input" value={form.socialWorkerPosition} onChange={e => updateForm('socialWorkerPosition', e.target.value)} placeholder="e.g. SWO I" aria-label="Social Worker Position" />
                 </div>
               </div>
               <div className="form-group mt-3">
                 <label className="form-label">Referral Origin</label>
-                <input className="form-input" value={form.referralOrigin} onChange={e => updateForm('referralOrigin', e.target.value)} placeholder="Barangay / Agency / Self" />
+                <input className="form-input" value={form.referralOrigin} onChange={e => updateForm('referralOrigin', e.target.value)} placeholder="Barangay / Agency / Self" aria-label="Referral Origin" />
               </div>
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">II. Reason for Referral</h4>
-              <textarea className="form-input min-h-[80px]" value={form.reasonForReferral} onChange={e => updateForm('reasonForReferral', e.target.value)} placeholder="Why was the client referred to MSWDO?" />
+              <h4 className="mb-3 text-sm font-semibold text-primary">II. Reason for Referral</h4>
+              <textarea className="form-input min-h-[80px]" value={form.reasonForReferral} onChange={e => updateForm('reasonForReferral', e.target.value)} placeholder="Why was the client referred to MSWDO?" aria-label="Reason for Referral" />
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">III. Problem Presented</h4>
-              <textarea className="form-input min-h-[80px]" value={form.problemPresented} onChange={e => updateForm('problemPresented', e.target.value)} placeholder="Describe the presenting problem" />
+              <h4 className="mb-3 text-sm font-semibold text-primary">III. Problem Presented</h4>
+              <textarea className="form-input min-h-[80px]" value={form.problemPresented} onChange={e => updateForm('problemPresented', e.target.value)} placeholder="Describe the presenting problem" aria-label="Problem Presented" />
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">IV. Family Background</h4>
-              <textarea className="form-input min-h-[100px]" value={form.familyBackground} onChange={e => updateForm('familyBackground', e.target.value)} placeholder="Family structure, relationships, history" />
+              <h4 className="mb-3 text-sm font-semibold text-primary">IV. Family Background</h4>
+              <textarea className="form-input min-h-[100px]" value={form.familyBackground} onChange={e => updateForm('familyBackground', e.target.value)} placeholder="Family structure, relationships, history" aria-label="Family Background" />
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">V. Socio-Economic Profile</h4>
-              <textarea className="form-input min-h-[80px]" value={form.socioEconomicProfile} onChange={e => updateForm('socioEconomicProfile', e.target.value)} placeholder="Income, employment, housing, education" />
+              <h4 className="mb-3 text-sm font-semibold text-primary">V. Socio-Economic Profile</h4>
+              <textarea className="form-input min-h-[80px]" value={form.socioEconomicProfile} onChange={e => updateForm('socioEconomicProfile', e.target.value)} placeholder="Income, employment, housing, education" aria-label="Socio-Economic Profile" />
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">VI. Assessment & Analysis</h4>
-              <textarea className="form-input min-h-[100px]" value={form.assessmentAnalysis} onChange={e => updateForm('assessmentAnalysis', e.target.value)} placeholder="Social worker's assessment and professional analysis" />
+              <h4 className="mb-3 text-sm font-semibold text-primary">VI. Assessment & Analysis</h4>
+<textarea className="form-input min-h-[100px]" value={form.assessmentAnalysis} onChange={e => updateForm('assessmentAnalysis', e.target.value)} placeholder="Social worker's assessment and professional analysis" aria-label="Assessment and Analysis" />
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">VII. Recommendation</h4>
-              <textarea className="form-input min-h-[80px]" value={form.recommendation} onChange={e => updateForm('recommendation', e.target.value)} placeholder="Recommended course of action" />
+              <h4 className="mb-3 text-sm font-semibold text-primary">VII. Recommendation</h4>
+              <textarea className="form-input min-h-[80px]" value={form.recommendation} onChange={e => updateForm('recommendation', e.target.value)} placeholder="Recommended course of action" aria-label="Recommendation" />
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">VIII. Intervention Plan</h4>
-              <textarea className="form-input min-h-[80px]" value={form.interventionPlan} onChange={e => updateForm('interventionPlan', e.target.value)} placeholder="Planned interventions and services" />
+              <h4 className="mb-3 text-sm font-semibold text-primary">VIII. Intervention Plan</h4>
+              <textarea className="form-input min-h-[80px]" value={form.interventionPlan} onChange={e => updateForm('interventionPlan', e.target.value)} placeholder="Planned interventions and services" aria-label="Intervention Plan" />
             </div>
 
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.finalized} onChange={e => updateForm('finalized', e.target.checked)} className="rounded border-gray-300 text-[#2E5C8A]" />
+                <input type="checkbox" checked={form.finalized} onChange={e => updateForm('finalized', e.target.checked)} className="rounded border-gray-300 text-primary" aria-label="Finalized" />
                 Mark as finalized
               </label>
             </div>
 
             <div className="flex gap-2">
-              <button type="submit" className="btn btn-primary">{editingId ? 'Update CSR' : 'Create CSR'}</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary" aria-label="Create CSR">{editingId ? 'Update CSR' : 'Create CSR'}</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)} aria-label="Cancel">Cancel</button>
             </div>
           </form>
         </div>
@@ -210,7 +210,7 @@ export function CsrPage() {
                 <div className="flex items-center gap-4">
                   <div className={`w-2 h-2 rounded-full ${r.finalized ? 'bg-green-500' : 'bg-amber-400'}`} />
                   <div>
-                    <span className="font-mono font-semibold text-[#2E5C8A]">{r.controlNo}</span>
+                    <span className="font-mono font-semibold text-primary">{r.controlNo}</span>
                     <span className="ml-2 text-xs text-gray-400">| {new Date(r.createdAt).toLocaleDateString('en-PH')}</span>
                   </div>
                 </div>
@@ -222,17 +222,17 @@ export function CsrPage() {
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <button onClick={() => setExpandedId(expandedId === r.id ? null : r.id)} className="btn-text btn-text-sm">
+                <button onClick={() => setExpandedId(expandedId === r.id ? null : r.id)} className="btn-text btn-text-sm" aria-label="View Details">
                   {expandedId === r.id ? 'Collapse' : 'View Details'}
                 </button>
-                <button onClick={() => downloadCsrPdf(r.controlNo)} className="btn-text btn-text-sm">
+                <button onClick={() => downloadCsrPdf(r.controlNo)} className="btn-text btn-text-sm" aria-label="Download PDF">
                   Download PDF
                 </button>
-                <button onClick={() => openEdit(r)} className="btn-text btn-text-sm">Edit</button>
-                <button onClick={() => handleFinalize(r.id, !r.finalized)} className="btn-text btn-text-sm">
+                <button onClick={() => openEdit(r)} className="btn-text btn-text-sm" aria-label="Edit">Edit</button>
+                <button onClick={() => handleFinalize(r.id, !r.finalized)} className="btn-text btn-text-sm" aria-label="Finalize">
                   {r.finalized ? 'Unfinalize' : 'Finalize'}
                 </button>
-                <button onClick={() => handleDelete(r.id)} className="btn-text btn-text-sm text-red-600">Delete</button>
+                <button onClick={() => handleDelete(r.id)} className="btn-text btn-text-sm text-red-600" aria-label="Delete">Delete</button>
               </div>
               {expandedId === r.id && (
                 <div className="mt-4 border-t border-gray-100 pt-4 text-sm space-y-3">
@@ -256,7 +256,7 @@ export function CsrPage() {
   );
 }
 
-function Section({ label, value }: { label: string; value?: string }) {
+const Section = React.memo(function Section({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <div>
@@ -264,4 +264,4 @@ function Section({ label, value }: { label: string; value?: string }) {
       <p className="text-gray-700 whitespace-pre-wrap">{value}</p>
     </div>
   );
-}
+});

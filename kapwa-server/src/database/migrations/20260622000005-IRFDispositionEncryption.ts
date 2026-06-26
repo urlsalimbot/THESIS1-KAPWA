@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class IrfDispositionEncryption20260622000005 implements MigrationInterface {
-  name = 'IrfDispositionEncryption20260622000005';
+export class IrfDispositionEncryption2026062200005 implements MigrationInterface {
+  name = 'IrfDispositionEncryption2026062200005';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Create audit_log table for IRF audit logging

@@ -13,10 +13,10 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [navigate, roles]);
 
   async function checkAuth() {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('kapwa_token');
     if (!token) {
       navigate('/login');
       return;
@@ -25,7 +25,7 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     try {
       const user = await getCurrentUser();
       if (!user) {
-        localStorage.removeItem('token');
+        localStorage.removeItem('kapwa_token');
         navigate('/login');
         return;
       }
@@ -37,7 +37,7 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
 
       setAuthorized(true);
     } catch {
-      localStorage.removeItem('token');
+      localStorage.removeItem('kapwa_token');
       navigate('/login');
     }
   }

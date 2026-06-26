@@ -18,7 +18,7 @@ export class VersionVector {
   serverVersion: number;
 
   @Column({ name: 'last_synced_at', nullable: true })
-  lastSyncedAt: Date;
+  lastSyncedAt?: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -21,8 +21,8 @@ export function AccessCard({ beneficiary, services, printable = false }: AccessC
   return (
     <div className={`access-card ${printable ? 'print-version' : ''}`}>
       <div className="card-header">
-        <h1 className="text-lg font-bold text-[#1A1A1A] font-sans">MSWDO Norzagaray — Access Card</h1>
-        <div className="card-code font-mono text-sm text-[#2E5C8A] mt-1">
+        <h1 className="text-lg font-bold text-text-primary font-sans">MSWDO Norzagaray — Access Card</h1>
+        <div className="card-code font-mono text-sm text-primary mt-1">
           {beneficiary.accessCardCode}
         </div>
       </div>

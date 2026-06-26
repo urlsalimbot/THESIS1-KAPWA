@@ -1,3 +1,4 @@
+import { DEFAULT_MESSAGE_LIMIT } from './constants';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,7 +23,7 @@ export class ChatService {
     return this.chatRepo.save(msg);
   }
 
-  async getConversation(userId1: string, userId2: string, limit = 50) {
+  async getConversation(userId1: string, userId2: string, limit = DEFAULT_MESSAGE_LIMIT) {
     const conversationId = [userId1, userId2].sort().join('_');
     return this.chatRepo.find({
       where: { conversationId },
@@ -32,33 +33,33 @@ export class ChatService {
   }
 
   async getConversations(userId: string) {
-    const msgs = await this.chatRepo.find({
-      where: [{ senderId: userId }, { recipientId: userId }],
+    const messages = await this.chatRepo.find({
+      where: [
+        { senderId: userId },
+        { recipientId: userId },
+      ],
       order: { createdAt: 'DESC' },
     });
 
-    const convMap = new Map<string, { userId: string; name: string; lastMessage: string; lastTime: Date; unread: number }>();
+    const seen = new Set<string>();
+    const result: Array<{ userId: string; name: string; lastMessage: string; lastTime: Date; unread: number }> = [];
 
-    for (const msg of msgs) {
+    for (const msg of messages) {
+      const convId = [msg.senderId, msg.recipientId].sort().join('_');
+      if (seen.has(convId)) continue;
+      seen.add(convId);
+
       const otherId = msg.senderId === userId ? msg.recipientId : msg.senderId;
-      const otherName = msg.senderId === userId ? '' : msg.senderName || otherId;
-      const key = msg.conversationId;
-
-      if (!convMap.has(key)) {
-        convMap.set(key, {
-          userId: otherId,
-          name: otherName,
-          lastMessage: msg.content,
-          lastTime: msg.createdAt,
-          unread: (!msg.isRead && msg.recipientId === userId) ? 1 : 0,
-        });
-      } else {
-        const existing = convMap.get(key)!;
-        if (!msg.isRead && msg.recipientId === userId) existing.unread++;
-      }
+      result.push({
+        userId: otherId,
+        name: msg.senderId === userId ? '' : msg.senderName || otherId,
+        lastMessage: msg.content,
+        lastTime: msg.createdAt,
+        unread: (!msg.isRead && msg.recipientId === userId) ? 1 : 0,
+      });
     }
 
-    return Array.from(convMap.values()).sort((a, b) => b.lastTime.getTime() - a.lastTime.getTime());
+    return result;
   }
 
   async markAsRead(messageId: string) {

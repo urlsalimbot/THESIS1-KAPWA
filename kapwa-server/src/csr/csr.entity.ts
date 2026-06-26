@@ -15,37 +15,37 @@ export class CsrRecord {
   socialWorkerName: string;
 
   @Column({ name: 'social_worker_position', nullable: true })
-  socialWorkerPosition: string;
+  socialWorkerPosition?: string;
 
   @Column({ name: 'referral_origin', nullable: true })
-  referralOrigin: string;
+  referralOrigin?: string;
 
   @Column({ name: 'reason_for_referral', type: 'text', nullable: true })
-  reasonForReferral: string;
+  reasonForReferral?: string;
 
   @Column({ name: 'problem_presented', type: 'text', nullable: true })
-  problemPresented: string;
+  problemPresented?: string;
 
   @Column({ name: 'family_background', type: 'text', nullable: true })
-  familyBackground: string;
+  familyBackground?: string;
 
   @Column({ name: 'socio_economic_profile', type: 'text', nullable: true })
-  socioEconomicProfile: string;
+  socioEconomicProfile?: string;
 
   @Column({ name: 'assessment_analysis', type: 'text', nullable: true })
-  assessmentAnalysis: string;
+  assessmentAnalysis?: string;
 
   @Column({ name: 'recommendation', type: 'text', nullable: true })
-  recommendation: string;
+  recommendation?: string;
 
   @Column({ name: 'intervention_plan', type: 'text', nullable: true })
-  interventionPlan: string;
+  interventionPlan?: string;
 
   @Column({ name: 'client_signature_url', nullable: true })
-  clientSignatureUrl: string;
+  clientSignatureUrl?: string;
 
   @Column({ name: 'worker_signature_url', nullable: true })
-  workerSignatureUrl: string;
+  workerSignatureUrl?: string;
 
   @Column({ default: false })
   finalized: boolean;

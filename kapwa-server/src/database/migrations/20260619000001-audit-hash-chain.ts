@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AuditHashChain20260619000001 implements MigrationInterface {
-  name = 'AuditHashChain20260619000001';
+export class AuditHashChain2026061900000 implements MigrationInterface {
+  name = 'AuditHashChain2026061900000';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // Add hash columns to tables that don't have them
@@ -24,14 +24,21 @@ export class AuditHashChain20260619000001 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_idempotency_key ON idempotency_keys(key)`);
 
     // Backfill hash values for existing records
-    for (const table of ['cases', 'beneficiaries', 'consent_ledger']) {
+    // consent_ledger uses granted_at instead of created_at
+    for (const table of ['cases', 'beneficiaries']) {
       await queryRunner.query(`
         UPDATE "${table}" SET hash = encode(
-          sha256(COALESCE(id::text, '') || COALESCE(created_at::text, '')),
+          digest(COALESCE(id::text, '') || COALESCE(created_at::text, ''), 'sha256'),
           'hex'
         ) WHERE hash IS NULL
       `);
     }
+    await queryRunner.query(`
+      UPDATE "consent_ledger" SET hash = encode(
+        digest(COALESCE(id::text, '') || COALESCE(granted_at::text, ''), 'sha256'),
+        'hex'
+      ) WHERE hash IS NULL
+    `);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {

@@ -1,3 +1,5 @@
+import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from './constants';
+import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,6 +14,16 @@ export class DashboardService {
     @InjectRepository(Intervention) private intRepo: Repository<Intervention>,
     @InjectRepository(Beneficiary) private benRepo: Repository<Beneficiary>
   ) {}
+
+  async getServedToday(): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return this.intRepo.count({
+      where: { serviceDate: today as any },
+    });
+  }
 
   async getMetrics(barangay?: string) {
     const caseQb = this.caseRepo.createQueryBuilder('c')
@@ -86,23 +98,23 @@ export class DashboardService {
     }));
   }
 
-  async getRecentCases(barangay?: string) {
+  async getRecentCases(barangay?: string, page = 1, limit = RECENT_CASES_LIMIT) {
     const qb = this.caseRepo
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'b')
-      .orderBy('c.updated_at', 'DESC')
-      .take(10);
+      .orderBy('c.updated_at', 'DESC');
 
     if (barangay) {
       qb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
     }
 
+    paginate(qb, page, limit);
     return qb.getMany();
   }
 
   async getSlaCompliance() {
     const now = new Date();
-    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const threeDaysAgo = new Date(now.getTime() - SLA_OVERDUE_DAYS * 24 * 60 * 60 * 1000);
     const overdue = await this.caseRepo
       .createQueryBuilder('c')
       .where('c.created_at < :date', { date: threeDaysAgo })

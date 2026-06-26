@@ -188,14 +188,14 @@ export function AdminPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">Admin Panel</h2>
+        <h2 className="text-xl font-bold text-text-primary font-sans">Admin Panel</h2>
         <p className="text-sm text-gray-500">System configuration, users, and monitoring</p>
       </div>
 
       <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`flex items-center gap-1.5 rounded px-4 py-2 text-sm font-medium transition-colors ${activeTab === t.key ? 'bg-white text-[#2E5C8A] shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
+            className={`flex items-center gap-1.5 rounded px-4 py-2 text-sm font-medium transition-colors ${activeTab === t.key ? 'bg-white text-primary shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
           >
             <span>{t.icon}</span> {t.label}
           </button>
@@ -205,7 +205,7 @@ export function AdminPage() {
       {activeTab === 'programs' && (
         <div className="rounded-lg border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-            <h3 className="font-semibold text-sm text-[#2E5C8A]">Program Configurator</h3>
+            <h3 className="font-semibold text-sm text-primary">Program Configurator</h3>
           </div>
           {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
             <div className="divide-y divide-gray-100">
@@ -231,7 +231,7 @@ export function AdminPage() {
           {/* Create User Form */}
           <div className="rounded-lg border border-gray-200 bg-white">
             <div className="border-b border-gray-100 px-4 py-3">
-              <h3 className="font-semibold text-sm text-[#2E5C8A]">Create New User</h3>
+              <h3 className="font-semibold text-sm text-primary">Create New User</h3>
             </div>
             <div className="p-4">
               {formSuccess && (
@@ -286,7 +286,7 @@ export function AdminPage() {
                 </div>
                 <div className="md:col-span-2 flex justify-end">
                   <button type="submit" disabled={formSubmitting}
-                    className="rounded bg-[#2E5C8A] px-6 py-2 text-sm font-medium text-white hover:bg-[#1D4A78] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    className="rounded bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     {formSubmitting ? 'Creating...' : 'Create User'}
                   </button>
                 </div>
@@ -297,7 +297,7 @@ export function AdminPage() {
           {/* User Management Table */}
           <div className="rounded-lg border border-gray-200 bg-white">
             <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-[#2E5C8A]">User Management</h3>
+              <h3 className="font-semibold text-sm text-primary">User Management</h3>
               <input type="text" aria-label="Search users" placeholder="Search users..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="rounded border border-gray-300 px-3 py-1.5 text-sm w-64" />
             </div>
             {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
@@ -349,7 +349,7 @@ export function AdminPage() {
       {activeTab === 'sync' && (
         <div className="rounded-lg border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-4 py-3">
-            <h3 className="font-semibold text-sm text-[#2E5C8A]">Sync Queue Monitor</h3>
+            <h3 className="font-semibold text-sm text-primary">Sync Queue Monitor</h3>
           </div>
           {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
             <div className="divide-y divide-gray-100">
@@ -376,7 +376,7 @@ export function AdminPage() {
 
       {activeTab === 'audit' && (
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-sm text-[#2E5C8A]">Audit Log (RA 10173 / COA)</h3>
+          <h3 className="mb-4 font-semibold text-sm text-primary">Audit Log (RA 10173 / COA)</h3>
           {loading ? <div className="p-4 text-center text-gray-400 text-sm">Loading audit data...</div> : (
             <>
               {auditLogs.map((log, idx) => log && (

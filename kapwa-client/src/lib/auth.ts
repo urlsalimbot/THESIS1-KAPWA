@@ -9,21 +9,21 @@ export interface AuthUser {
   fullName?: string;
 }
 
-export async function saveAuthToken(token: string, refreshToken: string, user: AuthUser): Promise<void> {
+export function saveAuthToken(token: string, refreshToken: string, user: AuthUser): void {
   localStorage.setItem(AUTH_KEY, token);
   localStorage.setItem(REFRESH_KEY, refreshToken);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
-export async function getAuthToken(): Promise<string | null> {
+export function getAuthToken(): string | null {
   return localStorage.getItem(AUTH_KEY);
 }
 
-export async function getRefreshToken(): Promise<string | null> {
+export function getRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_KEY);
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
+export function getCurrentUser(): AuthUser | null {
   const user = localStorage.getItem(USER_KEY);
   return user ? JSON.parse(user) : null;
 }
@@ -35,7 +35,7 @@ export function clearAuth(): void {
 }
 
 export async function refreshAuthToken(): Promise<boolean> {
-  const refresh = await getRefreshToken();
+  const refresh = getRefreshToken();
   if (!refresh) return false;
 
   try {

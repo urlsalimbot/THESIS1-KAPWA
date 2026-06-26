@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -39,7 +39,7 @@ export default function NotificationsDropdown() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setNotifications(await res.json());
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error("NotificationsDropdown:", e); } finally { setLoading(false); }
   }
 
   async function fetchUnreadCount() {
@@ -52,7 +52,7 @@ export default function NotificationsDropdown() {
         const data = await res.json();
         setUnreadCount(data.count);
       }
-    } catch {}
+    } catch (e) { console.error("NotificationsDropdown:", e); }
   }
 
   async function markAsRead(id: string) {
@@ -64,7 +64,7 @@ export default function NotificationsDropdown() {
       });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch {}
+    } catch (e) { console.error("NotificationsDropdown:", e); }
   }
 
   async function markAllRead() {
@@ -76,7 +76,7 @@ export default function NotificationsDropdown() {
       });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
-    } catch {}
+    } catch (e) { console.error("NotificationsDropdown:", e); }
   }
 
   function categoryIcon(cat: string) {
@@ -92,7 +92,7 @@ export default function NotificationsDropdown() {
 
   return (
     <div ref={dropdownRef} className="relative">
-      <button onClick={() => setOpen(!open)} className="icon-btn relative" title="Notifications">
+      <button onClick={() => setOpen(!open)} className="icon-btn relative" title="Notifications" aria-label="Notifications">
         <Bell size={20} />
         {unreadCount > 0 && (
           <span className="notification-dot">{unreadCount > 9 ? '9+' : unreadCount}</span>
@@ -104,7 +104,7 @@ export default function NotificationsDropdown() {
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <h3 className="text-sm font-semibold text-gray-700">Notifications</h3>
             {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs text-[#2E5C8A] hover:underline">
+              <button onClick={markAllRead} className="text-xs text-primary hover:underline">
                 Mark all read
               </button>
             )}
@@ -128,7 +128,7 @@ export default function NotificationsDropdown() {
                     {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                {!n.isRead && <span className="mt-1.5 h-2 w-2 rounded-full bg-[#2E5C8A] flex-shrink-0" />}
+                {!n.isRead && <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
               </div>
             ))}
           </div>

@@ -37,6 +37,17 @@ export class AuditController {
     return this.auditService.getAuditLog(table, recordId, limit);
   }
 
+    @Get('consent-ledger')
+  @Roles('admin', 'auditor')
+  @ApiOperation({ summary: 'Read consent ledger (auditor read-only)' })
+  async getConsentLedger(
+    @Query('beneficiaryId') beneficiaryId?: string,
+    @Query('limit') limit?: string
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return this.auditService.getConsentLedger(beneficiaryId, limitNum);
+  }
+
   @Get('coa-export')
   @Roles('admin', 'auditor')
   @ApiOperation({ summary: 'Export for COA' })

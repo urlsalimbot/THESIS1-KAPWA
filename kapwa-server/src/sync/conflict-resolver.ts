@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +19,7 @@ export class ConflictResolver {
 
   private readonly FINANCIAL_TABLES = new Set(['interventions', 'disbursements', 'financial_assistance']);
   private readonly NOTE_TABLES = new Set(['case_notes', 'activity_logs', 'remarks']);
+  private readonly CONSENT_TABLES = new Set(['consent_ledger']);
 
   resolve(
     tableName: string,
@@ -39,6 +41,14 @@ export class ConflictResolver {
 
     if (this.NOTE_TABLES.has(tableName)) {
       return this.resolveNotes(serverRecord, clientPayload, clientUpdatedAt);
+    }
+
+    if (this.CONSENT_TABLES.has(tableName)) {
+      return {
+        action: 'server_wins',
+        mergedPayload: { ...serverRecord },
+        reason: 'Consent ledger — server revocation overrides client',
+      };
     }
 
     return this.resolveDefault(serverRecord, clientPayload, clientUpdatedAt);
@@ -131,13 +141,13 @@ export class ConflictResolver {
     };
   }
 
-  private parseNotes(raw: string | any[]): any[] {
+  private parseNotes(raw: string | Array<Record<string, unknown>>): Array<Record<string, unknown>> {
     if (Array.isArray(raw)) return raw;
     try {
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return raw ? [{ id: Date.now().toString(), text: raw }] : [];
+      return raw ? [{ id: crypto.createHash('md5').update(raw).digest('hex'), text: raw }] : [];
     }
   }
 }

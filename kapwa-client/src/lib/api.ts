@@ -84,6 +84,23 @@ export async function getConsentLedger(beneficiaryId: string) {
   return apiFetch(`/beneficiaries/${beneficiaryId}/consent`);
 }
 
+export async function getMyAccessCard() {
+  return apiFetch('/beneficiaries/me/access-card');
+}
+
+export async function getMayorReports() {
+  return apiFetch('/dashboard/reports/mayor');
+}
+
+export async function getAuditConsentLedger(beneficiaryId?: string) {
+  const q = beneficiaryId ? `?beneficiaryId=${beneficiaryId}` : '';
+  return apiFetch(`/audit/consent-ledger${q}`);
+}
+
+export async function verifyHashChains() {
+  return apiFetch('/audit/verify-all');
+}
+
 export async function revokeConsent(beneficiaryId: string, reason?: string) {
   return apiFetch(`/beneficiaries/${beneficiaryId}/consent/revoke`, {
     method: 'POST',

@@ -9,7 +9,7 @@ export class ChatMessage {
   senderId: string;
 
   @Column({ name: 'sender_name', nullable: true })
-  senderName: string;
+  senderName?: string;
 
   @Column({ name: 'recipient_id' })
   recipientId: string;
@@ -20,8 +20,11 @@ export class ChatMessage {
   @Column({ name: 'is_read', default: false })
   isRead: boolean;
 
-  @Column({ name: 'conversation_id', nullable: true })
-  conversationId: string;
+  @Column({ name: 'conversation_id' })
+  conversationId!: string;
+
+  @Column({ name: 'read_at', type: 'timestamp', nullable: true })
+  readAt?: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

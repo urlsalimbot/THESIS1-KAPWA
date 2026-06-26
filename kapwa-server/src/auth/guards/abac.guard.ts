@@ -1,21 +1,37 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AbacService, ResourceSensitivity } from '../services/abac.service';
 import { RESOURCE_SENSITIVITY_KEY } from '../decorators/resource-sensitivity.decorator';
+import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity';
 
 @Injectable()
 export class AbacGuard implements CanActivate {
   constructor(
     private readonly abacService: AbacService,
     private readonly reflector: Reflector,
+    @InjectRepository(ConsentLedger)
+    private readonly consentRepo: Repository<ConsentLedger>,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const { user, query, params } = context.switchToHttp().getRequest();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const { user, query, params, body } = context.switchToHttp().getRequest();
     if (!user) return false;
 
     // Admin bypass
     if (user.role === 'admin') return true;
+
+    // Consent-gated ABAC: auto-evaluate consent_ledger for beneficiary routes
+    const beneficiaryId = params?.beneficiaryId || params?.id || query?.beneficiaryId;
+    if (beneficiaryId) {
+      const consent = await this.consentRepo.findOne({
+        where: { beneficiaryId, status: 'active' },
+      });
+      if (!consent) {
+        throw new ForbiddenException('Beneficiary consent has been revoked or not granted');
+      }
+    }
 
     const resourceSensitivity = this.reflector.getAllAndOverride<ResourceSensitivity>(
       RESOURCE_SENSITIVITY_KEY,
@@ -28,7 +44,7 @@ export class AbacGuard implements CanActivate {
     // Coordinator scoping
     if (user.role === 'coordinator') {
       if (resourceSensitivity !== 'public' && resourceSensitivity !== 'internal') return false;
-      const barangay = query?.barangay || params?.barangay;
+      const barangay = query?.barangay || params?.barangay || body?.barangay;
       if (barangay && barangay !== user.assignedBarangay) return false;
       return true;
     }
@@ -36,7 +52,7 @@ export class AbacGuard implements CanActivate {
     // Social worker scoping
     if (user.role === 'social_worker') {
       if (resourceSensitivity === 'restricted' && !query?.legalBasis) return false;
-      const barangay = query?.barangay || params?.barangay;
+      const barangay = query?.barangay || params?.barangay || body?.barangay;
       if (barangay && !user.permittedBarangays?.includes(barangay)) return false;
       return true;
     }
