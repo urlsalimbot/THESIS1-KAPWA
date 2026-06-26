@@ -147,4 +147,4 @@ Plans:
 | 3. Intervention Tracking & Case Management | 3/3 | Complete   | 2026-06-22 |
 | 4. Access Card System | 3/3 | In Progress|  |
 | 5. Dynamic Programs & IRF Module | 0/4 | Not started | - |
-| 6. Dashboards, Notifications & Role Completion | 1/4 | In Progress|  |
+| 6. Dashboards, Notifications & Role Completion | 2/4 | In Progress|  |
