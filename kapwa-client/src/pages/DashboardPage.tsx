@@ -96,11 +96,11 @@ export function DashboardPage() {
             <thead>
               <tr>
                 <th className="w-30">Case ID</th>
-                <th className="text-style-label">Name</th>
-                <th className="text-style-label">Category</th>
-                <th className="text-style-label">Barangay</th>
-                <th className="text-style-label">Intervention/Remarks</th>
-                <th className="text-style-label">Status</th>
+                <th >Name</th>
+                <th >Category</th>
+                <th >Barangay</th>
+                <th >Intervention/Remarks</th>
+                <th >Status</th>
                 <th className="min-w-[140px]">Date</th>
               </tr>
             </thead>

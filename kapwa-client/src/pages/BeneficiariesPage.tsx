@@ -63,7 +63,7 @@ export function BeneficiariesPage() {
     return () => { cancelled = true; };
   }, [debouncedSearch, categoryFilter, barangayFilter]);
 
-  if (loading) return <div className="p-8 text-center text-style-body">Loading beneficiaries...</div>;
+  if (loading) return <div className="p-8 text-center text-text-secondary">Loading beneficiaries...</div>;
 
   return (
     <div>
@@ -120,7 +120,7 @@ export function BeneficiariesPage() {
 
       {/* Empty state */}
       {!loading && !fetching && beneficiaries.length === 0 ? (
-        <div className="p-8 text-center text-style-body text-gray-400">
+        <div className="p-8 text-center text-text-secondary text-gray-400">
           No beneficiaries found
         </div>
       ) : (

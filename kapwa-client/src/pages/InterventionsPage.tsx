@@ -104,7 +104,7 @@ export function InterventionsPage() {
     setSubmitting(false);
   }
 
-  if (loading) return <div className="p-8 text-center text-style-body">Loading interventions...</div>;
+  if (loading) return <div className="p-8 text-center text-text-secondary">Loading interventions...</div>;
 
   return (
     <div>
