@@ -115,6 +115,7 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
 **Plans:** 4 plans
 
 Plans:
+
 - [ ] 05-01-PLAN.md — Dynamic Programs CRUD + JSON Schema Form Templates
 - [ ] 05-02-PLAN.md — Program Assignment & Approval Workflow FSM
 - [ ] 05-03-PLAN.md — IRF Encryption, Name Masking & Disposition FSM
@@ -146,4 +147,4 @@ Plans:
 | 3. Intervention Tracking & Case Management | 3/3 | Complete   | 2026-06-22 |
 | 4. Access Card System | 3/3 | In Progress|  |
 | 5. Dynamic Programs & IRF Module | 0/4 | Not started | - |
-| 6. Dashboards, Notifications & Role Completion | 0/4 | Planning | - |
+| 6. Dashboards, Notifications & Role Completion | 1/4 | In Progress|  |

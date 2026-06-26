@@ -16,6 +16,7 @@ import { ChatModule } from './chat/chat.module';
 import { TrackerModule } from './tracker/tracker.module';
 import { CsrModule } from './csr/csr.module';
 import { AuditModule } from './audit/audit.module';
+import { ExportModule } from './export/export.module';
 import { FilingModule } from './filing/filing.module';
 import { UsersModule } from './users/users.module';
 import { AccessCardsModule } from './access-cards/access-cards.module';
@@ -68,6 +69,7 @@ import { AppController } from './app.controller';
     TrackerModule,
     CsrModule,
     AuditModule,
+    ExportModule,
     FilingModule,
     UsersModule,
     AccessCardsModule,
