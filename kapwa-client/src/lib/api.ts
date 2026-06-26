@@ -321,3 +321,12 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
 export async function exportIrfJson(id: string, legalBasis: string) {
   return apiFetch(`/irf/${id}/export-json?legalBasis=${encodeURIComponent(legalBasis)}`);
 }
+
+// ===== Notification Preferences =====
+export async function getNotificationPreferences(signal?: AbortSignal) {
+  return apiFetch('/notifications/preferences', { signal });
+}
+
+export async function updateNotificationPreferences(data: { channel: string; category: string; optedIn: boolean }) {
+  return apiFetch('/notifications/preferences', { method: 'PUT', body: JSON.stringify(data) });
+}
