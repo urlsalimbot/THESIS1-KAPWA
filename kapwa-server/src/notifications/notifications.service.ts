@@ -1,12 +1,19 @@
+import { DEFAULT_NOTIF_LIMIT } from './constants';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification, NotificationCategory } from './notification.entity';
+import { NotificationPreference } from './notification-preference.entity';
+import { SmsGatewayService } from '../otp/sms-gateway.service';
+import { renderTemplate, SmsTemplateKey } from './sms-templates';
+import { UpdatePreferenceInput } from './dto/notifications.zod';
 
 @Injectable()
 export class NotificationsService {
   constructor(
-    @InjectRepository(Notification) private notifRepo: Repository<Notification>
+    @InjectRepository(Notification) private notifRepo: Repository<Notification>,
+    @InjectRepository(NotificationPreference) private notifPrefRepo: Repository<NotificationPreference>,
+    private smsGateway: SmsGatewayService,
   ) {}
 
   async create(notif: Partial<Notification>) {
@@ -15,8 +22,25 @@ export class NotificationsService {
   }
 
   async send(notifId: string) {
-    await this.notifRepo.update(notifId, { sent: true, sentAt: new Date() });
-    return { message: 'Notification sent' };
+    const notif = await this.notifRepo.findOne({ where: { id: notifId } });
+    if (!notif) {
+      return { message: 'Notification not found' };
+    }
+
+    let sent = false;
+
+    if (notif.channel === 'sms' && notif.phone) {
+      const result = await this.smsGateway.sendSms(notif.phone, notif.message);
+      sent = result.success;
+    }
+
+    await this.notifRepo.update(notifId, { sent, sentAt: sent ? new Date() : undefined });
+    return { message: sent ? 'Notification sent' : 'Notification send failed' };
+  }
+
+  async sendSmsTemplate(phone: string, templateKey: SmsTemplateKey, vars: Record<string, string>) {
+    const body = renderTemplate(templateKey, vars);
+    return this.smsGateway.sendSms(phone, body);
   }
 
   async findByRecipient(recipientId: string) {
@@ -26,7 +50,7 @@ export class NotificationsService {
     });
   }
 
-  async getByUser(userId: string, limit = 20) {
+  async getByUser(userId: string, limit = DEFAULT_NOTIF_LIMIT) {
     return this.notifRepo.find({
       where: { recipientId: userId },
       order: { createdAt: 'DESC' },
@@ -70,6 +94,58 @@ export class NotificationsService {
       message: `Conflict on ${tableName}: ${reason}`,
       category: NotificationCategory.SYNC_CONFLICT,
     });
+  }
+
+  async checkConsent(userId: string, channel: string, category: NotificationCategory): Promise<boolean> {
+    const pref = await this.notifPrefRepo.findOne({
+      where: { userId, channel: channel as any, category },
+    });
+    return pref ? pref.optedIn : false;
+  }
+
+  async sendWithConsent(notifId: string) {
+    const notif = await this.notifRepo.findOne({ where: { id: notifId } });
+    if (!notif) {
+      return { message: 'Notification not found' };
+    }
+
+    if (notif.category !== NotificationCategory.SYSTEM) {
+      const consented = await this.checkConsent(notif.recipientId, notif.channel, notif.category);
+      if (!consented) {
+        await this.notifRepo.update(notifId, { sent: false, consentSkipped: true });
+        return { message: 'Consent not granted — delivery skipped' };
+      }
+    }
+
+    let sent = false;
+    if (notif.channel === 'sms' && notif.phone) {
+      const result = await this.smsGateway.sendSms(notif.phone, notif.message);
+      sent = result.success;
+    }
+
+    await this.notifRepo.update(notifId, { sent, sentAt: sent ? new Date() : undefined });
+    return { message: sent ? 'Notification sent' : 'Notification send failed' };
+  }
+
+  async getPreferences(userId: string) {
+    return this.notifPrefRepo.find({ where: { userId } });
+  }
+
+  async setPreference(userId: string, body: UpdatePreferenceInput) {
+    const existing = await this.notifPrefRepo.findOne({
+      where: { userId, channel: body.channel as any, category: body.category },
+    });
+    if (existing) {
+      existing.optedIn = body.optedIn;
+      return this.notifPrefRepo.save(existing);
+    }
+    const pref = this.notifPrefRepo.create({
+      userId,
+      channel: body.channel,
+      category: body.category,
+      optedIn: body.optedIn,
+    });
+    return this.notifPrefRepo.save(pref);
   }
 
   async delete(id: string) {

@@ -1,8 +1,11 @@
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Param, Body, UseGuards, Query, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { NotificationsService } from './notifications.service';
+import { ZodPipe } from '../common/pipes/zod.pipe';
+import { CreateNotificationSchema, CreateNotificationInput, UpdatePreferenceSchema, UpdatePreferenceInput } from './dto/notifications.zod';
+import { AuthenticatedRequest } from '../auth/types';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -11,7 +14,7 @@ export class NotificationsController {
 
   @Post()
   @Roles('admin', 'social_worker')
-  async create(@Body() body: any) {
+  async create(@Body(new ZodPipe(CreateNotificationSchema)) body: CreateNotificationInput) {
     return this.notifService.create(body);
   }
 
@@ -21,15 +24,21 @@ export class NotificationsController {
     return this.notifService.send(id);
   }
 
+  @Post(':id/send-with-consent')
+  @Roles('admin', 'social_worker')
+  async sendWithConsent(@Param('id') id: string) {
+    return this.notifService.sendWithConsent(id);
+  }
+
   @Get('my')
   @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor')
-  async getMyNotifications(@Request() req: any) {
+  async getMyNotifications(@Request() req: AuthenticatedRequest) {
     return this.notifService.getByUser(req.user.id);
   }
 
   @Get('unread')
   @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor')
-  async getUnreadCount(@Request() req: any) {
+  async getUnreadCount(@Request() req: AuthenticatedRequest) {
     const count = await this.notifService.getUnreadCount(req.user.id);
     return { count };
   }
@@ -42,8 +51,23 @@ export class NotificationsController {
 
   @Post('read-all')
   @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor')
-  async markAllAsRead(@Request() req: any) {
+  async markAllAsRead(@Request() req: AuthenticatedRequest) {
     return this.notifService.markAllAsRead(req.user.id);
+  }
+
+  @Get('preferences')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor')
+  async getMyPreferences(@Request() req: AuthenticatedRequest) {
+    return this.notifService.getPreferences(req.user.id);
+  }
+
+  @Put('preferences')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor')
+  async setPreference(
+    @Request() req: AuthenticatedRequest,
+    @Body(new ZodPipe(UpdatePreferenceSchema)) body: UpdatePreferenceInput
+  ) {
+    return this.notifService.setPreference(req.user.id, body);
   }
 
   @Get('recipient/:recipientId')
