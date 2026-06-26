@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class InterventionFields20260622000002 implements MigrationInterface {
-  name = 'InterventionFields20260622000002';
+export class InterventionFields2026062200002 implements MigrationInterface {
+  name = 'InterventionFields2026062200002';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Enable btree_gist extension (idempotent)
@@ -40,7 +40,7 @@ export class InterventionFields20260622000002 implements MigrationInterface {
       EXCLUDE USING gist (
         household_id WITH =,
         intervention_type WITH =,
-        daterange(service_date, service_date + interval '30 days') WITH &&
+        daterange(service_date, (service_date + interval '30 days')::date) WITH &&
       )
     `);
 

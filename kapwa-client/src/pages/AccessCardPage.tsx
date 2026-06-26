@@ -80,7 +80,7 @@ export function AccessCardPage() {
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold text-[#1a1a1a]">Access Card Manager</h1>
+      <h1 className="mb-6 text-2xl font-bold text-text-primary">Access Card Manager</h1>
 
       {successBanner && (
         <div className="mb-4 rounded bg-green-50 p-3 text-sm font-medium text-green-700 border border-green-200">
@@ -101,7 +101,7 @@ export function AccessCardPage() {
           <button
             onClick={handleAssign}
             disabled={assigning || !beneficiaryId.trim()}
-            className="rounded bg-[#2E5C8A] px-4 py-2 text-xs text-white hover:bg-[#1e3d5e] disabled:opacity-50"
+            className="rounded bg-primary px-4 py-2 text-xs text-white hover:bg-primary-dark disabled:opacity-50"
             aria-label="Generate and Assign Card"
           >
             {assigning ? 'Assigning...' : 'Generate & Assign Card'}
@@ -130,7 +130,7 @@ export function AccessCardPage() {
           <button
             onClick={() => navigate(`/beneficiary/${printBeneficiaryId}/card/print`)}
             disabled={!printBeneficiaryId.trim()}
-            className="rounded bg-[#2E5C8A] px-4 py-2 text-xs text-white hover:bg-[#1e3d5e] disabled:opacity-50"
+            className="rounded bg-primary px-4 py-2 text-xs text-white hover:bg-primary-dark disabled:opacity-50"
             aria-label="Go to Print View"
           >
             Print Card
@@ -168,7 +168,7 @@ export function AccessCardPage() {
             )}
             <button
               onClick={() => navigate(`/beneficiary/${cardSearchInput}/card/print`)}
-              className="mt-2 rounded bg-[#2E5C8A] px-3 py-1 text-xs text-white hover:bg-[#1e3d5e]"
+              className="mt-2 rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark"
             >
               Print Card
             </button>
@@ -190,7 +190,7 @@ export function AccessCardPage() {
             <option value="HV">Home Visit</option>
           </select>
           <input type="date" value={logForm.serviceDate} onChange={e => setLogForm({ ...logForm, serviceDate: e.target.value })} aria-label="Service Date" className="rounded border border-gray-300 p-2 text-sm" required />
-          <button type="submit" className="rounded bg-[#2E5C8A] px-4 py-2 text-xs text-white hover:bg-[#1e3d5e]" aria-label="Log Service">Log Service</button>
+          <button type="submit" className="rounded bg-primary px-4 py-2 text-xs text-white hover:bg-primary-dark" aria-label="Log Service">Log Service</button>
         </form>
       </div>
 

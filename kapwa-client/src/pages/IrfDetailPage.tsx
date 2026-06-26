@@ -151,9 +151,9 @@ export function IrfDetailPage() {
         {currentState === 'Under Investigation' && (
           <div className="flex gap-2">
             <button onClick={() => handleDisposition(() => referToPnp(id!))}
-              className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e]">Refer to PNP</button>
+              className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark">Refer to PNP</button>
             <button onClick={() => handleDisposition(() => referToWcpd(id!))}
-              className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e]">Refer to WCPD</button>
+              className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark">Refer to WCPD</button>
             <button onClick={() => {
               const reason = prompt('Dismissal reason:');
               if (reason) handleDisposition(() => dismissIrf(id!, reason));
@@ -162,7 +162,7 @@ export function IrfDetailPage() {
         )}
         {(currentState === 'Referred to PNP' || currentState === 'Referred to WCPD' || currentState === 'Dismissed') && (
           <button onClick={() => handleDisposition(() => closeIrf(id!))}
-            className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e]">Close Case</button>
+            className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark">Close Case</button>
         )}
       </div>
 
@@ -180,12 +180,12 @@ export function IrfDetailPage() {
                   placeholder="Legal basis code" value={legalBasis}
                   onChange={e => setLegalBasis(e.target.value)} aria-label="Legal Basis Code" />
                 <button onClick={handleDecrypt} disabled={!legalBasis}
-                  className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-40">Decrypt</button>
+                  className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark disabled:opacity-40">Decrypt</button>
                 <button onClick={() => setShowDecryptForm(false)}
                   className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
               </div>
             ) : (
-              <button onClick={() => setShowDecryptForm(true)} className="text-sm text-[#2E5C8A] hover:underline">
+              <button onClick={() => setShowDecryptForm(true)} className="text-sm text-primary hover:underline">
                 Decrypt Narration
               </button>
             )}
@@ -209,7 +209,7 @@ export function IrfDetailPage() {
             type="password"
             aria-label="PDF password" />
           <button onClick={handleExportPdf} disabled={!exportLegalBasis}
-            className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-40">PDF</button>
+            className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark disabled:opacity-40">PDF</button>
           <button onClick={handleExportJson} disabled={!exportLegalBasis}
             className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">JSON</button>
         </div>

@@ -60,7 +60,7 @@ export function AccessCardPrintView() {
       <div className="no-print mb-4 flex justify-end">
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e]"
+          className="flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark"
         >
           <Printer size={16} />
           Print Card

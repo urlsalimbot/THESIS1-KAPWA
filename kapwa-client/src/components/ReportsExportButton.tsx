@@ -61,7 +61,7 @@ export default function ReportsExportButton({
       <button
         onClick={handleClick}
         disabled={loading || disabled}
-        className={`rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e] disabled:opacity-50 ${className}`}
+        className={`rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark disabled:opacity-50 ${className}`}
       >
         {loading ? 'Generating...' : label}
       </button>

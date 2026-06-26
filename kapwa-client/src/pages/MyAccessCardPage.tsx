@@ -58,7 +58,7 @@ export function MyAccessCardPage() {
       </div>
 
       <div className="no-print flex gap-2 mb-4">
-        <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]">
+        <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark">
           <Printer size={14} /> Print Card
         </button>
         <button onClick={() => navigate('/my-dashboard')} className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
@@ -69,7 +69,7 @@ export function MyAccessCardPage() {
       <div className="rounded-lg border bg-white p-6 max-w-lg">
         <div className="text-center mb-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">KAPWA Access Card</p>
-          <p className="text-lg font-bold text-[#2E5C8A] font-mono">{card?.code}</p>
+          <p className="text-lg font-bold text-primary font-mono">{card?.code}</p>
         </div>
         <div className="border-t pt-4 mb-4">
           <p className="text-sm"><span className="text-gray-500">Name:</span> <span className="font-medium">{card?.beneficiary?.name}</span></p>
@@ -79,7 +79,7 @@ export function MyAccessCardPage() {
 
         {card?.services?.length > 0 && (
           <div>
-            <h3 className="font-semibold text-sm text-[#2E5C8A] mb-2">Service Log</h3>
+            <h3 className="font-semibold text-sm text-primary mb-2">Service Log</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>

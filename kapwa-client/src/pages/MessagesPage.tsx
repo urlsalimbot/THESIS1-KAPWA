@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { connectSocket, disconnectSocket, sendMessage, emitTyping } from '../lib/chat-socket';
-import { Search, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import '../index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -26,8 +26,9 @@ export function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchConversations();
-    fetchUsers();
+    const ac = new AbortController();
+    fetchConversations(ac.signal);
+    fetchUsers(ac.signal);
     const token = localStorage.getItem('kapwa_token');
     if (token) {
       const sock = connectSocket(token);
@@ -36,46 +37,47 @@ export function MessagesPage() {
         fetchConversations();
       });
     }
-    return () => { disconnectSocket(); };
+    return () => { disconnectSocket(); ac.abort(); };
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  async function fetchConversations() {
+  async function fetchConversations(signal?: AbortSignal) {
     try {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(`${API_URL}/chat/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
       if (res.ok) setConversations(await res.json());
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error("MessagesPage:", e); } finally { setLoading(false); }
   }
 
-  async function fetchUsers() {
+  async function fetchUsers(signal?: AbortSignal) {
     try {
       const token = localStorage.getItem('kapwa_token');
       const userRes = await fetch(`${API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
       const me = userRes.ok ? (await userRes.json()).user : null;
-      // Get users from programs endpoint as proxy (or we'd need a users list endpoint)
-      // For now, hardcode known users for demo
       setUsers([
         { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', fullName: 'Admin User', role: 'admin' },
         { id: 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', fullName: 'Juan Dela Cruz', role: 'social_worker' },
         { id: 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', fullName: 'Maria Santos', role: 'coordinator' },
       ].filter(u => u.id !== me?.id));
-    } catch {}
+    } catch (e) { console.error("MessagesPage:", e); }
   }
 
-  async function fetchConversation(otherUserId: string) {
+  async function fetchConversation(otherUserId: string, signal?: AbortSignal) {
     setActiveConv(otherUserId);
     try {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(`${API_URL}/chat/conversation/${otherUserId}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
       if (res.ok) {
         const msgs = await res.json();
@@ -86,7 +88,7 @@ export function MessagesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchConversations();
-    } catch {}
+    } catch (e) { console.error("MessagesPage:", e); }
   }
 
   function handleSend(e: React.FormEvent) {
@@ -116,8 +118,8 @@ export function MessagesPage() {
       {/* Conversations List */}
       <div className="w-72 flex-shrink-0 border-r border-gray-200 bg-white rounded-l-lg flex flex-col">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-          <h3 className="text-sm font-semibold text-[#2E5C8A]">Messages</h3>
-          <button onClick={() => setShowNewChat(!showNewChat)} className="rounded bg-[#2E5C8A] px-2 py-1 text-xs text-white hover:bg-[#1e3d5e]">+ New</button>
+          <h3 className="text-sm font-semibold text-primary">Messages</h3>
+          <button onClick={() => setShowNewChat(!showNewChat)} className="rounded bg-primary px-2 py-1 text-xs text-white hover:bg-primary-dark" aria-label="+ New">+ New</button>
         </div>
 
         {showNewChat && (
@@ -127,7 +129,7 @@ export function MessagesPage() {
               <button key={u.id} onClick={() => { fetchConversation(u.id); setShowNewChat(false); }}
                 className="w-full text-left rounded px-2 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2"
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2E5C8A] text-xs text-white">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-white">
                   {u.fullName.charAt(0)}
                 </span>
                 <span>{u.fullName}</span>
@@ -147,7 +149,7 @@ export function MessagesPage() {
               className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${activeConv === conv.userId ? 'bg-blue-50' : ''}`}
             >
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2E5C8A] text-sm text-white font-medium">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm text-white font-medium">
                   {(conv.name || '?').charAt(0)}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -157,7 +159,7 @@ export function MessagesPage() {
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs text-gray-400">{formatTime(conv.lastTime.toString())}</p>
                   {conv.unread > 0 && (
-                    <span className="mt-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2E5C8A] px-1.5 text-xs text-white">
+                    <span className="mt-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs text-white">
                       {conv.unread}
                     </span>
                   )}
@@ -181,7 +183,7 @@ export function MessagesPage() {
           <>
             <div className="border-b border-gray-100 px-4 py-3">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2E5C8A] text-sm text-white font-medium">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm text-white font-medium">
                   {getOtherName(activeConv).charAt(0)}
                 </span>
                 <p className="text-sm font-medium text-gray-800">{getOtherName(activeConv)}</p>
@@ -197,7 +199,7 @@ export function MessagesPage() {
                 return (
                   <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
-                      isMine ? 'bg-[#2E5C8A] text-white' : 'bg-gray-100 text-gray-800'
+                      isMine ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'
                     }`}>
                       <p>{msg.content}</p>
                       <p className={`text-xs mt-0.5 ${isMine ? 'text-blue-200' : 'text-gray-400'}`}>
@@ -221,7 +223,7 @@ export function MessagesPage() {
                 placeholder="Type a message..."
                 className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none"
               />
-              <button type="submit" disabled={!text.trim()} className="rounded-lg bg-[#2E5C8A] px-4 py-2 text-white hover:bg-[#1e3d5e] disabled:opacity-50">
+              <button type="submit" disabled={!text.trim()} className="rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary-dark disabled:opacity-50">
                 <Send size={18} />
               </button>
             </form>

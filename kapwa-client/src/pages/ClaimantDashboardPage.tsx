@@ -120,7 +120,7 @@ export function ClaimantDashboardPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">My Dashboard</h2>
+        <h2 className="text-xl font-bold text-text-primary font-sans">My Dashboard</h2>
         <p className="text-sm text-gray-500">Service history, case status, and consent management</p>
       </div>
 
@@ -128,9 +128,9 @@ export function ClaimantDashboardPage() {
       <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between">
         <div>
           <p className="text-xs text-gray-500">Access Card</p>
-          <p className="text-sm font-medium text-[#2E5C8A]">View your KAPWA Access Card</p>
+          <p className="text-sm font-medium text-primary">View your KAPWA Access Card</p>
         </div>
-        <Link to="/my-access-card" className="rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]">View Card</Link>
+        <Link to="/my-access-card" className="rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark">View Card</Link>
       </div>
 
       {/* Case Status */}
@@ -138,7 +138,7 @@ export function ClaimantDashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500">Case Status</p>
-            <p className="text-lg font-semibold text-[#2E5C8A]">{caseStatus}</p>
+            <p className="text-lg font-semibold text-primary">{caseStatus}</p>
           </div>
           <div className={`rounded-full px-3 py-1 text-xs font-medium ${
             caseStatus === 'Disbursed' ? 'bg-green-100 text-green-700' :
@@ -151,7 +151,7 @@ export function ClaimantDashboardPage() {
       {/* Service History */}
       <div className="mb-4 rounded-lg border border-gray-200 bg-white">
         <div className="border-b border-gray-100 px-4 py-3">
-          <h3 className="font-semibold text-sm text-[#2E5C8A]">Service History</h3>
+          <h3 className="font-semibold text-sm text-primary">Service History</h3>
         </div>
         {services.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-400">No service records yet</div>
@@ -176,8 +176,8 @@ export function ClaimantDashboardPage() {
       {/* Consent Hub */}
       <div className="mb-4 rounded-lg border border-gray-200 bg-white">
         <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-[#2E5C8A]">Consent Management</h3>
-          <button className="rounded bg-[#2E5C8A] px-3 py-1 text-xs text-white hover:bg-[#1e3d5e]">Manage Consent</button>
+          <h3 className="font-semibold text-sm text-primary">Consent Management</h3>
+          <button className="rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark">Manage Consent</button>
         </div>
         {consents.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-400">No consent records</div>
@@ -204,12 +204,12 @@ export function ClaimantDashboardPage() {
       {/* Notification Preferences */}
       <div className="rounded-lg border border-gray-200 bg-white">
         <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-[#2E5C8A]">Notification Preferences</h3>
+          <h3 className="font-semibold text-sm text-primary">Notification Preferences</h3>
           <button
             onClick={handleSave}
             disabled={!prefDirty || prefSaving}
             className={`rounded px-3 py-1 text-xs text-white ${
-              prefDirty ? 'bg-[#2E5C8A] hover:bg-[#1e3d5e]' : 'bg-gray-300 cursor-not-allowed'
+              prefDirty ? 'bg-primary hover:bg-primary-dark' : 'bg-gray-300 cursor-not-allowed'
             }`}
           >
             {prefSaving ? 'Saving...' : 'Save Preferences'}
@@ -245,9 +245,9 @@ export function ClaimantDashboardPage() {
                       />
                       <div className={`h-5 w-9 rounded-full transition-colors ${
                         cat.locked
-                          ? 'bg-[#2E5C8A] cursor-not-allowed'
+                          ? 'bg-primary cursor-not-allowed'
                           : (preferences[cat.key]?.[ch.key]
-                              ? 'bg-[#2E5C8A]'
+                              ? 'bg-primary'
                               : 'bg-gray-300 peer-hover:bg-gray-400')
                       }`}>
                         <div className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${

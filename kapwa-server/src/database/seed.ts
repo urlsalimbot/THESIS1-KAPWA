@@ -31,6 +31,11 @@ async function seed() {
   `, [adminPass, workerPass, coordPass, claimantPass]);
 
   await q.query(`
+    INSERT INTO users (email, password, role, full_name, mfa_enabled, mfa_secret)
+    VALUES ('mfa-admin@mswdo.test', $1, 'admin', 'MFA Admin', true, 'JBSWY3DPEHPK3PXP')
+  `, [adminPass]);
+
+  await q.query(`
     INSERT INTO beneficiaries (id, philsys_number, surname, first_name, middle_name, gender, dob, address, phone, access_card_code)
     VALUES 
       ('f47ac10b-58cc-4372-a567-0e02b2c3d479', '1234-5678-9012', 'Dela Cruz', 'Juan', 'Santos', 'Male', '1985-06-15', '123 Poblacion, Bigte', '09171234567', 'NORZ-AC-2024-0001'),
@@ -56,30 +61,30 @@ async function seed() {
   await q.query(`
     INSERT INTO programs (id, name, category, waiting_period_days, required_documents, fund_sources, approval_workflow, form_template, is_active)
     VALUES 
-      ('p1', 'AKAP', 'Financial Assistance', 7, '["Medical Certificate", "Barangay Indigency", "Valid ID"]', '{Regular,PDAF}', '{SW Assessment,Head Approval,Mayor Approval,Disbursement}', '{"type":"object","title":"AKAP Application","properties":{"amount":{"type":"number","title":"Amount","minimum":0},"purpose":{"type":"string","title":"Purpose","enum":["Medical","Education","Burial","Food"]},"remarks":{"type":"string","title":"Remarks","format":"textarea"}},"required":["amount","purpose"]}', true),
-      ('p2', 'Medical Assistance', 'Health', 3, '["Medical Certificate", "Prescription", "Valid ID"]', '{Regular,Legislative}', '{SW Assessment,Head Approval,Disbursement}', '{"type":"object","title":"Medical Assistance","properties":{"hospital":{"type":"string","title":"Hospital"},"diagnosis":{"type":"string","title":"Diagnosis"},"amount":{"type":"number","title":"Amount"},"date":{"type":"string","title":"Date","format":"date"}},"required":["hospital","diagnosis","amount"]}', true)
+      ('00000000-0000-0000-0000-000000000001', 'AKAP', 'Financial Assistance', 7, '["Medical Certificate", "Barangay Indigency", "Valid ID"]', '{Regular,PDAF}', '["SW Assessment","Head Approval","Mayor Approval","Disbursement"]'::jsonb, '{"type":"object","title":"AKAP Application","properties":{"amount":{"type":"number","title":"Amount","minimum":0},"purpose":{"type":"string","title":"Purpose","enum":["Medical","Education","Burial","Food"]},"remarks":{"type":"string","title":"Remarks","format":"textarea"}},"required":["amount","purpose"]}', true),
+      ('00000000-0000-0000-0000-000000000002', 'Medical Assistance', 'Health', 3, '["Medical Certificate", "Prescription", "Valid ID"]', '{Regular,Legislative}', '["SW Assessment","Head Approval","Disbursement"]'::jsonb, '{"type":"object","title":"Medical Assistance","properties":{"hospital":{"type":"string","title":"Hospital"},"diagnosis":{"type":"string","title":"Diagnosis"},"amount":{"type":"number","title":"Amount"},"date":{"type":"string","title":"Date","format":"date"}},"required":["hospital","diagnosis","amount"]}', true)
   `);
 
   await q.query(`
     INSERT INTO cases (id, control_no, beneficiary_id, service_requested, requirements_checklist, status, assigned_worker_id)
     VALUES 
-      ('c1', 'NORZ-2024-0001', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '{Financial Aid}', '[{"key":"med_cert","checked":true},{"key":"indigency","checked":true}]', 'approved', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'),
-      ('c2', 'NORZ-2024-0002', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '{Medical Assistance}', '[{"key":"med_cert","checked":true}]', 'disbursed', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22')
+      ('00000000-0000-0000-0000-000000000003', 'NORZ-2024-0001', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '{Financial Aid}', '[{"key":"med_cert","checked":true},{"key":"indigency","checked":true}]', 'approved', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'),
+      ('00000000-0000-0000-0000-000000000004', 'NORZ-2024-0002', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '{Medical Assistance}', '[{"key":"med_cert","checked":true}]', 'disbursed', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22')
   `);
 
   await q.query(`
     INSERT INTO consent_ledger (id, beneficiary_id, purpose, channel, status)
     VALUES 
-      ('cl1', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'GIS Intake & Case Processing', 'in_person', 'active'),
-      ('cl2', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', 'GIS Intake & Case Processing', 'in_person', 'active'),
-      ('cl3', 'f47ac10b-58cc-4372-a567-0e02b2c3d481', 'GIS Intake & Case Processing', 'in_person', 'active')
+      ('00000000-0000-0000-0000-000000000005', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'GIS Intake & Case Processing', 'in_person', 'active'),
+      ('00000000-0000-0000-0000-000000000006', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', 'GIS Intake & Case Processing', 'in_person', 'active'),
+      ('00000000-0000-0000-0000-000000000007', 'f47ac10b-58cc-4372-a567-0e02b2c3d481', 'GIS Intake & Case Processing', 'in_person', 'active')
   `);
 
   await q.query(`
     INSERT INTO case_tracker_log (id, daily_seq_num, transaction_date, surname, first_name, middle_name, gender, age_range, client_category, barangay, intervention_remarks)
     VALUES 
-      ('t1', 1, NOW(), 'Dela Cruz', 'Juan', 'Santos', 'M', '18-59', 'Family', 'Bigte', 'FA'),
-      ('t2', 2, NOW(), 'Mendoza', 'Maria', 'Reyes', 'F', '18-59', 'Women', 'Matictic', 'FA')
+      ('00000000-0000-0000-0000-000000000008', 1, NOW(), 'Dela Cruz', 'Juan', 'Santos', 'M', '18-59', 'Family', 'Bigte', 'FA'),
+      ('00000000-0000-0000-0000-000000000009', 2, NOW(), 'Mendoza', 'Maria', 'Reyes', 'F', '18-59', 'Women', 'Matictic', 'FA')
   `);
 
   console.log('Seed data inserted');

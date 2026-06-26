@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { MAX_FILE_SIZE, DEFAULT_DOC_LIMIT } from './constants';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere, LessThan } from 'typeorm';
 import { DocumentVault } from './filing.entity';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -17,9 +18,17 @@ export class FilingService {
   }
 
   async upload(file: { originalname: string; mimetype: string; size: number; buffer: Buffer }, metadata: { caseId?: string; beneficiaryId?: string; category?: string; notes?: string; uploadedBy?: string }) {
-    const fileName = `${Date.now()}-${file.originalname}`;
+    const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedMimes.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type. Allowed: PDF, JPEG, PNG, GIF, DOC');
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      throw new BadRequestException('File too large. Max 10MB');
+    }
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\./g, '');
+    const fileName = `${Date.now()}-${safeName}`;
     const filePath = path.join(UPLOAD_DIR, fileName);
-    fs.writeFileSync(filePath, file.buffer);
+    await fs.promises.writeFile(filePath, file.buffer);
 
     const doc = this.docRepo.create({
       fileName,
@@ -36,10 +45,10 @@ export class FilingService {
   }
 
   async findAll(caseId?: string, beneficiaryId?: string) {
-    const where: any = {};
+    const where: FindOptionsWhere<DocumentVault> = {};
     if (caseId) where.caseId = caseId;
     if (beneficiaryId) where.beneficiaryId = beneficiaryId;
-    return this.docRepo.find({ where, order: { createdAt: 'DESC' } });
+    return this.docRepo.find({ where, order: { createdAt: 'DESC' }, take: DEFAULT_DOC_LIMIT });
   }
 
   async findOne(id: string) {
@@ -53,5 +62,17 @@ export class FilingService {
     const filePath = path.join(UPLOAD_DIR, doc.fileName);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     return this.docRepo.delete(id);
+  }
+
+  async cleanupOlderThan(days: number) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const docs = await this.docRepo.find({ where: { createdAt: LessThan(cutoff) } });
+    for (const doc of docs) {
+      const filePath = path.join(UPLOAD_DIR, doc.fileName);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    const result = await this.docRepo.delete({ createdAt: LessThan(cutoff) });
+    return { deleted: result.affected || 0 };
   }
 }

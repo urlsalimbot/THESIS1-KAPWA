@@ -79,7 +79,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
           You are offline{pendingCount > 0 ? ` — ${pendingCount} change(s) pending sync` : ''} — changes will sync when connection is restored
         </div>
       )}
-      <div className="min-h-screen bg-[#F9F9FD]">
+      <div className="min-h-screen bg-surface">
         <header className="header">
           <div className="header-left">
             <div className="municipal-seal">

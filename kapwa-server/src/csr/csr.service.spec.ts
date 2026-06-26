@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Intervention } from '../interventions/intervention.entity';
 import { CsrService } from './csr.service';
 import { CsrRecord } from './csr.entity';
 
@@ -16,12 +17,14 @@ describe('CsrService', () => {
       save: jest.fn().mockResolvedValue({}),
       count: jest.fn().mockResolvedValue(0),
       remove: jest.fn().mockResolvedValue(undefined),
+      query: jest.fn().mockResolvedValue([{ seq: 1 }]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CsrService,
         { provide: getRepositoryToken(CsrRecord), useValue: repoMock },
+        { provide: getRepositoryToken(Intervention), useValue: repoMock },
       ],
     }).compile();
 
@@ -29,7 +32,7 @@ describe('CsrService', () => {
   });
 
   it('creates CSR and generates control number', async () => {
-    repoMock.count.mockResolvedValue(0);
+    repoMock.query.mockResolvedValue([{ seq: 1 }]);
     repoMock.create.mockReturnValue({ controlNo: 'CSR-2026-0001' });
     repoMock.save.mockResolvedValue({ id: '1', controlNo: 'CSR-2026-0001', socialWorkerName: 'Jane SW', createdBy: 'user-1' });
 
@@ -42,7 +45,7 @@ describe('CsrService', () => {
   });
 
   it('increments control number', async () => {
-    repoMock.count.mockResolvedValue(5);
+    repoMock.query.mockResolvedValue([{ seq: 6 }]);
     repoMock.create.mockReturnValue({ controlNo: 'CSR-2026-0006' });
     repoMock.save.mockResolvedValue({ id: '2', controlNo: 'CSR-2026-0006' });
 
@@ -61,7 +64,7 @@ describe('CsrService', () => {
     repoMock.find.mockResolvedValue(mockRecords);
     const result = await service.findAll();
     expect(result).toHaveLength(2);
-    expect(repoMock.find).toHaveBeenCalledWith({ order: { createdAt: 'DESC' } });
+    expect(repoMock.find).toHaveBeenCalledWith({ order: { createdAt: 'DESC' }, take: 100 });
   });
 
   it('finds CSR by id', async () => {

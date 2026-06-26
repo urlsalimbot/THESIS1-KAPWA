@@ -73,8 +73,8 @@ export function AuditorPage() {
       </div>
 
       <div className="flex gap-2 mb-4">
-        <button onClick={() => setActiveTab('hash')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'hash' ? 'bg-[#2E5C8A] text-white' : 'bg-gray-100 text-gray-600'}`}>Audit Logs</button>
-        <button onClick={() => setActiveTab('consent')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'consent' ? 'bg-[#2E5C8A] text-white' : 'bg-gray-100 text-gray-600'}`}>Consent Ledger</button>
+        <button onClick={() => setActiveTab('hash')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'hash' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}>Audit Logs</button>
+        <button onClick={() => setActiveTab('consent')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'consent' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}>Consent Ledger</button>
       </div>
 
       {activeTab === 'hash' && (
@@ -90,7 +90,7 @@ export function AuditorPage() {
           </div>
 
           <div className="no-print flex gap-2 mb-4">
-            <button onClick={reVerify} className="flex items-center gap-1.5 rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]">
+            <button onClick={reVerify} className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark">
               <RefreshCw size={14} /> Verify All Chains
             </button>
             <span className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs text-gray-600">
@@ -131,7 +131,7 @@ export function AuditorPage() {
                 className="w-full pl-8 pr-3 py-1.5 border rounded text-xs"
               />
             </div>
-            <button onClick={loadLedger} disabled={ledgerLoading} className="px-3 py-1.5 bg-[#2E5C8A] text-white rounded text-xs hover:bg-[#1e3d5e] disabled:opacity-50">
+            <button onClick={loadLedger} disabled={ledgerLoading} className="px-3 py-1.5 bg-primary text-white rounded text-xs hover:bg-primary-dark disabled:opacity-50">
               {ledgerLoading ? 'Loading...' : 'Filter'}
             </button>
           </div>

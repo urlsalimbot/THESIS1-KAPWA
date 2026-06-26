@@ -223,7 +223,7 @@ export function InterventionsPage() {
                 </td>
                 <td>
                   {i.clientReceiptUrl
-                    ? <a href={i.clientReceiptUrl} target="_blank" rel="noopener noreferrer" className="text-[#2E5C8A] underline text-sm">View Receipt</a>
+                    ? <a href={i.clientReceiptUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">View Receipt</a>
                     : <span className="text-gray-400 text-sm">None</span>}
                 </td>
               </tr>

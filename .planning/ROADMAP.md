@@ -9,9 +9,9 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
 - [x] **Phase 1: Foundation — Deploy & Authenticate** - Infrastructure, roles, basic sync, and audit foundation
 - [x] **Phase 2: GIS Intake & Beneficiary Registration** - Dual-mode GIS intake with consent management (completed 2026-06-19)
 - [x] **Phase 3: Intervention Tracking & Case Management** - End-to-end case workflow with post-disbursement logging (completed 2026-06-22)
-- [ ] **Phase 4: Access Card System** - One-step generate-and-assign, printable card view, soft No Card guard, reprint with identity verification
-- [ ] **Phase 5: Dynamic Programs & IRF Module** - Program configuration and encrypted incident reports
-- [ ] **Phase 6: Dashboards, Notifications & Role Completion** - Role-specific UIs, notifications, compliance exports
+- [x] **Phase 4: Access Card System** - One-step generate-and-assign, printable card view, soft No Card guard, reprint with identity verification
+- [x] **Phase 5: Dynamic Programs & IRF Module** - Program configuration and encrypted incident reports
+- [x] **Phase 6: Dashboards, Notifications & Role Completion** - Role-specific UIs, notifications, compliance exports
 
 ## Phase Details
 
@@ -91,10 +91,10 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
   4. Reprint displays existing card after identity confirmation; code stays permanently tied to beneficiary (no replacement workflow) per D-04
   5. Staff can view, print (browser print dialog per D-06), and reprint the Access Card service log from the UI
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed — COMPLETE
 
 - [x] 04-01-PLAN.md — Generate & Assign Access Card (AC-01, AC-03)
-- [ ] 04-02-PLAN.md — Printable Card View & Service Log (AC-02, AC-03)
+- [x] 04-02-PLAN.md — Printable Card View & Service Log (AC-02, AC-03)
 - [x] 04-03-PLAN.md — No Card Soft Warning & Sync (AC-04, AC-02)
 
 ### Phase 5: Dynamic Programs & IRF Module
@@ -112,14 +112,11 @@ Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a 
   5. Victim/person-reported names are masked by default in all views; secure export to WCPD/PNP requires legal_basis_code + audit log entry
   6. IRF case disposition tracks through Under Investigation → Referred → Closed
 
-**Plans:** 4 plans
-
-Plans:
-
-- [ ] 05-01-PLAN.md — Dynamic Programs CRUD + JSON Schema Form Templates
-- [ ] 05-02-PLAN.md — Program Assignment & Approval Workflow FSM
-- [ ] 05-03-PLAN.md — IRF Encryption, Name Masking & Disposition FSM
-- [ ] 05-04-PLAN.md — IRF Secure Export (PDF + JSON) & Audit
+**Plans:** 4/4 plans executed — COMPLETE
+- [x] 05-01-PLAN.md — Dynamic Programs CRUD + JSON Schema Form Templates
+- [x] 05-02-PLAN.md — Program Assignment & Approval Workflow FSM
+- [x] 05-03-PLAN.md — IRF Encryption, Name Masking & Disposition FSM
+- [x] 05-04-PLAN.md — IRF Secure Export (PDF + JSON) & Audit
 
 ### Phase 6: Dashboards, Notifications & Role Completion
 
@@ -145,6 +142,6 @@ Plans:
 | 1. Foundation — Deploy & Authenticate | 4/4 | Complete | 2026-06-19 |
 | 2. GIS Intake & Beneficiary Registration | 4/4 | Complete   | 2026-06-19 |
 | 3. Intervention Tracking & Case Management | 3/3 | Complete   | 2026-06-22 |
-| 4. Access Card System | 3/3 | In Progress|  |
-| 5. Dynamic Programs & IRF Module | 0/4 | Not started | - |
-| 6. Dashboards, Notifications & Role Completion | 2/4 | In Progress|  |
+| 4. Access Card System | 3/3 | Complete | |
+| 5. Dynamic Programs & IRF Module | 4/4 | Complete | |
+| 6. Dashboards, Notifications & Role Completion | 4/4 | Complete | |

@@ -32,7 +32,6 @@ function saveDb(data: DbTable): void {
 
 export async function initDatabase(): Promise<void> {
   loadDb();
-  console.log('KAPWA offline DB initialized');
 }
 
 export function getDatabase(): DbTable {
@@ -40,7 +39,18 @@ export function getDatabase(): DbTable {
 }
 
 export async function execute(sql: string, params: unknown[] = []): Promise<unknown[]> {
-  loadDb();
+  const data = loadDb();
+  const lower = sql.trim().toLowerCase();
+  if (lower.startsWith('select')) {
+    const fromMatch = sql.match(/FROM\s+(\w+)/i);
+    if (fromMatch) {
+      const table = fromMatch[1];
+      const rows = data[table] || [];
+      const whereMatch = sql.match(/WHERE\s+(.+?)(?:ORDER BY|LIMIT|$)/i);
+      if (whereMatch) return rows;
+      return rows;
+    }
+  }
   return [];
 }
 

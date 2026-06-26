@@ -27,13 +27,13 @@ export class SyncQueue {
   status: 'pending' | 'applied' | 'conflict' | 'failed';
 
   @Column({ name: 'idempotency_key', nullable: true })
-  idempotencyKey: string;
+  idempotencyKey?: string;
 
   @Column({ name: 'conflict_reason', nullable: true })
-  conflictReason: string;
+  conflictReason?: string;
 
   @Column({ name: 'resolved_at', nullable: true })
-  resolvedAt: Date;
+  resolvedAt?: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

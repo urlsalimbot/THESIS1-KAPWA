@@ -15,7 +15,7 @@ interface FieldSchema {
   description?: string;
   enum?: string[];
   enumNames?: string[];
-  default?: any;
+  default?: unknown;
   minimum?: number;
   maximum?: number;
   pattern?: string;
@@ -56,7 +56,7 @@ export default function JsonSchemaForm({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = useCallback((key: string, value: any) => {
+  const handleChange = useCallback((key: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [key]: value }));
     setErrors(prev => {
       const next = { ...prev };
@@ -273,7 +273,7 @@ export default function JsonSchemaForm({
           {onSubmit && (
             <button
               type="submit"
-              className="rounded bg-[#2E5C8A] px-6 py-2 text-sm font-medium text-white hover:bg-[#1e3d5e] transition-colors"
+              className="rounded bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors"
             >
               {submitLabel}
             </button>

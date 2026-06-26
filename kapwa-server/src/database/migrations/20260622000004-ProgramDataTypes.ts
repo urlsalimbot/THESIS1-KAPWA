@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ProgramDataTypes20260622000004 implements MigrationInterface {
-  name = 'ProgramDataTypes20260622000004';
+export class ProgramDataTypes2026062200004 implements MigrationInterface {
+  name = 'ProgramDataTypes2026062200004';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Add new JSONB column for approval_workflow

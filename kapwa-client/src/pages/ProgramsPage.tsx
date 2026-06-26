@@ -430,7 +430,7 @@ export function ProgramsPage() {
         <button
           onClick={() => setActiveTab('programs')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'programs' ? 'bg-white text-[#2E5C8A] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            activeTab === 'programs' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
           aria-label="Programs tab"
         >
@@ -440,7 +440,7 @@ export function ProgramsPage() {
         <button
           onClick={() => setActiveTab('assignments')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'assignments' ? 'bg-white text-[#2E5C8A] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            activeTab === 'assignments' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
           aria-label="Assignments tab"
         >
@@ -494,7 +494,7 @@ export function ProgramsPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">Basic Information</h4>
+                  <h4 className="mb-3 text-sm font-semibold text-primary">Basic Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="form-group">
                       <label className="form-label">Program Name *</label>
@@ -546,7 +546,7 @@ export function ProgramsPage() {
                         type="checkbox"
                         checked={form.isActive}
                         onChange={e => updateForm('isActive', e.target.checked)}
-                        className="rounded border-gray-300 text-[#2E5C8A]"
+                        className="rounded border-gray-300 text-primary"
                         aria-label="Active"
                       />
                       Active
@@ -556,7 +556,7 @@ export function ProgramsPage() {
 
                 {/* Required Documents */}
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">Required Documents</h4>
+                  <h4 className="mb-3 text-sm font-semibold text-primary">Required Documents</h4>
                   {form.requiredDocuments.map((doc, i) => (
                     <div key={i} className="flex items-center gap-2 mb-2">
                       <input
@@ -583,7 +583,7 @@ export function ProgramsPage() {
 
                 {/* Fund Sources */}
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">Fund Sources</h4>
+                  <h4 className="mb-3 text-sm font-semibold text-primary">Fund Sources</h4>
                   {form.fundSources.map((src, i) => (
                     <div key={i} className="flex items-center gap-2 mb-2">
                       <input
@@ -610,7 +610,7 @@ export function ProgramsPage() {
 
                 {/* Approval Workflow */}
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">Approval Workflow</h4>
+                  <h4 className="mb-3 text-sm font-semibold text-primary">Approval Workflow</h4>
                   {form.approvalWorkflow.map((step, i) => (
                     <div key={i} className="mb-3 rounded border border-gray-200 bg-white p-3">
                       <div className="flex items-center justify-between mb-2">
@@ -675,7 +675,7 @@ export function ProgramsPage() {
 
                 {/* Form Template (JSON Schema) */}
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-[#2E5C8A]">Form Template (JSON Schema)</h4>
+                  <h4 className="mb-3 text-sm font-semibold text-primary">Form Template (JSON Schema)</h4>
                   <textarea
                     className="form-input font-mono text-xs min-h-[120px]"
                     value={form.formTemplate}
@@ -726,7 +726,7 @@ export function ProgramsPage() {
                     <div className="flex items-center gap-4">
                       <div className={`w-2 h-2 rounded-full ${r.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
                       <div>
-                        <span className="font-semibold text-[#2E5C8A]">{r.name}</span>
+                        <span className="font-semibold text-primary">{r.name}</span>
                         {r.category && <span className="ml-2 text-xs text-gray-400">| {r.category}</span>}
                       </div>
                     </div>
@@ -771,7 +771,7 @@ export function ProgramsPage() {
                           <div className="mt-1 space-y-1">
                             {r.approvalWorkflow.map((s, i) => (
                               <div key={i} className="flex items-center gap-2 text-xs text-gray-700">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#2E5C8A] text-white text-[10px] font-bold">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold">
                                   {s.order + 1}
                                 </span>
                                 <span className="font-medium">{s.stepName}</span>
@@ -842,7 +842,7 @@ export function ProgramsPage() {
                       <div className="flex items-center gap-3">
                         {getStatusIcon(a.status)}
                         <div>
-                          <span className="font-semibold text-[#2E5C8A]">{a.programName || 'Program'}</span>
+                          <span className="font-semibold text-primary">{a.programName || 'Program'}</span>
                           <span className="ml-2 text-xs text-gray-400">Case: {a.caseId.slice(0, 8)}...</span>
                         </div>
                       </div>

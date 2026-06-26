@@ -7,9 +7,10 @@ import { Case } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { MinioModule } from '../minio/minio.module';
 import { TrackerModule } from '../tracker/tracker.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Intervention, Case, ConsentLedger]), MinioModule, TrackerModule],
+  imports: [TypeOrmModule.forFeature([Intervention, Case, ConsentLedger]), MinioModule, TrackerModule, AuthModule],
   controllers: [InterventionsController],
   providers: [InterventionsService],
   exports: [InterventionsService]

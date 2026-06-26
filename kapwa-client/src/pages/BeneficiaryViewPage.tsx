@@ -200,7 +200,7 @@ export function BeneficiaryViewPage() {
 
   return (
     <div className="space-y-6">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-[#2E5C8A] hover:underline">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-primary hover:underline">
         <ArrowLeft size={16} /> Back
       </button>
 
@@ -214,11 +214,11 @@ export function BeneficiaryViewPage() {
       <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#2E5C8A] text-2xl font-bold text-white">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-white">
               {beneficiary.name.charAt(0)}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">{beneficiary.name}</h2>
+              <h2 className="text-xl font-bold text-text-primary font-sans">{beneficiary.name}</h2>
               <p className="text-sm text-gray-500">ID: {beneficiary.id}</p>
               <div className="mt-1 flex items-center gap-3 text-sm text-gray-600">
                 <span className="flex items-center gap-1"><User size={14} /> {beneficiary.gender}, {beneficiary.age} yrs old</span>
@@ -232,25 +232,25 @@ export function BeneficiaryViewPage() {
 
       {/* Access Card Section — standalone between profile and main grid */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-        <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]"><Shield size={18} /> <h3 className="text-sm font-semibold">Access Card</h3></div>
+        <div className="mb-3 flex items-center gap-2 text-primary"><Shield size={18} /> <h3 className="text-sm font-semibold">Access Card</h3></div>
         {beneficiary.accessCardCode ? (
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500">Card Code</p>
-              <p className="font-mono text-sm font-medium text-[#2E5C8A]">
+              <p className="font-mono text-sm font-medium text-primary">
                 {beneficiary.accessCardCode}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate(`/beneficiary/${id}/card/print`)}
-                className="rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]"
+                className="rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark"
               >
                 Print Card
               </button>
               <button
                 onClick={handleReprint}
-                className="rounded border border-[#2E5C8A] px-3 py-1.5 text-xs text-[#2E5C8A] hover:bg-gray-50"
+                className="rounded border border-[#2E5C8A] px-3 py-1.5 text-xs text-primary hover:bg-gray-50"
               >
                 Reprint Card
               </button>
@@ -260,7 +260,7 @@ export function BeneficiaryViewPage() {
           <button
             onClick={handleAssignCard}
             disabled={assigning}
-            className="w-full rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-50"
+            className="w-full rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark disabled:opacity-50"
           >
             {assigning ? 'Assigning...' : 'Generate & Assign Access Card'}
           </button>
@@ -270,7 +270,7 @@ export function BeneficiaryViewPage() {
       {/* Main Details Grid */}
       <div className="grid grid-cols-3 gap-6">
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-          <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]"><UsersIcon size={18} /> <h3 className="text-sm font-semibold">Personal Info</h3></div>
+          <div className="mb-3 flex items-center gap-2 text-primary"><UsersIcon size={18} /> <h3 className="text-sm font-semibold">Personal Info</h3></div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Birth Date</span><span>{beneficiary.birthDate}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Contact</span><span>{beneficiary.contact || 'N/A'}</span></div>
@@ -281,8 +281,8 @@ export function BeneficiaryViewPage() {
 
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
           <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[#2E5C8A]"><FileText size={18} /> <h3 className="text-sm font-semibold">Active Cases</h3></div>
-            <button className="rounded p-1 text-gray-400 hover:text-[#2E5C8A]"><Plus size={16} /></button>
+            <div className="flex items-center gap-2 text-primary"><FileText size={18} /> <h3 className="text-sm font-semibold">Active Cases</h3></div>
+            <button className="rounded p-1 text-gray-400 hover:text-primary"><Plus size={16} /></button>
           </div>
           {beneficiary.cases.length === 0 ? (
             <p className="text-sm text-gray-400">No active cases</p>
@@ -299,7 +299,7 @@ export function BeneficiaryViewPage() {
                     {c.status === 'disbursed' && (
                       <button
                         onClick={() => setInterventionCaseId(c.id === interventionCaseId ? null : c.id)}
-                        className="rounded bg-[#2E5C8A] px-2 py-1 text-xs text-white hover:bg-[#1e3d5e]"
+                        className="rounded bg-primary px-2 py-1 text-xs text-white hover:bg-primary-dark"
                         title="Log Intervention"
                       >
                         <ClipboardList size={12} className="inline mr-1" />
@@ -314,7 +314,7 @@ export function BeneficiaryViewPage() {
         </div>
 
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-          <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]"><Gift size={18} /> <h3 className="text-sm font-semibold">Interventions</h3></div>
+          <div className="mb-3 flex items-center gap-2 text-primary"><Gift size={18} /> <h3 className="text-sm font-semibold">Interventions</h3></div>
           {beneficiary.interventions.length === 0 ? (
             <p className="text-sm text-gray-400">No interventions recorded</p>
           ) : (
@@ -323,7 +323,7 @@ export function BeneficiaryViewPage() {
                 <div key={intv.id} className="rounded bg-gray-50 p-2 text-sm">
                   <p className="font-medium text-gray-800">{intv.type}</p>
                   <p className="text-xs text-gray-400">{intv.description}</p>
-                  {intv.fundSource && <p className="text-xs font-medium text-[#2E5C8A]">Fund: {intv.fundSource}</p>}
+                  {intv.fundSource && <p className="text-xs font-medium text-primary">Fund: {intv.fundSource}</p>}
                   <p className="text-xs text-gray-400">{intv.date}</p>
                 </div>
               ))}
@@ -334,7 +334,7 @@ export function BeneficiaryViewPage() {
 
       {/* Case Tracker Log Section */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-        <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]">
+        <div className="mb-3 flex items-center gap-2 text-primary">
           <FileText size={18} />
           <h3 className="text-sm font-semibold">Case Tracker Log</h3>
         </div>
@@ -358,7 +358,7 @@ export function BeneficiaryViewPage() {
       {/* Intervention Form (inline, shown when a disbursed case selected) */}
       {interventionCaseId && (
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-          <div className="mb-3 flex items-center gap-2 text-[#2E5C8A]">
+          <div className="mb-3 flex items-center gap-2 text-primary">
             <ClipboardList size={18} />
             <h3 className="text-sm font-semibold">Log Intervention for Case {interventionCaseId}</h3>
           </div>
@@ -416,7 +416,7 @@ export function BeneficiaryViewPage() {
 
       {family.length > 0 && (
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-          <button onClick={() => setFamilyExpanded(!familyExpanded)} className="flex items-center gap-2 text-[#2E5C8A] mb-3">
+          <button onClick={() => setFamilyExpanded(!familyExpanded)} className="flex items-center gap-2 text-primary mb-3">
             {familyExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
             <UsersIcon size={18} />
             <h3 className="text-sm font-semibold">Family Composition ({family.length})</h3>
@@ -426,11 +426,11 @@ export function BeneficiaryViewPage() {
               {family.map(m => (
                 <div key={m.id} className="flex items-center justify-between rounded bg-gray-50 px-3 py-2 text-sm">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2E5C8A]/10 text-xs font-medium text-[#2E5C8A]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
                       {m.fullName.charAt(0)}
                     </span>
                     <div>
-                      <p className="font-medium text-gray-800">{m.fullName} {m.isPrimary && <span className="text-xs text-[#2E5C8A]">(Primary)</span>}</p>
+                      <p className="font-medium text-gray-800">{m.fullName} {m.isPrimary && <span className="text-xs text-primary">(Primary)</span>}</p>
                       <p className="text-xs text-gray-500">{m.relationship} · {m.age} yrs</p>
                     </div>
                   </div>
@@ -445,7 +445,7 @@ export function BeneficiaryViewPage() {
       )}
       {/* Family Graph Section */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-        <div className="mb-4 flex items-center gap-2 text-[#2E5C8A]">
+        <div className="mb-4 flex items-center gap-2 text-primary">
           <UsersIcon size={18} />
           <h3 className="text-sm font-semibold">Family Tree</h3>
         </div>
@@ -454,7 +454,7 @@ export function BeneficiaryViewPage() {
 
       {/* Consent Management Section */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
-        <div className="mb-4 flex items-center gap-2 text-[#2E5C8A]">
+        <div className="mb-4 flex items-center gap-2 text-primary">
           <Shield size={18} />
           <h3 className="text-sm font-semibold">Consent & Privacy</h3>
         </div>

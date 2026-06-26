@@ -16,16 +16,20 @@ export function FilingPage() {
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => { loadDocs(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadDocs(undefined, controller.signal);
+    return () => controller.abort();
+  }, []);
 
-  async function loadDocs(category?: string) {
+  async function loadDocs(category?: string, signal?: AbortSignal) {
     setLoading(true);
     try {
       const token = localStorage.getItem('kapwa_token');
       const q = category ? `?category=${category}` : '';
       const res = await fetch(`${API_URL}/filing${q}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setDocs(await res.json());
-    } catch {} finally { setLoading(false); }
+    } catch (e) { console.error("FilingPage:", e); } finally { setLoading(false); }
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -43,7 +47,7 @@ export function FilingPage() {
         body: formData,
       });
       if (res.ok) loadDocs();
-    } catch {} finally { setUploading(false); }
+    } catch (e) { console.error("FilingPage:", e); } finally { setUploading(false); }
   }
 
   async function handleDelete(id: string) {
@@ -52,7 +56,7 @@ export function FilingPage() {
       const token = localStorage.getItem('kapwa_token');
       await fetch(`${API_URL}/filing/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       loadDocs();
-    } catch {}
+    } catch (e) { console.error("FilingPage:", e); }
   }
 
   async function handleDownload(doc: Document) {
@@ -69,7 +73,7 @@ export function FilingPage() {
       a.download = doc.originalName;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch (e) { console.error("FilingPage:", e); }
   }
 
   const filtered = docs.filter(d => !search || d.originalName?.toLowerCase().includes(search.toLowerCase()));
@@ -77,19 +81,19 @@ export function FilingPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#1A1A1A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Digital Filing</h2>
+        <h2 className="text-xl font-bold text-text-primary font-sans">Digital Filing</h2>
         <p className="text-sm text-gray-500">Upload and manage case documents, signatures, and attachments</p>
       </div>
 
       <div className="mb-4 flex items-center gap-3">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#2E5C8A] px-4 py-2 text-sm font-medium text-white hover:bg-[#1e3d5e]">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark">
           <Upload size={16} />
           {uploading ? 'Uploading...' : 'Upload Document'}
           <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
         </label>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input type="text" placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm" />
+          <input type="text" aria-label="Search documents" placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm" />
         </div>
       </div>
 
@@ -109,8 +113,8 @@ export function FilingPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleDownload(d)} className="rounded p-1.5 text-gray-400 hover:text-[#2E5C8A] hover:bg-blue-50" title="Download"><Download size={16} /></button>
-                  <button onClick={() => handleDelete(d.id)} className="rounded p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50" title="Delete"><Trash2 size={16} /></button>
+                  <button onClick={() => handleDownload(d)} className="rounded p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50" title="Download" aria-label="Download"><Download size={16} /></button>
+                  <button onClick={() => handleDelete(d.id)} className="rounded p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50" title="Delete" aria-label="Delete"><Trash2 size={16} /></button>
                 </div>
               </div>
             ))}

@@ -186,7 +186,7 @@ export function IntakePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">GIS Intake Form</h2>
+          <h2 className="text-xl font-bold text-text-primary font-sans">GIS Intake Form</h2>
           <p className="text-sm text-gray-500">General Intake Sheet — Client Stub + Assessment</p>
         </div>
         <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${offlineMode ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
@@ -201,7 +201,7 @@ export function IntakePage() {
       <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
         {/* Client Stub Section */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-[#2E5C8A] font-sans">Client Stub / Beneficiary Information</h3>
+          <h3 className="mb-4 font-semibold text-primary font-sans">Client Stub / Beneficiary Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="surname" className="mb-1 block text-sm font-medium text-gray-700">Surname *</label>
@@ -253,8 +253,8 @@ export function IntakePage() {
         {/* Family Composition */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-[#2E5C8A] font-sans">Family Composition</h3>
-            <button type="button" onClick={addFamilyMember} className="rounded bg-[#2E5C8A] px-3 py-1 text-xs text-white hover:bg-[#1e3d5e]">
+            <h3 className="font-semibold text-primary font-sans">Family Composition</h3>
+            <button type="button" onClick={addFamilyMember} className="rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark">
               + Add Member
             </button>
           </div>
@@ -288,12 +288,12 @@ export function IntakePage() {
 
         {/* Service Requested & Requirements */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-[#2E5C8A] font-sans">Service Request & Requirements</h3>
+          <h3 className="mb-4 font-semibold text-primary font-sans">Service Request & Requirements</h3>
           <div className="mb-4">
             <label className="mb-2 block text-sm font-medium text-gray-700">Service Requested *</label>
             <div className="flex flex-wrap gap-2">
               {SERVICE_TYPES.map(svc => (
-                <label key={svc} className={`cursor-pointer rounded border px-3 py-1 text-xs font-medium transition-colors ${form.serviceRequested.includes(svc) ? 'border-[#2E5C8A] bg-[#2E5C8A] text-white' : 'border-gray-300 text-gray-600 hover:border-gray-400'}`}>
+                <label key={svc} className={`cursor-pointer rounded border px-3 py-1 text-xs font-medium transition-colors ${form.serviceRequested.includes(svc) ? 'border-[#2E5C8A] bg-primary text-white' : 'border-gray-300 text-gray-600 hover:border-gray-400'}`}>
                   <input type="checkbox" className="hidden" checked={form.serviceRequested.includes(svc)} onChange={() => toggleService(svc)} />
                   {svc}
                 </label>
@@ -305,7 +305,7 @@ export function IntakePage() {
             <div className="grid grid-cols-2 gap-2">
               {requirements.map(r => (
                 <label key={r.key} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={r.checked} onChange={() => toggleRequirement(r.key)} className="rounded border-gray-300 text-[#2E5C8A]" />
+                  <input type="checkbox" checked={r.checked} onChange={() => toggleRequirement(r.key)} className="rounded border-gray-300 text-primary" />
                   {r.label}
                 </label>
               ))}
@@ -315,20 +315,20 @@ export function IntakePage() {
 
         {/* Assessment & Signature */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-[#2E5C8A] font-sans">Assessment</h3>
+          <h3 className="mb-4 font-semibold text-primary font-sans">Assessment</h3>
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700">Assessed By (MSWDO Staff) *</label>
             <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.assessedBy} onChange={e => update('assessedBy', e.target.value)} aria-label="Assessed By" />
           </div>
           <SignaturePad key={sigResetKey} onSave={setSignature} label="Worker Signature *" />
           <label className="mt-4 flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.hasConsent} onChange={e => update('hasConsent', e.target.checked)} className="rounded border-gray-300 text-[#2E5C8A]" />
+            <input type="checkbox" checked={form.hasConsent} onChange={e => update('hasConsent', e.target.checked)} className="rounded border-gray-300 text-primary" />
             <span>I confirm the beneficiary has given consent per Data Privacy Act (RA 10173) and this data will be logged in the consent ledger</span>
           </label>
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" className="rounded bg-[#2E5C8A] px-8 py-2 text-sm font-medium text-white hover:bg-[#1e3d5e] disabled:opacity-50" disabled={submitting} aria-label="Submit Intake">
+          <button type="submit" className="rounded bg-primary px-8 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50" disabled={submitting} aria-label="Submit Intake">
             {submitting ? 'Submitting...' : offlineMode ? 'Queue for Sync' : 'Submit Intake'}
           </button>
           <button type="button" onClick={resetForm} className="rounded border border-gray-300 bg-white px-8 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">

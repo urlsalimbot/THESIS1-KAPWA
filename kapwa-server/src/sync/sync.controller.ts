@@ -2,12 +2,15 @@ import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
 import { SyncService } from './sync.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { AbacGuard } from '../auth/guards/abac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { SyncRequestSchema, ResolveConflictSchema } from './dto/sync.zod';
+import { SyncRequestSchema, SyncRequestInput, ResolveConflictSchema } from './dto/sync.zod';
+import { PullRequestInput } from './dto/pull.zod';
+import { PullRequestSchema } from './dto/pull.zod';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 
 @Controller('sync')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 export class SyncController {
   constructor(private readonly syncService: SyncService) {}
 
@@ -21,7 +24,7 @@ export class SyncController {
 
   @Post('pull')
   @Roles('admin', 'coordinator', 'social_worker')
-  async pullFromServer(@Body() body: { deviceId: string; versionVectors: any[] }) {
+  async pullFromServer(@Body(new ZodPipe(PullRequestSchema)) body: PullRequestInput) {
     return this.syncService.pullFromServer(body.deviceId, body.versionVectors);
   }
 

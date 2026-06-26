@@ -10,7 +10,7 @@ import { ChatMessage } from './chat.entity';
   imports: [
     TypeOrmModule.forFeature([ChatMessage]),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'kapwa-secret-key',
+      secret: process.env.JWT_SECRET,
     }),
   ],
   controllers: [ChatController],

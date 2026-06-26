@@ -44,10 +44,12 @@ describe('ChatService', () => {
 
   it('gets conversations list for user', async () => {
     repoMock.find.mockResolvedValue([
-      { id: 'm1', senderId: 'u1', recipientId: 'u2', content: 'Hello', isRead: true, conversationId: 'u1_u2', createdAt: new Date() },
+      { senderId: 'u1', recipientId: 'u2', senderName: 'Alice', content: 'Hello', createdAt: new Date(), isRead: true, conversationId: 'u1_u2' },
     ]);
     const result = await service.getConversations('u1');
     expect(result).toBeDefined();
+    expect(result).toHaveLength(1);
+    expect(result[0]).toHaveProperty('userId', 'u2');
   });
 
   it('marks message as read', async () => {

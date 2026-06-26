@@ -35,6 +35,12 @@ export class Case {
   @Column({ name: 'petty_cash_voucher_url', nullable: true })
   pettyCashVoucherUrl?: string;
 
+  @Column({ name: 'approved_by_signature', nullable: true, type: 'text' })
+  approvedBySignature?: string;
+
+  @Column({ name: 'approved_by_role', nullable: true })
+  approvedByRole?: string;
+
   @Column({ name: 'assigned_worker_id', nullable: true })
   assignedWorkerId?: string;
 
