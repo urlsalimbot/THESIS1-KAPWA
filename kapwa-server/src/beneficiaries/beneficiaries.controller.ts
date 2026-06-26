@@ -39,6 +39,12 @@ export class BeneficiariesController {
     return this.benService.getMyServices(req.user?.id || req.user.id);
   }
 
+  @Get('me/access-card')
+  @Roles('claimant')
+  async getMyAccessCard(@Request() req: AuthenticatedRequest) {
+    return this.benService.getAccessCard(req.user?.id || req.user.id);
+  }
+
   @Get('me/consent')
   @Roles('claimant')
   async getMyConsent(@Request() req: AuthenticatedRequest) {

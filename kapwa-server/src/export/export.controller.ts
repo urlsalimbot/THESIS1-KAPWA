@@ -25,6 +25,7 @@ export class ExportController {
     @Query('endDate') endDate?: string,
     @Res() res?: Response,
   ) {
+    if (!res) return;
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 
@@ -61,6 +62,7 @@ export class ExportController {
     @Query('endDate') endDate?: string,
     @Res() res?: Response,
   ) {
+    if (!res) return;
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 
@@ -101,6 +103,7 @@ export class ExportController {
     @Query('format') format: string,
     @Res() res?: Response,
   ) {
+    if (!res) return;
     if (format === 'pdf') {
       const buf = await this.exportService.exportCompliancePdf();
       res.set({

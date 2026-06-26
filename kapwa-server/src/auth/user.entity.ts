@@ -41,6 +41,15 @@ export class User {
   @Column({ name: 'device_id', nullable: true })
   deviceId?: string;
 
+  @Column({ name: 'mfa_secret', nullable: true })
+  mfaSecret?: string;
+
+  @Column({ name: 'mfa_enabled', default: false })
+  mfaEnabled!: boolean;
+
+  @Column({ name: 'token_version', default: 0 })
+  tokenVersion!: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

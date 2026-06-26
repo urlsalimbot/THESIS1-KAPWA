@@ -4,9 +4,6 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
 
 let socket: Socket | null = null;
 
-export function getSocket(): Socket | null {
-  return socket;
-}
 
 export function connectSocket(token: string): Socket {
   if (socket?.connected) return socket;
@@ -17,11 +14,9 @@ export function connectSocket(token: string): Socket {
   });
 
   socket.on('connect', () => {
-    console.log('[WS] Connected:', socket?.id);
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('[WS] Disconnected:', reason);
   });
 
   socket.on('error', (err) => {

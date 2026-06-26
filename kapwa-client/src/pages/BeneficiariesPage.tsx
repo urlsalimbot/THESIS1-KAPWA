@@ -63,7 +63,7 @@ export function BeneficiariesPage() {
     return () => { cancelled = true; };
   }, [debouncedSearch, categoryFilter, barangayFilter]);
 
-  if (loading) return <div className="p-8 text-center text-style-body">Loading beneficiaries...</div>;
+  if (loading) return <div className="p-8 text-center text-text-secondary">Loading beneficiaries...</div>;
 
   return (
     <div>
@@ -120,7 +120,7 @@ export function BeneficiariesPage() {
 
       {/* Empty state */}
       {!loading && !fetching && beneficiaries.length === 0 ? (
-        <div className="p-8 text-center text-style-body text-gray-400">
+        <div className="p-8 text-center text-text-secondary text-gray-400">
           No beneficiaries found
         </div>
       ) : (
@@ -149,7 +149,7 @@ export function BeneficiariesPage() {
                   <td className="flex gap-1">{b.programs.map(p => <span key={p} className="badge-category">{p}</span>)}</td>
                   <td><span className={b.status === 'active' ? 'badge-approved' : 'badge-closed'}>{b.status}</span></td>
                   <td>
-                    <button className="text-sm text-[#2E5C8A] flex items-center gap-1" onClick={() => navigate(`/beneficiaries/${b.id}`)} aria-label="View Beneficiary">
+                    <button className="text-sm text-primary flex items-center gap-1" onClick={() => navigate(`/beneficiaries/${b.id}`)} aria-label="View Beneficiary">
                       <Eye size={14} /> View
                     </button>
                   </td>

@@ -35,7 +35,7 @@ export default function NameMaskToggle({ irfId, legalBasis: initialLegalBasis, o
         onChange={e => setLegalBasis(e.target.value)}
         aria-label="Legal basis code" />
       <button onClick={handleUnlock} disabled={!legalBasis || loading}
-        className="text-xs text-[#2E5C8A] hover:underline">
+        className="text-xs text-primary hover:underline">
         {loading ? 'Unlocking...' : 'Unlock Names'}
       </button>
     </div>

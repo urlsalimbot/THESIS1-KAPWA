@@ -1,28 +1,27 @@
+import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CsrRecord } from './csr.entity';
+import { Intervention } from '../interventions/intervention.entity';
 import * as PDFDocument from 'pdfkit';
 
+const CSR_PAD_WIDTH = 4;
 @Injectable()
 export class CsrService {
   constructor(
     @InjectRepository(CsrRecord)
     private readonly csrRepo: Repository<CsrRecord>,
+    @InjectRepository(Intervention)
+    private readonly interventionRepo: Repository<Intervention>,
   ) {}
 
   async create(data: Partial<CsrRecord>, userId: string): Promise<CsrRecord> {
     const year = new Date().getFullYear();
-    const last = await this.csrRepo.findOne({
-      where: { controlNo: ILike(`CSR-${year}-%`) },
-      order: { createdAt: 'DESC' },
-    });
-    let nextSeq = 1;
-    if (last) {
-      const parts = last.controlNo.split('-');
-      nextSeq = parseInt(parts[parts.length - 1], 10) + 1;
-    }
-    const controlNo = `CSR-${year}-${String(nextSeq).padStart(4, '0')}`;
+    const seqName = `csr_seq_${year}`;
+    const result = await this.csrRepo.query(`SELECT nextval('${seqName}') AS seq`);
+    const nextSeq = parseInt(result[0].seq, 10);
+    const controlNo = `CSR-${year}-${String(nextSeq).padStart(CSR_PAD_WIDTH, '0')}`;
     const record = this.csrRepo.create({
       ...data,
       controlNo,
@@ -32,7 +31,7 @@ export class CsrService {
   }
 
   async findAll(): Promise<CsrRecord[]> {
-    return this.csrRepo.find({ order: { createdAt: 'DESC' } });
+    return this.csrRepo.find({ order: { createdAt: 'DESC' }, take: DEFAULT_LIST_LIMIT });
   }
 
   async findById(id: string): Promise<CsrRecord> {
@@ -56,6 +55,10 @@ export class CsrService {
   async remove(id: string): Promise<void> {
     const record = await this.findById(id);
     await this.csrRepo.remove(record);
+  }
+
+  async findInterventions(caseId: string) {
+    return this.interventionRepo.find({ where: { caseId }, order: { loggedAt: 'DESC' } });
   }
 
   async generatePdf(controlNo: string): Promise<Buffer> {
@@ -111,30 +114,30 @@ export class CsrService {
       field('Control No.', record.controlNo);
       field('Date Filed', new Date(record.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }));
       field('Social Worker', record.socialWorkerName);
-      field('Position', record.socialWorkerPosition);
-      field('Referral Origin', record.referralOrigin);
+      field("Position", record.socialWorkerPosition ?? "");
+      field("Referral Origin", record.referralOrigin ?? "");
       doc.moveDown(0.5);
 
       section('II', 'REASON FOR REFERRAL');
-      body(record.reasonForReferral);
+      body(record.reasonForReferral ?? "");
 
       section('III', 'PROBLEM PRESENTED');
-      body(record.problemPresented);
+      body(record.problemPresented ?? "");
 
       section('IV', 'FAMILY BACKGROUND');
-      body(record.familyBackground);
+      body(record.familyBackground ?? "");
 
       section('V', 'SOCIO-ECONOMIC PROFILE');
-      body(record.socioEconomicProfile);
+      body(record.socioEconomicProfile ?? "");
 
       section('VI', 'ASSESSMENT AND ANALYSIS');
-      body(record.assessmentAnalysis);
+      body(record.assessmentAnalysis ?? "");
 
       section('VII', 'RECOMMENDATION');
-      body(record.recommendation);
+      body(record.recommendation ?? "");
 
       section('VIII', 'INTERVENTION PLAN');
-      body(record.interventionPlan);
+      body(record.interventionPlan ?? "");
 
       doc.moveDown(2);
       doc.moveTo(50, doc.y).lineTo(250, doc.y).strokeColor('#333').lineWidth(0.5).stroke();
@@ -142,7 +145,7 @@ export class CsrService {
       doc.fontSize(8).fillColor('#666').font('Helvetica').text('Prepared by:', { continued: true });
       doc.moveDown(0.3);
       doc.fontSize(10).fillColor('#1a1a1a').font('Helvetica-Bold').text(record.socialWorkerName);
-      doc.fontSize(8).fillColor('#666').font('Helvetica').text(record.socialWorkerPosition || 'Social Worker');
+      doc.fontSize(8).fillColor('#666').font('Helvetica').text(record.socialWorkerPosition ?? 'Social Worker');
       doc.moveDown(1);
       doc.moveTo(300, doc.y).lineTo(500, doc.y).strokeColor('#333').lineWidth(0.5).stroke();
       doc.moveDown(0.5);

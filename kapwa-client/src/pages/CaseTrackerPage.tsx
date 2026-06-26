@@ -3,9 +3,7 @@ import '../index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const AGE_RANGES = ['0-7','8-17','18-59','60+'] as const;
-const CLIENT_CATEGORIES = ['Children','Youth','Women','PWD','Senior','Family'] as const;
-const BARANGAYS = ['Bigte','Matictic','Partida','San Mateo','Tigbe','Minuyan','San Roque','Samson','FVR','Sta. Lucia'];
+import { BARANGAYS, AGE_RANGES, CLIENT_CATEGORIES } from '../lib/constants';
 
 interface TrackerEntry {
   id: string;
@@ -35,38 +33,41 @@ export function CaseTrackerPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchEntries();
-    fetchStats();
+    const ac = new AbortController();
+    fetchEntries(ac.signal);
+    fetchStats(ac.signal);
+    return () => ac.abort();
   }, [selectedDate]);
 
-  async function fetchEntries() {
+  async function fetchEntries(signal?: AbortSignal) {
     setLoading(true);
     try {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(`${API_URL}/tracker/daily?date=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
       if (res.ok) {
         const data = await res.json();
         setEntries(data);
       }
-    } catch {
-    } finally {
+    } catch (e) { console.error("CaseTracker:", e); } finally {
       setLoading(false);
     }
   }
 
-  async function fetchStats() {
+  async function fetchStats(signal?: AbortSignal) {
     try {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(`${API_URL}/tracker/stats`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
       if (res.ok) {
         const data = await res.json();
         setStats(data);
       }
-    } catch {}
+    } catch (e) { console.error("CaseTracker:", e); }
   }
 
   async function handleAddEntry(e: React.FormEvent) {
@@ -92,14 +93,14 @@ export function CaseTrackerPage() {
         setForm({ surname: '', firstName: '', middleName: '', gender: 'M', ageRange: '', clientCategory: '', barangay: '', interventionRemarks: '' });
         setShowForm(false);
       }
-    } catch {}
+    } catch (e) { console.error("CaseTracker:", e); }
     finally { setSubmitting(false); }
   }
 
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#1A1A1A]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Daily Case Tracker</h2>
+        <h2 className="text-xl font-bold text-text-primary font-sans">Daily Case Tracker</h2>
         <p className="text-sm text-gray-500">Case Tracker Log — 'God Database' tally</p>
       </div>
 
@@ -107,19 +108,19 @@ export function CaseTrackerPage() {
       <div className="mb-4 grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">Total Cases Logged</p>
-          <p className="text-2xl font-bold text-[#2E5C8A]">{stats.totalCasesLogged}</p>
+          <p className="text-2xl font-bold text-primary">{stats.totalCasesLogged}</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">Today's Entries</p>
-          <p className="text-2xl font-bold text-[#2E5C8A]">{stats.todayEntries}</p>
+          <p className="text-2xl font-bold text-primary">{stats.todayEntries}</p>
         </div>
       </div>
 
       {/* Date Selector + Add Button */}
       <div className="mb-4 flex items-center gap-3">
         <label className="text-sm font-medium text-gray-700">Date:</label>
-        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="rounded border border-gray-300 px-3 py-1.5 text-sm" />
-        <button onClick={() => setShowForm(!showForm)} className="ml-auto rounded bg-[#2E5C8A] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#1e3d5e]">
+        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} aria-label="Tracker Date" className="rounded border border-gray-300 px-3 py-1.5 text-sm" />
+        <button onClick={() => setShowForm(!showForm)} className="ml-auto rounded bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark" aria-label="Add Entry">
           {showForm ? 'Cancel' : '+ Add Entry'}
         </button>
       </div>
@@ -127,53 +128,53 @@ export function CaseTrackerPage() {
       {/* Add Entry Form */}
       {showForm && (
         <form onSubmit={handleAddEntry} className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
-          <h4 className="mb-3 font-semibold text-[#2E5C8A] text-sm">New Tracker Entry</h4>
+          <h4 className="mb-3 font-semibold text-primary text-sm">New Tracker Entry</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs text-gray-500">Surname</label>
-              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.surname} onChange={e => setForm({...form, surname: e.target.value})} />
+              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.surname} onChange={e => setForm({...form, surname: e.target.value})} aria-label="Surname" />
             </div>
             <div>
               <label className="block text-xs text-gray-500">First Name</label>
-              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.firstName} onChange={e => setForm({...form, firstName: e.target.value})} />
+              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.firstName} onChange={e => setForm({...form, firstName: e.target.value})} aria-label="First Name" />
             </div>
             <div>
               <label className="block text-xs text-gray-500">Middle Name</label>
-              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.middleName} onChange={e => setForm({...form, middleName: e.target.value})} />
+              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.middleName} onChange={e => setForm({...form, middleName: e.target.value})} aria-label="Middle Name" />
             </div>
             <div>
               <label className="block text-xs text-gray-500">Gender</label>
-              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.gender} onChange={e => setForm({...form, gender: e.target.value})}>
+              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} aria-label="Gender">
                 <option value="M">M</option><option value="F">F</option>
               </select>
             </div>
             <div>
               <label className="block text-xs text-gray-500">Age Range</label>
-              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.ageRange} onChange={e => setForm({...form, ageRange: e.target.value})}>
+              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.ageRange} onChange={e => setForm({...form, ageRange: e.target.value})} aria-label="Age Range">
                 <option value="">Select</option>
                 {AGE_RANGES.map(r => <option key={r}>{r}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs text-gray-500">Category</label>
-              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.clientCategory} onChange={e => setForm({...form, clientCategory: e.target.value})}>
+              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.clientCategory} onChange={e => setForm({...form, clientCategory: e.target.value})} aria-label="Client Category">
                 <option value="">Select</option>
                 {CLIENT_CATEGORIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs text-gray-500">Barangay</label>
-              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.barangay} onChange={e => setForm({...form, barangay: e.target.value})}>
+              <select className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.barangay} onChange={e => setForm({...form, barangay: e.target.value})} aria-label="Barangay">
                 <option value="">Select</option>
                 {BARANGAYS.map(b => <option key={b}>{b}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs text-gray-500">Intervention</label>
-              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.interventionRemarks} onChange={e => setForm({...form, interventionRemarks: e.target.value})} placeholder="FA/C/CSR..." />
+              <input className="w-full rounded border border-gray-300 px-2 py-1 text-sm" value={form.interventionRemarks} onChange={e => setForm({...form, interventionRemarks: e.target.value})} placeholder="FA/C/CSR..." aria-label="Intervention" />
             </div>
           </div>
-          <button type="submit" disabled={submitting} className="mt-3 rounded bg-[#2E5C8A] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#1e3d5e] disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="mt-3 rounded bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-dark disabled:opacity-50" aria-label="Save Entry">
             {submitting ? 'Saving...' : 'Save Entry'}
           </button>
         </form>

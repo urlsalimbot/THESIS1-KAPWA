@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CaseFsmLifecycle20260622000001 implements MigrationInterface {
-  name = 'CaseFsmLifecycle20260622000001';
+export class CaseFsmLifecycle2026062200001 implements MigrationInterface {
+  name = 'CaseFsmLifecycle2026062200001';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS btree_gist`);

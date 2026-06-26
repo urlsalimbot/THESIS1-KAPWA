@@ -10,6 +10,21 @@ Built as an offline-first PWA with Capacitor 6 mobile wrappers, React 18 client,
 
 Social workers can register any claimant, conduct a full social case study (GIS), manage the complete approval workflow, log interventions post-disbursement, and track every service rendered — reliably offline in the field with automatic sync when connected.
 
+
+## Current Milestone: v1.1 UI/UX Overhaul
+
+**Goal:** Polish the entire Kapwa frontend to production-ready quality with a unified shadcn design system, responsive layouts, and public-facing pages.
+
+**Target features:**
+- Full shadcn component migration across all screens
+- Design token system (Tailwind CSS variables + CSS custom properties)
+- Responsive layout + mobile UX for field workers
+- Loading/empty/error states and transitions on every page
+- Accessibility improvements (ARIA, keyboard nav, focus management)
+- Public landing page, about, and polished auth flow
+- Print styles for reports and production-ready polish
+
+
 ## Requirements
 
 ### Validated
@@ -143,4 +158,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-19 after initialization*
+*Last updated: 2026-06-27 after milestone v1.1 start*

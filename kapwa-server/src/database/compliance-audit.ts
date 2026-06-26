@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import * as crypto from 'crypto';
 
+const HASH_CHAIN_SAMPLE_LIMIT = 10;
 const dataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
@@ -121,7 +122,7 @@ async function audit() {
     const [interventions] = await q.query(
       `SELECT id, amount, intervention_type, logged_at, hash,
               LAG(hash) OVER (ORDER BY logged_at) AS prev_hash
-       FROM interventions ORDER BY logged_at LIMIT 10`
+       FROM interventions ORDER BY logged_at LIMIT ${HASH_CHAIN_SAMPLE_LIMIT}`
     );
     if (interventions.length > 0) {
       let chainValid = true;

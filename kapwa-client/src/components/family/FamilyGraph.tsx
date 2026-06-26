@@ -93,16 +93,16 @@ export function FamilyGraph({ beneficiaryId }: FamilyGraphProps) {
     <div className="space-y-4">
       {/* Primary beneficiary card */}
       {primary && (
-        <div className="rounded-lg border border-[#2E5C8A]/20 bg-[#2E5C8A]/5 p-4">
+        <div className="rounded-lg border border-[#2E5C8A]/20 bg-primary/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2E5C8A] text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white">
               <User size={20} />
             </div>
             <div>
               <p className="font-semibold text-gray-800">{primary.fullName}</p>
               <p className="text-xs text-gray-500">
                 {primary.relationship} · {primary.age} yrs
-                {primary.isPrimary && <span className="ml-2 text-[#2E5C8A]">(Primary)</span>}
+                {primary.isPrimary && <span className="ml-2 text-primary">(Primary)</span>}
               </p>
               {primary.statusIncome && (
                 <p className="text-xs text-gray-400">{primary.statusIncome}</p>

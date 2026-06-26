@@ -4,7 +4,9 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CsrService } from './csr.service';
 import { createCsrSchema, updateCsrSchema } from './dto/csr.zod';
+import { AuthenticatedRequest } from '../auth/types';
 import { ZodPipe } from '../common/pipes/zod.pipe';
+import { z } from 'zod';
 import type { Response } from 'express';
 
 @Controller('csr')
@@ -14,7 +16,7 @@ export class CsrController {
 
   @Post()
   @Roles('admin', 'social_worker')
-  async create(@Body(new ZodPipe(createCsrSchema)) data: any, @Req() req: any) {
+  async create(@Body(new ZodPipe(createCsrSchema)) data: z.infer<typeof createCsrSchema>, @Req() req: AuthenticatedRequest) {
     return this.csrService.create(data, req.user.id);
   }
 
@@ -32,7 +34,7 @@ export class CsrController {
 
   @Patch(':id')
   @Roles('admin', 'social_worker')
-  async update(@Param('id') id: string, @Body(new ZodPipe(updateCsrSchema)) data: any) {
+  async update(@Param('id') id: string, @Body(new ZodPipe(updateCsrSchema)) data: z.infer<typeof updateCsrSchema>) {
     return this.csrService.update(id, data);
   }
 

@@ -41,7 +41,6 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
     ctx.stroke();
 
     setHasContent(false);
-    setHasContent(true);
     if (onClear) onClear();
   }
 
@@ -83,7 +82,6 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
     setHasContent(true);
-    setHasContent(false);
   }
 
   function stopDrawing(e: React.MouseEvent | React.TouchEvent) {
@@ -108,8 +106,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
           ref={canvasRef}
           width={width}
           height={height}
-          className="touch-none w-full"
-          style={{ maxWidth: width, cursor: 'crosshair' }}
+          className="touch-none w-full max-w-full cursor-crosshair"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -124,7 +121,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
           type="button"
           onClick={handleSave}
           disabled={!hasContent}
-          className="rounded bg-[#2E5C8A] px-3 py-1 text-xs text-white hover:bg-[#1e3d5e] disabled:opacity-40"
+          className="rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark disabled:opacity-40"
         >
           Save Signature
         </button>

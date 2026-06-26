@@ -91,8 +91,8 @@ export function IrfPage() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1a1a1a]">Incident Report Forms (IRF)</h1>
-        <button onClick={() => setShowForm(!showForm)} className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e]" aria-label="New IRF">
+        <h1 className="text-2xl font-bold text-text-primary">Incident Report Forms (IRF)</h1>
+        <button onClick={() => setShowForm(!showForm)} className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark" aria-label="New IRF">
           {showForm ? 'Cancel' : 'New IRF'}
         </button>
       </div>
@@ -121,7 +121,7 @@ export function IrfPage() {
             <label className="mb-1 block text-sm font-medium text-gray-700">Narration (AES-256 encrypted)</label>
             <textarea value={form.narration} onChange={e => setForm({ ...form, narration: e.target.value })} aria-label="Narration" className="w-full rounded border border-gray-300 p-2 text-sm" rows={4} required />
           </div>
-          <button type="submit" className="rounded bg-[#2E5C8A] px-4 py-2 text-xs text-white hover:bg-[#1e3d5e]" aria-label="Submit IRF">Submit IRF</button>
+          <button type="submit" className="rounded bg-primary px-4 py-2 text-xs text-white hover:bg-primary-dark" aria-label="Submit IRF">Submit IRF</button>
         </form>
       )}
 
@@ -130,7 +130,7 @@ export function IrfPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-center gap-2 mb-4">
-              <Shield className="text-[#2E5C8A]" size={20} />
+              <Shield className="text-primary" size={20} />
               <h3 className="font-semibold text-gray-800">Export IRF</h3>
             </div>
             <p className="text-xs text-gray-500 mb-3">
@@ -147,7 +147,7 @@ export function IrfPage() {
               <button onClick={handleExportJson} disabled={!legalBasis || exporting} className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
                 Export JSON
               </button>
-              <button onClick={handleExportPdf} disabled={!legalBasis || exporting} className="rounded bg-[#2E5C8A] px-4 py-2 text-sm text-white hover:bg-[#1e3d5e] disabled:opacity-40">
+              <button onClick={handleExportPdf} disabled={!legalBasis || exporting} className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark disabled:opacity-40">
                 {exporting ? 'Exporting...' : 'Export PDF'}
               </button>
             </div>
@@ -178,10 +178,10 @@ export function IrfPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <button onClick={() => navigate('/irf/' + irf.id)}
-                      className="text-sm text-[#2E5C8A] hover:underline" aria-label="View Details">
+                      className="text-sm text-primary hover:underline" aria-label="View Details">
                       View Details
                     </button>
-                    <button onClick={() => setExportIrfId(irf.id)} className="flex items-center gap-1 text-xs text-[#2E5C8A] hover:underline" aria-label="Export IRF">
+                    <button onClick={() => setExportIrfId(irf.id)} className="flex items-center gap-1 text-xs text-primary hover:underline" aria-label="Export IRF">
                       <Shield size={14} /> Export
                     </button>
                   </div>
