@@ -16,6 +16,10 @@ import { ClaimantDashboardPage } from './pages/ClaimantDashboardPage';
 import { FilingPage } from './pages/FilingPage';
 import { ApprovalPipelinePage } from './pages/ApprovalPipelinePage';
 import { MfaSetupPage } from './pages/MfaSetupPage';
+import { CoordinatorDashboardPage } from './pages/CoordinatorDashboardPage';
+import { MyAccessCardPage } from './pages/MyAccessCardPage';
+import { MayorReportsPage } from './pages/MayorReportsPage';
+import { AuditorPage } from './pages/AuditorPage';
 import { IrfPage } from './pages/IrfPage';
 import { IrfDetailPage } from './pages/IrfDetailPage';
 import { AccessCardPage } from './pages/AccessCardPage';
@@ -48,7 +52,11 @@ const router = createBrowserRouter([
   { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
   { path: '/beneficiaries/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
+  { path: '/coordinator', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator']}><MessagesPage /></Private> },
+  { path: '/my-access-card', element: <Private roles={['claimant']}><MyAccessCardPage /></Private> },
+  { path: '/reports', element: <Private roles={['mayor']}><MayorReportsPage /></Private> },
+  { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },
   { path: '*', element: <Navigate to="/" /> },
 ]);

@@ -13,6 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
   { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/cases', label: 'Case Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
+  { path: '/coordinator', label: 'Coordinator', icon: <LayoutDashboard size={20} />, roles: ['coordinator'] },
   { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
   { path: '/interventions', label: 'Interventions', icon: <CheckCircle size={20} />, roles: ['admin', 'social_worker'] },
   { path: '/csr', label: 'CSR Generator', icon: <FileText size={20} />, roles: ['admin', 'social_worker'] },

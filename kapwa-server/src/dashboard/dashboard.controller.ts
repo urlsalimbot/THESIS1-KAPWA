@@ -1,12 +1,15 @@
 import { Controller, Get, Query, UseGuards, Request, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { DashboardService } from './dashboard.service';
 import { CaseStatus } from '../cases/case.entity';
+import { AuthenticatedRequest } from '../auth/types';
 
 @ApiTags('Dashboard')
 @Controller('dashboard')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class DashboardController {
   private readonly logger = new Logger(DashboardController.name);
@@ -14,24 +17,27 @@ export class DashboardController {
   constructor(private dashService: DashboardService) {}
 
   @Get()
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get dashboard summary' })
-  async getDashboard(@Request() req: any) {
+  async getDashboard(@Request() req: AuthenticatedRequest) {
     try {
       const userBarangay = req.user?.role === 'coordinator'
         ? req.user.assignedBarangay
         : undefined;
       const metrics = await this.dashService.getMetrics(userBarangay);
       const sla = await this.dashService.getSlaCompliance();
+      const servedToday = await this.dashService.getServedToday();
 
       let recentCasesRaw: any[] = [];
       try {
         recentCasesRaw = await this.dashService.getRecentCases(userBarangay);
-      } catch (e: any) {
-        this.logger.error('getRecentCases failed', e.message, e.stack);
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        this.logger.error('getRecentCases failed', errMsg);
       }
 
       return {
-        servedToday: metrics.disbursedCases || 0,
+        servedToday,
         servedChange: '+0%',
         pendingReview: metrics.byStatus?.find((s: any) => s.status === CaseStatus.IN_REVIEW)?.count || 0,
         urgentCount: sla.overdueCount || 0,
@@ -48,28 +54,49 @@ export class DashboardController {
           status: c.status,
         })),
       };
-    } catch (e: any) {
-      this.logger.error('getDashboard failed', e.message, e.stack);
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      this.logger.error('getDashboard failed', errMsg);
       throw e;
     }
   }
 
   @Get('metrics')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get fund utilization metrics' })
-  async getMetrics(@Request() req: any, @Query('barangay') barangay?: string) {
+  async getMetrics(@Request() req: AuthenticatedRequest, @Query('barangay') barangay?: string) {
     const userBarangay = req.user.role === 'coordinator'
       ? req.user.assignedBarangay
       : barangay;
     return this.dashService.getMetrics(userBarangay);
   }
 
+    @Get('reports/mayor')
+  @Roles('mayor')
+  @ApiOperation({ summary: 'Mayor aggregate reports - zero PII' })
+  async getMayorReports(@Request() req: AuthenticatedRequest) {
+    const metrics = await this.dashService.getMetrics();
+    const sla = await this.dashService.getSlaCompliance();
+    const servedToday = await this.dashService.getServedToday();
+    return {
+      fundUtilization: metrics.totalDisbursedAmount,
+      uniqueHouseholds: metrics.uniqueHouseholds,
+      caseStatusDistribution: metrics.byStatus,
+      totalCases: metrics.totalCases,
+      slaCompliance: sla,
+      servedToday,
+    };
+  }
+
   @Get('daily-tracker')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get daily case tracker' })
   async getDailyTracker(@Query('date') date: string) {
     return this.dashService.getDailyTracker(new Date(date));
   }
 
   @Get('sla')
+  @Roles('admin', 'auditor')
   @ApiOperation({ summary: 'Get SLA compliance status' })
   async getSlaCompliance() {
     return this.dashService.getSlaCompliance();

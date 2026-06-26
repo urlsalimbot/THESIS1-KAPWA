@@ -93,6 +93,16 @@ export class AuditService {
     }));
   }
 
+  async getConsentLedger(beneficiaryId?: string, limit = 50) {
+    const where: any = {};
+    if (beneficiaryId) where.beneficiaryId = beneficiaryId;
+    return this.consentRepo.find({
+      where,
+      order: { grantedAt: 'DESC' },
+      take: limit,
+    });
+  }
+
   async exportForCoa(startDate: Date, endDate: Date) {
     const where: FindOptionsWhere<Intervention> = {};
     if (startDate) where.loggedAt = MoreThanOrEqual(startDate);

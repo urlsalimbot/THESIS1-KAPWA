@@ -7,13 +7,15 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from './user.entity';
 import { AbacService } from './services/abac.service';
+import { OtpModule } from '../otp/otp.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
+        OtpModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'kapwa-secret-key',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
   ],

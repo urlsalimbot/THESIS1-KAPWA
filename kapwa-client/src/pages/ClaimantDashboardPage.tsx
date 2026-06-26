@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getNotificationPreferences, updateNotificationPreferences } from '../lib/api';
+import { Link } from 'react-router-dom';
 import '../index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -121,6 +122,15 @@ export function ClaimantDashboardPage() {
       <div className="mb-6">
         <h2 className="text-xl font-bold text-[#1A1A1A] font-sans">My Dashboard</h2>
         <p className="text-sm text-gray-500">Service history, case status, and consent management</p>
+      </div>
+
+      {/* Access Card Link */}
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-500">Access Card</p>
+          <p className="text-sm font-medium text-[#2E5C8A]">View your KAPWA Access Card</p>
+        </div>
+        <Link to="/my-access-card" className="rounded bg-[#2E5C8A] px-3 py-1.5 text-xs text-white hover:bg-[#1e3d5e]">View Card</Link>
       </div>
 
       {/* Case Status */}
