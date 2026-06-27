@@ -2,146 +2,178 @@
 
 ## Overview
 
-Kapwa replaces paper-based workflows at the MSWDO of Norzagaray, Bulacan with a digital system covering the full social welfare lifecycle — from GIS beneficiary intake through case management, post-disbursement intervention logging, Access Card tracking, and compliance reporting. Built as an offline-first PWA on an existing brownfield codebase (React 18 + Capacitor 6 + NestJS 11 + PostgreSQL 16 + MinIO), this roadmap delivers 47 v1 requirements across 6 vertical-slice phases. Each phase delivers a complete, deployable user capability — from "staff can log in and the system runs" through "all stakeholders have role-appropriate dashboards" — with offline sync, consent gating, and compliance woven throughout.
+Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 16 + MinIO) and core case management flows — GIS intake, intervention tracking, Access Card system, IRF module, and role-specific dashboards. v1.1 shifts focus entirely to the frontend: a production-ready UI/UX overhaul of the React 18 SPA using shadcn/ui design system, responsive layouts for field workers, public-facing pages, and accessibility compliance. Six phases deliver this transformation — starting with design tokens and layout shell, building shared page-state components, migrating every page to shadcn, and finishing with accessibility audit and differentiating features.
+
+## Milestones
+
+- ✅ **v1.0 MVP** — Phases 1-6 (shipped 2026-06-27)
+- 🚧 **v1.1 UI/UX Overhaul** — Phases 7-12 (in progress)
 
 ## Phases
 
+<details>
+<summary>✅ v1.0 MVP (Phases 1-6) — SHIPPED 2026-06-27</summary>
+
 - [x] **Phase 1: Foundation — Deploy & Authenticate** - Infrastructure, roles, basic sync, and audit foundation
-- [x] **Phase 2: GIS Intake & Beneficiary Registration** - Dual-mode GIS intake with consent management (completed 2026-06-19)
-- [x] **Phase 3: Intervention Tracking & Case Management** - End-to-end case workflow with post-disbursement logging (completed 2026-06-22)
-- [x] **Phase 4: Access Card System** - One-step generate-and-assign, printable card view, soft No Card guard, reprint with identity verification
+- [x] **Phase 2: GIS Intake & Beneficiary Registration** - Dual-mode GIS intake with consent management
+- [x] **Phase 3: Intervention Tracking & Case Management** - End-to-end case workflow with post-disbursement logging
+- [x] **Phase 4: Access Card System** - One-step generate-and-assign, printable card view, soft No Card guard
 - [x] **Phase 5: Dynamic Programs & IRF Module** - Program configuration and encrypted incident reports
 - [x] **Phase 6: Dashboards, Notifications & Role Completion** - Role-specific UIs, notifications, compliance exports
 
+</details>
+
+### 🚧 v1.1 UI/UX Overhaul (In Progress)
+
+**Milestone Goal:** Polish the entire Kapwa frontend to production-ready quality with a unified shadcn design system, responsive layouts, loading/empty/error states on every page, accessibility improvements, public-facing pages, and print styles for government reports.
+
+- [ ] **Phase 7: Foundation & Design System** - Design tokens, CSS cleanup, and infrastructure established
+- [ ] **Phase 8: Dashboard Shell & Layout** - App shell with sidebar, topbar, breadcrumbs, and dark mode toggle
+- [ ] **Phase 9: Landing Page & Auth Flow** - Public-facing pages and polished auth flow
+- [ ] **Phase 10: Shared Components & Responsive** - Reusable page-state components and mobile-responsive infrastructure
+- [ ] **Phase 11: Page Migration, Print & Offline UI** - All pages migrated to shadcn with print styles and offline awareness
+- [ ] **Phase 12: Accessibility & Differentiators** - Accessibility compliance and production-differentiating features
+
 ## Phase Details
 
-### Phase 1: Foundation — Deploy & Authenticate
+### Phase 7: Foundation & Design System
 
-**Goal**: Staff can deploy the full system stack, log in with role-appropriate access, and sync infrastructure is initialized with encrypted local storage.
-**Mode:** mvp
-**Depends on**: Nothing (first phase)
-**Requirements**: INF-01, INF-02, INF-03, INF-05, ROL-01, ROL-06, SYNC-01, SYNC-04, SYNC-05, CON-06
+**Goal**: Design token system, CSS cleanup, and infrastructure established — enabling every subsequent phase to use consistent, theme-aware styling without specificity conflicts.
+
+**Depends on**: Nothing (first v1.1 phase)
+
+**Requirements**: DSG-01, DSG-02, DSG-03, DSG-04
+
 **Success Criteria** (what must be TRUE):
 
-  1. System deploys via Docker Compose with MinIO, Caddy 2 (auto-TLS, rate limiting), and PostgreSQL 16 with backup cron
-  2. Admin can log in with MFA and manage users across all 6 role types (Social Worker, Admin, Barangay Coordinator, Claimant, Mayor's Office, Auditor)
-  3. Mobile app uses SQLCipher AES-256 encrypted local database; sync endpoint enforces idempotency keys
-  4. Offline queue status indicator is visible in the UI with pending change count
-  5. Audit trail uses SHA-256 hash chaining — admin can verify chain integrity
+1. CSS custom properties (colors, spacing, typography, shadows, radii) are defined as `:root` + `.dark` blocks and used throughout all component styling
+2. Tailwind theme colors map 1:1 to CSS custom properties — changing `--primary` in `index.css` updates all primary-colored elements across the app
+3. All legacy component classes (`.btn`, `.table`, `.form-input`, `.badge-*`) are moved to `@layer legacy` — no specificity conflicts with shadcn/Tailwind utilities
+4. `@base-ui/react` dependency removed from `package.json` with zero remaining imports
 
-**Plans**: 4/4 plans executed — COMPLETE
+**Plans**: TBD
 
-- [x] 01-01-PLAN.md — Walking Skeleton: Docker Compose, Caddy, MinIO, connection pooling, RLS for all 6 roles
-- [x] 01-02-PLAN.md — Admin User Management: POST /users, role validation, AdminPage form
-- [x] 01-03-PLAN.md — Sync Client Foundation: SQLCipher, platform-aware SecureStorage, Layout offline queue fix
-- [x] 01-04-PLAN.md — Audit Integrity & Idempotency: SHA-256 hash chain extension, DB-backed idempotency keys
+**Dependencies**: Existing `components.json` verified, shadcn CLI configured, app builds without error
 
-### Phase 2: GIS Intake & Beneficiary Registration
+### Phase 8: Dashboard Shell & Layout
 
-**Goal**: Social workers can register any walk-in or referred claimant through dual-mode GIS intake (online/offline), capturing full Client Stub fields, family composition, assessment notes, and searchable beneficiary records.
-**Mode:** mvp
-**Depends on**: Phase 1
-**Requirements**: GIS-01, GIS-02, GIS-03, GIS-04, GIS-05, GIS-06, CON-01, CON-02, SYNC-02
+**Goal**: Users can navigate the app through a polished dashboard shell with collapsible sidebar, topbar with user controls, breadcrumb navigation, and dark mode preference.
+
+**Depends on**: Phase 7
+
+**Requirements**: LAY-01, LAY-02, LAY-03, LAY-04, DSG-05
+
 **Success Criteria** (what must be TRUE):
 
-  1. Staff can start a GIS intake session online or offline, capturing Client Stub fields, requirements checklist, family composition, and assessment notes — all in one form
-  2. On intake completion, a case is generated with a unique control_no and status = 'pending_assessment'; profile fields are editable ONLY during active intake sessions (no standalone PATCH)
-  3. Staff can search beneficiaries by name, category, and barangay with trigram + BM25 typo-tolerant search
-  4. Family graph visualization shows relationships up to 2 degrees, filtered by consent status
-  5. Consent ledger tracks grant/revoke per beneficiary; revoked consent = immediate masking of PII fields in UI
+1. User can collapse/expand the sidebar navigation and see role-filtered nav groups with active route highlighting
+2. User can access the user menu (profile, logout) and notification/messages popover from the topbar
+3. Breadcrumb trail shows the current page location and updates on every navigation
+4. Keyboard user can skip directly to main content via skip-to-content link (first focusable element)
+5. Admin can toggle between light and dark mode via a toggle in the user menu
 
-**Plans:** 4/4 plans complete
+**Plans**: TBD
 
-- [x] 02-01-PLAN.md — Consolidated GIS Intake: POST /api/intake, category migration, IntakePage wiring
-- [x] 02-02-PLAN.md — Beneficiary Search: pg_trgm + ts_rank, category/barangay filters
-- [x] 02-03-PLAN.md — Family Graph, Consent & PII: Recursive CTE, revoke endpoint, interceptor, UI
-- [x] 02-04-PLAN.md — Offline Intake Sync: Sync processor for intake, offline queue consolidation
+**UI hint**: yes
 
-### Phase 3: Intervention Tracking & Case Management
+### Phase 9: Landing Page & Auth Flow
 
-**Goal**: Staff can move cases through the full FSM lifecycle (pending_assessment → in_review → approved → disbursed → closed) and log post-disbursement interventions with mandatory signatures, eligibility checks, and fund source tracking.
-**Mode:** mvp
-**Depends on**: Phase 2
-**Requirements**: INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-08, CON-03, CON-04, SYNC-03
+**Goal**: Public visitors can learn about Kapwa, log in with role-aware redirect, or find the claimant self-registration entry point — through polished, mobile-friendly pages.
+
+**Depends on**: Phase 7
+
+**Requirements**: PUB-01, PUB-02, PUB-03, PUB-04
+
 **Success Criteria** (what must be TRUE):
 
-  1. Case progresses through strict FSM transitions (pending → review → approved → disbursed → closed) with role-appropriate approval step at each gate
-  2. Intervention entry (FA/C/CSR/R/H/HV) is ONLY available after case.status = 'disbursed'; system blocks any pre-disbursement logging
-  3. Sliding-window duplicate detection prevents a household from receiving the same intervention type within 30 days
-  4. Each intervention requires a mandatory worker signature upload AND client receipt/liquidation scan; Case Tracker Log auto-generates with daily sequence numbering
-  5. ABAC evaluates (role, resource_sensitivity, consent_status) on every intervention query; ARTA SLA timers auto-escalate overdue approval steps
+1. Visitor on the landing page sees hero section, services overview, application steps, about section, and contact information — all offline-cached
+2. Visitor on the about page sees the MSWDO mission, team, and program details
+3. User can log in with a shadcn-ified form and is redirected to the correct dashboard based on role (or to `/unauthorized` for wrong-role access)
+4. Claimant can find and use the self-registration entry point on the login page
 
-**Plans:** 3/3 plans complete
+**Plans**: TBD
 
-- [x] 03-01-PLAN.md — Case FSM Lifecycle: 3-gate separation with per-gate endpoints, admin override, role-specific UI
-- [x] 03-02-PLAN.md — Intervention Logging: signatures via MinIO, duplicate detection, fund source tracking, deferrable sig state
-- [x] 03-03-PLAN.md — Tracker, SLA & Offline: NORZ-TRACK IDs, ARTA SLA cron, offline FSM transitions, sync conflict resolution
+**UI hint**: yes
 
-### Phase 4: Access Card System
+### Phase 10: Shared Components & Responsive
 
-**Goal**: Admin can generate-and-assign unique Access Cards (NORZ-AC-YYYY-####) per beneficiary, with soft-warning No Card guard at intervention logging, on-demand browser-print card view with full service log, and reprint with identity verification.
-**Mode:** mvp
-**Depends on**: Phase 3
-**Requirements**: AC-01, AC-02, AC-03, AC-04
+**Goal**: Every data page uses consistent page-state components (PageShell, skeletons, empty states, error boundaries, toasts) and works correctly on mobile devices with responsive tables and touch-friendly controls.
+
+**Depends on**: Phase 7, Phase 8
+
+**Requirements**: STT-01, STT-02, STT-03, STT-04, STT-05, RES-01, RES-02, RES-03
+
 **Success Criteria** (what must be TRUE):
 
-  1. Admin can generate-and-assign a unique Access Card code (NORZ-AC-YYYY-####) to any beneficiary in one step — no standalone code generation
-  2. Digital service log is the source of truth with unbounded rows (no 18-row limit enforced in software) per D-02
-  3. "No Card = No Voucher" is a soft warning with override flag — worker can proceed by sending overrideNoCardCheck=true per D-03
-  4. Reprint displays existing card after identity confirmation; code stays permanently tied to beneficiary (no replacement workflow) per D-04
-  5. Staff can view, print (browser print dialog per D-06), and reprint the Access Card service log from the UI
+1. Every page uses `PageShell` wrapper with consistent title, description header, and proper spacing
+2. Data-fetching pages show skeleton components matching real content dimensions (table skeletons, card skeletons, form skeletons)
+3. Empty list/search views display icon + message + optional CTA instead of blank areas (4 variants: no data, no results, offline, no access)
+4. Route crashes show an error boundary with error icon, message, retry button, and home link — not a white screen
+5. CRUD operations show toast notifications (success, error, promise/loading states) via Sonner
+6. Mobile users see bottom tab navigation for main sections (Dashboard, Cases, Beneficiaries, Profile)
+7. Data tables are sortable, filterable, and paginated with horizontal scroll on mobile
+8. All form controls have minimum 44px touch targets with proper spacing (`gap-3` between interactive elements)
 
-**Plans**: 3/3 plans executed — COMPLETE
+**Plans**: TBD
 
-- [x] 04-01-PLAN.md — Generate & Assign Access Card (AC-01, AC-03)
-- [x] 04-02-PLAN.md — Printable Card View & Service Log (AC-02, AC-03)
-- [x] 04-03-PLAN.md — No Card Soft Warning & Sync (AC-04, AC-02)
+**UI hint**: yes
 
-### Phase 5: Dynamic Programs & IRF Module
+### Phase 11: Page Migration, Print & Offline UI
 
-**Goal**: Admin can configure dynamic programs with JSON Schema form templates, and staff can submit encrypted Incident Report Forms (IRF) with secure WCPD/PNP export and case disposition tracking.
-**Mode:** mvp
-**Depends on**: Phase 2, Phase 3
-**Requirements**: PRG-01, PRG-02, PRG-03, IRF-01, IRF-02, IRF-03, IRF-04
+**Goal**: All internal pages use shadcn components with proper loading/empty/error states, print styles for government reports, and offline-aware indicators for field workers.
+
+**Depends on**: Phase 7, Phase 8, Phase 10
+
+**Requirements**: PGM-01, PGM-02, PGM-03, PGM-04, PGM-05, PGM-06, PRN-01, PRN-02, OFF-01, OFF-02, OFF-03, DIF-02
+
 **Success Criteria** (what must be TRUE):
 
-  1. Admin can create/edit programs with name, category, waiting period, required documents, and fund sources — all persisted to the database
-  2. Program config includes a JSON Schema form template that renders dynamically as a structured intake form in the UI
-  3. Each program type supports a configurable multi-step approval workflow with role-based gates
-  4. Staff can submit an IRF with blotter entry number, case category, and Item A/B/C fields; victim narration is AES-256 encrypted via pgcrypto
-  5. Victim/person-reported names are masked by default in all views; secure export to WCPD/PNP requires legal_basis_code + audit log entry
-  6. IRF case disposition tracks through Under Investigation → Referred → Closed
+1. Beneficiaries, cases/interventions, Access Card, IRF, dashboard, and admin pages all use shadcn components (`<Table>`, `<Input>`, `<Button variant>`, `<Badge variant>`, `<Card>`) with zero remaining legacy CSS class usage
+2. Each migrated page shows loading skeleton (cold load), empty state (zero results), and error state with retry — using shared page-state components from Phase 10
+3. Print view of reports hides navigation, sidebar, and buttons — shows clean A4 layout with government branding, proper margins, and `break-inside-avoid` on table rows
+4. Print-ready case documents (Access Card, CSR, intervention log) have proper pagination and signature blocks
+5. Sync status banner shows connection state, pending operation count, and sync progress; user can open the queue detail panel from the sidebar to view pending/syncing/failed/conflict items with resolve actions
+6. Cache staleness indicators appear on data when viewing cached (not fresh) information — visual badge shows data age
 
-**Plans:** 4/4 plans executed — COMPLETE
-- [x] 05-01-PLAN.md — Dynamic Programs CRUD + JSON Schema Form Templates
-- [x] 05-02-PLAN.md — Program Assignment & Approval Workflow FSM
-- [x] 05-03-PLAN.md — IRF Encryption, Name Masking & Disposition FSM
-- [x] 05-04-PLAN.md — IRF Secure Export (PDF + JSON) & Audit
+**Plans**: TBD
 
-### Phase 6: Dashboards, Notifications & Role Completion
+**UI hint**: yes
 
-**Goal**: Every role sees appropriate data — Claimant self-service, Mayor's Office aggregate views, Auditor read-only logs — with consent-gated notifications and DSWD/COA-compliant exports.
-**Mode:** mvp
-**Depends on**: Phase 4
-**Requirements**: ROL-02, ROL-03, ROL-04, ROL-05, CON-05, INF-04
+### Phase 12: Accessibility & Differentiators
+
+**Goal**: The frontend meets WCAG 2.1 AA accessibility standards and delivers differentiating features — role-specific dashboards, consent-aware masking, SLA timers, quick actions, and bulk operations.
+
+**Depends on**: Phase 11
+
+**Requirements**: ACC-01, ACC-02, ACC-03, ACC-04, DIF-01, DIF-03, DIF-04, DIF-05, DIF-06
+
 **Success Criteria** (what must be TRUE):
 
-  1. Claimant can access a self-service dashboard showing service history timeline, case status tracker, digital Access Card, and consent management hub
-  2. Mayor's Office sees aggregate data only (no PII) — fund utilization, unique household counts, SLA compliance rates
-  3. Auditor role provides read-only access to audit logs with SHA-256 hash-chain verification and consent ledger inspection
-  4. Barangay Coordinator is scoped to single barangay with SMS OTP auth and mobile PWA interface
-  5. SMS and in-app notifications are sent respecting consent preferences (opt-in/opt-out per channel)
-  6. Admin can export DSWD/COA-compliant reports (audit logs, service summaries, compliance data)
+1. All interactive elements are keyboard-reachable with visible focus rings and no focus traps; screen reader announcements play for toast notifications, loading state changes, and errors
+2. All text colors meet WCAG 2.1 AA minimum contrast (4.5:1 for body text, 3:1 for large text)
+3. Role-specific dashboards show tailored KPI cards, trend data, and recent activity per role (social worker, admin, coordinator, claimant, mayor, auditor)
+4. Consent-aware UI dynamically masks PII fields on consent revoke without page reload; case cards show color-coded SLA countdown timers (green → yellow → red)
+5. Field workers access quick actions (new intake, search, photo, signature) via bottom-sheet shortcuts on mobile
+6. Data tables support row selection with a bulk action toolbar (approve/reject/assign/export) on selected rows
+
+**Plans**: TBD
+
+**UI hint**: yes
 
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+**Execution Order:** Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Foundation — Deploy & Authenticate | 4/4 | Complete | 2026-06-19 |
-| 2. GIS Intake & Beneficiary Registration | 4/4 | Complete   | 2026-06-19 |
-| 3. Intervention Tracking & Case Management | 3/3 | Complete   | 2026-06-22 |
-| 4. Access Card System | 3/3 | Complete | |
-| 5. Dynamic Programs & IRF Module | 4/4 | Complete | |
-| 6. Dashboards, Notifications & Role Completion | 4/4 | Complete | |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation — Deploy & Authenticate | v1.0 | 4/4 | Complete | 2026-06-19 |
+| 2. GIS Intake & Beneficiary Registration | v1.0 | 4/4 | Complete | 2026-06-19 |
+| 3. Intervention Tracking & Case Management | v1.0 | 3/3 | Complete | 2026-06-22 |
+| 4. Access Card System | v1.0 | 3/3 | Complete | 2026-06-22 |
+| 5. Dynamic Programs & IRF Module | v1.0 | 4/4 | Complete | 2026-06-22 |
+| 6. Dashboards, Notifications & Role Completion | v1.0 | 4/4 | Complete | 2026-06-24 |
+| 7. Foundation & Design System | v1.1 | 0/0 | Not started | - |
+| 8. Dashboard Shell & Layout | v1.1 | 0/0 | Not started | - |
+| 9. Landing Page & Auth Flow | v1.1 | 0/0 | Not started | - |
+| 10. Shared Components & Responsive | v1.1 | 0/0 | Not started | - |
+| 11. Page Migration, Print & Offline UI | v1.1 | 0/0 | Not started | - |
+| 12. Accessibility & Differentiators | v1.1 | 0/0 | Not started | - |

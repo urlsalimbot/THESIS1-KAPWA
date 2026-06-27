@@ -106,53 +106,62 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DSG-01 | | Pending |
-| DSG-02 | | Pending |
-| DSG-03 | | Pending |
-| DSG-04 | | Pending |
-| DSG-05 | | Pending |
-| LAY-01 | | Pending |
-| LAY-02 | | Pending |
-| LAY-03 | | Pending |
-| LAY-04 | | Pending |
-| PUB-01 | | Pending |
-| PUB-02 | | Pending |
-| PUB-03 | | Pending |
-| PUB-04 | | Pending |
-| STT-01 | | Pending |
-| STT-02 | | Pending |
-| STT-03 | | Pending |
-| STT-04 | | Pending |
-| STT-05 | | Pending |
-| RES-01 | | Pending |
-| RES-02 | | Pending |
-| RES-03 | | Pending |
-| PRN-01 | | Pending |
-| PRN-02 | | Pending |
-| OFF-01 | | Pending |
-| OFF-02 | | Pending |
-| OFF-03 | | Pending |
-| ACC-01 | | Pending |
-| ACC-02 | | Pending |
-| ACC-03 | | Pending |
-| ACC-04 | | Pending |
-| PGM-01 | | Pending |
-| PGM-02 | | Pending |
-| PGM-03 | | Pending |
-| PGM-04 | | Pending |
-| PGM-05 | | Pending |
-| PGM-06 | | Pending |
-| DIF-01 | | Pending |
-| DIF-02 | | Pending |
-| DIF-03 | | Pending |
-| DIF-04 | | Pending |
-| DIF-05 | | Pending |
-| DIF-06 | | Pending |
+| DSG-01 | Phase 7 | Pending |
+| DSG-02 | Phase 7 | Pending |
+| DSG-03 | Phase 7 | Pending |
+| DSG-04 | Phase 7 | Pending |
+| DSG-05 | Phase 8 | Pending |
+| LAY-01 | Phase 8 | Pending |
+| LAY-02 | Phase 8 | Pending |
+| LAY-03 | Phase 8 | Pending |
+| LAY-04 | Phase 8 | Pending |
+| PUB-01 | Phase 9 | Pending |
+| PUB-02 | Phase 9 | Pending |
+| PUB-03 | Phase 9 | Pending |
+| PUB-04 | Phase 9 | Pending |
+| STT-01 | Phase 10 | Pending |
+| STT-02 | Phase 10 | Pending |
+| STT-03 | Phase 10 | Pending |
+| STT-04 | Phase 10 | Pending |
+| STT-05 | Phase 10 | Pending |
+| RES-01 | Phase 10 | Pending |
+| RES-02 | Phase 10 | Pending |
+| RES-03 | Phase 10 | Pending |
+| PRN-01 | Phase 11 | Pending |
+| PRN-02 | Phase 11 | Pending |
+| OFF-01 | Phase 11 | Pending |
+| OFF-02 | Phase 11 | Pending |
+| OFF-03 | Phase 11 | Pending |
+| ACC-01 | Phase 12 | Pending |
+| ACC-02 | Phase 12 | Pending |
+| ACC-03 | Phase 12 | Pending |
+| ACC-04 | Phase 12 | Pending |
+| PGM-01 | Phase 11 | Pending |
+| PGM-02 | Phase 11 | Pending |
+| PGM-03 | Phase 11 | Pending |
+| PGM-04 | Phase 11 | Pending |
+| PGM-05 | Phase 11 | Pending |
+| PGM-06 | Phase 11 | Pending |
+| DIF-01 | Phase 12 | Pending |
+| DIF-02 | Phase 11 | Pending |
+| DIF-03 | Phase 12 | Pending |
+| DIF-04 | Phase 12 | Pending |
+| DIF-05 | Phase 12 | Pending |
+| DIF-06 | Phase 12 | Pending |
 
 **Coverage:**
 - v1 requirements: 42 total
-- Mapped to phases: 0
-- Unmapped: 42 ⚠️
+- Mapped to phases: 42
+- Unmapped: 0 ✅
+
+| Phase | Requirements |
+|-------|-------------|
+| Phase 7 | DSG-01, DSG-02, DSG-03, DSG-04 |
+| Phase 8 | LAY-01, LAY-02, LAY-03, LAY-04, DSG-05 |
+| Phase 9 | PUB-01, PUB-02, PUB-03, PUB-04 |
+| Phase 10 | STT-01, STT-02, STT-03, STT-04, STT-05, RES-01, RES-02, RES-03 |
+| Phase 11 | PGM-01, PGM-02, PGM-03, PGM-04, PGM-05, PGM-06, PRN-01, PRN-02, OFF-01, OFF-02, OFF-03, DIF-02 |
+| Phase 12 | ACC-01, ACC-02, ACC-03, ACC-04, DIF-01, DIF-03, DIF-04, DIF-05, DIF-06 |
 
 ---
 *Requirements defined: 2026-06-27*
