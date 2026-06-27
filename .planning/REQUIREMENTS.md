@@ -1,157 +1,159 @@
 # Requirements: Kapwa — MSWDO Norzagaray
 
-**Defined:** 2026-06-19
+**Defined:** 2026-06-27
 **Core Value:** Social workers can register any claimant, conduct a full social case study, manage the complete approval workflow, log interventions post-disbursement, and track every service rendered — reliably offline in the field with automatic sync when connected.
 
-## v1 Requirements
+## v1.1 UI/UX Overhaul
 
-### GIS Intake & Beneficiary Profiling
+Requirements for production-ready frontend polish with unified shadcn design system, responsive layouts, and public-facing pages.
 
-- [ ] **GIS-01**: Staff can conduct dual-mode GIS intake (online/offline) capturing Client Stub fields, requirements checklist, family composition, and assessment notes
-- [ ] **GIS-02**: Profile fields are editable ONLY during active GIS intake sessions — no standalone PATCH endpoints for beneficiaries
-- [ ] **GIS-03**: Intake completion generates a case with control_no and status = 'pending_assessment'
-- [x] **GIS-04**: Staff can search beneficiaries by name, category, and barangay using trigram + BM25 with typo tolerance
-- [x] **GIS-05**: Family graph visualization via recursive CTE (up to 2 degrees, consent-filtered)
-- [ ] **GIS-06**: Beneficiary categorization by type (Senior, PWD, Child, Solo Parent, etc.)
+### Foundation & Design Tokens
 
-### Intervention Tracking
+- [ ] **DSG-01**: Design token system defined as CSS custom properties (colors, spacing, typography, shadows, radii)
+- [ ] **DSG-02**: Tailwind CSS theme config fully mapped to design tokens
+- [ ] **DSG-03**: Legacy CSS classes cleaned up — unused `@layer components` classes removed, remaining ones wrapped in `@layer legacy`
+- [ ] **DSG-04**: Unused `@base-ui/react` dependency removed from package.json
+- [ ] **DSG-05**: Admin can toggle dark/light mode via a toggle in the user menu
 
-- [x] **INT-01**: Interventions (FA/C/CSR/R/H/HV) are loggable ONLY after case.status = 'disbursed'
-- [x] **INT-02**: End-to-end workflow: intake → assessment → approval → disbursement → post-intervention logging
-- [x] **INT-03**: Eligibility checks with sliding window duplicate detection (30-day household limit)
-- [x] **INT-04**: Mandatory worker signature upload per intervention
-- [x] **INT-05**: Mandatory client receipt/liquidation scan upload per intervention
-- [x] **INT-06**: Case Tracker Log with daily sequencing (transaction_date + daily_seq_num unique)
-- [ ] **INT-07**: Auto-append to Access Card service records on intervention creation
-- [x] **INT-08**: Fund source tracking (Regular/PDAF/Legislative/Donation) with balance checks
+### Dashboard Shell & Layout
 
-### Access Card System
+- [ ] **LAY-01**: Sidebar with collapsible navigation, role-filtered nav groups, active route highlighting
+- [ ] **LAY-02**: Topbar with user menu (profile, logout), notification bell, messages popover
+- [ ] **LAY-03**: Breadcrumb navigation showing current page location
+- [ ] **LAY-04**: Skip-to-content link for keyboard accessibility
 
-- [x] **AC-01**: Generate unique Access Card codes (NORZ-AC-YYYY-####) per beneficiary
-- [x] **AC-02**: 18-row service log per card with refill/print workflow
-- [x] **AC-03**: Loss/replacement workflow with full audit trail
-- [ ] **AC-04**: "No Card = No Voucher" API guard enforced at intervention logging
+### Landing Page & Auth
 
-### IRF (Incident Report Form) Module
+- [ ] **PUB-01**: Public landing page with hero section, services overview, application steps, about section, and contact information
+- [ ] **PUB-02**: Public about page with mission, team, and program details
+- [ ] **PUB-03**: Polished login page (shadcn) with role-aware redirect post-login
+- [ ] **PUB-04**: Claimant self-registration entry point on login page
 
-- [ ] **IRF-01**: Staff can submit IRF with blotter entry number, case category, and Item A/B/C fields
-- [ ] **IRF-02**: AES-256 encryption of victim narration via pgcrypto; names masked by default
-- [ ] **IRF-03**: Secure export to WCPD/PNP requiring legal_basis_code + audit log entry
-- [ ] **IRF-04**: Case disposition tracking: Under Investigation → Referred → Closed
+### Page-State Components
 
-### Dynamic Programs
+- [ ] **STT-01**: `PageShell` wrapper component providing consistent padding, title, and breadcrumbs
+- [ ] **STT-02**: Loading skeleton states on every data-fetching page (table skeletons, card skeletons, form skeletons)
+- [ ] **STT-03**: Empty state placeholders with icon, message, and optional CTA for all list/search views
+- [ ] **STT-04**: Error boundaries with fallback UI (error icon, message, retry button, home link) at route and widget level
+- [ ] **STT-05**: Toast notifications via Sonner for all CRUD operations (success, error, promise/loading states)
 
-- [ ] **PRG-01**: Admin can configure programs (name, category, waiting period, required docs, fund sources)
-- [ ] **PRG-02**: Program config includes JSON Schema form template for dynamic UI rendering
-- [ ] **PRG-03**: Approval workflow per program type with configurable steps
+### Mobile & Responsive
 
-### User Roles & Access
+- [ ] **RES-01**: Mobile bottom tab navigation for main sections (Dashboard, Cases, Beneficiaries, Profile)
+- [ ] **RES-02**: Responsive data tables using TanStack Table + shadcn DataTable (sortable, filterable, paginated, horizontal scroll on mobile)
+- [ ] **RES-03**: Touch-friendly form controls (min 44px touch targets, proper spacing, mobile keyboard handling)
 
-- [ ] **ROL-01**: 6 roles implemented: MSWDO Social Worker, MSWDO Admin, Barangay Coordinator, Claimant, Mayor's Office, Auditor
-- [ ] **ROL-02**: Barangay Coordinator scoped to single barangay, SMS OTP auth + mobile PWA
-- [ ] **ROL-03**: Claimant self-service dashboard — status tracker, service history timeline, Access Card view, consent management
-- [ ] **ROL-04**: Mayor's Office sees aggregate data only (no PII), fund utilization, SLA compliance
-- [ ] **ROL-05**: Auditor role — read-only audit logs, hash-chain verification, consent ledger access
-- [x] **ROL-06**: MSWDO Admin — manage programs, users, consent ledger, sync queue, audit exports
+### Print Styles
 
-### Consent & Compliance
+- [ ] **PRN-01**: Print stylesheet for reports — hide nav/sidebar/buttons, show proper A4 layout with government branding
+- [ ] **PRN-02**: Print-ready case documents (CSR, Access Card, intervention log) with proper margins, pagination, signature blocks
 
-- [x] **CON-01**: Consent ledger with grant/revoke tracking per beneficiary
-- [x] **CON-02**: Revoked consent = immediate UI masking or null return on PII fields
-- [x] **CON-03**: ABAC evaluates (role, resource_sensitivity, consent_status, legal_basis) for every query
-- [x] **CON-04**: ARTA SLA timers with auto-escalation for overdue approvals
-- [ ] **CON-05**: DSWD/COA-compliant report export formats
-- [ ] **CON-06**: SHA-256 hash chaining for audit trail integrity
+### Offline-Aware UI
 
-### Offline Sync
+- [ ] **OFF-01**: Enhanced sync status banner showing connection state, pending operation count, sync progress
+- [ ] **OFF-02**: Sync queue detail panel accessible from sidebar — shows pending/syncing/failed/conflict items with resolve actions
+- [ ] **OFF-03**: Cache staleness indicators on data — visual badge when viewing cached data
 
-- [x] **SYNC-01**: SQLCipher local cache on mobile (AES-256 encrypted)
-- [ ] **SYNC-02**: All core workflows function offline; delta sync on reconnect
-- [x] **SYNC-03**: Conflict resolution: Financial/Amount → Server Wins; Notes → Chronological Append; Consent → Server Revocation Overrides; Unclear → Conflict Queue
-- [ ] **SYNC-04**: Idempotency key enforcement on sync endpoint
-- [x] **SYNC-05**: Offline queue status indicator and pending count display in UI
+### Accessibility
 
-### Infrastructure & Notifications
+- [ ] **ACC-01**: ARIA landmarks, labels, and descriptions on all interactive elements
+- [ ] **ACC-02**: Full keyboard navigation (focus order, focus traps in modals, visible focus rings)
+- [ ] **ACC-03**: Color contrast meeting WCAG 2.1 AA minimum (4.5:1 for text, 3:1 for large text)
+- [ ] **ACC-04**: Screen-reader-friendly announcements for dynamic content (toasts, loading changes, errors)
 
-- [ ] **INF-01**: MinIO (S3-compatible) for document storage (signatures, vouchers, IRF attachments)
-- [ ] **INF-02**: Caddy 2 reverse proxy with auto-TLS, rate limiting, WAF
-- [ ] **INF-03**: Docker Compose deployment with automated backup cron
-- [ ] **INF-04**: Notifications (SMS + in-app) respecting consent preferences
-- [ ] **INF-05**: Connection pooling and backup strategy configured
+### Per-Page shadcn Migration
+
+- [ ] **PGM-01**: Beneficiaries pages (list, view, intake form) migrated to shadcn + loading/empty/error states
+- [ ] **PGM-02**: Cases & interventions pages migrated to shadcn + states
+- [ ] **PGM-03**: Access Card pages migrated to shadcn + print styles
+- [ ] **PGM-04**: IRF module pages migrated to shadcn + states
+- [ ] **PGM-05**: Dashboard pages for all roles migrated to shadcn + states
+- [ ] **PGM-06**: Admin/settings pages migrated to shadcn + states
+
+### Differentiators
+
+- [ ] **DIF-01**: Role-specific dashboards with tailored KPI cards, trend data, and recent activity per role (social worker, admin, coordinator, claimant, mayor, auditor)
+- [ ] **DIF-02**: Offline queue transparency panel — pending/syncing/failed/conflict items with resolve actions
+- [ ] **DIF-03**: Consent-aware UI masking — PII fields dynamically mask on consent revoke without page reload
+- [ ] **DIF-04**: SLA countdown timers on case cards (color-coded green → yellow → red) and compliance badges on reports
+- [ ] **DIF-05**: Field worker quick actions — bottom-sheet shortcuts for new intake, search, photo, signature
+- [ ] **DIF-06**: Bulk action toolbar in data tables — select multiple rows for approve/reject/assign/export
 
 ## v2 Requirements
 
-- **Full integration with PhilSys/DSWD national databases** — CSV/PDF export sufficient for v1
-- **Real-time chat between beneficiaries and staff** — Existing Socket.IO infrastructure but not MSWDO-priority
-- **Scheduling/appointment system** — Not in current project scope
+Deferred to future release. Tracked but not in current roadmap.
+
+### Future
+
+- **DIF-07**: Print-ready CSR with official MSWDO letterhead and watermark
+- **PLG-01**: Integration with national databases (PhilSys/DSWD)
+- **CHT-01**: Real-time chat between beneficiaries and staff
+- **SCH-01**: Scheduling/appointment system
 
 ## Out of Scope
 
+Explicitly excluded. Documented to prevent scope creep.
+
 | Feature | Reason |
 |---------|--------|
-| PhilSys/DSWD API integration | Standalone system; export reports for external submission |
-| LGU-wide financial management | Fund tracking limited to intervention/program scope |
-| Real-time chat | Infrastructure exists but not prioritized for MSWDO workflow |
-| Appointment scheduling | Not part of MSWDO paper workflow mapped in KAPWA-PROJECT.md |
+| Heavy page animation libraries | Frame Motion hurts PWA bundle size and Capacitor mobile performance; CSS transitions cover all needs |
+| Server-side PDF generation | CSS `@media print` + browser "Save as PDF" covers 95% of use cases |
+| Dark mode as primary theme | Government social workers work in well-lit offices; light mode is standard |
+| Drag-and-drop reordering | Poor mobile support and accessibility; use dropdown/button ordering instead |
+| Real-time WebSocket dashboard updates | SWR stale-while-revalidate on 30s polling interval is sufficient; WebSocket adds complexity for offline |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AC-01 | Phase 4 | Complete |
-| AC-02 | Phase 4 | Complete |
-| AC-03 | Phase 4 | Complete |
-| AC-04 | Phase 4 | Pending |
-| CON-01 | Phase 2 | Complete |
-| CON-02 | Phase 2 | Complete |
-| CON-03 | Phase 3 | Complete |
-| CON-04 | Phase 3 | Complete |
-| CON-05 | Phase 6 | Pending |
-| CON-06 | Phase 1 | Pending |
-| GIS-01 | Phase 2 | Pending |
-| GIS-02 | Phase 2 | Pending |
-| GIS-03 | Phase 2 | Pending |
-| GIS-04 | Phase 2 | Complete |
-| GIS-05 | Phase 2 | Complete |
-| GIS-06 | Phase 2 | Pending |
-| INF-01 | Phase 1 | Pending |
-| INF-02 | Phase 1 | Pending |
-| INF-03 | Phase 1 | Pending |
-| INF-04 | Phase 6 | Pending |
-| INF-05 | Phase 1 | Pending |
-| INT-01 | Phase 3 | Complete |
-| INT-02 | Phase 3 | Complete |
-| INT-03 | Phase 3 | Complete |
-| INT-04 | Phase 3 | Complete |
-| INT-05 | Phase 3 | Complete |
-| INT-06 | Phase 3 | Complete |
-| INT-07 | Phase 4 | Pending |
-| INT-08 | Phase 3 | Complete |
-| IRF-01 | Phase 5 | Pending |
-| IRF-02 | Phase 5 | Pending |
-| IRF-03 | Phase 5 | Pending |
-| IRF-04 | Phase 5 | Pending |
-| PRG-01 | Phase 5 | Pending |
-| PRG-02 | Phase 5 | Pending |
-| PRG-03 | Phase 5 | Pending |
-| ROL-01 | Phase 1 | Pending |
-| ROL-02 | Phase 6 | Pending |
-| ROL-03 | Phase 6 | Pending |
-| ROL-04 | Phase 6 | Pending |
-| ROL-05 | Phase 6 | Pending |
-| ROL-06 | Phase 1 | Complete |
-| SYNC-01 | Phase 1 | Complete |
-| SYNC-02 | Phase 2 | Pending |
-| SYNC-03 | Phase 3 | Complete |
-| SYNC-04 | Phase 1 | Pending |
-| SYNC-05 | Phase 1 | Complete |
+| DSG-01 | | Pending |
+| DSG-02 | | Pending |
+| DSG-03 | | Pending |
+| DSG-04 | | Pending |
+| DSG-05 | | Pending |
+| LAY-01 | | Pending |
+| LAY-02 | | Pending |
+| LAY-03 | | Pending |
+| LAY-04 | | Pending |
+| PUB-01 | | Pending |
+| PUB-02 | | Pending |
+| PUB-03 | | Pending |
+| PUB-04 | | Pending |
+| STT-01 | | Pending |
+| STT-02 | | Pending |
+| STT-03 | | Pending |
+| STT-04 | | Pending |
+| STT-05 | | Pending |
+| RES-01 | | Pending |
+| RES-02 | | Pending |
+| RES-03 | | Pending |
+| PRN-01 | | Pending |
+| PRN-02 | | Pending |
+| OFF-01 | | Pending |
+| OFF-02 | | Pending |
+| OFF-03 | | Pending |
+| ACC-01 | | Pending |
+| ACC-02 | | Pending |
+| ACC-03 | | Pending |
+| ACC-04 | | Pending |
+| PGM-01 | | Pending |
+| PGM-02 | | Pending |
+| PGM-03 | | Pending |
+| PGM-04 | | Pending |
+| PGM-05 | | Pending |
+| PGM-06 | | Pending |
+| DIF-01 | | Pending |
+| DIF-02 | | Pending |
+| DIF-03 | | Pending |
+| DIF-04 | | Pending |
+| DIF-05 | | Pending |
+| DIF-06 | | Pending |
 
 **Coverage:**
-
-- v1 requirements: 47 total
-- Mapped to phases: 47
-- Unmapped: 0 ✓
+- v1 requirements: 42 total
+- Mapped to phases: 0
+- Unmapped: 42 ⚠️
 
 ---
-*Requirements defined: 2026-06-19*
-*Last updated: 2026-06-19 after initial definition*
+*Requirements defined: 2026-06-27*
+*Last updated: 2026-06-27 after v1.1 milestone definition*
