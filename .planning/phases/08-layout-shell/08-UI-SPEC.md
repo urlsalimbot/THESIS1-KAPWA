@@ -39,6 +39,18 @@ created: 2026-06-27
 
 ---
 
+## Visual Hierarchy & Focal Points
+
+| Priority | Element | Rationale |
+|----------|---------|-----------|
+| Primary | Sidebar navigation | User's primary action is route selection. Active nav item highlighted with `bg-muted text-foreground`. This is where users spend most of their interaction time. |
+| Secondary | Main content area (`<main>`) | Where selected route content renders. Breadcrumb trail provides navigation context. |
+| Tertiary | Topbar | Utility actions (notifications, messages, user menu, dark mode toggle, search). Support role — peripheral to primary task. |
+
+**Focal point enforcement:** No competing visual elements draw attention away from the sidebar-content axis. The sidebar sticks permanently on desktop (256px, `sticky`), the main content fills remaining space. Accent color is reserved exclusively for interaction feedback (focus rings, hover states) — never for chrome or decoration.
+
+---
+
 ## Spacing Scale
 
 Declared values (all multiples of 4 — confirmed against existing `--spacing-*` CSS variables):
@@ -68,8 +80,10 @@ Font families (inherited from Phase 7 design tokens):
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 (normal) | 1.5 | Nav item labels, breadcrumb text, user menu items, placeholder text |
 | Label | 12px | 600 (semibold) | 1.0 | Nav group headers (uppercase, `tracking-wider`), role badge text |
-| Heading | 14px | 700 (bold) | 1.25 | "KAPWA" logo brand text (uses Lexend font) |
-| Display | 16px | 500 (medium) | 1.5 | User full name in DropdownMenu profile card |
+| Heading | 14px | 600 (semibold) | 1.25 | "KAPWA" logo brand text (uses Lexend font) |
+| Display | 16px | 600 (semibold) | 1.5 | User full name in DropdownMenu profile card |
+
+**Weight summary:** Exactly 2 weights used — 400 (normal) for body/display text and 600 (semibold) for all headings, labels, and emphasis. No 500 (medium) or 700 (bold) weights used. This ensures a clean, readable hierarchy without unnecessary weight variation.
 
 **Note on "Skip to content":** Uses `sr-only` / `focus:not-sr-only` pattern — font size inherits from body (14px), weight 600 (semibold) for visibility on focus.
 
