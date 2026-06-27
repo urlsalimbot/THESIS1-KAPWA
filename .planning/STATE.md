@@ -12,7 +12,7 @@ last_activity_desc: v1.1 roadmap created with 6 phases (7-12)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 2
   completed_plans: 0
   percent: 0
 ---

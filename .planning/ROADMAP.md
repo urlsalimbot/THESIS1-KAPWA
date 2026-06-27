@@ -51,7 +51,11 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 3. All legacy component classes (`.btn`, `.table`, `.form-input`, `.badge-*`) are moved to `@layer legacy` — no specificity conflicts with shadcn/Tailwind utilities
 4. `@base-ui/react` dependency removed from `package.json` with zero remaining imports
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+**Plan list:**
+- [ ] 07-01-PLAN.md — Design token system (DSG-01, DSG-02, DSG-04): Expand :root CSS custom properties, define .dark block, update tailwind.config.js, remove @base-ui/react
+- [ ] 07-02-PLAN.md — Legacy CSS cleanup & shadcn components (DSG-01, DSG-03): Move legacy CSS to @layer legacy, install 14 shadcn components via CLI
 
 **Dependencies**: Existing `components.json` verified, shadcn CLI configured, app builds without error
 
@@ -71,7 +75,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 4. Keyboard user can skip directly to main content via skip-to-content link (first focusable element)
 5. Admin can toggle between light and dark mode via a toggle in the user menu
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 **UI hint**: yes
 
@@ -90,7 +94,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 3. User can log in with a shadcn-ified form and is redirected to the correct dashboard based on role (or to `/unauthorized` for wrong-role access)
 4. Claimant can find and use the self-registration entry point on the login page
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 **UI hint**: yes
 
@@ -113,7 +117,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 7. Data tables are sortable, filterable, and paginated with horizontal scroll on mobile
 8. All form controls have minimum 44px touch targets with proper spacing (`gap-3` between interactive elements)
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 **UI hint**: yes
 
@@ -134,7 +138,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 5. Sync status banner shows connection state, pending operation count, and sync progress; user can open the queue detail panel from the sidebar to view pending/syncing/failed/conflict items with resolve actions
 6. Cache staleness indicators appear on data when viewing cached (not fresh) information — visual badge shows data age
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 **UI hint**: yes
 
@@ -155,7 +159,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 5. Field workers access quick actions (new intake, search, photo, signature) via bottom-sheet shortcuts on mobile
 6. Data tables support row selection with a bulk action toolbar (approve/reject/assign/export) on selected rows
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 **UI hint**: yes
 
@@ -171,7 +175,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 | 4. Access Card System | v1.0 | 3/3 | Complete | 2026-06-22 |
 | 5. Dynamic Programs & IRF Module | v1.0 | 4/4 | Complete | 2026-06-22 |
 | 6. Dashboards, Notifications & Role Completion | v1.0 | 4/4 | Complete | 2026-06-24 |
-| 7. Foundation & Design System | v1.1 | 0/0 | Not started | - |
+| 7. Foundation | 7. Foundation & Design System | v1.1 | 0/0 | Not started | - | Design System | v1.1 | 0/2 | Not started | - |
 | 8. Dashboard Shell & Layout | v1.1 | 0/0 | Not started | - |
 | 9. Landing Page & Auth Flow | v1.1 | 0/0 | Not started | - |
 | 10. Shared Components & Responsive | v1.1 | 0/0 | Not started | - |
