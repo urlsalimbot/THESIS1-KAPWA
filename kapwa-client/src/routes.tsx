@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeProvider } from 'next-themes';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { AuthProvider } from './lib/auth-context';
 import { LoginPage } from './pages/LoginPage';
@@ -63,10 +64,12 @@ const router = createBrowserRouter([
 
 export function MainRoutes() {
   return (
-    <AuthProvider>
-      <ErrorBoundary>
-        <RouterProvider router={router} />
-      </ErrorBoundary>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <AuthProvider>
+        <ErrorBoundary>
+          <RouterProvider router={router} />
+        </ErrorBoundary>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
