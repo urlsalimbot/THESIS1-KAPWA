@@ -28,7 +28,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 **Milestone Goal:** Polish the entire Kapwa frontend to production-ready quality with a unified shadcn design system, responsive layouts, loading/empty/error states on every page, accessibility improvements, public-facing pages, and print styles for government reports.
 
 - [ ] **Phase 7: Foundation & Design System** - Design tokens, CSS cleanup, and infrastructure established
-- [ ] **Phase 8: Dashboard Shell & Layout** - App shell with sidebar, topbar, breadcrumbs, and dark mode toggle
+- [x] **Phase 8: Dashboard Shell & Layout** - App shell with sidebar, topbar, breadcrumbs, and dark mode toggle (completed 2026-06-28)
 - [ ] **Phase 9: Landing Page & Auth Flow** - Public-facing pages and polished auth flow
 - [ ] **Phase 10: Shared Components & Responsive** - Reusable page-state components and mobile-responsive infrastructure
 - [ ] **Phase 11: Page Migration, Print & Offline UI** - All pages migrated to shadcn with print styles and offline awareness
@@ -54,6 +54,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 **Plans:** 2 plans
 
 **Plan list:**
+
 - [ ] 07-01-PLAN.md — Design token system (DSG-01, DSG-02, DSG-04): Expand :root CSS custom properties, define .dark block, update tailwind.config.js, remove @base-ui/react
 - [ ] 07-02-PLAN.md — Legacy CSS cleanup & shadcn components (DSG-01, DSG-03): Move legacy CSS to @layer legacy, install 14 shadcn components via CLI
 
@@ -75,7 +76,9 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 4. Keyboard user can skip directly to main content via skip-to-content link (first focusable element)
 5. Admin can toggle between light and dark mode via a toggle in the user menu
 
-**Plans:** 2 plans
+**Plans:** 1/1 plans complete
+
+- [x] 08-PLAN.md
 
 **UI hint**: yes
 
@@ -176,7 +179,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 | 5. Dynamic Programs & IRF Module | v1.0 | 4/4 | Complete | 2026-06-22 |
 | 6. Dashboards, Notifications & Role Completion | v1.0 | 4/4 | Complete | 2026-06-24 |
 | 7. Foundation | 7. Foundation & Design System | v1.1 | 0/0 | Not started | - | Design System | v1.1 | 0/2 | Not started | - |
-| 8. Dashboard Shell & Layout | v1.1 | 0/0 | Not started | - |
+| 8. Dashboard Shell & Layout | v1.1 | 1/1 | Complete   | 2026-06-28 |
 | 9. Landing Page & Auth Flow | v1.1 | 0/0 | Not started | - |
 | 10. Shared Components & Responsive | v1.1 | 0/0 | Not started | - |
 | 11. Page Migration, Print & Offline UI | v1.1 | 0/0 | Not started | - |
