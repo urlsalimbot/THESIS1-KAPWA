@@ -183,9 +183,9 @@ Plans:
 | 4. Access Card System | v1.0 | 3/3 | Complete | 2026-06-22 |
 | 5. Dynamic Programs & IRF Module | v1.0 | 4/4 | Complete | 2026-06-22 |
 | 6. Dashboards, Notifications & Role Completion | v1.0 | 4/4 | Complete | 2026-06-24 |
-| 7. Foundation | 7. Foundation & Design System | v1.1 | 0/0 | Not started | - | Design System | v1.1 | 0/2 | Not started | - |
+| 7. Foundation & Design System | v1.1 | 0/0 | Not started | - | Design System | v1.1 | 0/2 | Not started | - |
 | 8. Dashboard Shell & Layout | v1.1 | 1/1 | Complete   | 2026-06-28 |
-| 9. Landing Page & Auth Flow | v1.1 | 0/0 | Not started | - |
+| 9. Landing Page & Auth Flow | v1.1 | 3/3 | Complete | 2026-06-28 |
 | 10. Shared Components & Responsive | v1.1 | 0/0 | Not started | - |
 | 11. Page Migration, Print & Offline UI | v1.1 | 0/0 | Not started | - |
 | 12. Accessibility & Differentiators | v1.1 | 0/0 | Not started | - |
