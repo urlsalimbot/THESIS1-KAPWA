@@ -1,91 +1,187 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth-context';
-import { Smartphone } from 'lucide-react';
-import '../index.css';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/lib/auth-context';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Loader2, Smartphone } from 'lucide-react';
+
+const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(1, 'Please enter your password.'),
+});
+type LoginValues = z.infer<typeof loginSchema>;
+
+const roleRedirectMap: Record<string, string> = {
+  social_worker: '/dashboard',
+  admin: '/admin',
+  coordinator: '/coordinator',
+  claimant: '/my-dashboard',
+  mayor: '/reports',
+  auditor: '/audit-logs',
+};
 
 export function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [mfaCode, setMfaCode] = useState('');
   const [error, setError] = useState('');
+  const [mfaValue, setMfaValue] = useState('');
+  const [mfaSubmitting, setMfaSubmitting] = useState(false);
   const { login, resolveMfa, cancelMfa, mfaChallenge } = useAuth();
   const navigate = useNavigate();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  async function onSubmit(values: LoginValues) {
     setError('');
     try {
-      const result = await login(email, password);
-      if (!result?.mfaRequired) navigate('/');
-    } catch (err) {
-      setError('Invalid email or password');
+      const result = await login(values.email, values.password);
+      if (!result?.mfaRequired) {
+        // Navigate to dashboard — ProtectedRoute redirects based on role
+        navigate('/dashboard', { replace: true });
+      }
+    } catch {
+      setError('Invalid email or password. Please try again.');
     }
   }
 
   async function handleMfaSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (mfaValue.length !== 6) return;
+    setMfaSubmitting(true);
     try {
-      await resolveMfa(mfaCode);
-      navigate('/');
-    } catch (err) {
-      setError('Invalid verification code');
+      await resolveMfa(mfaValue);
+      navigate('/dashboard', { replace: true });
+    } catch {
+      setError('Invalid verification code. Please try again.');
+    } finally {
+      setMfaSubmitting(false);
     }
   }
 
+  // MFA Challenge Mode
   if (mfaChallenge) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-card p-8">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Smartphone className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="font-heading text-2xl font-bold text-text-primary">Two-Factor Auth</h1>
-            <p className="text-sm text-text-secondary mt-1">Enter code from authenticator app</p>
-          </div>
-
-          {error && <div className="error-msg">{error}</div>}
-
-          <form onSubmit={handleMfaSubmit} className="space-y-4">
-            <div>
-              <label className="form-label">Verification Code</label>
-              <input type="text" className="form-input text-center text-2xl tracking-widest" maxLength={6} placeholder="000000" aria-label="Verification Code" value={mfaCode} onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))} required />
-            </div>
-            <button type="submit" className="btn btn-primary w-full" disabled={mfaCode.length !== 6} aria-label="Verify">Verify</button>
-            <button type="button" onClick={() => { cancelMfa(); setMfaCode(''); }} className="w-full text-sm text-gray-500 hover:text-gray-700" aria-label="Cancel">Cancel</button>
-          </form>
-        </div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-4">
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <Avatar className="w-16 h-16 mx-auto mb-2">
+              <AvatarFallback>
+                <Smartphone className="w-8 h-8" />
+              </AvatarFallback>
+            </Avatar>
+            <CardTitle>Two-Factor Authentication</CardTitle>
+            <CardDescription>Enter the verification code from your authenticator app.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4" role="alert">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleMfaSubmit} className="space-y-4">
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                maxLength={6}
+                className="text-center tracking-[0.25em] text-2xl h-12"
+                value={mfaValue}
+                onChange={(e) => setMfaValue(e.target.value.replace(/\D/g, ''))}
+                autoFocus
+              />
+              <Button
+                type="submit"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                disabled={mfaValue.length !== 6 || mfaSubmitting}
+              >
+                {mfaSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verify
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="justify-center">
+            <Button
+              variant="ghost"
+              onClick={() => { cancelMfa(); setMfaValue(''); setError(''); }}
+            >
+              Cancel
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     );
   }
 
+  // Login Form Mode
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-card p-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-          </div>
-          <h1 className="font-heading text-2xl font-bold text-text-primary">KAPWA</h1>
-          <p className="text-sm text-text-secondary mt-1">MSWDO Norzagaray Social Welfare System</p>
-        </div>
-
-        {error && <div className="error-msg">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="form-label">Email</label>
-            <input type="email" className="form-input" value={email} onChange={e => setEmail(e.target.value)} required />
-          </div>
-          <div>
-            <label className="form-label">Password</label>
-            <input type="password" className="form-input" value={password} onChange={e => setPassword(e.target.value)} required />
-          </div>
-          <button type="submit" className="btn btn-primary w-full">Sign In</button>
-        </form>
-      </div>
+    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-4">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <Avatar className="w-16 h-16 mx-auto mb-2">
+            <AvatarFallback className="text-lg font-bold">K</AvatarFallback>
+          </Avatar>
+          <CardTitle>KAPWA</CardTitle>
+          <CardDescription>MSWDO Norzagaray Social Welfare System</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4" role="alert">
+              {error}
+            </div>
+          )}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Email" autoFocus {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="submit"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign In
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="justify-center">
+          <Button variant="link" asChild>
+            <Link to="/register">Register as claimant</Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
