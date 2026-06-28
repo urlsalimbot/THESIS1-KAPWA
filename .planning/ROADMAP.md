@@ -97,7 +97,12 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 3. User can log in with a shadcn-ified form and is redirected to the correct dashboard based on role (or to `/unauthorized` for wrong-role access)
 4. Claimant can find and use the self-registration entry point on the login page
 
-**Plans:** 2 plans
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Foundation: Packages, PublicLayout, route restructuring, reusable display components
+- [ ] 09-02-PLAN.md — Public pages: LandingPage, AboutPage, ContactPage
+- [ ] 09-03-PLAN.md — Auth pages: LoginPage (shadcn rewrite), RegisterPage
 
 **UI hint**: yes
 
