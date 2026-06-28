@@ -1,7 +1,7 @@
 ---
 phase: 09
 slug: landing-page-auth-flow
-status: draft
+status: approved
 shadcn_initialized: true
 preset: default (base=neutral, style=default, cssVariables=true)
 created: 2026-06-28
