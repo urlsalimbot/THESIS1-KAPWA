@@ -7,6 +7,15 @@ interface ProtectedRouteProps {
   roles?: string[];
 }
 
+const roleRedirectMap: Record<string, string> = {
+  social_worker: '/dashboard',
+  admin: '/admin',
+  coordinator: '/coordinator',
+  claimant: '/my-dashboard',
+  mayor: '/reports',
+  auditor: '/audit-logs',
+};
+
 export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const navigate = useNavigate();
@@ -31,7 +40,7 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
       }
 
       if (roles && roles.length > 0 && !roles.includes(user.role)) {
-        navigate('/');
+        navigate(roleRedirectMap[user.role] || '/dashboard');
         return;
       }
 

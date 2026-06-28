@@ -1,7 +1,7 @@
 import React from 'react';
 import { ThemeProvider } from 'next-themes';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
-import { AuthProvider } from './lib/auth-context';
+import { AuthProvider, useAuth } from './lib/auth-context';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { IntakePage } from './pages/IntakePage';
@@ -29,14 +29,37 @@ import { ProgramsPage } from './pages/ProgramsPage';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PublicLayout } from './components/PublicLayout';
+import { LandingPage } from './pages/LandingPage';
+import { AboutPage } from './pages/AboutPage';
+import { ContactPage } from './pages/ContactPage';
+import { RegisterPage } from './pages/RegisterPage';
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   return <ProtectedRoute roles={roles}><Layout>{children}</Layout></ProtectedRoute>;
 }
 
+// Auth-aware redirect for /
+function LandingPageRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+}
+
 const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
-  { path: '/', element: <Private><DashboardPage /></Private> },
+  // === PUBLIC ROUTES ===
+  {
+    element: <PublicLayout />,
+    children: [
+      { index: true, element: <LandingPageRedirect /> },
+      { path: 'about', element: <AboutPage /> },
+      { path: 'contact', element: <ContactPage /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'register', element: <RegisterPage /> },
+    ],
+  },
+  // === PROTECTED ROUTES ===
+  { path: 'dashboard', element: <Private><DashboardPage /></Private> },
   { path: '/intake', element: <Private roles={['admin','social_worker','coordinator']}><IntakePage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker','coordinator']}><CasesPage /></Private> },
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
