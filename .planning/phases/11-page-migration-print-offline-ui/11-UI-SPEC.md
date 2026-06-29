@@ -56,29 +56,29 @@ Declared values (multiples of 4px, mapped to CSS custom properties):
 
 ## Typography
 
-### Screen (unchanged from Phase 07 design tokens)
+### Screen (reduced to 4 sizes, 2 weights per checker revision)
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body (base) | 16px / 1rem | Normal (400) | 1.5 (normal) |
-| Label / Muted | 14px / 0.875rem | Medium (500) | 1.25 (tight) |
-| Heading (h1) | 30px / 1.875rem | Bold (700) | 1.5 (normal) |
-| Subheading (h2) | 24px / 1.5rem | Semibold (600) | 1.75 (relaxed) |
+| Label / Muted | 14px / 0.875rem | Normal (400) | 1.25 (tight) |
+| Subheading (h2) | 24px / 1.5rem | Bold (700) | 1.75 (relaxed) |
+| Heading (h1) | 28px / 1.75rem | Bold (700) | 1.5 (normal) |
 
-Additional screen sizes used (not primary roles): `xs` 12px (badges, tiny metadata), `lg` 18px (section titles), `xl` 20px (card titles).
+**Weight rationale:** Normal (400) for body and labels; Bold (700) for all headings. Labels are visually distinguished from body by size (14px) and muted color (`#64748B` / `#94A3B8`), not by weight. No Medium (500) or Semibold (600) used.
 
-### Print (new — supplement for this phase)
+### Print (supplementary — pt units in `@media print`, not counted toward screen limits)
 
 | Role | Size | Weight | Font Family |
 |------|------|--------|-------------|
 | Print body | 12pt | Normal (400) | Georgia, 'Times New Roman', serif |
 | Print heading (report title) | 16pt | Bold (700) | Lexend, sans-serif (MSWDO branding) |
-| Print label | 10pt | Semibold (600) | Georgia, serif |
+| Print label | 10pt | Bold (700) | Georgia, serif |
 | Print signature | 11pt | Normal (400) | Georgia, serif |
 
 **Print line-height:** 1.4 (body), 1.2 (headings). All `@media print` only.
 
-**Source:** CONTEXT.md D-07, D-09. Pre-populated from Phase 07 token system.
+**Source:** CONTEXT.md D-07, D-09. Pre-populated from Phase 07 token system. Screen sizes and weights reduced per checker revision (4 sizes max, 2 weights max).
 
 ---
 
@@ -110,6 +110,20 @@ Additional screen sizes used (not primary roles): `xs` 12px (badges, tiny metada
 
 ---
 
+## Visual Hierarchy & Focal Points
+
+### Dashboard (P0 — Pattern-Setter Page)
+
+The **KPI stats grid** is the primary visual anchor — stat cards with large bold numbers draw the eye first. The grid occupies the upper-viewport zone above the fold and uses consistent card sizing with prominent metric values in Bold (700) at 28px, paired with muted labels at 14px. Secondary focal areas: the recent activity feed (middle zone) and quick-action buttons (header area).
+
+### Icon-Only Labels
+
+| Element | Aria Label | Rationale |
+|---------|------------|-----------|
+| Sync status icon — online (green dot) | `aria-label="Connected"` | Green circle icon with no visible text; required for screen reader accessibility |
+
+---
+
 ## Copywriting Contract
 
 | Element | Copy | Notes |
@@ -122,18 +136,18 @@ Additional screen sizes used (not primary roles): `xs` 12px (badges, tiny metada
 | Sync queue — syncing item | "Syncing…" | Status badge with spinner animation |
 | Sync queue — failed item | "Sync failed" | Status badge — red bg |
 | Sync queue — conflict | "Conflict" | Status badge — orange/warning bg |
-| Sync queue — Retry action | "Retry" | Button on failed items |
+| Sync queue — Retry action | "Retry Sync" | Button on failed items |
 | Sync queue — View diff action | "View Diff" | Button on conflict items |
 | Sync queue — Resolve: keep local | "Keep Local" | Conflict resolution option |
 | Sync queue — Resolve: keep server | "Keep Server" | Conflict resolution option |
 | Sync queue — Resolve: keep both | "Keep Both" | Conflict resolution option |
-| Sync queue — Remove item | "Remove" | Destructive action on queued items (swipe or menu) |
+| Sync queue — Remove item | "Remove Item" | Destructive action on queued items (swipe or menu) |
 | Cache staleness badge — fresh | — | No badge shown (data < 5 min old) |
 | Cache staleness badge — stale | "Cached data — last sync {X} min ago" | Subtitle in PageShell, clock icon prefix |
 | Cache staleness badge — no sync | "Cached data — not yet synced" | Fallback when lastSync timestamp absent |
 | Offline banner | "You are offline" | Fixed top bar (existing, enhanced with count) |
 | Offline banner + pending | "You are offline — {N} change(s) pending sync" | Enhanced offline banner from D-06 spec |
-| Sync status — online | "Connected" | Truncated to icon-only (green dot) |
+| Sync status — online | "Connected" | Truncated to icon-only (green dot), `aria-label="Connected"` |
 | Sync progress — uploading | "Syncing {N} item(s)…" | Progress text in queue panel during upload |
 | Error — queue load failed | "Could not load sync queue. Please try again." | Error state for queue panel |
 | Error — conflict resolution | "This item was modified by another user while you were offline. Choose how to resolve." | Conflict description in resolution dialog |
@@ -142,7 +156,7 @@ Additional screen sizes used (not primary roles): `xs` 12px (badges, tiny metada
 
 | Action | Confirmation Copy |
 |--------|-------------------|
-| Remove item from sync queue | "Remove sync item: This will discard this operation. You may lose data. Continue?" | Dialog with Cancel / Remove buttons |
+| Remove item from sync queue | "Remove sync item: This will discard this operation. You may lose data. Continue?" | Dialog with Cancel / Remove Item buttons |
 | Dismiss failed sync item | "Dismiss failed sync: The operation will not be retried. Continue?" | Dialog with Cancel / Dismiss buttons |
 
 **Source:** CONTEXT.md D-10 through D-17 decisions. Copywriting values new (defined here).
@@ -247,10 +261,10 @@ The existing PageShell component receives a new optional `cachedAt?: number` pro
 | Open panel | Click sync status button in sidebar/topbar → Sheet slides from right |
 | Close panel | Click X button, click overlay, press Escape, or navigate |
 | Real-time updates | Items transition through states: pending → syncing (spinner) → done (checkmark) / failed (X) |
-| Retry failed | Click "Retry" → re-queues item for sync → status becomes "pending" |
+| Retry failed | Click "Retry Sync" → re-queues item for sync → status becomes "pending" |
 | View conflict diff | Click "View Diff" → opens ConflictResolutionDialog showing local vs server values side by side |
 | Resolve conflict | Choose Keep Local / Keep Server / Keep Both → sync engine applies resolution → item removed from queue |
-| Remove item | Swipe left (mobile) or click menu → Remove → confirmation dialog → item removed |
+| Remove item | Swipe left (mobile) or click menu → Remove Item → confirmation dialog → item removed |
 | Empty state | No items → `CheckCircle` icon + "All caught up" heading |
 
 ### Cache Staleness
