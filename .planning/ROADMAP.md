@@ -161,14 +161,14 @@ Plans:
 5. Sync status banner shows connection state, pending operation count, and sync progress; user can open the queue detail panel from the sidebar to view pending/syncing/failed/conflict items with resolve actions
 6. Cache staleness indicators appear on data when viewing cached (not fresh) information — visual badge shows data age
 
-**Plans:** 2 plans
+**Plans:** 4 plans
 
 Plans:
 
-- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
-- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
-
-**UI hint**: yes
+- [ ] 11-01-PLAN.md — Print & offline UI infrastructure (print stylesheet, PageShell cachedAt, SyncQueuePanel, ConflictResolutionDialog, cache staleness hook)
+- [ ] 11-02-PLAN.md — Dashboard & Beneficiaries migration (DashboardPage, ClaimantDashboardPage, BeneficiariesPage, BeneficiaryViewPage, IntakePage)
+- [ ] 11-03-PLAN.md — Cases, Access Card & IRF migration (CasesPage, InterventionsPage, CaseTrackerPage, ApprovalPipelinePage, AccessCardPage, CsrPage, IrfPage) with print-ready layouts
+- [ ] 11-04-PLAN.md — Admin pages & final verification (AdminPage, MfaSetupPage, FilingPage, MessagesPage, ClaimantDashboardPage + test pass)
 
 ### Phase 12: Accessibility & Differentiators
 
@@ -187,14 +187,14 @@ Plans:
 5. Field workers access quick actions (new intake, search, photo, signature) via bottom-sheet shortcuts on mobile
 6. Data tables support row selection with a bulk action toolbar (approve/reject/assign/export) on selected rows
 
-**Plans:** 2 plans
+**Plans:** 4 plans
 
 Plans:
 
-- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
-- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
-
-**UI hint**: yes
+- [ ] 11-01-PLAN.md — Print & offline UI infrastructure (print stylesheet, PageShell cachedAt, SyncQueuePanel, ConflictResolutionDialog, cache staleness hook)
+- [ ] 11-02-PLAN.md — Dashboard & Beneficiaries migration (DashboardPage, ClaimantDashboardPage, BeneficiariesPage, BeneficiaryViewPage, IntakePage)
+- [ ] 11-03-PLAN.md — Cases, Access Card & IRF migration (CasesPage, InterventionsPage, CaseTrackerPage, ApprovalPipelinePage, AccessCardPage, CsrPage, IrfPage) with print-ready layouts
+- [ ] 11-04-PLAN.md — Admin pages & final verification (AdminPage, MfaSetupPage, FilingPage, MessagesPage, ClaimantDashboardPage + test pass)
 
 ## Progress
 
