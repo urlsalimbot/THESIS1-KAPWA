@@ -213,9 +213,88 @@
 }
 
 /* Print styles */
+@layer base {
+  :root {
+    --print-date: '';
+  }
+}
+
 @media print {
-  @page { size: A4 portrait; margin: 15mm; }
-  body { background: white !important; font-size: 10.5pt; color: #000; }
+  @page {
+    size: A4 portrait;
+    margin: 20mm;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9pt;
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #333;
+    }
+    @bottom-left {
+      content: "MSWDO Norzagaray";
+      font-size: 8pt;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+    @bottom-right {
+      content: "Printed: " var(--print-date);
+      font-size: 8pt;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+  }
+
+  @page :first {
+    @top-center {
+      content: element(msdwoHeader);
+    }
+  }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif !important;
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+    color: #000 !important;
+    background: white !important;
+  }
+
   .no-print { display: none !important; }
+
+  /* Hide layout chrome */
+  nav, .sidebar, .topbar, .bottom-nav,
+  button:not(.print-trigger),
+  .breadcrumb-nav { display: none !important; }
+
+  /* Print-specific elements */
+  .print-header {
+    position: running(msdwoHeader);
+    text-align: center;
+    font-family: 'Lexend', sans-serif;
+    border-bottom: 2px solid #000;
+    margin-bottom: 12pt;
+  }
+
+  .print-footer {
+    text-align: center;
+    font-size: 8pt;
+    border-top: 1px solid #ccc;
+    padding-top: 4pt;
+    margin-top: 12pt;
+  }
+
+  .signature-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-top: 24pt;
+  }
+
+  .no-break { break-inside: avoid; }
+
+  .page-break { page-break-before: always; }
+
+  table { break-inside: auto; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+
+  a { color: #000 !important; text-decoration: underline; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; }
+
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

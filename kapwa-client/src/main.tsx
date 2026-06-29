@@ -6,6 +6,11 @@ import './index.css';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+window.addEventListener('beforeprint', () => {
+  document.documentElement.style.setProperty('--print-date', new Date().toLocaleDateString());
+});
+
   });
 }
 
