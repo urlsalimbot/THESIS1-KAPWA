@@ -28,12 +28,12 @@ import { AccessCardPrintView } from './pages/AccessCardPrintView';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { ErrorBoundary } from './components/ErrorBoundary';
 import { PublicLayout } from './components/PublicLayout';
 import { LandingPage } from './pages/LandingPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { Toaster } from '@/components/ui/sonner';
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   return <ProtectedRoute roles={roles}><Layout>{children}</Layout></ProtectedRoute>;
@@ -88,10 +88,9 @@ const router = createBrowserRouter([
 export function MainRoutes() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <Toaster position="top-center" duration={Infinity} />
       <AuthProvider>
-        <ErrorBoundary>
-          <RouterProvider router={router} />
-        </ErrorBoundary>
+        <RouterProvider router={router} />
       </AuthProvider>
     </ThemeProvider>
   );
