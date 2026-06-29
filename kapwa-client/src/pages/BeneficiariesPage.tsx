@@ -2,12 +2,61 @@ import { BARANGAYS } from '../lib/constants';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Search, Loader2 } from 'lucide-react';
-import '../index.css';
 import { getBeneficiaries } from '../lib/api';
+import { PageShell } from '@/components/PageShell';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import type { ColumnDef } from '@tanstack/react-table';
 
 const CATEGORIES = ['All Categories', 'Senior', 'PWD', 'Child', 'Solo Parent', 'Indigenous', 'Others'];
 
 interface Beneficiary { id: string; name: string; age: number; barangay: string; householdSize: number; programs: string[]; status: string; }
+
+const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  active: 'default',
+  inactive: 'secondary',
+  revoked: 'destructive',
+};
+
+function BeneficiaryActions({ id }: { id: string }) {
+  const nav = useNavigate();
+  return (
+    <Button variant="ghost" size="sm" onClick={() => nav(`/beneficiaries/${id}`)} aria-label="View Beneficiary">
+      <Eye size={14} className="mr-1" /> View
+    </Button>
+  );
+}
+
+const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
+  { accessorKey: 'id', header: 'ID', cell: ({ row }) => <span className="font-medium">{row.original.id}</span> },
+  { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'age', header: 'Age', cell: ({ row }) => <Badge variant="outline">{row.original.age}</Badge> },
+  { accessorKey: 'barangay', header: 'Barangay' },
+  { accessorKey: 'householdSize', header: 'Household', cell: ({ row }) => <span>{row.original.householdSize} members</span> },
+  {
+    accessorKey: 'programs',
+    header: 'Programs',
+    cell: ({ row }) => (
+      <div className="flex gap-1 flex-wrap">
+        {row.original.programs.map(p => <Badge key={p} variant="secondary" className="text-xs">{p}</Badge>)}
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => <Badge variant={statusBadgeVariant[row.original.status] || 'outline'}>{row.original.status}</Badge>,
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => <BeneficiaryActions id={row.original.id} />,
+  },
+];
 
 export function BeneficiariesPage() {
   const navigate = useNavigate();
@@ -18,6 +67,7 @@ export function BeneficiariesPage() {
   const [barangayFilter, setBarangayFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   // Debounce search input — 300ms delay before triggering API call
   useEffect(() => {
@@ -51,6 +101,7 @@ export function BeneficiariesPage() {
           status: b.consentStatus as string || 'active',
         }));
         setBeneficiaries(mapped);
+        setLastSync(Date.now());
       } catch {
         if (!cancelled) setBeneficiaries([]);
       }
@@ -63,29 +114,37 @@ export function BeneficiariesPage() {
     return () => { cancelled = true; };
   }, [debouncedSearch, categoryFilter, barangayFilter]);
 
-  if (loading) return <div className="p-8 text-center text-text-secondary">Loading beneficiaries...</div>;
+  const canShowResults = !loading && !fetching && beneficiaries.length > 0;
+
+  if (loading) {
+    return (
+      <PageShell title="Beneficiaries" description="Manage beneficiary records and household data">
+        <TableSkeleton rows={8} />
+      </PageShell>
+    );
+  }
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">Beneficiaries</h2>
-        <p className="page-desc">Manage beneficiary records and household data</p>
-      </div>
-
-      <div className="toolbar">
-        <div className="toolbar-left">
-          <button className="btn btn-primary" aria-label="+ New Beneficiary">+ New Beneficiary</button>
-          <button className="btn btn-secondary" aria-label="Import CSV">Import CSV</button>
+    <PageShell
+      title="Beneficiaries"
+      description="Manage beneficiary records and household data"
+      cachedAt={lastSync ?? undefined}
+    >
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Button variant="default" size="sm" onClick={() => navigate('/intake')} aria-label="+ New Beneficiary">+ New Beneficiary</Button>
+          <Button variant="outline" size="sm" aria-label="Import CSV">Import CSV</Button>
         </div>
-        <div className="toolbar-right flex gap-2 items-center">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Search input with icon */}
           <div className="relative">
-            <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
+            <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
               type="text"
               aria-label="Search beneficiaries"
               placeholder="Search by name..."
-              className="form-input w-48 pl-8"
+              className="w-48 pl-8"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
             />
@@ -93,7 +152,7 @@ export function BeneficiariesPage() {
           {/* Category dropdown */}
           <select
             aria-label="Filter by category"
-            className="form-select w-36"
+            className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
           >
@@ -102,7 +161,12 @@ export function BeneficiariesPage() {
             ))}
           </select>
           {/* Barangay dropdown */}
-          <select aria-label="Filter by barangay" className="form-select w-40" value={barangayFilter} onChange={e => setBarangayFilter(e.target.value)}>
+          <select
+            aria-label="Filter by barangay"
+            className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={barangayFilter}
+            onChange={e => setBarangayFilter(e.target.value)}
+          >
             <option value="all">All Barangays</option>
             {BARANGAYS.map(b => <option key={b}>{b}</option>)}
           </select>
@@ -110,55 +174,26 @@ export function BeneficiariesPage() {
       </div>
 
       {/* Results count / loading indicator */}
-      {!loading && (
-        <div className="px-4 py-2 text-sm text-gray-500 flex items-center gap-1">
+      {canShowResults && (
+        <div className="text-sm text-muted-foreground flex items-center gap-1">
           {fetching && <Loader2 size={14} className="animate-spin" />}
-          {!fetching && beneficiaries.length > 0 && `Showing ${beneficiaries.length} result${beneficiaries.length !== 1 ? 's' : ''}`}
-          {!fetching && beneficiaries.length > 0 && debouncedSearch && ` for "${debouncedSearch}"`}
+          {!fetching && `Showing ${beneficiaries.length} result${beneficiaries.length !== 1 ? 's' : ''}`}
+          {!fetching && debouncedSearch && ` for "${debouncedSearch}"`}
         </div>
       )}
 
       {/* Empty state */}
       {!loading && !fetching && beneficiaries.length === 0 ? (
-        <div className="p-8 text-center text-text-secondary text-gray-400">
-          No beneficiaries found
-        </div>
+        <EmptyState variant={searchInput ? 'no-results' : 'no-data'} />
       ) : (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Age</th>
-                <th>Barangay</th>
-                <th>Household</th>
-                <th>Programs</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {beneficiaries.map(b => (
-                <tr key={b.id}>
-                  <td className="font-medium">{b.id}</td>
-                  <td>{b.name}</td>
-                  <td><span className="badge-age">{b.age}</span></td>
-                  <td>{b.barangay}</td>
-                  <td>{b.householdSize} members</td>
-                  <td className="flex gap-1">{b.programs.map(p => <span key={p} className="badge-category">{p}</span>)}</td>
-                  <td><span className={b.status === 'active' ? 'badge-approved' : 'badge-closed'}>{b.status}</span></td>
-                  <td>
-                    <button className="text-sm text-primary flex items-center gap-1" onClick={() => navigate(`/beneficiaries/${b.id}`)} aria-label="View Beneficiary">
-                      <Eye size={14} /> View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={beneficiaryColumns}
+          data={beneficiaries}
+          rowCount={beneficiaries.length}
+          pagination={{ pageIndex: 0, pageSize: 10 }}
+          sorting={[]}
+        />
       )}
-    </div>
+    </PageShell>
   );
 }

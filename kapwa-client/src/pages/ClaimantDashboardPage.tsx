@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getNotificationPreferences, updateNotificationPreferences } from '../lib/api';
 import { Link } from 'react-router-dom';
-import '../index.css';
+import { PageShell } from '@/components/PageShell';
+import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -45,6 +50,7 @@ export function ClaimantDashboardPage() {
   const [prefDirty, setPrefDirty] = useState(false);
   const [prefSaved, setPrefSaved] = useState(false);
   const [prefSaving, setPrefSaving] = useState(false);
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,6 +76,7 @@ export function ClaimantDashboardPage() {
         setCaseStatus(data.caseStatus || 'No active case');
       }
       if (conRes.ok) setConsents(await conRes.json());
+      setLastSync(Date.now());
     } catch (e) { console.error("ClaimantDashboard:", e); } finally { setLoading(false); }
   }
 
@@ -115,53 +122,66 @@ export function ClaimantDashboardPage() {
     setPrefDirty(true);
   }
 
-  if (loading) return <div className="flex items-center justify-center min-h-[400px] text-gray-400">Loading dashboard...</div>;
+  if (loading) {
+    return (
+      <PageShell title="My Dashboard" description="Your case and assistance overview">
+        <CardGridSkeleton count={4} />
+      </PageShell>
+    );
+  }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-text-primary font-sans">My Dashboard</h2>
-        <p className="text-sm text-gray-500">Service history, case status, and consent management</p>
-      </div>
-
+    <PageShell
+      title="My Dashboard"
+      description="Service history, case status, and consent management"
+      cachedAt={lastSync ?? undefined}
+    >
       {/* Access Card Link */}
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-gray-500">Access Card</p>
-          <p className="text-sm font-medium text-primary">View your KAPWA Access Card</p>
-        </div>
-        <Link to="/my-access-card" className="rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark">View Card</Link>
-      </div>
+      <Card>
+        <CardContent className="p-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">Access Card</p>
+            <p className="text-sm font-medium text-primary">View your KAPWA Access Card</p>
+          </div>
+          <Link to="/my-access-card">
+            <Button variant="default" size="sm">View Card</Button>
+          </Link>
+        </CardContent>
+      </Card>
 
       {/* Case Status */}
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500">Case Status</p>
-            <p className="text-lg font-semibold text-primary">{caseStatus}</p>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Case Status</p>
+              <p className="text-lg font-semibold text-primary">{caseStatus}</p>
+            </div>
+            <Badge variant={
+              caseStatus === 'Disbursed' ? 'default' :
+              caseStatus === 'Approved' ? 'secondary' :
+              'outline'
+            }>{caseStatus}</Badge>
           </div>
-          <div className={`rounded-full px-3 py-1 text-xs font-medium ${
-            caseStatus === 'Disbursed' ? 'bg-green-100 text-green-700' :
-            caseStatus === 'Approved' ? 'bg-blue-100 text-blue-700' :
-            'bg-amber-100 text-amber-700'
-          }`}>{caseStatus}</div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Service History */}
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-100 px-4 py-3">
+      <Card>
+        <div className="border-b px-4 py-3">
           <h3 className="font-semibold text-sm text-primary">Service History</h3>
         </div>
         {services.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">No service records yet</div>
+          <CardContent>
+            <EmptyState variant="no-data" />
+          </CardContent>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y">
             {services.map(s => (
               <div key={s.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{s.type}</p>
-                  <p className="text-xs text-gray-500">{new Date(s.date).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(s.date).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">
                   {s.amount > 0 && <p className="text-sm font-semibold">₱{s.amount.toLocaleString()}</p>}
@@ -171,49 +191,48 @@ export function ClaimantDashboardPage() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Consent Hub */}
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <Card>
+        <div className="border-b px-4 py-3 flex items-center justify-between">
           <h3 className="font-semibold text-sm text-primary">Consent Management</h3>
-          <button className="rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark">Manage Consent</button>
+          <Button variant="default" size="sm">Manage Consent</Button>
         </div>
         {consents.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">No consent records</div>
+          <CardContent>
+            <EmptyState variant="no-data" />
+          </CardContent>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y">
             {consents.map(c => (
               <div key={c.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{c.purpose}</p>
-                  <p className="text-xs text-gray-500">Via {c.channel} · {new Date(c.grantedAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">Via {c.channel} · {new Date(c.grantedAt).toLocaleDateString()}</p>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>{c.status}</span>
+                <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>{c.status}</Badge>
               </div>
             ))}
           </div>
         )}
-        <div className="border-t border-gray-100 px-4 py-3">
-          <p className="text-xs text-gray-400">Your data is processed per RA 10173 (Data Privacy Act). You may revoke consent at any time.</p>
+        <div className="border-t px-4 py-3">
+          <p className="text-xs text-muted-foreground">Your data is processed per RA 10173 (Data Privacy Act). You may revoke consent at any time.</p>
         </div>
-      </div>
+      </Card>
 
       {/* Notification Preferences */}
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <Card>
+        <div className="border-b px-4 py-3 flex items-center justify-between">
           <h3 className="font-semibold text-sm text-primary">Notification Preferences</h3>
-          <button
+          <Button
             onClick={handleSave}
             disabled={!prefDirty || prefSaving}
-            className={`rounded px-3 py-1 text-xs text-white ${
-              prefDirty ? 'bg-primary hover:bg-primary-dark' : 'bg-gray-300 cursor-not-allowed'
-            }`}
+            variant={prefDirty ? 'default' : 'outline'}
+            size="sm"
           >
             {prefSaving ? 'Saving...' : 'Save Preferences'}
-          </button>
+          </Button>
         </div>
         {prefSaved && (
           <div className="mx-4 mt-2 rounded bg-green-50 px-3 py-2 text-xs text-green-700">
@@ -222,16 +241,16 @@ export function ClaimantDashboardPage() {
         )}
         <div className="p-4">
           <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-xs">
-            <div className="font-medium text-gray-500">Category</div>
+            <div className="font-medium text-muted-foreground">Category</div>
             {NOTIF_CHANNELS.map(ch => (
-              <div key={ch.key} className="text-center font-medium text-gray-500">{ch.label}</div>
+              <div key={ch.key} className="text-center font-medium text-muted-foreground">{ch.label}</div>
             ))}
             {NOTIF_CATEGORIES.map(cat => (
               <div key={cat.key} className={`contents ${cat.locked ? 'opacity-50' : ''}`}>
                 <div className="flex items-center gap-2 py-1">
-                  {cat.locked && <span className="text-gray-400">🔒</span>}
+                  {cat.locked && <span className="text-muted-foreground">🔒</span>}
                   <span className="text-sm">{cat.label}</span>
-                  {cat.locked && <span className="text-xs text-gray-400">(always active)</span>}
+                  {cat.locked && <span className="text-xs text-muted-foreground">(always active)</span>}
                 </div>
                 {NOTIF_CHANNELS.map(ch => (
                   <div key={ch.key} className="flex justify-center py-1">
@@ -261,7 +280,7 @@ export function ClaimantDashboardPage() {
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </Card>
+    </PageShell>
   );
 }

@@ -1,45 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, RefreshCw, Clock, DollarSign } from 'lucide-react';
-import '../index.css';
 import { getDashboard } from '../lib/api';
+import { PageShell } from '@/components/PageShell';
+import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import type { ColumnDef } from '@tanstack/react-table';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
 interface CaseRow { id: string; name: string; category: string; barangay: string; remarks: string; date: string; status: string; }
 
 const StatusBadge = React.memo(({ status }: { status: string }) => {
-  const map: Record<string, { className: string; label: string }> = {
-    approved: { className: 'bg-green-100 text-green-800', label: 'Approved' },
-    pending_assessment: { className: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-    in_review: { className: 'bg-blue-100 text-blue-800', label: 'In Review' },
-    disbursed: { className: 'bg-gray-200 text-gray-700', label: 'Disbursed' },
-    closed: { className: 'bg-gray-100 text-gray-500', label: 'Closed' },
+  const variantMap: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+    approved: 'default',
+    in_review: 'secondary',
+    pending_assessment: 'outline',
+    disbursed: 'secondary',
+    closed: 'outline',
   };
-  const s = map[status] || map.pending_assessment;
-  return <span className={`badge ${s.className}`}>{s.label}</span>;
+  const labelMap: Record<string, string> = {
+    pending_assessment: 'Pending',
+    in_review: 'In Review',
+    approved: 'Approved',
+    disbursed: 'Disbursed',
+    closed: 'Closed',
+  };
+  return <Badge variant={variantMap[status] || 'outline'}>{labelMap[status] || status}</Badge>;
 });
 
 const StatCard = React.memo(({ stat }: { stat: Stat }) => {
   const Icon = stat.icon;
   return (
-    <div className="rounded-xl p-4">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-gray-500 text-xs uppercase tracking-wide">{stat.label}</span>
-        <div className={`ml-auto rounded-full w-8 h-8 flex items-center justify-center ${stat.iconClass}`}>
-          <Icon size={16} />
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{stat.label}</span>
+          <div className={`ml-auto rounded-full w-8 h-8 flex items-center justify-center ${stat.iconClass}`}>
+            <Icon size={16} />
+          </div>
         </div>
-      </div>
-      <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-      <div className="text-xs mt-1">{stat.change}</div>
-    </div>
+        <div className="text-2xl font-bold text-foreground font-heading">{stat.value}</div>
+        <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
+      </CardContent>
+    </Card>
   );
 });
+
+const dashboardCaseColumns: ColumnDef<CaseRow>[] = [
+  { accessorKey: 'id', header: 'Case ID', cell: ({ row }) => <span className="text-muted-foreground">{row.original.id}</span> },
+  { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+  { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
+  { accessorKey: 'barangay', header: 'Barangay' },
+  { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
+  { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+  { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.date}</span> },
+];
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stat[]>([]);
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,6 +84,7 @@ export function DashboardPage() {
         { label: 'Disbursed This Month', value: `₱${data.disbursedMonth || 0}`, change: `${data.beneficiaryCount || 0} beneficiaries`, icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
       ]);
       setCases(data.recentCases || []);
+      setLastSync(Date.now());
     } catch {
       setStats([
         { label: 'Served Today', value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
@@ -68,62 +96,57 @@ export function DashboardPage() {
     setLoading(false);
   }
 
-  if (loading) return <div className="flex items-center justify-center p-12">
-    <div className="text-center">
-      <div className="spinner mx-auto mb-3" />
-      <p className="text-text-secondary text-sm">Loading dashboard...</p>
-    </div>
-  </div>;
+  if (loading) {
+    return (
+      <PageShell title="Dashboard" description="Overview of social welfare operations and metrics.">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <CardGridSkeleton />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="mt-6">
+          <TableSkeleton rows={5} />
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (stats.length === 0 && !loading) {
+    return (
+      <PageShell title="Dashboard" description="Overview of social welfare operations and metrics.">
+        <EmptyState variant="no-data" />
+      </PageShell>
+    );
+  }
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">Dashboard</h2>
-        <p className="page-desc">Overview of social welfare operations and metrics.</p>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4 mb-6">
+    <PageShell
+      title="Dashboard"
+      description="Overview of social welfare operations and metrics."
+      cachedAt={lastSync ?? undefined}
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(s => <StatCard key={s.label} stat={s} />)}
       </div>
 
-      <div className="mb-4">
-        <h3 className="text-lg mb-3">Recent Cases</h3>
+      <div className="flex items-center justify-between mt-2">
+        <h3 className="text-lg font-semibold">Recent Cases</h3>
+        <Button variant="outline" size="sm" onClick={() => navigate('/cases')}>
+          View All Cases
+        </Button>
       </div>
 
-      <div className="rounded-lg">
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th className="w-30">Case ID</th>
-                <th >Name</th>
-                <th >Category</th>
-                <th >Barangay</th>
-                <th >Intervention/Remarks</th>
-                <th >Status</th>
-                <th className="min-w-[140px]">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map(c => (
-                <tr key={c.id}>
-                  <td className="text-gray-500">{c.id}</td>
-                  <td className="font-medium text-gray-900">{c.name}</td>
-                  <td><span className="badge-category">{c.category}</span></td>
-                  <td className="text-text-secondary">{c.barangay}</td>
-                  <td className="text-xs">{c.remarks}</td>
-                  <td><StatusBadge status={c.status} /></td>
-                  <td className="text-xs text-gray-500 min-w-[140px]">{c.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="pagination">
-          <span>Showing {cases.length} recent cases</span>
-          <button className="px-3 py-1.5 text-xs" onClick={() => navigate("/cases")} aria-label="View All Cases">View All Cases</button>
-        </div>
-      </div>
-    </div>
+      <DataTable
+        columns={dashboardCaseColumns}
+        data={cases}
+        rowCount={cases.length}
+        pagination={{ pageIndex: 0, pageSize: 10 }}
+        sorting={[]}
+      />
+    </PageShell>
   );
 }

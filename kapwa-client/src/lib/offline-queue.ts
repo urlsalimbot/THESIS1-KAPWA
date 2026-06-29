@@ -152,3 +152,41 @@ export async function queueFsmTransition(caseId: string, newStatus: string, payl
     _clientUpdatedAt: new Date().toISOString(),
   });
 }
+
+const FINANCIAL_FIELDS = new Set(['amount', 'status', 'fundSource', 'disbursedAmount']);
+
+export function mergeRecords(server: Record<string, unknown>, client: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const allKeys = new Set([...Object.keys(server), ...Object.keys(client)]);
+  for (const key of allKeys) {
+    if (key === 'notes') {
+      const s = (server[key] ?? '') as string;
+      const c = (client[key] ?? '') as string;
+      result[key] = s && c ? `${s}\n${c}` : (s || c);
+    } else if (key === 'consentStatus' && server[key] === 'revoked') {
+      result[key] = 'revoked';
+    } else if (FINANCIAL_FIELDS.has(key) && key in server) {
+      result[key] = server[key];
+    } else if (key in client) {
+      result[key] = client[key];
+    } else {
+      result[key] = server[key];
+    }
+  }
+  return result;
+}
+
+export function resolveConflict(strategy: 'server-wins' | 'client-wins', server: Record<string, unknown>, client: Record<string, unknown>): Record<string, unknown> {
+  if (strategy === 'server-wins') return { ...client, ...server };
+  return mergeRecords(server, client);
+}
+
+export async function getVersionVector(table: string): Promise<VersionVector | undefined> {
+  const versions = loadVersions();
+  return versions.find(v => v.tableName === table);
+}
+
+export async function getConflictChanges(): Promise<QueuedChange[]> {
+  const queue = loadQueue();
+  return queue.filter(c => c.status === 'conflict');
+}

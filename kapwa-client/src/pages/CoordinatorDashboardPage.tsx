@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight } from 'lucide-react';
+import { PageShell } from '@/components/PageShell';
 import { getDashboard } from '../lib/api';
 import { getCase } from '../lib/api';
 
@@ -57,11 +58,10 @@ export function CoordinatorDashboardPage() {
   if (loading) return <div className="p-8 text-center text-gray-500">Loading dashboard...</div>;
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">Coordinator Dashboard</h2>
-        <p className="page-desc">Overview of barangay social welfare activities.</p>
-      </div>
+    <PageShell
+      title="Coordinator Dashboard"
+      description="Overview of barangay social welfare activities."
+    >
 
       <div className="grid grid-cols-4 gap-4 mb-6">
         {stats.map(s => {
@@ -151,6 +151,6 @@ export function CoordinatorDashboardPage() {
           <button className="px-3 py-1.5 text-xs" onClick={() => navigate('/tracker')}>View Full Tracker</button>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

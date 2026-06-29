@@ -3,7 +3,8 @@ import { queueChange } from '../lib/offline-queue';
 import { isOnline } from '../lib/sync';
 import { submitIntake } from '../lib/api';
 import SignaturePad from '../components/forms/SignaturePad';
-import '../index.css';
+import { PageShell } from '@/components/PageShell';
+
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 import { BARANGAYS, SERVICE_TYPES } from '../lib/constants';
@@ -183,17 +184,16 @@ export function IntakePage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-text-primary font-sans">GIS Intake Form</h2>
-          <p className="text-sm text-gray-500">General Intake Sheet — Client Stub + Assessment</p>
-        </div>
+    <PageShell
+      title="GIS Intake Form"
+      description="General Intake Sheet — Client Stub + Assessment"
+      actions={
         <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${offlineMode ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
           <span className={`w-2 h-2 rounded-full ${offlineMode ? 'bg-amber-500' : 'bg-green-500'}`} />
           {offlineMode ? 'Offline — changes queued' : 'Online'}
         </div>
-      </div>
+      }
+    >
 
       {success && <div className="mb-4 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">{success}</div>}
       {error && <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
@@ -201,7 +201,7 @@ export function IntakePage() {
       <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
         {/* Client Stub Section */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-primary font-sans">Client Stub / Beneficiary Information</h3>
+          <h3 className="mb-4 font-semibold text-primary">Client Stub / Beneficiary Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="surname" className="mb-1 block text-sm font-medium text-gray-700">Surname *</label>
@@ -253,7 +253,7 @@ export function IntakePage() {
         {/* Family Composition */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-primary font-sans">Family Composition</h3>
+            <h3 className="font-semibold text-primary">Family Composition</h3>
             <button type="button" onClick={addFamilyMember} className="rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark">
               + Add Member
             </button>
@@ -288,7 +288,7 @@ export function IntakePage() {
 
         {/* Service Requested & Requirements */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-primary font-sans">Service Request & Requirements</h3>
+          <h3 className="mb-4 font-semibold text-primary">Service Request & Requirements</h3>
           <div className="mb-4">
             <label className="mb-2 block text-sm font-medium text-gray-700">Service Requested *</label>
             <div className="flex flex-wrap gap-2">
@@ -315,7 +315,7 @@ export function IntakePage() {
 
         {/* Assessment & Signature */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-primary font-sans">Assessment</h3>
+          <h3 className="mb-4 font-semibold text-primary">Assessment</h3>
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700">Assessed By (MSWDO Staff) *</label>
             <input className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-[#2E5C8A] focus:outline-none" required value={form.assessedBy} onChange={e => update('assessedBy', e.target.value)} aria-label="Assessed By" />
@@ -336,6 +336,6 @@ export function IntakePage() {
           </button>
         </div>
       </form>
-    </div>
+    </PageShell>
   );
 }

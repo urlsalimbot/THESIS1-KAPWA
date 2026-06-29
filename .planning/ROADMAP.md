@@ -31,7 +31,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 - [x] **Phase 8: Dashboard Shell & Layout** - App shell with sidebar, topbar, breadcrumbs, and dark mode toggle (completed 2026-06-28)
 - [ ] **Phase 9: Landing Page & Auth Flow** - Public-facing pages and polished auth flow
 - [x] **Phase 10: Shared Components & Responsive** - Reusable page-state components and mobile-responsive infrastructure (completed 2026-06-29)
-- [ ] **Phase 11: Page Migration, Print & Offline UI** - All pages migrated to shadcn with print styles and offline awareness
+- [x] **Phase 11: Page Migration, Print & Offline UI** - All pages migrated to shadcn with print styles and offline awareness (completed 2026-06-30)
 - [ ] **Phase 12: Accessibility & Differentiators** - Accessibility compliance and production-differentiating features
 
 ## Phase Details
@@ -161,14 +161,14 @@ Plans:
 5. Sync status banner shows connection state, pending operation count, and sync progress; user can open the queue detail panel from the sidebar to view pending/syncing/failed/conflict items with resolve actions
 6. Cache staleness indicators appear on data when viewing cached (not fresh) information — visual badge shows data age
 
-**Plans:** 2 plans
+**Plans:** 4/4 plans complete
 
 Plans:
 
-- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
-- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
-
-**UI hint**: yes
+- [x] 11-01-PLAN.md — Print & offline UI infrastructure (print stylesheet, PageShell cachedAt, SyncQueuePanel, ConflictResolutionDialog, cache staleness hook)
+- [x] 11-02-PLAN.md — Dashboard & Beneficiaries migration (DashboardPage, ClaimantDashboardPage, BeneficiariesPage, BeneficiaryViewPage, IntakePage)
+- [x] 11-03-PLAN.md — Cases, Access Card & IRF migration (CasesPage, InterventionsPage, CaseTrackerPage, ApprovalPipelinePage, AccessCardPage, CsrPage, IrfPage) with print-ready layouts
+- [x] 11-04-PLAN.md — Admin pages & final verification (AdminPage, MfaSetupPage, FilingPage, MessagesPage, ClaimantDashboardPage + test pass)
 
 ### Phase 12: Accessibility & Differentiators
 
@@ -187,14 +187,14 @@ Plans:
 5. Field workers access quick actions (new intake, search, photo, signature) via bottom-sheet shortcuts on mobile
 6. Data tables support row selection with a bulk action toolbar (approve/reject/assign/export) on selected rows
 
-**Plans:** 2 plans
+**Plans:** 4 plans
 
 Plans:
 
-- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
-- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
-
-**UI hint**: yes
+- [x] 11-01-PLAN.md — Print & offline UI infrastructure (print stylesheet, PageShell cachedAt, SyncQueuePanel, ConflictResolutionDialog, cache staleness hook)
+- [x] 11-02-PLAN.md — Dashboard & Beneficiaries migration (DashboardPage, ClaimantDashboardPage, BeneficiariesPage, BeneficiaryViewPage, IntakePage)
+- [x] 11-03-PLAN.md — Cases, Access Card & IRF migration (CasesPage, InterventionsPage, CaseTrackerPage, ApprovalPipelinePage, AccessCardPage, CsrPage, IrfPage) with print-ready layouts
+- [x] 11-04-PLAN.md — Admin pages & final verification (AdminPage, MfaSetupPage, FilingPage, MessagesPage, ClaimantDashboardPage + test pass)
 
 ## Progress
 
@@ -212,5 +212,5 @@ Plans:
 | 8. Dashboard Shell & Layout | v1.1 | 1/1 | Complete    | 2026-06-28 |
 | 9. Landing Page & Auth Flow | v1.1 | 3/3 | Complete | 2026-06-28 |
 | 10. Shared Components & Responsive | v1.1 | 2/2 | Complete   | 2026-06-29 |
-| 11. Page Migration, Print & Offline UI | v1.1 | 0/0 | Not started | - |
+| 11. Page Migration, Print & Offline UI | v1.1 | 4/4 | Complete   | 2026-06-30 |
 | 12. Accessibility & Differentiators | v1.1 | 0/0 | Not started | - |
