@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
+import { BottomNav } from '@/components/BottomNav';
 
 function computePendingCount(): number {
   try { const queue = loadQueue(); return queue.filter(c => c.status === 'pending').length; }
@@ -103,6 +104,8 @@ export function Layout({ children }: { children?: React.ReactNode }) {
           </ErrorBoundary>
         </main>
       </div>
+
+      <BottomNav />
     </>
   );
 }
