@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import '../index.css';
 import { getInterventions, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob } from '../lib/api';
 import SignaturePad from '../components/forms/SignaturePad';
+import { PageShell } from '@/components/PageShell';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { ColumnDef } from '@tanstack/react-table';
 
 interface Intervention {
   id: string;
@@ -30,6 +38,7 @@ export function InterventionsPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   useEffect(() => {
     load();
@@ -56,6 +65,7 @@ export function InterventionsPage() {
         };
       });
       setInterventions(mapped);
+      setLastSync(Date.now());
     } catch {
       setInterventions([]);
     }
@@ -72,13 +82,11 @@ export function InterventionsPage() {
       let workerSignatureUrl = '';
       let receiptUrl = '';
 
-      // Upload signature if captured
       if (sigDataUrl) {
         const blob = dataURItoBlob(sigDataUrl);
         workerSignatureUrl = await uploadSignature(blob, `sig-${Date.now()}.png`);
       }
 
-      // Upload receipt if selected
       if (receiptFile) {
         receiptUrl = await uploadReceipt(receiptFile, receiptFile.name);
       }
@@ -104,133 +112,145 @@ export function InterventionsPage() {
     setSubmitting(false);
   }
 
-  if (loading) return <div className="p-8 text-center text-text-secondary">Loading interventions...</div>;
+  const columns: ColumnDef<Intervention>[] = [
+    { accessorKey: 'id', header: 'ID', cell: ({ row }) => <span className="font-medium">{row.original.id}</span> },
+    { accessorKey: 'caseId', header: 'Case ID' },
+    { accessorKey: 'beneficiary', header: 'Beneficiary' },
+    { accessorKey: 'type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.type}</Badge> },
+    { accessorKey: 'description', header: 'Amount' },
+    { accessorKey: 'fundSource', header: 'Fund Source', cell: ({ row }) => <Badge variant="secondary">{row.original.fundSource}</Badge> },
+    { accessorKey: 'provider', header: 'Agency' },
+    { accessorKey: 'date', header: 'Date' },
+    {
+      id: 'signature',
+      header: 'Signature',
+      cell: ({ row }) => {
+        if (row.original.signatureStatus === 'signatures_pending') {
+          return <Badge variant="outline">Signatures Pending</Badge>;
+        }
+        return row.original.verified
+          ? <Badge variant="default">✓ Signed</Badge>
+          : <Badge variant="outline">Pending</Badge>;
+      },
+    },
+    {
+      id: 'receipt',
+      header: 'Receipt',
+      cell: ({ row }) => row.original.clientReceiptUrl
+        ? <a href={row.original.clientReceiptUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">View Receipt</a>
+        : <span className="text-muted-foreground text-sm">None</span>,
+    },
+  ];
+
+  if (loading) {
+    return (
+      <PageShell title="Interventions" description="Post-disbursement intervention logging (case must be disbursed)">
+        <TableSkeleton rows={5} />
+      </PageShell>
+    );
+  }
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">Interventions</h2>
-        <p className="page-desc">Post-disbursement intervention logging (case must be disbursed)</p>
+    <PageShell
+      title="Interventions"
+      description="Post-disbursement intervention logging (case must be disbursed)"
+      cachedAt={lastSync ?? undefined}
+    >
+      {/* Toolbar */}
+      <div className="flex items-center gap-2">
+        <Button variant="default" onClick={() => setShowForm(!showForm)} aria-label="+ New Intervention">+ New Intervention</Button>
       </div>
 
-      <div className="toolbar">
-        <div className="toolbar-left">
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)} aria-label="+ New Intervention">+ New Intervention</button>
-        </div>
-      </div>
-
+      {/* New Intervention Form */}
       {showForm && (
-        <div className="card mb-4 max-w-2xl">
-          <h3 className="font-heading font-semibold mb-4">Log Intervention</h3>
-          {error && <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="form-group">
-                <label className="form-label">Case ID (must be disbursed)</label>
-                <input className="form-input" required placeholder="Case UUID" value={form.caseId} onChange={e => update('caseId', e.target.value)} aria-label="Case ID" />
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>Log Intervention</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {error && <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Case ID (must be disbursed)</label>
+                  <Input required placeholder="Case UUID" value={form.caseId} onChange={e => update('caseId', e.target.value)} aria-label="Case ID" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Type</label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    required value={form.type} onChange={e => update('type', e.target.value)} aria-label="Intervention Type"
+                  >
+                    <option value="">Select...</option>
+                    <option value="FA">Financial Assistance</option>
+                    <option value="C">Counseling</option>
+                    <option value="CSR">CSR</option>
+                    <option value="R">Referral</option>
+                    <option value="H">Healthcare</option>
+                    <option value="HV">Home Visit</option>
+                  </select>
+                </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Type</label>
-                <select className="form-select" required value={form.type} onChange={e => update('type', e.target.value)} aria-label="Intervention Type">
-                  <option value="">Select...</option>
-                  <option value="FA">Financial Assistance</option>
-                  <option value="C">Counseling</option>
-                  <option value="CSR">CSR</option>
-                  <option value="R">Referral</option>
-                  <option value="H">Healthcare</option>
-                  <option value="HV">Home Visit</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Amount (₱)</label>
+                  <Input type="number" min="0" step="0.01" value={form.amount} onChange={e => update('amount', e.target.value)} aria-label="Amount" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Fund Source</label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={form.fundSource} onChange={e => update('fundSource', e.target.value)} aria-label="Fund Source"
+                  >
+                    <option value="Regular">Regular</option>
+                    <option value="PDAF">PDAF</option>
+                    <option value="Legislative">Legislative</option>
+                    <option value="Donation">Donation</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="form-group">
-                <label className="form-label">Amount (₱)</label>
-                <input className="form-input" type="number" min="0" step="0.01" value={form.amount} onChange={e => update('amount', e.target.value)} aria-label="Amount" />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Agency</label>
+                <Input value={form.agency} placeholder="MSWDO" onChange={e => update('agency', e.target.value)} aria-label="Agency" />
               </div>
-              <div className="form-group">
-                <label className="form-label">Fund Source</label>
-                <select className="form-select" value={form.fundSource} onChange={e => update('fundSource', e.target.value)} aria-label="Fund Source">
-                  <option value="Regular">Regular</option>
-                  <option value="PDAF">PDAF</option>
-                  <option value="Legislative">Legislative</option>
-                  <option value="Donation">Donation</option>
-                </select>
+              <div className="space-y-2">
+                <SignaturePad
+                  onSave={(dataUrl: string) => setSigDataUrl(dataUrl)}
+                  label="Worker Signature"
+                />
               </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Agency</label>
-              <input className="form-input" value={form.agency} placeholder="MSWDO" onChange={e => update('agency', e.target.value)} aria-label="Agency" />
-            </div>
-            <div className="form-group">
-              <SignaturePad
-                onSave={(dataUrl: string) => setSigDataUrl(dataUrl)}
-                label="Worker Signature"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Client Receipt (optional photo)</label>
-              <input
-                type="file"
-                accept="image/*"
-                className="form-input"
-                onChange={e => setReceiptFile(e.target.files?.[0] || null)}
-                aria-label="Client Receipt"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button type="submit" className="btn btn-primary" disabled={submitting} aria-label="Log Intervention">
-                {submitting ? 'Saving...' : 'Log Intervention'}
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setError(''); setSigDataUrl(null); setReceiptFile(null); }} aria-label="Cancel">Cancel</button>
-            </div>
-          </form>
-        </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Client Receipt (optional photo)</label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setReceiptFile(e.target.files?.[0] || null)}
+                  aria-label="Client Receipt"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={submitting} aria-label="Log Intervention">
+                  {submitting ? 'Saving...' : 'Log Intervention'}
+                </Button>
+                <Button variant="outline" onClick={() => { setShowForm(false); setError(''); setSigDataUrl(null); setReceiptFile(null); }} aria-label="Cancel">Cancel</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Case ID</th>
-              <th>Beneficiary</th>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Fund Source</th>
-              <th>Agency</th>
-              <th>Date</th>
-              <th>Signature</th>
-              <th>Receipt</th>
-            </tr>
-          </thead>
-          <tbody>
-            {interventions.map(i => (
-              <tr key={i.id}>
-                <td className="font-medium">{i.id}</td>
-                <td>{i.caseId}</td>
-                <td>{i.beneficiary}</td>
-                <td><span className="badge-category">{i.type}</span></td>
-                <td>{i.description}</td>
-                <td><span className="inline-block rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{i.fundSource}</span></td>
-                <td>{i.provider}</td>
-                <td>{i.date}</td>
-                <td>
-                  {i.signatureStatus === 'signatures_pending'
-                    ? <span className="badge-pending">Signatures Pending</span>
-                    : i.verified
-                      ? <span className="badge-approved">✓ Signed</span>
-                      : <span className="badge-pending">Pending</span>}
-                </td>
-                <td>
-                  {i.clientReceiptUrl
-                    ? <a href={i.clientReceiptUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">View Receipt</a>
-                    : <span className="text-gray-400 text-sm">None</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {/* Data table / Empty state */}
+      {!loading && interventions.length === 0 ? (
+        <EmptyState variant="no-data" />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={interventions}
+          rowCount={interventions.length}
+          pagination={{ pageIndex: 0, pageSize: 10 }}
+          sorting={[]}
+        />
+      )}
+    </PageShell>
   );
 }

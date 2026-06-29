@@ -3,7 +3,14 @@ import { getCases, requestReview, disburseCase, closeCase, overrideCaseStatus } 
 import { Search, SlidersHorizontal, Download, AlertTriangle } from 'lucide-react';
 import { isOnline } from '../lib/sync';
 import { queueFsmTransition } from '../lib/offline-queue';
-import '../index.css';
+import { PageShell } from '@/components/PageShell';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import type { ColumnDef } from '@tanstack/react-table';
 
 interface CaseRow {
   id: string;
@@ -22,12 +29,12 @@ interface CaseRow {
   slaOverdue?: boolean;
 }
 
-const STATUS_BADGES: Record<string, string> = {
-  pending_assessment: 'badge-pending',
-  in_review: 'badge-review',
-  approved: 'badge-approved',
-  disbursed: 'badge-disbursed',
-  closed: 'badge-closed',
+const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  pending_assessment: 'outline',
+  in_review: 'secondary',
+  approved: 'default',
+  disbursed: 'secondary',
+  closed: 'outline',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -44,6 +51,7 @@ export function CasesPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filters, setFilters] = useState({ barangay: false, status: false, category: false });
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   const role = localStorage.getItem('kapwa_role') || '';
 
@@ -78,6 +86,7 @@ export function CasesPage() {
         };
       });
       setCases(mapped);
+      setLastSync(Date.now());
     } catch {
       setCases([]);
     }
@@ -92,7 +101,6 @@ export function CasesPage() {
           if (isOnline()) {
             await requestReview(caseId);
           } else {
-            // D-04: pending→in_review allowed offline
             await queueFsmTransition(caseId, 'in_review');
             alert('Review request queued — will sync when online.');
           }
@@ -132,6 +140,8 @@ export function CasesPage() {
     return true;
   });
 
+  const activeFilters = Object.values(filters).some(Boolean);
+
   function exportCSV() {
     const headers = ['No.','Surname','First','Middle','Gender','Age Range','Category','Status','SLA','Barangay','Remarks','Date'];
     const rows = filteredCases.map(c => [c.no, c.surname, c.first, c.middle, c.gender, c.ageRange, c.category, STATUS_LABELS[c.status] || c.status, c.slaOverdue ? 'OVERDUE' : '', c.barangay, c.remarks, c.date]);
@@ -159,133 +169,142 @@ export function CasesPage() {
       buttons.push({ action: 'close', label: 'Close' });
     }
 
-    if (buttons.length === 0) return <span className="text-gray-400 text-xs">—</span>;
+    if (buttons.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
 
     return (
       <div className="flex gap-1">
         {buttons.map(b => (
-          <button
+          <Button
             key={b.action}
-            className="btn btn-sm"
+            variant="outline"
+            size="sm"
             disabled={actionLoading === c.id}
             onClick={() => handleAction(b.action, c.id)}
           >
             {actionLoading === c.id ? '...' : b.label}
-          </button>
+          </Button>
         ))}
       </div>
     );
   }
 
-  if (loading) return <div className="flex items-center justify-center p-12">
-    <div className="text-center">
-      <div className="spinner mx-auto mb-3" />
-      <p className="text-text-secondary text-sm">Loading cases...</p>
-    </div>
-  </div>;
+  const columns: ColumnDef<CaseRow>[] = [
+    { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground">{row.original.no}</span> },
+    { accessorKey: 'surname', header: 'Surname', cell: ({ row }) => <span className="font-medium">{row.original.surname}</span> },
+    { accessorKey: 'first', header: 'First' },
+    { accessorKey: 'middle', header: 'Middle' },
+    { accessorKey: 'gender', header: 'Gender' },
+    { accessorKey: 'ageRange', header: 'Age Range', cell: ({ row }) => <Badge variant="outline">{row.original.ageRange}</Badge> },
+    { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{STATUS_LABELS[row.original.status] || row.original.status}</Badge>,
+    },
+    {
+      id: 'sla',
+      header: 'SLA',
+      cell: ({ row }) => row.original.slaOverdue ? (
+        <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+          <AlertTriangle size={12} /> OVERDUE
+        </span>
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
+      ),
+    },
+    { accessorKey: 'barangay', header: 'Barangay' },
+    { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.date}</span> },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => renderActions(row.original),
+    },
+  ];
 
-  const uniqueBarangays = [...new Set(cases.map(c => c.barangay).filter(Boolean))];
+  if (loading) {
+    return (
+      <PageShell title="Case Tracker" description="Real-time view of processed interventions and logs.">
+        <TableSkeleton rows={8} />
+      </PageShell>
+    );
+  }
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">Case Tracker</h2>
-        <p className="page-desc">Real-time view of processed interventions and logs.</p>
-      </div>
-
-      <div className="toolbar">
-        <div className="toolbar-left">
-          <button className="btn btn-secondary" aria-label="Filter cases">
+    <PageShell
+      title="Case Tracker"
+      description="Real-time view of processed interventions and logs."
+      cachedAt={lastSync ?? undefined}
+    >
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" aria-label="Filter cases">
             <SlidersHorizontal size={16} />
             Filter
-          </button>
-          <button className="btn btn-primary" onClick={exportCSV} aria-label="Export CSV">
+          </Button>
+          <Button variant="default" size="sm" onClick={exportCSV} aria-label="Export CSV">
             <Download size={16} />
             Export CSV
-          </button>
+          </Button>
         </div>
-        <div className="toolbar-right">
-          <div className="search-bar">
-            <Search className="search-icon" size={20} stroke="#6B7280" />
-            <input type="text" aria-label="Search cases" className="search-input" placeholder="Search records..." value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              aria-label="Search cases"
+              placeholder="Search records..."
+              className="w-48 pl-8"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
         </div>
       </div>
 
-      <div className="filter-pills">
-        <button className={`filter-pill ${filters.barangay ? 'active' : ''}`} onClick={() => toggleFilter('barangay')} aria-label="Filter by barangay">
-          By Barangay {filters.barangay && `(${uniqueBarangays.length})`}
-        </button>
-        <button className={`filter-pill ${filters.category ? 'active' : ''}`} onClick={() => toggleFilter('category')} aria-label="Filter by category">
+      {/* Filter pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={filters.barangay ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => toggleFilter('barangay')}
+          aria-label="Filter by barangay"
+        >
+          By Barangay {filters.barangay && `(${new Set(cases.map(c => c.barangay).filter(Boolean)).size})`}
+        </Button>
+        <Button
+          variant={filters.category ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => toggleFilter('category')}
+          aria-label="Filter by category"
+        >
           By Category
-        </button>
-        {Object.values(filters).some(Boolean) && (
-          <button className="filter-pill clear" onClick={() => setFilters({ barangay: false, status: false, category: false })} aria-label="Clear filters">
+        </Button>
+        {activeFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilters({ barangay: false, status: false, category: false })}
+            aria-label="Clear filters"
+          >
             Clear
-          </button>
+          </Button>
         )}
       </div>
 
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th className="w-12">No.</th>
-              <th className="text-text-primary">Surname</th>
-              <th className="text-text-primary">First</th>
-              <th className="text-text-primary">Middle</th>
-              <th className="text-text-primary">Gender</th>
-              <th className="text-text-primary">Age Range</th>
-              <th className="text-text-primary">Category</th>
-              <th className="text-text-primary">Status</th>
-              <th className="text-text-primary">SLA</th>
-              <th className="text-text-primary">Barangay</th>
-              <th className="text-text-primary">Intervention/Remarks</th>
-              <th className="min-w-[140px]">Date</th>
-              <th className="text-text-primary">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCases.length === 0 ? (
-              <tr><td colSpan={13} className="text-center py-8 text-text-secondary text-sm">No cases found matching your filters</td></tr>
-            ) : (
-              filteredCases.map(c => (
-              <tr key={c.no}>
-                <td className="text-gray-500">{c.no}</td>
-                <td className="text-gray-900 font-medium">{c.surname}</td>
-                <td className="text-text-secondary">{c.first}</td>
-                <td className="text-gray-500">{c.middle}</td>
-                <td className="text-text-secondary">{c.gender}</td>
-                <td><span className="badge-age">{c.ageRange}</span></td>
-                <td><span className="badge-category">{c.category}</span></td>
-                <td>
-                  <span className={STATUS_BADGES[c.status] || 'badge-pending'}>
-                    {STATUS_LABELS[c.status] || c.status}
-                  </span>
-                </td>
-                <td>
-                  {c.slaOverdue ? (
-                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                      <AlertTriangle size={12} />
-                      OVERDUE
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="text-text-secondary">{c.barangay}</td>
-                <td className="text-xs">{c.remarks}</td>
-                <td className="text-xs text-gray-500 min-w-[140px]">{c.date}</td>
-                <td>{renderActions(c)}</td>
-              </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="pagination">
-        <span>Showing {filteredCases.length} cases</span>
-      </div>
-    </div>
+      {/* Data table / Empty state */}
+      {!loading && filteredCases.length === 0 ? (
+        <EmptyState variant={search || activeFilters ? 'no-results' : 'no-data'} />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filteredCases}
+          rowCount={filteredCases.length}
+          pagination={{ pageIndex: 0, pageSize: 10 }}
+          sorting={[]}
+        />
+      )}
+    </PageShell>
   );
 }

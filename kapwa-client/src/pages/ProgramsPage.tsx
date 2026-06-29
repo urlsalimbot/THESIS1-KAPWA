@@ -4,7 +4,7 @@ import { getPrograms, createProgram, updateProgram, deleteProgram } from '../lib
 import { getProgramAssignments, getProgramAssignment, createProgramAssignment, approveAssignmentStep, rejectAssignmentStep, overrideAssignmentStep } from '../lib/api';
 import { getCurrentUser } from '../lib/auth-context';
 import JsonSchemaForm from '../components/forms/JsonSchemaForm';
-import '../index.css';
+import { PageShell } from '@/components/PageShell';
 
 interface ApprovalStep {
   stepName: string;
@@ -417,13 +417,10 @@ export function ProgramsPage() {
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h2 className="page-title">Programs & Assignments</h2>
-          <p className="page-desc">Configure programs and manage assignment approval workflow</p>
-        </div>
-      </div>
+    <PageShell
+      title="Programs & Assignments"
+      description="Configure programs and manage assignment approval workflow"
+    >
 
       {/* Tab toggle */}
       <div className="mb-6 flex gap-1 rounded-lg bg-gray-100 p-1 w-fit">
@@ -1034,7 +1031,7 @@ export function ProgramsPage() {
           )}
         </>
       )}
-    </div>
+    </PageShell>
   );
 }
 

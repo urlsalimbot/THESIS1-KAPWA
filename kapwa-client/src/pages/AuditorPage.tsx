@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, CheckCircle, XCircle, Download, Search, RefreshCw } from 'lucide-react';
+import { PageShell } from '@/components/PageShell';
 
 export function AuditorPage() {
   const [hashChain, setHashChain] = useState<any>(null);
@@ -66,11 +67,10 @@ export function AuditorPage() {
   const allValid = hashChain && Object.values(hashChain).every((v: any) => v.valid);
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">Audit Logs</h2>
-        <p className="page-desc">Hash-chain verified records and consent ledger</p>
-      </div>
+    <PageShell
+      title="Audit Logs"
+      description="Hash-chain verified records and consent ledger"
+    >
 
       <div className="flex gap-2 mb-4">
         <button onClick={() => setActiveTab('hash')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'hash' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}>Audit Logs</button>
@@ -170,6 +170,6 @@ export function AuditorPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

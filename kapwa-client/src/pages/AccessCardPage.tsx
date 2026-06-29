@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { assignCard, getBeneficiaryCard } from '../lib/api';
+import { PageShell } from '@/components/PageShell';
+import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { ColumnDef } from '@tanstack/react-table';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -19,12 +28,16 @@ export function AccessCardPage() {
   const [logForm, setLogForm] = useState({ accessCardCode: '', serviceType: '', serviceDate: '', remarks: '' });
   const [successBanner, setSuccessBanner] = useState('');
   const [printBeneficiaryId, setPrintBeneficiaryId] = useState('');
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   async function loadServices(signal?: AbortSignal) {
     try {
       const token = localStorage.getItem('kapwa_token');
       const res = await fetch(API + '/access-cards', { headers: { Authorization: 'Bearer ' + token }, signal });
-      if (res.ok) setServices(await res.json());
+      if (res.ok) {
+        setServices(await res.json());
+        setLastSync(Date.now());
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
@@ -76,151 +89,180 @@ export function AccessCardPage() {
     } catch (e) { console.error(e); }
   }
 
-  if (loading) return <div className="p-6 text-gray-400">Loading...</div>;
+  const columns: ColumnDef<ServiceLog>[] = [
+    { accessorKey: 'accessCardCode', header: 'Card Code', cell: ({ row }) => <span className="font-mono text-xs font-medium">{row.original.accessCardCode}</span> },
+    { accessorKey: 'serviceType', header: 'Service Type', cell: ({ row }) => <Badge variant="secondary">{row.original.serviceType}</Badge> },
+    { accessorKey: 'serviceDate', header: 'Service Date', cell: ({ row }) => <span>{new Date(row.original.serviceDate).toLocaleDateString()}</span> },
+    { accessorKey: 'servedBy', header: 'Served By', cell: ({ row }) => <span className="text-muted-foreground">{row.original.servedBy || '-'}</span> },
+    { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-muted-foreground">{row.original.remarks || '-'}</span> },
+    { accessorKey: 'createdAt', header: 'Logged At', cell: ({ row }) => <span className="text-muted-foreground">{new Date(row.original.createdAt).toLocaleDateString()}</span> },
+  ];
+
+  if (loading) {
+    return (
+      <PageShell title="Access Cards" description="Manage access card records">
+        <CardGridSkeleton count={2} />
+      </PageShell>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold text-text-primary">Access Card Manager</h1>
-
+    <PageShell
+      title="Access Cards"
+      description="Manage access card records"
+      cachedAt={lastSync ?? undefined}
+    >
+      {/* Success banner */}
       {successBanner && (
-        <div className="mb-4 rounded bg-green-50 p-3 text-sm font-medium text-green-700 border border-green-200">
+        <div className="rounded bg-green-50 p-3 text-sm font-medium text-green-700 border border-green-200">
           {successBanner}
         </div>
       )}
 
-      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">Generate & Assign Access Card</h2>
-        <div className="flex items-center gap-2">
-          <input
-            placeholder="Beneficiary ID (UUID)"
-            value={beneficiaryId}
-            onChange={e => setBeneficiaryId(e.target.value)}
-            aria-label="Beneficiary ID"
-            className="flex-1 rounded border border-gray-300 p-2 text-sm font-mono"
-          />
-          <button
-            onClick={handleAssign}
-            disabled={assigning || !beneficiaryId.trim()}
-            className="rounded bg-primary px-4 py-2 text-xs text-white hover:bg-primary-dark disabled:opacity-50"
-            aria-label="Generate and Assign Card"
-          >
-            {assigning ? 'Assigning...' : 'Generate & Assign Card'}
-          </button>
-        </div>
-        {assignedCode && (
-          <div className="mt-2 rounded bg-green-50 p-2 text-sm font-medium text-green-700">
-            Card Assigned: <span className="font-mono">{assignedCode}</span>
+      {/* Section 1: Generate & Assign Access Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Generate & Assign Access Card</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Beneficiary ID (UUID)"
+              value={beneficiaryId}
+              onChange={e => setBeneficiaryId(e.target.value)}
+              aria-label="Beneficiary ID"
+              className="font-mono"
+            />
+            <Button
+              onClick={handleAssign}
+              disabled={assigning || !beneficiaryId.trim()}
+              aria-label="Generate and Assign Card"
+            >
+              {assigning ? 'Assigning...' : 'Generate & Assign Card'}
+            </Button>
           </div>
-        )}
-        {assignError && (
-          <div className="mt-2 rounded bg-red-50 p-2 text-sm text-red-700">{assignError}</div>
-        )}
-      </div>
+          {assignedCode && (
+            <div className="mt-2 rounded bg-green-50 p-2 text-sm font-medium text-green-700">
+              Card Assigned: <span className="font-mono">{assignedCode}</span>
+            </div>
+          )}
+          {assignError && (
+            <div className="mt-2 rounded bg-red-50 p-2 text-sm text-red-700">{assignError}</div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">Quick Print — Card View</h2>
-        <div className="flex items-center gap-2">
-          <input
-            placeholder="Beneficiary ID (UUID)"
-            value={printBeneficiaryId}
-            onChange={e => setPrintBeneficiaryId(e.target.value)}
-            aria-label="Print Card Beneficiary ID"
-            className="flex-1 rounded border border-gray-300 p-2 text-sm font-mono"
-          />
-          <button
-            onClick={() => navigate(`/beneficiary/${printBeneficiaryId}/card/print`)}
-            disabled={!printBeneficiaryId.trim()}
-            className="rounded bg-primary px-4 py-2 text-xs text-white hover:bg-primary-dark disabled:opacity-50"
-            aria-label="Go to Print View"
-          >
-            Print Card
-          </button>
-        </div>
-      </div>
-
-      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">Look Up Beneficiary Card</h2>
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            placeholder="Beneficiary ID (UUID)"
-            value={cardSearchInput}
-            onChange={e => setCardSearchInput(e.target.value)}
-            aria-label="Search Beneficiary Card"
-            className="flex-1 rounded border border-gray-300 p-2 text-sm font-mono"
-          />
-          <button
-            onClick={handleSearchCard}
-            className="rounded bg-gray-100 px-4 py-2 text-xs text-gray-700 hover:bg-gray-200"
-            aria-label="Look up"
-          >
-            Look Up
-          </button>
-        </div>
-        {cardData && (
-          <div className="mt-2 rounded bg-blue-50 p-3 text-sm">
-            <p className="font-medium text-blue-800">
-              Card: <span className="font-mono">{cardData.code}</span>
-            </p>
-            {cardData.beneficiary && (
-              <p className="text-blue-600 text-xs mt-1">
-                {cardData.beneficiary.surname}, {cardData.beneficiary.first_name} — {cardData.beneficiary.barangay}
-              </p>
-            )}
-            <button
-              onClick={() => navigate(`/beneficiary/${cardSearchInput}/card/print`)}
-              className="mt-2 rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark"
+      {/* Section 2: Quick Print — Card View */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Print — Card View</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Beneficiary ID (UUID)"
+              value={printBeneficiaryId}
+              onChange={e => setPrintBeneficiaryId(e.target.value)}
+              aria-label="Print Card Beneficiary ID"
+              className="font-mono"
+            />
+            <Button
+              onClick={() => navigate(`/beneficiary/${printBeneficiaryId}/card/print`)}
+              disabled={!printBeneficiaryId.trim()}
+              aria-label="Go to Print View"
             >
               Print Card
-            </button>
+            </Button>
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">Log Service to Access Card</h2>
-        <form onSubmit={logService} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-          <input placeholder="Access Card Code" aria-label="Access Card Code" value={logForm.accessCardCode} onChange={e => setLogForm({ ...logForm, accessCardCode: e.target.value })} className="rounded border border-gray-300 p-2 text-sm" required />
-          <select value={logForm.serviceType} onChange={e => setLogForm({ ...logForm, serviceType: e.target.value })} className="rounded border border-gray-300 p-2 text-sm" required>
-            <option value="">Service Type</option>
-            <option value="FA">Financial Assistance</option>
-            <option value="C">Counseling</option>
-            <option value="CSR">Case Study Report</option>
-            <option value="R">Referral</option>
-            <option value="H">Healthcare</option>
-            <option value="HV">Home Visit</option>
-          </select>
-          <input type="date" value={logForm.serviceDate} onChange={e => setLogForm({ ...logForm, serviceDate: e.target.value })} aria-label="Service Date" className="rounded border border-gray-300 p-2 text-sm" required />
-          <button type="submit" className="rounded bg-primary px-4 py-2 text-xs text-white hover:bg-primary-dark" aria-label="Log Service">Log Service</button>
-        </form>
-      </div>
+      {/* Section 3: Look Up Beneficiary Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Look Up Beneficiary Card</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 mb-2">
+            <Input
+              placeholder="Beneficiary ID (UUID)"
+              value={cardSearchInput}
+              onChange={e => setCardSearchInput(e.target.value)}
+              aria-label="Search Beneficiary Card"
+              className="font-mono"
+            />
+            <Button
+              onClick={handleSearchCard}
+              variant="secondary"
+              aria-label="Look up"
+            >
+              Look Up
+            </Button>
+          </div>
+          {cardData && (
+            <div className="mt-2 rounded bg-blue-50 p-3 text-sm space-y-2">
+              <p className="font-medium text-blue-800">
+                Card: <span className="font-mono">{cardData.code}</span>
+              </p>
+              {cardData.beneficiary && (
+                <p className="text-blue-600 text-xs">
+                  {cardData.beneficiary.surname}, {cardData.beneficiary.first_name} — {cardData.beneficiary.barangay}
+                </p>
+              )}
+              <Button
+                onClick={() => navigate(`/beneficiary/${cardSearchInput}/card/print`)}
+                size="sm"
+                className="no-print"
+                aria-label="Print Card from search"
+              >
+                Print Card
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-4 py-3">Card Code</th>
-              <th className="px-4 py-3">Service Type</th>
-              <th className="px-4 py-3">Service Date</th>
-              <th className="px-4 py-3">Served By</th>
-              <th className="px-4 py-3">Remarks</th>
-              <th className="px-4 py-3">Logged At</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {services.map(s => (
-              <tr key={s.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-xs font-medium">{s.accessCardCode}</td>
-                <td className="px-4 py-3"><span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">{s.serviceType}</span></td>
-                <td className="px-4 py-3">{new Date(s.serviceDate).toLocaleDateString()}</td>
-                <td className="px-4 py-3 text-gray-600">{s.servedBy || '-'}</td>
-                <td className="px-4 py-3 text-gray-500">{s.remarks || '-'}</td>
-                <td className="px-4 py-3 text-gray-500">{new Date(s.createdAt).toLocaleDateString()}</td>
-              </tr>
-            ))}
-            {services.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No services logged</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {/* Section 4: Log Service to Access Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Log Service to Access Card</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={logService} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <Input placeholder="Access Card Code" aria-label="Access Card Code" value={logForm.accessCardCode} onChange={e => setLogForm({ ...logForm, accessCardCode: e.target.value })} required />
+            <select
+              value={logForm.serviceType}
+              onChange={e => setLogForm({ ...logForm, serviceType: e.target.value })}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              required
+              aria-label="Service Type"
+            >
+              <option value="">Service Type</option>
+              <option value="FA">Financial Assistance</option>
+              <option value="C">Counseling</option>
+              <option value="CSR">Case Study Report</option>
+              <option value="R">Referral</option>
+              <option value="H">Healthcare</option>
+              <option value="HV">Home Visit</option>
+            </select>
+            <Input type="date" value={logForm.serviceDate} onChange={e => setLogForm({ ...logForm, serviceDate: e.target.value })} aria-label="Service Date" required />
+            <Button type="submit" aria-label="Log Service">Log Service</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Services Log Table */}
+      {!loading && services.length === 0 ? (
+        <EmptyState variant="no-data" />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={services}
+          rowCount={services.length}
+          pagination={{ pageIndex: 0, pageSize: 10 }}
+          sorting={[]}
+        />
+      )}
+    </PageShell>
   );
 }

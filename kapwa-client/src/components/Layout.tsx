@@ -14,6 +14,8 @@ import {
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/BottomNav';
+import { SyncStatusBanner } from '@/components/SyncStatusBanner';
+import { SyncQueuePanel } from '@/components/SyncQueuePanel';
 
 function computePendingCount(): number {
   try { const queue = loadQueue(); return queue.filter(c => c.status === 'pending').length; }
@@ -49,6 +51,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
   const [offline, setOffline] = useState(!navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   useEffect(() => {
     setPendingCount(computePendingCount());
@@ -71,6 +74,8 @@ export function Layout({ children }: { children?: React.ReactNode }) {
     setSheetOpen(false);
   }, [location.pathname]);
 
+  const isOnline = !offline;
+
   return (
     <>
       <a
@@ -80,16 +85,20 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         Skip to content
       </a>
 
-      {offline && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 px-4 py-1.5 text-center text-xs font-medium text-white">
-          You are offline{pendingCount > 0 ? ` — ${pendingCount} change(s) pending sync` : ''}
-        </div>
-      )}
+      <SyncStatusBanner
+        pendingCount={pendingCount}
+        isOnline={isOnline}
+        onOpenQueue={() => setQueueOpen(true)}
+      />
 
-      <Topbar onMenuToggle={() => setSheetOpen(s => !s)} />
+      <div className="no-print">
+        <Topbar onMenuToggle={() => setSheetOpen(s => !s)} />
+      </div>
 
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <Sidebar />
+        <div className="no-print">
+          <Sidebar />
+        </div>
 
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetContent side="left" className="w-64 p-0">
@@ -105,7 +114,14 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         </main>
       </div>
 
-      <BottomNav />
+      <div className="no-print">
+        <BottomNav />
+      </div>
+
+      <SyncQueuePanel
+        open={queueOpen}
+        onClose={() => setQueueOpen(false)}
+      />
     </>
   );
 }
