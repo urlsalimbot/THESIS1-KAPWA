@@ -53,6 +53,10 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 
 **Plans:** 2 plans
 
+Plans:
+- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
+- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
+
 **Plan list:**
 
 - [ ] 07-01-PLAN.md — Design token system (DSG-01, DSG-02, DSG-04): Expand :root CSS custom properties, define .dark block, update tailwind.config.js, remove @base-ui/react
@@ -100,6 +104,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 **Plans:** 3 plans
 
 Plans:
+
 - [ ] 09-01-PLAN.md — Foundation: Packages, PublicLayout, route restructuring, reusable display components
 - [ ] 09-02-PLAN.md — Public pages: LandingPage, AboutPage, ContactPage
 - [ ] 09-03-PLAN.md — Auth pages: LoginPage (shadcn rewrite), RegisterPage
@@ -127,6 +132,10 @@ Plans:
 
 **Plans:** 2 plans
 
+Plans:
+- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
+- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
+
 **UI hint**: yes
 
 ### Phase 11: Page Migration, Print & Offline UI
@@ -147,6 +156,10 @@ Plans:
 6. Cache staleness indicators appear on data when viewing cached (not fresh) information — visual badge shows data age
 
 **Plans:** 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
+- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
 
 **UI hint**: yes
 
@@ -169,6 +182,10 @@ Plans:
 
 **Plans:** 2 plans
 
+Plans:
+- [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
+- [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
+
 **UI hint**: yes
 
 ## Progress
@@ -184,8 +201,8 @@ Plans:
 | 5. Dynamic Programs & IRF Module | v1.0 | 4/4 | Complete | 2026-06-22 |
 | 6. Dashboards, Notifications & Role Completion | v1.0 | 4/4 | Complete | 2026-06-24 |
 | 7. Foundation & Design System | v1.1 | 0/0 | Not started | - | Design System | v1.1 | 0/2 | Not started | - |
-| 8. Dashboard Shell & Layout | v1.1 | 1/1 | Complete   | 2026-06-28 |
+| 8. Dashboard Shell & Layout | v1.1 | 1/1 | Complete    | 2026-06-28 |
 | 9. Landing Page & Auth Flow | v1.1 | 3/3 | Complete | 2026-06-28 |
-| 10. Shared Components & Responsive | v1.1 | 0/0 | Not started | - |
+| 10. Shared Components & Responsive | v1.1 | 0/2 | Planning complete | - |
 | 11. Page Migration, Print & Offline UI | v1.1 | 0/0 | Not started | - |
 | 12. Accessibility & Differentiators | v1.1 | 0/0 | Not started | - |
