@@ -106,6 +106,19 @@
   .card { @apply bg-card border border-border rounded-lg p-4 mb-4 shadow-sm; }
 }
 
+@layer components {
+  /* 44x44px touch targets for mobile accessibility (Phase 10) */
+  button, a[href], input, select, textarea, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Opt-out class for small decorative/inline elements */
+  .touch-sm {
+    min-height: unset;
+    min-width: unset;
+  }
+}
+
 @layer base {
   :root {
     --background: #F8FAFC;
