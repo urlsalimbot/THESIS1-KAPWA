@@ -54,6 +54,7 @@ Kapwa's v1.0 delivered the full backend infrastructure (NestJS 11 + PostgreSQL 1
 **Plans:** 2 plans
 
 Plans:
+
 - [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
 - [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
 
@@ -133,7 +134,12 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
 
 **UI hint**: yes
@@ -158,6 +164,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
+
 - [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
 - [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
 
@@ -183,6 +190,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
+
 - [ ] 10-01-PLAN.md — Page-state components: PageShell, skeletons, EmptyState, ErrorBoundary, Sonner, Layout/routes integration
 - [ ] 10-02-PLAN.md — Mobile & responsive: BottomNav, DataTable system (TanStack Table), 44px touch targets
 
