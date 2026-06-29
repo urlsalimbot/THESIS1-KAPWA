@@ -1,6 +1,6 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-06-19
+**Analysis Date:** 2026-06-29
 
 ## Directory Layout
 
@@ -9,46 +9,47 @@ THESIS1-KAPWA/
 ├── kapwa-client/            # React PWA frontend (Vite + Capacitor)
 │   ├── src/
 │   │   ├── components/     # Shared UI components
-│   │   │   ├── forms/     # Dynamic form renderers
-│   │   │   └── *.tsx      # Layout, ErrorBoundary, etc.
-│   │   ├── lib/           # Client services (API, auth, sync, storage)
-│   │   └── pages/         # Screen-level page components
-│   ├── public/            # Static assets (icons, manifest, SW)
-│   ├── tests/             # Client test files
-│   ├── index.html         # Vite entry HTML
-│   └── *.config.ts        # Build configs (vite, vitest, tailwind, capacitor)
+│   │   │   ├── data-table/ # TanStack Table system (DataTable, Pagination, Toolbar, ColumnHeader)
+│   │   │   ├── forms/      # Dynamic form renderers
+│   │   │   └── *.tsx       # Layout, ErrorBoundary, BottomNav, etc.
+│   │   ├── lib/            # Client services (API, auth, sync, storage)
+│   │   └── pages/          # Screen-level page components
+│   ├── public/             # Static assets (icons, manifest, SW)
+│   ├── tests/              # Client test files
+│   ├── index.html          # Vite entry HTML
+│   └── *.config.ts         # Build configs (vite, vitest, tailwind, capacitor)
 ├── kapwa-server/            # NestJS API backend
 │   ├── src/
-│   │   ├── auth/          # Authentication + authorization
-│   │   ├── beneficiaries/ # Beneficiary management
-│   │   ├── cases/         # Case FSM management
-│   │   ├── interventions/ # Post-disbursement intervention logging
-│   │   ├── programs/      # Dynamic program configuration
-│   │   ├── sync/          # Offline sync protocol
-│   │   ├── notifications/ # SMS + in-app notifications
-│   │   ├── dashboard/     # Metrics and SLA dashboard
-│   │   ├── chat/          # Real-time messaging (WebSocket)
-│   │   ├── tracker/       # Daily case tracker
-│   │   ├── csr/           # CSR report generation
-│   │   ├── irf/           # Incident Report Form
-│   │   ├── filing/        # Document vault
-│   │   ├── audit/         # Audit trail
-│   │   ├── access-cards/  # Access card management
-│   │   ├── users/         # User management
-│   │   ├── lcr/           # LCR report module
-│   │   ├── sla/           # SLA monitoring
-│   │   ├── otp/           # OTP module (stub)
-│   │   ├── common/        # Shared pipes, filters, constants
-│   │   └── database/      # DB config, migrations, seed
-│   ├── test/              # Server test files
+│   │   ├── auth/           # Authentication + authorization
+│   │   ├── beneficiaries/  # Beneficiary management
+│   │   ├── cases/          # Case FSM management
+│   │   ├── interventions/  # Post-disbursement intervention logging
+│   │   ├── programs/       # Dynamic program configuration
+│   │   ├── sync/           # Offline sync protocol
+│   │   ├── notifications/  # SMS + in-app notifications
+│   │   ├── dashboard/      # Metrics and SLA dashboard
+│   │   ├── chat/           # Real-time messaging (WebSocket)
+│   │   ├── tracker/        # Daily case tracker
+│   │   ├── csr/            # CSR report generation
+│   │   ├── irf/            # Incident Report Form
+│   │   ├── filing/         # Document vault
+│   │   ├── audit/          # Audit trail
+│   │   ├── access-cards/   # Access card management
+│   │   ├── users/          # User management
+│   │   ├── lcr/            # LCR report module
+│   │   ├── sla/            # SLA monitoring
+│   │   ├── otp/            # OTP module (stub)
+│   │   ├── common/         # Shared pipes, filters, constants
+│   │   └── database/       # DB config, migrations, seed
+│   ├── test/               # Server test files
 │   ├── tsconfig.json
 │   └── nest-cli.json
-├── tests/                   # Top-level/integration tests
-├── .planning/               # Project planning artifacts
-│   └── codebase/           # Codebase analysis documents
-├── KAPWA-PROJECT.md         # Project spec and handoff document
-├── ARCHITECTURE.md          # Architecture diagram (existing)
-├── AGENTS.md                # Agent instructions
+├── tests/                    # Top-level/integration tests
+├── .planning/                # Project planning artifacts
+│   └── codebase/            # Codebase analysis documents
+├── KAPWA-PROJECT.md          # Project spec and handoff document
+├── ARCHITECTURE.md           # Architecture diagram (existing)
+├── AGENTS.md                 # Agent instructions
 └── .gitignore
 ```
 
@@ -90,11 +91,18 @@ THESIS1-KAPWA/
 - `AccessCardPage.tsx` — Access card management
 
 `src/components/` — Shared UI components:
-- `Layout.tsx` — Main app shell with sidebar navigation and header
+- `Layout.tsx` — Main app shell with sidebar navigation, header, and BottomNav
+- `BottomNav.tsx` — Mobile bottom tab navigation (5 tabs + center Quick Action)
 - `ProtectedRoute.tsx` — Auth guard + role check wrapper
-- `ErrorBoundary.tsx` — React error boundary with fallback UI
+- `ErrorBoundary.tsx` — React error boundary with fallback UI (network-aware)
 - `NotificationsDropdown.tsx` — Notification bell dropdown
 - `ChainViewer.tsx` — Hash-chain integrity viewer
+- `data-table/` — TanStack Table system:
+  - `DataTable.tsx` — Controlled table wrapper with server-side sort/search/paginate
+  - `DataTablePagination.tsx` — shadcn Pagination prev/next + page numbers
+  - `DataTableToolbar.tsx` — Single search bar with Search icon
+  - `DataTableColumnHeader.tsx` — Sortable column header with direction indicator
+  - `index.ts` — Barrel re-export
 - `forms/JsonSchemaForm.tsx` — Dynamic form renderer from JSON Schema
 - `forms/SignaturePad.tsx` — Signature capture component
 
@@ -199,12 +207,13 @@ All modules follow the same structure:
 - `*.spec.ts` — Unit test files (co-located with source)
 
 **Files (Client):**
-- `PascalCase.tsx` — Page and component React files (e.g., `DashboardPage.tsx`, `ProtectedRoute.tsx`)
+- `PascalCase.tsx` — Page and component React files (e.g., `DashboardPage.tsx`, `BottomNav.tsx`)
 - `kebab-case.ts` — Library/service files (e.g., `auth-context.tsx`, `offline-queue.ts`)
-- `*.test.ts` — Test files (in `tests/` directory)
+- `kebab-case` — Test helper directories
+- `*.test.tsx` / `*.test.ts` — Co-located test files in `src/` or `tests/` directory
 
 **Directories:**
-- `kebab-case` — All directories (e.g., `access-cards/`, `case-tracker-log/`)
+- `kebab-case` — All directories (e.g., `access-cards/`, `data-table/`)
 - Domain names for feature modules (e.g., `auth/`, `cases/`, `beneficiaries/`)
 - Plural for collection directories (`pages/`, `components/`, `lib/`, `tests/`)
 
@@ -240,6 +249,7 @@ All modules follow the same structure:
 **New Component (Client):**
 - Implementation: `kapwa-client/src/components/{Name}.tsx`
 - Dynamic form field: `kapwa-client/src/components/forms/{Name}.tsx`
+- Component subsystem: `kapwa-client/src/components/{subsystem}/index.ts` barrel export
 
 **New Client Service:**
 - Implementation: `kapwa-client/src/lib/{name}.ts`
@@ -289,5 +299,5 @@ All modules follow the same structure:
 
 ---
 
-*Structure analysis: 2026-06-19*
+*Structure analysis: 2026-06-29 (updated for Phase 10-02: BottomNav, data-table subsystem)*
 *Update when directory structure changes*
