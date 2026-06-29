@@ -11,6 +11,7 @@ import {
   Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink,
   BreadcrumbPage, BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 
 function computePendingCount(): number {
@@ -95,9 +96,11 @@ export function Layout({ children }: { children?: React.ReactNode }) {
           </SheetContent>
         </Sheet>
 
-        <main id="main-content" className="flex-1 p-6 bg-background min-h-[calc(100vh-4rem)] overflow-auto">
-          <BreadcrumbNav pathname={location.pathname} />
-          {children || <Outlet />}
+        <main id="main-content" className="flex-1 p-6 bg-background min-h-[calc(100vh-4rem)] overflow-auto pb-16 lg:pb-6">
+          <ErrorBoundary>
+            <BreadcrumbNav pathname={location.pathname} />
+            {children || <Outlet />}
+          </ErrorBoundary>
         </main>
       </div>
     </>
