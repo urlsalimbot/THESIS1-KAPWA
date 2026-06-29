@@ -39,9 +39,9 @@ Requirements for production-ready frontend polish with unified shadcn design sys
 
 ### Mobile & Responsive
 
-- [ ] **RES-01**: Mobile bottom tab navigation for main sections (Dashboard, Cases, Beneficiaries, Profile)
-- [ ] **RES-02**: Responsive data tables using TanStack Table + shadcn DataTable (sortable, filterable, paginated, horizontal scroll on mobile)
-- [ ] **RES-03**: Touch-friendly form controls (min 44px touch targets, proper spacing, mobile keyboard handling)
+- [x] **RES-01**: Mobile bottom tab navigation for main sections (Dashboard, Cases, Beneficiaries, Profile)
+- [x] **RES-02**: Responsive data tables using TanStack Table + shadcn DataTable (sortable, filterable, paginated, horizontal scroll on mobile)
+- [x] **RES-03**: Touch-friendly form controls (min 44px touch targets, proper spacing, mobile keyboard handling)
 
 ### Print Styles
 
@@ -124,9 +124,9 @@ Explicitly excluded. Documented to prevent scope creep.
 | STT-03 | Phase 10 | Complete |
 | STT-04 | Phase 10 | Complete |
 | STT-05 | Phase 10 | Complete |
-| RES-01 | Phase 10 | Pending |
-| RES-02 | Phase 10 | Pending |
-| RES-03 | Phase 10 | Pending |
+| RES-01 | Phase 10 | Complete |
+| RES-02 | Phase 10 | Complete |
+| RES-03 | Phase 10 | Complete |
 | PRN-01 | Phase 11 | Pending |
 | PRN-02 | Phase 11 | Pending |
 | OFF-01 | Phase 11 | Pending |
