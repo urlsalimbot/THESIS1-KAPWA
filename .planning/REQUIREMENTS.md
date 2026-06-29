@@ -13,14 +13,14 @@ Requirements for production-ready frontend polish with unified shadcn design sys
 - [ ] **DSG-02**: Tailwind CSS theme config fully mapped to design tokens
 - [ ] **DSG-03**: Legacy CSS classes cleaned up — unused `@layer components` classes removed, remaining ones wrapped in `@layer legacy`
 - [ ] **DSG-04**: Unused `@base-ui/react` dependency removed from package.json
-- [ ] **DSG-05**: Admin can toggle dark/light mode via a toggle in the user menu
+- [x] **DSG-05**: Admin can toggle dark/light mode via a toggle in the user menu
 
 ### Dashboard Shell & Layout
 
-- [ ] **LAY-01**: Sidebar with collapsible navigation, role-filtered nav groups, active route highlighting
-- [ ] **LAY-02**: Topbar with user menu (profile, logout), notification bell, messages popover
-- [ ] **LAY-03**: Breadcrumb navigation showing current page location
-- [ ] **LAY-04**: Skip-to-content link for keyboard accessibility
+- [x] **LAY-01**: Sidebar with collapsible navigation, role-filtered nav groups, active route highlighting
+- [x] **LAY-02**: Topbar with user menu (profile, logout), notification bell, messages popover
+- [x] **LAY-03**: Breadcrumb navigation showing current page location
+- [x] **LAY-04**: Skip-to-content link for keyboard accessibility
 
 ### Landing Page & Auth
 
@@ -31,11 +31,11 @@ Requirements for production-ready frontend polish with unified shadcn design sys
 
 ### Page-State Components
 
-- [ ] **STT-01**: `PageShell` wrapper component providing consistent padding, title, and breadcrumbs
-- [ ] **STT-02**: Loading skeleton states on every data-fetching page (table skeletons, card skeletons, form skeletons)
-- [ ] **STT-03**: Empty state placeholders with icon, message, and optional CTA for all list/search views
-- [ ] **STT-04**: Error boundaries with fallback UI (error icon, message, retry button, home link) at route and widget level
-- [ ] **STT-05**: Toast notifications via Sonner for all CRUD operations (success, error, promise/loading states)
+- [x] **STT-01**: `PageShell` wrapper component providing consistent padding, title, and breadcrumbs
+- [x] **STT-02**: Loading skeleton states on every data-fetching page (table skeletons, card skeletons, form skeletons)
+- [x] **STT-03**: Empty state placeholders with icon, message, and optional CTA for all list/search views
+- [x] **STT-04**: Error boundaries with fallback UI (error icon, message, retry button, home link) at route and widget level
+- [x] **STT-05**: Toast notifications via Sonner for all CRUD operations (success, error, promise/loading states)
 
 ### Mobile & Responsive
 
@@ -110,20 +110,20 @@ Explicitly excluded. Documented to prevent scope creep.
 | DSG-02 | Phase 7 | Pending |
 | DSG-03 | Phase 7 | Pending |
 | DSG-04 | Phase 7 | Pending |
-| DSG-05 | Phase 8 | Pending |
-| LAY-01 | Phase 8 | Pending |
-| LAY-02 | Phase 8 | Pending |
-| LAY-03 | Phase 8 | Pending |
-| LAY-04 | Phase 8 | Pending |
+| DSG-05 | Phase 8 | Complete |
+| LAY-01 | Phase 8 | Complete |
+| LAY-02 | Phase 8 | Complete |
+| LAY-03 | Phase 8 | Complete |
+| LAY-04 | Phase 8 | Complete |
 | PUB-01 | Phase 9 | Pending |
 | PUB-02 | Phase 9 | Pending |
 | PUB-03 | Phase 9 | Pending |
 | PUB-04 | Phase 9 | Pending |
-| STT-01 | Phase 10 | Pending |
-| STT-02 | Phase 10 | Pending |
-| STT-03 | Phase 10 | Pending |
-| STT-04 | Phase 10 | Pending |
-| STT-05 | Phase 10 | Pending |
+| STT-01 | Phase 10 | Complete |
+| STT-02 | Phase 10 | Complete |
+| STT-03 | Phase 10 | Complete |
+| STT-04 | Phase 10 | Complete |
+| STT-05 | Phase 10 | Complete |
 | RES-01 | Phase 10 | Pending |
 | RES-02 | Phase 10 | Pending |
 | RES-03 | Phase 10 | Pending |
@@ -150,6 +150,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | DIF-06 | Phase 12 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 42 total
 - Mapped to phases: 42
 - Unmapped: 0 ✅
