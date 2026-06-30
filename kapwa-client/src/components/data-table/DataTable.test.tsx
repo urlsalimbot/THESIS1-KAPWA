@@ -26,7 +26,7 @@ const defaultSorting: any[] = [];
 function renderTable(props: Partial<Parameters<typeof DataTable>[0]> = {}) {
   return render(
     <DataTable
-      columns={columns}
+      columns={columns as ColumnDef<unknown, unknown>[]}
       data={mockData}
       rowCount={mockData.length}
       pagination={defaultPagination}
@@ -63,7 +63,7 @@ describe('DataTable', () => {
   it('renders children in toolbar area', () => {
     render(
       <DataTable
-        columns={columns}
+        columns={columns as ColumnDef<unknown, unknown>[]}
         data={mockData}
         rowCount={mockData.length}
         pagination={defaultPagination}

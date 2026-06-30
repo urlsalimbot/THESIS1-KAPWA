@@ -2,11 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../lib/auth-context';
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  roles?: string[];
-}
-
 const roleRedirectMap: Record<string, string> = {
   social_worker: '/dashboard',
   admin: '/admin',
@@ -16,7 +11,7 @@ const roleRedirectMap: Record<string, string> = {
   auditor: '/audit-logs',
 };
 
-export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const navigate = useNavigate();
 
@@ -27,7 +22,7 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   async function checkAuth() {
     const token = localStorage.getItem('kapwa_token');
     if (!token) {
-      navigate('/login');
+      navigate('/login', { replace: true });
       return;
     }
 
@@ -35,19 +30,20 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
       const user = await getCurrentUser();
       if (!user) {
         localStorage.removeItem('kapwa_token');
-        navigate('/login');
+        navigate('/login', { replace: true });
         return;
       }
 
       if (roles && roles.length > 0 && !roles.includes(user.role)) {
-        navigate(roleRedirectMap[user.role] || '/dashboard');
+        navigate(roleRedirectMap[user.role] || '/dashboard', { replace: true });
         return;
       }
 
       setAuthorized(true);
     } catch {
-      localStorage.removeItem('kapwa_token');
-      navigate('/login');
+      // Network error — backend unreachable. Don't redirect, let the page render.
+      // The app components will handle offline state gracefully.
+      setAuthorized(true);
     }
   }
 

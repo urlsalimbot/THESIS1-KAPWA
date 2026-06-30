@@ -11,21 +11,24 @@ Built as an offline-first PWA with Capacitor 6 mobile wrappers, React 18 client,
 Social workers can register any claimant, conduct a full social case study (GIS), manage the complete approval workflow, log interventions post-disbursement, and track every service rendered — reliably offline in the field with automatic sync when connected.
 
 
-## Current Milestone: v1.1 UI/UX Overhaul
+## Requirements
+## Current Milestone: v1.2 Quality & Resilience Hardening
 
-**Goal:** Polish the entire Kapwa frontend to production-ready quality with a unified shadcn design system, responsive layouts, and public-facing pages.
+**Goal:** Close test coverage gaps, harden error resilience, strengthen the API layer, and upgrade toolchain so Kapwa is production-ready.
 
 **Target features:**
-- Full shadcn component migration across all screens
-- Design token system (Tailwind CSS variables + CSS custom properties)
-- Responsive layout + mobile UX for field workers
-- Loading/empty/error states and transitions on every page
-- Accessibility improvements (ARIA, keyboard nav, focus management)
-- Public landing page, about, and polished auth flow
-- Print styles for reports and production-ready polish
+- Test coverage for core modules (api.ts, auth-context, offline-queue, secure-storage) — target ≥70%
+- Smoke tests for core UI components (Layout, Topbar, Sidebar, ProtectedRoute)
+- `<ErrorBoundary>` wrapping for all 28 pages
+- Centralized API client with retry/timeout/interceptor pattern
+- SWR activation for data fetching (stale-while-revalidate caching)
+- Axe-core a11y integration in CI pipeline + SkipToContent activation
+- Token refresh/rotation in auth-context
+- Dependency cleanup: move playwright, @capacitor/cli, esbuild → devDependencies
+- Upgrade vitest to v4, testing libraries to latest
+- Plan React 19 + Capacitor 8 + Tailwind CSS v4 upgrade (medium-term, tested via mobile builds)
 
-
-## Requirements
+**Target scores:** Overall 53/100 → 75/100 (PRODUCTION READY)
 
 ### Validated
 
@@ -158,4 +161,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-27 after milestone v1.1 start*
+*Last updated: 2026-07-05 after milestone v1.2 start

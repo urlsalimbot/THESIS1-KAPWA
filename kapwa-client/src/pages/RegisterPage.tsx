@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, HandHeart } from 'lucide-react';
 
 const barangays = [
   'Bangkal', 'Binitagan', 'Bitungol', 'Matictic', 'Maturanoc',
@@ -89,11 +89,20 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-4 py-8">
-      <Card className="w-full max-w-lg mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle className="font-heading">Claimant Registration</CardTitle>
-          <CardDescription>
+    <div className="relative flex items-center justify-center min-h-[calc(100vh-8rem)] px-4 py-8 overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-muted/20 rounded-full blur-3xl opacity-40" />
+      </div>
+
+      <Card className="w-full max-w-lg mx-auto relative shadow-lg border-border/50">
+        <CardHeader className="text-center pb-6">
+          <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
+            <HandHeart size={24} className="text-accent" />
+          </div>
+          <CardTitle className="text-2xl tracking-tight">Claimant Registration</CardTitle>
+          <CardDescription className="text-base">
             Create an account to track your services and applications.
           </CardDescription>
         </CardHeader>
@@ -213,16 +222,16 @@ export function RegisterPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-11"
                 disabled={form.formState.isSubmitting}
               >
-                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {form.formState.isSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}
                 Create Account
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="justify-center pt-2 pb-6">
           <Button variant="link" asChild>
             <Link to="/login">Already have an account? Sign in</Link>
           </Button>

@@ -85,7 +85,7 @@ export function CoordinatorDashboardPage() {
         <h3 className="text-lg mb-3">Quick Case Search</h3>
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
               value={searchId}

@@ -60,6 +60,7 @@ export default {
       spacing: {
         4: 'var(--spacing-4)',
         8: 'var(--spacing-8)',
+        17: '4.25rem',
         12: 'var(--spacing-12)',
         16: 'var(--spacing-16)',
         24: 'var(--spacing-24)',

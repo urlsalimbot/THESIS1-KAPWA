@@ -29,7 +29,8 @@ describe('InterventionsService', () => {
       uploadFile: jest.fn().mockResolvedValue('https://minio.example.com/signature.png'),
     };
     trackerServiceMock = {
-      generateTrackerId: jest.fn().mockResolvedValue('NORZ-TRACK-2026-0622-001'),
+      generateTrackerId: jest.fn().mockResolvedValue("NORZ-TRACK-2026-0622-001"),
+      createEntry: jest.fn().mockResolvedValue({}),
     };
 
     const module: TestingModule = await Test.createTestingModule({

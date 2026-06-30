@@ -228,7 +228,7 @@ export function MessagesPage() {
                   className="flex-1"
                 />
                 <Button type="submit" disabled={!text.trim()} aria-label="Send">
-                  <Send size={18} />
+                  <Send size={16} />
                 </Button>
               </form>
             </>

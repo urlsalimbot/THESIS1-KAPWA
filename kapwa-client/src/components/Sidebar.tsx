@@ -33,10 +33,10 @@ export function SidebarNavContent({ onNavClick }: SidebarNavContentProps) {
                     to={item.path}
                     onClick={onNavClick}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium no-underline transition-colors',
+                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium no-underline transition-all duration-200',
                       isActive
-                        ? 'bg-muted text-foreground'
-                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                        ? 'bg-muted text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:translate-x-0.5'
                     )}
                   >
                     {item.icon}
@@ -59,8 +59,8 @@ export interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   return (
     <aside className={cn(
-      'w-64 bg-card border-r border-border shrink-0',
-      'sticky top-16 h-[calc(100vh-4rem)]',
+      'w-[16rem] bg-card border-r border-border shrink-0',
+      'top-0 h-full',
       'hidden lg:block',
       className
     )}>

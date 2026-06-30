@@ -57,7 +57,7 @@ export function FamilyGraph({ beneficiaryId }: FamilyGraphProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8 text-gray-400">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        <Loader2 size={20} className="mr-2 animate-spin" />
         <span>Loading family data...</span>
       </div>
     );
@@ -66,7 +66,7 @@ export function FamilyGraph({ beneficiaryId }: FamilyGraphProps) {
   if (error) {
     return (
       <div className="flex items-center justify-center rounded-lg bg-red-50 py-8 text-sm text-red-600">
-        <AlertCircle className="mr-2 h-5 w-5" />
+        <AlertCircle size={20} className="mr-2" />
         {error}
       </div>
     );
@@ -75,7 +75,7 @@ export function FamilyGraph({ beneficiaryId }: FamilyGraphProps) {
   if (members.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 text-sm text-gray-400">
-        <Users className="mr-2 h-5 w-5" />
+        <Users size={20} className="mr-2" />
         No family members found
       </div>
     );
