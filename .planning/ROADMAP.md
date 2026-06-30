@@ -187,14 +187,15 @@ Plans:
 5. Field workers access quick actions (new intake, search, photo, signature) via bottom-sheet shortcuts on mobile
 6. Data tables support row selection with a bulk action toolbar (approve/reject/assign/export) on selected rows
 
-**Plans:** 4 plans
+**Plans:** 5 plans
 
 Plans:
 
-- [x] 11-01-PLAN.md — Print & offline UI infrastructure (print stylesheet, PageShell cachedAt, SyncQueuePanel, ConflictResolutionDialog, cache staleness hook)
-- [x] 11-02-PLAN.md — Dashboard & Beneficiaries migration (DashboardPage, ClaimantDashboardPage, BeneficiariesPage, BeneficiaryViewPage, IntakePage)
-- [x] 11-03-PLAN.md — Cases, Access Card & IRF migration (CasesPage, InterventionsPage, CaseTrackerPage, ApprovalPipelinePage, AccessCardPage, CsrPage, IrfPage) with print-ready layouts
-- [x] 11-04-PLAN.md — Admin pages & final verification (AdminPage, MfaSetupPage, FilingPage, MessagesPage, ClaimantDashboardPage + test pass)
+- [ ] 12-01-PLAN.md — A11y Foundation + PII Masking (WCAG components, usePiiMasking hook, MaskedField)
+- [ ] 12-02-PLAN.md — SLA Timers + Global Search + Quick Actions (useSlaTimer, GlobalSearch, Topbar quick actions)
+- [ ] 12-03-PLAN.md — Bulk Operations (DataTable row selection, BulkActionBar, BulkApproveDialog, progress toasts)
+- [ ] 12-04-PLAN.md — Role-Specific Dashboard (unified dashboard page, role widgets, QuickActionPanel)
+- [ ] 12-05-PLAN.md — Accessibility Audit + Final Polish (contrast audit, keyboard audit, axe-core E2E tests)
 
 ## Progress
 
@@ -213,4 +214,4 @@ Plans:
 | 9. Landing Page & Auth Flow | v1.1 | 3/3 | Complete | 2026-06-28 |
 | 10. Shared Components & Responsive | v1.1 | 2/2 | Complete   | 2026-06-29 |
 | 11. Page Migration, Print & Offline UI | v1.1 | 4/4 | Complete   | 2026-06-30 |
-| 12. Accessibility & Differentiators | v1.1 | 0/0 | Not started | - |
+| 12. Accessibility & Differentiators | v1.1 | 0/5 | Not started | - |
