@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import '../index.css';
 import { Upload, Download, Trash2, Search } from 'lucide-react';
+import { PageShell } from '@/components/PageShell';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -15,6 +20,7 @@ export function FilingPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -29,6 +35,7 @@ export function FilingPage() {
       const q = category ? `?category=${category}` : '';
       const res = await fetch(`${API_URL}/filing${q}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setDocs(await res.json());
+      setLastSync(Date.now());
     } catch (e) { console.error("FilingPage:", e); } finally { setLoading(false); }
   }
 
@@ -79,48 +86,60 @@ export function FilingPage() {
   const filtered = docs.filter(d => !search || d.originalName?.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-text-primary font-sans">Digital Filing</h2>
-        <p className="text-sm text-gray-500">Upload and manage case documents, signatures, and attachments</p>
-      </div>
-
-      <div className="mb-4 flex items-center gap-3">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark">
+    <PageShell
+      title="Digital Filing"
+      description="Upload and manage case documents, signatures, and attachments"
+      cachedAt={lastSync ?? undefined}
+    >
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
           <Upload size={16} />
           {uploading ? 'Uploading...' : 'Upload Document'}
-          <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
+          <input type="file" className="sr-only" onChange={handleUpload} disabled={uploading} />
         </label>
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input type="text" aria-label="Search documents" placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+          <Input
+            type="text"
+            aria-label="Search documents"
+            placeholder="Search documents..."
+            className="w-full pl-9"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
       </div>
 
-      {loading ? <div className="p-8 text-center text-gray-400 text-sm">Loading...</div> : (
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="divide-y divide-gray-100">
-            {filtered.length === 0 ? (
-              <div className="p-8 text-center text-sm text-gray-400">No documents uploaded yet</div>
-            ) : filtered.map(d => (
+      {loading ? (
+        <TableSkeleton rows={5} />
+      ) : filtered.length === 0 ? (
+        <EmptyState variant={search ? 'no-results' : 'no-data'} />
+      ) : (
+        <Card>
+          <CardContent className="p-0 divide-y">
+            {filtered.map(d => (
               <div key={d.id} className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="rounded bg-blue-50 p-2 text-blue-600 text-xs font-bold uppercase">
                     {d.mimeType?.split('/')[1] || 'FILE'}</div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{d.originalName}</p>
-                    <p className="text-xs text-gray-400">{(d.fileSize / 1024).toFixed(1)} KB · {d.category} · {new Date(d.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">{(d.fileSize / 1024).toFixed(1)} KB · {d.category} · {new Date(d.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleDownload(d)} className="rounded p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50" title="Download" aria-label="Download"><Download size={16} /></button>
-                  <button onClick={() => handleDelete(d.id)} className="rounded p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50" title="Delete" aria-label="Delete"><Trash2 size={16} /></button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDownload(d)} title="Download" aria-label="Download">
+                    <Download size={16} />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)} title="Delete" aria-label="Delete">
+                    <Trash2 size={16} />
+                  </Button>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
-    </div>
+    </PageShell>
   );
 }
