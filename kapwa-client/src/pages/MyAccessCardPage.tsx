@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Printer, RefreshCw, ArrowLeft, AlertCircle } from 'lucide-react';
+import { PageShell } from '@/components/PageShell';
 
 export function MyAccessCardPage() {
   const [card, setCard] = useState<any>(null);
@@ -36,26 +37,24 @@ export function MyAccessCardPage() {
 
   if (error) {
     return (
-      <div>
-        <div className="page-header">
-          <h2 className="page-title">My Access Card</h2>
-          <p className="page-desc">Your KAPWA Access Card — read-only view</p>
-        </div>
+      <PageShell
+        title="My Access Card"
+        description="Your KAPWA Access Card — read-only view"
+      >
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="text-gray-300 mb-4" size={48} />
           <p className="text-gray-500 mb-4">{error}</p>
           <button onClick={() => navigate('/my-dashboard')} className="text-blue-600 text-sm underline">Back to Dashboard</button>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">My Access Card</h2>
-        <p className="page-desc">Your KAPWA Access Card — read-only view</p>
-      </div>
+    <PageShell
+      title="My Access Card"
+      description="Your KAPWA Access Card — read-only view"
+    >
 
       <div className="no-print flex gap-2 mb-4">
         <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark">
@@ -103,6 +102,6 @@ export function MyAccessCardPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

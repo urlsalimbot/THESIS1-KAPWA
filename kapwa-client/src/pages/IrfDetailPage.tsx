@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getIrfCase, referToPnp, referToWcpd, dismissIrf, closeIrf, decryptNarration, exportIrfPdf, exportIrfJson } from '../lib/api';
 import NameMaskToggle from '../components/irf/NameMaskToggle';
+import { PageShell } from '@/components/PageShell';
 import VictimNarrationField from '../components/irf/VictimNarrationField';
 
 const DISPOSITION_STATES = ['Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed'];
@@ -90,7 +91,10 @@ export function IrfDetailPage() {
   const currentState = irf.caseDisposition;
 
   return (
-    <div className="p-6">
+    <PageShell
+      title={`IRF: ${irf.blotterEntryNumber}`}
+    >
+      <div className="p-6">
       {/* Header with back button */}
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">← IRF List</button>
@@ -225,5 +229,6 @@ export function IrfDetailPage() {
         {irf.dismissalReason && <p className="text-sm">Dismissal Reason: {irf.dismissalReason}</p>}
       </div>
     </div>
+    </PageShell>
   );
 }

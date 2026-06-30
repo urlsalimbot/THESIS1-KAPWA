@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
+import { PageShell } from '@/components/PageShell';
 import { getMayorReports } from '../lib/api';
 
 export function MayorReportsPage() {
@@ -26,22 +27,20 @@ export function MayorReportsPage() {
 
   if (!metrics) {
     return (
-      <div>
-        <div className="page-header">
-          <h2 className="page-title">Reports</h2>
-          <p className="page-desc">Municipal program and compliance overview</p>
-        </div>
+      <PageShell
+        title="Reports"
+        description="Municipal program and compliance overview"
+      >
         <div className="p-8 text-center text-gray-400">No data available for the selected period.</div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <h2 className="page-title">Reports</h2>
-        <p className="page-desc">Municipal program and compliance overview</p>
-      </div>
+    <PageShell
+      title="Reports"
+      description="Municipal program and compliance overview"
+    >
 
       <div className="no-print flex gap-2 mb-4">
         <span className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs text-gray-600">
@@ -79,6 +78,6 @@ export function MayorReportsPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
