@@ -257,6 +257,11 @@ export async function getIrfCase(id: string) {
   return apiFetch(`/irf/${id}`);
 }
 
+export async function getIrfRecords(signal?: AbortSignal) {
+  return apiFetch("/irf", { signal });
+}
+
+
 export async function createIrf(data: Record<string, unknown>) {
   return apiFetch('/irf', { method: 'POST', body: JSON.stringify(data) });
 }
