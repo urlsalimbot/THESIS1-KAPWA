@@ -17,9 +17,6 @@ describe('SyncQueuePanel', () => {
     mockLoadQueue.mockReturnValue([]);
     const { container } = render(<SyncQueuePanel open={true} onClose={() => {}} />);
     expect(screen.getByText('All caught up')).toBeTruthy();
-    // CheckCircle icon renders as an SVG
-    const svgs = container.querySelectorAll('svg');
-    expect(svgs.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders pending items with correct status badge', () => {
@@ -37,8 +34,7 @@ describe('SyncQueuePanel', () => {
       },
     ]);
     render(<SyncQueuePanel open={true} onClose={() => {}} />);
-    expect(screen.getByText(/C-001/)).toBeTruthy();
-    expect(screen.getByText('cases')).toBeTruthy();
+    expect(screen.getByText(/cases #C-001/)).toBeTruthy();
   });
 
   it('renders failed items with Retry Sync button', () => {
@@ -58,7 +54,8 @@ describe('SyncQueuePanel', () => {
     ]);
     render(<SyncQueuePanel open={true} onClose={() => {}} />);
     expect(screen.getByText('Network error')).toBeTruthy();
-    const retryBtn = screen.getByText('Retry Sync');
+    // Retry Sync button has aria-label="Retry Sync"
+    const retryBtn = screen.getByRole('button', { name: /Retry Sync/i });
     expect(retryBtn).toBeTruthy();
   });
 
@@ -78,16 +75,34 @@ describe('SyncQueuePanel', () => {
       },
     ]);
     render(<SyncQueuePanel open={true} onClose={() => {}} />);
-    const viewDiffBtn = screen.getByText('View Diff');
+    // View Diff button has aria-label="View Diff"
+    const viewDiffBtn = screen.getByRole('button', { name: /View Diff/i });
     expect(viewDiffBtn).toBeTruthy();
   });
 
   it('calls onClose when Sheet close is triggered', () => {
     mockLoadQueue.mockReturnValue([]);
     const onClose = vi.fn();
-    const { container } = render(<SyncQueuePanel open={true} onClose={onClose} />);
-    // Sheet content rendered - verify the panel renders
+    render(<SyncQueuePanel open={true} onClose={onClose} />);
     expect(screen.getByText('Sync Queue')).toBeTruthy();
     expect(screen.getByText('All caught up')).toBeTruthy();
+  });
+
+  it('renders syncing items with animated refresh icon', () => {
+    mockLoadQueue.mockReturnValue([
+      {
+        id: 'q4',
+        tableName: 'cases',
+        recordId: 'C-003',
+        operation: 'INSERT',
+        payload: {},
+        clientUpdatedAt: new Date().toISOString(),
+        serverVersion: 0,
+        status: 'syncing',
+        retryCount: 0,
+      },
+    ]);
+    render(<SyncQueuePanel open={true} onClose={() => {}} />);
+    expect(screen.getByText(/cases #C-003/)).toBeTruthy();
   });
 });

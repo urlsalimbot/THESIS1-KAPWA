@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ConflictResolutionDialog } from './ConflictResolutionDialog';
 
 // Mock offline-queue
-const mockRemoveQueueItem = vi.fn();
 vi.mock('@/lib/offline-queue', () => ({
   loadQueue: vi.fn(() => []),
 }));
@@ -34,9 +33,8 @@ describe('ConflictResolutionDialog', () => {
         onOpenChange={() => {}}
       />
     );
-    // Should show table name and record ID in the dialog
-    expect(screen.getByText(/cases/)).toBeTruthy();
-    expect(screen.getByText(/C-001/)).toBeTruthy();
+    expect(screen.getByText(/Sync Conflict/)).toBeTruthy();
+    expect(screen.getByText(/cases #C-001/)).toBeTruthy();
   });
 
   it('shows both Local and Server column headings', () => {
@@ -48,7 +46,9 @@ describe('ConflictResolutionDialog', () => {
       />
     );
     expect(screen.getByText(/Local.*Your Changes/)).toBeTruthy();
-    expect(screen.getByText(/Server/)).toBeTruthy();
+    // Server heading is an h4 element
+    const headings = screen.getAllByText('Server');
+    expect(headings.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Keep Local, Keep Server, and Keep Both buttons', () => {
