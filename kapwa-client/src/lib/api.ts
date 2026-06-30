@@ -352,3 +352,36 @@ export async function getNotificationPreferences(signal?: AbortSignal) {
 export async function updateNotificationPreferences(data: { channel: string; category: string; optedIn: boolean }) {
   return apiFetch('/notifications/preferences', { method: 'PUT', body: JSON.stringify(data) });
 }
+
+// ===== Bulk Operations =====
+export async function bulkApprove(
+  ids: string[],
+  signature?: string
+): Promise<{ id: string; success: boolean; error?: string }[]> {
+  return apiFetch('/cases/bulk-approve', {
+    method: 'POST',
+    body: JSON.stringify({ ids, signature }),
+  });
+}
+
+export async function bulkReassign(
+  ids: string[],
+  newWorkerId: string
+): Promise<{ id: string; success: boolean; error?: string }[]> {
+  return apiFetch('/cases/bulk-reassign', {
+    method: 'POST',
+    body: JSON.stringify({ ids, newWorkerId }),
+  });
+}
+
+export async function bulkExport(
+  ids: string[],
+  format: 'csv' | 'pdf',
+  masked?: boolean,
+  unmaskReason?: string | null
+): Promise<{ id: string; success: boolean; error?: string }[]> {
+  return apiFetch('/cases/bulk-export', {
+    method: 'POST',
+    body: JSON.stringify({ ids, format, masked, unmaskReason }),
+  });
+}

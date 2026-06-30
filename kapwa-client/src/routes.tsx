@@ -1,5 +1,5 @@
 import React from 'react';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from '@/lib/theme-context';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth-context';
 import { LoginPage } from './pages/LoginPage';
@@ -87,7 +87,7 @@ const router = createBrowserRouter([
 
 export function MainRoutes() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider>
       <Toaster position="top-center" duration={Infinity} />
       <AuthProvider>
         <RouterProvider router={router} />

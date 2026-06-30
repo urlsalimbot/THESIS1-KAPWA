@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: UI/UX Overhaul
-current_phase: 11
-current_phase_name: page-migration-print-offline-ui
-status: executing
-stopped_at: Plan 11-04 final sweep complete
-last_updated: "2026-06-30T04:00:44Z"
-last_activity: 2026-06-30
-last_activity_desc: Plan 11-04 complete -- final sweep PageShell migration
+milestone: v1.2
+milestone_name: Quality & Resilience Hardening
+current_phase: 12
+status: completed
+stopped_at: Phase 12 executed (2/2 plans, 196/196 tests pass)
+last_updated: "2026-07-05T12:57:07.128Z"
+last_activity: 2026-07-05
+last_activity_desc: Phase 12 marked complete
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 13
-  completed_plans: 9
-  percent: 69
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 17
+current_phase_name: toolchain-cleanup-vitest-upgrade
 ---
 
 # Project State
@@ -25,22 +25,14 @@ See: .planning/PROJECT.md (updated 2026-06-27)
 
 **Core value:** Social workers can register any claimant, conduct a full social case study (GIS), manage the complete approval workflow, log interventions post-disbursement, and track every service rendered — reliably offline in the field with automatic sync when connected.
 
-**Current focus:** Phase 11 — page-migration-print-offline-ui
+**Current focus:** Phase 12 — toolchain-cleanup-vitest-upgrade
 
 ## Current Position
 
-Phase: 11 (page-migration-print-offline-ui) — EXECUTING
-
-Phase: 09 — COMPLETE
-Plan: 1 of 4
-Last activity: 2026-06-29 — Phase 11 execution started
-
-Phase: 09 (landing-page-auth-flow) — COMPLETE
-Status: Executing Phase 11
-
-Progress: [██████████████░░░░░░] 43%
-
-## Performance Metrics
+Phase: 12 — COMPLETE
+Plan: 1 of 2
+Status: Phase 12 complete
+Last activity: 2026-07-05 — Phase 12 marked complete
 
 **Velocity:**
 
@@ -152,7 +144,7 @@ requirements-completed:
 
 duration: 10 min
 completed: 2026-06-29
-status: complete
+status: planning
 ---
 
 # Phase 10 Plan 01: Page-State Components Summary
@@ -237,7 +229,7 @@ requirements-completed:
 
 duration: 3 min
 completed: 2026-06-29
-status: complete
+status: planning
 ---
 
 # Phase 10 Plan 02: Mobile BottomNav, DataTable System, and 44px Touch Targets
@@ -425,10 +417,10 @@ None.
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/11-page-migration-print-offline-ui/11-UI-SPEC.md
+**Resume file:** .planning/phases/12-toolchain-cleanup-vitest-upgrade/12-CONTEXT.md
 
-Last session: 2026-06-29T05:30:45.777Z
-Stopped at: Phase 11 UI-SPEC approved
+Last session: 2026-07-05T12:57:07.121Z
+Stopped at: Phase 12 executed (2/2 plans, 196/196 tests pass)
 Next: Phase 08 layout-shell planning
 
 ## Performance Metrics

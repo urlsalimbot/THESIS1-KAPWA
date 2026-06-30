@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import React from "react";
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -68,7 +69,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('shows offline UI for fetch-related errors', () => {
-    function FetchBomb() {
+    function FetchBomb(): React.ReactNode {
       const error = new TypeError('Failed to fetch');
       error.name = 'TypeError';
       throw error;

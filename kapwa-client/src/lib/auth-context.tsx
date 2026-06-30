@@ -98,11 +98,10 @@ export function useAuth() { return useContext(AuthContext); }
 export async function getCurrentUser(signal?: AbortSignal) {
   const token = localStorage.getItem('kapwa_token');
   if (!token) return null;
-  try {
-    const res = await fetch(`${API}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }, signal
-    });
-    if (res.ok) { const d = await res.json(); return d.user; }
-  } catch (e) { console.error("AuthContext:", e); }
-  return null;
+  const res = await fetch(`${API}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` }, signal
+  });
+  if (!res.ok) return null;
+  const d = await res.json();
+  return d.user;
 }
