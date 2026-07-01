@@ -54,7 +54,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
     <header className="sticky top-0 z-40 h-16 border-b bg-card flex items-center justify-between px-4 lg:px-6">
       <div className="flex items-center gap-3">
         <button
-          className="lg:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+          className="lg:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
           onClick={onMenuToggle}
           aria-label="Toggle navigation menu"
         >
@@ -90,7 +90,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
                   onClick={() => navigate('/intake')}
                   aria-label="New Intake"
                 >
@@ -107,7 +107,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                  className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
                   onClick={() => navigate('/approvals')}
                   aria-label="Approvals Queue"
                 >
@@ -127,7 +127,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Help">
+              <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors" aria-label="Help">
                 <HelpCircle size={19} />
               </button>
             </TooltipTrigger>

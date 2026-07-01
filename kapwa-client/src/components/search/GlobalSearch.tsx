@@ -46,7 +46,7 @@ export function GlobalSearch() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="hidden md:inline-flex h-9 w-56 items-center gap-2 rounded-full bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted transition-colors border-none"
+          className="hidden md:inline-flex h-9 w-56 items-center gap-2 rounded-full bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors border-none"
           aria-label="Search beneficiaries"
         >
           <Search size={16} className="shrink-0" />

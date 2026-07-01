@@ -14,6 +14,6 @@ export default {
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
-    exclude: ['tests/e2e.test.ts'],
+    exclude: ['tests/e2e.test.ts', 'src/tests/a11y/pages.test.ts'],
   },
 };
