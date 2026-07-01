@@ -1,74 +1,87 @@
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import { MapPin, Phone, Mail } from 'lucide-react';
+import { HandHeart, MapPin, Phone, Mail } from 'lucide-react';
+
+const quickLinks = [
+  { to: '/', label: 'Home' },
+  { to: '/about', label: 'About' },
+  { to: '/#services', label: 'Services' },
+  { to: '/contact', label: 'Contact' },
+];
+
+const contactDetails = [
+  { icon: MapPin, text: 'Municipal Social Welfare and Development Office, Norzagaray, Bulacan' },
+  { icon: Phone, text: '(044) 123-4567' },
+  { icon: Mail, text: 'mswdo@norzagaray.gov.ph' },
+];
 
 export function PublicFooter() {
   return (
     <footer className="bg-card border-t border-border mt-auto">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Column 1: LGU branding */}
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {/* Column 1: Brand */}
           <div>
-            <h3 className="font-heading text-xl font-bold mb-2">KAPWA</h3>
-            <p className="text-sm text-muted-foreground">MSWDO Norzagaray</p>
+            <Link to="/" className="inline-flex items-center gap-2 mb-3 no-underline">
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <HandHeart className="w-4 h-4 text-accent" />
+              </div>
+              <span className="font-heading text-xl font-bold text-foreground">KAPWA</span>
+            </Link>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              MSWDO Norzagaray — Empowering communities through compassionate social welfare services.
+            </p>
           </div>
 
           {/* Column 2: Quick Links */}
           <div>
-            <h4 className="font-heading text-sm font-semibold mb-3">Quick Links</h4>
-            <ul className="space-y-2">
-              <li>
-                <Button variant="link" className="h-auto p-0" asChild>
-                  <Link to="/">Home</Link>
-                </Button>
-              </li>
-              <li>
-                <Button variant="link" className="h-auto p-0" asChild>
-                  <Link to="/about">About</Link>
-                </Button>
-              </li>
-              <li>
-                <Button variant="link" className="h-auto p-0" asChild>
-                  <Link to="/#services">Services</Link>
-                </Button>
-              </li>
-              <li>
-                <Button variant="link" className="h-auto p-0" asChild>
-                  <Link to="/contact">Contact</Link>
-                </Button>
-              </li>
+            <h4 className="font-heading text-sm font-semibold text-foreground mb-4">Quick Links</h4>
+            <ul className="space-y-3">
+              {quickLinks.map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Column 3: Contact Info */}
+          {/* Column 3: Contact */}
           <div>
-            <h4 className="font-heading text-sm font-semibold mb-3">Contact Us</h4>
+            <h4 className="font-heading text-sm font-semibold text-foreground mb-4">Contact Us</h4>
             <ul className="space-y-3">
-              <li className="flex gap-3 items-start">
-                <MapPin className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-                <span className="text-sm text-muted-foreground">
-                  Municipal Social Welfare and Development Office, Norzagaray, Bulacan
-                </span>
-              </li>
-              <li className="flex gap-3 items-start">
-                <Phone className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-                <span className="text-sm text-muted-foreground">(044) XXX-XXXX</span>
-              </li>
-              <li className="flex gap-3 items-start">
-                <Mail className="h-5 w-5 text-accent mt-0.5 shrink-0" />
-                <span className="text-sm text-muted-foreground">mswdo@norzagaray.gov.ph</span>
-              </li>
+              {contactDetails.map((detail) => {
+                const Icon = detail.icon;
+                return (
+                  <li key={detail.text} className="flex gap-3 items-start">
+                    <Icon className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+                    <span className="text-sm text-muted-foreground">{detail.text}</span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
 
-        <Separator className="my-6" />
+        <Separator className="my-8" />
 
-        <p className="text-center text-sm text-muted-foreground pt-2">
-          &copy; 2026 MSWDO Norzagaray. All rights reserved.
-        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} MSWDO Norzagaray. All rights reserved.
+          </p>
+          <div className="flex gap-6">
+            <Link to="/about" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/contact" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Accessibility
+            </Link>
+          </div>
+        </div>
       </div>
     </footer>
   );

@@ -19,9 +19,10 @@ describe('LandingPage', () => {
     expect(screen.getByText('Access Services')).toBeTruthy();
   });
 
-  it('renders Learn More button', () => {
+  it('renders Learn More buttons (hero + about)', () => {
     render(<BrowserRouter><LandingPage /></BrowserRouter>);
-    expect(screen.getByText('Learn More')).toBeTruthy();
+    const learnMore = screen.getAllByText('Learn More');
+    expect(learnMore.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders services section heading', () => {

@@ -20,7 +20,7 @@ export class User {
   @Column({ name: 'password' })
   password!: string;
 
-  @Column({ name: 'role', type: 'enum', enum: UserRole, default: UserRole.SW })
+  @Column({ name: 'role', type: 'text', default: UserRole.SW })
   role!: UserRole;
 
   @Column({ name: 'full_name', nullable: true })

@@ -7,8 +7,7 @@ const mockLogin = vi.fn();
 const mockResolveMfa = vi.fn();
 const mockCancelMfa = vi.fn();
 
-// Use a mutable variable for mfaChallenge so we can change it per test
-let mockMfaChallenge: { tempToken: string } | null = null;
+const mockMfaChallenge = vi.hoisted(() => ({ current: null as { tempToken: string } | null }));
 
 vi.mock('../../src/lib/auth-context', () => ({
   useAuth: vi.fn(() => ({
@@ -17,7 +16,7 @@ vi.mock('../../src/lib/auth-context', () => ({
     login: mockLogin,
     logout: vi.fn(),
     loading: false,
-    mfaChallenge: mockMfaChallenge,
+    mfaChallenge: mockMfaChallenge.current,
     resolveMfa: mockResolveMfa,
     cancelMfa: mockCancelMfa,
   })),
@@ -49,12 +48,12 @@ vi.mock('../../src/components/ui/form', () => ({
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockMfaChallenge = null;
+    mockMfaChallenge.current = null;
   });
 
-  it('renders brand title KAPWA', () => {
+  it('renders brand title', () => {
     render(<BrowserRouter><LoginPage /></BrowserRouter>);
-    expect(screen.getByText('KAPWA')).toBeTruthy();
+    expect(screen.getByText('Welcome to KAPWA')).toBeTruthy();
   });
 
   it('renders login form with email and password fields', () => {
@@ -74,7 +73,7 @@ describe('LoginPage', () => {
   });
 
   it('shows MFA screen when mfaChallenge is set', () => {
-    mockMfaChallenge = { tempToken: 'abc123' };
+    mockMfaChallenge.current = { tempToken: 'abc123' };
     render(<BrowserRouter><LoginPage /></BrowserRouter>);
     expect(screen.getByText('Two-Factor Authentication')).toBeTruthy();
     expect(screen.getByText('Verify')).toBeTruthy();

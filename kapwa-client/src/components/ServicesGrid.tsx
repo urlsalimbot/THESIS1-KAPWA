@@ -1,13 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Heart, Briefcase, Baby, Users, Shield, Home } from 'lucide-react';
 
 const services = [
-  { title: 'Social Welfare Counseling', description: 'Professional counseling and psychosocial support for individuals, families, and communities in need.' },
-  { title: 'Livelihood Assistance', description: 'Skills training, livelihood programs, and financial assistance for sustainable community development.' },
-  { title: 'Child and Youth Welfare', description: 'Protection and development programs for children and youth, including educational support and intervention services.' },
-  { title: 'Senior Citizen Services', description: 'Comprehensive support for senior citizens including social pensions, health services, and community engagement.' },
-  { title: 'Disaster Response', description: 'Emergency relief, rehabilitation, and recovery assistance for families affected by natural disasters and crises.' },
-  { title: 'Family and Community Welfare', description: 'Family counseling, community organizing, and welfare programs to strengthen family units and communities.' },
+  { title: 'Social Welfare Counseling', description: 'Professional counseling and psychosocial support for individuals, families, and communities in need.', icon: Heart },
+  { title: 'Livelihood Assistance', description: 'Skills training, livelihood programs, and financial assistance for sustainable community development.', icon: Briefcase },
+  { title: 'Child and Youth Welfare', description: 'Protection and development programs for children and youth, including educational support and intervention services.', icon: Baby },
+  { title: 'Senior Citizen Services', description: 'Comprehensive support for senior citizens including social pensions, health services, and community engagement.', icon: Users },
+  { title: 'Disaster Response', description: 'Emergency relief, rehabilitation, and recovery assistance for families affected by natural disasters and crises.', icon: Shield },
+  { title: 'Family and Community Welfare', description: 'Family counseling, community organizing, and welfare programs to strengthen family units and communities.', icon: Home },
 ];
 
 interface ServicesGridProps {
@@ -18,22 +19,31 @@ export function ServicesGrid({ className }: ServicesGridProps) {
   return (
     <section className={cn('py-16 md:py-24', className)}>
       <div className="container mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-semibold text-center mb-12">
+        <h2 className="text-2xl md:text-3xl font-semibold text-center mb-4">
           Our Services
         </h2>
+        <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
+          Comprehensive social welfare programs designed to support every member of the Norzagaray community.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service) => (
-            <Card key={service.title} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-lg">{service.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <CardDescription className="text-base leading-relaxed">
-                  {service.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+          {services.map((service) => {
+            const Icon = service.icon;
+            return (
+              <Card key={service.title} className="flex flex-col group hover:shadow-md transition-shadow duration-200">
+                <CardHeader>
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center mb-2 group-hover:bg-accent/20 transition-colors duration-200">
+                    <Icon className="h-5 w-5 text-accent" />
+                  </div>
+                  <CardTitle className="text-lg">{service.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1">
+                  <CardDescription className="text-base leading-relaxed">
+                    {service.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>

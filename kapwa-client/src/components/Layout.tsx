@@ -98,7 +98,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         <Topbar onMenuToggle={() => setSheetOpen(s => !s)} />
       </div>
 
-      <div className="flex min-h-[calc(100vh-4rem)]">
+      <div className="flex min-h-[calc(100vh-4.5rem)]">
         <div className="no-print">
           <Sidebar />
         </div>
@@ -109,7 +109,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
           </SheetContent>
         </Sheet>
 
-        <main id="main-content" className="flex-1 p-6 bg-background min-h-[calc(100vh-4rem)] overflow-auto pb-16 lg:pb-6">
+        <main id="main-content" className="flex-1 p-6 bg-background min-h-[calc(100vh-4.5rem)] overflow-auto pb-16 lg:pb-6">
           <ErrorBoundary>
             <BreadcrumbNav pathname={location.pathname} />
             {children || <Outlet />}

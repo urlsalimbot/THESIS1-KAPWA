@@ -114,8 +114,8 @@
   }
   /* Opt-out class for small decorative/inline elements */
   .touch-sm {
-    min-height: unset;
-    min-width: unset;
+    min-height: unset !important;
+    min-width: unset !important;
   }
 }
 

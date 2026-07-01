@@ -1,35 +1,34 @@
 import { cn } from '@/lib/utils';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 
 interface ContactInfoProps {
   className?: string;
 }
 
 const contactDetails = [
-  { label: 'Address', value: 'Municipal Social Welfare and Development Office, Norzagaray, Bulacan' },
-  { label: 'Phone', value: '(044) 123-4567' },
-  { label: 'Email', value: 'mswdo@norzagaray.gov.ph' },
-  { label: 'Office Hours', value: 'Monday to Friday, 8:00 AM - 5:00 PM' },
+  { label: 'Address', value: 'Municipal Social Welfare and Development Office, Norzagaray, Bulacan', icon: MapPin },
+  { label: 'Phone', value: '(044) 123-4567', icon: Phone },
+  { label: 'Email', value: 'mswdo@norzagaray.gov.ph', icon: Mail },
+  { label: 'Office Hours', value: 'Monday to Friday, 8:00 AM - 5:00 PM', icon: Clock },
 ];
 
 export function ContactInfo({ className }: ContactInfoProps) {
   return (
-    <section className={cn('py-16 md:py-24', className)}>
-      <div className="container mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-semibold text-center mb-4">
-          Visit Us
-        </h2>
-        <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
-          Reach out to us in person, by phone, or through our online contact form. We are here to serve you.
-        </p>
-        <div className="max-w-lg mx-auto space-y-6">
-          {contactDetails.map((detail) => (
-            <div key={detail.label} className="flex flex-col sm:flex-row sm:gap-4">
-              <span className="font-medium text-sm text-muted-foreground sm:w-32 shrink-0">{detail.label}</span>
-              <span className="text-base">{detail.value}</span>
+    <div className={cn('space-y-4', className)}>
+      {contactDetails.map((detail) => {
+        const Icon = detail.icon;
+        return (
+          <div key={detail.label} className="flex gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors duration-200">
+            <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
+              <Icon className="h-5 w-5 text-accent" />
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{detail.label}</p>
+              <p className="text-sm text-foreground">{detail.value}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
