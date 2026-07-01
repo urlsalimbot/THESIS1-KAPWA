@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 const API_URL = 'http://localhost:3000/api';

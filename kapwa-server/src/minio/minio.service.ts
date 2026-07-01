@@ -60,10 +60,10 @@ export class MinioService implements OnModuleInit {
     const objects: string[] = [];
     const stream = this.client.listObjects(bucket, prefix, true);
     return new Promise<string[]>((resolve, reject) => {
-      stream.on('data', (obj) => {
+      stream.on('data', (obj: { name?: string }) => {
         if (obj.name) objects.push(obj.name);
       });
-      stream.on('error', (err) => reject(err));
+      stream.on('error', (err: Error) => reject(err));
       stream.on('end', () => resolve(objects));
     });
   }

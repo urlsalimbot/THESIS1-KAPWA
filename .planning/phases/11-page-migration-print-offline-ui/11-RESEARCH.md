@@ -616,22 +616,22 @@ export function ConflictResolutionDialog({ change, open, onOpenChange, onResolve
 | A4 | Existing business logic in pages (API calls, data mapping) stays unchanged during migration | User Constraints (D-03) | If business logic is tightly coupled to DOM structure, extraction may be needed |
 | A5 | The `storage` event + `setInterval` polling is sufficient for cross-component sync state | Architecture Patterns (Pattern 3) | If Dashboard and SyncQueuePanel need simultaneous reactivity, may need shared context |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **How to handle `@@page` margin boxes in non-Chromium browsers?**
    - What we know: `@top-left`, `@bottom-center`, `counter(page)` etc. are Chromium-only.
    - What's unclear: What browsers MSWDO field workers use. If they use Chrome (common on Android), this is fine.
-   - Recommendation: Implement as Chromium enhancement with graceful degradation. Add a `beforeprint`/`afterprint` JS listener as fallback for non-Chromium browsers.
+   - Recommendation: Implement as Chromium enhancement with graceful degradation. Add a `beforeprint`/`afterprint` JS listener as fallback for non-Chromium browsers. — RESOLVED: Plan 11-01 implements beforeprint listener in main.tsx + JS-based page number fallback
 
 2. **Should the SyncQueuePanel use a React Context for shared state or poll independently?**
    - What we know: The Layout.tsx already polls `pendingCount` via `loadQueue()`.
    - What's unclear: Whether Dashboard's stat cards also need to reflect pending sync state.
-   - Recommendation: Start with independent polling per component. Extract a shared context if cross-component reactivity becomes a requirement.
+   - Recommendation: Start with independent polling per component. Extract a shared context if cross-component reactivity becomes a requirement. — RESOLVED: Independent polling at 2s setInterval + storage event chosen per RESEARCH.md Pattern 3
 
 3. **How to handle the `cachedAt` timestamp for pages that fetch data in different ways?**
    - What we know: Some pages use `useEffect` with `fetch()`, some use `getDashboard()` from `api.ts`.
    - What's unclear: Where to inject the `cachedAt` tracking — at the API layer or per-page.
-   - Recommendation: Track `fetchedAt` at the page level with a `useState(Date.now())` after successful data load. A per-page ref is simpler and avoids cross-page coupling.
+   - Recommendation: Track `fetchedAt` at the page level with a `useState(Date.now())` after successful data load. A per-page ref is simpler and avoids cross-page coupling. — RESOLVED: Per-page useState(Date.now()) approach chosen; injected via PageShell cachedAt prop
 
 ## Environment Availability
 

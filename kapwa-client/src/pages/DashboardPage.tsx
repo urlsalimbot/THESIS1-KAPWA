@@ -10,10 +10,17 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/lib/auth-context';
 import type { ColumnDef } from '@tanstack/react-table';
+import { QuickActionPanel } from '@/components/dashboard/QuickActionPanel';
+import { ClaimantWidgets } from '@/components/dashboard/widgets/ClaimantWidgets';
+import { MayorWidgets } from '@/components/dashboard/widgets/MayorWidgets';
+import { AuditorWidgets } from '@/components/dashboard/widgets/AuditorWidgets';
+import { CoordinatorWidgets } from '@/components/dashboard/widgets/CoordinatorWidgets';
+import { SlaTimer } from '@/components/sla/SlaTimer';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
-interface CaseRow { id: string; name: string; category: string; barangay: string; remarks: string; date: string; status: string; }
+interface CaseRow { id: string; name: string; category: string; barangay: string; remarks: string; date: string; status: string; updatedAt?: string; }
 
 const StatusBadge = React.memo(({ status }: { status: string }) => {
   const variantMap: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -51,6 +58,8 @@ const StatCard = React.memo(({ stat }: { stat: Stat }) => {
   );
 });
 
+const DEFAULT_SLA_HOURS = 48;
+
 const dashboardCaseColumns: ColumnDef<CaseRow>[] = [
   { accessorKey: 'id', header: 'Case ID', cell: ({ row }) => <span className="text-muted-foreground">{row.original.id}</span> },
   { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
@@ -58,11 +67,30 @@ const dashboardCaseColumns: ColumnDef<CaseRow>[] = [
   { accessorKey: 'barangay', header: 'Barangay' },
   { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
   { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+  {
+    accessorKey: 'sla',
+    header: 'SLA',
+    cell: ({ row }) => {
+      const { updatedAt } = row.original;
+      if (!updatedAt) return <span className="text-xs text-muted-foreground">&mdash;</span>;
+      return (
+        <SlaTimer
+          stageStartedAt={updatedAt}
+          slaHours={DEFAULT_SLA_HOURS}
+          size="sm"
+        />
+      );
+    },
+  },
   { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.date}</span> },
 ];
 
+const WORKER_ROLES = ['social_worker', 'admin'];
+
 export function DashboardPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const role = user?.role || '';
   const [stats, setStats] = useState<Stat[]>([]);
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +98,13 @@ export function DashboardPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    loadData();
-      return () => controller.abort();
-  }, []);
+    if (WORKER_ROLES.includes(role)) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+    return () => controller.abort();
+  }, [role]);
 
   async function loadData(signal?: AbortSignal) {
     try {
@@ -115,9 +147,27 @@ export function DashboardPage() {
     );
   }
 
+  if (!WORKER_ROLES.includes(role)) {
+    return (
+      <PageShell
+        title="Dashboard"
+        description="Overview of social welfare operations and metrics."
+      >
+        {role === 'claimant' && <ClaimantWidgets />}
+        {role === 'mayor' && <MayorWidgets />}
+        {role === 'auditor' && <AuditorWidgets />}
+        {role === 'coordinator' && <CoordinatorWidgets />}
+        {!['claimant', 'mayor', 'auditor', 'coordinator'].includes(role) && (
+          <EmptyState variant="no-access" />
+        )}
+      </PageShell>
+    );
+  }
+
   if (stats.length === 0 && !loading) {
     return (
       <PageShell title="Dashboard" description="Overview of social welfare operations and metrics.">
+        <QuickActionPanel />
         <EmptyState variant="no-data" />
       </PageShell>
     );
@@ -129,6 +179,8 @@ export function DashboardPage() {
       description="Overview of social welfare operations and metrics."
       cachedAt={lastSync ?? undefined}
     >
+      <QuickActionPanel />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(s => <StatCard key={s.label} stat={s} />)}
       </div>

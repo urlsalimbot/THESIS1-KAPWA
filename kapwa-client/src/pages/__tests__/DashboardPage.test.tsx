@@ -3,8 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DashboardPage } from '../DashboardPage';
 
-// Mock the API module — vi.mock is hoisted above imports
-// The path is relative from test file to the module the component imports
 vi.mock('../../lib/api', () => ({
   getDashboard: vi.fn().mockResolvedValue({
     servedToday: 12,
@@ -20,14 +18,19 @@ vi.mock('../../lib/api', () => ({
   }),
 }));
 
+vi.mock('../../lib/auth-context', () => ({
+  useAuth: () => ({
+    user: { id: 'user-1', email: 'worker@test.com', fullName: 'Test Worker', role: 'social_worker' },
+    token: 'mock-token',
+    loading: false,
+  }),
+}));
+
 describe('DashboardPage', () => {
   it('renders PageShell heading, stat cards, and case table with mock data', async () => {
     render(<MemoryRouter><DashboardPage /></MemoryRouter>);
-    // PageShell renders the title as h1
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
-    // Stat cards should render after data loads
     expect(await screen.findByText('Served Today')).toBeTruthy();
-    // Case table should show mock data
     expect(await screen.findByText('C-001', {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.getByText('Juan Dela Cruz')).toBeTruthy();
   });

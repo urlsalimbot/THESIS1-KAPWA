@@ -48,6 +48,12 @@ services:
       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
     env_file:
       - ../infra/.env.production
+    healthcheck:
+      test: ["CMD", "node", "-e", 'http=require("http");http.get("http://localhost:3000",r=>process.exit(r.statusCode<500?0:1)).on("error",()=>process.exit(1))']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     depends_on:
       db:
         condition: service_healthy
@@ -87,6 +93,12 @@ services:
       - ../infra/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - ../infra/.env.production:/etc/caddy/.env:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", 'http=require("http");http.get("http://localhost:3000",r=>process.exit(r.statusCode<500?0:1)).on("error",()=>process.exit(1))']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     depends_on:
       api:
         condition: service_healthy
