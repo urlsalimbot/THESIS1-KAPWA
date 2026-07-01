@@ -14,10 +14,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
-import { Sun, Moon, Menu, HelpCircle, Search, LogOut, Settings, User } from 'lucide-react';
+import {
+  Tooltip, TooltipContent, TooltipTrigger, TooltipProvider,
+} from '@/components/ui/tooltip';
+import { Sun, Moon, Menu, HelpCircle, Plus, CheckSquare, LogOut, Settings, User } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
 import MessagesPopover from './MessagesPopover';
+import { GlobalSearch } from './search/GlobalSearch';
 import { cn } from '@/lib/utils';
 
 export interface TopbarProps {
@@ -35,6 +38,12 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
   const initials = user
     ? user.fullName.split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()
     : 'U';
+
+  const isAdmin = user?.role === 'admin';
+  const isSocialWorker = user?.role === 'social_worker';
+  const isCoordinator = user?.role === 'coordinator';
+  const canIntake = isAdmin || isSocialWorker || isCoordinator;
+  const canApprove = isAdmin || isSocialWorker;
 
   function handleLogout() {
     logout();
@@ -72,19 +81,59 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="hidden md:relative md:block">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input type="text" placeholder="Search records..." className="h-9 w-56 pl-9 text-sm rounded-full bg-muted/50 border-none" />
-        </div>
+        <GlobalSearch />
+
+        <Separator orientation="vertical" className="h-6 hidden md:block" />
+
+        {canIntake && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                  onClick={() => navigate('/intake')}
+                  aria-label="New Intake"
+                >
+                  <Plus size={19} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">New Intake</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {canApprove && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                  onClick={() => navigate('/approvals')}
+                  aria-label="Approvals Queue"
+                >
+                  <CheckSquare size={19} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Approvals Queue</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
 
         <Separator orientation="vertical" className="h-6 hidden md:block" />
 
         <NotificationsDropdown />
         <MessagesPopover />
 
-        <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" title="Help">
-          <HelpCircle size={19} />
-        </button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Help">
+                <HelpCircle size={19} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Help</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <Separator orientation="vertical" className="h-6" />
 
