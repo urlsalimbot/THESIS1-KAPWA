@@ -2,6 +2,7 @@ import React from 'react';
 import { TriangleAlert, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 
 interface Props {
   children: React.ReactNode;
@@ -40,7 +41,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
         return (
           <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
             <WifiOff className="h-12 w-12 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">You are offline</h2>
+            <AriaLiveRegion role="alert" aria-live="assertive" message="You are offline">
+              <h2 className="text-lg font-semibold">You are offline</h2>
+            </AriaLiveRegion>
             <p className="text-sm text-muted-foreground">
               Please check your internet connection and try again.
             </p>
@@ -56,7 +59,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
           <TriangleAlert className="h-12 w-12 text-destructive" />
-          <h2 className="text-lg font-semibold">Something went wrong</h2>
+          <AriaLiveRegion role="alert" aria-live="assertive" message="Something went wrong">
+            <h2 className="text-lg font-semibold">Something went wrong</h2>
+          </AriaLiveRegion>
           <p className="text-sm text-muted-foreground">
             An unexpected error occurred. Please try again later.
           </p>

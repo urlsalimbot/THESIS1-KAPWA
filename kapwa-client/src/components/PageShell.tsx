@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Clock } from 'lucide-react';
 import { useCacheStaleness } from '@/hooks/use-cache-staleness';
+import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 
 interface PageShellProps {
   title: string;
@@ -35,6 +36,13 @@ export function PageShell({ title, description, actions, cachedAt, children }: P
           <div className="flex items-center gap-2 shrink-0">{actions}</div>
         )}
       </div>
+      {isStale && ageDisplay && (
+        <AriaLiveRegion
+          role="status"
+          aria-live="polite"
+          message={`Showing cached data — last sync ${ageDisplay} ago`}
+        />
+      )}
       {children}
     </div>
   );

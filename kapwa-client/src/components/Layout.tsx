@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/BottomNav';
 import { SyncStatusBanner } from '@/components/SyncStatusBanner';
 import { SyncQueuePanel } from '@/components/SyncQueuePanel';
+import { SkipToContent } from '@/components/a11y/SkipToContent';
+import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 
 function computePendingCount(): number {
   try { const queue = loadQueue(); return queue.filter(c => c.status === 'pending').length; }
@@ -78,12 +80,13 @@ export function Layout({ children }: { children?: React.ReactNode }) {
 
   return (
     <>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-accent focus:text-accent-foreground focus:rounded-md"
-      >
-        Skip to content
-      </a>
+      <SkipToContent />
+
+      <AriaLiveRegion
+        message={offline ? 'You are offline. Some features may be unavailable.' : ''}
+        role="status"
+        aria-live="polite"
+      />
 
       <SyncStatusBanner
         pendingCount={pendingCount}
