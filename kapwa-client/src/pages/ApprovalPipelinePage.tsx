@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
-import { getCases, updateCaseStatus, updateCaseDocuments, approveCase } from '../lib/api';
+import { useState, useEffect, useCallback } from 'react';
+import { getCases, updateCaseStatus, updateCaseDocuments, approveCase, bulkApprove } from '../lib/api';
 import { getCurrentUser } from '../lib/auth-context';
 import SignaturePad from '../components/forms/SignaturePad';
-import { CheckCircle, Upload, FileText, ArrowRight } from 'lucide-react';
+import { CheckCircle, Upload, FileText, ArrowRight, ListChecks } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { BulkActionBar } from '@/components/bulk-actions/BulkActionBar';
+import { BulkApproveDialog } from '@/components/bulk-actions/BulkApproveDialog';
+import { BulkExportDialog } from '@/components/bulk-actions/BulkExportDialog';
+import { showBulkProgress } from '@/components/bulk-actions/BulkProgressToast';
 
 interface ApprovalCase {
   id: string;
@@ -31,6 +36,10 @@ export function ApprovalPipelinePage() {
   const [action, setAction] = useState<'approve' | 'disburse' | null>(null);
   const [saving, setSaving] = useState(false);
   const [lastSync, setLastSync] = useState<number | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkApproveDialogOpen, setBulkApproveDialogOpen] = useState(false);
+  const [bulkExportDialogOpen, setBulkExportDialogOpen] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -47,6 +56,27 @@ export function ApprovalPipelinePage() {
     } catch { setCases([]); }
     setLoading(false);
   }
+
+  const toggleSelectMode = useCallback(() => {
+    setSelectMode(prev => !prev);
+    setSelectedIds(new Set());
+  }, []);
+
+  const toggleSelectId = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
 
   const pipelineStatus = ['in_review', 'approved', 'disbursed'];
   const grouped = pipelineStatus.map(status => ({
@@ -104,11 +134,23 @@ export function ApprovalPipelinePage() {
     setSaving(false);
   }
 
+  async function handleBulkApprove() {
+    const ids = Array.from(selectedIds);
+    await showBulkProgress(ids, async (id) => {
+      await bulkApprove(id);
+    }, 'Approving');
+    await loadCases();
+    clearSelection();
+  }
+
   function openApproval(c: ApprovalCase, act: 'approve' | 'disburse') {
     setSelectedCase(c);
     setAction(act);
     setSignature('');
   }
+
+  const selectAllChecked = cases.length > 0 && cases.every(c => selectedIds.has(c.id));
+  const selectSomeChecked = cases.some(c => selectedIds.has(c.id)) && !selectAllChecked;
 
   if (loading) {
     return (
@@ -125,7 +167,36 @@ export function ApprovalPipelinePage() {
       title="Approval Pipeline"
       description="Certificate of Eligibility review, Petty Cash Voucher management, and sign-off."
       cachedAt={lastSync ?? undefined}
+      actions={
+        <Button
+          variant={selectMode ? 'default' : 'outline'}
+          size="sm"
+          onClick={toggleSelectMode}
+        >
+          <ListChecks className="mr-1.5 h-4 w-4" />
+          {selectMode ? 'Exit Select Mode' : 'Select Mode'}
+        </Button>
+      }
     >
+      {selectMode && cases.length > 0 && (
+        <div className="flex items-center gap-2 px-1 mb-2">
+          <Checkbox
+            checked={selectAllChecked || (selectSomeChecked ? 'indeterminate' : false)}
+            onCheckedChange={() => {
+              if (selectAllChecked) {
+                setSelectedIds(new Set());
+              } else {
+                setSelectedIds(new Set(cases.map(c => c.id)));
+              }
+            }}
+            aria-label="Select all cases"
+          />
+          <span className="text-sm text-muted-foreground">
+            Select all cases
+          </span>
+        </div>
+      )}
+
       {allEmpty ? (
         <EmptyState variant="no-data" />
       ) : (
@@ -143,6 +214,18 @@ export function ApprovalPipelinePage() {
               <div className="space-y-3">
                 {group.items.map(c => (
                   <div key={c.id} className="border border-border rounded-lg p-3 hover:shadow-sm transition-shadow">
+                    {selectMode && (
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
+                        <Checkbox
+                          checked={selectedIds.has(c.id)}
+                          onCheckedChange={() => toggleSelectId(c.id)}
+                          aria-label={`Select ${c.controlNo}`}
+                        />
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {selectedIds.has(c.id) ? 'Selected' : 'Select'}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <span className="font-medium text-sm text-foreground">{c.controlNo}</span>
@@ -226,6 +309,36 @@ export function ApprovalPipelinePage() {
           ))}
         </div>
       )}
+
+      {/* Bulk Action Bar */}
+      <BulkActionBar
+        selectedCount={selectedIds.size}
+        selectedIds={Array.from(selectedIds)}
+        onApprove={() => selectedIds.size > 0 && setBulkApproveDialogOpen(true)}
+        onReassign={() => {}}
+        onExport={() => selectedIds.size > 0 && setBulkExportDialogOpen(true)}
+        onClearSelection={clearSelection}
+      />
+
+      {/* Bulk Approve Dialog */}
+      <BulkApproveDialog
+        open={bulkApproveDialogOpen}
+        onOpenChange={setBulkApproveDialogOpen}
+        selectedCount={selectedIds.size}
+        selectedIds={Array.from(selectedIds)}
+        onConfirm={handleBulkApprove}
+      />
+
+      {/* Bulk Export Dialog */}
+      <BulkExportDialog
+        open={bulkExportDialogOpen}
+        onOpenChange={setBulkExportDialogOpen}
+        selectedIds={Array.from(selectedIds)}
+        onComplete={() => {
+          clearSelection();
+          setSelectMode(false);
+        }}
+      />
 
       {/* Signature Modal */}
       {selectedCase && action && (

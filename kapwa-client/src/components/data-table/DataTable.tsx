@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import {
   type ColumnDef,
   type PaginationState,
   type SortingState,
+  type RowSelectionState,
+  type Updater,
   flexRender,
   useReactTable,
   getCoreRowModel,
@@ -15,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DataTablePagination } from './DataTablePagination';
 
 export interface DataTableProps<TData, TValue> {
@@ -27,6 +31,10 @@ export interface DataTableProps<TData, TValue> {
   pagination: PaginationState;
   sorting: SortingState;
   children?: React.ReactNode;
+  enableRowSelection?: boolean;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: ((updater: Updater<RowSelectionState>) => void) | undefined;
+  getRowId?: (row: TData) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -39,21 +47,66 @@ export function DataTable<TData, TValue>({
   pagination,
   sorting,
   children,
+  enableRowSelection = false,
+  rowSelection,
+  onRowSelectionChange,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
+  const tableColumns = useMemo(() => {
+    if (!enableRowSelection) return columns;
+
+    const selectColumn: ColumnDef<TData, TValue> = {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected()
+              ? true
+              : table.getIsSomePageRowsSelected()
+                ? 'indeterminate'
+                : false
+          }
+          onCheckedChange={() => table.toggleAllPageRowsSelected()}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          onCheckedChange={row.getToggleSelectedHandler()}
+          aria-label={`Select row ${row.id}`}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    };
+
+    return [selectColumn, ...columns];
+  }, [columns, enableRowSelection]);
+
   const table = useReactTable({
     data,
-    columns,
+    columns: tableColumns,
     pageCount: Math.ceil(rowCount / pagination.pageSize),
     state: {
       sorting,
       pagination,
+      ...(enableRowSelection && rowSelection !== undefined ? { rowSelection } : {}),
     },
     onPaginationChange,
     onSortingChange,
+    ...(enableRowSelection && onRowSelectionChange
+      ? { onRowSelectionChange }
+      : {}),
+    ...(enableRowSelection && getRowId ? { getRowId } : {}),
+    ...(enableRowSelection ? { enableRowSelection: true } : {}),
     manualPagination: true,
     manualSorting: true,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const columnCount = table.getVisibleFlatColumns().length;
 
   return (
     <div>
@@ -80,7 +133,7 @@ export function DataTable<TData, TValue>({
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={columnCount}
                   className="h-24 text-center"
                 >
                   Loading...
@@ -89,7 +142,7 @@ export function DataTable<TData, TValue>({
             ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={columnCount}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No results.
