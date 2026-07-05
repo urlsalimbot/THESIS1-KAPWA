@@ -1,9 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
-@layer base, components, legacy, utilities;
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
 
 
 @layer legacy {
@@ -115,82 +113,113 @@
   }
 }
 
+/* shadcn design tokens — raw hex (NOT HSL) per Pitfall 2 (shadcn v4 raw-hex path) */
+:root {
+  --background: #F8F7F4;
+  --foreground: #0D1B2A;
+  --card: #FFFFFF;
+  --card-foreground: #0D1B2A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0D1B2A;
+  --primary: #1B3A5C;
+  --primary-foreground: #FFFFFF;
+  --secondary: #3D5A80;
+  --secondary-foreground: #FFFFFF;
+  --muted: #E5E2DD;
+  --muted-foreground: #5C5A56;
+  --accent: #C8553D;
+  --accent-foreground: #FFFFFF;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #D8D4CE;
+  --input: #D8D4CE;
+  --ring: #1B3A5C;
+  --font-heading: 'Geist', sans-serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-none: 1;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --shadow-sm: 0px 1px 2px 0px rgba(13, 27, 42, 0.05);
+  --shadow-md: 0px 4px 6px -1px rgba(13, 27, 42, 0.1), 0px 2px 4px -2px rgba(13, 27, 42, 0.1);
+  --shadow-lg: 0px 10px 15px -3px rgba(13, 27, 42, 0.1), 0px 4px 6px -4px rgba(13, 27, 42, 0.1);
+  --border-width-1: 1px;
+  --border-width-2: 2px;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: #0D1B2A;
+  --foreground: #F8F7F4;
+  --card: #1B2838;
+  --card-foreground: #F8F7F4;
+  --popover: #1B2838;
+  --popover-foreground: #F8F7F4;
+  --primary: #E8E6E1;
+  --primary-foreground: #0D1B2A;
+  --secondary: #3D5A80;
+  --secondary-foreground: #F8F7F4;
+  --muted: #2A3A4A;
+  --muted-foreground: #9CA3AF;
+  --accent: #E07A5F;
+  --accent-foreground: #0D1B2A;
+  --destructive: #EF4444;
+  --destructive-foreground: #F8F7F4;
+  --border: #2A3A4A;
+  --input: #3D5A80;
+  --ring: #E07A5F;
+}
+
+/* Theme reference for utility class generation — @theme inline per shadcn v4 */
+/* `inline` is critical: use the variable's actual value (NOT wrap in color function) */
+@theme inline {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --font-heading: 'Geist', sans-serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
 @layer base {
-  :root {
-    --background: #F8F7F4;
-    --foreground: #0D1B2A;
-    --card: #FFFFFF;
-    --card-foreground: #0D1B2A;
-    --popover: #FFFFFF;
-    --popover-foreground: #0D1B2A;
-    --primary: #1B3A5C;
-    --primary-foreground: #FFFFFF;
-    --secondary: #3D5A80;
-    --secondary-foreground: #FFFFFF;
-    --muted: #E5E2DD;
-    --muted-foreground: #5C5A56;
-    --accent: #C8553D;
-    --accent-foreground: #FFFFFF;
-    --destructive: #DC2626;
-    --destructive-foreground: #FFFFFF;
-    --border: #D8D4CE;
-    --input: #D8D4CE;
-    --ring: #1B3A5C;
-    --font-heading: 'Geist', sans-serif;
-    --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-size-xs: 0.75rem;
-    --font-size-sm: 0.875rem;
-    --font-size-base: 1rem;
-    --font-size-lg: 1.125rem;
-    --font-size-xl: 1.25rem;
-    --font-size-2xl: 1.5rem;
-    --font-size-3xl: 1.875rem;
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
-    --line-height-none: 1;
-    --line-height-tight: 1.25;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.75;
-    --spacing-4: 4px;
-    --spacing-8: 8px;
-    --spacing-12: 12px;
-    --spacing-16: 16px;
-    --spacing-24: 24px;
-    --spacing-32: 32px;
-    --spacing-48: 48px;
-    --spacing-64: 64px;
-    --shadow-sm: 0px 1px 2px 0px rgba(13, 27, 42, 0.05);
-    --shadow-md: 0px 4px 6px -1px rgba(13, 27, 42, 0.1), 0px 2px 4px -2px rgba(13, 27, 42, 0.1);
-    --shadow-lg: 0px 10px 15px -3px rgba(13, 27, 42, 0.1), 0px 4px 6px -4px rgba(13, 27, 42, 0.1);
-    --border-width-1: 1px;
-    --border-width-2: 2px;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: #0D1B2A;
-    --foreground: #F8F7F4;
-    --card: #1B2838;
-    --card-foreground: #F8F7F4;
-    --popover: #1B2838;
-    --popover-foreground: #F8F7F4;
-    --primary: #E8E6E1;
-    --primary-foreground: #0D1B2A;
-    --secondary: #3D5A80;
-    --secondary-foreground: #F8F7F4;
-    --muted: #2A3A4A;
-    --muted-foreground: #9CA3AF;
-    --accent: #E07A5F;
-    --accent-foreground: #0D1B2A;
-    --destructive: #EF4444;
-    --destructive-foreground: #F8F7F4;
-    --border: #2A3A4A;
-    --input: #3D5A80;
-    --ring: #E07A5F;
-  }
-
   * {
     @apply border-border;
     box-sizing: border-box;
