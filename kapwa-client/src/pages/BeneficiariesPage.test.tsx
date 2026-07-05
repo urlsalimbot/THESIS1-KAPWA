@@ -42,4 +42,14 @@ describe('BeneficiariesPage', () => {
     );
     expect(await screen.findByPlaceholderText('Search by name...')).toBeTruthy();
   });
+
+  it('snapshot: BeneficiariesPage rendered DOM with searchable list + action buttons + masked PII', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <BeneficiariesPage />
+      </MemoryRouter>
+    );
+    expect(await screen.findByRole('heading', { name: 'Beneficiaries' })).toBeTruthy();
+    expect(container).toMatchSnapshot();
+  });
 });

@@ -60,4 +60,10 @@ describe('CasesPage', () => {
     render(<MemoryRouter><CasesPage /></MemoryRouter>);
     expect(await screen.findByRole('button', { name: /export csv/i })).toBeTruthy();
   });
+
+  it('snapshot: CasesPage rendered DOM with table layout + status badges + filter controls', async () => {
+    const { container } = render(<MemoryRouter><CasesPage /></MemoryRouter>);
+    expect(await screen.findByRole('heading', { name: 'Case Tracker' })).toBeTruthy();
+    expect(container).toMatchSnapshot();
+  });
 });
