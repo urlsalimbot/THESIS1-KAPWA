@@ -18,13 +18,13 @@ export function ContactInfo({ className }: ContactInfoProps) {
       {contactDetails.map((detail) => {
         const Icon = detail.icon;
         return (
-          <div key={detail.label} className="flex gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors duration-200">
+          <div key={detail.label} className="flex gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
             <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
-              <Icon className="h-5 w-5 text-accent" />
+              <Icon size={20} className="text-accent" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{detail.label}</p>
-              <p className="text-sm text-foreground">{detail.value}</p>
+              <p className="text-xs font-medium text-muted-foreground mb-0.5">{detail.label}</p>
+              <p className="text-sm text-foreground leading-relaxed">{detail.value}</p>
             </div>
           </div>
         );

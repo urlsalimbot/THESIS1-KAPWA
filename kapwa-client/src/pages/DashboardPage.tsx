@@ -43,16 +43,16 @@ const StatusBadge = React.memo(({ status }: { status: string }) => {
 const StatCard = React.memo(({ stat }: { stat: Stat }) => {
   const Icon = stat.icon;
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3 mb-2">
+    <Card className="transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-3 mb-3">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{stat.label}</span>
-          <div className={`ml-auto rounded-full w-8 h-8 flex items-center justify-center ${stat.iconClass}`}>
-            <Icon size={16} />
+          <div className={`ml-auto rounded-full w-9 h-9 flex items-center justify-center shadow-sm ${stat.iconClass}`}>
+            <Icon size={20} />
           </div>
         </div>
-        <div className="text-2xl font-bold text-foreground font-heading">{stat.value}</div>
-        <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
+        <div className="text-3xl font-bold text-foreground font-heading tracking-tight tabular-nums mb-1">{stat.value}</div>
+        <p className="text-xs text-muted-foreground">{stat.change}</p>
       </CardContent>
     </Card>
   );
@@ -61,7 +61,7 @@ const StatCard = React.memo(({ stat }: { stat: Stat }) => {
 const DEFAULT_SLA_HOURS = 48;
 
 const dashboardCaseColumns: ColumnDef<CaseRow>[] = [
-  { accessorKey: 'id', header: 'Case ID', cell: ({ row }) => <span className="text-muted-foreground">{row.original.id}</span> },
+  { accessorKey: 'id', header: 'Case ID', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.id}</span> },
   { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
   { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
   { accessorKey: 'barangay', header: 'Barangay' },
@@ -82,7 +82,7 @@ const dashboardCaseColumns: ColumnDef<CaseRow>[] = [
       );
     },
   },
-  { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.date}</span> },
+  { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
 ];
 
 const WORKER_ROLES = ['social_worker', 'admin'];
@@ -185,8 +185,8 @@ export function DashboardPage() {
         {stats.map(s => <StatCard key={s.label} stat={s} />)}
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <h3 className="text-lg font-semibold">Recent Cases</h3>
+      <div className="flex items-center justify-between mt-6 mb-3">
+        <h3 className="text-lg font-semibold tracking-tight">Recent Cases</h3>
         <Button variant="outline" size="sm" onClick={() => navigate('/cases')}>
           View All Cases
         </Button>

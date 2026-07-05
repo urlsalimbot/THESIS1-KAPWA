@@ -1,17 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 @layer base, components, legacy, utilities;
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 
 @layer legacy {
-  /* Legacy component classes (kept for backward-compatibility until Phase 11 migration) */
   .page-header { @apply mb-4; }
   .page-title {
-    font-family: 'Lexend', sans-serif;
-    @apply font-bold text-2xl leading-8 text-foreground;
+    font-family: 'Geist', sans-serif;
+    @apply font-bold text-2xl leading-8 text-foreground tracking-tight;
   }
   .page-desc { @apply font-body text-sm leading-5 text-muted-foreground mt-1; }
   .toolbar { @apply flex justify-between items-center mb-4; }
@@ -78,13 +77,12 @@
   }
   .empty-state { @apply flex flex-col items-center justify-center py-12 text-muted-foreground; }
 
-  /* Login page */
   .login-container { @apply min-h-screen flex items-center justify-center bg-background; }
   .login-card { @apply w-full max-w-md bg-card rounded-2xl shadow-sm p-8; }
   .login-logo { @apply w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4; }
   .login-title {
-    font-family: 'Lexend', sans-serif;
-    @apply font-bold text-2xl text-foreground text-center;
+    font-family: 'Geist', sans-serif;
+    @apply font-bold text-2xl text-foreground text-center tracking-tight;
   }
   .login-subtitle { @apply font-body text-sm text-muted-foreground text-center mt-1; }
   .stats-grid { @apply grid grid-cols-4 gap-4 mb-6; }
@@ -93,8 +91,8 @@
     @apply font-body text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1;
   }
   .stat-value {
-    font-family: 'Lexend', sans-serif;
-    @apply text-2xl font-bold text-foreground;
+    font-family: 'Geist', sans-serif;
+    @apply text-2xl font-bold text-foreground tracking-tight;
   }
   .search-bar { @apply relative w-64; }
   .search-input { @apply w-full py-2 pl-9 pr-4 bg-[#F8FAFC] border border-border rounded-full font-body text-sm text-foreground outline-none; }
@@ -107,12 +105,10 @@
 }
 
 @layer components {
-  /* 44x44px touch targets for mobile accessibility (Phase 10) */
   button, a[href], input, select, textarea, [role="button"] {
     min-height: 44px;
     min-width: 44px;
   }
-  /* Opt-out class for small decorative/inline elements */
   .touch-sm {
     min-height: unset !important;
     min-width: unset !important;
@@ -121,26 +117,26 @@
 
 @layer base {
   :root {
-    --background: #F8FAFC;
-    --foreground: #020617;
+    --background: #F8F7F4;
+    --foreground: #0D1B2A;
     --card: #FFFFFF;
-    --card-foreground: #020617;
+    --card-foreground: #0D1B2A;
     --popover: #FFFFFF;
-    --popover-foreground: #020617;
-    --primary: #0F172A;
+    --popover-foreground: #0D1B2A;
+    --primary: #1B3A5C;
     --primary-foreground: #FFFFFF;
-    --secondary: #334155;
+    --secondary: #3D5A80;
     --secondary-foreground: #FFFFFF;
-    --muted: #E8ECF1;
-    --muted-foreground: #475569;  /* WCAG 2.1 AA 5.5:1 vs #F8FAFC (adjusted from #64748B 3.9:1 per SC 1.4.3) */
-    --accent: #0369A1;
+    --muted: #E5E2DD;
+    --muted-foreground: #5C5A56;
+    --accent: #C8553D;
     --accent-foreground: #FFFFFF;
     --destructive: #DC2626;
     --destructive-foreground: #FFFFFF;
-    --border: #E2E8F0;
-    --input: #E2E8F0;
-    --ring: #0F172A;
-    --font-heading: 'Lexend', sans-serif;
+    --border: #D8D4CE;
+    --input: #D8D4CE;
+    --ring: #1B3A5C;
+    --font-heading: 'Geist', sans-serif;
     --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
@@ -165,34 +161,34 @@
     --spacing-32: 32px;
     --spacing-48: 48px;
     --spacing-64: 64px;
-    --shadow-sm: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -2px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0px 1px 2px 0px rgba(13, 27, 42, 0.05);
+    --shadow-md: 0px 4px 6px -1px rgba(13, 27, 42, 0.1), 0px 2px 4px -2px rgba(13, 27, 42, 0.1);
+    --shadow-lg: 0px 10px 15px -3px rgba(13, 27, 42, 0.1), 0px 4px 6px -4px rgba(13, 27, 42, 0.1);
     --border-width-1: 1px;
     --border-width-2: 2px;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: #0F172A;
-    --foreground: #F8FAFC;
-    --card: #1E293B;
-    --card-foreground: #F8FAFC;
-    --popover: #1E293B;
-    --popover-foreground: #F8FAFC;
-    --primary: #F8FAFC;
-    --primary-foreground: #0F172A;
-    --secondary: #475569;
-    --secondary-foreground: #F8FAFC;
-    --muted: #334155;
-    --muted-foreground: #94A3B8;
-    --accent: #38BDF8;
-    --accent-foreground: #0F172A;
+    --background: #0D1B2A;
+    --foreground: #F8F7F4;
+    --card: #1B2838;
+    --card-foreground: #F8F7F4;
+    --popover: #1B2838;
+    --popover-foreground: #F8F7F4;
+    --primary: #E8E6E1;
+    --primary-foreground: #0D1B2A;
+    --secondary: #3D5A80;
+    --secondary-foreground: #F8F7F4;
+    --muted: #2A3A4A;
+    --muted-foreground: #9CA3AF;
+    --accent: #E07A5F;
+    --accent-foreground: #0D1B2A;
     --destructive: #EF4444;
-    --destructive-foreground: #F8FAFC;
-    --border: #334155;
-    --input: #475569;
-    --ring: #38BDF8;
+    --destructive-foreground: #F8F7F4;
+    --border: #2A3A4A;
+    --input: #3D5A80;
+    --ring: #E07A5F;
   }
 
   * {
@@ -208,36 +204,27 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Lexend', sans-serif;
+    font-family: 'Geist', sans-serif;
+    @apply tracking-tight;
   }
+
+  h1 { @apply text-4xl font-bold leading-tight; }
+  h2 { @apply text-3xl font-semibold leading-snug; }
+  h3 { @apply text-2xl font-semibold leading-snug; }
+  h4 { @apply text-xl font-medium leading-normal; }
+
+  p { @apply leading-relaxed; }
+
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  html { scroll-behavior: smooth; }
 }
 
-/* Print styles */
 @layer base {
-  :root {
-    --print-date: '';
-  }
+  :root { --print-date: ''; }
 }
-
-/* ============================================ 
- * WCAG 2.1 AA Color Contrast Audit (SC 1.4.3) 
- * ============================================ 
- * Light mode (--background: #F8FAFC): 
- *   --foreground #020617 → 16.5:1 ✓ 
- *   --accent #0369A1     →  5.1:1 ✓ 
- *   --muted-foreground #475569 → 5.5:1 ✓ (adjusted from #64748B 3.9:1) 
- *   --destructive #DC2626 → 5.7:1 ✓ 
- *   --border #E2E8F0     →  1.2:1 (non-text, no req) 
- * 
- * Dark mode (--background: #0F172A): 
- *   --foreground #F8FAFC → 16.5:1 ✓ 
- *   --accent #38BDF8     →  5.8:1 ✓ 
- *   --muted-foreground #94A3B8 → 6.1:1 ✓ 
- *   --destructive #EF4444 → 7.5:1 ✓ 
- *   --border #334155     →  1.7:1 (non-text, no req) 
- * 
- * Large text (≥18px or ≥14px bold): 3:1 minimum met by all above 
- */
 
 @media print {
   @page {
@@ -262,9 +249,7 @@
   }
 
   @page :first {
-    @top-center {
-      content: element(msdwoHeader);
-    }
+    @top-center { content: element(msdwoHeader); }
   }
 
   body {
@@ -276,17 +261,14 @@
   }
 
   .no-print { display: none !important; }
-
-  /* Hide layout chrome */
   nav, .sidebar, .topbar, .bottom-nav,
   button:not(.print-trigger),
   .breadcrumb-nav { display: none !important; }
 
-  /* Print-specific elements */
   .print-header {
     position: running(msdwoHeader);
     text-align: center;
-    font-family: 'Lexend', sans-serif;
+    font-family: 'Geist', sans-serif;
     border-bottom: 2px solid #000;
     margin-bottom: 12pt;
   }
@@ -299,22 +281,17 @@
     margin-top: 12pt;
   }
 
-  .signature-block {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    margin-top: 24pt;
-  }
-
+  .signature-block { break-inside: avoid; page-break-inside: avoid; margin-top: 24pt; }
   .no-break { break-inside: avoid; }
-
   .page-break { page-break-before: always; }
-
   table { break-inside: auto; }
   thead { display: table-header-group; }
   tr { break-inside: avoid; }
-
   a { color: #000 !important; text-decoration: underline; }
   a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; }
-
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+#root {
+  @apply min-h-screen flex flex-col;
 }

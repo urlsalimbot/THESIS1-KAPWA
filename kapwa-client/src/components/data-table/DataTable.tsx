@@ -26,8 +26,8 @@ export interface DataTableProps<TData, TValue> {
   data: TData[];
   rowCount: number;
   loading?: boolean;
-  onPaginationChange?: (pagination: PaginationState) => void;
-  onSortingChange?: (sorting: SortingState) => void;
+  onPaginationChange?: (updater: Updater<PaginationState>) => void;
+  onSortingChange?: (updater: Updater<SortingState>) => void;
   pagination: PaginationState;
   sorting: SortingState;
   children?: React.ReactNode;

@@ -70,7 +70,7 @@ export function MaskedField({
           disabled={revealing}
           aria-label={revealed ? `Hide ${label}` : `Reveal ${label}`}
         >
-          {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
         </Button>
       )}
     </div>

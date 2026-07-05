@@ -79,7 +79,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
   const isOnline = !offline;
 
   return (
-    <>
+    <div className="h-screen overflow-hidden flex flex-col">
       <SkipToContent />
 
       <AriaLiveRegion
@@ -94,22 +94,22 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         onOpenQueue={() => setQueueOpen(true)}
       />
 
-      <div className="no-print">
+      <div className="no-print shrink-0">
         <Topbar onMenuToggle={() => setSheetOpen(s => !s)} />
       </div>
 
-      <div className="flex min-h-[calc(100vh-4.5rem)]">
-        <div className="no-print">
+      <div className="flex flex-1 min-h-0">
+        <div className="no-print shrink-0">
           <Sidebar />
         </div>
 
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent side="left" className="w-64 p-0">
+          <SheetContent side="left" className="w-[16rem] p-0">
             <SidebarNavContent onNavClick={() => setSheetOpen(false)} />
           </SheetContent>
         </Sheet>
 
-        <main id="main-content" className="flex-1 p-6 bg-background min-h-[calc(100vh-4.5rem)] overflow-auto pb-16 lg:pb-6">
+        <main id="main-content" className="flex-1 min-h-0 p-6 bg-background overflow-auto pb-16 lg:pb-6">
           <ErrorBoundary>
             <BreadcrumbNav pathname={location.pathname} />
             {children || <Outlet />}
@@ -125,6 +125,6 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         open={queueOpen}
         onClose={() => setQueueOpen(false)}
       />
-    </>
+    </div>
   );
 }

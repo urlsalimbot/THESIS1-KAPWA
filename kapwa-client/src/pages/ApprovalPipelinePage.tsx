@@ -137,7 +137,7 @@ export function ApprovalPipelinePage() {
   async function handleBulkApprove() {
     const ids = Array.from(selectedIds);
     await showBulkProgress(ids, async (id) => {
-      await bulkApprove(id);
+      await bulkApprove([id]);
     }, 'Approving');
     await loadCases();
     clearSelection();
@@ -173,7 +173,7 @@ export function ApprovalPipelinePage() {
           size="sm"
           onClick={toggleSelectMode}
         >
-          <ListChecks className="mr-1.5 h-4 w-4" />
+          <ListChecks size={16} className="mr-1.5" />
           {selectMode ? 'Exit Select Mode' : 'Select Mode'}
         </Button>
       }

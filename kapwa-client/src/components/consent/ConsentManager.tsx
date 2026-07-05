@@ -74,9 +74,9 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
       <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
         <div className="flex items-center gap-3">
           {status === 'active' ? (
-            <Shield className="h-8 w-8 text-green-500" />
+            <Shield size={32} className="text-green-500" />
           ) : (
-            <ShieldOff className="h-8 w-8 text-red-500" />
+            <ShieldOff size={32} className="text-red-500" />
           )}
           <div>
             <p className="text-sm font-medium text-gray-800">Consent Status</p>
@@ -175,7 +175,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
         </div>
         {loadingLedger ? (
           <div className="flex items-center justify-center py-4 text-sm text-gray-400">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 size={16} className="mr-2 animate-spin" />
             Loading history...
           </div>
         ) : ledger.length === 0 ? (

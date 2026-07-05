@@ -64,7 +64,7 @@ export function LoginPage() {
           <CardHeader className="text-center">
             <Avatar className="w-16 h-16 mx-auto mb-2">
               <AvatarFallback>
-                <Smartphone className="w-8 h-8" />
+                <Smartphone size={32} />
               </AvatarFallback>
             </Avatar>
             <CardTitle>Two-Factor Authentication</CardTitle>
@@ -82,7 +82,7 @@ export function LoginPage() {
                 inputMode="numeric"
                 placeholder="000000"
                 maxLength={6}
-                className="text-center tracking-[0.25em] text-2xl h-12"
+                className="text-center tracking-[0.25em] text-2xl h-12 tabular-nums"
                 value={mfaValue}
                 onChange={(e) => setMfaValue(e.target.value.replace(/\D/g, ''))}
                 autoFocus
@@ -92,7 +92,7 @@ export function LoginPage() {
                 className="w-full"
                 disabled={mfaValue.length !== 6 || mfaSubmitting}
               >
-                {mfaSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {mfaSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}
                 Verify
               </Button>
             </form>
@@ -110,19 +110,20 @@ export function LoginPage() {
   // Login Form Mode
   return (
     <div className="relative flex items-center justify-center min-h-[calc(100vh-8rem)] px-4 overflow-hidden">
-      {/* Background decoration */}
+      {/* Background decoration with visual depth */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
       </div>
 
-      <Card className="w-full max-w-md mx-auto relative">
-        <CardHeader className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3">
-            <HandHeart className="w-7 h-7 text-accent" />
+      <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
+        <CardHeader className="text-center pb-6">
+          <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
+            <HandHeart size={28} className="text-accent" />
           </div>
-          <CardTitle className="text-xl">Welcome to KAPWA</CardTitle>
-          <CardDescription>MSWDO Norzagaray Social Welfare System</CardDescription>
+          <CardTitle className="text-2xl tracking-tight">Welcome to KAPWA</CardTitle>
+          <CardDescription className="text-base">MSWDO Norzagaray Social Welfare System</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -163,13 +164,13 @@ export function LoginPage() {
                 className="w-full h-11"
                 disabled={form.formState.isSubmitting}
               >
-                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {form.formState.isSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}
                 Sign In
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="justify-center pt-2 pb-6">
           <Button variant="link" asChild>
             <Link to="/register">Register as claimant</Link>
           </Button>

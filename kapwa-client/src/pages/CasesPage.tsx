@@ -189,7 +189,7 @@ export function CasesPage() {
   }
 
   const columns: ColumnDef<CaseRow>[] = [
-    { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground">{row.original.no}</span> },
+    { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.no}</span> },
     { accessorKey: 'surname', header: 'Surname', cell: ({ row }) => <span className="font-medium">{row.original.surname}</span> },
     { accessorKey: 'first', header: 'First' },
     { accessorKey: 'middle', header: 'Middle' },
@@ -214,7 +214,7 @@ export function CasesPage() {
     },
     { accessorKey: 'barangay', header: 'Barangay' },
     { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.date}</span> },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
     {
       id: 'actions',
       header: 'Actions',
@@ -237,7 +237,7 @@ export function CasesPage() {
       cachedAt={lastSync ?? undefined}
     >
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" aria-label="Filter cases">
             <SlidersHorizontal size={16} />
@@ -264,7 +264,7 @@ export function CasesPage() {
       </div>
 
       {/* Filter pills */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <Button
           variant={filters.barangay ? 'default' : 'outline'}
           size="sm"

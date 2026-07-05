@@ -47,7 +47,7 @@ export function ChainViewer({ caseId }: { caseId: string }) {
   return (
     <div className="border rounded-lg p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Shield size={18} className={isValid ? 'text-green-600' : 'text-red-600'} />
+        <Shield size={16} className={isValid ? 'text-green-600' : 'text-red-600'} />
         <span className="font-semibold text-sm">Intervention Hash Chain</span>
         {isValid
           ? <CheckCircle size={16} className="text-green-600" />

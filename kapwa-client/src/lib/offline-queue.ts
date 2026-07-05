@@ -11,7 +11,7 @@ export interface QueuedChange {
   payload: Record<string, unknown>;
   clientUpdatedAt: string;
   serverVersion: number;
-  status: 'pending' | 'synced' | 'conflict' | 'failed';
+  status: 'pending' | 'syncing' | 'synced' | 'conflict' | 'failed';
   retryCount: number;
   lastError?: string;
 }

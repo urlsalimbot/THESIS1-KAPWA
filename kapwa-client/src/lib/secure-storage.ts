@@ -22,7 +22,9 @@ export const SecureStorage = {
     if (platform === 'native') {
       // SQLCipher for Capacitor mobile — import dynamically to avoid breaking browser builds
       const { CapacitorSQLite } = await import('@capacitor-community/sqlite');
-      const db = await CapacitorSQLite.createConnection({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = CapacitorSQLite as any;
+      await db.createConnection({
         database: 'kapwa',
         version: 1,
         encrypted: true,
@@ -30,15 +32,18 @@ export const SecureStorage = {
       });
       // Derive key from user password for platform-independent recovery
       const key = password || getStorageKey();
-      await db.open(key);
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS sync_cache (
-          key TEXT PRIMARY KEY,
-          value TEXT,
-          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      await db.close();
+      await db.open({ database: 'kapwa', mode: 'secret' });
+      await db.execute({
+        database: 'kapwa',
+        statement: `
+          CREATE TABLE IF NOT EXISTS sync_cache (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `,
+      });
+      await db.close({ database: 'kapwa' });
     } else {
       // Browser fallback — existing AES-256-GCM over localStorage
       await encryptedDb.init();
@@ -48,16 +53,16 @@ export const SecureStorage = {
   async getItem<T = unknown>(key: string): Promise<T | null> {
     const platform = getPlatform();
     if (platform === 'native') {
-      const { CapacitorSQLite } = await import('@capacitor-community/sqlite');
-      const db = await CapacitorSQLite.createConnection({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { CapacitorSQLite } = await import('@capacitor-community/sqlite') as any;
+      const db = CapacitorSQLite;
+      await db.open({ database: 'kapwa', mode: 'secret' });
+      const res = await db.query({
         database: 'kapwa',
-        version: 1,
-        encrypted: true,
-        mode: 'secret',
+        statement: `SELECT value FROM sync_cache WHERE key = ?`,
+        values: [key],
       });
-      await db.open(getStorageKey());
-      const res = await db.query(`SELECT value FROM sync_cache WHERE key = ?`, [key]);
-      await db.close();
+      await db.close({ database: 'kapwa' });
       if (res.values && res.values.length > 0) {
         return JSON.parse(res.values[0].value);
       }
@@ -69,19 +74,16 @@ export const SecureStorage = {
   async setItem(key: string, value: unknown): Promise<void> {
     const platform = getPlatform();
     if (platform === 'native') {
-      const { CapacitorSQLite } = await import('@capacitor-community/sqlite');
-      const db = await CapacitorSQLite.createConnection({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { CapacitorSQLite } = await import('@capacitor-community/sqlite') as any;
+      const db = CapacitorSQLite;
+      await db.open({ database: 'kapwa', mode: 'secret' });
+      await db.execute({
         database: 'kapwa',
-        version: 1,
-        encrypted: true,
-        mode: 'secret',
+        statement: `INSERT OR REPLACE INTO sync_cache (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
+        values: [key, JSON.stringify(value)],
       });
-      await db.open(getStorageKey());
-      await db.execute(
-        `INSERT OR REPLACE INTO sync_cache (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
-        [key, JSON.stringify(value)]
-      );
-      await db.close();
+      await db.close({ database: 'kapwa' });
     } else {
       return encryptedDb.setItem(key, value);
     }
@@ -90,16 +92,16 @@ export const SecureStorage = {
   async removeItem(key: string): Promise<void> {
     const platform = getPlatform();
     if (platform === 'native') {
-      const { CapacitorSQLite } = await import('@capacitor-community/sqlite');
-      const db = await CapacitorSQLite.createConnection({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { CapacitorSQLite } = await import('@capacitor-community/sqlite') as any;
+      const db = CapacitorSQLite;
+      await db.open({ database: 'kapwa', mode: 'secret' });
+      await db.execute({
         database: 'kapwa',
-        version: 1,
-        encrypted: true,
-        mode: 'secret',
+        statement: `DELETE FROM sync_cache WHERE key = ?`,
+        values: [key],
       });
-      await db.open(getStorageKey());
-      await db.execute(`DELETE FROM sync_cache WHERE key = ?`, [key]);
-      await db.close();
+      await db.close({ database: 'kapwa' });
     } else {
       return encryptedDb.removeItem(key);
     }

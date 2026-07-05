@@ -28,19 +28,19 @@ export function BulkActionBar({
         </span>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={onApprove}>
-            <Check className="mr-1.5 h-4 w-4" />
+            <Check size={16} className="mr-1.5" />
             Approve
           </Button>
           <Button size="sm" variant="secondary" onClick={onReassign}>
-            <User className="mr-1.5 h-4 w-4" />
+            <User size={16} className="mr-1.5" />
             Reassign
           </Button>
           <Button size="sm" variant="outline" onClick={onExport}>
-            <Download className="mr-1.5 h-4 w-4" />
+            <Download size={16} className="mr-1.5" />
             Export
           </Button>
           <Button size="sm" variant="ghost" onClick={onClearSelection}>
-            <X className="mr-1.5 h-4 w-4" />
+            <X size={16} className="mr-1.5" />
             Clear
           </Button>
         </div>

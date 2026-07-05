@@ -18,7 +18,8 @@
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts src/database/migrations/Generation",
     "typeorm": "typeorm-ts-node-commonjs",
     "seed": "node dist/database/seed.js",
-    "test:unit": "jest --testPathPattern=unit"
+    "test:unit": "jest --testPathPattern=unit",
+    "seed:comprehensive": "node dist/database/seed-comprehensive.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

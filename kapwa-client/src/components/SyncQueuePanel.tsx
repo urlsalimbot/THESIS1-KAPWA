@@ -140,7 +140,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
           <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
             {!hasItems ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-                <CheckCircle2 className="h-10 w-10 text-muted-foreground" />
+                <CheckCircle2 size={40} className="text-muted-foreground" />
                 <p className="text-base font-medium">All caught up</p>
                 <p className="text-sm text-muted-foreground">No pending sync operations.</p>
               </div>
@@ -247,13 +247,13 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
   const isFailed = item.status === 'failed';
 
   const statusIcon = isSyncing ? (
-    <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
+    <RefreshCw size={16} className="text-blue-500 animate-spin" />
   ) : isFailed ? (
-    <XCircle className="h-4 w-4 text-destructive shrink-0" />
+    <XCircle size={16} className="text-destructive shrink-0" />
   ) : isConflict ? (
-    <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />
+    <AlertTriangle size={16} className="text-orange-500 shrink-0" />
   ) : (
-    <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+    <Clock size={16} className="text-muted-foreground shrink-0" />
   );
 
   const statusLabel = isSyncing ? 'Syncing…' : item.status === 'failed' ? 'Sync failed' : item.status === 'conflict' ? 'Conflict' : 'Pending';
@@ -291,7 +291,7 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
             title="Retry Sync"
             aria-label="Retry Sync"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw size={16} />
           </Button>
         )}
         {isConflict && (
@@ -303,7 +303,7 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
             title="View Diff"
             aria-label="View Diff"
           >
-            <Eye className="h-4 w-4" />
+            <Eye size={16} />
           </Button>
         )}
         <Button
@@ -314,7 +314,7 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
           title="Remove Item"
           aria-label="Remove Item"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 size={16} />
         </Button>
       </div>
     </div>

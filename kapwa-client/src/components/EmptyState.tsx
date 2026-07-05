@@ -56,7 +56,7 @@ export function EmptyState({ variant, onAction }: EmptyStateProps) {
 
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-      <Icon className="h-12 w-12 text-muted-foreground" aria-hidden="true" />
+      <Icon size={48} className="text-muted-foreground" aria-hidden="true" />
       <p className="text-base font-medium text-foreground">{config.message}</p>
       {config.hint && (
         <p className="text-sm text-muted-foreground">{config.hint}</p>

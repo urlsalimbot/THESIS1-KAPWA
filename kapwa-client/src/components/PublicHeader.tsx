@@ -42,11 +42,11 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
     <header className="sticky top-0 z-40 h-17 min-h-[4.5rem] flex flex-col justify-center bg-background/95 backdrop-blur-sm border-b border-border overflow-visible">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 flex items-center justify-between">
         {/* Logo/brand */}
-        <Link to="/" className="touch-sm flex items-center gap-2.5 no-underline">
-          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+        <Link to="/" className="touch-sm flex items-center gap-2.5 no-underline group">
+          <div className="w-24 h-24 rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-200 group-hover:shadow-md">
             <HandHeart className="w-64 h-64 text-accent" />
           </div>
-          <span className="font-heading text-xl font-bold text-foreground">KAPWA</span>
+          <span className="font-heading text-xl font-bold text-foreground tracking-tight">KAPWA</span>
         </Link>
 
         {/* Desktop nav */}
@@ -58,8 +58,8 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'touch-sm px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                  'hover:bg-muted hover:text-foreground',
+                  'touch-sm px-3 py-2 rounded-md text-sm font-medium transition-all duration-200',
+                  'hover:bg-muted hover:text-foreground hover:translate-y-px',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive ? 'text-accent font-semibold' : 'text-muted-foreground'
                 )}
@@ -91,7 +91,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <button
-                className="touch-sm sm:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
+                className="touch-sm sm:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
                 aria-label="Open menu"
               >
                 <Menu size={20} />
@@ -101,12 +101,12 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
               <div className="flex items-center justify-between px-6 h-14 border-b">
                 <Link to="/" className="flex items-center gap-2 no-underline" onClick={() => setMobileOpen(false)}>
                   <div className="w-7 h-7 rounded-md bg-accent/10 flex items-center justify-center">
-                    <HandHeart className="w-4 h-4 text-accent" />
+                    <HandHeart size={16} className="text-accent" />
                   </div>
-                  <span className="font-heading text-base font-bold text-foreground">KAPWA</span>
+                  <span className="font-heading text-base font-bold text-foreground tracking-tight">KAPWA</span>
                 </Link>
                 <button
-                  className="touch-sm w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted"
+                  className="touch-sm w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
                   onClick={() => setMobileOpen(false)}
                   aria-label="Close menu"
                 >
@@ -122,8 +122,8 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                       to={link.to}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        'touch-sm px-4 py-3 rounded-md text-sm font-medium transition-colors no-underline',
-                        'hover:bg-muted hover:text-foreground',
+                        'touch-sm px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 no-underline',
+                        'hover:bg-muted hover:text-foreground hover:translate-x-0.5',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         isActive ? 'text-accent font-semibold bg-accent/5' : 'text-muted-foreground'
                       )}

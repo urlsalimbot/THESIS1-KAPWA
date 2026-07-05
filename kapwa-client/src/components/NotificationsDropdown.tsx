@@ -72,7 +72,7 @@ export default function NotificationsDropdown() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Notifications">
-          {unreadCount > 0 ? <BellRing size={19} /> : <Bell size={19} />}
+          {unreadCount > 0 ? <BellRing size={20} /> : <Bell size={20} />}
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
               {unreadCount > 9 ? '9+' : unreadCount}

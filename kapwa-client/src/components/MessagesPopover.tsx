@@ -33,9 +33,9 @@ export default function MessagesPopover() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Messages">
-          <MessageSquare size={19} />
+          <MessageSquare size={20} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+            <span className="absolute -top-0.5 -right-0.5 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-[16px] font-bold text-accent-foreground">
               {unreadCount}
             </span>
           )}

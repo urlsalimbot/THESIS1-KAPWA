@@ -265,7 +265,7 @@ export function BeneficiaryViewPage() {
 
       {/* Access Card Section */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
-        <div className="mb-3 flex items-center gap-2 text-primary"><Shield size={18} /> <h3 className="text-sm font-semibold">Access Card</h3></div>
+        <div className="mb-3 flex items-center gap-2 text-primary"><Shield size={20} /> <h3 className="text-sm font-semibold">Access Card</h3></div>
         {beneficiary.accessCardCode ? (
           <div className="flex items-center justify-between">
             <div>
@@ -300,7 +300,7 @@ export function BeneficiaryViewPage() {
       {/* Main Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
-          <div className="mb-3 flex items-center gap-2 text-primary"><UsersIcon size={18} /> <h3 className="text-sm font-semibold">Personal Info</h3></div>
+          <div className="mb-3 flex items-center gap-2 text-primary"><UsersIcon size={20} /> <h3 className="text-sm font-semibold">Personal Info</h3></div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Birth Date</span><span>{beneficiary.birthDate}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Contact</span><span>{beneficiary.contact || 'N/A'}</span></div>
@@ -311,7 +311,7 @@ export function BeneficiaryViewPage() {
 
         <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
           <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-primary"><FileText size={18} /> <h3 className="text-sm font-semibold">Active Cases</h3></div>
+            <div className="flex items-center gap-2 text-primary"><FileText size={20} /> <h3 className="text-sm font-semibold">Active Cases</h3></div>
             <Button variant="ghost" size="icon" className="rounded-full"><Plus size={16} /></Button>
           </div>
           {beneficiary.cases.length === 0 ? (
@@ -345,7 +345,7 @@ export function BeneficiaryViewPage() {
         </div>
 
         <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
-          <div className="mb-3 flex items-center gap-2 text-primary"><Gift size={18} /> <h3 className="text-sm font-semibold">Interventions</h3></div>
+          <div className="mb-3 flex items-center gap-2 text-primary"><Gift size={20} /> <h3 className="text-sm font-semibold">Interventions</h3></div>
           {beneficiary.interventions.length === 0 ? (
             <p className="text-sm text-muted-foreground">No interventions recorded</p>
           ) : (
@@ -366,7 +366,7 @@ export function BeneficiaryViewPage() {
       {/* Case Tracker Log Section */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
         <div className="mb-3 flex items-center gap-2 text-primary">
-          <FileText size={18} />
+          <FileText size={20} />
           <h3 className="text-sm font-semibold">Case Tracker Log</h3>
         </div>
         {trackerEntries.length === 0 ? (
@@ -390,7 +390,7 @@ export function BeneficiaryViewPage() {
       {interventionCaseId && (
         <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
           <div className="mb-3 flex items-center gap-2 text-primary">
-            <ClipboardList size={18} />
+            <ClipboardList size={20} />
             <h3 className="text-sm font-semibold">Log Intervention for Case {interventionCaseId}</h3>
           </div>
           {intError && <div className="mb-4 rounded bg-destructive/10 p-3 text-sm text-destructive">{intError}</div>}
@@ -448,8 +448,8 @@ export function BeneficiaryViewPage() {
       {family.length > 0 && (
         <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
           <button onClick={() => setFamilyExpanded(!familyExpanded)} className="flex items-center gap-2 text-primary mb-3">
-            {familyExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-            <UsersIcon size={18} />
+            {familyExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <UsersIcon size={20} />
             <h3 className="text-sm font-semibold">Family Composition ({family.length})</h3>
           </button>
           {familyExpanded && (
@@ -477,7 +477,7 @@ export function BeneficiaryViewPage() {
       {/* Family Graph Section */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
         <div className="mb-4 flex items-center gap-2 text-primary">
-          <UsersIcon size={18} />
+          <UsersIcon size={20} />
           <h3 className="text-sm font-semibold">Family Tree</h3>
         </div>
         {id && <FamilyGraph beneficiaryId={id} />}
@@ -486,7 +486,7 @@ export function BeneficiaryViewPage() {
       {/* Consent Management Section */}
       <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
         <div className="mb-4 flex items-center gap-2 text-primary">
-          <Shield size={18} />
+          <Shield size={20} />
           <h3 className="text-sm font-semibold">Consent & Privacy</h3>
         </div>
         {id && beneficiary && (

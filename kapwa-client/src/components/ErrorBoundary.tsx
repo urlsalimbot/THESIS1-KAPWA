@@ -40,7 +40,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       if (isNetworkError) {
         return (
           <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-            <WifiOff className="h-12 w-12 text-muted-foreground" />
+            <WifiOff size={48} className="text-muted-foreground" />
             <AriaLiveRegion role="alert" aria-live="assertive" message="You are offline">
               <h2 className="text-lg font-semibold">You are offline</h2>
             </AriaLiveRegion>
@@ -58,7 +58,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <TriangleAlert className="h-12 w-12 text-destructive" />
+          <TriangleAlert size={48} className="text-destructive" />
           <AriaLiveRegion role="alert" aria-live="assertive" message="Something went wrong">
             <h2 className="text-lg font-semibold">Something went wrong</h2>
           </AriaLiveRegion>

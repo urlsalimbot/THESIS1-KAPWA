@@ -22,26 +22,26 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {/* Column 1: Brand */}
           <div>
-            <Link to="/" className="inline-flex items-center gap-2 mb-3 no-underline">
-              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                <HandHeart className="w-4 h-4 text-accent" />
+            <Link to="/" className="inline-flex items-center gap-2 mb-3 no-underline group">
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-200 group-hover:shadow-md">
+                <HandHeart size={16} className="text-accent" />
               </div>
-              <span className="font-heading text-xl font-bold text-foreground">KAPWA</span>
+              <span className="font-heading text-xl font-bold text-foreground tracking-tight">KAPWA</span>
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
               MSWDO Norzagaray — Empowering communities through compassionate social welfare services.
             </p>
           </div>
 
           {/* Column 2: Quick Links */}
           <div>
-            <h4 className="font-heading text-sm font-semibold text-foreground mb-4">Quick Links</h4>
+            <h4 className="font-heading text-sm font-semibold text-foreground mb-4 tracking-wide">Quick Links</h4>
             <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.to}>
                   <Link
                     to={link.to}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-all duration-200 hover:translate-x-0.5"
                   >
                     {link.label}
                   </Link>
@@ -52,13 +52,13 @@ export function PublicFooter() {
 
           {/* Column 3: Contact */}
           <div>
-            <h4 className="font-heading text-sm font-semibold text-foreground mb-4">Contact Us</h4>
+            <h4 className="font-heading text-sm font-semibold text-foreground mb-4 tracking-wide">Contact Us</h4>
             <ul className="space-y-3">
               {contactDetails.map((detail) => {
                 const Icon = detail.icon;
                 return (
                   <li key={detail.text} className="flex gap-3 items-start">
-                    <Icon className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+                    <Icon size={20} className="text-accent mt-0.5 shrink-0" />
                     <span className="text-sm text-muted-foreground">{detail.text}</span>
                   </li>
                 );

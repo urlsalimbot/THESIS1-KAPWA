@@ -27,7 +27,7 @@ export function PageShell({ title, description, actions, cachedAt, children }: P
           <h1 className="text-2xl font-bold font-heading text-foreground">{title}</h1>
           {fullDescription && (
             <p className="text-sm text-muted-foreground mt-1">
-              {isStale && <Clock className="inline h-3.5 w-3.5 mr-1 align-text-top" aria-hidden="true" />}
+              {isStale && <Clock size={14} className="inline mr-1 align-text-top" aria-hidden="true" />}
               {fullDescription}
             </p>
           )}
