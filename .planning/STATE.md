@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: Quality & Resilience Hardening
 current_phase: 12
 status: completed
-stopped_at: Phase 12 executed (2/2 plans, 196/196 tests pass)
-last_updated: "2026-07-05T12:57:07.128Z"
+stopped_at: Phase 13 context gathered
+last_updated: "2026-07-05T13:16:38.885Z"
 last_activity: 2026-07-05
 last_activity_desc: Phase 12 marked complete
 progress:
@@ -417,10 +417,10 @@ None.
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/12-toolchain-cleanup-vitest-upgrade/12-CONTEXT.md
+**Resume file:** .planning/phases/13-major-version-upgrades/13-CONTEXT.md
 
-Last session: 2026-07-05T12:57:07.121Z
-Stopped at: Phase 12 executed (2/2 plans, 196/196 tests pass)
+Last session: 2026-07-05T13:16:38.878Z
+Stopped at: Phase 13 context gathered
 Next: Phase 08 layout-shell planning
 
 ## Performance Metrics
