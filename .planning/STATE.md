@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: UI/UX Overhaul
-current_phase: 11
-current_phase_name: page-migration-print-offline-ui
-status: executing
-stopped_at: Plan 11-04 final sweep complete
-last_updated: "2026-06-30T04:00:44Z"
-last_activity: 2026-06-30
-last_activity_desc: Plan 11-04 complete -- final sweep PageShell migration
+milestone: v1.2
+milestone_name: Quality & Resilience Hardening
+current_phase: null
+current_phase_name: null
+status: planning
+stopped_at: null
+last_updated: "2026-07-05"
+last_activity: 2026-07-05
+last_activity_desc: Milestone v1.2 started
 progress:
-  total_phases: 6
-  completed_phases: 3
-  total_plans: 13
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
   completed_plans: 9
   percent: 69
 ---
@@ -29,18 +29,10 @@ See: .planning/PROJECT.md (updated 2026-06-27)
 
 ## Current Position
 
-Phase: 11 (page-migration-print-offline-ui) — EXECUTING
-
-Phase: 09 — COMPLETE
-Plan: 1 of 4
-Last activity: 2026-06-29 — Phase 11 execution started
-
-Phase: 09 (landing-page-auth-flow) — COMPLETE
-Status: Executing Phase 11
-
-Progress: [██████████████░░░░░░] 43%
-
-## Performance Metrics
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-05 — Milestone v1.2 started
 
 **Velocity:**
 
@@ -152,7 +144,7 @@ requirements-completed:
 
 duration: 10 min
 completed: 2026-06-29
-status: complete
+status: planning
 ---
 
 # Phase 10 Plan 01: Page-State Components Summary
@@ -237,7 +229,7 @@ requirements-completed:
 
 duration: 3 min
 completed: 2026-06-29
-status: complete
+status: planning
 ---
 
 # Phase 10 Plan 02: Mobile BottomNav, DataTable System, and 44px Touch Targets
