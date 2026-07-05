@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock API module
-vi.mock('../src/lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getFamilyGraph: vi.fn(),
 }));
 
-import { getFamilyGraph } from '../src/lib/api';
+import { getFamilyGraph } from '../lib/api';
 
 describe('FamilyGraph — Client', () => {
   beforeEach(() => {

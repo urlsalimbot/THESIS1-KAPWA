@@ -40,7 +40,7 @@ describe('usePiiMasking', () => {
   test('shouldMask is true for non-worker role (mayor)', () => {
     mockUseAuth.mockReturnValue({
       user: { id: '1', email: 'mayor@test.com', fullName: 'Mayor', role: 'mayor' },
-      token: null,
+      token: '',
       loading: false,
     });
     const { result } = renderHook(() => usePiiMasking({ consentStatus: 'active' }));
@@ -60,7 +60,7 @@ describe('usePiiMasking', () => {
   test('getDisplayValue returns masked string when shouldMask is true', () => {
     mockUseAuth.mockReturnValue({
       user: { id: '1', email: 'mayor@test.com', fullName: 'Mayor', role: 'mayor' },
-      token: null,
+      token: '',
       loading: false,
     });
     const { result } = renderHook(() => usePiiMasking({ consentStatus: 'active' }));

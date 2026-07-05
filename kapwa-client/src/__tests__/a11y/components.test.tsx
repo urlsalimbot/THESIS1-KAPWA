@@ -58,7 +58,7 @@ vi.mock('@/lib/sla-utils', () => ({
   getThresholdBgColor: (s: string) => s === 'compliant' ? 'bg-green-500/10' : 'bg-amber-500/10',
 }));
 
-function ThrowingChild() {
+function ThrowingChild(): React.ReactNode {
   throw new Error('Test error');
 }
 

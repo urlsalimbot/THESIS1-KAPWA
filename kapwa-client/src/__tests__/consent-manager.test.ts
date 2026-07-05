@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock API module
-vi.mock('../src/lib/api', () => ({
+vi.mock('../lib/api', () => ({
   revokeConsent: vi.fn(),
   getConsentLedger: vi.fn(),
 }));
 
-import { revokeConsent, getConsentLedger } from '../src/lib/api';
+import { revokeConsent, getConsentLedger } from '../lib/api';
 
 describe('ConsentManager — Client', () => {
   beforeEach(() => {
