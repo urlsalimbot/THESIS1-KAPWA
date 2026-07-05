@@ -18,6 +18,12 @@
 3. `npm run build` produces identical output (no regressions from dep moves)
 4. Dev server starts without warnings from deprecated vitest APIs
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Move 3 misplaced deps (playwright, @capacitor/cli, esbuild) from `dependencies` to `devDependencies` and upgrade vitest 1.2.0 → 4.1.9 in a single atomic commit
+- [ ] 12-02-PLAN.md — Co-locate 24 test files with their sources and move 10 orphan tests to new `src/__tests__/` directory per vitest v4 convention; update vite.config.ts include pattern
+
 ---
 
 ## Phase 13: Major Version Upgrades
@@ -102,7 +108,7 @@
 
 | Phase | Status | Requirements | Plans |
 |-------|--------|--------------|-------|
-| 12 | ○ | DEP-01, DEP-02 | 0/0 |
+| 12 | ⊙ | DEP-01, DEP-02 | 2/0 |
 | 13 | ○ | UPG-01, UPG-02, UPG-03 | 0/0 |
 | 14 | ○ | API-01, API-02 | 0/0 |
 | 15 | ○ | TST-01, TST-02, TST-03, TST-04 | 0/0 |
