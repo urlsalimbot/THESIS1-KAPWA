@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { MessagesPage } from '../MessagesPage';
+import { MessagesPage } from './MessagesPage';
 
 // Mock chat socket
-vi.mock('../../lib/chat-socket', () => ({
+vi.mock('../lib/chat-socket', () => ({
   connectSocket: vi.fn(() => ({
     on: vi.fn(),
   })),

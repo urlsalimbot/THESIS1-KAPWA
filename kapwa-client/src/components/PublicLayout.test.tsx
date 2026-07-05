@@ -1,17 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { PublicLayout } from '../../src/components/PublicLayout';
+import { PublicLayout } from './PublicLayout';
 
-vi.mock('../../src/lib/auth-context', () => ({
+vi.mock('../lib/auth-context', () => ({
   useAuth: vi.fn(() => ({ user: null, loading: false })),
 }));
 
-vi.mock('../../src/components/PublicHeader', () => ({
+vi.mock('./PublicHeader', () => ({
   PublicHeader: () => <div data-testid="mock-header">Header</div>,
 }));
 
-vi.mock('../../src/components/PublicFooter', () => ({
+vi.mock('./PublicFooter', () => ({
   PublicFooter: () => <div data-testid="mock-footer">Footer</div>,
 }));
 

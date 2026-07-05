@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { BeneficiariesPage } from '../BeneficiariesPage';
+import { BeneficiariesPage } from './BeneficiariesPage';
 
 const { mockBeneficiaries } = vi.hoisted(() => ({
   mockBeneficiaries: [
@@ -10,7 +10,7 @@ const { mockBeneficiaries } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getBeneficiaries: () => Promise.resolve(mockBeneficiaries),
 }));
 

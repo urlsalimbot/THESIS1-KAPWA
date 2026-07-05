@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Use mockImplementation instead of mockResolvedValue for reliability
-vi.mock('../src/lib/encrypted-db', () => ({
+vi.mock('./encrypted-db', () => ({
   encryptedDb: {
     init: vi.fn().mockResolvedValue(undefined),
     getItem: vi.fn().mockImplementation(() => Promise.resolve(null)),
@@ -10,7 +10,7 @@ vi.mock('../src/lib/encrypted-db', () => ({
   },
 }));
 
-import { encryptedDb } from '../src/lib/encrypted-db';
+import { encryptedDb } from './encrypted-db';
 
 describe('SecureStorage (browser fallback)', () => {
   beforeEach(() => {
@@ -27,14 +27,14 @@ describe('SecureStorage (browser fallback)', () => {
       () => Promise.resolve({ hello: 'world' })
     );
 
-    const { SecureStorage } = await import('../src/lib/secure-storage');
+    const { SecureStorage } = await import('./secure-storage');
     await SecureStorage.setItem('test-key', { hello: 'world' });
     const val = await SecureStorage.getItem('test-key');
     expect(val).toEqual({ hello: 'world' });
   });
 
   it('returns null for missing key', async () => {
-    const { SecureStorage } = await import('../src/lib/secure-storage');
+    const { SecureStorage } = await import('./secure-storage');
     const val = await SecureStorage.getItem('nonexistent');
     expect(val).toBeNull();
   });

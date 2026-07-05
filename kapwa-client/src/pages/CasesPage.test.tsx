@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { CasesPage } from '../CasesPage';
+import { CasesPage } from './CasesPage';
 
 const { mockCases } = vi.hoisted(() => ({
   mockCases: [
@@ -24,7 +24,7 @@ const { mockCases } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getCases: () => Promise.resolve(mockCases),
   requestReview: vi.fn(),
   disburseCase: vi.fn(),
@@ -32,11 +32,11 @@ vi.mock('../../lib/api', () => ({
   overrideCaseStatus: vi.fn(),
 }));
 
-vi.mock('../../lib/sync', () => ({
+vi.mock('../lib/sync', () => ({
   isOnline: () => true,
 }));
 
-vi.mock('../../lib/offline-queue', () => ({
+vi.mock('../lib/offline-queue', () => ({
   queueFsmTransition: vi.fn(),
 }));
 

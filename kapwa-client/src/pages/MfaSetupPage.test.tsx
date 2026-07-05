@@ -1,21 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { MfaSetupPage } from '../MfaSetupPage';
+import { MfaSetupPage } from './MfaSetupPage';
 
 // Mock API functions used by MfaSetupPage
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   setupMfa: vi.fn(),
   enableMfa: vi.fn(),
   disableMfa: vi.fn(),
 }));
 
 // Mock auth-context getCurrentUser
-vi.mock('../../lib/auth-context', () => ({
+vi.mock('../lib/auth-context', () => ({
   getCurrentUser: vi.fn(),
 }));
 
-import { getCurrentUser } from '../../lib/auth-context';
+import { getCurrentUser } from '../lib/auth-context';
 
 describe('MfaSetupPage', () => {
   beforeEach(() => {

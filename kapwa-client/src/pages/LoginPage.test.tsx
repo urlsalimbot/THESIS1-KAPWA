@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { LoginPage } from '../../src/pages/LoginPage';
+import { LoginPage } from './LoginPage';
 
 const mockLogin = vi.fn();
 const mockResolveMfa = vi.fn();
@@ -9,7 +9,7 @@ const mockCancelMfa = vi.fn();
 
 const mockMfaChallenge = vi.hoisted(() => ({ current: null as { tempToken: string } | null }));
 
-vi.mock('../../src/lib/auth-context', () => ({
+vi.mock('../lib/auth-context', () => ({
   useAuth: vi.fn(() => ({
     user: null,
     token: null,
@@ -36,7 +36,7 @@ vi.mock('react-hook-form', () => ({
 
 vi.mock('@hookform/resolvers/zod', () => ({ zodResolver: vi.fn(() => (data: any) => ({ values: data, errors: {} })) }));
 
-vi.mock('../../src/components/ui/form', () => ({
+vi.mock('../components/ui/form', () => ({
   Form: ({ children }: any) => <div data-testid="form">{children}</div>,
   FormField: ({ render }: any) => render({ field: { value: '', onChange: vi.fn() } }),
   FormItem: ({ children }: any) => <div>{children}</div>,

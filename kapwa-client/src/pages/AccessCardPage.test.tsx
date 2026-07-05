@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AccessCardPage } from '../AccessCardPage';
+import { AccessCardPage } from './AccessCardPage';
 
 const { mockServices } = vi.hoisted(() => ({
   mockServices: [
@@ -17,7 +17,7 @@ const { mockServices } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   assignCard: vi.fn(),
   getBeneficiaryCard: vi.fn(),
 }));

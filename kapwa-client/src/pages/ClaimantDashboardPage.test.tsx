@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ClaimantDashboardPage } from '../ClaimantDashboardPage';
+import { ClaimantDashboardPage } from './ClaimantDashboardPage';
 
 const { mockPrefs } = vi.hoisted(() => ({
   mockPrefs: [],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getNotificationPreferences: () => Promise.resolve(mockPrefs),
   updateNotificationPreferences: () => Promise.resolve(),
 }));

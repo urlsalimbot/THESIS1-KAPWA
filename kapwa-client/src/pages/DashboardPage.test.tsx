@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { DashboardPage } from '../DashboardPage';
+import { DashboardPage } from './DashboardPage';
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getDashboard: vi.fn().mockResolvedValue({
     servedToday: 12,
     servedChange: '+8%',
@@ -18,7 +18,7 @@ vi.mock('../../lib/api', () => ({
   }),
 }));
 
-vi.mock('../../lib/auth-context', () => ({
+vi.mock('../lib/auth-context', () => ({
   useAuth: () => ({
     user: { id: 'user-1', email: 'worker@test.com', fullName: 'Test Worker', role: 'social_worker' },
     token: 'mock-token',

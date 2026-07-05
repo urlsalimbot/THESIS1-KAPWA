@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { loadQueue } from '../src/lib/offline-queue';
+import { loadQueue } from './offline-queue';
 
 describe('Offline Queue', () => {
   beforeEach(() => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { CaseTrackerPage } from '../CaseTrackerPage';
+import { CaseTrackerPage } from './CaseTrackerPage';
 
 // Mock fetch since this page uses raw fetch() calls (not API module)
 const { mockEntries } = vi.hoisted(() => ({
@@ -22,7 +22,7 @@ const { mockEntries } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../lib/constants', () => ({
   BARANGAYS: ['Barangay 1', 'Barangay 2'],
   AGE_RANGES: ['0-17', '18-59', '60+'],
   CLIENT_CATEGORIES: ['Senior', 'PWD', 'Child'],

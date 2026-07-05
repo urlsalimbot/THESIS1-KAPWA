@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { CsrPage } from '../CsrPage';
+import { CsrPage } from './CsrPage';
 
 const { mockRecords } = vi.hoisted(() => ({
   mockRecords: [
@@ -29,7 +29,7 @@ const { mockRecords } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getCsrRecords: vi.fn(() => Promise.resolve(mockRecords)),
   createCsrRecord: vi.fn(),
   updateCsrRecord: vi.fn(),

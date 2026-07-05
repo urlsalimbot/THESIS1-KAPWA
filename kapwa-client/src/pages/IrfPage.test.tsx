@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { IrfPage } from '../IrfPage';
+import { IrfPage } from './IrfPage';
 
 const { mockIrfs } = vi.hoisted(() => ({
   mockIrfs: [
@@ -17,7 +17,7 @@ const { mockIrfs } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getIrfRecords: vi.fn(() => Promise.resolve(mockIrfs)),
   createIrf: vi.fn(),
   exportIrfPdf: vi.fn(),

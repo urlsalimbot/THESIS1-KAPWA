@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ApprovalPipelinePage } from '../ApprovalPipelinePage';
+import { ApprovalPipelinePage } from './ApprovalPipelinePage';
 
 const { mockCases } = vi.hoisted(() => ({
   mockCases: [
@@ -28,14 +28,14 @@ const { mockCases } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getCases: () => Promise.resolve(mockCases),
   updateCaseStatus: vi.fn(),
   updateCaseDocuments: vi.fn(),
   approveCase: vi.fn(),
 }));
 
-vi.mock('../../lib/auth-context', () => ({
+vi.mock('../lib/auth-context', () => ({
   getCurrentUser: () => Promise.resolve({ id: 'user-1', role: 'admin', name: 'Admin User' }),
 }));
 

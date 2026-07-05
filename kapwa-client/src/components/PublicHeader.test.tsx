@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { PublicHeader } from '../../src/components/PublicHeader';
+import { PublicHeader } from './PublicHeader';
 
-vi.mock('../../src/lib/auth-context', () => ({
+vi.mock('../lib/auth-context', () => ({
   useAuth: vi.fn(),
 }));
 
-import { useAuth } from '../../src/lib/auth-context';
+import { useAuth } from '../lib/auth-context';
 const mockUseAuth = useAuth as ReturnType<typeof vi.fn>;
 
 describe('PublicHeader', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { InterventionsPage } from '../InterventionsPage';
+import { InterventionsPage } from './InterventionsPage';
 
 const { mockInterventions } = vi.hoisted(() => ({
   mockInterventions: [
@@ -26,7 +26,7 @@ const { mockInterventions } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getInterventions: () => Promise.resolve(mockInterventions),
   createIntervention: vi.fn(),
   uploadSignature: vi.fn(),

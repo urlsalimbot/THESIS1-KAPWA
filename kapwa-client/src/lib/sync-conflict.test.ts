@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mergeRecords, resolveConflict, getPendingChanges, markConflict, markSynced } from '../src/lib/offline-queue';
-import type { QueuedChange, VersionVector } from '../src/lib/offline-queue';
+import { mergeRecords, resolveConflict, getPendingChanges, markConflict, markSynced } from './offline-queue';
+import type { QueuedChange, VersionVector } from './offline-queue';
 
-vi.mock('../src/lib/database', () => ({
+vi.mock('./database', () => ({
   getDatabase: vi.fn().mockResolvedValue({
     execute: vi.fn().mockResolvedValue([])
   })

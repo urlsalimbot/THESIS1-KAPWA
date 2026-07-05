@@ -7,18 +7,18 @@ const mockQueueChange = vi.fn((...args: unknown[]) => {
   return Promise.resolve({ id: 'mock-id', tableName: args[0], status: 'pending' });
 });
 
-vi.mock('../src/lib/offline-queue', () => ({
+vi.mock('../lib/offline-queue', () => ({
   queueChange: (...args: unknown[]) => mockQueueChange(...args),
   loadQueue: vi.fn(() => []),
   getPendingChanges: vi.fn(() => Promise.resolve([])),
 }));
 
 let onlineStatus = true;
-vi.mock('../src/lib/sync', () => ({
+vi.mock('../lib/sync', () => ({
   isOnline: vi.fn(() => onlineStatus),
 }));
 
-vi.mock('../src/lib/constants', () => ({
+vi.mock('../lib/constants', () => ({
   BARANGAYS: ['Barangay 1', 'Barangay 2'],
   SERVICE_TYPES: ['FA', 'CSR'],
 }));
@@ -31,7 +31,7 @@ describe('IntakePage — offline path', () => {
   });
 
   it('should export IntakePage component', async () => {
-    const { IntakePage } = await import('../src/pages/IntakePage');
+    const { IntakePage } = await import('./IntakePage');
     expect(IntakePage).toBeDefined();
     expect(typeof IntakePage).toBe('function');
   });
@@ -42,11 +42,11 @@ describe('IntakePage — offline path', () => {
     // Currently it calls queueChange('cases', ...) — this test will fail
     // with the current code and pass after the UI wiring in Task 3
 
-    const { IntakePage } = await import('../src/pages/IntakePage');
+    const { IntakePage } = await import('./IntakePage');
     expect(IntakePage).toBeDefined();
 
     // Verify the mock is set up correctly
-    const { queueChange } = await import('../src/lib/offline-queue');
+    const { queueChange } = await import('../lib/offline-queue');
     expect(queueChange).toBeDefined();
 
     // This is the expected call signature after Task 3:

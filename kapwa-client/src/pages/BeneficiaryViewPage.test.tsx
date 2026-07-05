@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { BeneficiaryViewPage } from '../BeneficiaryViewPage';
+import { BeneficiaryViewPage } from './BeneficiaryViewPage';
 
 const { mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.hoisted(() => ({
   mockBeneficiary: {
@@ -38,7 +38,7 @@ const { mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.h
   ],
 }));
 
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   getBeneficiary: () => Promise.resolve(mockBeneficiary),
   getCases: () => Promise.resolve(mockCases),
   getFamilyGraph: () => Promise.resolve(mockFamilyGraph),
