@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Quality & Resilience Hardening
-current_phase: null
-current_phase_name: null
+current_phase_name: defining requirements
 status: planning
-stopped_at: null
-last_updated: "2026-07-05"
+stopped_at: Phase 12 context gathered
+last_updated: "2026-07-05T12:04:15.847Z"
 last_activity: 2026-07-05
 last_activity_desc: Milestone v1.2 started
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
-  completed_plans: 9
-  percent: 69
+  completed_plans: 0
+  percent: 0
+current_phase: null
 ---
 
 # Project State
@@ -417,10 +417,10 @@ None.
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/11-page-migration-print-offline-ui/11-UI-SPEC.md
+**Resume file:** .planning/phases/12-toolchain-cleanup-vitest-upgrade/12-CONTEXT.md
 
-Last session: 2026-06-29T05:30:45.777Z
-Stopped at: Phase 11 UI-SPEC approved
+Last session: 2026-07-05T12:04:15.840Z
+Stopped at: Phase 12 context gathered
 Next: Phase 08 layout-shell planning
 
 ## Performance Metrics
