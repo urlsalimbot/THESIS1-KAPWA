@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'org.mswdo.norzagaray.kapwa',
   appName: 'KAPWA',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
     androidScheme: 'https',
   },
