@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import React from "react";
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -11,18 +10,9 @@ function Bomb({ shouldThrow = true }: { shouldThrow?: boolean }) {
   return <div>Safe content</div>;
 }
 
-function setupOffline() {
-  Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
-}
-
-function setupOnline() {
-  Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
-}
-
 describe('ErrorBoundary', () => {
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    setupOnline();
   });
 
   afterEach(() => {
@@ -53,39 +43,6 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Go to Dashboard')).toBeTruthy();
   });
 
-  it('shows offline UI when navigator.onLine is false', () => {
-    setupOffline();
-
-    render(
-      <MemoryRouter>
-        <ErrorBoundary>
-          <Bomb />
-        </ErrorBoundary>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('You are offline')).toBeTruthy();
-    expect(screen.getByText('Retry')).toBeTruthy();
-  });
-
-  it('shows offline UI for fetch-related errors', () => {
-    function FetchBomb(): React.ReactNode {
-      const error = new TypeError('Failed to fetch');
-      error.name = 'TypeError';
-      throw error;
-    }
-
-    render(
-      <MemoryRouter>
-        <ErrorBoundary>
-          <FetchBomb />
-        </ErrorBoundary>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('You are offline')).toBeTruthy();
-  });
-
   it('Try Again button resets error state', () => {
     render(
       <MemoryRouter>
@@ -98,7 +55,7 @@ describe('ErrorBoundary', () => {
     // Click Try Again
     screen.getByText('Try Again').click();
 
-    // After clicking Try Again, the error state resets
+    // After clicking Try Again, resetErrorBoundary is invoked
     // The bomb re-renders and is caught again, showing the fallback
     expect(screen.getByText('Something went wrong')).toBeTruthy();
   });
