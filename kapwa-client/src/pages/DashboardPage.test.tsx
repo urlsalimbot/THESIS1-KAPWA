@@ -34,4 +34,11 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('C-001', {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.getByText('Juan Dela Cruz')).toBeTruthy();
   });
+
+  it('snapshot: DashboardPage rendered DOM with stat cards + recent cases table', async () => {
+    const { container } = render(<MemoryRouter><DashboardPage /></MemoryRouter>);
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
+    expect(await screen.findByText('Served Today')).toBeTruthy();
+    expect(container).toMatchSnapshot();
+  });
 });

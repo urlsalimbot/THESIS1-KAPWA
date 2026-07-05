@@ -1,0 +1,505 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searchable list + action buttons + masked PII 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-4 lg:gap-8"
+  >
+    <div
+      class="flex items-start justify-between gap-4"
+    >
+      <div>
+        <h1
+          class="text-2xl font-bold font-heading text-foreground"
+        >
+          Beneficiaries
+        </h1>
+        <p
+          class="text-sm text-muted-foreground mt-1"
+        >
+          Manage beneficiary records and household data
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-center justify-between gap-3"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <button
+          aria-label="+ New Beneficiary"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
+        >
+          + New Beneficiary
+        </button>
+        <button
+          aria-label="Import CSV"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
+        >
+          Import CSV
+        </button>
+      </div>
+      <div
+        class="flex items-center gap-2 flex-wrap"
+      >
+        <div
+          class="relative"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-search absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            fill="none"
+            height="16"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="16"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m21 21-4.34-4.34"
+            />
+            <circle
+              cx="11"
+              cy="11"
+              r="8"
+            />
+          </svg>
+          <input
+            aria-label="Search beneficiaries"
+            class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-48 pl-8"
+            placeholder="Search by name..."
+            type="text"
+            value=""
+          />
+        </div>
+        <select
+          aria-label="Filter by category"
+          class="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option
+            value=""
+          >
+            All Categories
+          </option>
+          <option
+            value="Senior"
+          >
+            Senior
+          </option>
+          <option
+            value="PWD"
+          >
+            PWD
+          </option>
+          <option
+            value="Child"
+          >
+            Child
+          </option>
+          <option
+            value="Solo Parent"
+          >
+            Solo Parent
+          </option>
+          <option
+            value="Indigenous"
+          >
+            Indigenous
+          </option>
+          <option
+            value="Others"
+          >
+            Others
+          </option>
+        </select>
+        <select
+          aria-label="Filter by barangay"
+          class="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option
+            value="all"
+          >
+            All Barangays
+          </option>
+          <option>
+            Bigte
+          </option>
+          <option>
+            Matictic
+          </option>
+          <option>
+            Partida
+          </option>
+          <option>
+            San Mateo
+          </option>
+          <option>
+            Tigbe
+          </option>
+          <option>
+            Minuyan
+          </option>
+          <option>
+            San Roque
+          </option>
+          <option>
+            Samson
+          </option>
+          <option>
+            FVR
+          </option>
+          <option>
+            Sta. Lucia
+          </option>
+        </select>
+      </div>
+    </div>
+    <div
+      class="text-sm text-muted-foreground flex items-center gap-1"
+    >
+      Showing 2 results
+    </div>
+    <div>
+      <div
+        class="rounded-md border overflow-x-auto"
+      >
+        <div
+          class="relative w-full overflow-auto"
+        >
+          <table
+            class="w-full caption-bottom text-sm"
+          >
+            <thead
+              class="[&_tr]:border-b"
+            >
+              <tr
+                class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+              >
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  ID
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  Name
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  Age
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  Barangay
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  Household
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  Programs
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  Status
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              class="[&_tr:last-child]:border-0"
+            >
+              <tr
+                class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                data-state="false"
+              >
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <span
+                    class="font-medium"
+                  >
+                    BEN-001
+                  </span>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  Juan Dela Cruz
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground"
+                  >
+                    0
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                />
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <span>
+                    1
+                     members
+                  </span>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="flex gap-1 flex-wrap"
+                  />
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+                  >
+                    active
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <button
+                    aria-label="View Beneficiary"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-eye mr-1"
+                      fill="none"
+                      height="14"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="14"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                      />
+                    </svg>
+                     View
+                  </button>
+                </td>
+              </tr>
+              <tr
+                class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                data-state="false"
+              >
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <span
+                    class="font-medium"
+                  >
+                    BEN-002
+                  </span>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  Maria Santos
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground"
+                  >
+                    0
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                />
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <span>
+                    1
+                     members
+                  </span>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="flex gap-1 flex-wrap"
+                  />
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+                  >
+                    active
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <button
+                    aria-label="View Beneficiary"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-eye mr-1"
+                      fill="none"
+                      height="14"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="14"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                      />
+                    </svg>
+                     View
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div
+        class="flex items-center justify-between px-2 py-4"
+      >
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Page 
+          1
+           of 
+          1
+           (
+          2
+           total)
+        </p>
+        <div
+          class="flex items-center gap-1"
+        >
+          <nav
+            aria-label="pagination"
+            class="mx-auto flex w-full justify-center"
+            role="navigation"
+          >
+            <ul
+              class="flex flex-row items-center gap-1"
+            >
+              <li
+                class=""
+              >
+                <a
+                  aria-label="Go to previous page"
+                  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-1 pl-2.5 pointer-events-none opacity-50"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-chevron-left h-4 w-4"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m15 18-6-6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    Previous
+                  </span>
+                </a>
+              </li>
+              <li
+                class=""
+              >
+                <a
+                  aria-current="page"
+                  class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-10 w-10 cursor-pointer"
+                >
+                  1
+                </a>
+              </li>
+              <li
+                class=""
+              >
+                <a
+                  aria-label="Go to next page"
+                  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-1 pr-2.5 pointer-events-none opacity-50"
+                >
+                  <span>
+                    Next
+                  </span>
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-chevron-right h-4 w-4"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m9 18 6-6-6-6"
+                    />
+                  </svg>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
