@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { SWRConfig } from 'swr';
+import { SWRConfig, mutate } from 'swr';
 import { DashboardPage } from './DashboardPage';
 
 const { mockApiGet, mockApiPost, mockApiPut, mockApiDel } = vi.hoisted(() => ({
@@ -50,12 +50,14 @@ function renderWithSWR(ui: React.ReactNode) {
 }
 
 describe('DashboardPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockApiGet.mockReset();
     mockApiPost.mockReset();
     mockApiPut.mockReset();
     mockApiDel.mockReset();
     mockApiGet.mockResolvedValue(mockDashboardData);
+    // Clear the global SWR cache so each test gets a fresh useSWR fetch.
+    await mutate(() => true, undefined, { revalidate: false });
   });
 
   it('renders PageShell heading, stat cards, and case table with mock data', async () => {

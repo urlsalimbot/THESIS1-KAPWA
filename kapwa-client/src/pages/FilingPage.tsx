@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import useSWR, { mutate } from 'swr';
 import { Upload, Download, Trash2, Search } from 'lucide-react';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -7,6 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
+// Pre-auth carve-out: handleUpload (FormData) and handleDownload (blob) use raw
+// fetch with manual Bearer headers. The api client only handles JSON bodies/
+// responses, so these flows are deliberately out of scope (D-10 deferred).
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 interface Document {
@@ -16,28 +22,16 @@ interface Document {
 }
 
 export function FilingPage() {
-  const [docs, setDocs] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [lastSync, setLastSync] = useState<number | null>(null);
+  const [category, setCategory] = useState<string>('all');
 
-  useEffect(() => {
-    const controller = new AbortController();
-    loadDocs(undefined, controller.signal);
-    return () => controller.abort();
-  }, []);
-
-  async function loadDocs(category?: string, signal?: AbortSignal) {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const q = category ? `?category=${category}` : '';
-      const res = await fetch(`${API_URL}/filing${q}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setDocs(await res.json());
-      setLastSync(Date.now());
-    } catch (e) { console.error("FilingPage:", e); } finally { setLoading(false); }
-  }
+  // SWR list — api.get is bound globally in routes.tsx (no fetcher prop).
+  // The /filing endpoint accepts a category filter; we pass it via the query key.
+  const { data, isLoading } = useSWR<Document[]>(queryKeys.filing.byCategory(category));
+  const docs = data || [];
+  const loading = isLoading;
+  const lastSync = data ? Date.now() : null;
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -53,16 +47,19 @@ export function FilingPage() {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (res.ok) loadDocs();
+      if (res.ok) {
+        // Revalidate the filing list after an upload
+        await mutate(queryKeys.filing.all, undefined, { revalidate: true });
+      }
     } catch (e) { console.error("FilingPage:", e); } finally { setUploading(false); }
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this document?')) return;
     try {
-      const token = localStorage.getItem('kapwa_token');
-      await fetch(`${API_URL}/filing/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      loadDocs();
+      await api.del(`/filing/${id}`);
+      // Revalidate the filing list after a delete
+      await mutate(queryKeys.filing.all, undefined, { revalidate: true });
     } catch (e) { console.error("FilingPage:", e); }
   }
 
