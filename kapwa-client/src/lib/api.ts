@@ -127,7 +127,6 @@ async function executeWithRetry<T>(
   try {
     return await rawRequest<T>(method, path, body, signal);
   } catch (err) {
-    // 401 handling: refresh + retry once
     if (err instanceof ApiError && err.status === 401 && !isRetry) {
       const refreshed = await refreshToken();
       if (refreshed) {
@@ -135,7 +134,6 @@ async function executeWithRetry<T>(
       }
       throw err;
     }
-    // Retry policy: only network failure or internal-timeout abort, only on GET
     const isRetryableError =
       err instanceof TypeError ||
       (err instanceof DOMException && err.name === 'AbortError' && !signal?.aborted);
@@ -160,35 +158,7 @@ export const api = {
     executeWithRetry<T>('DELETE', path, undefined, opts?.signal),
 };
 
-// Backwards-compat shims for the legacy wrappers still imported by pages
-// that have not yet migrated to api.get/post/put/del (D-01 migration in Plan 14-02/14-03).
-// Each shim is a one-line delegate to the new client. Do not add new code here.
-export const getCases = (status?: string, signal?: AbortSignal) =>
-  api.get(status ? `/cases?status=${encodeURIComponent(status)}` : '/cases', { signal });
-export const getDashboard = () => api.get('/dashboard');
-export const requestReview = (id: string) => api.put(`/cases/${id}/request-review`);
-export const disburseCase = (id: string) => api.put(`/cases/${id}/disburse`, { status: 'disbursed' });
-export const closeCase = (id: string) => api.put(`/cases/${id}/close`);
-export const submitIntake = (data: Record<string, unknown>) => api.post('/intake', data);
-export const getBeneficiaries = (params?: { search?: string; category?: string; barangay?: string; page?: number; limit?: number }) => {
-  const q = new URLSearchParams();
-  if (params?.search) q.set('search', params.search);
-  if (params?.category) q.set('category', params.category);
-  if (params?.barangay) q.set('barangay', params.barangay);
-  if (params?.page) q.set('page', String(params.page));
-  if (params?.limit) q.set('limit', String(params.limit));
-  const qs = q.toString();
-  return api.get(`/beneficiaries${qs ? '?' + qs : ''}`);
-};
-export const getBeneficiary = (id: string, signal?: AbortSignal) => api.get(`/beneficiaries/${id}`, { signal });
-export const getFamilyGraph = (beneficiaryId: string, signal?: AbortSignal) =>
-  api.get(`/beneficiaries/${beneficiaryId}/family-graph`, { signal });
-export const createIntervention = (data: Record<string, unknown>) => api.post('/interventions', data);
-export const getCaseTrackerLog = (date?: string) => api.get(`/tracker/daily${date ? '?date=' + date : ''}`);
-export const assignCard = (beneficiaryId: string) => api.post(`/access-cards/assign/${beneficiaryId}`);
-
-// Blob/FormData endpoints stay on raw fetch — the JSON-only api client can't handle them.
-// These shims are kept for backwards compat; they use the same bearer-header pattern internally.
+// FormData uploads (D-10 deferred — api client only handles JSON).
 async function rawUpload(path: string, file: Blob, fileName: string): Promise<string> {
   const token = localStorage.getItem(TOKEN_KEY);
   const formData = new FormData();
@@ -202,8 +172,10 @@ async function rawUpload(path: string, file: Blob, fileName: string): Promise<st
   const data = (await res.json()) as { url: string };
   return data.url;
 }
-export const uploadSignature = (file: Blob, fileName: string) => rawUpload('/interventions/upload-signature', file, fileName);
-export const uploadReceipt = (file: Blob, fileName: string) => rawUpload('/interventions/upload-receipt', file, fileName);
+export const uploadSignature = (file: Blob, fileName: string) =>
+  rawUpload('/interventions/upload-signature', file, fileName);
+export const uploadReceipt = (file: Blob, fileName: string) =>
+  rawUpload('/interventions/upload-receipt', file, fileName);
 
 export function dataURItoBlob(dataUrl: string): Blob {
   const [header, base64] = dataUrl.split(',');
@@ -214,25 +186,7 @@ export function dataURItoBlob(dataUrl: string): Blob {
   return new Blob([array], { type: mime });
 }
 
-// ===== CSR =====
-export const getCsrRecords = (signal?: AbortSignal) => api.get('/csr', { signal });
-export const getCsrRecord = (id: string) => api.get(`/csr/${id}`);
-export const createCsrRecord = (data: Record<string, unknown>) => api.post('/csr', data);
-export const updateCsrRecord = (id: string, data: Record<string, unknown>) => api.put(`/csr/${id}`, data);
-export const deleteCsrRecord = (id: string) => api.del(`/csr/${id}`);
-
-export const getInterventions = (caseId?: string) =>
-  api.get(`/interventions${caseId ? '?caseId=' + caseId : ''}`);
-
-export const updateCaseDocuments = (id: string, data: { certificateUrl?: string; pettyCashVoucherUrl?: string }) =>
-  api.put(`/cases/${id}/documents`, data);
-export const approveCase = (id: string, status: string, signature?: string) =>
-  api.put(`/cases/${id}/approve`, { status, signature });
-export const getNotificationPreferences = (signal?: AbortSignal) => api.get('/notifications/preferences', { signal });
-export const updateNotificationPreferences = (data: { channel: string; category: string; optedIn: boolean }) =>
-  api.put('/notifications/preferences', data);
-
-// Blob download stays on raw fetch — needs URL.createObjectURL flow.
+// Blob downloads (D-10 deferred — api client only handles JSON).
 export async function downloadCsrPdf(controlNo: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE}/csr/${controlNo}/pdf`, {
@@ -248,25 +202,12 @@ export async function downloadCsrPdf(controlNo: string) {
   URL.revokeObjectURL(url);
 }
 
-export const getCase = (id: string) => api.get(`/cases/${id}`);
-export const bulkApprove = (ids: string[], signature?: string) =>
-  api.post('/cases/bulk-approve', { ids, signature });
-export const setupMfa = () => api.post('/auth/mfa/setup');
-export const enableMfa = (code: string) => api.post('/auth/mfa/enable', { code });
-export const disableMfa = (password: string) => api.post('/auth/mfa/disable', { password });
-
-export const getMayorReports = () => api.get('/dashboard/reports/mayor');
-export const getIrfRecords = (signal?: AbortSignal) => api.get('/irf', { signal });
-export const createIrf = (data: Record<string, unknown>) => api.post('/irf', data);
-export const exportIrfJson = (id: string, legalBasis: string) =>
-  api.get(`/irf/${id}/export-json?legalBasis=${encodeURIComponent(legalBasis)}`);
-
-// Blob download stays on raw fetch
 export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
   const token = localStorage.getItem(TOKEN_KEY);
-  const res = await fetch(`${API_BASE}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await fetch(
+    `${API_BASE}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
   if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -276,36 +217,3 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
   a.click();
   URL.revokeObjectURL(url);
 }
-
-export const getIrfCase = (id: string) => api.get(`/irf/${id}`);
-export const referToPnp = (id: string) => api.put(`/irf/${id}/refer-pnp`);
-export const referToWcpd = (id: string) => api.put(`/irf/${id}/refer-wcpd`);
-export const dismissIrf = (id: string, reason: string) => api.put(`/irf/${id}/dismiss`, { reason });
-export const closeIrf = (id: string) => api.put(`/irf/${id}/close`);
-export const decryptNarration = (id: string, legalBasis: string) => api.post(`/irf/${id}/decrypt`, { legalBasis });
-
-export const getPrograms = () => api.get('/programs');
-export const createProgram = (data: Record<string, unknown>) => api.post('/programs', data);
-export const getBeneficiaryCard = (beneficiaryId: string) => api.get(`/access-cards/beneficiary/${beneficiaryId}/card`);
-
-export const updateProgram = (id: string, data: Record<string, unknown>) => api.put(`/programs/${id}`, data);
-export const deleteProgram = (id: string) => api.del(`/programs/${id}`);
-
-export const getProgramAssignments = (caseId?: string) =>
-  api.get(`/program-assignments${caseId ? '?caseId=' + caseId : ''}`);
-export const getProgramAssignment = (id: string) => api.get(`/program-assignments/${id}`);
-export const approveAssignmentStep = (id: string, stepOrder: number) =>
-  api.post(`/program-assignments/${id}/steps/${stepOrder}/approve`, { stepOrder });
-export const rejectAssignmentStep = (id: string, stepOrder: number, remarks: string) =>
-  api.post(`/program-assignments/${id}/steps/${stepOrder}/reject`, { stepOrder, remarks });
-export const overrideAssignmentStep = (id: string, stepOrder: number, overrideStatus: 'approved' | 'rejected', remarks: string) =>
-  api.post(`/program-assignments/${id}/steps/${stepOrder}/override`, { stepOrder, overrideStatus, remarks });
-
-export const bulkExport = (ids: string[], format: 'csv' | 'pdf', masked?: boolean, unmaskReason?: string | null) =>
-  api.post('/cases/bulk-export', { ids, format, masked, unmaskReason });
-export const revokeConsent = (beneficiaryId: string, reason?: string) =>
-  api.post(`/beneficiaries/${beneficiaryId}/consent/revoke`, { reason });
-export const verifyHashChains = () => api.get('/audit/verify-all');
-export const getConsentLedger = (beneficiaryId: string) => api.get(`/beneficiaries/${beneficiaryId}/consent`);
-export const unmaskIrfNames = (id: string, legalBasis: string) =>
-  api.get(`/irf/${id}/unmask-names?legalBasis=${encodeURIComponent(legalBasis)}`);

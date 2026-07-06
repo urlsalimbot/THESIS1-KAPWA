@@ -1,13 +1,8 @@
 import { getPendingChanges, QueuedChange, markSynced, markConflict, markFailed, getAllVersionVectors, queueChange } from './offline-queue';
+import { api } from './api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const TOKEN_KEY = 'kapwa_token';
 const PRIVATE_KEY_STORAGE = 'kapwa_ed25519_private';
 const DEVICE_ID_STORAGE = 'kapwa_device_id';
-
-function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
 
 function hex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -71,7 +66,6 @@ async function sendBatch(
   changes: QueuedChange[],
   idempotencyKey: string,
 ): Promise<{ status: string; results: any[]; serverVersionVectors: Array<Record<string, unknown>>; serverChanges: Array<Record<string, unknown>> }> {
-  const token = getToken();
   const deviceId = await ensureDeviceId();
   const versionVectors = await getAllVersionVectors();
   const changesPayload = changes.map(c => ({
@@ -85,27 +79,13 @@ async function sendBatch(
 
   const signature = await generateSignature(deviceId, changesPayload);
 
-  const res = await fetch(`${API_URL}/sync/v1`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      deviceId,
-      changes: changesPayload,
-      versionVectors,
-      idempotencyKey,
-      signature,
-    }),
+  return api.post<{ status: string; results: any[]; serverVersionVectors: Array<Record<string, unknown>>; serverChanges: Array<Record<string, unknown>> }>('/sync/v1', {
+    deviceId,
+    changes: changesPayload,
+    versionVectors,
+    idempotencyKey,
+    signature,
   });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Sync failed (${res.status}): ${errText}`);
-  }
-
-  return res.json();
 }
 
 /** Check whether a pending change is a queued FSM transition (offline status change). */
@@ -159,46 +139,30 @@ export async function processDeltaSync() {
 }
 
 export async function pullFromServer() {
-  const token = getToken();
   const deviceId = await ensureDeviceId();
   const versionVectors = await getAllVersionVectors();
 
   try {
-    const res = await fetch(`${API_URL}/sync/pull`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ deviceId, versionVectors }),
+    const data = await api.post<{ serverChanges?: Array<Record<string, unknown>> }>('/sync/pull', {
+      deviceId,
+      versionVectors,
     });
 
-    if (!res.ok) return;
-
-    const data = await res.json();
     for (const change of data.serverChanges || []) {
       await queueChange(
-        change.tableName || 'unknown',
-        change.recordId || crypto.randomUUID(),
+        change.tableName as string || 'unknown',
+        change.recordId as string || crypto.randomUUID(),
         'INSERT' as any,
-        change.payload || {},
+        change.payload as Record<string, unknown> || {},
       );
     }
   } catch (e) { console.error("Sync:", e); }
 }
 
 export async function resolveConflictRemotely(conflictId: string, resolution: 'server' | 'client'): Promise<boolean> {
-  const token = getToken();
   try {
-    const res = await fetch(`${API_URL}/sync/conflicts/${conflictId}/resolve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ resolution }),
-    });
-    return res.ok;
+    await api.post(`/sync/conflicts/${conflictId}/resolve`, { resolution });
+    return true;
   } catch (e) { console.error("Sync:", e); return false; }
 }
 

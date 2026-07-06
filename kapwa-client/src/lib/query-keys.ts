@@ -29,6 +29,7 @@ export const queryKeys = {
       memo(`beneficiaries.familyGraph.${id}`, () => ['beneficiaries', 'family-graph', id] as const),
     myAccessCard: () => memo('beneficiaries.myAccessCard', () => ['beneficiaries', 'me', 'access-card'] as const),
     myServices: () => memo('beneficiaries.myServices', () => ['beneficiaries', 'me', 'services'] as const),
+    myConsent: () => memo('beneficiaries.myConsent', () => ['beneficiaries', 'me', 'consent'] as const),
   },
   dashboard: {
     all: ['dashboard'] as const,
@@ -58,6 +59,7 @@ export const queryKeys = {
   accessCards: {
     all: ['accessCards'] as const,
     list: () => memo('accessCards.list', () => ['accessCards', 'list'] as const),
+    log: () => memo('accessCards.log', () => ['accessCards', 'log'] as const),
     print: (id: string) => memo(`accessCards.print.${id}`, () => ['accessCards', 'print', id] as const),
   },
   filing: {
@@ -69,5 +71,55 @@ export const queryKeys = {
     all: ['programs'] as const,
     list: () => memo('programs.list', () => ['programs', 'list'] as const),
     detail: (id: string) => memo(`programs.detail.${id}`, () => ['programs', 'detail', id] as const),
+  },
+  tracker: {
+    all: ['tracker'] as const,
+    daily: (params: { date: string }) =>
+      memo(`tracker.daily.${params.date}`, () => ['tracker', 'daily', params.date] as const),
+    stats: () => memo('tracker.stats', () => ['tracker', 'stats'] as const),
+    list: () => memo('tracker.list', () => ['tracker', 'list'] as const),
+  },
+  messages: {
+    all: ['messages'] as const,
+    list: () => memo('messages.list', () => ['messages', 'list'] as const),
+    conversation: (userId: string) =>
+      memo(`messages.conversation.${userId}`, () => ['messages', 'conversation', userId] as const),
+    unread: () => memo('messages.unread', () => ['messages', 'unread'] as const),
+  },
+  sync: {
+    all: ['sync'] as const,
+    sendBatch: () => memo('sync.sendBatch', () => ['sync', 'v1'] as const),
+    pull: () => memo('sync.pull', () => ['sync', 'pull'] as const),
+    resolveConflict: (id: string) =>
+      memo(`sync.resolveConflict.${id}`, () => ['sync', 'conflicts', id, 'resolve'] as const),
+  },
+  irf: {
+    all: ['irf'] as const,
+    list: () => memo('irf.list', () => ['irf', 'list'] as const),
+    detail: (id: string) => memo(`irf.detail.${id}`, () => ['irf', 'detail', id] as const),
+  },
+  csr: {
+    all: ['csr'] as const,
+    list: () => memo('csr.list', () => ['csr', 'list'] as const),
+  },
+  intake: {
+    all: ['intake'] as const,
+    recent: () => memo('intake.recent', () => ['intake', 'recent'] as const),
+  },
+  programAssignments: {
+    all: ['programAssignments'] as const,
+    list: (caseId?: string) =>
+      memo(`programAssignments.list.${caseId ?? ''}`, () =>
+        ['program-assignments', 'list', caseId ?? null] as const,
+      ),
+    detail: (id: string) =>
+      memo(`programAssignments.detail.${id}`, () => ['program-assignments', 'detail', id] as const),
+  },
+  auth: {
+    me: () => memo('auth.me', () => ['auth', 'me'] as const),
+  },
+  users: {
+    all: ['users'] as const,
+    list: () => memo('users.list', () => ['users', 'list'] as const),
   },
 } as const;
