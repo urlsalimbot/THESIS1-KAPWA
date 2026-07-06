@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getCases, updateCaseStatus, updateCaseDocuments, approveCase, bulkApprove } from '../lib/api';
+import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { getCurrentUser } from '../lib/auth-context';
 import SignaturePad from '../components/forms/SignaturePad';
 import { CheckCircle, Upload, FileText, ArrowRight, ListChecks } from 'lucide-react';
@@ -28,34 +31,22 @@ interface ApprovalCase {
 }
 
 export function ApprovalPipelinePage() {
-  const [cases, setCases] = useState<ApprovalCase[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { mutate: globalMutate } = useSWRConfig();
+  const { data: cases = [], isLoading: loading } = useSWR<ApprovalCase[]>(queryKeys.cases.list());
   const [user, setUser] = useState<any>(null);
   const [selectedCase, setSelectedCase] = useState<ApprovalCase | null>(null);
   const [signature, setSignature] = useState<string>('');
   const [action, setAction] = useState<'approve' | 'disburse' | null>(null);
   const [saving, setSaving] = useState(false);
-  const [lastSync, setLastSync] = useState<number | null>(null);
+  const lastSync = cases.length > 0 ? Date.now() : null;
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkApproveDialogOpen, setBulkApproveDialogOpen] = useState(false);
   const [bulkExportDialogOpen, setBulkExportDialogOpen] = useState(false);
 
   useEffect(() => {
-    const ac = new AbortController();
     getCurrentUser().then(setUser);
-    loadCases(ac.signal);
-    return () => ac.abort();
   }, []);
-
-  async function loadCases(signal?: AbortSignal) {
-    try {
-      const data = await getCases(undefined, signal);
-      setCases(data || []);
-      setLastSync(Date.now());
-    } catch { setCases([]); }
-    setLoading(false);
-  }
 
   const toggleSelectMode = useCallback(() => {
     setSelectMode(prev => !prev);
@@ -85,6 +76,7 @@ export function ApprovalPipelinePage() {
     items: cases.filter(c => c.status === status),
   }));
 
+  // FormData uploads stay on raw fetch (D-10 deferred — JSON-only api client).
   async function handleCertificateUpload(caseId: string, file: File) {
     const token = localStorage.getItem('kapwa_token');
     const formData = new FormData();
@@ -98,8 +90,8 @@ export function ApprovalPipelinePage() {
     });
     if (res.ok) {
       const doc = await res.json();
-      await updateCaseDocuments(caseId, { certificateUrl: `/api/filing/file/${doc.id}` });
-      await loadCases();
+      await api.put(`/cases/${caseId}/documents`, { certificateUrl: `/api/filing/file/${doc.id}` });
+      globalMutate(queryKeys.cases.all);
     }
   }
 
@@ -116,8 +108,8 @@ export function ApprovalPipelinePage() {
     });
     if (res.ok) {
       const doc = await res.json();
-      await updateCaseDocuments(caseId, { pettyCashVoucherUrl: `/api/filing/file/${doc.id}` });
-      await loadCases();
+      await api.put(`/cases/${caseId}/documents`, { pettyCashVoucherUrl: `/api/filing/file/${doc.id}` });
+      globalMutate(queryKeys.cases.all);
     }
   }
 
@@ -125,11 +117,11 @@ export function ApprovalPipelinePage() {
     setSaving(true);
     try {
       const targetStatus = action === 'disburse' ? 'disbursed' : 'approved';
-      await approveCase(caseId, targetStatus, signature);
+      await api.put(`/cases/${caseId}/approve`, { status: targetStatus, signature });
       setSelectedCase(null);
       setAction(null);
       setSignature('');
-      await loadCases();
+      globalMutate(queryKeys.cases.all);
     } catch (e) { console.error('Approve failed', e); }
     setSaving(false);
   }
@@ -137,9 +129,9 @@ export function ApprovalPipelinePage() {
   async function handleBulkApprove() {
     const ids = Array.from(selectedIds);
     await showBulkProgress(ids, async (id) => {
-      await bulkApprove([id]);
+      await api.post('/cases/bulk-approve', { ids: [id] });
     }, 'Approving');
-    await loadCases();
+    globalMutate(queryKeys.cases.all);
     clearSelection();
   }
 

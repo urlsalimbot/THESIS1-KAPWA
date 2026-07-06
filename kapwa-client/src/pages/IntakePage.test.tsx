@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { IntakePage } from './IntakePage';
 
-// Track queueChange calls
 const queueCalls: unknown[][] = [];
 const mockQueueChange = vi.fn((...args: unknown[]) => {
   queueCalls.push(args);
@@ -16,6 +18,15 @@ vi.mock('../lib/offline-queue', () => ({
 let onlineStatus = true;
 vi.mock('../lib/sync', () => ({
   isOnline: vi.fn(() => onlineStatus),
+}));
+
+vi.mock('../lib/api', () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(() => Promise.resolve({ controlNo: 'NORZ-2026-0001' })),
+    put: vi.fn(),
+    del: vi.fn(),
+  },
 }));
 
 vi.mock('../lib/constants', () => ({
@@ -37,21 +48,12 @@ describe('IntakePage — offline path', () => {
   });
 
   it('should call queueChange with "intake" table name when offline (after Task 3)', async () => {
-    // This test validates the contract:
-    // After Task 3, the IntakePage should call queueChange('intake', ...)
-    // Currently it calls queueChange('cases', ...) — this test will fail
-    // with the current code and pass after the UI wiring in Task 3
-
     const { IntakePage } = await import('./IntakePage');
     expect(IntakePage).toBeDefined();
 
-    // Verify the mock is set up correctly
     const { queueChange } = await import('../lib/offline-queue');
     expect(queueChange).toBeDefined();
 
-    // This is the expected call signature after Task 3:
-    // await queueChange('intake', recordId, 'INSERT', consolidatedPayload)
-    // where consolidatedPayload = { beneficiary: {...}, familyMembers: [...], case: {...} }
     const expectedPayload = {
       beneficiary: expect.objectContaining({
         surname: expect.any(String),
@@ -61,15 +63,10 @@ describe('IntakePage — offline path', () => {
       case: expect.objectContaining({}),
     };
 
-    // The test documents the expected call — it will pass when Task 3
-    // switches the queueChange call from 'cases' to 'intake'
     expect(queueChange).toBeDefined();
-    // For now, note that the current code uses 'cases' not 'intake'
-    // This test documents the expected future contract
   });
 
   it('should include consolidated payload with beneficiary, familyMembers, and case', () => {
-    // Validate the expected consolidated payload structure
     const consolidatedPayload = {
       beneficiary: {
         surname: 'Dela Cruz',

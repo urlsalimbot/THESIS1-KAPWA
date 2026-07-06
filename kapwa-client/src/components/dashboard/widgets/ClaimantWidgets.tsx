@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/EmptyState';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { queryKeys } from '@/lib/query-keys';
 
 interface ServiceRecord {
   id: string;
@@ -21,35 +20,16 @@ interface ClaimantData {
 }
 
 export function ClaimantWidgets() {
-  const [data, setData] = useState<ClaimantData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading } = useSWR<{ caseStatus?: string; services?: ServiceRecord[] }>(
+    queryKeys.beneficiaries.myServices(),
+  );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    loadData(controller.signal);
-    return () => controller.abort();
-  }, []);
-
-  async function loadData(signal?: AbortSignal) {
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/beneficiaries/me/services`, {
-        signal,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setData({
-          caseStatus: d.caseStatus || 'No active case',
-          services: d.services || [],
-        });
+  const mapped: ClaimantData | null = data
+    ? {
+        caseStatus: data.caseStatus || 'No active case',
+        services: data.services || [],
       }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }
+    : null;
 
   if (loading) {
     return (
@@ -61,8 +41,8 @@ export function ClaimantWidgets() {
     );
   }
 
-  const statusVariant = data?.caseStatus === 'Disbursed' ? 'default'
-    : data?.caseStatus === 'Approved' ? 'secondary'
+  const statusVariant = mapped?.caseStatus === 'Disbursed' ? 'default'
+    : mapped?.caseStatus === 'Approved' ? 'secondary'
     : 'outline';
 
   return (
@@ -85,10 +65,10 @@ export function ClaimantWidgets() {
             <div>
               <p className="text-xs text-muted-foreground">Case Status</p>
               <p className="text-lg font-semibold text-primary">
-                {data?.caseStatus || 'No active case'}
+                {mapped?.caseStatus || 'No active case'}
               </p>
             </div>
-            <Badge variant={statusVariant}>{data?.caseStatus || 'N/A'}</Badge>
+            <Badge variant={statusVariant}>{mapped?.caseStatus || 'N/A'}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -97,11 +77,11 @@ export function ClaimantWidgets() {
         <div className="border-b px-4 py-3">
           <h3 className="font-semibold text-sm text-primary">Service History</h3>
         </div>
-        {!data || data.services.length === 0 ? (
+        {!mapped || mapped.services.length === 0 ? (
           <CardContent><EmptyState variant="no-data" /></CardContent>
         ) : (
           <div className="divide-y">
-            {data.services.map(s => (
+            {mapped.services.map(s => (
               <div key={s.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{s.type}</p>

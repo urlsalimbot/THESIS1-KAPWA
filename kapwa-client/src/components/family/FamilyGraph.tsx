@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Loader2, Users, AlertCircle } from 'lucide-react';
-import { getFamilyGraph } from '../../lib/api';
+import { api } from '../../lib/api';
 
 interface FamilyMemberNode {
   id: string;
@@ -37,7 +37,7 @@ export function FamilyGraph({ beneficiaryId }: FamilyGraphProps) {
     setLoading(true);
     setError(null);
 
-    getFamilyGraph(beneficiaryId)
+    api.get(`/beneficiaries/${beneficiaryId}/family-graph`)
       .then((data: any) => {
         if (cancelled) return;
         setMembers(data.members || []);

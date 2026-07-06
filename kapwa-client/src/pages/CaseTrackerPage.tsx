@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 import { BARANGAYS, AGE_RANGES, CLIENT_CATEGORIES } from '../lib/constants';
 
@@ -22,11 +24,14 @@ interface TrackerEntry {
   interventionRemarks: string;
 }
 
+interface TrackerStats {
+  totalCasesLogged: number;
+  todayEntries: number;
+}
+
 export function CaseTrackerPage() {
-  const [entries, setEntries] = useState<TrackerEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { mutate: globalMutate } = useSWRConfig();
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [stats, setStats] = useState({ totalCasesLogged: 0, todayEntries: 0 });
   const [form, setForm] = useState({
     surname: '', firstName: '', middleName: '', gender: 'M',
     ageRange: '' as string, clientCategory: '' as string,
@@ -34,70 +39,26 @@ export function CaseTrackerPage() {
   });
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [lastSync, setLastSync] = useState<number | null>(null);
 
-  useEffect(() => {
-    const ac = new AbortController();
-    fetchEntries(ac.signal);
-    fetchStats(ac.signal);
-    return () => ac.abort();
-  }, [selectedDate]);
-
-  async function fetchEntries(signal?: AbortSignal) {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/tracker/daily?date=${selectedDate}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data);
-        setLastSync(Date.now());
-      }
-    } catch (e) { console.error("CaseTracker:", e); } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchStats(signal?: AbortSignal) {
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/tracker/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
-      }
-    } catch (e) { console.error("CaseTracker:", e); }
-  }
+  const { data: entries = [], isLoading: loading } = useSWR<TrackerEntry[]>(
+    queryKeys.tracker.daily({ date: selectedDate }),
+  );
+  const { data: stats } = useSWR<TrackerStats>(queryKeys.tracker.stats());
+  const lastSync = entries ? Date.now() : null;
 
   async function handleAddEntry(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('kapwa_token');
       const payload = {
         transactionDate: selectedDate,
         ...form,
       };
-      const res = await fetch(`${API_URL}/tracker`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        await fetchEntries();
-        await fetchStats();
-        setForm({ surname: '', firstName: '', middleName: '', gender: 'M', ageRange: '', clientCategory: '', barangay: '', interventionRemarks: '' });
-        setShowForm(false);
-      }
+      await api.post('/tracker', payload);
+      await globalMutate(queryKeys.tracker.daily({ date: selectedDate }));
+      await globalMutate(queryKeys.tracker.stats());
+      setForm({ surname: '', firstName: '', middleName: '', gender: 'M', ageRange: '', clientCategory: '', barangay: '', interventionRemarks: '' });
+      setShowForm(false);
     } catch (e) { console.error("CaseTracker:", e); }
     finally { setSubmitting(false); }
   }
@@ -121,13 +82,13 @@ export function CaseTrackerPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Total Cases Logged</p>
-            <p className="text-2xl font-bold text-primary">{stats.totalCasesLogged}</p>
+            <p className="text-2xl font-bold text-primary">{stats?.totalCasesLogged ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Today's Entries</p>
-            <p className="text-2xl font-bold text-primary">{stats.todayEntries}</p>
+            <p className="text-2xl font-bold text-primary">{stats?.todayEntries ?? 0}</p>
           </CardContent>
         </Card>
       </div>

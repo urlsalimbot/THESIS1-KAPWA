@@ -1,25 +1,37 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { SWRConfig, mutate } from 'swr';
 import { CaseTrackerPage } from './CaseTrackerPage';
 
-// Mock fetch since this page uses raw fetch() calls (not API module)
-const { mockEntries } = vi.hoisted(() => ({
-  mockEntries: [
-    {
-      id: 'TRK-001',
-      dailySeqNum: 1,
-      transactionDate: '2026-06-30',
-      surname: 'Dela Cruz',
-      firstName: 'Juan',
-      middleName: 'M',
-      gender: 'M',
-      ageRange: '60-70',
-      clientCategory: 'Senior',
-      barangay: 'Barangay 1',
-      interventionRemarks: 'FA',
-    },
-  ],
+const { mockApiGet, mockApiPost } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+}));
+
+const mockEntries = [
+  {
+    id: 'TRK-001',
+    dailySeqNum: 1,
+    transactionDate: '2026-06-30',
+    surname: 'Dela Cruz',
+    firstName: 'Juan',
+    middleName: 'M',
+    gender: 'M',
+    ageRange: '60-70',
+    clientCategory: 'Senior',
+    barangay: 'Barangay 1',
+    interventionRemarks: 'FA',
+  },
+];
+
+vi.mock('../lib/api', () => ({
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+    put: vi.fn(),
+    del: vi.fn(),
+  },
 }));
 
 vi.mock('../lib/constants', () => ({
@@ -28,37 +40,47 @@ vi.mock('../lib/constants', () => ({
   CLIENT_CATEGORIES: ['Senior', 'PWD', 'Child'],
 }));
 
-describe('CaseTrackerPage', () => {
-  beforeEach(() => {
-    // Mock fetch to return entries and stats
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockEntries),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ totalCasesLogged: 10, todayEntries: 3 }),
-      })
-    );
-  });
+function renderWithSWR(ui: React.ReactNode) {
+  return render(
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </SWRConfig>,
+  );
+}
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+describe('CaseTrackerPage', () => {
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('stats')) return Promise.resolve({ totalCasesLogged: 10, todayEntries: 3 });
+      if (k.includes('daily')) return Promise.resolve(mockEntries);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
   });
 
   it('renders PageShell heading', async () => {
-    render(<MemoryRouter><CaseTrackerPage /></MemoryRouter>);
+    renderWithSWR(<CaseTrackerPage />);
     expect(await screen.findByRole('heading', { name: 'Daily Case Tracker' })).toBeTruthy();
   });
 
   it('renders stats after loading', async () => {
-    render(<MemoryRouter><CaseTrackerPage /></MemoryRouter>);
+    renderWithSWR(<CaseTrackerPage />);
     expect(await screen.findByText('Total Cases Logged', {}, { timeout: 3000 })).toBeTruthy();
   });
 
   it('renders date input', async () => {
-    render(<MemoryRouter><CaseTrackerPage /></MemoryRouter>);
+    renderWithSWR(<CaseTrackerPage />);
     expect(await screen.findByLabelText('Tracker Date')).toBeTruthy();
+  });
+
+  it('api.get is called with tracker.daily and tracker.stats on mount', async () => {
+    renderWithSWR(<CaseTrackerPage />);
+    await screen.findByText('Total Cases Logged', {}, { timeout: 3000 });
+    const allCalls = mockApiGet.mock.calls.map(c => JSON.stringify(c[0]));
+    expect(allCalls.some(c => c.includes('tracker') && c.includes('daily'))).toBe(true);
+    expect(allCalls.some(c => c.includes('tracker') && c.includes('stats'))).toBe(true);
   });
 });

@@ -1,40 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useSWR from 'swr';
 import { Search, TrendingUp, Clock, ClipboardList, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getDashboard, getCase } from '@/lib/api';
+import { api } from '@/lib/api';
+import { queryKeys } from '@/lib/query-keys';
 
 export function CoordinatorWidgets() {
   const navigate = useNavigate();
-  const [caseCount, setCaseCount] = useState(0);
-  const [servedToday, setServedToday] = useState(0);
-  const [pendingReview, setPendingReview] = useState(0);
-  const [recentEntries, setRecentEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading } = useSWR<{
+    pendingReview?: number;
+    servedToday?: number;
+    recentCases?: any[];
+  }>(queryKeys.dashboard.stats());
+
+  const caseCount = data?.pendingReview || 0;
+  const servedToday = data?.servedToday || 0;
+  const pendingReview = data?.pendingReview || 0;
+  const recentEntries = data?.recentCases || [];
 
   const [searchId, setSearchId] = useState('');
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchError, setSearchError] = useState('');
   const [searching, setSearching] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
-    try {
-      const data = await getDashboard();
-      setCaseCount(data.pendingReview || 0);
-      setServedToday(data.servedToday || 0);
-      setPendingReview(data.pendingReview || 0);
-      setRecentEntries(data.recentCases || []);
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -43,7 +32,7 @@ export function CoordinatorWidgets() {
     setSearchError('');
     setSearchResult(null);
     try {
-      const result = await getCase(searchId.trim());
+      const result = await api.get(`/cases/${searchId.trim()}`);
       setSearchResult(result);
     } catch {
       setSearchError('Case not found');

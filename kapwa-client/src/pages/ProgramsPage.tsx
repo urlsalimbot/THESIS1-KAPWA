@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, ChevronDown, ChevronUp, X, CheckCircle, XCircle, Clock, AlertTriangle, Shield } from 'lucide-react';
-import { getPrograms, createProgram, updateProgram, deleteProgram } from '../lib/api';
-import { getProgramAssignments, getProgramAssignment, createProgramAssignment, approveAssignmentStep, rejectAssignmentStep, overrideAssignmentStep } from '../lib/api';
+import { api } from '../lib/api';
 import { getCurrentUser } from '../lib/auth-context';
 import JsonSchemaForm from '../components/forms/JsonSchemaForm';
 import { PageShell } from '@/components/PageShell';
@@ -150,7 +149,7 @@ export function ProgramsPage() {
   async function load(signal?: AbortSignal) {
     setLoading(true);
     try {
-      const data = await getPrograms();
+      const data = await api.get("/programs");
       setRecords(data || []);
     } catch {
       setRecords([]);
@@ -161,7 +160,7 @@ export function ProgramsPage() {
   async function loadAssignments() {
     setAssignLoading(true);
     try {
-      const data = await getProgramAssignments();
+      const data = await api.get("/program-assignments");
       // Enrich with program names
       const enriched = (data || []).map((a: ProgramAssignment) => {
         const prog = records.find(r => r.id === a.programId);
@@ -179,7 +178,7 @@ export function ProgramsPage() {
     }
     setExpandedAssignId(id);
     try {
-      const detail = await getProgramAssignment(id);
+      const detail = await api.get(`/program-assignments/${id}`);
       setAssignments(prev => prev.map(a => a.id === id ? { ...a, steps: detail.steps, status: detail.status } : a));
     } catch { /* keep current state */ }
   }
@@ -314,10 +313,10 @@ export function ProgramsPage() {
     try {
       const submitData = getSubmitData();
       if (editingId) {
-        await updateProgram(editingId, submitData);
+        await api.put(`/programs/${editingId}`, submitData);
         setMsg('Program updated successfully');
       } else {
-        await createProgram(submitData);
+        await api.post("/programs", submitData);
         setMsg('Program created successfully');
       }
       setShowForm(false);
@@ -330,7 +329,7 @@ export function ProgramsPage() {
   async function handleDelete(id: string) {
     if (!confirm('Delete this program? This action cannot be undone.')) return;
     try {
-      await deleteProgram(id);
+      await api.del(`/programs/${id}`);
       setMsg('Program deleted');
       load();
     } catch (err: unknown) {
@@ -342,7 +341,7 @@ export function ProgramsPage() {
   async function handleApproveStep(assignmentId: string, stepOrder: number) {
     setActionMsg('');
     try {
-      await approveAssignmentStep(assignmentId, stepOrder);
+      await api.post(`/program-assignments/${assignmentId}/steps/${stepOrder}/approve`, { stepOrder });
       setActionMsg(`Step ${stepOrder + 1} approved successfully`);
       // Reload
       handleExpandAssignment(assignmentId);
@@ -361,7 +360,7 @@ export function ProgramsPage() {
     if (!rejectModal || !rejectReason.trim()) return;
     setActionMsg('');
     try {
-      await rejectAssignmentStep(rejectModal.assignmentId, rejectModal.stepOrder, rejectReason);
+      await api.post(`/program-assignments/${rejectModal.assignmentId}/steps/${rejectModal.stepOrder}/reject`, { stepOrder: rejectModal.stepOrder, remarks: rejectReason });
       setActionMsg(`Step ${rejectModal.stepOrder + 1} rejected`);
       setRejectModal(null);
       setRejectReason('');
@@ -382,7 +381,7 @@ export function ProgramsPage() {
     if (!overrideModal || !overrideReason.trim()) return;
     setActionMsg('');
     try {
-      await overrideAssignmentStep(overrideModal.assignmentId, overrideModal.stepOrder, overrideStatus, overrideReason);
+      await api.post(`/program-assignments/${overrideModal.assignmentId}/steps/${overrideModal.stepOrder}/override`, { stepOrder: overrideModal.stepOrder, overrideStatus, remarks: overrideReason });
       setActionMsg(`Step ${overrideModal.stepOrder + 1} overridden to ${overrideStatus}`);
       setOverrideModal(null);
       setOverrideReason('');

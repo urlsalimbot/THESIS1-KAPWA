@@ -1,55 +1,19 @@
-import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { Shield, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { verifyHashChains } from '@/lib/api';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { queryKeys } from '@/lib/query-keys';
 
 export function AuditorWidgets() {
-  const [hashChain, setHashChain] = useState<Record<string, { valid: boolean; brokenAt?: string }> | null>(null);
-  const [consentCount, setConsentCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [verifying, setVerifying] = useState(false);
+  const { data: hashChain, isLoading: loading, isValidating: verifying, mutate: revalidateHash } = useSWR<
+    Record<string, { valid: boolean; brokenAt?: string }>
+  >(queryKeys.audit.hashChains());
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  async function loadAll() {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const [hashRes, ledgerRes] = await Promise.all([
-        fetch(`${API_URL}/audit/verify-all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_URL}/audit/consent-ledger`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-      if (hashRes.ok) setHashChain(await hashRes.json());
-      if (ledgerRes.ok) {
-        const ledger = await ledgerRes.json();
-        setConsentCount(Array.isArray(ledger) ? ledger.length : 0);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: ledger } = useSWR<unknown[]>(queryKeys.audit.consentLedger());
+  const consentCount = Array.isArray(ledger) ? ledger.length : 0;
 
   async function handleReVerify() {
-    setVerifying(true);
-    try {
-      const data = await verifyHashChains();
-      setHashChain(data);
-    } catch {
-      // silent
-    } finally {
-      setVerifying(false);
-    }
+    await revalidateHash();
   }
 
   if (loading) {
@@ -118,7 +82,7 @@ export function AuditorWidgets() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Consent Ledger</p>
-              <p className="text-lg font-semibold">{consentCount ?? '—'} records</p>
+              <p className="text-lg font-semibold">{consentCount} records</p>
             </div>
             <Shield className="text-muted-foreground" size={20} />
           </div>

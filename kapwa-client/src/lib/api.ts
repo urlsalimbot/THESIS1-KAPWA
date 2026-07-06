@@ -1,132 +1,195 @@
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { ApiError } from './api-error';
 
-export async function apiFetch(path: string, options: RequestInit & { signal?: AbortSignal } = {}) {
-  const token = localStorage.getItem('kapwa_token');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API}${path}`, { ...options, headers });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const TOKEN_KEY = 'kapwa_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const TIMEOUT_MS = 10_000;
+const MAX_RETRIES = 3;
+const BASE_DELAYS_MS = [500, 1500, 4500] as const;
+export const KAPWA_AUTH_LOGOUT_EVENT = 'kapwa:auth:logout';
+
+function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-export async function getCases(status?: string, signal?: AbortSignal) {
-  const q = status ? `?status=${status}` : '';
-  return apiFetch(`/cases${q}`, { signal });
+// SWR's global fetcher receives the full queryKey tuple from queryKeys.* — join array parts with '/'.
+function normalizePath(path: string | readonly unknown[]): string {
+  if (Array.isArray(path)) {
+    return '/' + path.filter((p) => p !== null && p !== undefined && p !== '').join('/');
+  }
+  return path;
 }
 
-export async function getCase(id: string) {
-  return apiFetch(`/cases/${id}`);
+function jitteredDelay(baseMs: number): number {
+  const jitter = baseMs * 0.2 * (Math.random() * 2 - 1);
+  return Math.round(baseMs + jitter);
 }
 
-export async function createCase(data: Record<string, unknown>) {
-  return apiFetch('/cases', { method: 'POST', body: JSON.stringify(data) });
+function delayForAttempt(attempt: number): number {
+  return jitteredDelay(BASE_DELAYS_MS[attempt]);
 }
 
-export async function updateCaseStatus(id: string, status: string) {
-  return apiFetch(`/cases/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
-}
-
-export async function getDashboard() {
-  return apiFetch('/dashboard');
-}
-
-export async function getBeneficiaries(params?: {
-  search?: string;
-  category?: string;
-  barangay?: string;
-  page?: number;
-  limit?: number;
-}) {
-  const q = new URLSearchParams();
-  if (params?.search) q.set('search', params.search);
-  if (params?.category) q.set('category', params.category);
-  if (params?.barangay) q.set('barangay', params.barangay);
-  if (params?.page) q.set('page', String(params.page));
-  if (params?.limit) q.set('limit', String(params.limit));
-  const qs = q.toString();
-  return apiFetch(`/beneficiaries${qs ? '?' + qs : ''}`);
-}
-
-export async function getBeneficiary(id: string, signal?: AbortSignal) {
-  return apiFetch(`/beneficiaries/${id}`, { signal });
-}
-
-export async function getInterventions(caseId?: string) {
-  const q = caseId ? `?caseId=${caseId}` : '';
-  return apiFetch(`/interventions${q}`);
-}
-
-export async function createIntervention(data: Record<string, unknown>) {
-  return apiFetch('/interventions', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export async function getPrograms() {
-  return apiFetch('/programs');
-}
-
-// ===== Programs =====
-export async function createProgram(data: Record<string, unknown>) {
-  return apiFetch('/programs', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export async function updateProgram(id: string, data: Record<string, unknown>) {
-  return apiFetch(`/programs/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-}
-
-export async function deleteProgram(id: string) {
-  return apiFetch(`/programs/${id}`, { method: 'DELETE' });
-}
-
-export async function getConsentLedger(beneficiaryId: string) {
-  return apiFetch(`/beneficiaries/${beneficiaryId}/consent`);
-}
-
-export async function getMyAccessCard() {
-  return apiFetch('/beneficiaries/me/access-card');
-}
-
-export async function getMayorReports() {
-  return apiFetch('/dashboard/reports/mayor');
-}
-
-export async function getAuditConsentLedger(beneficiaryId?: string) {
-  const q = beneficiaryId ? `?beneficiaryId=${beneficiaryId}` : '';
-  return apiFetch(`/audit/consent-ledger${q}`);
-}
-
-export async function verifyHashChains() {
-  return apiFetch('/audit/verify-all');
-}
-
-export async function revokeConsent(beneficiaryId: string, reason?: string) {
-  return apiFetch(`/beneficiaries/${beneficiaryId}/consent/revoke`, {
-    method: 'POST',
-    body: JSON.stringify({ reason }),
+function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        clearTimeout(t);
+        reject(new DOMException('Aborted', 'AbortError'));
+      });
+    }
   });
 }
 
-// ===== CSR =====
-export async function getCsrRecords(signal?: AbortSignal) {
-  return apiFetch('/csr', { signal });
+async function rawRequest<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body: unknown,
+  callerSignal: AbortSignal | undefined,
+): Promise<T> {
+  const normalized = normalizePath(path);
+  const url = normalized.startsWith('http') ? normalized : `${API_BASE}${normalized}`;
+  const internalController = new AbortController();
+  const timeoutId = setTimeout(() => internalController.abort(), TIMEOUT_MS);
+  const composedSignal = callerSignal
+    ? AbortSignal.any([internalController.signal, callerSignal])
+    : internalController.signal;
+
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: composedSignal,
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => null);
+      throw new ApiError(res.status, errBody, res.statusText);
+    }
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
-export async function getCsrRecord(id: string) {
-  return apiFetch(`/csr/${id}`);
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshToken(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+  const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refresh) {
+    return false;
+  }
+  refreshInFlight = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: refresh }),
+      });
+      if (!res.ok) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+        window.dispatchEvent(
+          new CustomEvent(KAPWA_AUTH_LOGOUT_EVENT, { detail: { reason: 'refresh_failed' } }),
+        );
+        return false;
+      }
+      const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
+      if (data.accessToken) localStorage.setItem(TOKEN_KEY, data.accessToken);
+      if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+      return true;
+    } catch {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      window.dispatchEvent(
+        new CustomEvent(KAPWA_AUTH_LOGOUT_EVENT, { detail: { reason: 'refresh_network_error' } }),
+      );
+      return false;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
 }
-export async function createCsrRecord(data: Record<string, unknown>) {
-  return apiFetch('/csr', { method: 'POST', body: JSON.stringify(data) });
+
+async function executeWithRetry<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body: unknown,
+  signal: AbortSignal | undefined,
+  isRetry: boolean = false,
+  attempt: number = 0,
+): Promise<T> {
+  try {
+    return await rawRequest<T>(method, path, body, signal);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401 && !isRetry) {
+      const refreshed = await refreshToken();
+      if (refreshed) {
+        return executeWithRetry<T>(method, path, body, signal, true, attempt);
+      }
+      throw err;
+    }
+    const isRetryableError =
+      err instanceof TypeError ||
+      (err instanceof DOMException && err.name === 'AbortError' && !signal?.aborted);
+    if (isRetryableError && method === 'GET' && attempt < MAX_RETRIES) {
+      await sleep(delayForAttempt(attempt), signal);
+      return executeWithRetry<T>(method, path, body, signal, isRetry, attempt + 1);
+    }
+    throw err;
+  }
 }
-export async function updateCsrRecord(id: string, data: Record<string, unknown>) {
-  return apiFetch(`/csr/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export type ApiPath = string | readonly unknown[];
+
+export const api = {
+  get: <T>(path: ApiPath, opts?: { signal?: AbortSignal }) =>
+    executeWithRetry<T>('GET', path, undefined, opts?.signal),
+  post: <T>(path: ApiPath, body?: unknown, opts?: { signal?: AbortSignal }) =>
+    executeWithRetry<T>('POST', path, body, opts?.signal),
+  put: <T>(path: ApiPath, body?: unknown, opts?: { signal?: AbortSignal }) =>
+    executeWithRetry<T>('PUT', path, body, opts?.signal),
+  del: <T>(path: ApiPath, opts?: { signal?: AbortSignal }) =>
+    executeWithRetry<T>('DELETE', path, undefined, opts?.signal),
+};
+
+// FormData uploads (D-10 deferred — api client only handles JSON).
+async function rawUpload(path: string, file: Blob, fileName: string): Promise<string> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const formData = new FormData();
+  formData.append('file', file, fileName);
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  const data = (await res.json()) as { url: string };
+  return data.url;
 }
-export async function deleteCsrRecord(id: string) {
-  return apiFetch(`/csr/${id}`, { method: 'DELETE' });
+export const uploadSignature = (file: Blob, fileName: string) =>
+  rawUpload('/interventions/upload-signature', file, fileName);
+export const uploadReceipt = (file: Blob, fileName: string) =>
+  rawUpload('/interventions/upload-receipt', file, fileName);
+
+export function dataURItoBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)?.[1] || 'image/png';
+  const binary = atob(base64);
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+  return new Blob([array], { type: mime });
 }
+
+// Blob downloads (D-10 deferred — api client only handles JSON).
 export async function downloadCsrPdf(controlNo: string) {
-  const token = localStorage.getItem('kapwa_token');
-  const res = await fetch(`${API}/csr/${controlNo}/pdf`, {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/csr/${controlNo}/pdf`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error('PDF download failed');
@@ -139,197 +202,12 @@ export async function downloadCsrPdf(controlNo: string) {
   URL.revokeObjectURL(url);
 }
 
-export async function updateCaseDocuments(id: string, data: { certificateUrl?: string; pettyCashVoucherUrl?: string }) {
-  return apiFetch(`/cases/${id}/documents`, { method: 'PATCH', body: JSON.stringify(data) });
-}
-
-export async function approveCase(id: string, status: string, signature?: string) {
-  return apiFetch(`/cases/${id}/approve`, { method: 'PATCH', body: JSON.stringify({ status, signature }) });
-}
-
-// ===== FSM transition helpers =====
-export async function requestReview(id: string) {
-  return apiFetch(`/cases/${id}/request-review`, { method: 'PATCH' });
-}
-
-export async function disburseCase(id: string) {
-  return apiFetch(`/cases/${id}/disburse`, { method: 'PATCH', body: JSON.stringify({ status: 'disbursed' }) });
-}
-
-export async function closeCase(id: string) {
-  return apiFetch(`/cases/${id}/close`, { method: 'PATCH' });
-}
-
-export async function overrideCaseStatus(id: string, status: string, reason: string) {
-  return apiFetch(`/cases/${id}/override-status`, { method: 'PATCH', body: JSON.stringify({ status, reason }) });
-}
-
-export async function getFamilyGraph(beneficiaryId: string, signal?: AbortSignal) {
-  return apiFetch(`/beneficiaries/${beneficiaryId}/family-graph`, { signal });
-}
-
-export async function setupMfa() {
-  return apiFetch('/auth/mfa/setup', { method: 'POST' });
-}
-
-export async function enableMfa(code: string) {
-  return apiFetch('/auth/mfa/enable', { method: 'POST', body: JSON.stringify({ code }) });
-}
-
-export async function disableMfa(password: string) {
-  return apiFetch('/auth/mfa/disable', { method: 'POST', body: JSON.stringify({ password }) });
-}
-
-export async function verifyMfa(tempToken: string, code: string) {
-  return apiFetch('/auth/mfa/verify', { method: 'POST', body: JSON.stringify({ tempToken, code }) });
-}
-
-export async function createUser(data: { email: string; password: string; role: string; full_name?: string; phone?: string; assigned_barangay?: string; permitted_barangays?: string[] }): Promise<any> {
-  const token = localStorage.getItem('kapwa_token');
-  const res = await fetch(`${API}/users`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error(`Failed to create user: ${res.status}`);
-  return res.json();
-}
-
-export async function submitIntake(data: Record<string, unknown>) {
-  return apiFetch('/intake', { method: 'POST', body: JSON.stringify(data) });
-}
-
-// ===== Signature / Receipt upload =====
-export async function uploadSignature(file: Blob, fileName: string): Promise<string> {
-  const token = localStorage.getItem('kapwa_token');
-  const formData = new FormData();
-  formData.append('file', file, fileName);
-  const res = await fetch(`${API}/interventions/upload-signature`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
-  if (!res.ok) throw new Error('Signature upload failed');
-  const data = await res.json();
-  return data.url;
-}
-
-export async function uploadReceipt(file: Blob, fileName: string): Promise<string> {
-  const token = localStorage.getItem('kapwa_token');
-  const formData = new FormData();
-  formData.append('file', file, fileName);
-  const res = await fetch(`${API}/interventions/upload-receipt`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
-  if (!res.ok) throw new Error('Receipt upload failed');
-  const data = await res.json();
-  return data.url;
-}
-
-export function dataURItoBlob(dataUrl: string): Blob {
-  const [header, base64] = dataUrl.split(',');
-  const mime = header.match(/:(.*?);/)?.[1] || 'image/png';
-  const binary = atob(base64);
-  const array = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
-  return new Blob([array], { type: mime });
-}
-
-// ===== Case Tracker Log =====
-export async function getCaseTrackerLog(date?: string) {
-  const q = date ? `?date=${date}` : '';
-  return apiFetch(`/tracker/daily${q}`);
-}
-
-// ===== Access Card API =====
-export async function assignCard(beneficiaryId: string) {
-  return apiFetch(`/access-cards/assign/${beneficiaryId}`, { method: 'POST' });
-}
-
-export async function getBeneficiaryCard(beneficiaryId: string) {
-  return apiFetch(`/access-cards/beneficiary/${beneficiaryId}/card`);
-}
-
-// ===== IRF =====
-export async function getIrfCase(id: string) {
-  return apiFetch(`/irf/${id}`);
-}
-
-export async function getIrfRecords(signal?: AbortSignal) {
-  return apiFetch("/irf", { signal });
-}
-
-
-export async function createIrf(data: Record<string, unknown>) {
-  return apiFetch('/irf', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export async function referToPnp(id: string) {
-  return apiFetch(`/irf/${id}/refer-pnp`, { method: 'PATCH' });
-}
-
-export async function referToWcpd(id: string) {
-  return apiFetch(`/irf/${id}/refer-wcpd`, { method: 'PATCH' });
-}
-
-export async function dismissIrf(id: string, reason: string) {
-  return apiFetch(`/irf/${id}/dismiss`, { method: 'PATCH', body: JSON.stringify({ reason }) });
-}
-
-export async function closeIrf(id: string) {
-  return apiFetch(`/irf/${id}/close`, { method: 'PATCH' });
-}
-
-export async function decryptNarration(id: string, legalBasis: string) {
-  return apiFetch(`/irf/${id}/decrypt`, { method: 'POST', body: JSON.stringify({ legalBasis }) });
-}
-
-export async function unmaskIrfNames(id: string, legalBasis: string) {
-  return apiFetch(`/irf/${id}/unmask-names?legalBasis=${encodeURIComponent(legalBasis)}`);
-}
-
-// ===== Program Assignments =====
-export async function getProgramAssignments(caseId?: string) {
-  const q = caseId ? `?caseId=${caseId}` : '';
-  return apiFetch(`/program-assignments${q}`);
-}
-
-export async function getProgramAssignment(id: string) {
-  return apiFetch(`/program-assignments/${id}`);
-}
-
-export async function createProgramAssignment(data: { caseId: string; programId: string; assignedWorkerId: string }) {
-  return apiFetch('/program-assignments', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export async function approveAssignmentStep(id: string, stepOrder: number) {
-  return apiFetch(`/program-assignments/${id}/steps/${stepOrder}/approve`, {
-    method: 'POST',
-    body: JSON.stringify({ stepOrder }),
-  });
-}
-
-export async function rejectAssignmentStep(id: string, stepOrder: number, remarks: string) {
-  return apiFetch(`/program-assignments/${id}/steps/${stepOrder}/reject`, {
-    method: 'POST',
-    body: JSON.stringify({ stepOrder, remarks }),
-  });
-}
-
-export async function overrideAssignmentStep(id: string, stepOrder: number, overrideStatus: 'approved' | 'rejected', remarks: string) {
-  return apiFetch(`/program-assignments/${id}/steps/${stepOrder}/override`, {
-    method: 'POST',
-    body: JSON.stringify({ stepOrder, overrideStatus, remarks }),
-  });
-}
-
 export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
-  const token = localStorage.getItem('kapwa_token');
-  const res = await fetch(`${API}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(
+    `${API_BASE}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
   if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -338,50 +216,4 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
   a.download = `IRF-${id}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-export async function exportIrfJson(id: string, legalBasis: string) {
-  return apiFetch(`/irf/${id}/export-json?legalBasis=${encodeURIComponent(legalBasis)}`);
-}
-
-// ===== Notification Preferences =====
-export async function getNotificationPreferences(signal?: AbortSignal) {
-  return apiFetch('/notifications/preferences', { signal });
-}
-
-export async function updateNotificationPreferences(data: { channel: string; category: string; optedIn: boolean }) {
-  return apiFetch('/notifications/preferences', { method: 'PUT', body: JSON.stringify(data) });
-}
-
-// ===== Bulk Operations =====
-export async function bulkApprove(
-  ids: string[],
-  signature?: string
-): Promise<{ id: string; success: boolean; error?: string }[]> {
-  return apiFetch('/cases/bulk-approve', {
-    method: 'POST',
-    body: JSON.stringify({ ids, signature }),
-  });
-}
-
-export async function bulkReassign(
-  ids: string[],
-  newWorkerId: string
-): Promise<{ id: string; success: boolean; error?: string }[]> {
-  return apiFetch('/cases/bulk-reassign', {
-    method: 'POST',
-    body: JSON.stringify({ ids, newWorkerId }),
-  });
-}
-
-export async function bulkExport(
-  ids: string[],
-  format: 'csv' | 'pdf',
-  masked?: boolean,
-  unmaskReason?: string | null
-): Promise<{ id: string; success: boolean; error?: string }[]> {
-  return apiFetch('/cases/bulk-export', {
-    method: 'POST',
-    body: JSON.stringify({ ids, format, masked, unmaskReason }),
-  });
 }

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
-import { getDashboard } from '../lib/api';
-import { getCase } from '../lib/api';
+import { api } from '../lib/api';
 
 export function CoordinatorDashboardPage() {
   const [searchId, setSearchId] = useState('');
@@ -21,7 +20,7 @@ export function CoordinatorDashboardPage() {
 
   async function loadData() {
     try {
-      const data = await getDashboard();
+      const data = await api.get<any>('/dashboard');
       setStats([
         { label: 'Served Today', value: String(data.servedToday || 0), change: `${data.servedChange || '+0%'} from yesterday`, icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
         { label: 'Pending Cases', value: String(data.pendingReview || 0), change: `${data.urgentCount || 0} urgent`, icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
@@ -47,7 +46,7 @@ export function CoordinatorDashboardPage() {
     setSearchError('');
     setSearchResult(null);
     try {
-      const result = await getCase(searchId.trim());
+      const result = await api.get<any>(`/cases/${searchId.trim()}`);
       setSearchResult(result);
     } catch {
       setSearchError('Case not found');

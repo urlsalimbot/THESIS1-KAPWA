@@ -1,18 +1,10 @@
-import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { TrendingUp, Users, DollarSign, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
-import { getMayorReports } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 
 export function MayorReportsPage() {
-  const [metrics, setMetrics] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getMayorReports()
-      .then(setMetrics)
-      .catch(() => setMetrics(null))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: metrics, isLoading: loading } = useSWR(queryKeys.dashboard.mayorReports());
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading reports...</div>;
 
