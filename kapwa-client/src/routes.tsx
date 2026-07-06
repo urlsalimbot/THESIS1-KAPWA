@@ -1,6 +1,9 @@
 import React from 'react';
 import { ThemeProvider } from '@/lib/theme-context';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { SWRConfig } from 'swr';
+import { api } from './lib/api';
+import { ApiError } from './lib/api-error';
 import { AuthProvider, useAuth } from './lib/auth-context';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -85,12 +88,30 @@ const router = createBrowserRouter([
   { path: '*', element: <Navigate to="/" /> },
 ]);
 
+function swrErrorHandler(error: unknown) {
+  if (error instanceof ApiError && error.status !== 401) {
+    console.error('SWR fetch error:', error);
+  }
+  // 401s are handled by the api client's refresh interceptor — silent here.
+}
+
 export function MainRoutes() {
   return (
     <ThemeProvider>
       <Toaster position="top-center" duration={Infinity} />
       <AuthProvider>
-        <RouterProvider router={router} />
+        <SWRConfig
+          value={{
+            fetcher: api.get,
+            onError: swrErrorHandler,
+            revalidateOnFocus: true,
+            revalidateOnReconnect: true,
+            dedupingInterval: 2000,
+            refreshInterval: 0,
+          }}
+        >
+          <RouterProvider router={router} />
+        </SWRConfig>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -27,6 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else setLoading(false);
   }, [token]);
 
+  // Subscribe to kapwa:auth:logout — the api client dispatches this when /auth/refresh fails
+  // (single-flight 401 interceptor). Calling logout() clears token + user state.
+  useEffect(() => {
+    function handleLogout(e: Event) {
+      const reason = (e as CustomEvent).detail?.reason || 'unknown';
+      console.warn('Auth logout triggered:', reason);
+      logout();
+    }
+    window.addEventListener('kapwa:auth:logout', handleLogout);
+    return () => window.removeEventListener('kapwa:auth:logout', handleLogout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function fetchUser() {
     try {
       const res = await fetch(`${API}/auth/me`, {

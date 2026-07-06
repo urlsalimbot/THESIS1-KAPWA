@@ -12,6 +12,14 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+// SWR's global fetcher receives the full queryKey tuple from queryKeys.* — join array parts with '/'.
+function normalizePath(path: string | readonly unknown[]): string {
+  if (Array.isArray(path)) {
+    return '/' + path.filter((p) => p !== null && p !== undefined && p !== '').join('/');
+  }
+  return path;
+}
+
 function jitteredDelay(baseMs: number): number {
   const jitter = baseMs * 0.2 * (Math.random() * 2 - 1);
   return Math.round(baseMs + jitter);
@@ -39,7 +47,8 @@ async function rawRequest<T>(
   body: unknown,
   callerSignal: AbortSignal | undefined,
 ): Promise<T> {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const normalized = normalizePath(path);
+  const url = normalized.startsWith('http') ? normalized : `${API_BASE}${normalized}`;
   const internalController = new AbortController();
   const timeoutId = setTimeout(() => internalController.abort(), TIMEOUT_MS);
   const composedSignal = callerSignal
@@ -138,14 +147,16 @@ async function executeWithRetry<T>(
   }
 }
 
+export type ApiPath = string | readonly unknown[];
+
 export const api = {
-  get: <T>(path: string, opts?: { signal?: AbortSignal }) =>
+  get: <T>(path: ApiPath, opts?: { signal?: AbortSignal }) =>
     executeWithRetry<T>('GET', path, undefined, opts?.signal),
-  post: <T>(path: string, body?: unknown, opts?: { signal?: AbortSignal }) =>
+  post: <T>(path: ApiPath, body?: unknown, opts?: { signal?: AbortSignal }) =>
     executeWithRetry<T>('POST', path, body, opts?.signal),
-  put: <T>(path: string, body?: unknown, opts?: { signal?: AbortSignal }) =>
+  put: <T>(path: ApiPath, body?: unknown, opts?: { signal?: AbortSignal }) =>
     executeWithRetry<T>('PUT', path, body, opts?.signal),
-  del: <T>(path: string, opts?: { signal?: AbortSignal }) =>
+  del: <T>(path: ApiPath, opts?: { signal?: AbortSignal }) =>
     executeWithRetry<T>('DELETE', path, undefined, opts?.signal),
 };
 
