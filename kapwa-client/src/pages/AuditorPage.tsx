@@ -1,65 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { Shield, CheckCircle, XCircle, Download, Search, RefreshCw } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
+import { queryKeys } from '../lib/query-keys';
 
 export function AuditorPage() {
-  const [hashChain, setHashChain] = useState<any>(null);
-  const [consentLedger, setConsentLedger] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'hash' | 'consent'>('hash');
-  const [loading, setLoading] = useState(true);
-  const [ledgerLoading, setLedgerLoading] = useState(false);
   const [beneficiaryFilter, setBeneficiaryFilter] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const [hashRes, ledgerRes] = await Promise.all([
-        fetch(`${baseUrl}/audit/verify-all`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${baseUrl}/audit/consent-ledger`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      if (hashRes.ok) setHashChain(await hashRes.json());
-      if (ledgerRes.ok) setConsentLedger(await ledgerRes.json());
-    } catch (e) {
-      console.error('Auditor load failed:', e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: hashChain, isLoading: loading, mutate: revalidateHash } = useSWR<Record<string, { valid: boolean; brokenAt?: string }>>(
+    queryKeys.audit.hashChains(),
+  );
+  const { data: consentLedger = [], isLoading: ledgerLoading, mutate: revalidateLedger } = useSWR<any[]>(
+    queryKeys.audit.consentLedger(beneficiaryFilter || undefined),
+  );
 
   async function reVerify() {
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/audit/verify-all`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (res.ok) setHashChain(await res.json());
-    } catch (e) {
-      console.error('Re-verify failed:', e);
-    }
+    await revalidateHash();
   }
 
   async function loadLedger() {
-    setLedgerLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const q = beneficiaryFilter ? `?beneficiaryId=${beneficiaryFilter}` : '';
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/audit/consent-ledger${q}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (res.ok) setConsentLedger(await res.json());
-    } catch (e) {
-      console.error('Ledger load failed:', e);
-    } finally {
-      setLedgerLoading(false);
-    }
+    await revalidateLedger();
   }
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading audit data...</div>;

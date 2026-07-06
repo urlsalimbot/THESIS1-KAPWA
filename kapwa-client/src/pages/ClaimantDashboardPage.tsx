@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
-import { getNotificationPreferences, updateNotificationPreferences } from '../lib/api';
+import { useState } from 'react';
+import useSWR from 'swr';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { Link } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
@@ -7,8 +9,6 @@ import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 interface ServiceRecord {
   id: string; type: string; date: string; amount: number; status: string;
@@ -42,58 +42,31 @@ const NOTIF_CHANNELS = [
 const DEFAULT_CATEGORIES = ['case_update', 'approval', 'disbursement', 'sync_conflict', 'system'];
 
 export function ClaimantDashboardPage() {
-  const [services, setServices] = useState<ServiceRecord[]>([]);
-  const [consents, setConsents] = useState<ConsentRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [caseStatus, setCaseStatus] = useState<string>('');
-  const [preferences, setPreferences] = useState<Record<string, Record<string, boolean>>>({});
+  const { data: servicesData } = useSWR<{ services?: ServiceRecord[]; caseStatus?: string }>(
+    queryKeys.beneficiaries.myServices(),
+  );
+  const { data: consents = [] } = useSWR<ConsentRecord[]>(queryKeys.beneficiaries.myConsent());
+  const { data: prefs } = useSWR<NotificationPreference[]>('/notifications/preferences');
+  const loading = !servicesData && !consents.length;
+
+  const services = servicesData?.services || [];
+  const caseStatus = servicesData?.caseStatus || 'No active case';
+  const lastSync = servicesData ? Date.now() : null;
+
+  const [preferences, setPreferences] = useState<Record<string, Record<string, boolean>>>(() => {
+    const map: Record<string, Record<string, boolean>> = {};
+    for (const cat of DEFAULT_CATEGORIES) {
+      map[cat] = { sms: cat === 'system', in_app: cat === 'system' };
+    }
+    for (const p of prefs || []) {
+      if (!map[p.category]) map[p.category] = { sms: false, in_app: false };
+      map[p.category][p.channel] = p.optedIn;
+    }
+    return map;
+  });
   const [prefDirty, setPrefDirty] = useState(false);
   const [prefSaved, setPrefSaved] = useState(false);
   const [prefSaving, setPrefSaving] = useState(false);
-  const [lastSync, setLastSync] = useState<number | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchData(controller.signal);
-    fetchPreferences(controller.signal);
-    return () => controller.abort();
-  }, []);
-
-  async function fetchData(signal?: AbortSignal) {
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const [svcRes, conRes] = await Promise.all([
-        fetch(`${API_URL}/beneficiaries/me/services`, { signal,
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_URL}/beneficiaries/me/consent`, { signal,
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-      if (svcRes.ok) {
-        const data = await svcRes.json();
-        setServices(data.services || []);
-        setCaseStatus(data.caseStatus || 'No active case');
-      }
-      if (conRes.ok) setConsents(await conRes.json());
-      setLastSync(Date.now());
-    } catch (e) { console.error("ClaimantDashboard:", e); } finally { setLoading(false); }
-  }
-
-  async function fetchPreferences(signal?: AbortSignal) {
-    try {
-      const prefs: NotificationPreference[] = await getNotificationPreferences(signal);
-      const map: Record<string, Record<string, boolean>> = {};
-      for (const cat of DEFAULT_CATEGORIES) {
-        map[cat] = { sms: cat === 'system', in_app: cat === 'system' };
-      }
-      for (const p of prefs) {
-        if (!map[p.category]) map[p.category] = { sms: false, in_app: false };
-        map[p.category][p.channel] = p.optedIn;
-      }
-      setPreferences(map);
-    } catch (e) { console.error("Failed to load preferences:", e); }
-  }
 
   async function handleSave() {
     setPrefSaving(true);
@@ -105,7 +78,7 @@ export function ClaimantDashboardPage() {
           updates.push({ channel, category, optedIn });
         }
       }
-      await Promise.all(updates.map(u => updateNotificationPreferences(u)));
+      await Promise.all(updates.map(u => api.put('/notifications/preferences', u)));
       setPrefSaved(true);
       setPrefDirty(false);
       setTimeout(() => setPrefSaved(false), 3000);

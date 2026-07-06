@@ -1,41 +1,27 @@
-import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
-import { Printer, RefreshCw, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Printer, ArrowLeft, AlertCircle } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
+import { queryKeys } from '../lib/query-keys';
+import { ApiError } from '../lib/api-error';
 
 export function MyAccessCardPage() {
-  const [card, setCard] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { data: card, error, isLoading } = useSWR(queryKeys.beneficiaries.myAccessCard());
 
-  useEffect(() => {
-    loadCard();
-  }, []);
-
-  async function loadCard() {
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/beneficiaries/me/access-card`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!res.ok) {
-        if (res.status === 404) setError('No Access Card found. Please contact the MSWDO office.');
-        else throw new Error('Failed to load');
-        return;
-      }
-      setCard(await res.json());
-    } catch {
-      setError('Failed to load Access Card. Please try again.');
-    } finally {
-      setLoading(false);
+  const loading = isLoading;
+  let displayError = '';
+  if (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      displayError = 'No Access Card found. Please contact the MSWDO office.';
+    } else {
+      displayError = 'Failed to load Access Card. Please try again.';
     }
   }
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading Access Card...</div>;
 
-  if (error) {
+  if (displayError) {
     return (
       <PageShell
         title="My Access Card"
@@ -43,7 +29,7 @@ export function MyAccessCardPage() {
       >
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="text-gray-300 mb-4" size={48} />
-          <p className="text-gray-500 mb-4">{error}</p>
+          <p className="text-gray-500 mb-4">{displayError}</p>
           <button onClick={() => navigate('/my-dashboard')} className="text-blue-600 text-sm underline">Back to Dashboard</button>
         </div>
       </PageShell>

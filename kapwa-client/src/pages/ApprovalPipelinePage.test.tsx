@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { SWRConfig, mutate } from 'swr';
 import { ApprovalPipelinePage } from './ApprovalPipelinePage';
 
-const { mockCases } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockApiPut, mockCases } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockApiPut: vi.fn(),
   mockCases: [
     {
       id: 'C-001',
@@ -29,31 +33,52 @@ const { mockCases } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/api', () => ({
-  getCases: () => Promise.resolve(mockCases),
-  updateCaseStatus: vi.fn(),
-  updateCaseDocuments: vi.fn(),
-  approveCase: vi.fn(),
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+    put: (...args: unknown[]) => mockApiPut(...args),
+    del: vi.fn(),
+  },
 }));
 
 vi.mock('../lib/auth-context', () => ({
   getCurrentUser: () => Promise.resolve({ id: 'user-1', role: 'admin', name: 'Admin User' }),
 }));
 
+function renderWithSWR(ui: React.ReactNode) {
+  return render(
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </SWRConfig>,
+  );
+}
+
 describe('ApprovalPipelinePage', () => {
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPut.mockReset();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('cases') && k.includes('list')) return Promise.resolve(mockCases);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
   it('renders PageShell heading', async () => {
-    render(<MemoryRouter><ApprovalPipelinePage /></MemoryRouter>);
+    renderWithSWR(<ApprovalPipelinePage />);
     expect(await screen.findByRole('heading', { name: 'Approval Pipeline' })).toBeTruthy();
   });
 
   it('renders case data from mock', async () => {
-    render(<MemoryRouter><ApprovalPipelinePage /></MemoryRouter>);
+    renderWithSWR(<ApprovalPipelinePage />);
     expect(await screen.findByText('NORZ-2026-0001', {}, { timeout: 3000 })).toBeTruthy();
     expect(await screen.findByText('NORZ-2026-0002')).toBeTruthy();
   });
 
   it('renders pipeline column headers', async () => {
-    render(<MemoryRouter><ApprovalPipelinePage /></MemoryRouter>);
-    // Use getAllByText since In Review appears in both column header and badge
+    renderWithSWR(<ApprovalPipelinePage />);
     const inReviewElements = await screen.findAllByText('In Review');
     expect(inReviewElements.length).toBeGreaterThan(0);
     expect(await screen.findByText('Disbursed')).toBeTruthy();

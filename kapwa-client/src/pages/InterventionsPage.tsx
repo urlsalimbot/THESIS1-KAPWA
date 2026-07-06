@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { getInterventions, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob } from '../lib/api';
+import React, { useState } from 'react';
+import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
+import { api, uploadSignature, uploadReceipt, dataURItoBlob } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import SignaturePad from '../components/forms/SignaturePad';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -27,8 +30,27 @@ interface Intervention {
 }
 
 export function InterventionsPage() {
-  const [interventions, setInterventions] = useState<Intervention[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { mutate: globalMutate } = useSWRConfig();
+  const { data, isLoading: loading } = useSWR<Array<Record<string, unknown>>>('/interventions');
+  const interventions: Intervention[] = (data || []).map((i) => {
+    const beneficiary = (i.case as Record<string, unknown>)?.beneficiary as Record<string, unknown> || {};
+    return {
+      id: i.id as string,
+      caseId: i.caseId as string || '',
+      beneficiary: beneficiary.firstName && beneficiary.surname ? `${beneficiary.firstName} ${beneficiary.surname}` : '',
+      type: i.interventionType as string || '',
+      description: `₱${i.amount || 0}`,
+      fundSource: i.fundSource as string || 'Regular',
+      amount: (i.amount as number) || 0,
+      provider: i.agency as string || 'MSWDO',
+      date: i.serviceDate ? new Date(i.serviceDate as string).toLocaleDateString() : '',
+      verified: !!i.workerSignatureUrl,
+      signatureStatus: i.signatureStatus as string | undefined,
+      clientReceiptUrl: i.clientReceiptUrl as string | undefined,
+    };
+  });
+  const lastSync = data ? Date.now() : null;
+
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({
     caseId: '', type: '', description: '', provider: '',
@@ -38,39 +60,6 @@ export function InterventionsPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [lastSync, setLastSync] = useState<number | null>(null);
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
-    try {
-      const data = await getInterventions();
-      const mapped: Intervention[] = (data || []).map((i: Record<string, unknown>) => {
-        const beneficiary = (i.case as Record<string, unknown>)?.beneficiary as Record<string, unknown> || {};
-        return {
-          id: i.id as string,
-          caseId: i.caseId as string || '',
-          beneficiary: beneficiary.firstName && beneficiary.surname ? `${beneficiary.firstName} ${beneficiary.surname}` : '',
-          type: i.interventionType as string || '',
-          description: `₱${i.amount || 0}`,
-          fundSource: i.fundSource as string || 'Regular',
-          amount: (i.amount as number) || 0,
-          provider: i.agency as string || 'MSWDO',
-          date: i.serviceDate ? new Date(i.serviceDate as string).toLocaleDateString() : '',
-          verified: !!i.workerSignatureUrl,
-          signatureStatus: i.signatureStatus as string | undefined,
-          clientReceiptUrl: i.clientReceiptUrl as string | undefined,
-        };
-      });
-      setInterventions(mapped);
-      setLastSync(Date.now());
-    } catch {
-      setInterventions([]);
-    }
-    setLoading(false);
-  }
 
   function update(field: string, value: string) { setForm({ ...form, [field]: value }); }
 
@@ -91,7 +80,7 @@ export function InterventionsPage() {
         receiptUrl = await uploadReceipt(receiptFile, receiptFile.name);
       }
 
-      await createIntervention({
+      await api.post('/interventions', {
         caseId: form.caseId,
         interventionType: form.type,
         amount: parseFloat(form.amount) || 0,
@@ -99,13 +88,13 @@ export function InterventionsPage() {
         agency: form.agency || 'MSWDO',
         workerSignatureUrl: workerSignatureUrl || undefined,
         clientReceiptUrl: receiptUrl || undefined,
-      } as any);
+      } as Record<string, unknown>);
 
       setShowForm(false);
       setForm({ caseId: '', type: '', description: '', provider: '', amount: '', agency: '', fundSource: 'Regular' });
       setSigDataUrl(null);
       setReceiptFile(null);
-      load();
+      globalMutate('/interventions');
     } catch (err: any) {
       setError(err.message || 'Failed to create intervention');
     }

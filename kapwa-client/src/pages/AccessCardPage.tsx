@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import { useNavigate } from 'react-router-dom';
-import { assignCard, getBeneficiaryCard } from '../lib/api';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -11,14 +14,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ColumnDef } from '@tanstack/react-table';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 interface ServiceLog { id: string; accessCardCode: string; serviceType: string; serviceDate: string; servedBy?: string; remarks: string; createdAt: string; }
 
 export function AccessCardPage() {
   const navigate = useNavigate();
-  const [services, setServices] = useState<ServiceLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { mutate: globalMutate } = useSWRConfig();
+  const { data: services = [], isLoading: loading } = useSWR<ServiceLog[]>(queryKeys.accessCards.list());
+  const lastSync = services ? Date.now() : null;
+
   const [beneficiaryId, setBeneficiaryId] = useState('');
   const [assignedCode, setAssignedCode] = useState('');
   const [assigning, setAssigning] = useState(false);
@@ -28,23 +31,8 @@ export function AccessCardPage() {
   const [logForm, setLogForm] = useState({ accessCardCode: '', serviceType: '', serviceDate: '', remarks: '' });
   const [successBanner, setSuccessBanner] = useState('');
   const [printBeneficiaryId, setPrintBeneficiaryId] = useState('');
-  const [lastSync, setLastSync] = useState<number | null>(null);
 
-  async function loadServices(signal?: AbortSignal) {
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(API + '/access-cards', { headers: { Authorization: 'Bearer ' + token }, signal });
-      if (res.ok) {
-        setServices(await res.json());
-        setLastSync(Date.now());
-      }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => { const ac = new AbortController(); loadServices(ac.signal); return () => ac.abort(); }, []);
-
-  useEffect(() => {
+  React.useEffect(() => {
     if (successBanner) {
       const t = setTimeout(() => setSuccessBanner(''), 3000);
       return () => clearTimeout(t);
@@ -57,7 +45,7 @@ export function AccessCardPage() {
     setAssignError('');
     setAssignedCode('');
     try {
-      const result = await assignCard(beneficiaryId.trim());
+      const result = await api.post<{ accessCardCode: string }>(`/access-cards/assign/${beneficiaryId.trim()}`);
       setAssignedCode(result.accessCardCode);
       setSuccessBanner(`Access Card assigned: ${result.accessCardCode}`);
     } catch (e: any) {
@@ -69,7 +57,9 @@ export function AccessCardPage() {
   async function handleSearchCard() {
     if (!cardSearchInput.trim()) return;
     try {
-      const data = await getBeneficiaryCard(cardSearchInput.trim());
+      const data = await api.get<{ beneficiary: any; code: string; services: any[] }>(
+        `/access-cards/beneficiary/${cardSearchInput.trim()}/card`,
+      );
       setCardData(data);
     } catch (e) {
       setCardData(null);
@@ -79,13 +69,9 @@ export function AccessCardPage() {
   async function logService(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(API + '/access-cards/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify(logForm),
-      });
-      if (res.ok) { setLogForm({ accessCardCode: '', serviceType: '', serviceDate: '', remarks: '' }); loadServices(); }
+      await api.post('/access-cards/log', logForm);
+      setLogForm({ accessCardCode: '', serviceType: '', serviceDate: '', remarks: '' });
+      globalMutate(queryKeys.accessCards.list());
     } catch (e) { console.error(e); }
   }
 
