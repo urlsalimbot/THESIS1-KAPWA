@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, RefreshCw, Clock, DollarSign } from 'lucide-react';
-import { getDashboard } from '../lib/api';
+import useSWR from 'swr';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -21,6 +23,11 @@ import { SlaTimer } from '@/components/sla/SlaTimer';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
 interface CaseRow { id: string; name: string; category: string; barangay: string; remarks: string; date: string; status: string; updatedAt?: string; }
+interface DashboardData {
+  servedToday?: number; servedChange?: string; lastSync?: string;
+  pendingReview?: number; urgentCount?: number; disbursedMonth?: number;
+  beneficiaryCount?: number; recentCases?: CaseRow[];
+}
 
 const StatusBadge = React.memo(({ status }: { status: string }) => {
   const variantMap: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -87,46 +94,38 @@ const dashboardCaseColumns: ColumnDef<CaseRow>[] = [
 
 const WORKER_ROLES = ['social_worker', 'admin'];
 
+const offlineStats: Stat[] = [
+  { label: 'Served Today', value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
+  { label: 'Sync Status', value: 'Offline', change: 'Check connection', icon: RefreshCw, iconClass: 'bg-blue-50 text-cyan-600' },
+  { label: 'Pending Review', value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
+  { label: 'Disbursed This Month', value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
+];
+
+function mapStats(data: DashboardData): Stat[] {
+  return [
+    { label: 'Served Today', value: String(data.servedToday || 0), change: `${data.servedChange || '+0%'} from yesterday`, icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
+    { label: 'Sync Status', value: 'All Synced', change: `Last sync: ${data.lastSync || '2m ago'}`, icon: RefreshCw, iconClass: 'bg-blue-50 text-cyan-600' },
+    { label: 'Pending Review', value: String(data.pendingReview || 0), change: `${data.urgentCount || 0} urgent`, icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
+    { label: 'Disbursed This Month', value: `₱${data.disbursedMonth || 0}`, change: `${data.beneficiaryCount || 0} beneficiaries`, icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
+  ];
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const role = user?.role || '';
-  const [stats, setStats] = useState<Stat[]>([]);
-  const [cases, setCases] = useState<CaseRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lastSync, setLastSync] = useState<number | null>(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    if (WORKER_ROLES.includes(role)) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-    return () => controller.abort();
-  }, [role]);
+  // Conditional null key — non-worker roles (claimant/mayor/auditor/coordinator) skip the fetch.
+  // The api.get is bound globally in routes.tsx (SWRConfig fetcher) — no fetcher prop here.
+  const swrKey = WORKER_ROLES.includes(role) ? queryKeys.dashboard.stats() : null;
+  const { data, isLoading } = useSWR<DashboardData>(swrKey);
 
-  async function loadData(signal?: AbortSignal) {
-    try {
-      const data = await getDashboard();
-      setStats([
-        { label: 'Served Today', value: String(data.servedToday || 0), change: `${data.servedChange || '+0%'} from yesterday`, icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
-        { label: 'Sync Status', value: 'All Synced', change: `Last sync: ${data.lastSync || '2m ago'}`, icon: RefreshCw, iconClass: 'bg-blue-50 text-cyan-600' },
-        { label: 'Pending Review', value: String(data.pendingReview || 0), change: `${data.urgentCount || 0} urgent`, icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-        { label: 'Disbursed This Month', value: `₱${data.disbursedMonth || 0}`, change: `${data.beneficiaryCount || 0} beneficiaries`, icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
-      ]);
-      setCases(data.recentCases || []);
-      setLastSync(Date.now());
-    } catch {
-      setStats([
-        { label: 'Served Today', value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
-        { label: 'Sync Status', value: 'Offline', change: 'Check connection', icon: RefreshCw, iconClass: 'bg-blue-50 text-cyan-600' },
-        { label: 'Pending Review', value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-        { label: 'Disbursed This Month', value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
-      ]);
-    }
-    setLoading(false);
-  }
+  // Memoize so the stats array reference is stable across renders (preserves React.memo on StatCard).
+  const stats = useMemo(() => (data ? mapStats(data) : offlineStats), [data]);
+  const cases = useMemo(() => data?.recentCases ?? [], [data]);
+  const lastSync = data ? Date.now() : null;
+  // Only show the skeleton while a worker-role fetch is in flight; non-worker roles skip straight to their widget.
+  const loading = isLoading && WORKER_ROLES.includes(role);
 
   if (loading) {
     return (
@@ -160,15 +159,6 @@ export function DashboardPage() {
         {!['claimant', 'mayor', 'auditor', 'coordinator'].includes(role) && (
           <EmptyState variant="no-access" />
         )}
-      </PageShell>
-    );
-  }
-
-  if (stats.length === 0 && !loading) {
-    return (
-      <PageShell title="Dashboard" description="Overview of social welfare operations and metrics.">
-        <QuickActionPanel />
-        <EmptyState variant="no-data" />
       </PageShell>
     );
   }
