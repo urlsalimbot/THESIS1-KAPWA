@@ -87,7 +87,7 @@ describe('DashboardPage', () => {
     expect(JSON.stringify(lastCallArg)).toContain('stats');
   });
 
-  it('for a non-worker role (claimant), api.get is NOT called (null key skips fetch)', async () => {
+  it('for a non-worker role (claimant), the dashboard /dashboard/stats path is NOT called (null key skips fetch)', async () => {
     // Override useAuth to return a claimant role for this test
     const { useAuth } = await import('../lib/auth-context');
     (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValueOnce({
@@ -98,7 +98,13 @@ describe('DashboardPage', () => {
     renderWithSWR(<DashboardPage />);
     // Give SWR a moment to NOT fire (it shouldn't fire with a null key)
     await new Promise((r) => setTimeout(r, 50));
-    expect(mockApiGet).not.toHaveBeenCalled();
+    // The dashboard /dashboard/stats path is role-gated by the null key.
+    // The claimant widget (ClaimantWidgets) does fire its own /beneficiaries/me/services
+    // useSWR — that's expected, not a regression. The intent of this test is
+    // that the dashboard's role-gated /dashboard/stats endpoint is NOT called.
+    const allCalls = mockApiGet.mock.calls.map(c => JSON.stringify(c[0]));
+    const dashboardCalls = allCalls.filter(c => c.includes('dashboard') && c.includes('stats'));
+    expect(dashboardCalls).toHaveLength(0);
     // The claimant widget shell renders (role-gated content path)
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
   });
