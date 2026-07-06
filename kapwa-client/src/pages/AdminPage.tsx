@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR, { mutate } from 'swr';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -16,8 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 interface Program {
   id: string; name: string; category: string; isActive: boolean;
@@ -45,14 +46,8 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<string>('programs');
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [syncEntries, setSyncEntries] = useState<SyncEntry[]>([]);
-  const [users, setUsers] = useState<AppUser[]>([]);
   const [userSearch, setUserSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [editUser, setEditUser] = useState<AppUser | null>(null);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [lastSync, setLastSync] = useState<number | null>(null);
 
   // Create user form state
   const [formEmail, setFormEmail] = useState('');
@@ -66,56 +61,40 @@ export function AdminPage() {
   const [formError, setFormError] = useState('');
   const [formPermittedBarangays, setFormPermittedBarangays] = useState('');
 
-  useEffect(() => {
-    const controller = new AbortController();
-    if (activeTab === 'programs') fetchPrograms();
-    if (activeTab === 'users') fetchUsers();
-    if (activeTab === 'sync') fetchSyncEntries();
-    if (activeTab === 'audit') fetchAuditLogs();
-      return () => controller.abort();
-  }, [activeTab]);
+  // 4 conditional useSWR hooks — one per activeTab value. The null key
+  // tells SWR to skip the fetch for inactive tabs (SWR official docs).
+  // The api.get fetcher is bound globally in routes.tsx.
+  const { data: programsRaw, isLoading: loadingPrograms } = useSWR<Program[]>(
+    activeTab === 'programs' ? queryKeys.admin.programs() : null,
+  );
+  const { data: usersRaw, isLoading: loadingUsers } = useSWR<unknown>(
+    activeTab === 'users' ? queryKeys.admin.users() : null,
+  );
+  const { data: syncEntriesRaw, isLoading: loadingSync } = useSWR<SyncEntry[]>(
+    activeTab === 'sync' ? queryKeys.admin.syncEntries() : null,
+  );
+  const { data: auditLogs, isLoading: loadingAudit } = useSWR<unknown>(
+    activeTab === 'audit' ? queryKeys.admin.auditLogs() : null,
+  );
+  // Default to [] so the inactive-tab content branches still have safe values
+  // (Radix Tabs renders all panels; the active one is just visible).
+  const programs = programsRaw ?? [];
+  const syncEntries = syncEntriesRaw ?? [];
+  // The /users endpoint returns { data: AppUser[] } or AppUser[] — handle both shapes.
+  const users = ((usersRaw as { data?: AppUser[] } | undefined)?.data
+    ?? (usersRaw as AppUser[] | undefined)
+    ?? []) as AppUser[];
+  // The /admin/auditLogs endpoint returns [coaExport, hashChain] — keep the array shape.
+  const auditLogsArr = Array.isArray(auditLogs) ? auditLogs as any[] : [];
 
-  async function fetchPrograms() {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/programs`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setPrograms(await res.json());
-    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
-  }
+  // Single loading flag for the active tab's skeleton
+  const loading =
+    (activeTab === 'programs' && loadingPrograms) ||
+    (activeTab === 'users' && loadingUsers) ||
+    (activeTab === 'sync' && loadingSync) ||
+    (activeTab === 'audit' && loadingAudit);
 
-  async function fetchUsers() {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/users`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setUsers(await res.json().then(d => d.data || d));
-      setLastSync(Date.now());
-    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
-  }
-
-  async function fetchSyncEntries() {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const res = await fetch(`${API_URL}/sync/conflicts/admin`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setSyncEntries(await res.json());
-    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
-  }
-
-  async function fetchAuditLogs() {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('kapwa_token');
-      const [coaRes, hashRes] = await Promise.all([
-        fetch(`${API_URL}/audit/coa-export?startDate=2026-01-01&endDate=2026-12-31`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/audit/hash-chain`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      const coa = coaRes.ok ? await coaRes.json() : null;
-      const hash = hashRes.ok ? await hashRes.json() : null;
-      setAuditLogs([coa, hash].filter(Boolean));
-    } catch (e) { console.error("AdminPage:", e); } finally { setLoading(false); }
-  }
+  const lastSync = Date.now();
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -123,8 +102,7 @@ export function AdminPage() {
     setFormSuccess('');
     setFormError('');
     try {
-      const token = localStorage.getItem('kapwa_token');
-      const body: Record<string, any> = {
+      const body: Record<string, unknown> = {
         email: formEmail,
         password: formPassword,
         role: formRole,
@@ -135,16 +113,7 @@ export function AdminPage() {
       if (formPermittedBarangays.trim()) {
         body.permitted_barangays = formPermittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
       }
-      const res = await fetch(`${API_URL}/users`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || `Failed to create user: ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await api.post<{ user?: { email?: string } }>('/users', body);
       setFormSuccess(`User ${data.user?.email || formEmail} created successfully`);
       setFormEmail('');
       setFormPassword('');
@@ -153,9 +122,10 @@ export function AdminPage() {
       setFormPhone('');
       setFormBarangay('');
       setFormPermittedBarangays('');
-      fetchUsers();
-    } catch (e: any) {
-      setFormError(e.message || 'Failed to create user');
+      // Revalidate the users list
+      await mutate(queryKeys.admin.users(), undefined, { revalidate: true });
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'Failed to create user');
     } finally {
       setFormSubmitting(false);
     }
@@ -163,34 +133,23 @@ export function AdminPage() {
 
   async function toggleUserStatus(user: AppUser) {
     try {
-      const token = localStorage.getItem('kapwa_token');
-      await fetch(`${API_URL}/users/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ isActive: !user.isActive }),
-      });
-      fetchUsers();
+      await api.put(`/users/${user.id}`, { isActive: !user.isActive });
+      await mutate(queryKeys.admin.users(), undefined, { revalidate: true });
     } catch (e) { console.error("AdminPage:", e); }
   }
 
   async function updateUserRole(user: AppUser, role: string) {
     try {
-      const token = localStorage.getItem('kapwa_token');
-      await fetch(`${API_URL}/users/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ role }),
-      });
-      fetchUsers();
+      await api.put(`/users/${user.id}`, { role });
+      await mutate(queryKeys.admin.users(), undefined, { revalidate: true });
     } catch (e) { console.error("AdminPage:", e); }
   }
 
   async function deleteUser(id: string) {
     if (!confirm('Delete this user?')) return;
     try {
-      const token = localStorage.getItem('kapwa_token');
-      await fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      fetchUsers();
+      await api.del(`/users/${id}`);
+      await mutate(queryKeys.admin.users(), undefined, { revalidate: true });
     } catch (e) { console.error("AdminPage:", e); }
   }
 
@@ -426,10 +385,10 @@ export function AdminPage() {
             <CardContent>
               {loading ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">Loading audit data...</div>
-              ) : auditLogs.length === 0 ? (
+              ) : auditLogsArr.length === 0 ? (
                 <EmptyState variant="no-data" />
               ) : (
-                auditLogs.map((log, idx) => log && (
+                auditLogsArr.map((log, idx) => log && (
                   <div key={idx} className="mb-4 rounded bg-muted p-4 text-xs font-mono text-muted-foreground">
                     {log.generatedAt && (
                       <>

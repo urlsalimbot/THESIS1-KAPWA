@@ -1,8 +1,9 @@
 import { BARANGAYS } from '../lib/constants';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Search, Loader2 } from 'lucide-react';
-import { getBeneficiaries } from '../lib/api';
+import useSWR from 'swr';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -29,6 +30,18 @@ function BeneficiaryActions({ id }: { id: string }) {
       <Eye size={14} className="mr-1" /> View
     </Button>
   );
+}
+
+function mapBeneficiary(b: Record<string, unknown>): Beneficiary {
+  return {
+    id: b.id as string,
+    name: `${(b.firstName as string) || ''} ${(b.surname as string) || ''}`.trim(),
+    age: b.dob ? new Date().getFullYear() - new Date(b.dob as string).getFullYear() : 0,
+    barangay: ((b.address as string) || '').split(',').pop()?.trim() || '',
+    householdSize: ((b.household as Record<string, unknown>)?.familyMembers as Array<unknown>)?.length || 1,
+    programs: (b.programs as string[]) || [],
+    status: (b.consentStatus as string) || 'active',
+  };
 }
 
 const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
@@ -60,16 +73,13 @@ const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
 
 export function BeneficiariesPage() {
   const navigate = useNavigate();
-  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [barangayFilter, setBarangayFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
-  const [fetching, setFetching] = useState(false);
-  const [lastSync, setLastSync] = useState<number | null>(null);
 
-  // Debounce search input — 300ms delay before triggering API call
+  // Debounce search input — 300ms delay before triggering a key change.
+  // SWR doesn't debounce; we debounce the key here.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchInput);
@@ -77,43 +87,24 @@ export function BeneficiariesPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Fetch beneficiaries when debounced search, category, or barangay changes
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setFetching(true);
-      try {
-        const params: Record<string, string> = {};
-        if (debouncedSearch) params.search = debouncedSearch;
-        if (categoryFilter) params.category = categoryFilter;
-        if (barangayFilter && barangayFilter !== 'all') params.barangay = barangayFilter;
+  // Build the SWR key from the debounced inputs. The key is reference-stable
+  // via the queryKeys factory memoization.
+  const params = {
+    search: debouncedSearch || undefined,
+    category: categoryFilter || undefined,
+    barangay: barangayFilter === 'all' ? undefined : barangayFilter,
+  };
+  const swrKey = queryKeys.beneficiaries.list(params);
+  const { data, isLoading, isValidating } = useSWR<Record<string, unknown>[]>(swrKey, {
+    keepPreviousData: true,
+  });
 
-        const hasParams = Object.keys(params).length > 0;
-        const data = await getBeneficiaries(hasParams ? params : undefined);
-        if (cancelled) return;
-        const mapped: Beneficiary[] = (data || []).map((b: Record<string, unknown>) => ({
-          id: b.id as string,
-          name: `${b.firstName as string || ''} ${b.surname as string || ''}`.trim(),
-          age: b.dob ? new Date().getFullYear() - new Date(b.dob as string).getFullYear() : 0,
-          barangay: ((b.address as string) || '')?.split(',').pop()?.trim() || '',
-          householdSize: ((b.household as Record<string, unknown>)?.familyMembers as Array<unknown>)?.length || 1,
-          programs: b.programs as string[] || [],
-          status: b.consentStatus as string || 'active',
-        }));
-        setBeneficiaries(mapped);
-        setLastSync(Date.now());
-      } catch {
-        if (!cancelled) setBeneficiaries([]);
-      }
-      if (!cancelled) {
-        setLoading(false);
-        setFetching(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [debouncedSearch, categoryFilter, barangayFilter]);
+  // Map raw data → typed Beneficiary[] (memoized for React.memo compatibility)
+  const beneficiaries = useMemo(() => (data || []).map(mapBeneficiary), [data]);
+  const lastSync = data ? Date.now() : null;
 
+  const loading = isLoading;
+  const fetching = isValidating;
   const canShowResults = !loading && !fetching && beneficiaries.length > 0;
 
   if (loading) {
