@@ -45,9 +45,9 @@
 - [ ] **SEC-01**: Token refresh/rotation — `onUnauthorized` interceptor in API client, break loop on 401 refresh
 
 ### Major Upgrades
-- [ ] **UPG-01**: Upgrade React 18 → 19 (test mobile Capacitor builds after)
-- [ ] **UPG-02**: Upgrade Capacitor 6 → 8 (test Android + iOS builds after)
-- [ ] **UPG-03**: Upgrade Tailwind CSS v3 → v4 (audit UI rendering after)
+- [x] **UPG-01**: Upgrade React 18 → 19 (test mobile Capacitor builds after)
+- [x] **UPG-02**: Upgrade Capacitor 6 → 8 (test Android + iOS builds after)
+- [x] **UPG-03**: Upgrade Tailwind CSS v3 → v4 (audit UI rendering after)
 
 ---
 
@@ -143,9 +143,9 @@
 | A11Y-01 | — | Pending |
 | A11Y-02 | — | Pending |
 | SEC-01 | — | Pending |
-| UPG-01 | — | Pending |
-| UPG-02 | — | Pending |
-| UPG-03 | — | Pending |
+| UPG-01 | 13 | ✓ |
+| UPG-02 | 13 | ✓ |
+| UPG-03 | 13 | ✓ |
 
 **Coverage:**
 - v1.2 requirements: 18 total
