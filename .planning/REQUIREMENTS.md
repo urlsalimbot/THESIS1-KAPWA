@@ -34,8 +34,8 @@
 - [ ] **TST-07**: Integrate axe-core into CI pipeline — a11y assertions in vitest suite
 
 ### API Layer
-- [ ] **API-01**: Centralized API client with retry (3x GET), timeout (10s), Bearer token interceptor
-- [ ] **API-02**: Activate SWR for data fetching — replace raw `fetch()` calls with `useSWR` hooks
+- [x] **API-01**: Centralized API client with retry (3x GET), timeout (10s), Bearer token interceptor
+- [x] **API-02**: Activate SWR for data fetching — replace raw `fetch()` calls with `useSWR` hooks
 
 ### Accessibility
 - [ ] **A11Y-01**: Enable `SkipToContent` component in `<Layout>`
@@ -138,8 +138,8 @@
 | TST-05 | — | Pending |
 | TST-06 | — | Pending |
 | TST-07 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
+| API-01 | 14 | ✓ |
+| API-02 | 14 | ✓ |
 | A11Y-01 | — | Pending |
 | A11Y-02 | — | Pending |
 | SEC-01 | — | Pending |
