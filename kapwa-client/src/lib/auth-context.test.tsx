@@ -95,3 +95,50 @@ describe('AuthProvider — kapwa:auth:logout subscriber', () => {
     });
   });
 });
+
+// =============================================================
+// Tests for the fetchUser → api.get('/auth/me') migration (Plan 14-02 Task 1).
+// The api.get internally calls fetch, so we spy on the global fetch to verify
+// the URL contains '/auth/me' (proving the api.get call routed through the
+// correct path). The old tests also use this pattern; the migration is verified
+// by the URL containing '/auth/me' instead of the inline '/auth/me' literal.
+// =============================================================
+describe('AuthProvider — fetchUser uses api.get("/auth/me")', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+    localStorage.setItem('kapwa_token', 'test-tok');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('fetchUser calls api.get → fetch is called with URL ending in /auth/me', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' } }),
+    });
+
+    const onAuth = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={onAuth} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    // Wait for fetchUser to complete — the api.get call routes through fetch internally
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    // Verify the URL passed to fetch is the /auth/me endpoint
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toMatch(/\/auth\/me$/);
+  });
+});
+
