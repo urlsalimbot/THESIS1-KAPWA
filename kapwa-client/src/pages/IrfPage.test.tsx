@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { SWRConfig, mutate } from 'swr';
 import { IrfPage } from './IrfPage';
 
-const { mockIrfs } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockApiPut, mockIrfs } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockApiPut: vi.fn(),
   mockIrfs: [
     {
       id: 'IRF-001',
@@ -18,31 +22,55 @@ const { mockIrfs } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/api', () => ({
-  getIrfRecords: vi.fn(() => Promise.resolve(mockIrfs)),
-  createIrf: vi.fn(),
-  exportIrfPdf: vi.fn(),
-  exportIrfJson: vi.fn(),
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+    put: (...args: unknown[]) => mockApiPut(...args),
+    del: vi.fn(),
+    exportIrfPdf: vi.fn(),
+    exportIrfJson: vi.fn(),
+  },
 }));
 
+function renderWithSWR(ui: React.ReactNode) {
+  return render(
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </SWRConfig>,
+  );
+}
+
 describe('IrfPage', () => {
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPut.mockReset();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('irf') && k.includes('list')) return Promise.resolve(mockIrfs);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
   it('renders PageShell heading', async () => {
-    render(<MemoryRouter><IrfPage /></MemoryRouter>);
+    renderWithSWR(<IrfPage />);
     expect(await screen.findByRole('heading', { name: 'Incident Report Forms (IRF)' })).toBeTruthy();
   });
 
   it('renders description text', async () => {
-    render(<MemoryRouter><IrfPage /></MemoryRouter>);
+    renderWithSWR(<IrfPage />);
     expect(await screen.findByText('VAWC/RA 9262 cases — MSWDO Norzagaray')).toBeTruthy();
   });
 
   it('renders records when loaded', async () => {
-    render(<MemoryRouter><IrfPage /></MemoryRouter>);
+    renderWithSWR(<IrfPage />);
     expect(await screen.findByText('BL-2026-0001')).toBeTruthy();
     expect(await screen.findByText('Maria Santos')).toBeTruthy();
   });
 
   it('renders + New IRF button', async () => {
-    render(<MemoryRouter><IrfPage /></MemoryRouter>);
+    renderWithSWR(<IrfPage />);
     expect(await screen.findByRole("button", { name: /new irf/i })).toBeTruthy();
   });
 });

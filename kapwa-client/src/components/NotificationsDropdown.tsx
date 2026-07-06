@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { mutate } from 'swr';
@@ -28,14 +28,20 @@ export default function NotificationsDropdown() {
   );
   const unreadCount = unreadData?.count ?? 0;
 
+  const markReadIdRef = useRef<string | null>(null);
   const markRead = useSWRMutation(
     queryKeys.notifications.list(),
-    async (_key, { arg }: { arg: { id: string } }) => {
+    async (_key: unknown, { arg }: { arg: { id: string } }) => {
+      markReadIdRef.current = arg.id;
       await api.post(`/notifications/${arg.id}/read`);
     },
     {
-      optimisticData: (current: Notification[] | undefined, { arg }: { arg: { id: string } }) =>
-        (current || []).map(n => n.id === arg.id ? { ...n, isRead: true } : n),
+      optimisticData: (current: Notification[] | undefined) => {
+        const id = markReadIdRef.current;
+        return (current || []).map((n: Notification) =>
+          n.id === id ? { ...n, isRead: true } : n,
+        );
+      },
       revalidate: false,
       populateCache: true,
       rollbackOnError: true,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, ShieldOff, AlertTriangle, X, Check, Loader2, History, Info } from 'lucide-react';
-import { revokeConsent, getConsentLedger } from '../../lib/api';
+import { api } from '../../lib/api';
 
 interface ConsentLedgerEntry {
   id: string;
@@ -43,7 +43,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
 
   useEffect(() => {
     setLoadingLedger(true);
-    getConsentLedger(beneficiaryId)
+    api.get(`/beneficiaries/${beneficiaryId}/consent`)
       .then((data: any) => setLedger(Array.isArray(data) ? data : []))
       .catch(() => setLedger([]))
       .finally(() => setLoadingLedger(false));
@@ -53,13 +53,12 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
     setRevoking(true);
     setError(null);
     try {
-      const result = await revokeConsent(beneficiaryId, revokeReason || undefined);
+      await api.post(`/beneficiaries/${beneficiaryId}/consent/revoke`, { reason: revokeReason || undefined });
       setStatus('revoked');
       setShowRevokeDialog(false);
       setRevokeReason('');
       onConsentChange?.('revoked');
-      // Refresh ledger
-      const data = await getConsentLedger(beneficiaryId);
+      const data = await api.get(`/beneficiaries/${beneficiaryId}/consent`);
       setLedger(Array.isArray(data) ? data : []);
     } catch (err) {
       setError('Failed to revoke consent. Please try again.');

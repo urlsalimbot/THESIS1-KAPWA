@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { queueChange } from '../lib/offline-queue';
 import { isOnline } from '../lib/sync';
-import { submitIntake } from '../lib/api';
+import { api } from '../lib/api';
 import SignaturePad from '../components/forms/SignaturePad';
 import { PageShell } from '@/components/PageShell';
 
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 import { BARANGAYS, SERVICE_TYPES } from '../lib/constants';
 
 const CATEGORIES = ['Senior', 'PWD', 'Child', 'Solo Parent', 'Indigenous', 'Others'];
@@ -160,7 +159,7 @@ export function IntakePage() {
         await queueChange('intake', crypto.randomUUID(), 'INSERT', payload);
         setSuccess('Queued for sync — will be submitted when online.');
       } else {
-        const data = await submitIntake(payload);
+        const data = await api.post<{ controlNo?: string }>('/intake', payload);
         setSuccess(`Case ${data.controlNo || ''} created successfully!`);
         resetForm();
       }

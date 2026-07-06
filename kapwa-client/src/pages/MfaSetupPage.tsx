@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { setupMfa, enableMfa, disableMfa } from '../lib/api';
-import { getCurrentUser } from '../lib/auth-context';
+import { useState } from 'react';
+import useSWR from 'swr';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { Shield, Smartphone, CheckCircle } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { FormSkeleton } from '@/components/skeletons/FormSkeleton';
@@ -10,30 +11,20 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 
 export function MfaSetupPage() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: user, isLoading } = useSWR<{ mfaEnabled?: boolean }>(queryKeys.auth.me());
+  const loading = isLoading;
   const [step, setStep] = useState<'idle' | 'setup' | 'verify' | 'done'>('idle');
   const [secret, setSecret] = useState('');
   const [otpauth, setOtpauth] = useState('');
   const [code, setCode] = useState('');
-  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState(user?.mfaEnabled ?? false);
   const [error, setError] = useState('');
   const [disablePw, setDisablePw] = useState('');
-
-  useEffect(() => {
-    const ac = new AbortController();
-    getCurrentUser(ac.signal).then(u => {
-      setUser(u);
-      setMfaEnabled(u?.mfaEnabled ?? false);
-      setLoading(false);
-    });
-    return () => ac.abort();
-  }, []);
 
   async function handleSetup() {
     setError('');
     try {
-      const res = await setupMfa();
+      const res = await api.post<{ secret: string; otpauth: string }>('/auth/mfa/setup');
       setSecret(res.secret);
       setOtpauth(res.otpauth);
       setStep('setup');
@@ -45,7 +36,7 @@ export function MfaSetupPage() {
   async function handleEnable() {
     setError('');
     try {
-      const res = await enableMfa(code);
+      const res = await api.post<{ mfaEnabled: boolean }>('/auth/mfa/enable', { code });
       setMfaEnabled(res.mfaEnabled);
       setStep('done');
     } catch (e: any) {
@@ -56,7 +47,7 @@ export function MfaSetupPage() {
   async function handleDisable() {
     setError('');
     try {
-      const res = await disableMfa(disablePw);
+      const res = await api.post<{ mfaEnabled: boolean }>('/auth/mfa/disable', { password: disablePw });
       setMfaEnabled(res.mfaEnabled);
       setStep('idle');
       setSecret('');

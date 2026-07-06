@@ -1,9 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { SWRConfig, mutate } from 'swr';
 import { CsrPage } from './CsrPage';
 
-const { mockRecords } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockApiPut, mockApiDel, mockRecords } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockApiPut: vi.fn(),
+  mockApiDel: vi.fn(),
   mockRecords: [
     {
       id: 'CSR-001',
@@ -30,32 +35,55 @@ const { mockRecords } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/api', () => ({
-  getCsrRecords: vi.fn(() => Promise.resolve(mockRecords)),
-  createCsrRecord: vi.fn(),
-  updateCsrRecord: vi.fn(),
-  deleteCsrRecord: vi.fn(),
-  downloadCsrPdf: vi.fn(),
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+    put: (...args: unknown[]) => mockApiPut(...args),
+    del: (...args: unknown[]) => mockApiDel(...args),
+    downloadCsrPdf: vi.fn(),
+  },
 }));
 
+function renderWithSWR(ui: React.ReactNode) {
+  return render(
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </SWRConfig>,
+  );
+}
+
 describe('CsrPage', () => {
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPut.mockReset();
+    mockApiDel.mockReset();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('csr') && k.includes('list')) return Promise.resolve(mockRecords);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
   it('renders PageShell heading', async () => {
-    render(<MemoryRouter><CsrPage /></MemoryRouter>);
+    renderWithSWR(<CsrPage />);
     expect(await screen.findByRole('heading', { name: 'CSR Generator' })).toBeTruthy();
   });
 
   it('renders description text', async () => {
-    render(<MemoryRouter><CsrPage /></MemoryRouter>);
+    renderWithSWR(<CsrPage />);
     expect(await screen.findByText('Family Case Study Reports — MSWDO Norzagaray')).toBeTruthy();
   });
 
   it('renders records when loaded', async () => {
-    render(<MemoryRouter><CsrPage /></MemoryRouter>);
+    renderWithSWR(<CsrPage />);
     expect(await screen.findByText('CSR-2026-0001')).toBeTruthy();
     expect(await screen.findByText('Juan Dela Cruz')).toBeTruthy();
   });
 
   it('renders + New CSR button', async () => {
-    render(<MemoryRouter><CsrPage /></MemoryRouter>);
+    renderWithSWR(<CsrPage />);
     expect(await screen.findByRole('button', { name: '+ New CSR' })).toBeTruthy();
   });
 });

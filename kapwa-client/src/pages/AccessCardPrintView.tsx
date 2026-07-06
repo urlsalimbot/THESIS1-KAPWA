@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getBeneficiaryCard } from '../lib/api';
+import { api } from '../lib/api';
 import { AccessCard } from '../components/cards/AccessCard';
 import { Printer } from 'lucide-react';
 
@@ -16,7 +16,7 @@ export function AccessCardPrintView() {
       setError('No beneficiary ID provided');
       return;
     }
-    getBeneficiaryCard(id)
+    api.get<{ code: string; beneficiary: any; services: any[] }>(`/access-cards/beneficiary/${id}/card`)
       .then((data: any) => {
         setCard(data);
         setLoading(false);

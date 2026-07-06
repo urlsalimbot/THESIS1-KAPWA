@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getIrfCase, referToPnp, referToWcpd, dismissIrf, closeIrf, decryptNarration, exportIrfPdf, exportIrfJson } from '../lib/api';
+import { api, exportIrfPdf } from '../lib/api';
 import NameMaskToggle from '../components/irf/NameMaskToggle';
 import { PageShell } from '@/components/PageShell';
 import VictimNarrationField from '../components/irf/VictimNarrationField';
@@ -26,7 +26,7 @@ export function IrfDetailPage() {
   async function load() {
     if (!id) return;
     try {
-      const data = await getIrfCase(id);
+      const data = await api.get<any>(`/irf/${id}`);
       setIrf(data);
     } catch (e) {
       console.error('Failed to load IRF:', e);
@@ -47,7 +47,7 @@ export function IrfDetailPage() {
   async function handleDecrypt() {
     if (!id || !legalBasis) return;
     try {
-      const result = await decryptNarration(id, legalBasis);
+      const result = await api.post<{ narration: string }>(`/irf/${id}/decrypt`, { legalBasis });
       setDecryptedNarration(result.narration);
       setShowDecryptForm(false);
     } catch (e) {
@@ -71,7 +71,7 @@ export function IrfDetailPage() {
   async function handleExportJson() {
     if (!id || !exportLegalBasis) return;
     try {
-      const data = await exportIrfJson(id, exportLegalBasis);
+      const data = await api.get<any>(`/irf/${id}/export-json?legalBasis=${encodeURIComponent(exportLegalBasis)}`);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = window.document.createElement('a');
@@ -154,18 +154,18 @@ export function IrfDetailPage() {
         {/* Action buttons based on current state */}
         {currentState === 'Under Investigation' && (
           <div className="flex gap-2">
-            <button onClick={() => handleDisposition(() => referToPnp(id!))}
+            <button onClick={() => handleDisposition(() => api.put(`/irf/${id}/refer-pnp`))}
               className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark">Refer to PNP</button>
-            <button onClick={() => handleDisposition(() => referToWcpd(id!))}
+            <button onClick={() => handleDisposition(() => api.put(`/irf/${id}/refer-wcpd`))}
               className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark">Refer to WCPD</button>
             <button onClick={() => {
               const reason = prompt('Dismissal reason:');
-              if (reason) handleDisposition(() => dismissIrf(id!, reason));
+              if (reason) handleDisposition(() => api.put(`/irf/${id}/dismiss`, { reason }));
             }} className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Dismiss</button>
           </div>
         )}
         {(currentState === 'Referred to PNP' || currentState === 'Referred to WCPD' || currentState === 'Dismissed') && (
-          <button onClick={() => handleDisposition(() => closeIrf(id!))}
+          <button onClick={() => handleDisposition(() => api.put(`/irf/${id}/close`))}
             className="rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark">Close Case</button>
         )}
       </div>

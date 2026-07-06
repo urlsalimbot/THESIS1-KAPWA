@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import { Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getIrfRecords, createIrf, exportIrfPdf, exportIrfJson } from '../lib/api';
+import { api, exportIrfPdf } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -24,27 +27,16 @@ interface IrfCase {
 
 export function IrfPage() {
   const navigate = useNavigate();
-  const [irfs, setIrfs] = useState<IrfCase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lastSync, setLastSync] = useState<number | null>(null);
+  const { mutate: globalMutate } = useSWRConfig();
+  const { data: irfs = [], isLoading: loading } = useSWR<IrfCase[]>(queryKeys.irf.list());
+  const lastSync = irfs.length > 0 ? Date.now() : null;
+
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ caseCategory: '', narration: '', reporterName: '', reporterContact: '' });
   const [exportIrfId, setExportIrfId] = useState<string | null>(null);
   const [legalBasis, setLegalBasis] = useState('');
   const [pdfPassword, setPdfPassword] = useState('');
   const [exporting, setExporting] = useState(false);
-
-  useEffect(() => { const ac = new AbortController(); load(ac.signal); return () => ac.abort(); }, []);
-
-  async function load(signal?: AbortSignal) {
-    setLoading(true);
-    try {
-      const data = await getIrfRecords(signal);
-      setIrfs(data || []);
-      setLastSync(Date.now());
-    } catch { setIrfs([]); }
-    setLoading(false);
-  }
 
   function resetForm() {
     setForm({ caseCategory: '', narration: '', reporterName: '', reporterContact: '' });
@@ -54,13 +46,13 @@ export function IrfPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await createIrf({
+      await api.post('/irf', {
         caseCategory: form.caseCategory,
         narration: form.narration,
         itemAReportingPerson: { name: form.reporterName, contact: form.reporterContact },
       });
       resetForm();
-      load();
+      globalMutate(queryKeys.irf.list());
     } catch (err) { console.error(err); }
   }
 
@@ -80,7 +72,7 @@ export function IrfPage() {
     if (!exportIrfId || !legalBasis) return;
     setExporting(true);
     try {
-      const data = await exportIrfJson(exportIrfId, legalBasis);
+      const data = await api.get(`/irf/${exportIrfId}/export-json?legalBasis=${encodeURIComponent(legalBasis)}`);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = window.document.createElement('a');
