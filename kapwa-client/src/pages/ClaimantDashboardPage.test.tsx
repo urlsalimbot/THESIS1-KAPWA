@@ -1,34 +1,60 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { SWRConfig, mutate } from 'swr';
 import { ClaimantDashboardPage } from './ClaimantDashboardPage';
 
-const { mockPrefs } = vi.hoisted(() => ({
-  mockPrefs: [],
+const { mockApiGet, mockApiPost, mockApiPut } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockApiPut: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
-  getNotificationPreferences: () => Promise.resolve(mockPrefs),
-  updateNotificationPreferences: () => Promise.resolve(),
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+    put: (...args: unknown[]) => mockApiPut(...args),
+    del: vi.fn(),
+  },
 }));
 
+function renderWithSWR(ui: React.ReactNode) {
+  return render(
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </SWRConfig>,
+  );
+}
+
 describe('ClaimantDashboardPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPut.mockReset();
     localStorage.setItem('kapwa_token', 'test-token');
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('services')) return Promise.resolve({ services: [], caseStatus: 'No active case' });
+      if (k.includes('consent')) return Promise.resolve([]);
+      if (k.includes('preferences')) return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
   });
 
   it('renders PageShell heading', async () => {
-    render(<MemoryRouter><ClaimantDashboardPage /></MemoryRouter>);
+    renderWithSWR(<ClaimantDashboardPage />);
     expect(await screen.findByRole('heading', { name: 'My Dashboard' })).toBeTruthy();
   });
 
   it('renders Access Card section', async () => {
-    render(<MemoryRouter><ClaimantDashboardPage /></MemoryRouter>);
+    renderWithSWR(<ClaimantDashboardPage />);
     expect(await screen.findByText('View your KAPWA Access Card')).toBeTruthy();
   });
 
   it('renders View Card link', async () => {
-    render(<MemoryRouter><ClaimantDashboardPage /></MemoryRouter>);
+    renderWithSWR(<ClaimantDashboardPage />);
     expect(await screen.findByRole('link', { name: 'View Card' })).toBeTruthy();
   });
 });

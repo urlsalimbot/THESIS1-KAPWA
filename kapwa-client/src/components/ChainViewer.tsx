@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, CheckCircle, XCircle } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import { api } from '../lib/api';
 
 interface ChainEntry {
   id: string;
@@ -22,7 +22,7 @@ export function ChainViewer({ caseId }: { caseId: string }) {
 
   async function loadChain() {
     try {
-      const data = await apiFetch(`/interventions/chain/${caseId}`);
+      const data = await api.get<ChainEntry[]>(`/interventions/chain/${caseId}`);
       setChain(data as ChainEntry[]);
     } catch {
       setError('Failed to load hash chain');

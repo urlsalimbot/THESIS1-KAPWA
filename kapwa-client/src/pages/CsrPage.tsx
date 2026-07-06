@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import { FileText } from 'lucide-react';
-import { getCsrRecords, createCsrRecord, updateCsrRecord, deleteCsrRecord, downloadCsrPdf } from '../lib/api';
+import { api, downloadCsrPdf } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -33,27 +36,16 @@ const emptyForm: CsrForm = {
 };
 
 export function CsrPage() {
-  const [records, setRecords] = useState<CsrRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { mutate: globalMutate } = useSWRConfig();
+  const { data: records = [], isLoading: loading } = useSWR<CsrRecord[]>(queryKeys.csr.list());
+  const lastSync = records.length > 0 ? Date.now() : null;
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CsrForm>(emptyForm);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [msg, setMsg] = useState('');
-  const [lastSync, setLastSync] = useState<number | null>(null);
-
-  useEffect(() => { const ac = new AbortController(); load(ac.signal); return () => ac.abort(); }, []);
-
-  async function load(signal?: AbortSignal) {
-    setLoading(true);
-    try {
-      const data = await getCsrRecords(signal);
-      setRecords(data || []);
-      setLastSync(Date.now());
-    } catch { setRecords([]); }
-    setLoading(false);
-  }
 
   function openNew() {
     setForm(emptyForm);
@@ -83,14 +75,14 @@ export function CsrPage() {
     setMsg('');
     try {
       if (editingId) {
-        await updateCsrRecord(editingId, form as unknown as Record<string, unknown>);
+        await api.put(`/csr/${editingId}`, form as unknown as Record<string, unknown>);
         setMsg('CSR updated');
       } else {
-        await createCsrRecord(form as unknown as Record<string, unknown>);
+        await api.post('/csr', form as unknown as Record<string, unknown>);
         setMsg('CSR created');
       }
       setShowForm(false);
-      load();
+      globalMutate(queryKeys.csr.list());
     } catch (err: unknown) {
       setMsg(err instanceof Error ? err.message : 'Error saving CSR');
     }
@@ -98,13 +90,13 @@ export function CsrPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this CSR record?')) return;
-    await deleteCsrRecord(id);
-    load();
+    await api.del(`/csr/${id}`);
+    globalMutate(queryKeys.csr.list());
   }
 
   async function handleFinalize(id: string, finalized: boolean) {
-    await updateCsrRecord(id, { finalized });
-    load();
+    await api.put(`/csr/${id}`, { finalized });
+    globalMutate(queryKeys.csr.list());
   }
 
   if (loading) {

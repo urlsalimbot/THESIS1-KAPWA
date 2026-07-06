@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { SWRConfig, mutate } from 'swr';
 import { BeneficiaryViewPage } from './BeneficiaryViewPage';
 
-const { mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockApiPut: vi.fn(),
   mockBeneficiary: {
     id: 'BEN-001',
     firstName: 'Juan',
@@ -39,21 +43,47 @@ const { mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.h
 }));
 
 vi.mock('../lib/api', () => ({
-  getBeneficiary: () => Promise.resolve(mockBeneficiary),
-  getCases: () => Promise.resolve(mockCases),
-  getFamilyGraph: () => Promise.resolve(mockFamilyGraph),
-  getCaseTrackerLog: () => Promise.resolve(mockTrackerEntries),
-  getConsentLedger: () => Promise.resolve({ records: [] }),
-  createIntervention: vi.fn(),
-  uploadSignature: vi.fn(),
-  uploadReceipt: vi.fn(),
-  dataURItoBlob: vi.fn(),
-  assignCard: vi.fn(),
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+    put: (...args: unknown[]) => mockApiPut(...args),
+    del: vi.fn(),
+    uploadSignature: vi.fn(),
+    uploadReceipt: vi.fn(),
+    dataURItoBlob: vi.fn(),
+  },
+  getFamilyGraph: vi.fn(() => Promise.resolve({ totalCount: 0, members: [] })),
+  getConsentLedger: vi.fn(() => Promise.resolve([])),
+  getBeneficiary: vi.fn(),
+  getCases: vi.fn(),
 }));
 
+function renderWithSWR(ui: React.ReactNode) {
+  return render(
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+      {ui}
+    </SWRConfig>,
+  );
+}
+
 describe('BeneficiaryViewPage', () => {
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPut.mockReset();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && k.includes('detail')) return Promise.resolve(mockBeneficiary);
+      if (k.includes('cases') && k.includes('list')) return Promise.resolve(mockCases);
+      if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
+      if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
   it('renders PageShell heading', async () => {
-    render(
+    renderWithSWR(
       <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
         <Routes>
           <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
@@ -64,7 +94,7 @@ describe('BeneficiaryViewPage', () => {
   });
 
   it('renders beneficiary name after load', async () => {
-    render(
+    renderWithSWR(
       <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
         <Routes>
           <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
@@ -75,7 +105,7 @@ describe('BeneficiaryViewPage', () => {
   });
 
   it('renders Access Card section with card code', async () => {
-    render(
+    renderWithSWR(
       <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
         <Routes>
           <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />

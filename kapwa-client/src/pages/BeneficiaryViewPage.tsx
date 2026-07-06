@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import {
   ArrowLeft, User, MapPin, Users as UsersIcon, Gift, FileText, Plus,
   ChevronDown, ChevronRight, Shield, ClipboardList
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getBeneficiary, getCases, getFamilyGraph, createIntervention, uploadSignature, uploadReceipt, dataURItoBlob, getCaseTrackerLog, assignCard } from '../lib/api';
+import { api, uploadSignature, uploadReceipt, dataURItoBlob } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { ConsentManager } from '../components/consent/ConsentManager';
 import SignaturePad from '../components/forms/SignaturePad';
@@ -74,9 +77,20 @@ function StatusBadge({ status }: { status: string }) {
 export function BeneficiaryViewPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [beneficiary, setBeneficiary] = useState<BeneficiaryDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [family, setFamily] = useState<FamilyMember[]>([]);
+  const { mutate: globalMutate } = useSWRConfig();
+
+  const { data: ben } = useSWR<Record<string, unknown>>(
+    id ? queryKeys.beneficiaries.detail(id) : null,
+  );
+  const { data: cases = [] } = useSWR<Array<Record<string, unknown>>>(queryKeys.cases.list());
+  const { data: famGraph } = useSWR<{ totalCount?: number; members?: FamilyMember[] }>(
+    id ? queryKeys.beneficiaries.familyGraph(id) : null,
+  );
+  const { data: trackerEntries = [], isLoading: trackerLoading } = useSWR<TrackerEntry[]>(
+    id ? queryKeys.tracker.list() : null,
+  );
+
+  const loading = !ben && id;
   const [familyExpanded, setFamilyExpanded] = useState(false);
   const [interventionCaseId, setInterventionCaseId] = useState<string | null>(null);
   const [intForm, setIntForm] = useState({ type: 'FA', amount: '', fundSource: 'Regular' });
@@ -84,60 +98,48 @@ export function BeneficiaryViewPage() {
   const [intReceiptFile, setIntReceiptFile] = useState<File | null>(null);
   const [intSubmitting, setIntSubmitting] = useState(false);
   const [intError, setIntError] = useState('');
-  const [trackerEntries, setTrackerEntries] = useState<TrackerEntry[]>([]);
   const [assigning, setAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState('');
+  const [family, setFamily] = useState<FamilyMember[]>([]);
+  const [beneficiary, setBeneficiary] = useState<BeneficiaryDetail | null>(null);
 
+  // Sync SWR fetches into a derived beneficiary shape (same as legacy code).
   useEffect(() => {
-    const controller = new AbortController();
-    if (!id) { setLoading(false); return; }
-    Promise.all([
-      getBeneficiary(id, controller.signal).catch(() => null),
-      getCases(undefined, controller.signal).catch(() => []),
-      getFamilyGraph(id, controller.signal).catch(() => null),
-    ]).then(([ben, cases, famGraph]) => {
-      if (ben) {
-        const age = ben.dob ? (() => { const today = new Date(); const birth = new Date(ben.dob); let a = today.getFullYear() - birth.getFullYear(); if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) a--; return a; })() : 0;
-        const addrParts = (ben.address || '').split(',').map((s: string) => s.trim());
-        const beneficiaryCases = (cases || []).filter((c: Record<string, unknown>) => c.beneficiaryId === id || ((c.beneficiary as Record<string, unknown>)?.id as string) === id);
-        setBeneficiary({
-          id: ben.id,
-          name: `${ben.firstName || ''} ${ben.middleName || ''} ${ben.surname || ''}`.replace(/\s+/g, ' ').trim(),
-          age,
-          birthDate: ben.dob || '',
-          gender: ben.gender || '',
-          contact: ben.phone || '',
-          barangay: addrParts[addrParts.length - 1] || '',
-          purok: addrParts.length > 1 ? addrParts[0] : '',
-          category: ben.category || '',
-          householdSize: famGraph?.totalCount || 1,
-          status: ben.consentStatus || 'active',
-          accessCardCode: ben.accessCardCode || undefined,
-          cases: beneficiaryCases.map((c: Record<string, unknown>) => {
-            const sr = c.serviceRequested;
-            return {
-              id: (c.controlNo || c.id) as string,
-              program: Array.isArray(sr) ? sr.join(', ') : 'General',
-              status: (c.status as string) || 'pending',
-              date: c.createdAt ? new Date(c.createdAt as string).toLocaleDateString() : '',
-            };
-          }),
-          interventions: [],
-        });
-        if (famGraph?.members) setFamily(famGraph.members);
-      }
-      setLoading(false);
-    });
-
-    // Load tracker entries
-    if (id) {
-      getCaseTrackerLog().then((entries: TrackerEntry[]) => {
-        setTrackerEntries(entries || []);
-      }).catch(() => {
-        setTrackerEntries([]);
+    if (!id) return;
+    if (ben) {
+      const b = ben as Record<string, unknown>;
+      const age = b.dob ? (() => { const today = new Date(); const birth = new Date(b.dob as string); let a = today.getFullYear() - birth.getFullYear(); if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) a--; return a; })() : 0;
+      const addrParts = ((b.address as string) || '').split(',').map((s: string) => s.trim());
+      const beneficiaryCases = (cases as Array<Record<string, unknown>>).filter(
+        (c) => c.beneficiaryId === id || ((c.beneficiary as Record<string, unknown>)?.id as string) === id,
+      );
+      setBeneficiary({
+        id: b.id as string,
+        name: `${b.firstName || ''} ${b.middleName || ''} ${b.surname || ''}`.replace(/\s+/g, ' ').trim(),
+        age,
+        birthDate: (b.dob as string) || '',
+        gender: (b.gender as string) || '',
+        contact: (b.phone as string) || '',
+        barangay: addrParts[addrParts.length - 1] || '',
+        purok: addrParts.length > 1 ? addrParts[0] : '',
+        category: (b.category as string) || '',
+        householdSize: famGraph?.totalCount || 1,
+        status: (b.consentStatus as string) || 'active',
+        accessCardCode: (b.accessCardCode as string) || undefined,
+        cases: beneficiaryCases.map((c: Record<string, unknown>) => {
+          const sr = c.serviceRequested;
+          return {
+            id: (c.controlNo || c.id) as string,
+            program: Array.isArray(sr) ? sr.join(', ') : 'General',
+            status: (c.status as string) || 'pending',
+            date: c.createdAt ? new Date(c.createdAt as string).toLocaleDateString() : '',
+          };
+        }),
+        interventions: [],
       });
     }
-  }, [id]);
+    if (famGraph?.members) setFamily(famGraph.members);
+  }, [ben, cases, famGraph, id]);
 
   useEffect(() => {
     if (assignSuccess) {
@@ -164,14 +166,14 @@ export function BeneficiaryViewPage() {
         receiptUrl = await uploadReceipt(intReceiptFile, intReceiptFile.name);
       }
 
-      await createIntervention({
+      await api.post('/interventions', {
         caseId: interventionCaseId,
         interventionType: intForm.type,
         amount: parseFloat(intForm.amount) || 0,
         fundSource: intForm.fundSource,
         workerSignatureUrl: workerSignatureUrl || undefined,
         clientReceiptUrl: receiptUrl || undefined,
-      } as any);
+      } as Record<string, unknown>);
 
       setInterventionCaseId(null);
       setIntForm({ type: 'FA', amount: '', fundSource: 'Regular' });
@@ -187,7 +189,7 @@ export function BeneficiaryViewPage() {
     if (!id) return;
     setAssigning(true);
     try {
-      const result = await assignCard(id);
+      const result = await api.post<{ accessCardCode: string }>(`/access-cards/assign/${id}`);
       setBeneficiary(prev => prev ? { ...prev, accessCardCode: result.accessCardCode } : prev);
       setAssignSuccess(`Access Card assigned: ${result.accessCardCode}`);
     } catch (err: any) {

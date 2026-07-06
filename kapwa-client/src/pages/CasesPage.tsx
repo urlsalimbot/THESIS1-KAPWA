@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import { getCases, requestReview, disburseCase, closeCase, overrideCaseStatus } from '../lib/api';
+import { useState, useMemo } from 'react';
+import useSWR, { mutate } from 'swr';
+import useSWRMutation from 'swr/mutation';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { Search, SlidersHorizontal, Download, AlertTriangle } from 'lucide-react';
 import { isOnline } from '../lib/sync';
 import { queueFsmTransition } from '../lib/offline-queue';
@@ -45,53 +48,61 @@ const STATUS_LABELS: Record<string, string> = {
   closed: 'Closed',
 };
 
+function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
+  const ben = (c.beneficiary as Record<string, unknown>) || {};
+  const dob = ben.dob as string;
+  const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 0;
+  return {
+    id: c.id as string,
+    no: i + 1,
+    surname: (ben.surname as string) || '',
+    first: (ben.firstName as string) || '',
+    middle: (ben.middleName as string) || '',
+    gender: (ben.gender as string) || '',
+    ageRange: dob ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
+    category: ((c.serviceRequested as string[]) || []).join(', '),
+    barangay: ((ben.address as string) || '').split(',').pop()?.trim() || '',
+    remarks: (c.remarks as string) || '',
+    date: c.updatedAt ? new Date(c.updatedAt as string).toLocaleString() : '',
+    status: (c.status as string) || 'pending_assessment',
+    controlNo: (c.controlNo as string) || '',
+    slaOverdue: (c.slaOverdue as boolean) || false,
+  };
+}
+
 export function CasesPage() {
-  const [cases, setCases] = useState<CaseRow[]>([]);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filters, setFilters] = useState({ barangay: false, status: false, category: false });
-  const [lastSync, setLastSync] = useState<number | null>(null);
+  // Per-action in-flight flags — preserves the existing per-row disabled-button behavior.
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const role = localStorage.getItem('kapwa_role') || '';
 
-  useEffect(() => {
-    const controller = new AbortController();
-    loadCases();
-    return () => controller.abort();
-  }, []);
+  // SWR list — api.get is bound globally in routes.tsx (no fetcher prop)
+  const { data, isLoading } = useSWR<Record<string, unknown>[]>(queryKeys.cases.list());
+  const cases = useMemo(() => (data || []).map(mapCaseRow), [data]);
+  const lastSync = data ? Date.now() : null;
+  const loading = isLoading;
 
-  async function loadCases() {
-    try {
-      const data = await getCases();
-      const mapped: CaseRow[] = (data || []).map((c: Record<string, unknown>, i: number) => {
-        const ben = c.beneficiary as Record<string, unknown> || {};
-        const dob = ben.dob as string;
-        const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 0;
-        return {
-          id: c.id as string,
-          no: i + 1,
-          surname: ben.surname as string || '',
-          first: ben.firstName as string || '',
-          middle: ben.middleName as string || '',
-          gender: ben.gender as string || '',
-          ageRange: dob ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
-          category: (c.serviceRequested as string[])?.join(', ') || '',
-          barangay: (ben.address as string || '')?.split(',').pop()?.trim() || '',
-          remarks: c.remarks as string || '',
-          date: c.updatedAt ? new Date(c.updatedAt as string).toLocaleString() : '',
-          status: c.status as string || 'pending_assessment',
-          controlNo: c.controlNo as string || '',
-          slaOverdue: c.slaOverdue as boolean || false,
-        };
-      });
-      setCases(mapped);
-      setLastSync(Date.now());
-    } catch {
-      setCases([]);
-    }
-    setLoading(false);
-  }
+  // 4 useSWRMutation hooks for state transitions — all keyed on queryKeys.cases.all
+  // so the global mutate(queryKeys.cases.all) revalidation hits them too.
+  const { trigger: requestReview } = useSWRMutation(
+    queryKeys.cases.all,
+    (_key, { arg }: { arg: { id: string } }) => api.put(`/cases/${arg.id}/request-review`),
+  );
+  const { trigger: disburseCase } = useSWRMutation(
+    queryKeys.cases.all,
+    (_key, { arg }: { arg: { id: string } }) => api.put(`/cases/${arg.id}/disburse`, { status: 'disbursed' }),
+  );
+  const { trigger: closeCase } = useSWRMutation(
+    queryKeys.cases.all,
+    (_key, { arg }: { arg: { id: string } }) => api.put(`/cases/${arg.id}/close`),
+  );
+  const { trigger: overrideCaseStatus } = useSWRMutation(
+    queryKeys.cases.all,
+    (_key, { arg }: { arg: { id: string; status: string; reason: string } }) =>
+      api.put(`/cases/${arg.id}/override-status`, { status: arg.status, reason: arg.reason }),
+  );
 
   async function handleAction(action: string, caseId: string) {
     setActionLoading(caseId);
@@ -99,7 +110,7 @@ export function CasesPage() {
       switch (action) {
         case 'request-review':
           if (isOnline()) {
-            await requestReview(caseId);
+            await requestReview({ id: caseId });
           } else {
             await queueFsmTransition(caseId, 'in_review');
             alert('Review request queued — will sync when online.');
@@ -111,7 +122,7 @@ export function CasesPage() {
             setActionLoading(null);
             return;
           }
-          await disburseCase(caseId);
+          await disburseCase({ id: caseId });
           break;
         case 'close':
           if (!isOnline()) {
@@ -119,10 +130,20 @@ export function CasesPage() {
             setActionLoading(null);
             return;
           }
-          await closeCase(caseId);
+          await closeCase({ id: caseId });
+          break;
+        case 'override':
+          if (!isOnline()) {
+            alert('This action requires an internet connection.');
+            setActionLoading(null);
+            return;
+          }
+          await overrideCaseStatus({ id: caseId, status: 'approved', reason: 'admin override' });
           break;
       }
-      await loadCases();
+      // Revalidate all case-related queries — covers the list (CasesPage) and any
+      // cross-page revalidation (Dashboard's recent-cases widget, etc.).
+      await mutate(queryKeys.cases.all, undefined, { revalidate: true });
     } catch (err) {
       console.error(`Action ${action} failed:`, err);
       alert(`Action failed: ${err instanceof Error ? err.message : 'Unknown error'}`);

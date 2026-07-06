@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { bulkExport } from '@/lib/api';
+import { api } from '@/lib/api';
 
 export type ExportFormat = 'csv' | 'pdf';
 
@@ -43,7 +43,7 @@ export function BulkExportDialog({
 
     setLoading(true);
     try {
-      await bulkExport(selectedIds, format, masked, masked ? null : unmaskReason.trim());
+      await api.post('/cases/bulk-export', { ids: selectedIds, format, masked, unmaskReason: masked ? null : unmaskReason.trim() });
       onOpenChange(false);
       setUnmaskReason('');
       setMasked(true);

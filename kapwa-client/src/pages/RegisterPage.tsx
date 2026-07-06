@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2, HandHeart } from 'lucide-react';
+import { api } from '../lib/api';
 
 const barangays = [
   'Bangkal', 'Binitagan', 'Bitungol', 'Matictic', 'Maturanoc',
@@ -65,22 +66,15 @@ export function RegisterPage() {
   async function onSubmit(values: RegisterValues) {
     setServerError('');
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: values.fullName,
-          email: values.email,
-          phone: values.phone,
-          password: values.password,
-          barangay: values.barangay,
-          dateOfBirth: values.dateOfBirth,
-        }),
+      await api.post('/auth/register', {
+        fullName: values.fullName,
+        email: values.email,
+        phone: values.phone,
+        password: values.password,
+        barangay: values.barangay,
+        dateOfBirth: values.dateOfBirth,
       });
 
-      if (!res.ok) throw new Error('Registration failed');
-
-      // Auto-login after successful registration
       await login(values.email, values.password);
       navigate('/my-dashboard', { replace: true });
     } catch {

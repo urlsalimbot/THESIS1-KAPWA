@@ -83,18 +83,20 @@ describe('usePiiMasking', () => {
       token: 'mock-token',
       loading: false,
     });
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((url: unknown) => {
+      const s = String(url);
+      expect(s).toContain('/beneficiaries/b1/audit/unmask');
+      return Promise.resolve(new Response('{"ok":true}', { status: 200 }));
+    });
     const { result } = renderHook(() => usePiiMasking({ consentStatus: 'active' }));
 
     await result.current.revealField('b1', 'name', 'testing');
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/beneficiaries/b1/audit/unmask',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ field: 'name', reason: 'testing' }),
-      })
-    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const callArgs = fetchSpy.mock.calls[0];
+    expect(String(callArgs[0])).toContain('/beneficiaries/b1/audit/unmask');
+    expect(callArgs[1]).toMatchObject({ method: 'POST' });
+    expect(JSON.parse(callArgs[1].body)).toEqual({ field: 'name', reason: 'testing' });
     fetchSpy.mockRestore();
   });
 });

@@ -1,44 +1,55 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { SWRConfig, mutate } from 'swr';
 import { MfaSetupPage } from './MfaSetupPage';
 
-// Mock API functions used by MfaSetupPage
+const { mockApiGet, mockApiPost } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+}));
+
 vi.mock('../lib/api', () => ({
-  setupMfa: vi.fn(),
-  enableMfa: vi.fn(),
-  disableMfa: vi.fn(),
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+    put: vi.fn(),
+    del: vi.fn(),
+  },
 }));
 
-// Mock auth-context getCurrentUser
-vi.mock('../lib/auth-context', () => ({
-  getCurrentUser: vi.fn(),
-}));
-
-import { getCurrentUser } from '../lib/auth-context';
+function renderWithSWR(ui: React.ReactNode) {
+  return render(
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </SWRConfig>,
+  );
+}
 
 describe('MfaSetupPage', () => {
-  beforeEach(() => {
-    vi.mocked(getCurrentUser).mockResolvedValue({
-      id: 'test-user',
-      email: 'admin@norzagaray.gov',
-      role: 'admin',
-      mfaEnabled: false,
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('auth') && k.includes('me')) return Promise.resolve({ id: 'test-user', email: 'admin@norzagaray.gov', role: 'admin', mfaEnabled: false });
+      return Promise.resolve(null);
     });
+    await mutate(() => true, undefined, { revalidate: false });
   });
 
   it('renders PageShell heading', async () => {
-    render(<MemoryRouter><MfaSetupPage /></MemoryRouter>);
+    renderWithSWR(<MfaSetupPage />);
     expect(await screen.findByRole('heading', { name: 'Multi-Factor Authentication' })).toBeTruthy();
   });
 
   it('renders set up MFA button for eligible roles', async () => {
-    render(<MemoryRouter><MfaSetupPage /></MemoryRouter>);
+    renderWithSWR(<MfaSetupPage />);
     expect(await screen.findByRole('button', { name: /set up mfa/i })).toBeTruthy();
   });
 
   it('shows MFA not enabled message', async () => {
-    render(<MemoryRouter><MfaSetupPage /></MemoryRouter>);
+    renderWithSWR(<MfaSetupPage />);
     expect(await screen.findByText('MFA not enabled')).toBeTruthy();
   });
 });

@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import type { MaskableField } from '@/lib/pii-utils';
 import { maskValue, WORKER_ROLES } from '@/lib/pii-utils';
+import { api } from '../lib/api';
 
 type ConsentStatus = 'active' | 'revoked' | 'expired' | 'unknown';
 
@@ -34,11 +35,7 @@ export function usePiiMasking({ consentStatus = 'unknown' }: UsePiiMaskingOption
       const existing = autoMaskTimers.current.get(timerKey);
       if (existing) clearTimeout(existing);
 
-      await fetch(`/api/beneficiaries/${beneficiaryId}/audit/unmask`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field, reason }),
-      });
+      await api.post(`/beneficiaries/${beneficiaryId}/audit/unmask`, { field, reason });
 
       autoMaskTimers.current.set(
         timerKey,

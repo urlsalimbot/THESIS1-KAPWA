@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { unmaskIrfNames } from '../../lib/api';
+import { api } from '../../lib/api';
 
 interface NameMaskToggleProps {
   irfId: string;
@@ -16,7 +16,7 @@ export default function NameMaskToggle({ irfId, legalBasis: initialLegalBasis, o
     if (!legalBasis) return alert('Legal basis code required');
     setLoading(true);
     try {
-      const data = await unmaskIrfNames(irfId, legalBasis);
+      const data = await api.get(`/irf/${irfId}/unmask-names?legalBasis=${encodeURIComponent(legalBasis)}`);
       setUnlocked(true);
       onUnlock(data);
     } catch (e) {
