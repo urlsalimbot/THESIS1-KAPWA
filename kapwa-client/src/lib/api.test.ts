@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, KAPWA_AUTH_LOGOUT_EVENT } from './api';
+import { api, KAPWA_AUTH_LOGOUT_EVENT, dataURItoBlob } from './api';
 import { ApiError } from './api-error';
 
 function okJsonResponse(body: unknown, status = 200) {
@@ -289,6 +289,81 @@ describe('api client', () => {
       await api.get(['cases', '123', null, undefined, ''] as readonly unknown[]);
       const url = String(fetchMock.mock.calls[0][0]);
       expect(url).toMatch(/\/cases\/123$/);
+    });
+  });
+
+  describe('refresh path edge cases', () => {
+    it('throws ApiError(401) without calling /auth/refresh when no refresh_token is stored', async () => {
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+      localStorage.removeItem('refresh_token');
+      fetchMock.mockResolvedValueOnce(errJsonResponse({}, 401, 'Unauthorized'));
+
+      const logoutListener = vi.fn();
+      window.addEventListener('kapwa:auth:logout', logoutListener);
+      try {
+        await expect(api.get('/cases')).rejects.toBeInstanceOf(ApiError);
+        expect(fetchMock.mock.calls.length).toBe(1);
+        expect(logoutListener).not.toHaveBeenCalled();
+        const calledUrl = String(fetchMock.mock.calls[0][0]);
+        expect(calledUrl).not.toContain('/auth/refresh');
+      } finally {
+        window.removeEventListener('kapwa:auth:logout', logoutListener);
+      }
+    });
+
+    it('parses errBody as null when error response has malformed JSON body', async () => {
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal',
+        json: () => Promise.reject(new SyntaxError('unexpected token')),
+      });
+
+      try {
+        await api.get('/cases');
+        throw new Error('expected to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError);
+        expect((err as ApiError).status).toBe(500);
+        expect((err as ApiError).body).toBeNull();
+      }
+      expect(fetchMock.mock.calls.length).toBe(1);
+    });
+
+    it('aborts the backoff sleep when caller signal aborts during a retry', async () => {
+      const caller = new AbortController();
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+      fetchMock.mockRejectedValueOnce(new TypeError('network'));
+
+      vi.useFakeTimers();
+      try {
+        const promise = api.get('/cases', { signal: caller.signal }).catch((e) => e);
+        await vi.advanceTimersByTimeAsync(100);
+        caller.abort();
+        await vi.advanceTimersByTimeAsync(10_000);
+        const result = await promise;
+        expect(result).toBeInstanceOf(DOMException);
+        expect((result as DOMException).name).toBe('AbortError');
+        expect(caller.signal.aborted).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  describe('dataURItoBlob', () => {
+    it('decodes a base64 data URI into a Blob with the declared MIME type', () => {
+      const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      const blob = dataURItoBlob(dataUrl);
+      expect(blob).toBeInstanceOf(Blob);
+      expect(blob.type).toBe('image/png');
+    });
+
+    it('falls back to image/png MIME type when header has no media-type match', () => {
+      const dataUrl = 'data:;base64,YWJj';
+      const blob = dataURItoBlob(dataUrl);
+      expect(blob.type).toBe('image/png');
     });
   });
 });
