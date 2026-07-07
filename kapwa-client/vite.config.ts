@@ -29,5 +29,19 @@ export default {
     setupFiles: ['./tests/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     exclude: ['src/__tests__/e2e.test.ts', 'src/__tests__/a11y/pages.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: [
+        'src/lib/{api,api-error,auth-context,offline-queue,secure-storage}.{ts,tsx}',
+      ],
+      exclude: ['**/*.test.{ts,tsx}', '**/types.ts', '**/index.ts'],
+      thresholds: {
+        perFile: true,
+        lines: 70,
+        functions: 70,
+        branches: 60,
+        statements: 70,
+      },
+    },
   },
 };
