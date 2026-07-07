@@ -32,7 +32,7 @@ export function BottomNav() {
   if (!isMobile) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border h-16 lg:hidden">
+    <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border h-16 lg:hidden">
       <div className="flex items-center justify-around h-full px-2">
         {TABS.map((tab) => {
           if (tab.isQuick) {
@@ -40,9 +40,10 @@ export function BottomNav() {
               <Link
                 key={tab.path}
                 to={tab.path}
+                aria-label="New Intake (Quick Action)"
                 className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center -mt-4 shadow-lg min-w-0 flex-shrink-0"
               >
-                <Plus size={24} />
+                <Plus size={24} aria-hidden="true" />
               </Link>
             );
           }
