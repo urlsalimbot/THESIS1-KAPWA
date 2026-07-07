@@ -25,10 +25,10 @@
 - [ ] **ERR-01**: Wrap all 28 pages in `<ErrorBoundary>` — catch render errors with fallback UI
 
 ### Test Coverage
-- [ ] **TST-01**: Unit tests for `api.ts` (67 functions, ≥70% coverage)
-- [ ] **TST-02**: Unit tests for `auth-context.tsx` (login, logout, role checks)
-- [ ] **TST-03**: Unit tests for `offline-queue.ts` (queue, dequeue, conflict resolution)
-- [ ] **TST-04**: Unit tests for `secure-storage.ts` (encrypt, decrypt, key rotation)
+- [x] **TST-01**: Unit tests for `api.ts` (67 functions, ≥70% coverage)
+- [x] **TST-02**: Unit tests for `auth-context.tsx` (login, logout, role checks)
+- [x] **TST-03**: Unit tests for `offline-queue.ts` (queue, dequeue, conflict resolution)
+- [x] **TST-04**: Unit tests for `secure-storage.ts` (encrypt, decrypt, key rotation)
 - [ ] **TST-05**: Smoke tests for core UI components: Layout, Topbar, Sidebar, ProtectedRoute
 - [ ] **TST-06**: At least 1 smoke test per page (28 pages — renders without crash)
 - [ ] **TST-07**: Integrate axe-core into CI pipeline — a11y assertions in vitest suite
@@ -131,10 +131,10 @@
 | DEP-01 | — | Pending |
 | DEP-02 | — | Pending |
 | ERR-01 | — | Pending |
-| TST-01 | — | Pending |
-| TST-02 | — | Pending |
-| TST-03 | — | Pending |
-| TST-04 | — | Pending |
+| TST-01 | 15 | ✓ |
+| TST-02 | 15 | ✓ |
+| TST-03 | 15 | ✓ |
+| TST-04 | 15 | ✓ |
 | TST-05 | — | Pending |
 | TST-06 | — | Pending |
 | TST-07 | — | Pending |
