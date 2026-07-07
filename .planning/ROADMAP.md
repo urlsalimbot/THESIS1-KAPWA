@@ -112,7 +112,7 @@ Plans:
 | 13 | ⊙ | UPG-01, UPG-02, UPG-03 | 2/0 |
 | 14 | ⊙ | API-01, API-02 | 3/0 |
 | 15 | ⊙ | TST-01, TST-02, TST-03, TST-04 | 4/0 |
-| 16 | ○ | ERR-01, TST-05, A11Y-01, A11Y-02 | 0/0 |
+| 16 | ⊙ | ERR-01, TST-05, A11Y-01, A11Y-02, TST-06 (folded from 17) | 3/0 |
 | 17 | ○ | TST-06, TST-07, SEC-01 | 0/0 |
 
 **6 phases | 18 requirements | Ready to plan ✓**
