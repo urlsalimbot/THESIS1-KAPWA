@@ -4,8 +4,24 @@ import { TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
+import { EmptyState } from './EmptyState';
 
-function ErrorFallback({ resetErrorBoundary }: FallbackProps) {
+function isOfflineError(error: unknown): boolean {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+  if (error instanceof Error) {
+    return error.name === 'TypeError' && /fetch|network|failed to fetch/i.test(error.message);
+  }
+  return false;
+}
+
+function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  if (isOfflineError(error)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <EmptyState variant="offline" onAction={resetErrorBoundary} />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
       <TriangleAlert size={48} className="text-destructive" />
