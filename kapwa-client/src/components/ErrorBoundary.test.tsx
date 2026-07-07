@@ -73,3 +73,33 @@ describe('ErrorBoundary', () => {
     expect(link.closest('a')?.getAttribute('href')).toBe('/dashboard');
   });
 });
+
+function FetchBomb({ shouldThrow = true }: { shouldThrow?: boolean }) {
+  if (shouldThrow) {
+    throw new TypeError('Failed to fetch');
+  }
+  return <div>Safe content</div>;
+}
+
+describe('ErrorBoundary — offline branch', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders offline UI when TypeError("Failed to fetch") is thrown', () => {
+    render(
+      <MemoryRouter>
+        <ErrorBoundary>
+          <FetchBomb />
+        </ErrorBoundary>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('You appear to be offline')).toBeTruthy();
+    expect(screen.getByText('Please check your connection and try again')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy();
+  });
+});

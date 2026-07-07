@@ -13,7 +13,7 @@ export function SidebarNavContent({ onNavClick }: SidebarNavContentProps) {
   const location = useLocation();
 
   return (
-    <nav className="flex flex-col gap-4 px-3 py-4">
+    <nav aria-label="Main navigation" className="flex flex-col gap-4 px-3 py-4">
       {NAV_GROUPS.map(group => {
         const visibleItems = group.items.filter(item => item.roles.includes(user?.role ?? ''));
         if (visibleItems.length === 0) return null;
