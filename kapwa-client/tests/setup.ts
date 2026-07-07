@@ -1,4 +1,8 @@
-import { vi } from 'vitest';
+import 'vitest-axe/extend-expect';
+import * as axeMatchers from 'vitest-axe/matchers';
+import { expect, vi } from 'vitest';
+
+expect.extend(axeMatchers);
 
 // Mock localStorage for all environments (Node 26 + jsdom compat)
 const store: Record<string, string> = {};

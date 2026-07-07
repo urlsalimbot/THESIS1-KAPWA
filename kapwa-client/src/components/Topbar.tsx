@@ -128,11 +128,16 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Avatar className="cursor-pointer transition-all duration-200 hover:shadow-md">
-                <AvatarFallback className="text-xs font-medium bg-muted text-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <button
+                aria-label="Open user menu"
+                className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:shadow-md"
+              >
+                <Avatar className="cursor-pointer">
+                  <AvatarFallback className="text-xs font-medium bg-muted text-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="w-56">
               <DropdownMenuLabel className="font-normal">
