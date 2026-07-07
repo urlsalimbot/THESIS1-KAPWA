@@ -182,7 +182,7 @@ export function RegisterPage() {
                       <FormLabel>Barangay</FormLabel>
                       <FormControl>
                         <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger className="h-11 md:h-10">
+                          <SelectTrigger className="h-11 md:h-10" aria-label="Select barangay">
                             <SelectValue placeholder="Select barangay" />
                           </SelectTrigger>
                           <SelectContent>
@@ -207,7 +207,7 @@ export function RegisterPage() {
                   <FormItem>
                     <FormLabel>Date of Birth</FormLabel>
                     <FormControl>
-                      <Input type="date" className="h-11 md:h-10" {...field} />
+                      <Input type="date" className="h-11 md:h-10" aria-label="Date of Birth" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

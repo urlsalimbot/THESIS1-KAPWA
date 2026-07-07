@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { ApprovalPipelinePage } from './ApprovalPipelinePage';
 
 const { mockApiGet, mockApiPost, mockApiPut, mockCases } = vi.hoisted(() => ({
@@ -82,5 +83,12 @@ describe('ApprovalPipelinePage', () => {
     const inReviewElements = await screen.findAllByText('In Review');
     expect(inReviewElements.length).toBeGreaterThan(0);
     expect(await screen.findByText('Disbursed')).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<ApprovalPipelinePage />);
+    await screen.findByRole('heading', { name: 'Approval Pipeline' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

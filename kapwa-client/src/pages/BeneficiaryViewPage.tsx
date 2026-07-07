@@ -314,7 +314,7 @@ export function BeneficiaryViewPage() {
         <div className="rounded-lg bg-white p-6 shadow-sm border border-border">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-primary"><FileText size={20} /> <h3 className="text-sm font-semibold">Active Cases</h3></div>
-            <Button variant="ghost" size="icon" className="rounded-full"><Plus size={16} /></Button>
+            <Button variant="ghost" size="icon" className="rounded-full" aria-label="Add case"><Plus size={16} /></Button>
           </div>
           {beneficiary.cases.length === 0 ? (
             <p className="text-sm text-muted-foreground">No active cases</p>

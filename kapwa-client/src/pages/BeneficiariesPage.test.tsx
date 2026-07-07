@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { BeneficiariesPage } from './BeneficiariesPage';
 
 const { mockBeneficiaries, mockApiGet } = vi.hoisted(() => ({
@@ -89,6 +90,13 @@ describe('BeneficiariesPage', () => {
     const lastCallArg = mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][0];
     const argJson = JSON.stringify(lastCallArg);
     expect(argJson).toContain('Maria');
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<BeneficiariesPage />);
+    await screen.findByRole('heading', { name: 'Beneficiaries' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
 

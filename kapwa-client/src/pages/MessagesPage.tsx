@@ -103,7 +103,7 @@ export function MessagesPage() {
       <div className="flex h-[calc(100vh-12rem)] gap-0 rounded-lg border overflow-hidden">
         <div className="w-72 flex-shrink-0 border-r bg-card flex flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">
-            <h3 className="text-sm font-semibold text-primary">Messages</h3>
+            <h2 className="text-sm font-semibold text-primary">Messages</h2>
             <Button size="sm" variant="default" onClick={() => setShowNewChat(!showNewChat)} aria-label="+ New">
               + New
             </Button>

@@ -127,6 +127,11 @@ async function executeWithRetry<T>(
   try {
     return await rawRequest<T>(method, path, body, signal);
   } catch (err) {
+    /**
+     * On 401, attempt /auth/refresh exactly once via single-flight pattern.
+     * Concurrent 401s share the same refresh promise.
+     * See SECURITY.md for the full flow.
+     */
     if (err instanceof ApiError && err.status === 401 && !isRetry) {
       const refreshed = await refreshToken();
       if (refreshed) {

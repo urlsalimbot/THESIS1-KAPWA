@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { AccessCardPage } from './AccessCardPage';
 
 const { mockApiGet, mockApiPost } = vi.hoisted(() => ({
@@ -61,5 +62,12 @@ describe('AccessCardPage', () => {
     expect(await screen.findByText('Quick Print — Card View')).toBeTruthy();
     expect(await screen.findByText('Look Up Beneficiary Card')).toBeTruthy();
     expect(await screen.findByText('Log Service to Access Card')).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<AccessCardPage />);
+    await screen.findByRole('heading', { name: 'Access Cards' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

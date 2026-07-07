@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { DashboardPage } from './DashboardPage';
 
 const { mockApiGet, mockApiPost, mockApiPut, mockApiDel } = vi.hoisted(() => ({
@@ -107,6 +108,14 @@ describe('DashboardPage', () => {
     expect(dashboardCalls).toHaveLength(0);
     // The claimant widget shell renders (role-gated content path)
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<DashboardPage />);
+    await screen.findByRole('heading', { name: 'Dashboard' });
+    await screen.findByText('Served Today');
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
 

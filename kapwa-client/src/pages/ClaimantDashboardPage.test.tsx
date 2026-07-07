@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { ClaimantDashboardPage } from './ClaimantDashboardPage';
 
 const { mockApiGet, mockApiPost, mockApiPut } = vi.hoisted(() => ({
@@ -56,5 +57,12 @@ describe('ClaimantDashboardPage', () => {
   it('renders View Card link', async () => {
     renderWithSWR(<ClaimantDashboardPage />);
     expect(await screen.findByRole('link', { name: 'View Card' })).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<ClaimantDashboardPage />);
+    await screen.findByRole('heading', { name: 'My Dashboard' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
