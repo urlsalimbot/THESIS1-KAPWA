@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: Quality & Resilience Hardening
 current_phase: 16
 status: completed
-stopped_at: Phase 16 executed (3/3 plans, 12 atomic commits, 314/314 tests pass, 3 a11y violations fixed)
-last_updated: "2026-07-07T10:06:42.019Z"
+stopped_at: Phase 17 context gathered
+last_updated: "2026-07-07T11:10:13.828Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 16 marked complete
 progress:
@@ -417,10 +417,10 @@ None.
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/16-ui-polish-errorboundary-a11y-core-ui-tests/16-01-PLAN.md
+**Resume file:** .planning/phases/17-page-smoke-tests-security/17-CONTEXT.md
 
-Last session: 2026-07-07T10:06:42.012Z
-Stopped at: Phase 16 executed (3/3 plans, 12 atomic commits, 314/314 tests pass, 3 a11y violations fixed)
+Last session: 2026-07-07T11:10:13.821Z
+Stopped at: Phase 17 context gathered
 Next: Phase 08 layout-shell planning
 
 ## Performance Metrics
