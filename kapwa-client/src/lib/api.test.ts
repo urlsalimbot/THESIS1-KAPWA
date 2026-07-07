@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api } from './api';
+import { api, KAPWA_AUTH_LOGOUT_EVENT } from './api';
 import { ApiError } from './api-error';
 
 function okJsonResponse(body: unknown, status = 200) {
@@ -250,6 +250,45 @@ describe('api client', () => {
       await api.post('/cases', { foo: 'bar' });
       const call = fetchMock.mock.calls[0];
       expect(call[1].body).toBe(JSON.stringify({ foo: 'bar' }));
+    });
+  });
+
+  describe('KAPWA_AUTH_LOGOUT_EVENT', () => {
+    it('exports the constant value "kapwa:auth:logout"', () => {
+      expect(KAPWA_AUTH_LOGOUT_EVENT).toBe('kapwa:auth:logout');
+    });
+  });
+
+  describe('refresh_network_error dispatch', () => {
+    it('dispatches kapwa:auth:logout with reason "refresh_network_error" when /auth/refresh fetch throws', async () => {
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+      localStorage.setItem('refresh_token', 'r');
+      fetchMock
+        .mockResolvedValueOnce(errJsonResponse({}, 401, 'Unauthorized'))
+        .mockRejectedValueOnce(new TypeError('network failure on refresh'));
+
+      const logoutListener = vi.fn();
+      window.addEventListener('kapwa:auth:logout', logoutListener);
+      try {
+        await expect(api.get('/cases')).rejects.toBeInstanceOf(ApiError);
+        expect(logoutListener).toHaveBeenCalledTimes(1);
+        const event = logoutListener.mock.calls[0][0] as CustomEvent;
+        expect(event.detail?.reason).toBe('refresh_network_error');
+        expect(localStorage.getItem('kapwa_token')).toBeNull();
+        expect(localStorage.getItem('refresh_token')).toBeNull();
+      } finally {
+        window.removeEventListener('kapwa:auth:logout', logoutListener);
+      }
+    });
+  });
+
+  describe('path normalization', () => {
+    it('joins array path parts with "/" and drops null/undefined/empty segments', async () => {
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+      fetchMock.mockResolvedValueOnce(okJsonResponse({}));
+      await api.get(['cases', '123', null, undefined, ''] as readonly unknown[]);
+      const url = String(fetchMock.mock.calls[0][0]);
+      expect(url).toMatch(/\/cases\/123$/);
     });
   });
 });
