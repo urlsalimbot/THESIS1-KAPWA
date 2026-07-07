@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import { RegisterPage } from './RegisterPage';
 
 vi.mock('../lib/auth-context', () => ({
@@ -74,5 +75,11 @@ describe('RegisterPage', () => {
   it('renders link back to login', () => {
     render(<BrowserRouter><RegisterPage /></BrowserRouter>);
     expect(screen.getByText(/Already have an account/i)).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(<BrowserRouter><RegisterPage /></BrowserRouter>);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

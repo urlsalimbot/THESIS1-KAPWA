@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { MfaSetupPage } from './MfaSetupPage';
 
 const { mockApiGet, mockApiPost } = vi.hoisted(() => ({
@@ -51,5 +52,12 @@ describe('MfaSetupPage', () => {
   it('shows MFA not enabled message', async () => {
     renderWithSWR(<MfaSetupPage />);
     expect(await screen.findByText('MFA not enabled')).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<MfaSetupPage />);
+    await screen.findByRole('heading', { name: 'Multi-Factor Authentication' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

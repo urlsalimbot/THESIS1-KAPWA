@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import { CoordinatorDashboardPage } from './CoordinatorDashboardPage';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
@@ -30,5 +31,12 @@ describe('CoordinatorDashboardPage', () => {
   it('renders PageShell heading', async () => {
     render(<MemoryRouter><CoordinatorDashboardPage /></MemoryRouter>);
     expect(await screen.findByRole('heading', { name: 'Coordinator Dashboard' })).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(<MemoryRouter><CoordinatorDashboardPage /></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Coordinator Dashboard' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

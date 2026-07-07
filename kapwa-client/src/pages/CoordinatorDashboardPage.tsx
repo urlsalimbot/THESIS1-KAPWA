@@ -81,7 +81,7 @@ export function CoordinatorDashboardPage() {
       </div>
 
       <div className="mb-6">
-        <h3 className="text-lg mb-3">Quick Case Search</h3>
+        <h2 className="text-lg mb-3">Quick Case Search</h2>
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -110,7 +110,7 @@ export function CoordinatorDashboardPage() {
       </div>
 
       <div className="mb-4">
-        <h3 className="text-lg mb-3">Today's Tracker Entries</h3>
+        <h2 className="text-lg mb-3">Today's Tracker Entries</h2>
       </div>
 
       <div className="rounded-lg">

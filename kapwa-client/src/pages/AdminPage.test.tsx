@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { AdminPage } from './AdminPage';
 
 const { mockApiGet, mockApiPost, mockApiPut, mockApiDel } = vi.hoisted(() => ({
@@ -96,6 +97,13 @@ describe('AdminPage', () => {
     const newCalls = mockApiGet.mock.calls.slice(initialCallCount);
     const hasUsers = newCalls.some((c) => JSON.stringify(c[0]).includes('users'));
     expect(hasUsers).toBe(true);
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<AdminPage />);
+    await screen.findByRole('heading', { name: 'Admin Panel' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
 

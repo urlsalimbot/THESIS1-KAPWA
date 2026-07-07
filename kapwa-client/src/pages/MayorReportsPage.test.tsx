@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { MayorReportsPage } from './MayorReportsPage';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
@@ -46,5 +47,12 @@ describe('MayorReportsPage', () => {
   it('renders PageShell heading', async () => {
     renderWithSWR(<MayorReportsPage />);
     expect(await screen.findByRole('heading', { name: /Reports|Mayor/i })).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<MayorReportsPage />);
+    await screen.findByRole('heading', { name: /Reports|Mayor/i });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import { LoginPage } from './LoginPage';
 
 const mockLogin = vi.fn();
@@ -77,5 +78,11 @@ describe('LoginPage', () => {
     render(<BrowserRouter><LoginPage /></BrowserRouter>);
     expect(screen.getByText('Two-Factor Authentication')).toBeTruthy();
     expect(screen.getByText('Verify')).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(<BrowserRouter><LoginPage /></BrowserRouter>);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
