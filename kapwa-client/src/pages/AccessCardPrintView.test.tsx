@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import { AccessCardPrintView } from './AccessCardPrintView';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
@@ -40,5 +41,18 @@ describe('AccessCardPrintView', () => {
       </MemoryRouter>
     );
     expect((await screen.findAllByText(/NORZ-AC-2026-0001|Print Card/i, {}, { timeout: 3000 })).length).toBeGreaterThan(0);
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001/card/print']}>
+        <Routes>
+          <Route path="/beneficiaries/:id/card/print" element={<AccessCardPrintView />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByText(/NORZ-AC-2026-0001/);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
