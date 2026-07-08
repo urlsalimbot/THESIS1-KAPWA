@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import { LandingPage } from './LandingPage';
 
 describe('LandingPage', () => {
@@ -43,5 +44,11 @@ describe('LandingPage', () => {
   it('renders contact section heading', () => {
     render(<BrowserRouter><LandingPage /></BrowserRouter>);
     expect(screen.getByText('Get in Touch')).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(<BrowserRouter><LandingPage /></BrowserRouter>);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
