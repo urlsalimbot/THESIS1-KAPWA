@@ -176,7 +176,7 @@ export function DashboardPage() {
       </div>
 
       <div className="flex items-center justify-between mt-6 mb-3">
-        <h3 className="text-lg font-semibold tracking-tight">Recent Cases</h3>
+        <h2 className="text-lg font-semibold tracking-tight">Recent Cases</h2>
         <Button variant="outline" size="sm" onClick={() => navigate('/cases')}>
           View All Cases
         </Button>
