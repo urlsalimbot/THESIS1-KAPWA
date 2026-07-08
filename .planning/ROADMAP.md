@@ -102,6 +102,13 @@ Plans:
 5. Token refresh 401 breaks the loop (clears token + redirects to /login)
 6. Manual test: login → wait for token expiry → navigate → automatic refresh → page loads
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — CI pipeline (3 jobs) + SECURITY.md + api.ts JSDoc
+- [ ] 17-02-PLAN.md — axe assertions on 14 Worker/Admin pages + a11y fixes
+- [ ] 17-03-PLAN.md — axe assertions on 14 Claimant/Auditor/Mayor/Coordinator pages + a11y fixes
+
 ---
 
 ## Progress
@@ -113,7 +120,7 @@ Plans:
 | 14 | ⊙ | API-01, API-02 | 3/0 |
 | 15 | ⊙ | TST-01, TST-02, TST-03, TST-04 | 4/0 |
 | 16 | ⊙ | ERR-01, TST-05, A11Y-01, A11Y-02, TST-06 (folded from 17) | 3/0 |
-| 17 | ○ | TST-06, TST-07, SEC-01 | 0/0 |
+| 17 | ○ | TST-06, TST-07, SEC-01 | 3/0 |
 
 **6 phases | 18 requirements | Ready to plan ✓**
 
