@@ -142,7 +142,7 @@ export function ClaimantDashboardPage() {
       {/* Service History */}
       <Card>
         <div className="border-b px-4 py-3">
-          <h3 className="font-semibold text-sm text-primary">Service History</h3>
+          <h2 className="font-semibold text-sm text-primary">Service History</h2>
         </div>
         {services.length === 0 ? (
           <CardContent>
@@ -234,6 +234,7 @@ export function ClaimantDashboardPage() {
                         disabled={cat.locked}
                         onChange={() => togglePref(cat.key, ch.key)}
                         className="peer sr-only"
+                        aria-label={`${cat.label} ${ch.label}`}
                       />
                       <div className={`h-5 w-9 rounded-full transition-colors ${
                         cat.locked
