@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { MessagesPage } from './MessagesPage';
 
 const { mockApiGet, mockApiPost } = vi.hoisted(() => ({
@@ -63,5 +64,13 @@ describe('MessagesPage', () => {
   it('renders New button', async () => {
     renderWithSWR(<MessagesPage />);
     expect(await screen.findByRole('button', { name: /\+ New/i })).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<MessagesPage />);
+    const headings = await screen.findAllByRole('heading', { level: 1 });
+    expect(headings.some(h => h.textContent === 'Messages')).toBe(true);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
