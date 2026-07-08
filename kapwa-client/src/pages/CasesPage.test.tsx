@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { CasesPage } from './CasesPage';
 
 const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiDel, mockQueueFsm, mockIsOnline } = vi.hoisted(() => ({
@@ -130,6 +131,13 @@ describe('CasesPage', () => {
     // The first call to api.put should be to /request-review
     const putCall = mockApiPut.mock.calls[0];
     expect(String(putCall[0])).toContain('/request-review');
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<CasesPage />);
+    await screen.findByRole('heading', { name: 'Case Tracker' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
 
