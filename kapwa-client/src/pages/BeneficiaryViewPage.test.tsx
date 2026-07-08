@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { BeneficiaryViewPage } from './BeneficiaryViewPage';
 
 const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.hoisted(() => ({
@@ -34,7 +35,7 @@ const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFam
   mockFamilyGraph: {
     totalCount: 3,
     members: [
-      { id: 'FM-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, statusIncome: 'Employed', isPrimary: false },
+      { id: 'FM-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, statusIncome: 'Employed', isPrimary: false, depth: 1 },
     ],
   },
   mockTrackerEntries: [
@@ -113,5 +114,18 @@ describe('BeneficiaryViewPage', () => {
       </MemoryRouter>
     );
     expect(await screen.findByText('NORZ-AC-2026-0001', {}, { timeout: 5000 })).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: 'Beneficiary Details' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
