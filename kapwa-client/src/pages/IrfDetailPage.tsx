@@ -98,7 +98,7 @@ export function IrfDetailPage() {
       {/* Header with back button */}
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">← IRF List</button>
-        <h1 className="text-2xl font-bold">IRF: {irf.blotterEntryNumber}</h1>
+        <h2 className="text-2xl font-bold">IRF: {irf.blotterEntryNumber}</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
