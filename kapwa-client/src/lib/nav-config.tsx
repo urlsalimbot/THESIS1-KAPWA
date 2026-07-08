@@ -1,6 +1,6 @@
 import {
   FilePlus, LayoutDashboard, Users, CheckCircle, FolderOpen, FileText,
-  ClipboardList, Shield, UserCircle, Stamp,
+  ClipboardList, Shield, UserCircle, Stamp, Settings,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -40,15 +40,10 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Admin',
     items: [
       { path: '/admin', label: 'Admin Panel', icon: <Shield size={20} />, roles: ['admin'] },
-      { path: '/settings/mfa', label: 'MFA Settings', icon: <Shield size={20} />, roles: ['admin', 'mayor', 'auditor'] },
+      { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor', 'claimant'] },
     ],
   },
-  {
-    label: 'Reports & Tracker',
-    items: [
-      { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
-    ],
-  },
+
   {
     label: 'Claimant',
     items: [

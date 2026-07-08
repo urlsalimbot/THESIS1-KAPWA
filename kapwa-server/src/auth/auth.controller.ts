@@ -2,7 +2,7 @@ import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, 
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaSetupSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput } from './dto/auth.zod';
+import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaSetupSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
 
 @Controller('auth')
@@ -64,5 +64,23 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyLoginOtp(@Body(new ZodPipe(OtpVerifySchema)) body: { tempToken: string; otpCode: string }) {
     return this.authService.verifySmsOtp(body.tempToken, body.otpCode);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Request() req: AuthenticatedRequest,
+    @Body(new ZodPipe(ChangePasswordSchema)) body: ChangePasswordInput
+  ) {
+    return this.authService.changePassword(req.user.id, body);
+  }
+
+  @Post('change-email')
+  @UseGuards(JwtAuthGuard)
+  async changeEmail(
+    @Request() req: AuthenticatedRequest,
+    @Body(new ZodPipe(ChangeEmailSchema)) body: ChangeEmailInput
+  ) {
+    return this.authService.changeEmail(req.user.id, body);
   }
 }
