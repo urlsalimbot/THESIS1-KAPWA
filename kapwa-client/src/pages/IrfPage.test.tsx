@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { IrfPage } from './IrfPage';
 
 const { mockApiGet, mockApiPost, mockApiPut, mockIrfs } = vi.hoisted(() => ({
@@ -72,5 +73,12 @@ describe('IrfPage', () => {
   it('renders + New IRF button', async () => {
     renderWithSWR(<IrfPage />);
     expect(await screen.findByRole("button", { name: /new irf/i })).toBeTruthy();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<IrfPage />);
+    await screen.findByRole('heading', { name: 'Incident Report Forms (IRF)' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
