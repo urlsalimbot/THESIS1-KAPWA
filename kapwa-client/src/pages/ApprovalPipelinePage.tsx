@@ -195,14 +195,14 @@ export function ApprovalPipelinePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {grouped.map(group => (
             <div key={group.status} className="bg-card rounded-lg border border-border p-4">
-              <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+              <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-base">
                 <span className={`w-2 h-2 rounded-full ${
                   group.status === 'in_review' ? 'bg-amber-400' :
                   group.status === 'approved' ? 'bg-green-400' : 'bg-blue-400'
                 }`} />
                 {group.label}
                 <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.items.length}</span>
-              </h3>
+              </h2>
               <div className="space-y-3">
                 {group.items.map(c => (
                   <div key={c.id} className="border border-border rounded-lg p-3 hover:shadow-sm transition-shadow">
