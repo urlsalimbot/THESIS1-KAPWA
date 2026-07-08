@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Quality & Resilience Hardening
 current_phase: 16
-status: completed
+status: executing
 stopped_at: Phase 17 context gathered
-last_updated: "2026-07-07T11:10:13.828Z"
+last_updated: "2026-07-08T08:35:34.312Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 16 marked complete
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 15
   percent: 83
 current_phase_name: major-version-upgrades
 ---
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-06-27)
 ## Current Position
 
 Phase: 16 — COMPLETE
-Plan: 1 of 2
-Status: Phase 16 complete
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-07-07 — Phase 16 marked complete
 
 **Velocity:**
@@ -419,7 +419,7 @@ None.
 
 **Resume file:** .planning/phases/17-page-smoke-tests-security/17-CONTEXT.md
 
-Last session: 2026-07-07T11:10:13.821Z
+Last session: 2026-07-08T08:35:34.304Z
 Stopped at: Phase 17 context gathered
 Next: Phase 08 layout-shell planning
 
@@ -429,3 +429,4 @@ Next: Phase 08 layout-shell planning
 |-------|------|----------|-------|
 | Phase 10-shared-components-responsive P01 | 10 min | 3 tasks | 20 files |
 | Phase 10-shared-components-responsive P02 | 3 min | 3 tasks | 10 files |
+| Phase 17-page-smoke-tests-security P01 | 12 | 3 tasks | 3 files |
