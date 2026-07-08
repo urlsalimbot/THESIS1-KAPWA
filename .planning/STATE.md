@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Quality & Resilience Hardening
-current_phase: 16
+current_phase: 17
 status: verifying
 stopped_at: Phase 17 complete — ready for verification
-last_updated: "2026-07-08T09:00:00.000Z"
+last_updated: "2026-07-08T08:43:19.975Z"
 last_activity: 2026-07-08
-last_activity_desc: Phase 17 complete — all 3 plans executed
+last_activity_desc: Phase 17 all 3 plans executed (CI pipeline + SECURITY.md + axe assertions on 27 pages)
 progress:
   total_phases: 6
   completed_phases: 6
@@ -236,6 +236,9 @@ status: planning
 
 **BottomNav mobile tab navigation, DataTable component system with TanStack Table + shadcn Pagination, and 44px global touch target CSS**
 
+- [Phase ?]: Production-first fix: fix a11y violations in source .tsx before adding axe test
+- [Phase ?]: [Phase 17] Snapshot update after heading change: DashboardPage h3->h2 required snapshot update
+
 ## Performance
 
 - **Duration:** 3 min
@@ -419,7 +422,7 @@ None.
 
 **Resume file:** None (phase complete)
 
-Last session: 2026-07-08T09:00:00.000Z
+Last session: 2026-07-08T08:43:01.912Z
 Stopped at: Phase 17 complete — all 3 plans executed
 Next: Phase 12 — Toolchain Cleanup & Vitest Upgrade planning
 
@@ -432,3 +435,4 @@ Next: Phase 12 — Toolchain Cleanup & Vitest Upgrade planning
 | Phase 17-page-smoke-tests-security P01 | 12 min | 3 tasks | 3 files |
 | Phase 17-page-smoke-tests-security P02 | ~15 min | 2 tasks | 16 files |
 | Phase 17-page-smoke-tests-security P03 | ~10 min | 2 tasks | 18 files |
+| Phase 17-page-smoke-tests-security P02 | 11min | 2 tasks | 18 files |
