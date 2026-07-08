@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import { IntakePage } from './IntakePage';
 
 const queueCalls: unknown[][] = [];
@@ -91,5 +92,16 @@ describe('IntakePage — offline path', () => {
     expect(consolidatedPayload.beneficiary).toHaveProperty('firstName');
     expect(consolidatedPayload.beneficiary).toHaveProperty('gender');
     expect(consolidatedPayload.beneficiary).toHaveProperty('dob');
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /GIS Intake Form/i });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

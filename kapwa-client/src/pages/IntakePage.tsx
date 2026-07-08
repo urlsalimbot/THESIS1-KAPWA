@@ -200,7 +200,7 @@ export function IntakePage() {
       <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
         {/* Client Stub Section */}
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-primary">Client Stub / Beneficiary Information</h3>
+          <h2 className="mb-4 font-semibold text-primary">Client Stub / Beneficiary Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="surname" className="mb-1 block text-sm font-medium text-gray-700">Surname *</label>
