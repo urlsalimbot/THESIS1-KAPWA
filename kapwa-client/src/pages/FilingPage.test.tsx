@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
+import { axe } from 'vitest-axe';
 import { FilingPage } from './FilingPage';
 
 const { mockApiGet, mockApiPost, mockApiPut, mockApiDel, mockFetch } = vi.hoisted(() => ({
@@ -103,6 +104,13 @@ describe('FilingPage', () => {
     const lastCallArg = mockApiDel.mock.calls[mockApiDel.mock.calls.length - 1][0];
     expect(String(lastCallArg)).toContain('/filing/');
     expect(String(lastCallArg)).toContain('doc-123');
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = renderWithSWR(<FilingPage />);
+    await screen.findByRole('heading', { name: 'Digital Filing' });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
 
