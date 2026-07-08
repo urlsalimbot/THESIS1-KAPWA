@@ -156,9 +156,9 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
-                <Link to="/settings/mfa" className="flex items-center gap-2 no-underline">
+                <Link to="/settings" className="flex items-center gap-2 no-underline">
                   <Settings size={16} />
-                  MFA Settings
+                  Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

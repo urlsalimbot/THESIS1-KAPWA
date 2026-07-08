@@ -162,6 +162,36 @@ export class AuthService {
     }
   }
 
+  async changePassword(userId: string, body: { currentPassword: string; newPassword: string }) {
+    const user = await this.findByIdWithSecret(userId);
+    if (!user) throw new UnauthorizedException();
+
+    const valid = await bcrypt.compare(body.currentPassword, user.password);
+    if (!valid) throw new BadRequestException('Current password is incorrect');
+
+    const hashed = await bcrypt.hash(body.newPassword, BCRYPT_SALT_ROUNDS);
+    user.password = hashed;
+    await this.userRepo.save(user);
+
+    return { message: 'Password changed successfully' };
+  }
+
+  async changeEmail(userId: string, body: { newEmail: string; currentPassword: string }) {
+    const user = await this.findByIdWithSecret(userId);
+    if (!user) throw new UnauthorizedException();
+
+    const valid = await bcrypt.compare(body.currentPassword, user.password);
+    if (!valid) throw new BadRequestException('Current password is incorrect');
+
+    const existing = await this.userRepo.findOne({ where: { email: body.newEmail } });
+    if (existing) throw new ConflictException('Email already in use');
+
+    user.email = body.newEmail;
+    await this.userRepo.save(user);
+
+    return { user: { id: user.id, email: user.email, role: user.role, fullName: user.fullName } };
+  }
+
   async verifySmsOtp(tempToken: string, otpCode: string) {
     try {
       const payload = this.jwtService.verify(tempToken) as any;

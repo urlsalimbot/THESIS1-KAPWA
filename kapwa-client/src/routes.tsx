@@ -20,6 +20,7 @@ import { ClaimantDashboardPage } from './pages/ClaimantDashboardPage';
 import { FilingPage } from './pages/FilingPage';
 import { ApprovalPipelinePage } from './pages/ApprovalPipelinePage';
 import { MfaSetupPage } from './pages/MfaSetupPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { CoordinatorDashboardPage } from './pages/CoordinatorDashboardPage';
 import { MyAccessCardPage } from './pages/MyAccessCardPage';
 import { MayorReportsPage } from './pages/MayorReportsPage';
@@ -73,7 +74,8 @@ const router = createBrowserRouter([
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
   { path: '/filing', element: <Private roles={['admin','social_worker']}><FilingPage /></Private> },
   { path: '/approvals', element: <Private roles={['admin','social_worker']}><ApprovalPipelinePage /></Private> },
-  { path: '/settings/mfa', element: <Private roles={['admin','mayor','auditor']}><MfaSetupPage /></Private> },
+  { path: '/settings/mfa', element: <Navigate to="/settings" replace /> },
+  { path: '/settings', element: <Private><SettingsPage /></Private> },
   { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
   { path: '/irf/:id', element: <Private roles={['admin','social_worker']}><IrfDetailPage /></Private> },
   { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
