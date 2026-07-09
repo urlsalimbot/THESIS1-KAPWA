@@ -285,7 +285,7 @@ afterEach(() => {
 - Tests register → login → CRUD → FSM transitions → dashboard metrics
 - Tests offline-queue, sync, and Web Crypto APIs via dynamic imports
 - Uses `fetch` directly (no supertest), `faker` for test data generation
-- Wrapper script at `tests/run-tests.sh` starts Docker PostgreSQL, then runs client tests
+- Wrapper script at `tests/run-tests.sh` starts Podman PostgreSQL, then runs client tests
 
 **Not found:**
 - No Playwright or Cypress browser E2E tests

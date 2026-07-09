@@ -48,6 +48,30 @@ export class Beneficiary {
   @Column({ name: 'category', nullable: true })
   category?: string;
 
+  @Column({ name: 'place_of_birth', nullable: true })
+  placeOfBirth?: string;
+
+  @Column({ name: 'civil_status', nullable: true })
+  civilStatus?: string;
+
+  @Column({ name: 'current_address', type: 'jsonb', nullable: true })
+  currentAddress?: Record<string, string>;
+
+  @Column({ name: 'provincial_address', type: 'jsonb', nullable: true })
+  provincialAddress?: Record<string, string>;
+
+  @Column({ name: 'philhealth_number', nullable: true })
+  philhealthNumber?: string;
+
+  @Column({ name: 'occupation', nullable: true })
+  occupation?: string;
+
+  @Column({ name: 'estimated_monthly_income', type: 'decimal', precision: 12, scale: 2, nullable: true })
+  estimatedMonthlyIncome?: number;
+
+  @Column({ name: 'age', nullable: true })
+  age?: number;
+
   @ManyToOne(() => Household, { nullable: true })
   @JoinColumn({ name: 'household_id' })
   household?: Household;

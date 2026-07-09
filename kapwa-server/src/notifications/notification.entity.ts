@@ -11,7 +11,8 @@ export enum NotificationCategory {
   SYSTEM = 'system',
   CHAT = 'chat',
   APPROVAL = 'approval',
-  DISBURSEMENT = 'disbursement'
+  DISBURSEMENT = 'disbursement',
+  SLA_ESCALATION = 'sla_escalation'
 }
 
 @Entity('notifications')

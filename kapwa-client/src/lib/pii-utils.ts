@@ -8,7 +8,7 @@ export const MASK_DISPLAY: Record<MaskableField, string> = {
   philsys: '****-***-****',
 };
 
-export const WORKER_ROLES = ['admin', 'worker', 'supervisor'];
+export const WORKER_ROLES = ['admin', 'social_worker', 'coordinator'];
 
 export function maskValue(field: MaskableField, _value: string): string {
   return MASK_DISPLAY[field] || '********';

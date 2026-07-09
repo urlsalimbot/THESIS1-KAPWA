@@ -2,12 +2,13 @@ import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { IntakeService } from './intake.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { IntakeInputSchema, IntakeInput } from './dto/intake.zod';
 
 @Controller('intake')
-@UseGuards(JwtAuthGuard, AbacGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 export class IntakeController {
   constructor(private readonly intakeService: IntakeService) {}
 

@@ -20,7 +20,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Core',
     items: [
       { path: '/intake', label: 'GIS Intake', icon: <FilePlus size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
-      { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
+      { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
       { path: '/cases', label: 'Case Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
     ],
@@ -28,7 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operations',
     items: [
-      { path: '/coordinator', label: 'Coordinator', icon: <LayoutDashboard size={20} />, roles: ['coordinator'] },
+      { path: '/coordinator', label: 'Barangay Coordinator', icon: <LayoutDashboard size={20} />, roles: ['coordinator'] },
       { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
       { path: '/interventions', label: 'Interventions', icon: <CheckCircle size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/csr', label: 'CSR Generator', icon: <FileText size={20} />, roles: ['admin', 'social_worker'] },

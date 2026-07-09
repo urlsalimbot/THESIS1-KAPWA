@@ -2,7 +2,7 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nes
 import { Observable, from, isObservable } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ConsentLedger } from './consent-ledger.entity';
 
 const PII_FIELDS = ['surname', 'firstName', 'middleName', 'address', 'phone', 'dob', 'philsysNumber'];
@@ -15,6 +15,11 @@ export class PiiMaskingInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const userRole = request.user?.role || '';
+    if (userRole === 'admin') {
+      return next.handle();
+    }
     return next.handle().pipe(
       switchMap((data) => {
         if (!data) return from([data]);
@@ -31,7 +36,7 @@ export class PiiMaskingInterceptor implements NestInterceptor {
     const ids = items.filter((i: any) => i?.id).map((i: any) => i.id);
     if (ids.length === 0) return items;
     const revoked = await this.consentRepo.find({
-      where: { beneficiaryId: ids.length === 1 ? (ids[0] as any) : (ids as any), status: 'revoked' },
+      where: { beneficiaryId: In(ids), status: 'revoked' },
     });
     const revokedIds = new Set(revoked.map(r => r.beneficiaryId));
     return items.map(item => {

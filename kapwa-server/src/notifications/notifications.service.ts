@@ -77,11 +77,22 @@ export class NotificationsService {
     return { message: 'All marked as read' };
   }
 
+  private statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      pending_assessment: 'Pending Assessment',
+      in_review: 'In Review',
+      approved: 'Approved',
+      disbursed: 'Disbursed',
+      closed: 'Closed',
+    };
+    return labels[status] || status;
+  }
+
   async notifyCaseUpdate(recipientId: string, caseRef: string, status: string) {
     return this.create({
       recipientId,
       title: 'Case Update',
-      message: `Case ${caseRef} status changed to ${status}`,
+      message: `Case ${caseRef} status changed to ${this.statusLabel(status)}`,
       category: NotificationCategory.CASE_UPDATE,
       referenceId: caseRef,
     });

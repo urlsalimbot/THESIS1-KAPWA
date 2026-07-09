@@ -13,6 +13,7 @@ const { mockApiGet, mockApiPost } = vi.hoisted(() => ({
 vi.mock('../lib/chat-socket', () => ({
   connectSocket: vi.fn(() => ({
     on: vi.fn(),
+    off: vi.fn(),
   })),
   disconnectSocket: vi.fn(),
   sendMessage: vi.fn(),

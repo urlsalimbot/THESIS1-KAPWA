@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 const safeDecodeJWT = (token: string) => { try { const b = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(atob(b)); } catch { return {}; } };
 
 interface Conversation {
-  userId: string; name: string; lastMessage: string; lastTime: Date; unread: number;
+  userId: string; name: string; role?: string; lastMessage: string; lastTime: Date; unread: number;
 }
 
 interface ChatMsg {
@@ -51,21 +51,41 @@ export function MessagesPage() {
     },
   );
 
-  // Combine cached conversation messages with any pending live-arrival messages.
-  // The conversation fetcher returns the new state; we render that directly.
-  const displayMessages: ChatMsg[] = activeConv ? convMessages : [];
+  // Merge SWR conversation messages with real-time WebSocket arrivals, deduplicating by id.
+  const displayMessages: ChatMsg[] = useMemo(() => {
+    if (!activeConv) return [];
+    const map = new Map<string, ChatMsg>();
+    convMessages.forEach(m => map.set(m.id, m));
+    pendingNew
+      .filter(m => m.senderId === activeConv || m.recipientId === activeConv)
+      .forEach(m => map.set(m.id, m));
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  }, [convMessages, pendingNew, activeConv]);
+
+  const activeConvRef = useRef(activeConv);
+  activeConvRef.current = activeConv;
 
   useEffect(() => {
     const token = localStorage.getItem('kapwa_token');
-    if (token) {
-      const sock = connectSocket(token);
-      sock.on('new_message', (msg: ChatMsg) => {
-        setPendingNew(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
-        globalMutate(queryKeys.messages.list());
-      });
-    }
-    return () => { disconnectSocket(); };
+    if (!token) return;
+    const sock = connectSocket(token);
+    const handler = (msg: ChatMsg) => {
+      setPendingNew(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]));
+      globalMutate(queryKeys.messages.list());
+      const conv = activeConvRef.current;
+      if (conv && (msg.senderId === conv || msg.recipientId === conv)) {
+        globalMutate(queryKeys.messages.conversation(conv));
+      }
+    };
+    sock.on('new_message', handler);
+    return () => { sock.off('new_message', handler); };
   }, [globalMutate]);
+
+  useEffect(() => {
+    return () => { disconnectSocket(); };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -81,7 +101,10 @@ export function MessagesPage() {
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim() || !activeConv) return;
-    sendMessage(activeConv, text.trim());
+    const token = localStorage.getItem('kapwa_token');
+    const decoded = token ? safeDecodeJWT(token) : {};
+    const senderName = decoded.email || decoded.sub || 'Unknown';
+    sendMessage(activeConv, text.trim(), senderName);
     setText('');
   }
 
@@ -135,14 +158,14 @@ export function MessagesPage() {
               <button key={conv.userId} onClick={() => selectConversation(conv.userId)}
                 className={`w-full text-left px-4 py-3 border-b hover:bg-accent transition-colors ${activeConv === conv.userId ? 'bg-accent' : ''}`}
               >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground font-medium">
-                    {(conv.name || '?').charAt(0)}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{conv.name || 'Unknown'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{conv.lastMessage}</p>
-                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground font-medium">
+                      {(conv.name || '?').charAt(0)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{conv.name}{conv.role ? <span className="text-xs text-muted-foreground font-normal ml-1.5">({conv.role.replace(/_/g, ' ')})</span> : ''}</p>
+                      <p className="text-xs text-muted-foreground truncate">{conv.lastMessage}</p>
+                    </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-xs text-muted-foreground">{formatTime(conv.lastTime.toString())}</p>
                     {conv.unread > 0 && (
@@ -170,7 +193,10 @@ export function MessagesPage() {
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground font-medium">
                     {getOtherName(activeConv).charAt(0)}
                   </span>
-                  <p className="text-sm font-medium text-foreground">{getOtherName(activeConv)}</p>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{getOtherName(activeConv)}</p>
+                    {(() => { const u = conversations.find(c => c.userId === activeConv); return u?.role ? <p className="text-xs text-muted-foreground">{u.role.replace(/_/g, ' ')}</p> : null; })()}
+                  </div>
                 </div>
               </div>
 

@@ -18,8 +18,8 @@ export class FamilyMember {
   @Column({ name: 'age', nullable: true })
   age?: number;
 
-  @Column({ name: 'status_income', nullable: true })
-  statusIncome?: string;
+  @Column({ name: 'occupation', nullable: true })
+  occupation?: string;
 
   @Column({ name: 'is_primary', default: false })
   isPrimary!: boolean;

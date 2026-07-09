@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { InterventionType, FundSource, SignatureStatus } from '../intervention.entity';
+import { FundSource, SignatureStatus } from '../intervention.entity';
 
 export const CreateInterventionSchema = z.object({
   caseId: z.string().uuid(),
-  interventionType: z.nativeEnum(InterventionType).default(InterventionType.FA),
+  interventionType: z.string().max(10).default('FA'),
   amount: z.number().nonnegative().default(0),
   fundSource: z.nativeEnum(FundSource).default(FundSource.REGULAR),
   serviceDate: z.string().datetime().optional(),

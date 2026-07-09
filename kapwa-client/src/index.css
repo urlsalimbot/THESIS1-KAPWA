@@ -321,6 +321,16 @@
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
+/* Hide number input spinners across the app */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 #root {
   @apply min-h-screen flex flex-col;
 }

@@ -4,17 +4,18 @@ import { CaseStatus } from './case.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedRequest } from '../auth/types';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import {
   CreateCaseSchema, UpdateStatusSchema, ApproveCaseSchema,
-  UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema,
-  CreateCaseInput, OverrideStatusInput, DisburseInput,
+  UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema, AssessmentSchema,
+  CreateCaseInput, OverrideStatusInput, DisburseInput, AssessmentInput,
 } from './dto/cases.zod';
 
 @Controller('cases')
-@UseGuards(JwtAuthGuard, AbacGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 export class CasesController {
   constructor(private casesService: CasesService) {}
 
@@ -88,5 +89,14 @@ export class CasesController {
   @Roles('admin', 'social_worker')
   async updateDocuments(@Param('id') id: string, @Body(new ZodPipe(UpdateDocumentsSchema)) body: { certificateUrl?: string; pettyCashVoucherUrl?: string }) {
     return this.casesService.updateDocuments(id, body);
+  }
+
+  @Patch(':id/assessment')
+  @Roles('admin', 'social_worker')
+  async updateAssessment(
+    @Param('id') id: string,
+    @Body(new ZodPipe(AssessmentSchema)) body: AssessmentInput,
+  ) {
+    return this.casesService.updateAssessment(id, body);
   }
 }

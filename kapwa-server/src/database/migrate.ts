@@ -23,11 +23,32 @@ async function migrate() {
   }
 
   await q.query(`CREATE TABLE IF NOT EXISTS beneficiaries ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), philsys_number TEXT UNIQUE, surname TEXT NOT NULL, first_name TEXT NOT NULL, middle_name TEXT, gender TEXT CHECK (gender IN ('Male','Female')), dob DATE NOT NULL, address TEXT, phone TEXT, access_card_code TEXT UNIQUE, consent_status TEXT DEFAULT 'active', search_vector TSVECTOR, household_id UUID, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS place_of_birth TEXT`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS civil_status TEXT`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS current_address JSONB`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS provincial_address JSONB`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS philhealth_number TEXT`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS occupation TEXT`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS estimated_monthly_income DECIMAL(12,2)`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS age INTEGER`);
   await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS family_members ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), household_id UUID REFERENCES households(id), full_name TEXT NOT NULL, relationship TEXT NOT NULL, age INTEGER, status_income TEXT, is_primary BOOLEAN DEFAULT FALSE )`);
+  await q.query(`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS occupation TEXT`);
   await q.query(`CREATE TABLE IF NOT EXISTS cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), control_no TEXT UNIQUE NOT NULL, beneficiary_id UUID REFERENCES beneficiaries(id), service_requested TEXT[], requirements_checklist JSONB, status TEXT CHECK (status IN ('pending_assessment','in_review','approved','disbursed','closed')) DEFAULT 'pending_assessment', certificate_url TEXT, petty_cash_voucher_url TEXT, assigned_worker_id UUID, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS interventions ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), case_id UUID REFERENCES cases(id), intervention_type TEXT CHECK (intervention_type IN ('FA','C','CSR','R','H','HV','Other')), amount DECIMAL(12,2), fund_source TEXT CHECK (fund_source IN ('Regular','PDAF','Legislative','Donation')), agency TEXT, service_date DATE NOT NULL, voucher_no TEXT, or_reference TEXT, worker_signature_url TEXT NOT NULL, logged_by UUID, logged_at TIMESTAMP DEFAULT NOW(), hash TEXT, prev_hash TEXT )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS case_tracker_log ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), daily_seq_num INTEGER NOT NULL, transaction_date DATE NOT NULL, surname TEXT, first_name TEXT, middle_name TEXT, gender TEXT CHECK (gender IN ('M','F')), age_range TEXT CHECK (age_range IN ('0-7','8-17','18-59','60+')), client_category TEXT, barangay TEXT, intervention_remarks TEXT, UNIQUE (transaction_date, daily_seq_num) )`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS problems_presented TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS social_worker_assessment TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS client_category TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS nature_of_service TEXT[]`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS financial_subsidies JSONB`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS amount_assistance DECIMAL(12,2)`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS mode_financial_assistance TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS source_of_fund TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS legislator_specify TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS other_assistance JSONB`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS interviewed_by TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS client_signature TEXT`);
+  await q.query(`CREATE TABLE IF NOT EXISTS interventions ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), case_id UUID REFERENCES cases(id), intervention_type TEXT, amount DECIMAL(12,2), fund_source TEXT CHECK (fund_source IN ('Regular','PDAF','Legislative','Donation')), agency TEXT, service_date DATE NOT NULL, voucher_no TEXT, or_reference TEXT, worker_signature_url TEXT NOT NULL, logged_by UUID, logged_at TIMESTAMP DEFAULT NOW(), hash TEXT, prev_hash TEXT )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS case_tracker_log ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), daily_seq_num INTEGER NOT NULL, transaction_date DATE NOT NULL, surname TEXT, first_name TEXT, middle_name TEXT, gender TEXT CHECK (gender IN ('M','F')), age_range TEXT CHECK (age_range IN ('0-7','8-17','18-59','60+')), client_category TEXT, barangay TEXT, intervention_remarks TEXT, created_at TIMESTAMP DEFAULT NOW(), UNIQUE (transaction_date, daily_seq_num) )`);
   await q.query(`CREATE TABLE IF NOT EXISTS access_card_services ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), access_card_code TEXT REFERENCES beneficiaries(access_card_code), service_date DATE NOT NULL, service_rendered TEXT NOT NULL, cost DECIMAL(12,2), agency TEXT, worker_name_sign TEXT, intervention_id UUID )`);
   await q.query(`CREATE TABLE IF NOT EXISTS irf_blotter_seq ( id SERIAL PRIMARY KEY, year INTEGER NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS access_card_seq ( id SERIAL PRIMARY KEY, year INTEGER NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);

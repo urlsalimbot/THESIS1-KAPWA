@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { loadQueue, type QueuedChange } from '@/lib/offline-queue';
-import { Clock, CheckCircle2, XCircle, RefreshCw, AlertTriangle, Trash2, Eye } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, RefreshCw, AlertTriangle, Trash2, Eye, Upload } from 'lucide-react';
 import { ConflictResolutionDialog } from './ConflictResolutionDialog';
+import { syncOnReconnect } from '@/lib/sync';
 
 const QUEUE_KEY = 'kapwa_sync_queue';
 const POLL_INTERVAL = 2000;
@@ -54,6 +55,42 @@ function operationLabel(op: string): string {
   }
 }
 
+type ItemLabel = { primary: string; secondary: string };
+
+function itemLabel(item: QueuedChange): ItemLabel {
+  const p = item.payload ?? {};
+  const table = item.tableName;
+
+  switch (table) {
+    case 'intake':
+    case 'cases': {
+      const cn = p.control_no as string | undefined;
+      const name = (p.surname && p.first_name) ? `${p.surname}, ${p.first_name}` : undefined;
+      const control = cn ?? item.recordId.slice(0, 8);
+      return { primary: `Case ${control}`, secondary: name ?? '' };
+    }
+    case 'beneficiaries': {
+      const name = (p.surname && p.first_name) ? `${p.surname}, ${p.first_name}` : undefined;
+      const philsys = p.philsys_number as string | undefined;
+      return { primary: name ?? `Beneficiary ${item.recordId.slice(0, 8)}`, secondary: philsys ?? '' };
+    }
+    case 'interventions': {
+      const type = p.intervention_type as string | undefined;
+      return { primary: type ?? 'Intervention', secondary: item.recordId.slice(0, 8) };
+    }
+    case 'csr_reports': {
+      const cn = p.control_no as string | undefined;
+      return { primary: cn ? cn : 'CSR Report', secondary: item.recordId.slice(0, 8) };
+    }
+    case 'irf_cases': {
+      const blotter = p.blotter_entry_number as string | undefined;
+      return { primary: blotter ?? 'IRF Case', secondary: item.recordId.slice(0, 8) };
+    }
+    default:
+      return { primary: table, secondary: item.recordId.slice(0, 8) };
+  }
+}
+
 const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending: 'secondary',
   syncing: 'default',
@@ -71,6 +108,7 @@ const statusBadgeClass: Record<string, string> = {
 export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
   const [items, setItems] = useState<QueuedChange[]>([]);
   const [conflictItem, setConflictItem] = useState<QueuedChange | null>(null);
+  const [syncingAll, setSyncingAll] = useState(false);
   const itemsRef = useRef<string>('');
 
   const refreshItems = useCallback(() => {
@@ -120,6 +158,16 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
     refreshItems();
   };
 
+  const handleSyncAll = async () => {
+    setSyncingAll(true);
+    try {
+      await syncOnReconnect();
+    } finally {
+      setSyncingAll(false);
+      refreshItems();
+    }
+  };
+
   const pending = items.filter(i => i.status === 'pending');
   const syncing = items.filter(i => i.status === 'syncing');
   const failed = items.filter(i => i.status === 'failed');
@@ -130,14 +178,28 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <SheetContent side="right" className="w-[380px] sm:w-[480px]">
-          <SheetHeader>
+        <SheetContent side="right" className="w-[380px] sm:w-[480px] flex flex-col overflow-hidden">
+          <SheetHeader className="shrink-0">
             <SheetTitle>Sync Queue</SheetTitle>
             <SheetDescription>
               {hasItems ? `${items.length} pending change(s)` : 'No pending sync operations'}
             </SheetDescription>
           </SheetHeader>
-          <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
+          {hasItems && (
+            <div className="flex justify-end shrink-0 pt-1 pb-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleSyncAll}
+                disabled={syncingAll}
+                className="gap-2"
+              >
+                <Upload size={14} className={syncingAll ? 'animate-spin' : ''} />
+                {syncingAll ? 'Syncing...' : `Sync ${items.length} change(s)`}
+              </Button>
+            </div>
+          )}
+          <ScrollArea className="flex-1 min-h-0">
             {!hasItems ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
                 <CheckCircle2 size={40} className="text-muted-foreground" />
@@ -145,7 +207,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                 <p className="text-sm text-muted-foreground">No pending sync operations.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 pr-1">
                 {/* Pending group */}
                 {pending.length > 0 && (
                   <div>
@@ -159,6 +221,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                         onRetry={handleRetry}
                         onRemove={handleRemove}
                         onViewConflict={() => setConflictItem(item)}
+                        onSyncNow={handleSyncAll}
                       />
                     ))}
                   </div>
@@ -177,6 +240,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                         onRetry={handleRetry}
                         onRemove={handleRemove}
                         onViewConflict={() => setConflictItem(item)}
+                        onSyncNow={handleSyncAll}
                       />
                     ))}
                   </div>
@@ -195,6 +259,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                         onRetry={handleRetry}
                         onRemove={handleRemove}
                         onViewConflict={() => setConflictItem(item)}
+                        onSyncNow={handleSyncAll}
                       />
                     ))}
                   </div>
@@ -213,6 +278,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                         onRetry={handleRetry}
                         onRemove={handleRemove}
                         onViewConflict={() => setConflictItem(item)}
+                        onSyncNow={handleSyncAll}
                       />
                     ))}
                   </div>
@@ -239,12 +305,14 @@ interface QueueItemCardProps {
   onRetry: (id: string) => void;
   onRemove: (id: string, label: string) => void;
   onViewConflict: () => void;
+  onSyncNow: () => void;
 }
 
-function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCardProps) {
+function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: QueueItemCardProps) {
   const isSyncing = item.status === 'syncing';
   const isConflict = item.status === 'conflict';
   const isFailed = item.status === 'failed';
+  const isPending = item.status === 'pending';
 
   const statusIcon = isSyncing ? (
     <RefreshCw size={16} className="text-blue-500 animate-spin" />
@@ -259,10 +327,10 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
   const statusLabel = isSyncing ? 'Syncing…' : item.status === 'failed' ? 'Sync failed' : item.status === 'conflict' ? 'Conflict' : 'Pending';
 
   return (
-    <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card mb-2">
+    <div className="flex items-start gap-2 p-3 rounded-lg border border-border bg-card mb-2">
       {statusIcon}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-1.5 mb-0.5">
           <span className="text-xs font-medium text-muted-foreground uppercase">{operationLabel(item.operation)}</span>
           <Badge
             variant={statusBadgeVariant[item.status] || 'secondary'}
@@ -272,8 +340,11 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
           </Badge>
         </div>
         <p className="text-sm font-medium text-foreground truncate">
-          {item.tableName} #{item.recordId}
+          {itemLabel(item).primary}
         </p>
+        {itemLabel(item).secondary && (
+          <p className="text-xs text-muted-foreground truncate">{itemLabel(item).secondary}</p>
+        )}
         <p className="text-xs text-muted-foreground mt-0.5">
           {formatTimestamp(item.clientUpdatedAt)}
         </p>
@@ -281,7 +352,19 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
           <p className="text-xs text-destructive mt-1 truncate">{item.lastError}</p>
         )}
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-0.5 shrink-0 -mr-1">
+        {isPending && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onSyncNow}
+            title="Sync Now"
+            aria-label="Sync Now"
+          >
+            <Upload size={16} />
+          </Button>
+        )}
         {isFailed && (
           <Button
             variant="ghost"
@@ -310,7 +393,7 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict }: QueueItemCar
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          onClick={() => onRemove(item.id, `${item.tableName} #${item.recordId}`)}
+          onClick={() => onRemove(item.id, itemLabel(item).primary)}
           title="Remove Item"
           aria-label="Remove Item"
         >

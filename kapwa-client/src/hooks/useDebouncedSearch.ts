@@ -1,12 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 
-interface SearchResult {
+export interface SearchResult {
   id: string;
   fullName: string;
   controlNo: string;
   barangay: string;
+}
+
+function mapToSearchResult(raw: Record<string, unknown>): SearchResult {
+  const address = (raw.address as string) || '';
+  return {
+    id: raw.id as string,
+    fullName: `${(raw.firstName as string) || ''} ${(raw.surname as string) || ''}`.trim(),
+    controlNo: (raw.accessCardCode as string) || (raw.philsysNumber as string) || '',
+    barangay: address.split(',').pop()?.trim() || '',
+  };
 }
 
 export function useDebouncedSearch(query: string, delay = 300, limit = 10) {
@@ -22,9 +32,11 @@ export function useDebouncedSearch(query: string, delay = 300, limit = 10) {
     ? queryKeys.beneficiaries.list({ search: trimmed, limit })
     : null;
 
-  const { data, isLoading } = useSWR<SearchResult[]>(swrKey, {
+  const { data, isLoading } = useSWR<Record<string, unknown>[]>(swrKey, {
     keepPreviousData: true,
   });
 
-  return { results: data || [], loading: isLoading };
+  const results = useMemo(() => (data || []).map(mapToSearchResult), [data]);
+
+  return { results, loading: isLoading };
 }

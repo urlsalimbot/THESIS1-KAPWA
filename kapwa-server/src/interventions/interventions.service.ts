@@ -3,10 +3,11 @@ import { Injectable, NotFoundException, BadRequestException, InternalServerError
 import * as crypto from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Intervention, InterventionType, FundSource, SignatureStatus } from './intervention.entity';
+import { Intervention, FundSource, SignatureStatus } from './intervention.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { MinioService } from '../minio/minio.service';
 import { TrackerService } from '../tracker/tracker.service';
+import { InterventionTypesService } from '../intervention-types/intervention-types.service';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 @Injectable()
@@ -18,6 +19,7 @@ export class InterventionsService {
     private caseRepo: Repository<Case>,
     private minioService: MinioService,
     private trackerService: TrackerService,
+    private interventionTypesService: InterventionTypesService,
   ) {}
 
   async create(data: Partial<Intervention> & { overrideNoCardCheck?: boolean }, userId: string) {
@@ -28,6 +30,10 @@ export class InterventionsService {
     if (!caseEntity) throw new NotFoundException('Case not found');
     if (caseEntity.status !== CaseStatus.DISBURSED) {
       throw new BadRequestException('Case must be disbursed first');
+    }
+
+    if (data.interventionType) {
+      await this.interventionTypesService.validateCode(data.interventionType);
     }
 
     // D-03: Soft warning for No Card with override
@@ -88,7 +94,7 @@ export class InterventionsService {
     });
     const prevHash = prevInt?.hash || 'GENESIS';
     const int = this.interventionRepo.create({
-      interventionType: data.interventionType || InterventionType.FA,
+      interventionType: data.interventionType || 'FA',
       amount: data.amount || 0,
       fundSource: data.fundSource || FundSource.REGULAR,
       serviceDate: data.serviceDate || new Date(),

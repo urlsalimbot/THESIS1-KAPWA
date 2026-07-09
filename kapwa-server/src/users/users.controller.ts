@@ -4,12 +4,13 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { CreateUserInputSchema, CreateUserInput, UpdateUserSchema, UpdateUserInput } from './dto/users.zod';
 
 @ApiTags('Users')
 @Controller('users')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class UsersController {
   constructor(private usersService: UsersService) {}

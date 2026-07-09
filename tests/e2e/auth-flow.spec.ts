@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-const DOCKER_COMPOSE_FILE = 'kapwa-server/docker-compose.yml';
+const PODMAN_COMPOSE_FILE = 'kapwa-server/docker-compose.yml';
 const BASE_URL = 'http://localhost';
 
-interface DockerService {
+interface PodmanService {
   Name?: string;
   Service?: string;
   Status?: string;
@@ -12,16 +12,16 @@ interface DockerService {
 }
 
 test.describe('Walking Skeleton — End-to-End Stack Verification', () => {
-  test('Test 1: All 4 Docker services (db, api, minio, caddy) are running and healthy', async () => {
+  test('Test 1: All 4 Pod services (db, api, minio, caddy) are running and healthy', async () => {
     const { execSync } = await import('child_process');
     const raw = execSync(
-      `docker compose -f ${DOCKER_COMPOSE_FILE} ps --format json`,
+      `podman-compose -f ${PODMAN_COMPOSE_FILE} ps --format json`,
       { encoding: 'utf8', timeout: 15000 }
     );
 
-    // docker compose ps --format json may return JSON array or NDJSON lines
+    // podman-compose ps --format json may return JSON array or NDJSON lines
     // Parse whichever format is returned
-    let services: DockerService[];
+    let services: PodmanService[];
     try {
       services = JSON.parse(raw.trim());
     } catch {
@@ -33,7 +33,7 @@ test.describe('Walking Skeleton — End-to-End Stack Verification', () => {
         .map((l: string) => JSON.parse(l));
     }
 
-    const serviceNames = services.map((s: DockerService) => s.Service || s.Name);
+    const serviceNames = services.map((s: PodmanService) => s.Service || s.Name);
     expect(serviceNames).toContain('db');
     expect(serviceNames).toContain('api');
     expect(serviceNames).toContain('minio');

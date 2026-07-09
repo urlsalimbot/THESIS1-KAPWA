@@ -39,18 +39,18 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 h-17 min-h-[4.5rem] flex flex-col justify-center bg-background/95 backdrop-blur-sm border-b border-border overflow-visible">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 flex items-center justify-between">
+    <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur-sm border-b border-border">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 h-full flex items-center gap-6">
         {/* Logo/brand */}
-        <Link to="/" className="touch-sm flex items-center gap-2.5 no-underline group">
-          <div className="w-24 h-24 rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-200 group-hover:shadow-md">
-            <HandHeart className="w-64 h-64 text-accent" />
+        <Link to="/" className="shrink-0 flex items-center gap-2.5 no-underline group">
+          <div className="rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-200 group-hover:shadow-md">
+            <HandHeart className="w-10 h-10 text-accent" />
           </div>
           <span className="font-heading text-xl font-bold text-foreground tracking-tight">KAPWA</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav aria-label="Main navigation" className="hidden sm:flex items-center gap-1">
+        <nav aria-label="Main navigation" className="hidden sm:flex items-center justify-center gap-2 flex-1 min-w-0">
           {navLinks.map((link) => {
             const isActive = currentPath === link.to || (link.to !== '/' && currentPath.startsWith(link.to));
             return (
@@ -58,7 +58,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'touch-sm px-3 py-2 rounded-md text-sm font-medium transition-all duration-200',
+                  'shrink-0 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200',
                   'hover:bg-muted hover:text-foreground hover:translate-y-px',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   isActive ? 'text-accent font-semibold' : 'text-muted-foreground'
@@ -72,7 +72,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
         </nav>
 
         {/* Right side: CTA + mobile menu */}
-        <div className="flex items-center gap-3">
+        <div className="shrink-0 flex items-center gap-3">
           {!loading && (
             user ? (
               <Button variant="outline" size="sm" asChild>

@@ -103,7 +103,7 @@ graph TB
                     └─────────┬─────────┘
                               │
          ┌────────────────────▼────────────────────┐
-         │     KAPWA Server (NestJS + Docker)      │
+          │     KAPWA Server (NestJS + Podman)      │
          │  - Auth Module (JWT)                    │
          │  - Case FSM Engine                      │
          │  - Consent & RBAC Guards                │
@@ -111,7 +111,7 @@ graph TB
          └────────────────────┬────────────────────┘
                               │
          ┌────────────────────▼────────────────────┐
-         │  PostgreSQL 16 + pgAudit (Docker)       │
+          │  PostgreSQL 16 + pgAudit (Podman)       │
          │  - RLS enabled                         │
          │  - Consent ledger                      │
          │  - Hash-chain audit                    │

@@ -33,9 +33,9 @@ export function disconnectSocket() {
   }
 }
 
-export function sendMessage(recipientId: string, content: string) {
+export function sendMessage(recipientId: string, content: string, senderName?: string) {
   if (!socket?.connected) return;
-  socket.emit("send_message", { recipientId, content });
+  socket.emit("send_message", { recipientId, content, senderName });
 }
 
 export function markMessageRead(messageId: string) {

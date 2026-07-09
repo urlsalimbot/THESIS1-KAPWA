@@ -12,7 +12,7 @@ Set up GitHub Actions CI workflow that runs `npm run test:run` + `npm run covera
 ### CI Scope (TST-07 + A11Y-02)
 - **D-01:** Create `.github/workflows/ci.yml` with triggers: `push` to `main` + `pull_request` to `main`. Single workflow file, named `ci.yml`. No manual dispatch, no schedule, no release triggers.
 - **D-02:** 3 jobs in the workflow: (1) `test` runs `npm ci` + `npm run test:run`; (2) `coverage` runs `npm ci` + `npm run coverage:check` (depends on `test` succeeding); (3) `build` runs `npm ci` + `npm run build` (parallel to `test` and `coverage`). All 3 jobs are required checks — failure of any blocks merge.
-- **D-03:** Environment: `ubuntu-latest` (single OS, no matrix). Node 20 only (matches the Dockerfile which uses `node:20-alpine`). No npm cache (simple/minimal — every run does a clean `npm ci`). Total CI runtime estimate: ~3-5 min for test, ~3-5 min for coverage, ~1 min for build = ~10 min worst case.
+- **D-03:** Environment: `ubuntu-latest` (single OS, no matrix). Node 20 only (matches the Dockerfile which uses `node:20-slim`). No npm cache (simple/minimal — every run does a clean `npm ci`). Total CI runtime estimate: ~3-5 min for test, ~3-5 min for coverage, ~1 min for build = ~10 min worst case.
 - **D-04:** The `coverage` job's `npm run coverage:check` script (added in Phase 15 D-01) enforces the per-file 70% lines threshold. CI fails the build if any of the 4 critical modules (api.ts, auth-context.tsx, offline-queue.ts, secure-storage.ts) drops below 70%. Coverage HTML report is uploaded as a workflow artifact (downloadable from the Actions run page).
 - **D-05:** The `test` job's `npm run test:run` includes the 28 page smoke tests + the 4 component smoke tests + 288+ existing tests = ~314 tests. axe assertions on Layout/Topbar/Sidebar (Phase 16) + axe on all 28 page tests (Plan 17-02 + 17-03) are part of this. CI fails on any axe violation.
 
@@ -101,7 +101,7 @@ Set up GitHub Actions CI workflow that runs `npm run test:run` + `npm run covera
 
 ### CI Workflow Reference
 - `.github/workflows/` — does not exist yet (Phase 17 creates it)
-- `kapwa-server/Dockerfile` — uses `node:20-alpine` (matches the CI Node 20 choice per D-03)
+- `kapwa-server/Dockerfile` — uses `node:20-slim` (matches the CI Node 20 choice per D-03)
 - `kapwa-server/package.json` scripts — `npm run test:run`, `npm run build` (used in the kapwa-client CI job; the workflow runs from `kapwa-client/` workdir per Phase 12 precedent)
 
 ## Existing Code Insights
