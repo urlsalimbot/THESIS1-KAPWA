@@ -48,3 +48,16 @@ export type MfaEnableInput = z.infer<typeof MfaEnableSchema>;
 export type MfaDisableInput = z.infer<typeof MfaDisableSchema>;
 export type OtpVerifyInput = z.infer<typeof OtpVerifySchema>;
 export type MfaVerifyInput = z.infer<typeof MfaVerifySchema>;
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string(),
+  newPassword: z.string().min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`),
+});
+
+export const ChangeEmailSchema = z.object({
+  newEmail: z.string().email(),
+  currentPassword: z.string(),
+});
+
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+export type ChangeEmailInput = z.infer<typeof ChangeEmailSchema>;
