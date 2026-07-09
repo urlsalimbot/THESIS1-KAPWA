@@ -4,12 +4,13 @@ import { LogServiceSchema } from './dto/access-cards.zod';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AccessCardsService } from './access-cards.service';
 
 @ApiTags('Access Cards')
 @Controller('access-cards')
-@UseGuards(JwtAuthGuard, AbacGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 @ApiBearerAuth()
 export class AccessCardsController {
   constructor(private svc: AccessCardsService) {}

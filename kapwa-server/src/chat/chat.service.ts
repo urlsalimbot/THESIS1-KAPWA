@@ -3,12 +3,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatMessage } from './chat.entity';
+import { User } from '../auth/user.entity';
 
 @Injectable()
 export class ChatService {
   constructor(
     @InjectRepository(ChatMessage)
     private readonly chatRepo: Repository<ChatMessage>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   async sendMessage(senderId: string, senderName: string, recipientId: string, content: string) {
@@ -42,7 +45,7 @@ export class ChatService {
     });
 
     const seen = new Set<string>();
-    const result: Array<{ userId: string; name: string; lastMessage: string; lastTime: Date; unread: number }> = [];
+    const result: Array<{ userId: string; name: string; role: string; lastMessage: string; lastTime: Date; unread: number }> = [];
 
     for (const msg of messages) {
       const convId = [msg.senderId, msg.recipientId].sort().join('_');
@@ -50,9 +53,11 @@ export class ChatService {
       seen.add(convId);
 
       const otherId = msg.senderId === userId ? msg.recipientId : msg.senderId;
+      const user = await this.userRepo.findOne({ where: { id: otherId } });
       result.push({
         userId: otherId,
-        name: msg.senderId === userId ? '' : msg.senderName || otherId,
+        name: user?.fullName || otherId.slice(0, 8),
+        role: user?.role || '',
         lastMessage: msg.content,
         lastTime: msg.createdAt,
         unread: (!msg.isRead && msg.recipientId === userId) ? 1 : 0,

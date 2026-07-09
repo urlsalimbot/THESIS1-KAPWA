@@ -12,15 +12,23 @@ function memo<T extends readonly unknown[]>(key: string, build: () => T): T {
 export const queryKeys = {
   cases: {
     all: ['cases'] as const,
-    list: () => memo('cases.list', () => ['cases'] as const),
-    detail: (id: string) => memo(`cases.detail.${id}`, () => ['cases', 'detail', id] as const),
+    list: (params?: Record<string, unknown>) => {
+      const key: unknown[] = ['cases'];
+      if (params && Object.keys(params).length > 0) key.push(params);
+      return memo(`cases.list.${JSON.stringify(params)}`, () => key as readonly unknown[]);
+    },
+    detail: (id: string) => memo(`cases.detail.${id}`, () => ['cases', id] as const),
   },
   beneficiaries: {
     all: ['beneficiaries'] as const,
-    list: () => memo('beneficiaries.list', () => ['beneficiaries'] as const),
-    detail: (id: string) => memo(`beneficiaries.detail.${id}`, () => ['beneficiaries', 'detail', id] as const),
+    list: (params?: Record<string, unknown>) => {
+      const key: unknown[] = ['beneficiaries'];
+      if (params && Object.keys(params).length > 0) key.push(params);
+      return memo(`beneficiaries.list.${JSON.stringify(params)}`, () => key as readonly unknown[]);
+    },
+    detail: (id: string) => memo(`beneficiaries.detail.${id}`, () => ['beneficiaries', id] as const),
     familyGraph: (id: string) =>
-      memo(`beneficiaries.familyGraph.${id}`, () => ['beneficiaries', 'family-graph', id] as const),
+      memo(`beneficiaries.familyGraph.${id}`, () => ['beneficiaries', id, 'family-graph'] as const),
     myAccessCard: () => memo('beneficiaries.myAccessCard', () => ['beneficiaries', 'me', 'access-card'] as const),
     myServices: () => memo('beneficiaries.myServices', () => ['beneficiaries', 'me', 'services'] as const),
     myConsent: () => memo('beneficiaries.myConsent', () => ['beneficiaries', 'me', 'consent'] as const),
@@ -64,12 +72,16 @@ export const queryKeys = {
   programs: {
     all: ['programs'] as const,
     list: () => memo('programs.list', () => ['programs'] as const),
-    detail: (id: string) => memo(`programs.detail.${id}`, () => ['programs', 'detail', id] as const),
+    detail: (id: string) => memo(`programs.detail.${id}`, () => ['programs', id] as const),
   },
   tracker: {
     all: ['tracker'] as const,
     daily: (params: { date: string }) =>
-      memo(`tracker.daily.${params.date}`, () => ['tracker', 'daily', params.date] as const),
+      memo(`tracker.daily.${params.date}`, () => {
+        const key: unknown[] = ['tracker', 'daily'];
+        key.push(params);
+        return key as readonly unknown[];
+      }),
     stats: () => memo('tracker.stats', () => ['tracker', 'stats'] as const),
     list: () => memo('tracker.list', () => ['tracker', 'daily'] as const),
   },
@@ -90,7 +102,7 @@ export const queryKeys = {
   irf: {
     all: ['irf'] as const,
     list: () => memo('irf.list', () => ['irf'] as const),
-    detail: (id: string) => memo(`irf.detail.${id}`, () => ['irf', 'detail', id] as const),
+    detail: (id: string) => memo(`irf.detail.${id}`, () => ['irf', id] as const),
   },
   csr: {
     all: ['csr'] as const,

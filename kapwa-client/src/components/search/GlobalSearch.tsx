@@ -1,95 +1,137 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandItem,
-  CommandEmpty,
-} from '@/components/ui/command';
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
+
+function useOs() {
+  return useMemo(() => {
+    const ua = navigator.userAgent;
+    if (/Mac|iP(hone|ad|od)/i.test(ua)) return 'mac';
+    if (/Windows/i.test(ua)) return 'windows';
+    if (/Linux/i.test(ua)) return 'linux';
+    return 'windows';
+  }, []);
+}
 
 export function GlobalSearch() {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [focused, setFocused] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const os = useOs();
   const { results, loading } = useDebouncedSearch(query);
+  const showDropdown = focused && query.trim().length > 0;
+
+  useEffect(() => {
+    setSelectedIdx(-1);
+  }, [results]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        inputRef.current?.focus();
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  useEffect(() => {
-    if (!open) {
-      setQuery('');
+  function navigateToSearch() {
+    const trimmed = query.trim();
+    if (trimmed) {
+      setFocused(false);
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
     }
-  }, [open]);
+  }
 
-  const handleSelect = useCallback(
-    (id: string) => {
-      setOpen(false);
-      navigate(`/beneficiaries/${id}`);
-    },
-    [navigate]
-  );
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!showDropdown) {
+      if (e.key === 'Enter') navigateToSearch();
+      return;
+    }
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIdx(i => Math.min(i + 1, results.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIdx(i => Math.max(i - 1, -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIdx >= 0 && selectedIdx < results.length) {
+          setFocused(false);
+          navigate(`/beneficiaries/${results[selectedIdx].id}`);
+        } else {
+          navigateToSearch();
+        }
+        break;
+      case 'Escape':
+        setFocused(false);
+        inputRef.current?.blur();
+        break;
+    }
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          className="hidden md:inline-flex h-9 w-56 items-center gap-2 rounded-full bg-muted/50 px-3 text-sm text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors border-none"
+    <div className="relative">
+      <form onSubmit={e => { e.preventDefault(); navigateToSearch(); }}>
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+        <input
+          ref={inputRef}
+          type="text"
+          role="combobox"
+          aria-expanded={showDropdown}
           aria-label="Search beneficiaries"
-        >
-          <Search size={16} className="shrink-0" />
-          <span className="flex-1 text-left">Search records...</span>
-          <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            <span className="text-xs">&#8984;</span>K
-          </kbd>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Search by name, control no, or barangay..."
-            value={query}
-            onValueChange={setQuery}
-            role="combobox"
-            aria-label="Search beneficiaries"
-          />
-          <CommandList>
-            {loading && (
-              <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
-            )}
-            {!loading && query.trim() && results.length === 0 && (
-              <CommandEmpty>No results found.</CommandEmpty>
-            )}
-            {results.map((item) => (
-              <CommandItem
-                key={item.id}
-                value={item.id}
-                onSelect={() => handleSelect(item.id)}
-                className="cursor-pointer"
-              >
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{item.fullName}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {item.controlNo} &middot; {item.barangay}
-                  </span>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          placeholder="Search records..."
+          className={`h-9 w-56 lg:w-72 rounded-full border pl-9 pr-10 text-sm bg-muted/50 text-foreground placeholder:text-muted-foreground outline-none transition-colors ${focused ? 'border-ring bg-background' : 'border-transparent hover:bg-muted'}`}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 200)}
+          onKeyDown={handleKeyDown}
+        />
+        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground pointer-events-none z-10">
+          {os === 'mac' ? <span className="text-xs">&#8984;</span> : <span className="text-xs">Ctrl</span>}K
+        </kbd>
+      </form>
+
+      {showDropdown && (
+        <div ref={listRef} className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+          {loading && (
+            <div className="px-3 py-4 text-xs text-center text-muted-foreground">Searching...</div>
+          )}
+          {!loading && results.length === 0 && (
+            <div className="px-3 py-4 text-xs text-center text-muted-foreground">No results found.</div>
+          )}
+          {results.map((item, i) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`w-full text-left px-3 py-2.5 flex flex-col gap-0.5 hover:bg-muted transition-colors text-sm ${i === selectedIdx ? 'bg-muted' : ''}`}
+              onMouseDown={() => { setFocused(false); navigate(`/beneficiaries/${item.id}`); }}
+            >
+              <span className="font-medium truncate">{item.fullName}</span>
+              <span className="text-xs text-muted-foreground truncate">
+                {item.controlNo && <>{item.controlNo} &middot; </>}{item.barangay}
+              </span>
+            </button>
+          ))}
+          {results.length > 0 && (
+            <button
+              type="button"
+              className="w-full text-center px-3 py-2 text-xs font-medium text-accent border-t hover:bg-muted transition-colors"
+              onMouseDown={() => navigateToSearch()}
+            >
+              View all results
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

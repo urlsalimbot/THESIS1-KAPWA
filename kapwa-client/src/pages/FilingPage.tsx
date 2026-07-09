@@ -28,7 +28,7 @@ export function FilingPage() {
 
   // SWR list — api.get is bound globally in routes.tsx (no fetcher prop).
   // The /filing endpoint accepts a category filter; we pass it via the query key.
-  const { data, isLoading } = useSWR<Document[]>(queryKeys.filing.byCategory(category));
+  const { data, isLoading } = useSWR<Document[]>(queryKeys.filing.list());
   const docs = data || [];
   const loading = isLoading;
   const lastSync = data ? Date.now() : null;

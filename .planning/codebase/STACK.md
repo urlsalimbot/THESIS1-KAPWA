@@ -14,7 +14,7 @@
 ## Runtime
 
 **Environment (Server):**
-- Node.js 20 (LTS) - Backend runtime via `kapwa-server/Dockerfile`
+- Node.js 20 (LTS) - Backend runtime via `kapwa-server/Dockerfile` (built by Podman)
 
 **Environment (Client):**
 - Browser (PWA) + Capacitor 6 (Android/iOS native wrappers)
@@ -106,13 +106,13 @@
 **Development:**
 - Node.js 20
 - npm
-- Docker (for PostgreSQL via `docker-compose.yml`)
-- PostgreSQL 16 (local or Docker)
+- Podman (for PostgreSQL via `docker-compose.yml`)
+- PostgreSQL 16 (local or Podman)
 - Android SDK (for Capacitor Android builds)
 - Xcode (for Capacitor iOS builds, macOS only)
 
 **Production:**
-- Docker host (Docker Compose deployment)
+- Podman host (podman-compose deployment)
 - PostgreSQL 16 with pgAudit, pgcrypto, uuid-ossp, pg_trgm extensions
 - Node.js 20 runtime
 - Twilio account (for SMS)

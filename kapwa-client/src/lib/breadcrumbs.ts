@@ -23,7 +23,7 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   '/irf': 'Incident Reports',
   '/access-cards': 'Access Cards',
   '/messages': 'Messages',
-  '/coordinator': 'Coordinator',
+  '/coordinator': 'Barangay Coordinator',
   '/settings': 'Settings',
 };
 
@@ -31,10 +31,10 @@ export function createBreadcrumbs(pathname: string): BreadcrumbItem[] {
   const segments = pathname.split('/').filter(Boolean);
   const crumbs: BreadcrumbItem[] = [];
 
-  crumbs.push({ label: 'Dashboard', href: '/' });
-
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let accumulated = '';
   for (const segment of segments) {
+    if (uuidRe.test(segment)) continue;
     accumulated += '/' + segment;
     const label = BREADCRUMB_LABELS[accumulated]
       || segment.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

@@ -105,7 +105,7 @@ Existing Kapwa codebase capabilities:
 #### Infrastructure
 - [ ] **INF-01**: MinIO (S3-compatible) for document vault (signatures, vouchers, IRF attachments)
 - [ ] **INF-02**: Caddy 2 reverse proxy with auto-TLS, rate limiting
-- [ ] **INF-03**: Docker Compose deployment with backup cron
+- [ ] **INF-03**: Podman deployment with backup cron
 - [ ] **INF-04**: Notifications (SMS via Twilio? + in-app) respecting consent preferences
 
 ### Out of Scope
@@ -120,7 +120,7 @@ Existing Kapwa codebase capabilities:
 Kapwa is a thesis project targeting full deployment at the MSWDO of Norzagaray, Bulacan. The existing codebase has a strong technical foundation (NestJS modular architecture, offline-first sync protocol, JWT+ABAC auth, Capacitor mobile, PostgreSQL with RLS/pgcrypto/pgAudit). Key technical debt includes sub-50% test coverage, NestJS version mismatch (v10 vs v11), TypeORM alpha dependency, and sync service complexity. The full spec is defined in KAPWA-PROJECT.md v2.0, which maps directly to MSWDO paper forms (Client Stub, General Intake Sheet, Access Card, IRF, Petty Cash Voucher).
 
 **Timeline:** 12 weeks (current semester)
-**Deployment:** Cloud-hosted (Ubuntu + Docker Compose + Caddy)
+**Deployment:** Cloud-hosted (Ubuntu + Podman + Caddy)
 **Compliance:** RA 11032, RA 10173, ARTA, COA, DSWD AO 2020-002
 
 ## Constraints

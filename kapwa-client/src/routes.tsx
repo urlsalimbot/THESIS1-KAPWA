@@ -9,10 +9,13 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { IntakePage } from './pages/IntakePage';
 import { CasesPage } from './pages/CasesPage';
+import { CaseViewPage } from './pages/CaseViewPage';
+import { SearchResultsPage } from './pages/SearchResultsPage';
 import { BeneficiariesPage } from './pages/BeneficiariesPage';
 import { BeneficiaryViewPage } from './pages/BeneficiaryViewPage';
 import { InterventionsPage } from './pages/InterventionsPage';
 import { MessagesPage } from './pages/MessagesPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { CaseTrackerPage } from './pages/CaseTrackerPage';
 import { CsrPage } from './pages/CsrPage';
 import { AdminPage } from './pages/AdminPage';
@@ -58,14 +61,15 @@ const router = createBrowserRouter([
       { index: true, element: <LandingPageRedirect /> },
       { path: 'about', element: <AboutPage /> },
       { path: 'contact', element: <ContactPage /> },
-      { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
     ],
   },
+  { path: 'login', element: <LoginPage /> },
   // === PROTECTED ROUTES ===
   { path: 'dashboard', element: <Private><DashboardPage /></Private> },
   { path: '/intake', element: <Private roles={['admin','social_worker','coordinator']}><IntakePage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker','coordinator']}><CasesPage /></Private> },
+  { path: '/cases/:id', element: <Private roles={['admin','social_worker','coordinator']}><CaseViewPage /></Private> },
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
   { path: '/interventions', element: <Private roles={['admin','social_worker']}><InterventionsPage /></Private> },
@@ -83,6 +87,8 @@ const router = createBrowserRouter([
   { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
   { path: '/coordinator', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator']}><MessagesPage /></Private> },
+  { path: '/search', element: <Private><SearchResultsPage /></Private> },
+  { path: '/notifications', element: <Private><NotificationsPage /></Private> },
   { path: '/my-access-card', element: <Private roles={['claimant']}><MyAccessCardPage /></Private> },
   { path: '/reports', element: <Private roles={['mayor']}><MayorReportsPage /></Private> },
   { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },

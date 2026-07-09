@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Smartphone, HandHeart } from 'lucide-react';
+import { Loader2, Smartphone, HandHeart, ArrowLeft } from 'lucide-react';
 
+const appendDomain = (v: string) => (v.includes('@') ? v : `${v}@mswdo.test`);
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address.'),
+  email: z.string().transform(appendDomain).pipe(z.string().email('Please enter a valid email address.')),
   password: z.string().min(1, 'Please enter your password.'),
 });
 type LoginValues = z.infer<typeof loginSchema>;
@@ -59,7 +60,10 @@ export function LoginPage() {
   // MFA Challenge Mode
   if (mfaChallenge) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] px-4">
+      <div className="relative flex items-center justify-center min-h-screen px-4 bg-background">
+        <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
+          <ArrowLeft size={16} /> Back to Home
+        </Link>
         <Card className="w-full max-w-md mx-auto">
           <CardHeader className="text-center">
             <Avatar className="w-16 h-16 mx-auto mb-2">
@@ -109,13 +113,17 @@ export function LoginPage() {
 
   // Login Form Mode
   return (
-    <div className="relative flex items-center justify-center min-h-[calc(100vh-8rem)] px-4 overflow-hidden">
+    <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden bg-background">
       {/* Background decoration with visual depth */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
       </div>
+
+      <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
+        <ArrowLeft size={16} /> Back to Home
+      </Link>
 
       <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
         <CardHeader className="text-center pb-6">

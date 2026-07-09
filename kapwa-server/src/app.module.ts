@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { SyncModule } from './sync/sync.module';
 import { CasesModule } from './cases/cases.module';
 import { InterventionsModule } from './interventions/interventions.module';
+import { InterventionTypesModule } from './intervention-types/intervention-types.module';
 import { ProgramsModule } from './programs/programs.module';
 import { BeneficiariesModule } from './beneficiaries/beneficiaries.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -26,7 +27,6 @@ import { OtpModule } from './otp/otp.module';
 import { MinioModule } from './minio/minio.module';
 import { IntakeModule } from './intake/intake.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
-import { RolesGuard } from './auth/guards/roles.guard';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { PiiMaskingInterceptor } from './beneficiaries/pii.interceptor';
 import { AppController } from './app.controller';
@@ -60,6 +60,7 @@ import { AppController } from './app.controller';
     SyncModule,
     CasesModule,
     InterventionsModule,
+    InterventionTypesModule,
     ProgramsModule,
     BeneficiariesModule,
     NotificationsModule,
@@ -81,7 +82,6 @@ import { AppController } from './app.controller';
   ],
   controllers: [AppController],
   providers: [
-    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: PiiMaskingInterceptor },

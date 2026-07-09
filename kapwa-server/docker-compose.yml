@@ -1,3 +1,14 @@
+# Podman short-name registries config (optional — keeps compose files clean):
+#   sudo mkdir -p /etc/containers/registries.conf.d
+#   sudo tee /etc/containers/registries.conf.d/99-kapwa.conf <<-'EOF'
+#     [aliases]
+#       "postgres" = "docker.io/library/postgres"
+#       "minio/minio" = "docker.io/minio/minio"
+#       "caddy" = "docker.io/library/caddy"
+#     [registries.search]
+#       registries = ["docker.io"]
+#   EOF
+
 services:
   db:
     build:
@@ -5,6 +16,7 @@ services:
       dockerfile: Dockerfile.db
     container_name: kapwa-db
     restart: unless-stopped
+    command: postgres -c shared_preload_libraries=pgaudit -c pgaudit.log=all
     environment:
       POSTGRES_USER: ${DB_USER:-kapwa}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-kapwa}
@@ -12,8 +24,8 @@ services:
     env_file:
       - ../infra/.env.production
     volumes:
-      - kapwa-data:/var/lib/postgresql/data
-      - ./init.sh:/docker-entrypoint-initdb.d/init.sh
+      - kapwa-data:/var/lib/postgresql/data:z
+      - ./init.sh:/docker-entrypoint-initdb.d/init.sh:z
     ports:
       - "5432:5432"
     healthcheck:
@@ -28,8 +40,8 @@ services:
       dockerfile: Dockerfile
     container_name: kapwa-api
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -49,7 +61,7 @@ services:
     env_file:
       - ../infra/.env.production
     healthcheck:
-      test: ["CMD", "node", "-e", 'http=require("http");http.get("http://localhost:3000",r=>process.exit(r.statusCode<500?0:1)).on("error",()=>process.exit(1))']
+      test: ["CMD", "node", "-e", 'http=require("http");http.get("http://localhost:3000/api/",r=>process.exit(r.statusCode<500?0:1)).on("error",()=>process.exit(1))']
       interval: 15s
       timeout: 10s
       retries: 5
@@ -61,7 +73,7 @@ services:
         condition: service_healthy
 
   minio:
-    image: minio/minio:latest
+    image: docker.io/minio/minio:latest
     container_name: kapwa-minio
     restart: unless-stopped
     expose:
@@ -74,7 +86,7 @@ services:
     env_file:
       - ../infra/.env.production
     volumes:
-      - minio-data:/data
+      - minio-data:/data:z
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
       interval: 15s
@@ -83,18 +95,23 @@ services:
       start_period: 30s
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
     container_name: kapwa-caddy
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      # Rootless Podman cannot bind <1024. In production use sudo podman or:
+      #   sudo sysctl net.ipv4.ip_unprivileged_port_start=80
+      - "8080:80"
+      - "8443:443"
     volumes:
-      - ../infra/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - ../infra/.env.production:/etc/caddy/.env:ro
+      - ../infra/Caddyfile:/etc/caddy/Caddyfile:ro,z
+      - caddy-data:/data:z
+      - ../infra/.env.production:/etc/caddy/.env:ro,z
+      - ../kapwa-client/dist:/var/www/kapwa:ro,z
     healthcheck:
-      test: ["CMD", "node", "-e", 'http=require("http");http.get("http://localhost:3000",r=>process.exit(r.statusCode<500?0:1)).on("error",()=>process.exit(1))']
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/health || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5

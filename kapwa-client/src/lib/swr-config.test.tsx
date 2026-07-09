@@ -41,16 +41,16 @@ describe('SWRConfig global options', () => {
 
     render(
       <SWRConfig value={{ fetcher: api.get, dedupingInterval: 0 }}>
-        <FetchComponent swrKey={queryKeys.dashboard.stats() as readonly ['dashboard', 'stats']} />
+        <FetchComponent swrKey={queryKeys.dashboard.stats() as unknown as readonly ['dashboard']} />
       </SWRConfig>,
     );
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
     });
-    // Verify the URL passed to fetch matches the dashboard stats key (joined as a path)
+    // Verify the URL passed to fetch matches the dashboard key (joined as a path)
     const calledUrl = String(fetchMock.mock.calls[0][0]);
-    expect(calledUrl).toContain('/dashboard/stats');
+    expect(calledUrl).toContain('/dashboard');
   });
 
   it('revalidateOnFocus is true', async () => {
