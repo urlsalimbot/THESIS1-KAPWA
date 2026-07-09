@@ -4,7 +4,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { NotificationsService } from './notifications.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { CreateNotificationSchema, CreateNotificationInput, UpdatePreferenceSchema, UpdatePreferenceInput } from './dto/notifications.zod';
+import { CreateNotificationSchema, CreateNotificationInput, UpdatePreferenceSchema, UpdatePreferenceInput, BulkUpdatePreferencesSchema, BulkUpdatePreferencesInput } from './dto/notifications.zod';
 import { AuthenticatedRequest } from '../auth/types';
 
 @Controller('notifications')
@@ -68,6 +68,15 @@ export class NotificationsController {
     @Body(new ZodPipe(UpdatePreferenceSchema)) body: UpdatePreferenceInput
   ) {
     return this.notifService.setPreference(req.user.id, body);
+  }
+
+  @Put('preferences/bulk')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor')
+  async bulkSetPreferences(
+    @Request() req: AuthenticatedRequest,
+    @Body(new ZodPipe(BulkUpdatePreferencesSchema)) body: BulkUpdatePreferencesInput
+  ) {
+    return this.notifService.bulkSetPreferences(req.user.id, body);
   }
 
   @Get('recipient/:recipientId')

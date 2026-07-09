@@ -131,6 +131,15 @@ export class NotificationsService {
     return this.notifPrefRepo.find({ where: { userId } });
   }
 
+  async bulkSetPreferences(userId: string, prefs: UpdatePreferenceInput[]) {
+    const results = [];
+    for (const pref of prefs) {
+      const result = await this.setPreference(userId, pref);
+      results.push(result);
+    }
+    return results;
+  }
+
   async setPreference(userId: string, body: UpdatePreferenceInput) {
     const existing = await this.notifPrefRepo.findOne({
       where: { userId, channel: body.channel as any, category: body.category },
