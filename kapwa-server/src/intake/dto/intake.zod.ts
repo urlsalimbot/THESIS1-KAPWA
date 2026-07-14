@@ -16,7 +16,7 @@ export const IntakeInputSchema = z.object({
     fullName: z.string().min(1),
     relationship: z.string().min(1),
     age: z.number().int().min(0).optional(),
-    statusIncome: z.string().optional(),
+    occupation: z.string().optional(),
   })).optional(),
   case: z.object({
     serviceRequested: z.array(z.string()).optional(),

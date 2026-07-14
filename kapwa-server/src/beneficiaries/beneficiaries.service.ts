@@ -57,7 +57,22 @@ export class BeneficiariesService {
     limit = DEFAULT_LIST_LIMIT,
     category?: string,
   ) {
-    const qb = this.benRepo.createQueryBuilder('b').leftJoinAndSelect('b.household', 'h');
+    const qb = this.benRepo.createQueryBuilder('b')
+      .leftJoinAndSelect('b.household', 'h')
+      .addSelect(sub => sub
+        .select('COALESCE(COUNT(DISTINCT i.id), 0)', 'cnt')
+        .from('interventions', 'i')
+        .innerJoin('cases', 'c', 'c.id = i.case_id')
+        .where('c.beneficiary_id = b.id'),
+        'intervention_count'
+      )
+      .addSelect(sub => sub
+        .select('MAX(i.service_date)', 'last')
+        .from('interventions', 'i')
+        .innerJoin('cases', 'c', 'c.id = i.case_id')
+        .where('c.beneficiary_id = b.id'),
+        'last_intervention_date'
+      );
     if (barangay) {
       qb.andWhere('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
     }
@@ -71,8 +86,9 @@ export class BeneficiariesService {
           `(b.search_vector @@ plainto_tsquery('english', :search)
             OR similarity(b.surname, :search) > 0.3
             OR similarity(b.first_name, :search) > 0.3
-            OR b.category ILIKE :categoryMatch)`,
-          { search, categoryMatch: `%${search}%` },
+            OR b.category ILIKE :categoryMatch
+            OR b.address ILIKE :addressMatch)`,
+          { search, categoryMatch: `%${search}%`, addressMatch: `%${search}%` },
         );
 
         qb.addSelect(
@@ -89,7 +105,8 @@ export class BeneficiariesService {
         qb.andWhere(
           `(b.search_vector @@ plainto_tsquery('english', :search)
             OR b.surname ILIKE :like
-            OR b.first_name ILIKE :like)`,
+            OR b.first_name ILIKE :like
+            OR b.address ILIKE :like)`,
           { search, like: `%${search}%` },
         );
         qb.orderBy('ts_rank(b.search_vector, plainto_tsquery(:search))', 'DESC');
@@ -127,8 +144,8 @@ export class BeneficiariesService {
     const members = await this.familyMemberRepo.query(
       `WITH RECURSIVE family_tree AS (
         -- Base: direct household members
-        SELECT fm.id, fm.full_name, fm.relationship, fm.age,
-               fm.status_income, fm.is_primary, fm.household_id, 0 AS depth
+         SELECT fm.id, fm.full_name, fm.relationship, fm.age,
+               fm.occupation, fm.is_primary, fm.household_id, 0 AS depth
         FROM family_members fm
         JOIN households h ON h.id = fm.household_id
         WHERE h.primary_beneficiary_id = $1
@@ -137,7 +154,7 @@ export class BeneficiariesService {
 
         -- Recursive: members of linked households within 2 degrees
         SELECT fm.id, fm.full_name, fm.relationship, fm.age,
-               fm.status_income, fm.is_primary, fm.household_id, ft.depth + 1
+               fm.occupation, fm.is_primary, fm.household_id, ft.depth + 1
         FROM family_members fm
         JOIN households h ON h.id = fm.household_id
         JOIN family_tree ft ON ft.depth < 2
@@ -149,15 +166,25 @@ export class BeneficiariesService {
           )
       )
       SELECT DISTINCT id, full_name, relationship, age,
-             status_income, is_primary, depth
+             occupation, is_primary, depth
       FROM family_tree
       ORDER BY depth, is_primary DESC, full_name
       LIMIT $2`,
       [beneficiaryId, FAMILY_MEMBER_LIMIT],
     );
 
-    const primary = members.find((m: any) => m.isPrimary) || members[0] || null;
-    return { primary, members, totalCount: members.length };
+    const camelCase = (m: any) => ({
+      id: m.id,
+      fullName: m.full_name || m.fullName,
+      relationship: m.relationship,
+      age: m.age,
+      occupation: m.occupation,
+      isPrimary: m.is_primary || m.isPrimary,
+      depth: m.depth,
+    });
+    const mapped = members.map(camelCase);
+    const primary = mapped.find((m: any) => m.isPrimary) || mapped[0] || null;
+    return { primary, members: mapped, totalCount: mapped.length };
   }
 
   async revokeConsent(beneficiaryId: string, body: { reason?: string }) {

@@ -24,7 +24,7 @@ const ID = {
   u_mayor:          '10000000-0000-0000-0000-000000000007',
   u_auditor:        '10000000-0000-0000-0000-000000000008',
 
-  // Beneficiaries (12)
+  // Beneficiaries (18)
   b_alcala:   '20000000-0000-0000-0000-000000000001',
   b_roxas:    '20000000-0000-0000-0000-000000000002',
   b_cruz:     '20000000-0000-0000-0000-000000000003',
@@ -37,8 +37,14 @@ const ID = {
   b_villanueva:'20000000-0000-0000-0000-00000000000a',
   b_fernando: '20000000-0000-0000-0000-00000000000b',
   b_lopez:    '20000000-0000-0000-0000-00000000000c',
+  b_delacruz: '20000000-0000-0000-0000-00000000000d',
+  b_martinez: '20000000-0000-0000-0000-00000000000e',
+  b_flores:   '20000000-0000-0000-0000-00000000000f',
+  b_gonzales: '20000000-0000-0000-0000-000000000010',
+  b_navarro:  '20000000-0000-0000-0000-000000000011',
+  b_soriano:  '20000000-0000-0000-0000-000000000012',
 
-  // Households (8)
+  // Households (14)
   hh_alcala:    '30000000-0000-0000-0000-000000000001',
   hh_roxas:     '30000000-0000-0000-0000-000000000002',
   hh_cruz:      '30000000-0000-0000-0000-000000000003',
@@ -47,8 +53,14 @@ const ID = {
   hh_reyes:     '30000000-0000-0000-0000-000000000006',
   hh_mendoza:   '30000000-0000-0000-0000-000000000007',
   hh_aquino:    '30000000-0000-0000-0000-000000000008',
+  hh_delacruz:  '30000000-0000-0000-0000-000000000009',
+  hh_martinez:  '30000000-0000-0000-0000-00000000000a',
+  hh_flores:    '30000000-0000-0000-0000-00000000000b',
+  hh_gonzales:  '30000000-0000-0000-0000-00000000000c',
+  hh_navarro:   '30000000-0000-0000-0000-00000000000d',
+  hh_soriano:   '30000000-0000-0000-0000-00000000000e',
 
-  // Family members (24)
+  // Family members (42)
   fm1:  '40000000-0000-0000-0000-000000000001',
   fm2:  '40000000-0000-0000-0000-000000000002',
   fm3:  '40000000-0000-0000-0000-000000000003',
@@ -73,6 +85,33 @@ const ID = {
   fm22: '40000000-0000-0000-0000-000000000016',
   fm23: '40000000-0000-0000-0000-000000000017',
   fm24: '40000000-0000-0000-0000-000000000018',
+  fm25: '40000000-0000-0000-0000-000000000019',
+  fm26: '40000000-0000-0000-0000-00000000001a',
+  fm27: '40000000-0000-0000-0000-00000000001b',
+  fm28: '40000000-0000-0000-0000-00000000001c',
+  fm29: '40000000-0000-0000-0000-00000000001d',
+  fm30: '40000000-0000-0000-0000-00000000001e',
+  fm31: '40000000-0000-0000-0000-00000000001f',
+  fm32: '40000000-0000-0000-0000-000000000020',
+  fm33: '40000000-0000-0000-0000-000000000021',
+  fm34: '40000000-0000-0000-0000-000000000022',
+  fm35: '40000000-0000-0000-0000-000000000023',
+  fm36: '40000000-0000-0000-0000-000000000024',
+  fm37: '40000000-0000-0000-0000-000000000025',
+  fm38: '40000000-0000-0000-0000-000000000026',
+  fm39: '40000000-0000-0000-0000-000000000027',
+  fm40: '40000000-0000-0000-0000-000000000028',
+  fm41: '40000000-0000-0000-0000-000000000029',
+  fm42: '40000000-0000-0000-0000-00000000002a',
+
+  // Intervention types (7) – codes that match migration defaults
+  it_fa:    '1a000000-0000-0000-0000-000000000001',
+  it_c:     '1a000000-0000-0000-0000-000000000002',
+  it_csr:   '1a000000-0000-0000-0000-000000000003',
+  it_r:     '1a000000-0000-0000-0000-000000000004',
+  it_h:     '1a000000-0000-0000-0000-000000000005',
+  it_hv:    '1a000000-0000-0000-0000-000000000006',
+  it_other: '1a000000-0000-0000-0000-000000000007',
 
   // Cases (8)
   c_1: '50000000-0000-0000-0000-000000000001',
@@ -259,7 +298,8 @@ async function seed() {
     sync_queue, version_vectors, idempotency_keys,
     chat_messages, notifications, notification_preferences, otp_codes,
     consent_ledger, cases, family_members, households,
-    irf_cases, beneficiaries, programs, users
+    irf_cases, beneficiaries, programs, users,
+    intervention_types
     CASCADE`);
 
   const adminPass   = await bcrypt.hash('admin123', 12);
@@ -272,13 +312,13 @@ async function seed() {
   // ==========================================================================
   // 1. USERS (8)
   // ==========================================================================
-  console.log('[1/25] Seeding users...');
+  console.log('[1/26] Seeding users...');
   await q.query(`
     INSERT INTO users (id, email, password, role, full_name, phone, assigned_barangay, permitted_barangays, is_active, mfa_enabled)
     VALUES
       ('${ID.u_admin}',        'admin@mswdo.test',       '${adminPass}',   'admin',         'Rosario G. Mendoza',     '09171000001', NULL,      '{}',                                              true,  false),
-      ('${ID.u_worker_bigte}',   'worker1@mswdo.test',     '${workerPass}',  'social_worker', 'Juan Dela Cruz',         '09171000002', 'Bigte',   '{"Bigte","Partida"}',                            true,  false),
-      ('${ID.u_worker_matictic}','worker2@mswdo.test',     '${workerPass}',  'social_worker', 'Lorna B. Santos',        '09171000003', 'Matictic','{"Matictic","San Mateo","Tumana"}',          true,  false),
+      ('${ID.u_worker_bigte}',   'worker1@mswdo.test',     '${workerPass}',  'social_worker', 'Juan Dela Cruz',         '09171000002', NULL,      '{"Bigte","Partida","Pugad","Sapang Kawayan","Tigbe"}', true, false),
+      ('${ID.u_worker_matictic}','worker2@mswdo.test',     '${workerPass}',  'social_worker', 'Lorna B. Santos',        '09171000003', NULL,      '{"Matictic","San Mateo","Tumana","Minuyan","Balayong","Alawihaw"}', true, false),
       ('${ID.u_coordinator}',   'coordinator@mswdo.test',  '${coordPass}',   'coordinator',   'Emmanuel T. Reyes',      '09171000004', NULL,      '{"Bigte","Matictic","Partida","San Mateo","Tumana","Bitbit","Bangkal","Pugad","Sapang Kawayan","Tigbe","Minuyan","Balayong","Alawihaw"}', true, false),
       ('${ID.u_claimant_a}',    'pedro.claimant@test.com', '${claimantPass}','claimant',      'Pedro P. Reyes',         '09171000005', NULL,      '{}',                                               true,  false),
       ('${ID.u_claimant_b}',    'ana.claimant@test.com',   '${claimantPass}','claimant',      'Ana Marie L. Fernandez', '09171000006', NULL,      '{}',                                               true,  false),
@@ -287,9 +327,9 @@ async function seed() {
   `);
 
   // ==========================================================================
-  // 2. BENEFICIARIES (12) – 2 per barangay to exercise barangay-scoped RLS
+  // 2. BENEFICIARIES (18) – coverage across all 13 barangays for RLS
   // ==========================================================================
-  console.log('[2/25] Seeding beneficiaries...');
+  console.log('[2/26] Seeding beneficiaries...');
   await q.query(`
     INSERT INTO beneficiaries (id, philsys_number, surname, first_name, middle_name, gender, dob, address, phone, access_card_code, consent_status, category)
     VALUES
@@ -304,32 +344,46 @@ async function seed() {
       ('${ID.b_rivera}',    'PHIL-9876-5432-1009','Rivera',    'Benigno',  'Cruz',    'Male',   '1975-08-19','606 Sitio Bakal, Tumana, Norzagaray',   '09171234509','NORZ-AC-2025-0009','active','Family'),
       ('${ID.b_villanueva}','PHIL-9876-5432-1010','Villanueva','Lydia',    'Santos',  'Female', '1985-03-10','707 Purok 3, Bitbit, Norzagaray',      '09171234510','NORZ-AC-2025-0010','active','PWD'),
       ('${ID.b_fernando}',  'PHIL-9876-5432-1011','Fernando',  'Gabriel',  'Reyes',   'Male',   '1992-10-05','808 Purok 4, Bangkal, Norzagaray',     '09171234511','NORZ-AC-2025-0011','revoked','Family'),
-      ('${ID.b_lopez}',     'PHIL-9876-5432-1012','Lopez',     'Imelda',   'Alcala',  'Female', '1970-05-28','909 Purok 5, Bigte, Norzagaray',       '09171234512','NORZ-AC-2025-0012','active','Women')
+      ('${ID.b_lopez}',     'PHIL-9876-5432-1012','Lopez',     'Imelda',   'Alcala',  'Female', '1970-05-28','909 Purok 5, Bigte, Norzagaray',       '09171234512','NORZ-AC-2025-0012','active','Women'),
+      -- 6 new beneficiaries in uncovered barangays (coordinator territory)
+      ('${ID.b_delacruz}',  'PHIL-9876-5432-1013','Dela Cruz', 'Nenita',   'Marquez', 'Female', '1953-03-25','111 Purok 1, Pugad, Norzagaray',       '09171234513','NORZ-AC-2025-0013','active','Senior Citizen'),
+      ('${ID.b_martinez}',  'PHIL-9876-5432-1014','Martinez',  'Roberto',  'Fernandez','Male',   '1979-11-18','222 Purok 2, Sapang Kawayan, Norzagaray','09171234514','NORZ-AC-2025-0014','active','PWD'),
+      ('${ID.b_flores}',    'PHIL-9876-5432-1015','Flores',    'Maricel',  'Dimagiba', 'Female', '1992-07-08','333 Purok 1, Tigbe, Norzagaray',        '09171234515','NORZ-AC-2025-0015','active','Women'),
+      ('${ID.b_gonzales}',  'PHIL-9876-5432-1016','Gonzales',  'Efren',    'Lansang',  'Male',   '1975-04-30','444 Purok 3, Minuyan, Norzagaray',      '09171234516','NORZ-AC-2025-0016','active','Family'),
+      ('${ID.b_navarro}',   'PHIL-9876-5432-1017','Navarro',   'Luzviminda','Torres',  'Female', '1957-09-14','555 Purok 2, Balayong, Norzagaray',    '09171234517','NORZ-AC-2025-0017','active','Senior Citizen'),
+      ('${ID.b_soriano}',   'PHIL-9876-5432-1018','Soriano',   'Dante',    'Pascual',  'Male',   '2003-06-21','666 Purok 1, Alawihaw, Norzagaray',    '09171234518','NORZ-AC-2025-0018','active','Youth')
   `);
 
   // ==========================================================================
-  // 3. HOUSEHOLDS (8)
+  // 3. HOUSEHOLDS (14)
   // ==========================================================================
-  console.log('[3/25] Seeding households...');
+  console.log('[3/26] Seeding 14 households...');
   await q.query(`
     INSERT INTO households (id, primary_beneficiary_id, barangay, estimated_income, verified_by)
     VALUES
-      ('${ID.hh_alcala}',  '${ID.b_alcala}',   'Bigte',     8500.00,  'Juan Dela Cruz'),
-      ('${ID.hh_roxas}',   '${ID.b_roxas}',    'Bigte',     5000.00,  'Juan Dela Cruz'),
-      ('${ID.hh_cruz}',    '${ID.b_cruz}',     'Matictic',  12000.00, 'Lorna B. Santos'),
-      ('${ID.hh_santos}',  '${ID.b_santos}',   'Matictic',  4500.00,  'Lorna B. Santos'),
-      ('${ID.hh_garcia}',  '${ID.b_garcia}',   'Partida',   7000.00,  'Juan Dela Cruz'),
-      ('${ID.hh_reyes}',   '${ID.b_reyes}',    'Partida',   11000.00, 'Juan Dela Cruz'),
-      ('${ID.hh_mendoza}', '${ID.b_mendoza}',  'San Mateo', 3500.00,  'Lorna B. Santos'),
-      ('${ID.hh_aquino}',  '${ID.b_aquino}',   'San Mateo', 9000.00,  'Lorna B. Santos')
+      ('${ID.hh_alcala}',  '${ID.b_alcala}',   'Bigte',     8500.00,  'Emmanuel T. Reyes'),
+      ('${ID.hh_roxas}',   '${ID.b_roxas}',    'Bigte',     5000.00,  'Emmanuel T. Reyes'),
+      ('${ID.hh_cruz}',    '${ID.b_cruz}',     'Matictic',  12000.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_santos}',  '${ID.b_santos}',   'Matictic',  4500.00,  'Emmanuel T. Reyes'),
+      ('${ID.hh_garcia}',  '${ID.b_garcia}',   'Partida',   7000.00,  'Emmanuel T. Reyes'),
+      ('${ID.hh_reyes}',   '${ID.b_reyes}',    'Partida',   11000.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_mendoza}', '${ID.b_mendoza}',  'San Mateo', 3500.00,  'Emmanuel T. Reyes'),
+      ('${ID.hh_aquino}',  '${ID.b_aquino}',   'San Mateo', 9000.00,  'Emmanuel T. Reyes'),
+      -- 6 new households in uncovered barangays
+      ('${ID.hh_delacruz}', '${ID.b_delacruz}', 'Pugad',         6200.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_martinez}', '${ID.b_martinez}', 'Sapang Kawayan',3500.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_flores}',   '${ID.b_flores}',   'Tigbe',         8000.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_gonzales}', '${ID.b_gonzales}', 'Minuyan',       5500.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_navarro}',  '${ID.b_navarro}',  'Balayong',      4000.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_soriano}',  '${ID.b_soriano}',  'Alawihaw',      3000.00, 'Emmanuel T. Reyes')
   `);
 
   // ==========================================================================
-  // 4. FAMILY MEMBERS (24) – 3 per household, varied relationships
+  // 4. FAMILY MEMBERS (42) – 3 per household, varied relationships
   // ==========================================================================
-  console.log('[4/25] Seeding family members...');
+  console.log('[4/26] Seeding 42 family members...');
   await q.query(`
-    INSERT INTO family_members (id, household_id, full_name, relationship, age, status_income, is_primary)
+    INSERT INTO family_members (id, household_id, full_name, relationship, age, occupation, is_primary)
     VALUES
       -- Alcala household (Bigte)
       ('${ID.fm1}',  '${ID.hh_alcala}',  'Rosa Alcala',       'Spouse',       48, 'Unemployed', false),
@@ -362,13 +416,54 @@ async function seed() {
       -- Aquino household (San Mateo)
       ('${ID.fm22}', '${ID.hh_aquino}',  'Sofia Aquino',       'Self',         27, 'Student',     true),
       ('${ID.fm23}', '${ID.hh_aquino}',  'Bella Aquino',       'Sibling',      19, 'Student',     false),
-      ('${ID.fm24}', '${ID.hh_aquino}',  'Alfredo Aquino Sr.', 'Father',       55, 'Employed',    false)
+      ('${ID.fm24}', '${ID.hh_aquino}',  'Alfredo Aquino Sr.', 'Father',       55, 'Employed',    false),
+      -- Dela Cruz household (Pugad)
+      ('${ID.fm25}', '${ID.hh_delacruz}',  'Nenita Dela Cruz',     'Self',         72, 'Retired',     true),
+      ('${ID.fm26}', '${ID.hh_delacruz}',  'Mario Dela Cruz',      'Spouse',       75, 'Retired',     false),
+      ('${ID.fm27}', '${ID.hh_delacruz}',  'Susan Dela Cruz',      'Child',        35, 'Employed',    false),
+      -- Martinez household (Sapang Kawayan)
+      ('${ID.fm28}', '${ID.hh_martinez}',  'Roberto Martinez',     'Self',         45, 'Self-Employed',true),
+      ('${ID.fm29}', '${ID.hh_martinez}',  'Liza Martinez',        'Spouse',       42, 'Employed',    false),
+      ('${ID.fm30}', '${ID.hh_martinez}',  'Kevin Martinez',       'Child',        16, 'Student',     false),
+      -- Flores household (Tigbe)
+      ('${ID.fm31}', '${ID.hh_flores}',    'Maricel Flores',       'Self',         33, 'Self-Employed',true),
+      ('${ID.fm32}', '${ID.hh_flores}',    'Baby Flores',          'Child',        4,  'Dependent',   false),
+      ('${ID.fm33}', '${ID.hh_flores}',    'Linda Flores',         'Mother',       60, 'Dependent',   false),
+      -- Gonzales household (Minuyan)
+      ('${ID.fm34}', '${ID.hh_gonzales}',  'Efren Gonzales',       'Self',         50, 'Employed',    true),
+      ('${ID.fm35}', '${ID.hh_gonzales}',  'Marilyn Gonzales',     'Spouse',       47, 'Employed',    false),
+      ('${ID.fm36}', '${ID.hh_gonzales}',  'John Gonzales',        'Child',        20, 'Student',     false),
+      -- Navarro household (Balayong)
+      ('${ID.fm37}', '${ID.hh_navarro}',   'Luzviminda Navarro',   'Self',         68, 'Retired',     true),
+      ('${ID.fm38}', '${ID.hh_navarro}',   'Pedro Navarro',        'Spouse',       70, 'Retired',     false),
+      ('${ID.fm39}', '${ID.hh_navarro}',   'Anna Navarro',         'Child',        30, 'Employed',    false),
+      -- Soriano household (Alawihaw)
+      ('${ID.fm40}', '${ID.hh_soriano}',   'Dante Soriano',        'Self',         22, 'Student',     true),
+      ('${ID.fm41}', '${ID.hh_soriano}',   'Elena Soriano',        'Mother',       50, 'Employed',    false),
+      ('${ID.fm42}', '${ID.hh_soriano}',   'Karl Soriano',         'Sibling',      18, 'Student',     false)
   `);
 
   // ==========================================================================
-  // 5. CASES (8) – all 5 FSM statuses covered
+  // 5. INTERVENTION TYPES (7) – dynamic types managed by admin
   // ==========================================================================
-  console.log('[5/25] Seeding cases...');
+  console.log('[5/26] Seeding intervention_types...');
+  await q.query(`
+    INSERT INTO intervention_types (id, code, name, description, is_active)
+    VALUES
+      ('${ID.it_fa}',    'FA',   'Financial Assistance',  'Direct financial aid disbursement to beneficiaries',                        true),
+      ('${ID.it_c}',     'C',    'Cash Assistance',       'Cash-based assistance distribution',                                          true),
+      ('${ID.it_csr}',   'CSR',  'Case Study Report',     'Comprehensive Social Report – assessment documentation',                     true),
+      ('${ID.it_r}',     'R',    'Referral',              'Referral to external agency or service provider',                             true),
+      ('${ID.it_h}',     'H',    'Home Visit',            'Home visit for wellness check or monitoring',                                 true),
+      ('${ID.it_hv}',    'HV',   'Home Visit Variation',  'Home visit with additional services or distribution',                        true),
+      ('${ID.it_other}', 'Other','Other Intervention',    'Custom intervention type defined by admin',                                   true)
+    ON CONFLICT (code) DO NOTHING
+  `);
+
+  // ==========================================================================
+  // 6. CASES (8) – all 5 FSM statuses covered
+  // ==========================================================================
+  console.log('[6/26] Seeding cases...');
   await q.query(`
     INSERT INTO cases (id, control_no, beneficiary_id, service_requested, requirements_checklist, status, assigned_worker_id, created_at)
     VALUES
@@ -401,41 +496,42 @@ async function seed() {
   // ==========================================================================
   // 6. CASE HISTORY (25) – full FSM transition audit trail
   // ==========================================================================
-  console.log('[6/25] Seeding case_history...');
+  console.log('[7/26] Seeding case_history...');
   await q.query(`
     INSERT INTO case_history (id, case_id, from_status, to_status, changed_by_role, changed_by_id, remarks, transition_type, created_at)
     VALUES
       -- Case 1: pending → in_review → approved → disbursed (full happy path)
-      ('${ID.ch1}', '${ID.c_1}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_bigte}',   'Initial GIS intake completed',            'standard', '2025-01-15 09:05:00'),
-      ('${ID.ch2}', '${ID.c_1}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_bigte}',   'Intake assessment reviewed',              'standard', '2025-01-16 10:00:00'),
-      ('${ID.ch3}', '${ID.c_1}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Approved by coordinator review',          'standard', '2025-01-17 14:30:00'),
-      ('${ID.ch4}', '${ID.c_1}', 'approved',            'disbursed',          'coordinator',  '${ID.u_coordinator}',     'Funds disbursed via Landbank, PHP 5,000', 'standard', '2025-01-20 11:00:00'),
+      -- Coordinator field intake → social worker office review → coordinator approval → coordinator field disbursement
+      ('${ID.ch1}', '${ID.c_1}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'Field intake completed – Bigte home visit',         'standard', '2025-01-15 09:05:00'),
+      ('${ID.ch2}', '${ID.c_1}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_bigte}',   'Documents verified at MSWDO office',                'standard', '2025-01-16 10:00:00'),
+      ('${ID.ch3}', '${ID.c_1}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Approved by coordinator review',                    'standard', '2025-01-17 14:30:00'),
+      ('${ID.ch4}', '${ID.c_1}', 'approved',            'disbursed',          'coordinator',  '${ID.u_coordinator}',     'Funds disbursed via Landbank, PHP 5,000',           'standard', '2025-01-20 11:00:00'),
       -- Case 2: pending → in_review → approved
-      ('${ID.ch5}', '${ID.c_2}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_matictic}','GIS intake completed – medical emergency','standard','2025-02-10 10:35:00'),
-      ('${ID.ch6}', '${ID.c_2}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_matictic}','Assessment findings attached',            'standard', '2025-02-12 09:00:00'),
-      ('${ID.ch7}', '${ID.c_2}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Medical assistance approved, PHP 3,000',  'standard', '2025-02-14 16:00:00'),
+      ('${ID.ch5}', '${ID.c_2}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'Field intake – medical emergency flagged',           'standard','2025-02-10 10:35:00'),
+      ('${ID.ch6}', '${ID.c_2}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_matictic}','Office assessment: medical urgency verified',        'standard', '2025-02-12 09:00:00'),
+      ('${ID.ch7}', '${ID.c_2}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Medical assistance approved, PHP 3,000',             'standard', '2025-02-14 16:00:00'),
       -- Case 3: full path with override
-      ('${ID.ch8}', '${ID.c_3}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_bigte}',   'GIS intake – educational + financial',    'standard', '2025-02-20 14:10:00'),
-      ('${ID.ch9}', '${ID.c_3}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_bigte}',   'Fast-tracked due to enrollment deadline', 'standard', '2025-02-20 16:00:00'),
-      ('${ID.ch10}','${ID.c_3}', 'in_review',           'approved',           'admin',        '${ID.u_admin}',          'OVERRIDE: Mayor urgent endorsement',     'override', '2025-02-21 08:00:00'),
-      ('${ID.ch11}','${ID.c_3}', 'approved',            'disbursed',          'coordinator',  '${ID.u_coordinator}',     'PHP 8,000 disbursed (edu + cash aid)',    'standard', '2025-02-25 10:00:00'),
+      ('${ID.ch8}', '${ID.c_3}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'Field intake – educational + financial needs assessed','standard', '2025-02-20 14:10:00'),
+      ('${ID.ch9}', '${ID.c_3}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_bigte}',   'Fast-tracked due to enrollment deadline',            'standard', '2025-02-20 16:00:00'),
+      ('${ID.ch10}','${ID.c_3}', 'in_review',           'approved',           'admin',        '${ID.u_admin}',          'OVERRIDE: Mayor urgent endorsement',                 'override', '2025-02-21 08:00:00'),
+      ('${ID.ch11}','${ID.c_3}', 'approved',            'disbursed',          'coordinator',  '${ID.u_coordinator}',     'PHP 8,000 disbursed (edu + cash aid) in field',      'standard', '2025-02-25 10:00:00'),
       -- Case 4: pending → in_review → approved
-      ('${ID.ch12}','${ID.c_4}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_bigte}',   'PWD medical assistance intake',           'standard', '2025-03-05 08:20:00'),
-      ('${ID.ch13}','${ID.c_4}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_bigte}',   'PWD verification complete',               'standard', '2025-03-06 11:00:00'),
-      ('${ID.ch14}','${ID.c_4}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Approved PHP 4,500',                      'standard', '2025-03-08 09:00:00'),
+      ('${ID.ch12}','${ID.c_4}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'PWD medical field intake – home visit conducted',    'standard', '2025-03-05 08:20:00'),
+      ('${ID.ch13}','${ID.c_4}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_bigte}',   'Office PWD verification complete',                   'standard', '2025-03-06 11:00:00'),
+      ('${ID.ch14}','${ID.c_4}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Approved PHP 4,500',                                 'standard', '2025-03-08 09:00:00'),
       -- Case 5: full path → closed
-      ('${ID.ch15}','${ID.c_5}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_matictic}','Burial assistance intake',                'standard', '2025-03-15 11:10:00'),
-      ('${ID.ch16}','${ID.c_5}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_matictic}','Death cert & funeral docs verified',      'standard', '2025-03-16 14:00:00'),
-      ('${ID.ch17}','${ID.c_5}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Burial assistance PHP 10,000 approved',   'standard', '2025-03-17 10:00:00'),
-      ('${ID.ch18}','${ID.c_5}', 'approved',            'disbursed',          'coordinator',  '${ID.u_coordinator}',     'Disbursed to funeral home',               'standard', '2025-03-18 15:00:00'),
-      ('${ID.ch19}','${ID.c_5}', 'disbursed',           'closed',             'social_worker','${ID.u_worker_matictic}','Case closed – services rendered',         'standard', '2025-03-30 09:00:00'),
+      ('${ID.ch15}','${ID.c_5}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'Field intake – family bereavement assessment',       'standard', '2025-03-15 11:10:00'),
+      ('${ID.ch16}','${ID.c_5}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_matictic}','Death cert & funeral docs verified at office',       'standard', '2025-03-16 14:00:00'),
+      ('${ID.ch17}','${ID.c_5}', 'in_review',           'approved',           'coordinator',  '${ID.u_coordinator}',     'Burial assistance PHP 10,000 approved',              'standard', '2025-03-17 10:00:00'),
+      ('${ID.ch18}','${ID.c_5}', 'approved',            'disbursed',          'coordinator',  '${ID.u_coordinator}',     'Disbursed to funeral home',                          'standard', '2025-03-18 15:00:00'),
+      ('${ID.ch19}','${ID.c_5}', 'disbursed',           'closed',             'social_worker','${ID.u_worker_matictic}','Case closed – services rendered',                    'standard', '2025-03-30 09:00:00'),
       -- Case 6: pending → in_review (awaiting grades document)
-      ('${ID.ch20}','${ID.c_6}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_matictic}','Educational assistance intake',           'standard', '2025-04-01 13:15:00'),
-      ('${ID.ch21}','${ID.c_6}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_matictic}','Pending final grades submission',         'standard', '2025-04-03 10:00:00'),
+      ('${ID.ch20}','${ID.c_6}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'Field intake – educational assistance for college student','standard', '2025-04-01 13:15:00'),
+      ('${ID.ch21}','${ID.c_6}', 'pending_assessment',  'in_review',          'social_worker','${ID.u_worker_matictic}','Pending final grades submission – office follow-up','standard', '2025-04-03 10:00:00'),
       -- Case 7: just created (pending)
-      ('${ID.ch22}','${ID.c_7}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_bigte}',   'New intake – senior citizen assistance',  'standard', '2025-04-10 09:35:00'),
+      ('${ID.ch22}','${ID.c_7}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'Field intake – senior citizen assistance in Bigte',  'standard', '2025-04-10 09:35:00'),
       -- Case 8: just created (pending)
-      ('${ID.ch23}','${ID.c_8}', NULL,                  'pending_assessment', 'social_worker','${ID.u_worker_matictic}','New intake – medical certificate pending','standard','2025-04-12 15:50:00'),
+      ('${ID.ch23}','${ID.c_8}', NULL,                  'pending_assessment', 'coordinator',  '${ID.u_coordinator}',     'Field intake – medical certificate pending referral', 'standard','2025-04-12 15:50:00'),
 
       -- Additional history records for cases that had status jumps
       ('${ID.ch24}','${ID.c_4}', 'approved',            'in_review',          'admin',        '${ID.u_admin}',          'Returned for additional PWD verification','override', '2025-03-07 13:00:00'),
@@ -445,26 +541,26 @@ async function seed() {
   // ==========================================================================
   // 7. INTERVENTIONS (10) – varied types, fund sources, signature statuses
   // ==========================================================================
-  console.log('[7/25] Seeding interventions...');
+  console.log('[8/26] Seeding interventions...');
   await q.query(`
     INSERT INTO interventions (id, case_id, household_id, intervention_type, amount, fund_source, agency, service_date, voucher_no, or_reference, worker_signature_url, client_signature_url, client_receipt_url, signature_status, logged_by)
     VALUES
-      ('${ID.int1}',  '${ID.c_1}','${ID.hh_alcala}',  'FA', 5000.00, 'Regular', 'DSWD',       '2025-01-20','VCH-2025-001','OR-2025-001','/sig/worker/bigte/20250120.png','/sig/client/alcala/20250120.png','/receipt/alcala/20250120.png','signatures_collected','${ID.u_worker_bigte}'),
-      ('${ID.int2}',  '${ID.c_2}','${ID.hh_cruz}',     'C',  3000.00, 'Legislative','Congressman', '2025-02-14','VCH-2025-002','OR-2025-002','/sig/worker/matictic/20250214.png',NULL,NULL,'signatures_pending','${ID.u_worker_matictic}'),
-      ('${ID.int3}',  '${ID.c_3}','${ID.hh_garcia}',   'FA', 5000.00, 'Regular', 'DSWD',       '2025-02-25','VCH-2025-003','OR-2025-003','/sig/worker/bigte/20250225.png','/sig/client/garcia/20250225.png','/receipt/garcia/20250225.png','signatures_collected','${ID.u_worker_bigte}'),
-      ('${ID.int4}',  '${ID.c_3}','${ID.hh_garcia}',   'CSR',3000.00, 'PDAF',    'Senator Office','2025-02-25','VCH-2025-004','OR-2025-004','/sig/worker/bigte/20250225b.png','/sig/client/garcia/20250225b.png','/receipt/garcia/20250225b.png','signatures_collected','${ID.u_worker_bigte}'),
-      ('${ID.int5}',  '${ID.c_4}','${ID.hh_reyes}',    'R',  4500.00, 'Regular', 'DSWD',       '2025-03-08','VCH-2025-005','OR-2025-005','/sig/worker/bigte/20250308.png',NULL,NULL,'signatures_pending','${ID.u_worker_bigte}'),
-      ('${ID.int6}',  '${ID.c_5}','${ID.hh_mendoza}',  'FA', 10000.00,'Donation','LGU Norzagaray','2025-03-18','VCH-2025-006','OR-2025-006','/sig/worker/matictic/20250318.png','/sig/client/mendoza/20250318.png','/receipt/mendoza/20250318.png','signatures_collected','${ID.u_worker_matictic}'),
-      ('${ID.int7}',  '${ID.c_1}','${ID.hh_alcala}',  'HV', 2000.00, 'Regular', 'DSWD',       '2025-03-22','VCH-2025-007','OR-2025-007','/sig/worker/bigte/20250322.png','/sig/client/alcala/20250322.png','/receipt/alcala/20250322.png','signatures_collected','${ID.u_worker_bigte}'),
-      ('${ID.int8}',  '${ID.c_2}','${ID.hh_cruz}',     'H',  1500.00, 'Regular', 'DSWD',       '2025-03-28','VCH-2025-008','OR-2025-008','/sig/worker/matictic/20250328.png','/sig/client/cruz/20250328.png','/receipt/cruz/20250328.png','signatures_collected','${ID.u_worker_matictic}'),
-      ('${ID.int9}',  '${ID.c_5}','${ID.hh_mendoza}',  'FA', 5000.00, 'Regular', 'DSWD',       '2025-04-05','VCH-2025-009','OR-2025-009','/sig/worker/matictic/20250405.png','/sig/client/mendoza2/20250405.png','/receipt/mendoza2/20250405.png','signatures_collected','${ID.u_worker_matictic}'),
-      ('${ID.int10}', '${ID.c_4}','${ID.hh_reyes}',    'C',  2500.00, 'Regular', 'DSWD',       '2025-04-10','VCH-2025-010','OR-2025-010','/sig/worker/bigte/20250410.png',NULL,NULL,'signatures_pending','${ID.u_worker_bigte}')
+      ('${ID.int1}',  '${ID.c_1}','${ID.hh_alcala}',  'FA', 5000.00, 'Regular', 'DSWD',       '2025-01-20','VCH-2025-001','OR-2025-001','/sig/coordinator/20250120.png','/sig/client/alcala/20250120.png','/receipt/alcala/20250120.png','signatures_collected','${ID.u_coordinator}'),
+      ('${ID.int2}',  '${ID.c_2}','${ID.hh_cruz}',     'C',  3000.00, 'Legislative','Congressman', '2025-02-14','VCH-2025-002','OR-2025-002','/sig/coordinator/20250214.png',NULL,NULL,'signatures_pending','${ID.u_coordinator}'),
+      ('${ID.int3}',  '${ID.c_3}','${ID.hh_garcia}',   'FA', 5000.00, 'Regular', 'DSWD',       '2025-02-25','VCH-2025-003','OR-2025-003','/sig/coordinator/20250225.png','/sig/client/garcia/20250225.png','/receipt/garcia/20250225.png','signatures_collected','${ID.u_coordinator}'),
+      ('${ID.int4}',  '${ID.c_3}','${ID.hh_garcia}',   'CSR',3000.00, 'PDAF',    'Senator Office','2025-02-25','VCH-2025-004','OR-2025-004','/sig/coordinator/20250225b.png','/sig/client/garcia/20250225b.png','/receipt/garcia/20250225b.png','signatures_collected','${ID.u_coordinator}'),
+      ('${ID.int5}',  '${ID.c_4}','${ID.hh_reyes}',    'R',  4500.00, 'Regular', 'DSWD',       '2025-03-08','VCH-2025-005','OR-2025-005','/sig/coordinator/20250308.png',NULL,NULL,'signatures_pending','${ID.u_coordinator}'),
+      ('${ID.int6}',  '${ID.c_5}','${ID.hh_mendoza}',  'FA', 10000.00,'Donation','LGU Norzagaray','2025-03-18','VCH-2025-006','OR-2025-006','/sig/coordinator/20250318.png','/sig/client/mendoza/20250318.png','/receipt/mendoza/20250318.png','signatures_collected','${ID.u_coordinator}'),
+      ('${ID.int7}',  '${ID.c_1}','${ID.hh_alcala}',  'HV', 2000.00, 'Regular', 'DSWD',       '2025-03-22','VCH-2025-007','OR-2025-007','/sig/coordinator/20250322.png','/sig/client/alcala/20250322.png','/receipt/alcala/20250322.png','signatures_collected','${ID.u_coordinator}'),
+      ('${ID.int8}',  '${ID.c_2}','${ID.hh_cruz}',     'H',  1500.00, 'Regular', 'DSWD',       '2025-03-28','VCH-2025-008','OR-2025-008','/sig/coordinator/20250328.png','/sig/client/cruz/20250328.png','/receipt/cruz/20250328.png','signatures_collected','${ID.u_coordinator}'),
+      ('${ID.int9}',  '${ID.c_5}','${ID.hh_mendoza}',  'C',  5000.00, 'Regular', 'DSWD',       '2025-04-05','VCH-2025-009','OR-2025-009','/sig/coordinator/20250405.png','/sig/client/mendoza2/20250405.png','/receipt/mendoza2/20250405.png','signatures_collected','${ID.u_coordinator}'),
+      ('${ID.int10}', '${ID.c_4}','${ID.hh_reyes}',    'C',  2500.00, 'Regular', 'DSWD',       '2025-04-10','VCH-2025-010','OR-2025-010','/sig/coordinator/20250410.png',NULL,NULL,'signatures_pending','${ID.u_coordinator}')
   `);
 
   // ==========================================================================
   // 8. CASE TRACKER LOG (8) – daily transaction log
   // ==========================================================================
-  console.log('[8/25] Seeding case_tracker_log...');
+  console.log('[9/26] Seeding case_tracker_log...');
   await q.query(`
     INSERT INTO case_tracker_log (id, daily_seq_num, transaction_date, tracker_id, surname, first_name, middle_name, gender, age_range, client_category, barangay, intervention_remarks)
     VALUES
@@ -474,29 +570,29 @@ async function seed() {
       ('${ID.trk4}', 1, '2025-03-08','TRK-20250308-001','Reyes',    'Carmen',   'Villanueva','F','18-59','PWD',           'Partida',   'Medical Assistance — PHP 4,500'),
       ('${ID.trk5}', 1, '2025-03-18','TRK-20250318-001','Mendoza',  'Ricardo',  'Fernando', 'M','60+',  'Senior Citizen','San Mateo', 'Burial Assistance — PHP 10,000'),
       ('${ID.trk6}', 2, '2025-03-22','TRK-20250322-002','Alcala',   'Rodolfo',  'Garcia',   'M','18-59','Senior Citizen','Bigte',     'HV — PHP 2,000 (home visit)'),
-      ('${ID.trk7}', 1, '2025-04-05','TRK-20250405-001','Mendoza',  'Ricardo',  'Fernando', 'M','60+',  'Senior Citizen','San Mateo', 'FA follow-up — PHP 5,000'),
+      ('${ID.trk7}', 1, '2025-04-05','TRK-20250405-001','Mendoza',  'Ricardo',  'Fernando', 'M','60+',  'Senior Citizen','San Mateo', 'Cash Assistance follow-up — PHP 5,000'),
       ('${ID.trk8}', 1, '2025-04-10','TRK-20250410-001','Reyes',    'Carmen',   'Villanueva','F','18-59','PWD',           'Partida',   'Medicine assistance — PHP 2,500')
   `);
 
   // ==========================================================================
   // 9. ACCESS CARD SERVICES (6)
   // ==========================================================================
-  console.log('[9/25] Seeding access_card_services...');
+  console.log('[10/26] Seeding access_card_services...');
   await q.query(`
     INSERT INTO access_card_services (id, access_card_code, service_date, service_rendered, cost, agency, worker_name_sign, intervention_id)
     VALUES
-      ('${ID.acs1}','NORZ-AC-2025-0001','2025-01-20','Financial Aid Disbursement',  5000.00,'DSWD',           'Juan Dela Cruz',   '${ID.int1}'),
-      ('${ID.acs2}','NORZ-AC-2025-0001','2025-03-22','Home Visit – Wellness Check', 2000.00,'MSWDO',          'Juan Dela Cruz',   '${ID.int7}'),
-      ('${ID.acs3}','NORZ-AC-2025-0003','2025-02-14','Medical Assistance Referral', 3000.00,'Congressman Office','Lorna B. Santos', '${ID.int2}'),
-      ('${ID.acs4}','NORZ-AC-2025-0005','2025-02-25','Educational + Cash Aid',      8000.00,'DSWD',           'Juan Dela Cruz',   '${ID.int3}'),
-      ('${ID.acs5}','NORZ-AC-2025-0007','2025-03-18','Burial Assistance',           10000.00,'LGU Norzagaray', 'Lorna B. Santos', '${ID.int6}'),
-      ('${ID.acs6}','NORZ-AC-2025-0006','2025-03-08','PWD Medical Assistance',     4500.00,'DSWD',           'Juan Dela Cruz',   '${ID.int5}')
+      ('${ID.acs1}','NORZ-AC-2025-0001','2025-01-20','Financial Aid Disbursement',         5000.00,'DSWD',           'Emmanuel T. Reyes', '${ID.int1}'),
+      ('${ID.acs2}','NORZ-AC-2025-0001','2025-03-22','Home Visit – Wellness Check',        2000.00,'MSWDO',          'Emmanuel T. Reyes', '${ID.int7}'),
+      ('${ID.acs3}','NORZ-AC-2025-0003','2025-02-14','Medical Assistance Referral',        3000.00,'Congressman Office','Emmanuel T. Reyes','${ID.int2}'),
+      ('${ID.acs4}','NORZ-AC-2025-0005','2025-02-25','Educational + Cash Aid',             8000.00,'DSWD',           'Emmanuel T. Reyes', '${ID.int3}'),
+      ('${ID.acs5}','NORZ-AC-2025-0007','2025-03-18','Burial Assistance',                  10000.00,'LGU Norzagaray', 'Emmanuel T. Reyes', '${ID.int5}'),
+      ('${ID.acs6}','NORZ-AC-2025-0006','2025-03-08','PWD Medical Assistance',            4500.00,'DSWD',           'Emmanuel T. Reyes', '${ID.int5}')
   `);
 
   // ==========================================================================
   // 10. IRF CASES (4) – all categories & dispositions exercised
   // ==========================================================================
-  console.log('[10/25] Seeding irf_cases...');
+  console.log('[11/26] Seeding irf_cases...');
   await q.query(`
     INSERT INTO irf_cases (id, blotter_entry_number, case_category, datetime_reported, datetime_incident, item_a_reporting_person, item_b_person_reported, encrypted_narration, case_disposition, msdw_signature_url, reporting_signature_url)
     VALUES
@@ -532,7 +628,7 @@ async function seed() {
   // ==========================================================================
   // 11. PROGRAMS (6) – diverse programs with structured approval workflows
   // ==========================================================================
-  console.log('[11/25] Seeding programs...');
+  console.log('[12/26] Seeding programs...');
   await q.query(`
     INSERT INTO programs (id, name, category, waiting_period_days, required_documents, fund_sources, approval_workflow, form_template, legal_basis, is_active, form_version)
     VALUES
@@ -606,7 +702,7 @@ async function seed() {
   // ==========================================================================
   // 12. FORM VERSION HISTORY (3)
   // ==========================================================================
-  console.log('[12/25] Seeding form_version_history...');
+  console.log('[13/26] Seeding form_version_history...');
   await q.query(`
     INSERT INTO form_version_history (id, program_id, form_template, version, created_at)
     VALUES
@@ -618,7 +714,7 @@ async function seed() {
   // ==========================================================================
   // 13. PROGRAM ASSIGNMENTS (6)
   // ==========================================================================
-  console.log('[13/25] Seeding program_assignments...');
+  console.log('[14/26] Seeding program_assignments...');
   await q.query(`
     INSERT INTO program_assignments (id, case_id, program_id, status, current_step_order, assigned_worker_id)
     VALUES
@@ -633,7 +729,7 @@ async function seed() {
   // ==========================================================================
   // 14. PROGRAM ASSIGNMENT STEPS (18)
   // ==========================================================================
-  console.log('[14/25] Seeding program_assignment_steps...');
+  console.log('[15/26] Seeding program_assignment_steps...');
   await q.query(`
     INSERT INTO program_assignment_steps (id, assignment_id, step_order, step_name, approver_role, status, approved_by, approved_at, remarks)
     VALUES
@@ -666,7 +762,7 @@ async function seed() {
   // ==========================================================================
   // 15. CONSENT LEDGER (12) – one per beneficiary, varied channels & statuses
   // ==========================================================================
-  console.log('[15/25] Seeding consent_ledger...');
+  console.log('[16/26] Seeding consent_ledger...');
   await q.query(`
     INSERT INTO consent_ledger (id, beneficiary_id, purpose, channel, status, granted_at)
     VALUES
@@ -687,7 +783,7 @@ async function seed() {
   // ==========================================================================
   // 16. NOTIFICATIONS (10) – diverse categories & channels
   // ==========================================================================
-  console.log('[16/25] Seeding notifications...');
+  console.log('[17/26] Seeding notifications...');
   await q.query(`
     INSERT INTO notifications (id, recipient_id, title, message, category, reference_id, channel, is_read, sent, sent_at)
     VALUES
@@ -706,7 +802,7 @@ async function seed() {
   // ==========================================================================
   // 17. NOTIFICATION PREFERENCES (6)
   // ==========================================================================
-  console.log('[17/25] Seeding notification_preferences...');
+  console.log('[18/26] Seeding notification_preferences...');
   await q.query(`
     INSERT INTO notification_preferences (user_id, channel, category, opted_in)
     VALUES
@@ -721,24 +817,28 @@ async function seed() {
   // ==========================================================================
   // 18. CHAT MESSAGES (8) – conversation between workers & coordinator
   // ==========================================================================
-  console.log('[18/25] Seeding chat_messages...');
+  console.log('[19/26] Seeding chat_messages...');
   await q.query(`
     INSERT INTO chat_messages (id, sender_id, sender_name, recipient_id, content, is_read, conversation_id, read_at)
     VALUES
-      ('${ID.chat1}','${ID.u_worker_bigte}',   'Juan Dela Cruz',  '${ID.u_coordinator}', 'Sir Emmanuel, requesting expedited review for case NORZ-2025-0004 (PWD medical). Patient is scheduled for procedure next week.',false,'CONV-2025-001',NULL),
-      ('${ID.chat2}','${ID.u_coordinator}',    'Emmanuel Reyes',  '${ID.u_worker_bigte}', 'Noted, Juan. I will prioritize this. Please ensure the medical certificate is complete and legible.',true,'CONV-2025-001','2025-03-07 16:00:00'),
-      ('${ID.chat3}','${ID.u_worker_bigte}',   'Juan Dela Cruz',  '${ID.u_coordinator}', 'All documents are complete. PWD ID, med cert, and prescription attached. Thank you!',true,'CONV-2025-001','2025-03-08 09:00:00'),
-      ('${ID.chat4}','${ID.u_worker_matictic}','Lorna B. Santos', '${ID.u_worker_bigte}',  'Hi Juan, can you cover my barangay visits tomorrow for Tumana? I have a seminar at the Municipal Hall.',true,'CONV-2025-002','2025-03-10 15:30:00'),
-      ('${ID.chat5}','${ID.u_worker_bigte}',   'Juan Dela Cruz',  '${ID.u_worker_matictic}','No problem, Lorna. I will submit the tracker logs by end of day. Good luck at the seminar!',false,'CONV-2025-002',NULL),
-      ('${ID.chat6}','${ID.u_coordinator}',    'Emmanuel Reyes',  '${ID.u_worker_matictic}','Lorna, please expedite burial assistance case NORZ-2025-0005. The family is requesting urgent processing.',true,'CONV-2025-003','2025-03-15 14:00:00'),
-      ('${ID.chat7}','${ID.u_worker_matictic}','Lorna B. Santos', '${ID.u_coordinator}', 'Already processed, Sir. Death cert and funeral contract verified. Ready for your approval.',true,'CONV-2025-003','2025-03-16 10:00:00'),
-      ('${ID.chat8}','${ID.u_worker_bigte}',   'Juan Dela Cruz',  '${ID.u_coordinator}', 'Sir, re: NORZ-2025-0001 home visit. Completed wellness check and food pack distribution. Photos uploaded to vault.',false,'CONV-2025-004',NULL)
+      -- Coordinator (field) reports findings → Social Worker (office) reviews → Coordinator confirms
+      ('${ID.chat1}','${ID.u_coordinator}',   'Emmanuel Reyes',  '${ID.u_worker_bigte}',   'Sir Juan, requesting your review for case NORZ-2025-0004 (PWD medical). Patient is scheduled for procedure next week. All field docs attached.',false,'CONV-2025-001',NULL),
+      ('${ID.chat2}','${ID.u_worker_bigte}',  'Juan Dela Cruz',  '${ID.u_coordinator}',    'Noted, Emmanuel. Medical certificate is complete and legible. I will proceed with office assessment.',true,'CONV-2025-001','2025-03-07 16:00:00'),
+      ('${ID.chat3}','${ID.u_coordinator}',   'Emmanuel Reyes',  '${ID.u_worker_bigte}',   'Thank you, Sir. PWD ID, med cert, and prescription verified during home visit – all uploaded to vault.',true,'CONV-2025-001','2025-03-08 09:00:00'),
+      -- Social workers coordinate office tasks between themselves
+      ('${ID.chat4}','${ID.u_worker_matictic}','Lorna B. Santos', '${ID.u_worker_bigte}',  'Hi Juan, can you handle the pending case reviews for Tumana tomorrow? I have a seminar at the Municipal Hall.',true,'CONV-2025-002','2025-03-10 15:30:00'),
+      ('${ID.chat5}','${ID.u_worker_bigte}',  'Juan Dela Cruz',  '${ID.u_worker_matictic}','No problem, Lorna. I will process the pending assessments by end of day. Good luck at the seminar!',false,'CONV-2025-002',NULL),
+      -- Coordinator requests expedited review from social worker
+      ('${ID.chat6}','${ID.u_coordinator}',   'Emmanuel Reyes',  '${ID.u_worker_matictic}','Maam Lorna, requesting expedited review for burial assistance case NORZ-2025-0005. The family is requesting urgent processing.',true,'CONV-2025-003','2025-03-15 14:00:00'),
+      ('${ID.chat7}','${ID.u_worker_matictic}','Lorna B. Santos', '${ID.u_coordinator}',   'Already processed, Emmanuel. Death cert and funeral contract verified at office. Ready for your field disbursement.',true,'CONV-2025-003','2025-03-16 10:00:00'),
+      -- Coordinator reports field work completion to social worker
+      ('${ID.chat8}','${ID.u_coordinator}',   'Emmanuel Reyes',  '${ID.u_worker_bigte}',   'Sir, re: NORZ-2025-0001 home visit. Completed wellness check and food pack distribution today. Photos uploaded to vault.',false,'CONV-2025-004',NULL)
   `);
 
   // ==========================================================================
   // 19. CSR REPORTS (3)
   // ==========================================================================
-  console.log('[19/25] Seeding csr_reports...');
+  console.log('[20/26] Seeding csr_reports...');
   await q.query(`
     INSERT INTO csr_reports (id, case_id, control_no, social_worker_name, social_worker_position, referral_origin, reason_for_referral, problem_presented, family_background, socio_economic_profile, assessment_analysis, recommendation, intervention_plan, finalized, created_by)
     VALUES
@@ -773,21 +873,21 @@ async function seed() {
   // ==========================================================================
   // 20. DOCUMENT VAULT (5)
   // ==========================================================================
-  console.log('[20/25] Seeding document_vault...');
+  console.log('[21/26] Seeding document_vault...');
   await q.query(`
     INSERT INTO document_vault (id, file_name, original_name, mime_type, file_size, case_id, beneficiary_id, category, notes, uploaded_by)
     VALUES
-      ('${ID.doc1}', '/vault/med/med_cert_alcala_20250115.pdf','MedicalCertificate_Alcala_20250115.pdf','application/pdf',245760, '${ID.c_1}', '${ID.b_alcala}', 'Medical Certificate', 'Issued by Dr. Reyes, Rural Health Unit Bigte', '${ID.u_worker_bigte}'),
-      ('${ID.doc2}', '/vault/indigency/indigency_cruz_20250210.pdf','BrgyIndigency_Cruz_20250210.pdf','application/pdf',180224, '${ID.c_2}', '${ID.b_cruz}', 'Barangay Indigency', 'Certified by Barangay Captain, Matictic', '${ID.u_worker_matictic}'),
-      ('${ID.doc3}', '/vault/sig/signature_garcia_20250225.png','ClientSignature_Garcia_20250225.png','image/png', 51200, '${ID.c_3}', '${ID.b_garcia}', 'Signature', 'AKAP + Educational assistance client signature', '${ID.u_worker_bigte}'),
-      ('${ID.doc4}', '/vault/death/death_cert_mendoza_sr_20250315.pdf','DeathCert_MendozaSr_20250315.pdf','application/pdf',156672, '${ID.c_5}', '${ID.b_mendoza}', 'Death Certificate', 'Registered at Norzagaray Civil Registry', '${ID.u_worker_matictic}'),
-      ('${ID.doc5}', '/vault/photo/home_visit_alcala_20250322.jpg','HomeVisit_Alcala_20250322.jpg','image/jpeg', 204800, '${ID.c_1}', '${ID.b_alcala}', 'Field Photo', 'Wellness check home visit documentation', '${ID.u_worker_bigte}')
+      ('${ID.doc1}', '/vault/med/med_cert_alcala_20250115.pdf','MedicalCertificate_Alcala_20250115.pdf','application/pdf',245760, '${ID.c_1}', '${ID.b_alcala}', 'Medical Certificate', 'Collected during field intake – Dr. Reyes, RHU Bigte', '${ID.u_coordinator}'),
+      ('${ID.doc2}', '/vault/indigency/indigency_cruz_20250210.pdf','BrgyIndigency_Cruz_20250210.pdf','application/pdf',180224, '${ID.c_2}', '${ID.b_cruz}', 'Barangay Indigency', 'Certified by Barangay Captain, Matictic', '${ID.u_coordinator}'),
+      ('${ID.doc3}', '/vault/sig/signature_garcia_20250225.png','ClientSignature_Garcia_20250225.png','image/png', 51200, '${ID.c_3}', '${ID.b_garcia}', 'Signature', 'Client signature collected in field', '${ID.u_coordinator}'),
+      ('${ID.doc4}', '/vault/death/death_cert_mendoza_sr_20250315.pdf','DeathCert_MendozaSr_20250315.pdf','application/pdf',156672, '${ID.c_5}', '${ID.b_mendoza}', 'Death Certificate', 'Document retrieved from family during home visit', '${ID.u_coordinator}'),
+      ('${ID.doc5}', '/vault/photo/home_visit_alcala_20250322.jpg','HomeVisit_Alcala_20250322.jpg','image/jpeg', 204800, '${ID.c_1}', '${ID.b_alcala}', 'Field Photo', 'Wellness check home visit documentation', '${ID.u_coordinator}')
   `);
 
   // ==========================================================================
   // 21. SYNC QUEUE (3)
   // ==========================================================================
-  console.log('[21/25] Seeding sync_queue...');
+  console.log('[22/26] Seeding sync_queue...');
   await q.query(`
     INSERT INTO sync_queue (id, device_id, table_name, record_id, operation, payload, client_updated_at, status)
     VALUES
@@ -799,7 +899,7 @@ async function seed() {
   // ==========================================================================
   // 22. VERSION VECTORS (2)
   // ==========================================================================
-  console.log('[22/25] Seeding version_vectors...');
+  console.log('[23/26] Seeding version_vectors...');
   await q.query(`
     INSERT INTO version_vectors (device_id, table_name, local_version, server_version, last_synced_at)
     VALUES
@@ -810,7 +910,7 @@ async function seed() {
   // ==========================================================================
   // 23. OTP CODES (2)
   // ==========================================================================
-  console.log('[23/25] Seeding otp_codes...');
+  console.log('[24/26] Seeding otp_codes...');
   await q.query(`
     INSERT INTO otp_codes (phone, code, verified, expires_at)
     VALUES
@@ -821,7 +921,7 @@ async function seed() {
   // ==========================================================================
   // 24. AUDIT LOG (5)
   // ==========================================================================
-  console.log('[24/25] Seeding audit_log...');
+  console.log('[25/26] Seeding audit_log...');
   await q.query(`
     INSERT INTO audit_log (action, reference_id, user_id, details)
     VALUES
@@ -835,7 +935,7 @@ async function seed() {
   // ==========================================================================
   // 25. IDEMPOTENCY KEYS (2)
   // ==========================================================================
-  console.log('[25/25] Seeding idempotency_keys...');
+  console.log('[26/26] Seeding idempotency_keys...');
   await q.query(`
     INSERT INTO idempotency_keys (key, result)
     VALUES
@@ -858,12 +958,12 @@ async function seed() {
   console.log('  COMPREHENSIVE SEED COMPLETE');
   console.log('══════════════════════════════════════════════════════════');
   console.log('  users:                      8  (admin, 2 workers, coordinator, 2 claimants, mayor, auditor)');
-  console.log('  beneficiaries:             12  (across 7 barangays, 5 categories)');
-  console.log('  households:                 8  (4 barangays)');
-  console.log('  family_members:            24  (3 per household, varied relationships)');
+  console.log('  beneficiaries:             18  (across 13 barangays, 5 categories)');
+  console.log('  households:                14  (10 barangays)');
+  console.log('  family_members:            42  (3 per household, varied relationships)');
   console.log('  cases:                      8  (all 5 FSM statuses)');
   console.log('  case_history:              25  (full transitions + overrides)');
-  console.log('  interventions:             10  (6 types: FA/C/CSR/R/H/HV, varied fund sources)');
+  console.log('  interventions:             10  (admin-managed types, varied fund sources)');
   console.log('  case_tracker_log:           8  (daily transaction log)');
   console.log('  access_card_services:       6  (card-linked service history)');
   console.log('  irf_cases:                  4  (4 categories, 4 dispositions)');
@@ -882,8 +982,9 @@ async function seed() {
   console.log('  otp_codes:                  2');
   console.log('  audit_log:                  5');
   console.log('  idempotency_keys:           2');
+  console.log('  intervention_types:         7');
   console.log('──────────────────────────────────────────────────────────');
-  console.log('  Total:                    199 records across 25 tables');
+  console.log('  Total:                    236 records across 26 tables');
   console.log('');
   console.log('  Default passwords (all users):');
   console.log('    admin / workers:        admin123 / worker123');

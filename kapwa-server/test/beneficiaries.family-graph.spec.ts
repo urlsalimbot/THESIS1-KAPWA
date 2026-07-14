@@ -60,8 +60,8 @@ describe('BeneficiariesService — Family Graph (Recursive CTE)', () => {
   // Test 1: Returns members from same household (depth 0)
   it('should return family members from the same household (depth 0)', async () => {
     const mockMembers = [
-      { id: 'fm-1', fullName: 'Juan Cruz', relationship: 'Self', age: 45, statusIncome: 'Employed', isPrimary: true, depth: 0 },
-      { id: 'fm-2', fullName: 'Maria Cruz', relationship: 'Spouse', age: 42, statusIncome: 'Housewife', isPrimary: false, depth: 0 },
+      { id: 'fm-1', fullName: 'Juan Cruz', relationship: 'Self', age: 45, occupation: 'Employed', isPrimary: true, depth: 0 },
+      { id: 'fm-2', fullName: 'Maria Cruz', relationship: 'Spouse', age: 42, occupation: 'Housewife', isPrimary: false, depth: 0 },
     ];
 
     (familyMemberRepo.query as jest.Mock).mockResolvedValue(mockMembers);
@@ -80,9 +80,9 @@ describe('BeneficiariesService — Family Graph (Recursive CTE)', () => {
   // Test 2: Returns cross-household members up to depth 2
   it('should return cross-household members up to depth 2', async () => {
     const mockMembers = [
-      { id: 'fm-1', fullName: 'Juan Cruz', relationship: 'Self', age: 45, statusIncome: 'Employed', isPrimary: true, depth: 0 },
-      { id: 'fm-3', fullName: 'Pedro Cruz', relationship: 'Sibling', age: 40, statusIncome: 'Self-employed', isPrimary: false, depth: 1 },
-      { id: 'fm-4', fullName: 'Ana Cruz', relationship: 'Niece', age: 20, statusIncome: 'Student', isPrimary: false, depth: 2 },
+      { id: 'fm-1', fullName: 'Juan Cruz', relationship: 'Self', age: 45, occupation: 'Employed', isPrimary: true, depth: 0 },
+      { id: 'fm-3', fullName: 'Pedro Cruz', relationship: 'Sibling', age: 40, occupation: 'Self-employed', isPrimary: false, depth: 1 },
+      { id: 'fm-4', fullName: 'Ana Cruz', relationship: 'Niece', age: 20, occupation: 'Student', isPrimary: false, depth: 2 },
     ];
 
     (familyMemberRepo.query as jest.Mock).mockResolvedValue(mockMembers);

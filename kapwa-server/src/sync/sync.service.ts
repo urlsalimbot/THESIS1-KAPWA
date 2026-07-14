@@ -20,7 +20,7 @@ const ALLOWED_COLUMNS = new Set([
   "assigned_worker_id","case_id","intervention_type","amount","fund_source","agency",
   "service_rendered","service_date","voucher_no","or_reference","worker_signature_url","worker_name_sign","logged_by","hash",
   "philsys_number","access_card_code","consent_status","cost","search_vector","household_id",
-  "age","status_income","is_primary","blotter_entry_number","case_category",
+  "age","occupation","is_primary","blotter_entry_number","case_category",
   "datetime_reported","datetime_incident","item_a_reporting_person","item_b_person_reported",
   "encrypted_narration","case_disposition","msdw_signature_url","reporting_signature_url",
   "recipient_id","title","message","channel","phone","sent","sent_at","is_read","reference_id",

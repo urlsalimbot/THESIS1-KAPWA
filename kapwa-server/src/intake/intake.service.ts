@@ -73,7 +73,7 @@ export class IntakeService {
             fullName: fm.fullName,
             relationship: fm.relationship,
             age: fm.age,
-            statusIncome: fm.statusIncome,
+            occupation: fm.occupation,
           });
           await queryRunner.manager.save(member);
         }

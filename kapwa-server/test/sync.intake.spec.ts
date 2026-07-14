@@ -30,7 +30,7 @@ function makeIntakePayload() {
       category: 'Senior',
     },
     familyMembers: [
-      { fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, statusIncome: 'Employed' },
+      { fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, occupation: 'Employed' },
     ],
     case: {
       serviceRequested: ['FA', 'CSR'],
