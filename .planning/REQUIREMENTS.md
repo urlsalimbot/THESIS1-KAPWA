@@ -126,7 +126,7 @@
 
 - [ ] **INF-01**: MinIO (S3-compatible) for document vault (signatures, vouchers, IRF attachments)
 - [ ] **INF-02**: Caddy 2 reverse proxy with auto-TLS, rate limiting
-- [ ] **INF-03**: Docker Compose deployment with backup cron
+- [ ] **INF-03**: Podman deployment with backup cron
 - [ ] **INF-04**: Notifications (SMS via Twilio? + in-app) respecting consent preferences
 
 ---

@@ -15,10 +15,9 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
-// Base URL is centralized in src/lib/api.ts (reads VITE_API_URL there).
-// Pre-auth flows (/auth/login, /auth/mfa/verify) stay on raw fetch (D-15) and use this local constant
-// because they fire before the api client has a token to attach.
-const API = 'http://localhost:3000/api';
+// Use VITE_API_URL from api.ts — in dev this uses Vite's proxy /api to avoid CORS.
+// Falls back to relative /api so the current origin handles the request.
+const API = import.meta.env.VITE_API_URL || '/api';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

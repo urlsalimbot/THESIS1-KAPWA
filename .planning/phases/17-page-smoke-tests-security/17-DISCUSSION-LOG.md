@@ -37,7 +37,7 @@
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| ubuntu-latest + Node 20 + npm cache | Matches Dockerfile (Node 20 Alpine). Single OS is faster | |
+| ubuntu-latest + Node 20 + npm cache | Matches Dockerfile (Node 20 Slim). Single OS is faster | |
 | Matrix: ubuntu + macOS + Node 20 + Node 22 | Catches cross-platform. Slower (4x CI minutes) | |
 | ubuntu + Node 20 only (minimal) | Simplest but slower (no npm cache) | ✓ |
 

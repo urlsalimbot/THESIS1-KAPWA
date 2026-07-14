@@ -54,7 +54,7 @@ async function cacheFirst(request, cacheName) {
   if (cached) return cached;
   try {
     const res = await fetch(request);
-    if (res.ok) {
+    if (res.ok && request.method === 'GET') {
       const cache = await caches.open(cacheName);
       cache.put(request, res.clone());
     }
@@ -67,13 +67,13 @@ async function cacheFirst(request, cacheName) {
 async function networkFirst(request, cacheName) {
   try {
     const res = await fetch(request);
-    if (res.ok) {
+    if (res.ok && request.method === 'GET') {
       const cache = await caches.open(cacheName);
       cache.put(request, res.clone());
     }
     return res;
   } catch {
-    const cached = await caches.match(request);
+    const cached = request.method === 'GET' ? await caches.match(request) : undefined;
     if (cached) return cached;
     if (request.mode === 'navigate') return caches.match('/index.html');
     return new Response(JSON.stringify({ error: 'offline', message: 'You are offline' }), {

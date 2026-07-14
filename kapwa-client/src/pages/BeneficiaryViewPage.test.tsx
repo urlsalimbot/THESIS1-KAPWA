@@ -74,7 +74,7 @@ describe('BeneficiaryViewPage', () => {
     mockApiPut.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
-      if (k.includes('beneficiaries') && k.includes('detail')) return Promise.resolve(mockBeneficiary);
+      if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
       if (k.includes('cases') && k.includes('list')) return Promise.resolve(mockCases);
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
       if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);

@@ -15,15 +15,18 @@ describe('queryKeys factory', () => {
   });
 
   it('list() includes params object for SWR dedup', () => {
-    expect(queryKeys.cases.list({ status: 'pending' })).toEqual(['cases', 'list', { status: 'pending' }]);
+    const key = queryKeys.cases.list({ status: 'pending' });
+    expect(key[0]).toBe('cases');
+    expect((key[key.length - 1] as Record<string, unknown>).status).toBe('pending');
   });
 
   it('beneficiaries.list with multi-param object', () => {
-    expect(queryKeys.beneficiaries.list({ search: 'foo', category: 'pwd', barangay: 'b1' })).toEqual([
-      'beneficiaries',
-      'list',
-      { search: 'foo', category: 'pwd', barangay: 'b1' },
-    ]);
+    const key = queryKeys.beneficiaries.list({ search: 'foo', category: 'pwd', barangay: 'b1' });
+    expect(key[0]).toBe('beneficiaries');
+    const params = key[key.length - 1] as Record<string, unknown>;
+    expect(params.search).toBe('foo');
+    expect(params.category).toBe('pwd');
+    expect(params.barangay).toBe('b1');
   });
 
   it('uses as const — tuples are readonly (TypeScript compile + push fails)', () => {

@@ -22,7 +22,7 @@
 | **Server** | NestJS 10 + TypeScript + Node 20 LTS | Strict typing, Zod validation, modular guards | Sync endpoint, workflow router, ABAC evaluator, notification bus |
 | **Database** | PostgreSQL 16 | `pgcrypto`, `pgAudit`, RLS enabled, materialized views | Single source of truth, encrypted PII, immutable audit logs |
 | **Storage** | MinIO (S3-compatible) | SSE-S3 encryption, versioning, private buckets | Document vault (signatures, vouchers, IRF attachments) |
-| **Proxy/Infra** | Caddy 2 + Docker Compose + Ubuntu 22.04 | Auto-TLS, WAF, rate limiting, mTLS optional | Reverse proxy, connection pooling, backup cron |
+| **Proxy/Infra** | Caddy 2 + Podman + Ubuntu 22.04 | Auto-TLS, WAF, rate limiting, mTLS optional | Reverse proxy, connection pooling, backup cron |
 | **Sync Protocol** | Custom REST + Ed25519 + Idempotency Keys | Delta packaging, version vectors, semantic merge rules | Offline → online reconciliation without data loss |
 
 ---
@@ -299,7 +299,7 @@ CREATE TABLE consent_ledger (
 - [ ] Scaffold NestJS modules: `auth`, `sync`, `cases`, `interventions`, `programs`, `notifications`, `irf`, `audit`, `beneficiary_dashboard`
 - [ ] Configure Capacitor + SQLCipher + dynamic form renderer
 - [ ] Implement sync endpoint with Ed25519 verification + idempotency
-- [ ] Deploy Caddy + Docker Compose + backup cron
+- [ ] Deploy Caddy + Podman + backup cron
 - [ ] Run compliance audit script (RA 10173 field mapping, RLS policy validation, hash-chain integrity)
 - [ ] Generate OpenAPI spec + seed data for pilot UAT
 - [ ] Deliver Sprint 1 artifacts + architecture diagram + test results

@@ -6,7 +6,12 @@ import tailwindcss from '@tailwindcss/vite';
 export default {
   plugins: [react(), tailwindcss()],
   server: {
+    host: '0.0.0.0',
     port: 3001,
+    proxy: {
+      '/api': 'http://localhost:3000',
+      '/socket.io': { target: 'http://localhost:3000', ws: true },
+    },
     hmr: {
       overlay: false,
     },
@@ -15,13 +20,8 @@ export default {
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
-      react: path.resolve(import.meta.dirname, 'node_modules/react'),
-      'react-dom': path.resolve(import.meta.dirname, 'node_modules/react-dom'),
     },
     dedupe: ['react', 'react-dom'],
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom'],
   },
   test: {
     environment: 'jsdom',

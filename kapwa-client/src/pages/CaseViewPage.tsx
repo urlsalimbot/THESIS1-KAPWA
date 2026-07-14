@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { ArrowLeft, User, FileText, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
@@ -114,7 +114,7 @@ export function CaseViewPage() {
     clientCategory: caseData?.clientCategory || '',
     natureOfService: (caseData?.natureOfService || []) as string[],
     financialSubsidies: (caseData?.financialSubsidies || {}) as Record<string, unknown>,
-    amountAssistance: caseData?.amountAssistance || '' as string | number,
+    amountAssistance: caseData?.amountAssistance !== undefined && caseData?.amountAssistance !== null ? caseData.amountAssistance : '' as string | number,
     modeFinancialAssistance: caseData?.modeFinancialAssistance || '',
     sourceOfFund: caseData?.sourceOfFund || '',
     legislatorSpecify: caseData?.legislatorSpecify || '',
@@ -131,7 +131,7 @@ export function CaseViewPage() {
         clientCategory: caseData.clientCategory || '',
         natureOfService: (caseData.natureOfService || []) as string[],
         financialSubsidies: (caseData.financialSubsidies || {}) as Record<string, unknown>,
-        amountAssistance: caseData.amountAssistance || '',
+        amountAssistance: caseData.amountAssistance !== undefined && caseData.amountAssistance !== null ? caseData.amountAssistance : '',
         modeFinancialAssistance: caseData.modeFinancialAssistance || '',
         sourceOfFund: caseData.sourceOfFund || '',
         legislatorSpecify: caseData.legislatorSpecify || '',
@@ -147,7 +147,9 @@ export function CaseViewPage() {
       await api.patch(`/cases/${id}/assessment`, {
         ...assessment,
         interviewedBy: user?.fullName || '',
-        amountAssistance: typeof assessment.amountAssistance === 'string' ? parseFloat(assessment.amountAssistance) || 0 : assessment.amountAssistance,
+        amountAssistance: typeof assessment.amountAssistance === 'string' 
+          ? (assessment.amountAssistance === '' ? undefined : parseFloat(assessment.amountAssistance)) 
+          : assessment.amountAssistance,
       });
       await mutate(queryKeys.cases.detail(id!));
       setEditingAssessment(false);

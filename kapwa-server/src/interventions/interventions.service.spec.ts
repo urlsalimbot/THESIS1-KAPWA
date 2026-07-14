@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InterventionsService } from './interventions.service';
-import { Intervention, InterventionType, FundSource, SignatureStatus } from './intervention.entity';
+import { Intervention, FundSource, SignatureStatus } from './intervention.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MinioService } from '../minio/minio.service';
 import { TrackerService } from '../tracker/tracker.service';
+import { InterventionTypesService } from '../intervention-types/intervention-types.service';
 
 describe('InterventionsService', () => {
   let service: InterventionsService;
@@ -12,6 +13,7 @@ describe('InterventionsService', () => {
   let caseRepoMock: any;
   let minioServiceMock: any;
   let trackerServiceMock: any;
+  let interventionTypesServiceMock: any;
 
   beforeEach(async () => {
     interventionRepoMock = {
@@ -32,6 +34,9 @@ describe('InterventionsService', () => {
       generateTrackerId: jest.fn().mockResolvedValue("NORZ-TRACK-2026-0622-001"),
       createEntry: jest.fn().mockResolvedValue({}),
     };
+    interventionTypesServiceMock = {
+      validateCode: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -40,6 +45,7 @@ describe('InterventionsService', () => {
         { provide: getRepositoryToken(Case), useValue: caseRepoMock },
         { provide: MinioService, useValue: minioServiceMock },
         { provide: TrackerService, useValue: trackerServiceMock },
+        { provide: InterventionTypesService, useValue: interventionTypesServiceMock },
       ],
     }).compile();
 
@@ -64,7 +70,7 @@ describe('InterventionsService', () => {
       const caseEntity = { id: 'case-1', status: CaseStatus.APPROVED } as unknown as Case;
       caseRepoMock.findOne.mockResolvedValue(caseEntity);
       await expect(
-        service.create({ caseId: 'case-1', interventionType: InterventionType.FA } as any, 'user-1'),
+        service.create({ caseId: 'case-1', interventionType: 'FA' } as any, 'user-1'),
       ).rejects.toThrow('Case must be disbursed first');
     });
 
@@ -75,7 +81,7 @@ describe('InterventionsService', () => {
       interventionRepoMock.save.mockResolvedValue({ id: 'int-1', caseId: 'case-1' });
 
       const result = await service.create(
-        { caseId: 'case-1', interventionType: InterventionType.FA } as any,
+        { caseId: 'case-1', interventionType: 'FA' } as any,
         'user-1',
       );
       expect(result).toBeDefined();
@@ -89,7 +95,7 @@ describe('InterventionsService', () => {
       interventionRepoMock.save.mockImplementation((entity: any) => Promise.resolve({ ...entity, id: 'int-1' }));
 
       const result = await service.create(
-        { caseId: 'case-1', interventionType: InterventionType.FA } as any,
+        { caseId: 'case-1', interventionType: 'FA' } as any,
         'user-1',
       );
       expect(result.intervention?.signatureStatus).toBe(SignatureStatus.PENDING);
@@ -103,7 +109,7 @@ describe('InterventionsService', () => {
 
       await expect(
         service.create(
-          { caseId: 'case-1', interventionType: InterventionType.FA, householdId: 'hh-1' } as any,
+          { caseId: 'case-1', interventionType: 'FA', householdId: 'hh-1' } as any,
           'user-1',
         ),
       ).rejects.toThrow('Duplicate intervention');
@@ -116,7 +122,7 @@ describe('InterventionsService', () => {
       caseRepoMock.findOne.mockResolvedValue(caseEntity);
       caseRepoMock.query.mockResolvedValueOnce([{ access_card_code: null }]);
       await expect(
-        service.create({ caseId: 'case-1', interventionType: InterventionType.FA } as any, 'user-1')
+        service.create({ caseId: 'case-1', interventionType: 'FA' } as any, 'user-1')
       ).rejects.toThrow('overrideNoCardCheck');
     });
 
@@ -127,7 +133,7 @@ describe('InterventionsService', () => {
       interventionRepoMock.create.mockReturnValue({ id: 'int-1' });
       interventionRepoMock.save.mockResolvedValue({ id: 'int-1' });
       const result = await service.create(
-        { caseId: 'case-1', interventionType: InterventionType.FA, overrideNoCardCheck: true } as any,
+        { caseId: 'case-1', interventionType: 'FA', overrideNoCardCheck: true } as any,
         'user-1'
       );
       expect(result.warning).toBeDefined();
@@ -140,7 +146,7 @@ describe('InterventionsService', () => {
       caseRepoMock.query.mockResolvedValueOnce([{ access_card_code: null }]);
       await expect(
         service.create(
-          { caseId: 'case-1', interventionType: InterventionType.FA, overrideNoCardCheck: false } as any,
+          { caseId: 'case-1', interventionType: 'FA', overrideNoCardCheck: false } as any,
           'user-1'
         )
       ).rejects.toThrow('overrideNoCardCheck');
@@ -166,8 +172,8 @@ describe('InterventionsService', () => {
   describe('findByCase', () => {
     it('should return interventions for a case', async () => {
       interventionRepoMock.find.mockResolvedValue([
-        { id: 'int-1', interventionType: InterventionType.FA },
-        { id: 'int-2', interventionType: InterventionType.CSR },
+        { id: 'int-1', interventionType: 'FA' },
+        { id: 'int-2', interventionType: 'CSR' },
       ]);
       const result = await service.findByCase('case-1');
       expect(interventionRepoMock.find).toHaveBeenCalled();

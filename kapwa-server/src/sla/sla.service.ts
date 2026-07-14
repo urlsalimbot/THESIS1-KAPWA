@@ -4,7 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from '../cases/case.entity';
-import { Notification } from '../notifications/notification.entity';
+import { Notification, NotificationCategory } from '../notifications/notification.entity';
 
 @Injectable()
 export class SlaService {
@@ -73,6 +73,17 @@ export class SlaService {
     return { escalated, warnings };
   }
 
+  private statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      pending_assessment: 'Pending Assessment',
+      in_review: 'In Review',
+      approved: 'Approved',
+      disbursed: 'Disbursed',
+      closed: 'Closed',
+    };
+    return labels[status] || status;
+  }
+
   private async createAlert(c: Case, stage: string, message: string) {
     const admins = await this.caseRepo.query(
       `SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE`
@@ -81,8 +92,8 @@ export class SlaService {
       await this.notifRepo.save({
         recipientId: admin.id,
         title: `SLA Escalation: ${c.controlNo}`,
-        message: `${message} — Case ${c.controlNo} (${stage})`,
-        category: 'sla_escalation',
+        message: `${message} — Case ${c.controlNo} (${this.statusLabel(stage)})`,
+        category: NotificationCategory.SLA_ESCALATION,
         referenceId: c.id,
       } as any);
     }

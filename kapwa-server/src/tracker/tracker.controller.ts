@@ -2,12 +2,13 @@ import { Controller, Get, Post, Query, Body, UseGuards } from '@nestjs/common';
 import { TrackerService } from './tracker.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { CreateTrackerEntrySchema, CreateTrackerEntryInput } from './dto/tracker.zod';
 
 @Controller('tracker')
-@UseGuards(JwtAuthGuard, AbacGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 export class TrackerController {
   constructor(private readonly trackerService: TrackerService) {}
 

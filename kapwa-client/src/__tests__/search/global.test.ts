@@ -40,7 +40,7 @@ describe('useDebouncedSearch', () => {
     expect(fetcherMock).toHaveBeenCalledTimes(1);
     const calledKey = fetcherMock.mock.calls[0][0];
     expect(JSON.stringify(calledKey)).toContain('beneficiaries');
-    expect(JSON.stringify(calledKey)).toContain('list');
+    expect(JSON.stringify(calledKey)).toContain('search');
     expect(JSON.stringify(calledKey)).toContain('test');
 
     // Advancing the timer past 300ms has no further effect — no second fetch.

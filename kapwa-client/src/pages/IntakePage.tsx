@@ -55,6 +55,7 @@ export function IntakePage() {
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [hasConsent, setHasConsent] = useState(false);
 
   const age = computeAge(form.dob);
 
@@ -92,6 +93,11 @@ export function IntakePage() {
     setError('');
     if (!form.surname || !form.firstName || !form.dob || !form.gender || !form.placeOfBirth || !form.civilStatus || !form.cellularNumber || !form.occupation || !form.estimatedMonthlyIncome) {
       setError('Please fill in all required fields');
+      return;
+    }
+    if (!hasConsent) {
+      setError('Consent required per Data Privacy Act (RA 10173)');
+      setSubmitting(false);
       return;
     }
     setSubmitting(true);
@@ -298,6 +304,14 @@ export function IntakePage() {
               <Button type="button" variant="ghost" size="sm" onClick={() => removeFamilyMember(m.id)} className="text-destructive h-8">Remove</Button>
             </div>
           ))}
+        </div>
+
+        {/* Consent acknowledgment */}
+        <div className="rounded-lg border bg-card p-6">
+          <label className="flex items-start gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={hasConsent} onChange={e => setHasConsent(e.target.checked)} className="mt-0.5 rounded border-input text-primary" />
+            <span>I confirm the beneficiary has given consent per Data Privacy Act (RA 10173) and this data will be logged in the consent ledger</span>
+          </label>
         </div>
 
         <div className="flex gap-3">

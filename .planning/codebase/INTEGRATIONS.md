@@ -83,9 +83,9 @@
 ## CI/CD & Deployment
 
 **Hosting:**
-- Docker Compose deployment (local/server) — `kapwa-server/docker-compose.yml`
-- API container: Node 20 Alpine (`kapwa-server/Dockerfile`)
-- DB container: PostgreSQL 16 with pgAudit (`kapwa-server/Dockerfile.db`)
+- Podman deployment (local/server) — `kapwa-server/docker-compose.yml`
+- API container: Node 20 Slim (`kapwa-server/Dockerfile`)
+- DB container: PostgreSQL 16 with pgAudit (`kapwa-server/Dockerfile.db`, built by Podman)
 
 **CI Pipeline:**
 - None detected — No GitHub Actions, GitLab CI, or similar configuration
@@ -108,7 +108,7 @@
 
 **Secrets location:**
 - `kapwa-server/.env` file (gitignored)
-- `docker-compose.yml` has defaults for development (not for production)
+- `docker-compose.yml` has defaults for development (not for production); also usable via `podman-compose`
 
 ## Webhooks & Callbacks
 

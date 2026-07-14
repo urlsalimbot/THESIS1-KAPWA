@@ -6,7 +6,7 @@ import { ProgramAssignmentStep } from './program-assignment-step.entity';
 import { Program } from './program.entity';
 import { InterventionsService } from '../interventions/interventions.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { InterventionType, FundSource } from '../interventions/intervention.entity';
+import { FundSource } from '../interventions/intervention.entity';
 import { CreateAssignmentInput } from './dto/assignment.zod';
 
 @Injectable()
@@ -171,13 +171,13 @@ export class ProgramAssignmentsService {
     const program = await this.progRepo.findOne({ where: { id: assignment.programId } });
     if (!program) return;
 
-    // Map program category to intervention type
+    // Map program category to intervention type code
     const category = program.category || '';
-    let interventionType = InterventionType.FA;
-    if (category.toLowerCase().includes('medical')) interventionType = InterventionType.FA;
-    else if (category.toLowerCase().includes('cash')) interventionType = InterventionType.C;
-    else if (category.toLowerCase().includes('burial')) interventionType = InterventionType.C;
-    else if (category.toLowerCase().includes('food')) interventionType = InterventionType.FA;
+    let interventionType = 'FA';
+    if (category.toLowerCase().includes('medical')) interventionType = 'FA';
+    else if (category.toLowerCase().includes('cash')) interventionType = 'C';
+    else if (category.toLowerCase().includes('burial')) interventionType = 'C';
+    else if (category.toLowerCase().includes('food')) interventionType = 'FA';
 
     // Map fund source
     const fundSourceStr = program.fundSources?.[0] || 'Regular';

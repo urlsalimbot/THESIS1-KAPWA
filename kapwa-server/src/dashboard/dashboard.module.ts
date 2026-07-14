@@ -5,9 +5,10 @@ import { DashboardService } from './dashboard.service';
 import { Case } from '../cases/case.entity';
 import { Intervention } from '../interventions/intervention.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { VersionVector } from '../sync/version-vector.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Case, Intervention, Beneficiary])],
+  imports: [TypeOrmModule.forFeature([Case, Intervention, Beneficiary, VersionVector])],
   controllers: [DashboardController],
   providers: [DashboardService],
   exports: [DashboardService],

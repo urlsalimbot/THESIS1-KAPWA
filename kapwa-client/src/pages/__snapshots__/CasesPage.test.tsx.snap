@@ -25,55 +25,130 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
       class="flex flex-wrap items-center justify-between gap-3 mb-4"
     >
       <div
-        class="flex items-center gap-2"
+        class="flex items-center gap-2 flex-wrap"
       >
-        <button
-          aria-label="Filter cases"
-          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
+        <select
+          aria-label="Filter by barangay"
+          class="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-sliders-horizontal"
-            fill="none"
-            height="16"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="16"
-            xmlns="http://www.w3.org/2000/svg"
+          <option
+            value=""
           >
-            <path
-              d="M10 5H3"
-            />
-            <path
-              d="M12 19H3"
-            />
-            <path
-              d="M14 3v4"
-            />
-            <path
-              d="M16 17v4"
-            />
-            <path
-              d="M21 12h-9"
-            />
-            <path
-              d="M21 19h-5"
-            />
-            <path
-              d="M21 5h-7"
-            />
-            <path
-              d="M8 10v4"
-            />
-            <path
-              d="M8 12H3"
-            />
-          </svg>
-          Filter
-        </button>
+            All Barangays
+          </option>
+          <option
+            value="Barangay 1"
+          >
+            Barangay 1
+          </option>
+        </select>
+        <select
+          aria-label="Filter by category"
+          class="flex h-10 w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option
+            value=""
+          >
+            All Categories
+          </option>
+          <option
+            value="Senior"
+          >
+            Senior
+          </option>
+        </select>
+        <select
+          aria-label="Filter by status"
+          class="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option
+            value=""
+          >
+            All Statuses
+          </option>
+          <option
+            value="pending_assessment"
+          >
+            Pending
+          </option>
+          <option
+            value="in_review"
+          >
+            In Review
+          </option>
+          <option
+            value="approved"
+          >
+            Approved
+          </option>
+          <option
+            value="disbursed"
+          >
+            Disbursed
+          </option>
+          <option
+            value="closed"
+          >
+            Closed
+          </option>
+        </select>
+        <select
+          aria-label="Filter by gender"
+          class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option
+            value=""
+          >
+            All Genders
+          </option>
+          <option
+            value="M"
+          >
+            M
+          </option>
+        </select>
+        <select
+          aria-label="Filter by age range"
+          class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option
+            value=""
+          >
+            All Ages
+          </option>
+        </select>
+        <select
+          aria-label="Filter by SLA"
+          class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option
+            value=""
+          >
+            All SLA
+          </option>
+          <option
+            value="overdue"
+          >
+            Overdue
+          </option>
+          <option
+            value="on_track"
+          >
+            On Track
+          </option>
+        </select>
+        <input
+          aria-label="Date from"
+          class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-36"
+          type="date"
+          value=""
+        />
+        <input
+          aria-label="Date to"
+          class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-36"
+          type="date"
+          value=""
+        />
         <button
           aria-label="Export CSV"
           class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
@@ -141,22 +216,6 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
           />
         </div>
       </div>
-    </div>
-    <div
-      class="flex flex-wrap items-center gap-2 mb-4"
-    >
-      <button
-        aria-label="Filter by barangay"
-        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
-      >
-        By Barangay 
-      </button>
-      <button
-        aria-label="Filter by category"
-        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
-      >
-        By Category
-      </button>
     </div>
     <div>
       <div
@@ -260,11 +319,11 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
-                  <span
-                    class="font-medium"
+                  <button
+                    class="font-medium text-primary hover:underline text-left"
                   >
                     Dela Cruz
-                  </span>
+                  </button>
                 </td>
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
@@ -310,9 +369,9 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
                   <span
-                    class="text-xs text-muted-foreground"
+                    class="inline-flex items-center gap-1 rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
                   >
-                    —
+                    On Track
                   </span>
                 </td>
                 <td

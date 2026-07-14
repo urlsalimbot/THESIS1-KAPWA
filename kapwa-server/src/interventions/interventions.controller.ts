@@ -3,13 +3,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { InterventionsService } from './interventions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { CreateInterventionSchema, CreateInterventionInput } from './dto/interventions.zod';
 import { AuthenticatedRequest } from '../auth/types';
 
 @Controller('interventions')
-@UseGuards(JwtAuthGuard, AbacGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 export class InterventionsController {
   constructor(private intService: InterventionsService) {}
 

@@ -1,11 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
-import useSWRMutation from 'swr/mutation';
 import { mutate } from 'swr';
-import { Bell, BellRing, CheckCheck } from 'lucide-react';
+import { Bell, BellRing, CheckCheck, ExternalLink } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { api } from '../lib/api';
@@ -16,57 +15,47 @@ interface Notification {
   isRead: boolean; createdAt: string;
 }
 
+function hasToken(): boolean {
+  return !!localStorage.getItem('kapwa_token');
+}
+
+function markOneRead(id: string) {
+  api.post(`/notifications/${id}/read`).then(() => {
+    mutate(
+      queryKeys.notifications.list(),
+      (current: Notification[] | undefined) =>
+        (current || []).map(n => n.id === id ? { ...n, isRead: true } : n),
+      false,
+    );
+    mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
+  });
+}
+
+function markAllRead() {
+  api.post('/notifications/read-all').then(() => {
+    mutate(
+      queryKeys.notifications.list(),
+      (current: Notification[] | undefined) =>
+        (current || []).map(n => ({ ...n, isRead: true })),
+      false,
+    );
+    mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
+  });
+}
+
 export default function NotificationsDropdown() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const authed = hasToken();
 
   const { data: notifications, isLoading: loading } = useSWR<Notification[]>(
-    queryKeys.notifications.list(),
+    authed ? queryKeys.notifications.list() : null,
   );
   const { data: unreadData } = useSWR<{ count: number }>(
-    queryKeys.notifications.unreadCount(),
+    authed ? queryKeys.notifications.unreadCount() : null,
     { refreshInterval: 30000 },
   );
   const unreadCount = unreadData?.count ?? 0;
-
-  const markReadIdRef = useRef<string | null>(null);
-  const markRead = useSWRMutation(
-    queryKeys.notifications.list(),
-    async (_key: unknown, { arg }: { arg: { id: string } }) => {
-      markReadIdRef.current = arg.id;
-      await api.post(`/notifications/${arg.id}/read`);
-    },
-    {
-      optimisticData: (current: Notification[] | undefined) => {
-        const id = markReadIdRef.current;
-        return (current || []).map((n: Notification) =>
-          n.id === id ? { ...n, isRead: true } : n,
-        );
-      },
-      revalidate: false,
-      populateCache: true,
-      rollbackOnError: true,
-      onSuccess: () => {
-        mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
-      },
-    },
-  );
-
-  const markAllRead = useSWRMutation(
-    queryKeys.notifications.list(),
-    async () => {
-      await api.post('/notifications/read-all');
-    },
-    {
-      optimisticData: (current: Notification[] | undefined) =>
-        (current || []).map(n => ({ ...n, isRead: true })),
-      revalidate: false,
-      populateCache: true,
-      rollbackOnError: true,
-      onSuccess: () => {
-        mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
-      },
-    },
-  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -88,8 +77,8 @@ export default function NotificationsDropdown() {
               variant="ghost"
               size="sm"
               className="h-auto px-2 py-0.5 text-xs text-accent"
-              onClick={() => markAllRead.trigger()}
-              disabled={markAllRead.isMutating}
+              onClick={(e) => { e.stopPropagation(); markAllRead(); }}
+              disabled={false}
             >
               <CheckCheck size={14} className="mr-1" />
               Mark all read
@@ -107,7 +96,7 @@ export default function NotificationsDropdown() {
           {(notifications || []).slice(0, 10).map(n => (
             <button
               key={n.id}
-              onClick={() => !n.isRead && markRead.trigger({ id: n.id })}
+              onClick={(e) => { e.stopPropagation(); if (!n.isRead) markOneRead(n.id); }}
               className={cn(
                 'w-full text-left px-4 py-3 flex gap-3 hover:bg-muted/50 transition-colors border-b border-border last:border-b-0 cursor-pointer',
                 !n.isRead && 'bg-muted/30'
@@ -129,6 +118,17 @@ export default function NotificationsDropdown() {
             </button>
           ))}
         </div>
+        {(notifications?.length ?? 0) > 0 && (
+          <>
+            <Separator />
+            <div className="p-2">
+              <Button variant="ghost" size="sm" className="w-full justify-between" onClick={() => { setOpen(false); navigate('/notifications'); }}>
+                View all notifications
+                <ExternalLink size={14} />
+              </Button>
+            </div>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );

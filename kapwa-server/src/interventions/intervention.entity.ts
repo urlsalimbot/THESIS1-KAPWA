@@ -1,15 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Case } from '../cases/case.entity';
 
-export enum InterventionType {
-  FA = 'FA',
-  C = 'C',
-  CSR = 'CSR',
-  R = 'R',
-  H = 'H',
-  HV = 'HV'
-}
-
 export enum FundSource {
   REGULAR = 'Regular',
   PDAF = 'PDAF',
@@ -34,8 +25,8 @@ export class Intervention {
   @Column({ name: 'household_id', nullable: true })
   householdId?: string;
 
-  @Column({ name: 'intervention_type', type: 'enum', enum: InterventionType, nullable: true })
-  interventionType?: InterventionType;
+  @Column({ name: 'intervention_type', type: 'text', nullable: true })
+  interventionType?: string;
 
   @Column({ name: 'amount', type: 'decimal', precision: 12, scale: 2, nullable: true })
   amount?: number;

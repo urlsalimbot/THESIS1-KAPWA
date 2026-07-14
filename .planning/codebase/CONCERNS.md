@@ -114,7 +114,7 @@
 - **Risk:** The `.env` file at `kapwa-server/.env` exists on disk with `DB_PASSWORD` defaulting to `'kapwa'`. If this file contains actual credentials, they're stored in plaintext. If committed to git, credentials are exposed.
 - **Files:** `kapwa-server/.env`
 - **Current mitigation:** `.env` in `.gitignore` (standard practice), but file is on disk.
-- **Recommendations:** Audit `.env` contents. Document required env vars in a `.env.example` file. In production, use a secrets manager or Docker secrets instead of `.env`.
+- **Recommendations:** Audit `.env` contents. Document required env vars in a `.env.example` file. In production, use a secrets manager or Podman secrets instead of `.env`.
 
 ### Hardcoded Dev DB Credentials Across All Config Files
 

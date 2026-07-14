@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
 import { loadQueue } from '@/lib/offline-queue';
-import { createBreadcrumbs } from '@/lib/breadcrumbs';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { SidebarNavContent } from './Sidebar';
-import {
-  Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink,
-  BreadcrumbPage, BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/BottomNav';
@@ -22,29 +17,6 @@ import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 function computePendingCount(): number {
   try { const queue = loadQueue(); return queue.filter(c => c.status === 'pending').length; }
   catch { return 0; }
-}
-
-function BreadcrumbNav({ pathname }: { pathname: string }) {
-  const crumbs = createBreadcrumbs(pathname);
-
-  return (
-    <Breadcrumb className="mb-4">
-      <BreadcrumbList>
-        {crumbs.map((crumb, i) => (
-          <BreadcrumbItem key={crumb.href}>
-            {i > 0 && <BreadcrumbSeparator />}
-            {i < crumbs.length - 1 ? (
-              <BreadcrumbLink asChild>
-                <Link to={crumb.href}>{crumb.label}</Link>
-              </BreadcrumbLink>
-            ) : (
-              <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-            )}
-          </BreadcrumbItem>
-        ))}
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
 }
 
 export function Layout({ children }: { children?: React.ReactNode }) {
@@ -111,7 +83,6 @@ export function Layout({ children }: { children?: React.ReactNode }) {
 
         <main id="main-content" className="flex-1 min-h-0 p-6 bg-background overflow-auto pb-16 lg:pb-6">
           <ErrorBoundary>
-            <BreadcrumbNav pathname={location.pathname} />
             {children || <Outlet />}
           </ErrorBoundary>
         </main>

@@ -24,9 +24,12 @@ export class DashboardController {
       const userBarangay = req.user?.role === 'coordinator'
         ? req.user.assignedBarangay
         : undefined;
-      const metrics = await this.dashService.getMetrics(userBarangay);
-      const sla = await this.dashService.getSlaCompliance();
-      const servedToday = await this.dashService.getServedToday();
+      const [metrics, sla, servedToday, lastSync] = await Promise.all([
+        this.dashService.getMetrics(userBarangay),
+        this.dashService.getSlaCompliance(),
+        this.dashService.getServedToday(),
+        this.dashService.getLastSync(),
+      ]);
 
       let recentCasesRaw: any[] = [];
       try {
@@ -43,7 +46,7 @@ export class DashboardController {
         urgentCount: sla.overdueCount || 0,
         disbursedMonth: metrics.totalDisbursedAmount || 0,
         beneficiaryCount: metrics.uniqueHouseholds || 0,
-        lastSync: '2m ago',
+        lastSync,
         recentCases: recentCasesRaw.map((c: any) => ({
           id: c.controlNo,
           name: `${c.beneficiary?.firstName || ''} ${c.beneficiary?.surname || ''}`.trim(),

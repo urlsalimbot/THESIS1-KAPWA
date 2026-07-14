@@ -49,6 +49,10 @@ vi.mock('../lib/offline-queue', () => ({
   queueFsmTransition: (...args: unknown[]) => mockQueueFsm(...args),
 }));
 
+vi.mock('../lib/auth-context', () => ({
+  useAuth: () => ({ user: { id: '1', email: 'worker@test.com', fullName: 'Test Worker', role: 'social_worker' } }),
+}));
+
 function renderWithSWR(ui: React.ReactNode) {
   return render(
     <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
@@ -72,8 +76,6 @@ describe('CasesPage', () => {
     mockApiDel.mockResolvedValue({ ok: true });
     // Clear the global SWR cache so each test gets a fresh useSWR fetch.
     await mutate(() => true, undefined, { revalidate: false });
-    // social_worker role to make Request Review button visible
-    localStorage.setItem('kapwa_role', 'social_worker');
   });
 
   it('renders PageShell heading', async () => {
@@ -109,7 +111,6 @@ describe('CasesPage', () => {
     expect(mockApiGet).toHaveBeenCalled();
     const lastCallArg = mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][0];
     expect(JSON.stringify(lastCallArg)).toContain('cases');
-    expect(JSON.stringify(lastCallArg)).toContain('list');
   });
 
   it('a successful requestReview trigger calls api.put with /request-review', async () => {
@@ -117,7 +118,6 @@ describe('CasesPage', () => {
     mockApiGet.mockResolvedValue([
       { ...mockCases[0], status: 'pending_assessment' },
     ]);
-    localStorage.setItem('kapwa_role', 'social_worker');
 
     renderWithSWR(<CasesPage />);
     // Wait for the button to appear

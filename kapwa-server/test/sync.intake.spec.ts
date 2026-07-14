@@ -23,14 +23,18 @@ function makeIntakePayload() {
       firstName: 'Juan',
       middleName: 'Santos',
       gender: 'Male',
-      dob: '1980-01-15',
-      barangay: 'Barangay 1',
-      purok: 'Purok A',
-      phone: '09171234567',
-      category: 'Senior',
+      dob: '1990-05-15',
+      placeOfBirth: 'Norzagaray, Bulacan',
+      civilStatus: 'Married',
+      cellularNumber: '09171234567',
+      currentAddress: { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', postalCode: '3012' },
+      provincialAddress: { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', postalCode: '3012' },
+      occupation: 'Farmer',
+      estimatedMonthlyIncome: 8500,
+      philhealthNumber: '123456789001',
     },
     familyMembers: [
-      { fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, occupation: 'Employed' },
+      { fullName: 'Maria Dela Cruz', age: 35, relationship: 'Spouse', occupation: 'Housewife' },
     ],
     case: {
       serviceRequested: ['FA', 'CSR'],
@@ -168,7 +172,7 @@ describe('SyncService — Offline Intake Sync', () => {
         beneficiary: expect.objectContaining({
           surname: 'Dela Cruz',
           firstName: 'Juan',
-          barangay: 'Barangay 1',
+          cellularNumber: '09171234567',
         }),
         familyMembers: expect.arrayContaining([
           expect.objectContaining({ fullName: 'Maria Dela Cruz' }),

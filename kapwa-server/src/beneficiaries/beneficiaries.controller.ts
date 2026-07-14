@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Body, Query, UseGuards, Request } from '@
 import { BeneficiariesService } from './beneficiaries.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
@@ -9,7 +10,7 @@ import { AuthenticatedRequest } from '../auth/types';
 import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema } from './dto/beneficiaries.zod';
 
 @Controller('beneficiaries')
-@UseGuards(JwtAuthGuard, AbacGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 export class BeneficiariesController {
   constructor(private benService: BeneficiariesService) {}
 

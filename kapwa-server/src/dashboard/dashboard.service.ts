@@ -6,14 +6,31 @@ import { Repository } from 'typeorm';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { Intervention } from '../interventions/intervention.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { VersionVector } from '../sync/version-vector.entity';
 
 @Injectable()
 export class DashboardService {
   constructor(
     @InjectRepository(Case) private caseRepo: Repository<Case>,
     @InjectRepository(Intervention) private intRepo: Repository<Intervention>,
-    @InjectRepository(Beneficiary) private benRepo: Repository<Beneficiary>
+    @InjectRepository(Beneficiary) private benRepo: Repository<Beneficiary>,
+    @InjectRepository(VersionVector) private versionVectorRepo: Repository<VersionVector>
   ) {}
+
+  async getLastSync(): Promise<string> {
+    const result = await this.versionVectorRepo
+      .createQueryBuilder('v')
+      .select('MAX(v.lastSyncedAt)', 'last_sync')
+      .getRawOne<{ last_sync: Date | null }>();
+    if (!result?.last_sync) return 'Never';
+    const diff = Date.now() - new Date(result.last_sync).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  }
 
   async getServedToday(): Promise<number> {
     const today = new Date();

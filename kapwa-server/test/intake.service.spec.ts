@@ -32,21 +32,21 @@ describe('IntakeService — Consolidated Intake', () => {
       firstName: 'Juan',
       middleName: 'Santos',
       gender: 'Male',
-      dob: '1980-01-15',
-      barangay: 'Barangay 1',
-      purok: 'Purok A',
-      phone: '09171234567',
-      category: 'Senior',
+      dob: '1990-05-15',
+      placeOfBirth: 'Norzagaray, Bulacan',
+      civilStatus: 'Married',
+      cellularNumber: '09171234567',
+      currentAddress: { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', postalCode: '3012' },
+      provincialAddress: { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', postalCode: '3012' },
+      occupation: 'Farmer',
+      estimatedMonthlyIncome: 8500,
+      philhealthNumber: '123456789001',
     },
     familyMembers: [
-      { fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, occupation: 'Employed' },
+      { fullName: 'Maria Dela Cruz', age: 35, relationship: 'Spouse', occupation: 'Housewife' },
+      { fullName: 'Jose Dela Cruz', age: 10, relationship: 'Child', occupation: 'Student' },
     ],
-    case: {
-      serviceRequested: ['FA', 'CSR'],
-      requirementsChecklist: { med_cert: true, indigency: false, valid_id: true },
-      assessedBy: 'MSWDO Worker',
-      assignedWorkerId: '00000000-0000-0000-0000-000000000001',
-    },
+    case: {},
   };
 
   beforeEach(async () => {
@@ -100,12 +100,13 @@ describe('IntakeService — Consolidated Intake', () => {
   // Test 1: Happy path — creates all 5 entities
   it('should create Beneficiary + Household + FamilyMembers + Case + ConsentLedger on successful intake', async () => {
     const saveMock = mockQueryRunner.manager.save as jest.Mock;
-    // save order: beneficiary, household, beneficiary(update), familyMember, case, consentLedger
+    // save order: beneficiary, household, beneficiary(update), familyMember×2, case, consentLedger
     saveMock
-      .mockResolvedValueOnce({ id: benUuid, category: 'Senior', consentStatus: 'active' })
+      .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz', consentStatus: 'active' })
       .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
       .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
       .mockResolvedValueOnce({ id: 'fm-uuid-1', fullName: 'Maria Dela Cruz' })
+      .mockResolvedValueOnce({ id: 'fm-uuid-2', fullName: 'Jose Dela Cruz' })
       .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001', status: CaseStatus.PENDING })
       .mockResolvedValueOnce({ id: clUuid, status: 'active' });
 
@@ -136,6 +137,7 @@ describe('IntakeService — Consolidated Intake', () => {
       .mockResolvedValueOnce({ id: hhUuid })
       .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
       .mockResolvedValueOnce({ id: 'fm-uuid-1' })
+      .mockResolvedValueOnce({ id: 'fm-uuid-2' })
       .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001' })
       .mockResolvedValueOnce({ id: clUuid });
 
@@ -149,14 +151,15 @@ describe('IntakeService — Consolidated Intake', () => {
     expect(result.controlNo).toMatch(/^KAPWA-\d{4}-\d{5}$/);
   });
 
-  // Test 3: Beneficiary category stored
-  it('should store the beneficiary category value', async () => {
+  // Test 3: Beneficiary surname stored
+  it('should store the beneficiary surname value', async () => {
     const saveMock = mockQueryRunner.manager.save as jest.Mock;
     saveMock
-      .mockResolvedValueOnce({ id: benUuid, category: 'Senior' })
+      .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz' })
       .mockResolvedValueOnce({ id: hhUuid })
       .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
       .mockResolvedValueOnce({ id: 'fm-uuid-1' })
+      .mockResolvedValueOnce({ id: 'fm-uuid-2' })
       .mockResolvedValueOnce({ id: caseUuid })
       .mockResolvedValueOnce({ id: clUuid });
 
@@ -169,7 +172,7 @@ describe('IntakeService — Consolidated Intake', () => {
     await service.submitIntake(validInput);
 
     expect(benRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ category: 'Senior' })
+      expect.objectContaining({ surname: 'Dela Cruz' })
     );
   });
 
@@ -181,6 +184,7 @@ describe('IntakeService — Consolidated Intake', () => {
       .mockResolvedValueOnce({ id: hhUuid })
       .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
       .mockResolvedValueOnce({ id: 'fm-uuid-1' })
+      .mockResolvedValueOnce({ id: 'fm-uuid-2' })
       .mockRejectedValueOnce(new Error('Case creation failed'));
 
     (benRepo.create as jest.Mock).mockReturnValue({});
@@ -208,14 +212,6 @@ describe('IntakeService — Consolidated Intake', () => {
     const result = IntakeInputSchema.safeParse(invalidInput);
     expect(result.success).toBe(false);
 
-    // Invalid category enum
-    const badCategory = {
-      ...validInput,
-      beneficiary: { ...validInput.beneficiary, category: 'InvalidCat' as any },
-    };
-    const catResult = IntakeInputSchema.safeParse(badCategory);
-    expect(catResult.success).toBe(false);
-
     // Valid minimal input should pass
     const minimalValid = {
       beneficiary: {
@@ -223,7 +219,13 @@ describe('IntakeService — Consolidated Intake', () => {
         firstName: 'Test',
         gender: 'Male',
         dob: '2000-01-01',
-        barangay: 'Barangay 1',
+        placeOfBirth: 'Norzagaray, Bulacan',
+        civilStatus: 'Single',
+        cellularNumber: '09171234567',
+        currentAddress: {},
+        provincialAddress: {},
+        occupation: 'Farmer',
+        estimatedMonthlyIncome: 5000,
       },
       case: {},
     };
