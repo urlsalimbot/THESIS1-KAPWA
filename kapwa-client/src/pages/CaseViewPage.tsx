@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
-import useSWRMutation from 'swr/mutation';
 import { ArrowLeft, User, FileText, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -405,7 +404,14 @@ export function CaseViewPage() {
                     <div className="grid grid-cols-2 gap-2">
                       {FINANCIAL_SUBSIDIES.map(sub => (
                         <label key={sub} className="flex items-center gap-2 text-sm cursor-pointer">
-                          <input type="checkbox" checked={!!assessment.financialSubsidies[sub]} onChange={() => setAssessment(a => ({ ...a, financialSubsidies: { ...a.financialSubsidies, [sub]: !a.financialSubsidies[sub] } }))} className="rounded border-input text-primary" />
+                          <input type="checkbox" checked={!!assessment.financialSubsidies[sub]} onChange={() => {
+                            const newVal = !assessment.financialSubsidies[sub];
+                            const updates: Record<string, unknown> = { financialSubsidies: { ...assessment.financialSubsidies, [sub]: newVal } };
+                            if (sub === 'Guarantee Letter' && newVal) {
+                              updates.modeFinancialAssistance = '';
+                            }
+                            setAssessment(a => ({ ...a, ...updates }));
+                          }} className="rounded border-input text-primary" />
                           {sub}
                         </label>
                       ))}
