@@ -12,10 +12,22 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-// SWR's global fetcher receives the full queryKey tuple from queryKeys.* — join array parts with '/'.
+// SWR's global fetcher receives the full queryKey tuple from queryKeys.*.
+// Join array parts with '/' and serialize the last object element as query params.
 function normalizePath(path: string | readonly unknown[]): string {
   if (Array.isArray(path)) {
-    return '/' + path.filter((p) => p !== null && p !== undefined && p !== '').join('/');
+    const parts = [...path];
+    let queryString = '';
+    const last = parts[parts.length - 1];
+    if (typeof last === 'object' && last !== null && !Array.isArray(last) && !(last instanceof Date)) {
+      parts.pop();
+      const entries = Object.entries(last as Record<string, unknown>)
+        .filter(([_, v]) => v !== null && v !== undefined && v !== '');
+      if (entries.length > 0) {
+        queryString = '?' + entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&');
+      }
+    }
+    return '/' + parts.filter((p) => p !== null && p !== undefined && p !== '').join('/') + queryString;
   }
   return path;
 }
@@ -42,7 +54,7 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
 }
 
 async function rawRequest<T>(
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body: unknown,
   callerSignal: AbortSignal | undefined,
@@ -117,7 +129,7 @@ async function refreshToken(): Promise<boolean> {
 }
 
 async function executeWithRetry<T>(
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body: unknown,
   signal: AbortSignal | undefined,
@@ -159,6 +171,8 @@ export const api = {
     executeWithRetry<T>('POST', path, body, opts?.signal),
   put: <T>(path: ApiPath, body?: unknown, opts?: { signal?: AbortSignal }) =>
     executeWithRetry<T>('PUT', path, body, opts?.signal),
+  patch: <T>(path: ApiPath, body?: unknown, opts?: { signal?: AbortSignal }) =>
+    executeWithRetry<T>('PATCH', path, body, opts?.signal),
   del: <T>(path: ApiPath, opts?: { signal?: AbortSignal }) =>
     executeWithRetry<T>('DELETE', path, undefined, opts?.signal),
 };
