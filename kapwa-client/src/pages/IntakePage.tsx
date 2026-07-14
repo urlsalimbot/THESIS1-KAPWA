@@ -72,7 +72,7 @@ export function IntakePage() {
 
   function addFamilyMember() {
     setFamily(prev => [...prev, {
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       fullName: '',
       age: '' as const,
       relationship: 'Spouse',
