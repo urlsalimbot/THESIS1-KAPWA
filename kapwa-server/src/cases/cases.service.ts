@@ -6,6 +6,7 @@ import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory } from '../notifications/notification.entity';
+import { AssessmentInput } from './dto/cases.zod';
 import {
   SATURDAY, SUNDAY,
   PENDING_ESCALATION_DAYS, REVIEW_ESCALATION_DAYS, APPROVED_ESCALATION_DAYS,
@@ -74,9 +75,9 @@ export class CasesService {
   async findAll(status?: CaseStatus) {
     let cases: Case[];
     if (status) {
-      cases = await this.caseRepo.find({ where: { status }, take: DEFAULT_LIST_LIMIT });
+      cases = await this.caseRepo.find({ where: { status }, relations: ['beneficiary'], take: DEFAULT_LIST_LIMIT });
     } else {
-      cases = await this.caseRepo.find({ take: DEFAULT_LIST_LIMIT });
+      cases = await this.caseRepo.find({ relations: ['beneficiary'], take: DEFAULT_LIST_LIMIT });
     }
     return cases.map(c => ({
       ...c,
@@ -317,6 +318,26 @@ export class CasesService {
     if (data.certificateUrl !== undefined) c.certificateUrl = data.certificateUrl;
     if (data.pettyCashVoucherUrl !== undefined) c.pettyCashVoucherUrl = data.pettyCashVoucherUrl;
     c.updatedAt = new Date();
+    return this.caseRepo.save(c);
+  }
+
+  async updateAssessment(id: string, data: AssessmentInput) {
+    const c = await this.findById(id);
+    Object.assign(c, {
+      problemsPresented: data.problemsPresented,
+      socialWorkerAssessment: data.socialWorkerAssessment,
+      clientCategory: data.clientCategory,
+      natureOfService: data.natureOfService,
+      financialSubsidies: data.financialSubsidies,
+      amountAssistance: data.amountAssistance,
+      modeFinancialAssistance: data.modeFinancialAssistance,
+      sourceOfFund: data.sourceOfFund,
+      legislatorSpecify: data.legislatorSpecify,
+      otherAssistance: data.otherAssistance,
+      interviewedBy: data.interviewedBy,
+      clientSignature: data.clientSignature,
+      updatedAt: new Date(),
+    });
     return this.caseRepo.save(c);
   }
 
