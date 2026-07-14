@@ -19,6 +19,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
+function formatMoney(val: string): string {
+  const num = parseFloat(val.replace(/,/g, ''));
+  if (isNaN(num)) return val.replace(/,/g, '');
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   pending_assessment: 'outline',
   in_review: 'secondary',
@@ -148,7 +154,7 @@ export function CaseViewPage() {
         ...assessment,
         interviewedBy: user?.fullName || '',
         amountAssistance: typeof assessment.amountAssistance === 'string' 
-          ? (assessment.amountAssistance === '' ? undefined : parseFloat(assessment.amountAssistance)) 
+          ? (assessment.amountAssistance === '' ? undefined : parseFloat(assessment.amountAssistance.replace(/,/g, ''))) 
           : assessment.amountAssistance,
       });
       await mutate(queryKeys.cases.detail(id!));
@@ -429,7 +435,7 @@ export function CaseViewPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">15a. Amount (₱)</label>
-                        <Input type="number" min="0" step="0.01" value={assessment.amountAssistance} onChange={e => setAssessment(a => ({ ...a, amountAssistance: e.target.value }))} aria-label="Amount" />
+                        <Input type="text" inputMode="numeric" value={assessment.amountAssistance} onChange={e => setAssessment(a => ({ ...a, amountAssistance: e.target.value.replace(/,/g, '') }))} onBlur={e => { const formatted = formatMoney(e.target.value); setAssessment(a => ({ ...a, amountAssistance: formatted })); }} aria-label="Amount" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">15b. Mode of Financial Assistance</label>

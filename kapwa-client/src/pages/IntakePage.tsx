@@ -19,6 +19,12 @@ function computeAge(dob: string): number {
   return age;
 }
 
+function formatMoney(val: string): string {
+  const num = parseFloat(val.replace(/,/g, ''));
+  if (isNaN(num)) return val.replace(/,/g, '');
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 interface FamilyMember {
   id: string;
   fullName: string;
@@ -117,7 +123,7 @@ export function IntakePage() {
           provincialAddress: form.provincialAddress,
           philhealthNumber: form.philhealthNumber || undefined,
           occupation: form.occupation,
-          estimatedMonthlyIncome: parseFloat(form.estimatedMonthlyIncome) || 0,
+          estimatedMonthlyIncome: parseFloat(form.estimatedMonthlyIncome.replace(/,/g, '')) || 0,
         },
         familyMembers: family.filter(m => m.fullName.trim()).map(f => ({
           fullName: f.fullName,
@@ -267,7 +273,7 @@ export function IntakePage() {
                 <label className="text-sm font-medium">11. Estimated Monthly Income *</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₱</span>
-                  <Input type="number" min="0" step="0.01" required value={form.estimatedMonthlyIncome} onChange={e => update('estimatedMonthlyIncome', e.target.value)} aria-label="Estimated Monthly Income" className="pl-7" />
+                  <Input type="text" inputMode="numeric" required value={form.estimatedMonthlyIncome} onChange={e => update('estimatedMonthlyIncome', e.target.value.replace(/,/g, ''))} onBlur={e => update('estimatedMonthlyIncome', formatMoney(e.target.value))} aria-label="Estimated Monthly Income" className="pl-7" />
                 </div>
               </div>
             </div>
