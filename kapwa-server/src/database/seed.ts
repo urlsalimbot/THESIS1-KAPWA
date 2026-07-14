@@ -36,11 +36,11 @@ async function seed() {
   `, [adminPass]);
 
   await q.query(`
-    INSERT INTO beneficiaries (id, philsys_number, surname, first_name, middle_name, gender, dob, address, phone, access_card_code)
+    INSERT INTO beneficiaries (id, philsys_number, surname, first_name, middle_name, gender, dob, address, phone, access_card_code, consent_status, category, place_of_birth, civil_status, current_address, provincial_address, philhealth_number, occupation, estimated_monthly_income, age)
     VALUES 
-      ('f47ac10b-58cc-4372-a567-0e02b2c3d479', '1234-5678-9012', 'Dela Cruz', 'Juan', 'Santos', 'Male', '1985-06-15', '123 Poblacion, Bigte', '09171234567', 'NORZ-AC-2024-0001'),
-      ('f47ac10b-58cc-4372-a567-0e02b2c3d480', '1234-5678-9013', 'Mendoza', 'Maria', 'Reyes', 'Female', '1990-03-22', '456 Purok 3, Matictic', '09179876543', 'NORZ-AC-2024-0002'),
-      ('f47ac10b-58cc-4372-a567-0e02b2c3d481', '1234-5678-9014', 'Santos', 'Jose', 'Garcia', 'Male', '1978-11-08', '789 Purok 7, Partida', '09177654321', 'NORZ-AC-2024-0003')
+      ('f47ac10b-58cc-4372-a567-0e02b2c3d479', '1234-5678-9012', 'Dela Cruz', 'Juan', 'Santos', 'Male', '1985-06-15', '123 Poblacion, Bigte', '09171234567', 'NORZ-AC-2024-0001', 'active', 'Family', 'Norzagaray, Bulacan', 'Married', '{"street":"123 Poblacion","barangay":"Bigte","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb, '{"street":"123 Poblacion","barangay":"Bigte","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb, '123456789019', 'Laborer', 8500.00, 40),
+      ('f47ac10b-58cc-4372-a567-0e02b2c3d480', '1234-5678-9013', 'Mendoza', 'Maria', 'Reyes', 'Female', '1990-03-22', '456 Purok 3, Matictic', '09179876543', 'NORZ-AC-2024-0002', 'active', 'Women', 'Norzagaray, Bulacan', 'Single', '{"street":"456 Purok 3","barangay":"Matictic","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb, '{"street":"456 Purok 3","barangay":"Matictic","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb, '123456789020', 'Vendor', 6200.00, 35),
+      ('f47ac10b-58cc-4372-a567-0e02b2c3d481', '1234-5678-9014', 'Santos', 'Jose', 'Garcia', 'Male', '1978-11-08', '789 Purok 7, Partida', '09177654321', 'NORZ-AC-2024-0003', 'active', 'Family', 'Norzagaray, Bulacan', 'Married', '{"street":"789 Purok 7","barangay":"Partida","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb, '{"street":"789 Purok 7","barangay":"Partida","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb, '123456789021', 'Driver', 7000.00, 47)
   `);
 
   await q.query(`
