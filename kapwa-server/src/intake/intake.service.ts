@@ -44,11 +44,18 @@ export class IntakeService {
         middleName: data.beneficiary.middleName,
         gender: data.beneficiary.gender,
         dob: new Date(data.beneficiary.dob),
-        address: data.beneficiary.purok
-          ? `${data.beneficiary.purok}, ${data.beneficiary.barangay}`
-          : data.beneficiary.barangay,
-        phone: data.beneficiary.phone,
-        category: data.beneficiary.category,
+        age: data.beneficiary.age || undefined,
+        placeOfBirth: data.beneficiary.placeOfBirth,
+        civilStatus: data.beneficiary.civilStatus,
+        phone: data.beneficiary.cellularNumber,
+        currentAddress: data.beneficiary.currentAddress,
+        provincialAddress: data.beneficiary.provincialAddress,
+        philhealthNumber: data.beneficiary.philhealthNumber || undefined,
+        occupation: data.beneficiary.occupation,
+        estimatedMonthlyIncome: data.beneficiary.estimatedMonthlyIncome,
+        address: data.beneficiary.currentAddress?.street
+          ? `${data.beneficiary.currentAddress.street}, ${data.beneficiary.currentAddress.barangay || ''}`
+          : undefined,
         consentStatus: 'active',
       });
       const savedBeneficiary = await queryRunner.manager.save(beneficiary);
@@ -56,7 +63,8 @@ export class IntakeService {
       // 2. Create Household
       const household = this.hhRepo.create({
         primaryBeneficiaryId: savedBeneficiary.id,
-        barangay: data.beneficiary.barangay,
+        barangay: data.beneficiary.currentAddress?.barangay || '',
+        estimatedIncome: data.beneficiary.estimatedMonthlyIncome,
       });
       const savedHousehold = await queryRunner.manager.save(household);
 
