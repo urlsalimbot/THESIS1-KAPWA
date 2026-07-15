@@ -1,0 +1,12 @@
+node_modules
+.git
+*.md
+coverage
+test
+tests
+.vite
+.gitignore
+.eslintrc*
+.prettierrc*
+tsconfig*.json
+vitest.config.*

@@ -94,6 +94,19 @@ services:
       retries: 5
       start_period: 30s
 
+  client:
+    build:
+      context: ../kapwa-client
+    container_name: kapwa-client
+    restart: unless-stopped
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
   caddy:
     build:
       context: .
@@ -109,7 +122,6 @@ services:
       - ../infra/Caddyfile:/etc/caddy/Caddyfile:ro,z
       - caddy-data:/data:z
       - ../infra/.env.production:/etc/caddy/.env:ro,z
-      - ../kapwa-client/dist:/var/www/kapwa:ro,z
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:80/health || exit 1"]
       interval: 15s
@@ -119,6 +131,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      client:
+        condition: service_started
 
 volumes:
   kapwa-data:

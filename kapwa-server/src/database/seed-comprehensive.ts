@@ -417,10 +417,6 @@ async function seed() {
       ('${ID.fm22}', '${ID.hh_aquino}',  'Sofia Aquino',       'Self',         27, '',                    NULL::decimal, 'Student',      true),
       ('${ID.fm23}', '${ID.hh_aquino}',  'Bella Aquino',       'Sibling',      19, '',                    NULL::decimal, 'Student',      false),
       ('${ID.fm24}', '${ID.hh_aquino}',  'Alfredo Aquino Sr.', 'Father',       55, 'Janitor',            6000,          'Employed',     false),
-      -- Aquino household (San Mateo)
-      ('${ID.fm22}', '${ID.hh_aquino}',  'Sofia Aquino',       'Self',         27, 'Student',     true),
-      ('${ID.fm23}', '${ID.hh_aquino}',  'Bella Aquino',       'Sibling',      19, 'Student',     false),
-      ('${ID.fm24}', '${ID.hh_aquino}',  'Alfredo Aquino Sr.', 'Father',       55, 'Employed',    false),
       -- Dela Cruz household (Pugad)
       ('${ID.fm25}', '${ID.hh_delacruz}',  'Nenita Dela Cruz',     'Self',         72, 'Retired',            5000,          'Retired',      true),
       ('${ID.fm26}', '${ID.hh_delacruz}',  'Mario Dela Cruz',      'Spouse',       75, 'Pensioner',          3000,          'Retired',      false),
