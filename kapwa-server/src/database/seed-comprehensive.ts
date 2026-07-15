@@ -383,64 +383,68 @@ async function seed() {
   // ==========================================================================
   console.log('[4/26] Seeding 42 family members...');
   await q.query(`
-    INSERT INTO family_members (id, household_id, full_name, relationship, age, occupation, is_primary)
+    INSERT INTO family_members (id, household_id, full_name, relationship, age, occupation, income, status, is_primary)
     VALUES
       -- Alcala household (Bigte)
-      ('${ID.fm1}',  '${ID.hh_alcala}',  'Rosa Alcala',       'Spouse',       48, 'Unemployed', false),
-      ('${ID.fm2}',  '${ID.hh_alcala}',  'Mark Alcala',        'Child',        22, 'Employed',    false),
-      ('${ID.fm3}',  '${ID.hh_alcala}',  'Jenny Alcala',       'Child',        16, 'Student',     false),
+      ('${ID.fm1}',  '${ID.hh_alcala}',  'Rosa Alcala',       'Spouse',       48, 'Housewife',         NULL::decimal, 'Unemployed',   false),
+      ('${ID.fm2}',  '${ID.hh_alcala}',  'Mark Alcala',        'Child',        22, 'Farmer',            12000,         'Employed',     false),
+      ('${ID.fm3}',  '${ID.hh_alcala}',  'Jenny Alcala',       'Child',        16, '',                    NULL::decimal, 'Student',      false),
       -- Roxas household (Bigte)
-      ('${ID.fm4}',  '${ID.hh_roxas}',   'Teresita Roxas',     'Self',         56, 'Retired',     true),
-      ('${ID.fm5}',  '${ID.hh_roxas}',   'Bobby Roxas',        'Grandchild',   10, 'Student',     false),
-      ('${ID.fm6}',  '${ID.hh_roxas}',   'Lita Roxas',         'Grandchild',   7,  'Student',     false),
+      ('${ID.fm4}',  '${ID.hh_roxas}',   'Teresita Roxas',     'Self',         56, 'Pensioner',          2000,          'Retired',      true),
+      ('${ID.fm5}',  '${ID.hh_roxas}',   'Bobby Roxas',        'Grandchild',   10, '',                    NULL::decimal, 'Student',      false),
+      ('${ID.fm6}',  '${ID.hh_roxas}',   'Lita Roxas',         'Grandchild',   7,  '',                    NULL::decimal, 'Student',      false),
       -- Cruz household (Matictic)
-      ('${ID.fm7}',  '${ID.hh_cruz}',    'Antonio Cruz',       'Self',         42, 'Employed',    true),
-      ('${ID.fm8}',  '${ID.hh_cruz}',    'Gloria Cruz',        'Spouse',       38, 'Employed',    false),
-      ('${ID.fm9}',  '${ID.hh_cruz}',    'Diego Cruz',         'Child',        12, 'Student',     false),
+      ('${ID.fm7}',  '${ID.hh_cruz}',    'Antonio Cruz',       'Self',         42, 'Driver',             8000,          'Employed',     true),
+      ('${ID.fm8}',  '${ID.hh_cruz}',    'Gloria Cruz',        'Spouse',       38, 'Construction Worker', 6000,         'Employed',     false),
+      ('${ID.fm9}',  '${ID.hh_cruz}',    'Diego Cruz',         'Child',        12, '',                    NULL::decimal, 'Student',      false),
       -- Santos household (Matictic)
-      ('${ID.fm10}', '${ID.hh_santos}',  'Elena Santos',       'Self',         35, 'Self-Employed',true),
-      ('${ID.fm11}', '${ID.hh_santos}',  'Baby Santos',        'Child',        3,  'Dependent',   false),
-      ('${ID.fm12}', '${ID.hh_santos}',  'Lola Nena Santos',   'Grandparent',  78, 'Dependent',   false),
+      ('${ID.fm10}', '${ID.hh_santos}',  'Elena Santos',       'Self',         35, 'Fruit Vendor',       5000,          'Self-Employed',true),
+      ('${ID.fm11}', '${ID.hh_santos}',  'Baby Santos',        'Child',        3,  '',                    NULL::decimal, 'Dependent',    false),
+      ('${ID.fm12}', '${ID.hh_santos}',  'Lola Nena Santos',   'Grandparent',  78, '',                    NULL::decimal, 'Dependent',    false),
       -- Garcia household (Partida)
-      ('${ID.fm13}', '${ID.hh_garcia}',  'Francisco Garcia',   'Self',         29, 'Employed',    true),
-      ('${ID.fm14}', '${ID.hh_garcia}',  'Raul Garcia',        'Sibling',      25, 'Unemployed',  false),
-      ('${ID.fm15}', '${ID.hh_garcia}',  'Maria Garcia',       'Mother',       62, 'Dependent',   false),
+      ('${ID.fm13}', '${ID.hh_garcia}',  'Francisco Garcia',   'Self',         29, 'Laborer',            10000,         'Employed',     true),
+      ('${ID.fm14}', '${ID.hh_garcia}',  'Raul Garcia',        'Sibling',      25, 'Unemployed',         NULL::decimal, 'Unemployed',   false),
+      ('${ID.fm15}', '${ID.hh_garcia}',  'Maria Garcia',       'Mother',       62, '',                    NULL::decimal, 'Dependent',    false),
       -- Reyes household (Partida)
-      ('${ID.fm16}', '${ID.hh_reyes}',   'Carmen Reyes',       'Self',         37, 'Employed',    true),
-      ('${ID.fm17}', '${ID.hh_reyes}',   'Jorge Reyes',        'Spouse',       40, 'Employed',    false),
-      ('${ID.fm18}', '${ID.hh_reyes}',   'Mila Reyes',         'Child',        14, 'Student',     false),
+      ('${ID.fm16}', '${ID.hh_reyes}',   'Carmen Reyes',       'Self',         37, 'Sales Lady',         15000,         'Employed',     true),
+      ('${ID.fm17}', '${ID.hh_reyes}',   'Jorge Reyes',        'Spouse',       40, 'Factory Worker',     12000,         'Employed',     false),
+      ('${ID.fm18}', '${ID.hh_reyes}',   'Mila Reyes',         'Child',        14, '',                    NULL::decimal, 'Student',      false),
       -- Mendoza household (San Mateo)
-      ('${ID.fm19}', '${ID.hh_mendoza}', 'Ricardo Mendoza',    'Self',         65, 'Retired',     true),
-      ('${ID.fm20}', '${ID.hh_mendoza}', 'Dalia Mendoza',      'Spouse',       61, 'Dependent',   false),
-      ('${ID.fm21}', '${ID.hh_mendoza}', 'Karlo Mendoza',      'Child',        35, 'Employed',    false),
+      ('${ID.fm19}', '${ID.hh_mendoza}', 'Ricardo Mendoza',    'Self',         65, 'Retired',            3000,          'Retired',      true),
+      ('${ID.fm20}', '${ID.hh_mendoza}', 'Dalia Mendoza',      'Spouse',       61, '',                    NULL::decimal, 'Dependent',    false),
+      ('${ID.fm21}', '${ID.hh_mendoza}', 'Karlo Mendoza',      'Child',        35, 'Laborer',            12000,         'Employed',     false),
+      -- Aquino household (San Mateo)
+      ('${ID.fm22}', '${ID.hh_aquino}',  'Sofia Aquino',       'Self',         27, '',                    NULL::decimal, 'Student',      true),
+      ('${ID.fm23}', '${ID.hh_aquino}',  'Bella Aquino',       'Sibling',      19, '',                    NULL::decimal, 'Student',      false),
+      ('${ID.fm24}', '${ID.hh_aquino}',  'Alfredo Aquino Sr.', 'Father',       55, 'Janitor',            6000,          'Employed',     false),
       -- Aquino household (San Mateo)
       ('${ID.fm22}', '${ID.hh_aquino}',  'Sofia Aquino',       'Self',         27, 'Student',     true),
       ('${ID.fm23}', '${ID.hh_aquino}',  'Bella Aquino',       'Sibling',      19, 'Student',     false),
       ('${ID.fm24}', '${ID.hh_aquino}',  'Alfredo Aquino Sr.', 'Father',       55, 'Employed',    false),
       -- Dela Cruz household (Pugad)
-      ('${ID.fm25}', '${ID.hh_delacruz}',  'Nenita Dela Cruz',     'Self',         72, 'Retired',     true),
-      ('${ID.fm26}', '${ID.hh_delacruz}',  'Mario Dela Cruz',      'Spouse',       75, 'Retired',     false),
-      ('${ID.fm27}', '${ID.hh_delacruz}',  'Susan Dela Cruz',      'Child',        35, 'Employed',    false),
+      ('${ID.fm25}', '${ID.hh_delacruz}',  'Nenita Dela Cruz',     'Self',         72, 'Retired',            5000,          'Retired',      true),
+      ('${ID.fm26}', '${ID.hh_delacruz}',  'Mario Dela Cruz',      'Spouse',       75, 'Pensioner',          3000,          'Retired',      false),
+      ('${ID.fm27}', '${ID.hh_delacruz}',  'Susan Dela Cruz',      'Child',        35, 'Driver',             10000,         'Employed',     false),
       -- Martinez household (Sapang Kawayan)
-      ('${ID.fm28}', '${ID.hh_martinez}',  'Roberto Martinez',     'Self',         45, 'Self-Employed',true),
-      ('${ID.fm29}', '${ID.hh_martinez}',  'Liza Martinez',        'Spouse',       42, 'Employed',    false),
-      ('${ID.fm30}', '${ID.hh_martinez}',  'Kevin Martinez',       'Child',        16, 'Student',     false),
+      ('${ID.fm28}', '${ID.hh_martinez}',  'Roberto Martinez',     'Self',         45, 'Fruit Vendor',       10000,         'Self-Employed',true),
+      ('${ID.fm29}', '${ID.hh_martinez}',  'Liza Martinez',        'Spouse',       42, 'Driver',             6000,          'Employed',     false),
+      ('${ID.fm30}', '${ID.hh_martinez}',  'Kevin Martinez',       'Child',        16, '',                    NULL::decimal, 'Student',      false),
       -- Flores household (Tigbe)
-      ('${ID.fm31}', '${ID.hh_flores}',    'Maricel Flores',       'Self',         33, 'Self-Employed',true),
-      ('${ID.fm32}', '${ID.hh_flores}',    'Baby Flores',          'Child',        4,  'Dependent',   false),
-      ('${ID.fm33}', '${ID.hh_flores}',    'Linda Flores',         'Mother',       60, 'Dependent',   false),
+      ('${ID.fm31}', '${ID.hh_flores}',    'Maricel Flores',       'Self',         33, 'Fish Vendor',        10000,         'Self-Employed',true),
+      ('${ID.fm32}', '${ID.hh_flores}',    'Baby Flores',          'Child',        4,  '',                    NULL::decimal, 'Dependent',    false),
+      ('${ID.fm33}', '${ID.hh_flores}',    'Linda Flores',         'Mother',       60, '',                    NULL::decimal, 'Dependent',    false),
       -- Gonzales household (Minuyan)
-      ('${ID.fm34}', '${ID.hh_gonzales}',  'Efren Gonzales',       'Self',         50, 'Employed',    true),
-      ('${ID.fm35}', '${ID.hh_gonzales}',  'Marilyn Gonzales',     'Spouse',       47, 'Employed',    false),
-      ('${ID.fm36}', '${ID.hh_gonzales}',  'John Gonzales',        'Child',        20, 'Student',     false),
+      ('${ID.fm34}', '${ID.hh_gonzales}',  'Efren Gonzales',       'Self',         50, 'Factory Worker',     8000,          'Employed',     true),
+      ('${ID.fm35}', '${ID.hh_gonzales}',  'Marilyn Gonzales',     'Spouse',       47, 'Cashier',            6000,          'Employed',     false),
+      ('${ID.fm36}', '${ID.hh_gonzales}',  'John Gonzales',        'Child',        20, '',                    NULL::decimal, 'Student',      false),
       -- Navarro household (Balayong)
-      ('${ID.fm37}', '${ID.hh_navarro}',   'Luzviminda Navarro',   'Self',         68, 'Retired',     true),
-      ('${ID.fm38}', '${ID.hh_navarro}',   'Pedro Navarro',        'Spouse',       70, 'Retired',     false),
-      ('${ID.fm39}', '${ID.hh_navarro}',   'Anna Navarro',         'Child',        30, 'Employed',    false),
+      ('${ID.fm37}', '${ID.hh_navarro}',   'Luzviminda Navarro',   'Self',         68, 'Pensioner',          2000,          'Retired',      true),
+      ('${ID.fm38}', '${ID.hh_navarro}',   'Pedro Navarro',        'Spouse',       70, 'Retired',            2000,          'Retired',      false),
+      ('${ID.fm39}', '${ID.hh_navarro}',   'Anna Navarro',         'Child',        30, 'Factory Worker',     15000,         'Employed',     false),
       -- Soriano household (Alawihaw)
-      ('${ID.fm40}', '${ID.hh_soriano}',   'Dante Soriano',        'Self',         22, 'Student',     true),
-      ('${ID.fm41}', '${ID.hh_soriano}',   'Elena Soriano',        'Mother',       50, 'Employed',    false),
-      ('${ID.fm42}', '${ID.hh_soriano}',   'Karl Soriano',         'Sibling',      18, 'Student',     false)
+      ('${ID.fm40}', '${ID.hh_soriano}',   'Dante Soriano',        'Self',         22, '',                    NULL::decimal, 'Student',      true),
+      ('${ID.fm41}', '${ID.hh_soriano}',   'Elena Soriano',        'Mother',       50, 'Laborer',            15000,         'Employed',     false),
+      ('${ID.fm42}', '${ID.hh_soriano}',   'Karl Soriano',         'Sibling',      18, '',                    NULL::decimal, 'Student',      false)
   `);
 
   // ==========================================================================

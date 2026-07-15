@@ -34,6 +34,8 @@ async function migrate() {
   await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS family_members ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), household_id UUID REFERENCES households(id), full_name TEXT NOT NULL, relationship TEXT NOT NULL, age INTEGER, status_income TEXT, is_primary BOOLEAN DEFAULT FALSE )`);
   await q.query(`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS occupation TEXT`);
+  await q.query(`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS income DECIMAL(12,2)`);
+  await q.query(`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS status TEXT`);
   await q.query(`CREATE TABLE IF NOT EXISTS cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), control_no TEXT UNIQUE NOT NULL, beneficiary_id UUID REFERENCES beneficiaries(id), service_requested TEXT[], requirements_checklist JSONB, status TEXT CHECK (status IN ('pending_assessment','in_review','approved','disbursed','closed')) DEFAULT 'pending_assessment', certificate_url TEXT, petty_cash_voucher_url TEXT, assigned_worker_id UUID, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS problems_presented TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS social_worker_assessment TEXT`);

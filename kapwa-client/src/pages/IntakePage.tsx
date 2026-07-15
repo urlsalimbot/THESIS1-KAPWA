@@ -31,6 +31,8 @@ interface FamilyMember {
   age: number | '';
   relationship: string;
   occupation: string;
+  income: string;
+  status: string;
 }
 
 interface AddressFields {
@@ -83,6 +85,8 @@ export function IntakePage() {
       age: '' as const,
       relationship: 'Spouse',
       occupation: '',
+      income: '',
+      status: 'Employed',
     }]);
   }
 
@@ -130,6 +134,8 @@ export function IntakePage() {
           age: f.age || 0,
           relationship: f.relationship,
           occupation: f.occupation,
+          income: f.income ? parseFloat(f.income.replace(/,/g, '')) : undefined,
+          status: f.status || undefined,
         })),
         case: {},
       });
@@ -304,8 +310,21 @@ export function IntakePage() {
                 </select>
               </div>
               <div className="flex-1 min-w-[120px] space-y-1">
-                <label className="text-xs text-muted-foreground">Occupation *</label>
-                <Input className="h-8 text-sm" required value={m.occupation} onChange={e => updateFamilyMember(m.id, 'occupation', e.target.value)} aria-label="Family member occupation" />
+                <label className="text-xs text-muted-foreground">Occupation</label>
+                <Input className="h-8 text-sm" value={m.occupation} onChange={e => updateFamilyMember(m.id, 'occupation', e.target.value)} aria-label="Family member occupation" />
+              </div>
+              <div className="w-28 space-y-1">
+                <label className="text-xs text-muted-foreground">Status *</label>
+                <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.status} onChange={e => updateFamilyMember(m.id, 'status', e.target.value)} aria-label="Family member status">
+                  {['Employed','Self-Employed','Unemployed','Student','Retired','Dependent','OFW'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div className="w-28 space-y-1">
+                <label className="text-xs text-muted-foreground">Monthly Income</label>
+                <div className="relative">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₱</span>
+                  <Input type="text" inputMode="numeric" className="h-8 text-sm pl-5" value={m.income} onChange={e => updateFamilyMember(m.id, 'income', e.target.value.replace(/,/g, ''))} onBlur={e => { const f = formatMoney(e.target.value); updateFamilyMember(m.id, 'income', f); }} aria-label="Family member income" />
+                </div>
               </div>
               <Button type="button" variant="ghost" size="sm" onClick={() => removeFamilyMember(m.id)} className="text-destructive h-8">Remove</Button>
             </div>
