@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('program_assignment_steps')
-export class ProgramAssignmentStep {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class ProgramAssignmentStep extends BaseEntity {
 
   @Column({ name: 'assignment_id' })
   assignmentId!: string;

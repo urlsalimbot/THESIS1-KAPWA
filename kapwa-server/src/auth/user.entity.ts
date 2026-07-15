@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 export enum UserRole {
   SW = 'social_worker',
@@ -10,9 +11,7 @@ export enum UserRole {
 }
 
 @Entity('users')
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class User extends BaseEntity {
 
   @Column({ name: 'email', unique: true })
   email!: string;

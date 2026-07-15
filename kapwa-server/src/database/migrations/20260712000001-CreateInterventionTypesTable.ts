@@ -6,7 +6,7 @@ export class CreateInterventionTypesTable2026071200001 implements MigrationInter
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS intervention_types (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
         code VARCHAR(10) UNIQUE NOT NULL,
         name VARCHAR(100) NOT NULL,
         description TEXT,

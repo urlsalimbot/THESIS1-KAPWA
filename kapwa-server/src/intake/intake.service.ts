@@ -82,6 +82,8 @@ export class IntakeService {
             relationship: fm.relationship,
             age: fm.age,
             occupation: fm.occupation,
+            income: fm.income,
+            status: fm.status,
           });
           await queryRunner.manager.save(member);
         }

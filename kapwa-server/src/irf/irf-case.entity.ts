@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 export enum IrfCategory {
   ABUSE = 'Abuse',
@@ -21,9 +22,7 @@ export interface KeyWrap {
 }
 
 @Entity('irf_cases')
-export class IrfCase {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class IrfCase extends BaseEntity {
 
   @Column({ unique: true })
   blotterEntryNumber!: string;

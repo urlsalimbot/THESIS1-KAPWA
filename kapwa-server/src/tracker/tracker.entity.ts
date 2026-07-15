@@ -1,10 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, Check } from 'typeorm';
+import { Entity, Column, CreateDateColumn, Unique, Check } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('case_tracker_log')
 @Unique(['transactionDate', 'dailySeqNum'])
-export class CaseTrackerLog {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class CaseTrackerLog extends BaseEntity {
 
   @Column({ name: 'tracker_id', unique: true, nullable: true })
   trackerId?: string;

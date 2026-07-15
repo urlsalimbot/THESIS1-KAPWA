@@ -6,7 +6,7 @@ name = 'AddFormVersionHistory1742000000000';
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE form_version_history (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
         program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
         form_template JSONB NOT NULL,
         version INTEGER NOT NULL,

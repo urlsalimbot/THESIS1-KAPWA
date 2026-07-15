@@ -1,10 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
 import { CaseStatus } from './case.entity';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('case_history')
-export class CaseHistory {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class CaseHistory extends BaseEntity {
 
   @Column({ name: 'case_id' })
   caseId!: string;

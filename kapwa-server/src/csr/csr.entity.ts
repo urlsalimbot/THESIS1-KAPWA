@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('csr_reports')
-export class CsrRecord {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class CsrRecord extends BaseEntity {
 
   @Column({ name: 'case_id' })
   caseId: string;

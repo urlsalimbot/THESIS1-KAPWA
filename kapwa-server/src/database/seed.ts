@@ -51,11 +51,11 @@ async function seed() {
   `);
 
   await q.query(`
-    INSERT INTO family_members (id, household_id, full_name, relationship, age, occupation, is_primary)
+    INSERT INTO family_members (id, household_id, full_name, relationship, age, occupation, income, status, is_primary)
     VALUES 
-      ('b2c3d4e5-1111-2222-3333-444455556666', 'a1b2c3d4-1111-2222-3333-444455556666', 'Maria Dela Cruz', 'Spouse', 42, 'Employed', false),
-      ('b2c3d4e5-1111-2222-3333-444455556667', 'a1b2c3d4-1111-2222-3333-444455556666', 'Jose Dela Cruz', 'Child', 16, 'Student', false),
-      ('b2c3d4e5-1111-2222-3333-444455556668', 'a1b2c3d4-1111-2222-3333-444455556667', 'Ana Mendoza', 'Child', 8, 'Student', false)
+      ('b2c3d4e5-1111-2222-3333-444455556666', 'a1b2c3d4-1111-2222-3333-444455556666', 'Maria Dela Cruz', 'Spouse', 42, 'Housewife', NULL, 'Unemployed', false),
+      ('b2c3d4e5-1111-2222-3333-444455556667', 'a1b2c3d4-1111-2222-3333-444455556666', 'Jose Dela Cruz', 'Child', 16, '', NULL, 'Student', false),
+      ('b2c3d4e5-1111-2222-3333-444455556668', 'a1b2c3d4-1111-2222-3333-444455556667', 'Ana Mendoza', 'Child', 8, '', NULL, 'Student', false)
   `);
 
   await q.query(`

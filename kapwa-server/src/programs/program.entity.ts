@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 export interface ApprovalStep {
   stepName: string;
@@ -8,9 +9,7 @@ export interface ApprovalStep {
 }
 
 @Entity('programs')
-export class Program {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class Program extends BaseEntity {
 
   @Column()
   name!: string;

@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('chat_messages')
-export class ChatMessage {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class ChatMessage extends BaseEntity {
 
   @Column({ name: 'sender_id' })
   senderId: string;

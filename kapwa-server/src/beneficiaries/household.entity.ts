@@ -1,10 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
+import { Entity, Column, CreateDateColumn, OneToMany } from 'typeorm';
 import { FamilyMember } from './family-member.entity';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('households')
-export class Household {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class Household extends BaseEntity {
 
   @Column({ name: 'primary_beneficiary_id', nullable: true })
   primaryBeneficiaryId?: string;

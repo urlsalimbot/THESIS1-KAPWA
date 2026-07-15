@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('consent_ledger')
-export class ConsentLedger {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class ConsentLedger extends BaseEntity {
 
   @Column({ name: 'beneficiary_id', nullable: true })
   beneficiaryId?: string;

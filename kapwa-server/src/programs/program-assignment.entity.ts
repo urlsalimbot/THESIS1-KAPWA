@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 export enum AssignmentStatus {
   PENDING = 'pending',
@@ -8,9 +9,7 @@ export enum AssignmentStatus {
 }
 
 @Entity('program_assignments')
-export class ProgramAssignment {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class ProgramAssignment extends BaseEntity {
 
   @Column({ name: 'case_id' })
   caseId!: string;

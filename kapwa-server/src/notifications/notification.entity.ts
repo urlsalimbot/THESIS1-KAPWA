@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 export enum NotificationType {
   SMS = 'sms',
@@ -16,9 +17,7 @@ export enum NotificationCategory {
 }
 
 @Entity('notifications')
-export class Notification {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class Notification extends BaseEntity {
 
   @Column({ name: 'recipient_id' })
   recipientId: string;
