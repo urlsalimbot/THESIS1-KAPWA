@@ -18,13 +18,14 @@ services:
     restart: unless-stopped
     command: postgres -c shared_preload_libraries=pgaudit -c pgaudit.log=all
     environment:
+      TZ: Asia/Manila
       POSTGRES_USER: ${DB_USER:-kapwa}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-kapwa}
       POSTGRES_DB: ${DB_NAME:-kapwa}
     env_file:
       - ../infra/.env.production
     volumes:
-      - kapwa-data:/var/lib/postgresql/data:z
+      - kapwa-data:/var/lib/postgresql/data
       - ./init.sh:/docker-entrypoint-initdb.d/init.sh:z
     ports:
       - "5432:5432"
@@ -43,6 +44,7 @@ services:
     expose:
       - "3000"
     environment:
+      TZ: Asia/Manila
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER:-kapwa}
@@ -81,12 +83,13 @@ services:
       - "9001"
     command: server /data --console-address ":9001"
     environment:
+      TZ: Asia/Manila
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     env_file:
       - ../infra/.env.production
     volumes:
-      - minio-data:/data:z
+      - minio-data:/data
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
       interval: 15s
@@ -97,8 +100,12 @@ services:
   client:
     build:
       context: ../kapwa-client
+      args:
+        VITE_API_URL: /api
     container_name: kapwa-client
     restart: unless-stopped
+    environment:
+      TZ: Asia/Manila
     expose:
       - "80"
     healthcheck:
@@ -113,14 +120,14 @@ services:
       dockerfile: Dockerfile.caddy
     container_name: kapwa-caddy
     restart: unless-stopped
+    environment:
+      TZ: Asia/Manila
     ports:
-      # Rootless Podman cannot bind <1024. In production use sudo podman or:
-      #   sudo sysctl net.ipv4.ip_unprivileged_port_start=80
-      - "8080:80"
-      - "8443:443"
+      - "8090:80"
+      - "443:443"
     volumes:
       - ../infra/Caddyfile:/etc/caddy/Caddyfile:ro,z
-      - caddy-data:/data:z
+      - caddy-data:/data
       - ../infra/.env.production:/etc/caddy/.env:ro,z
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:80/health || exit 1"]
