@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('sync_queue')
-export class SyncQueue {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class SyncQueue extends BaseEntity {
 
   @Column({ name: 'device_id' })
   deviceId: string;

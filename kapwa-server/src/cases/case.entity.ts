@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { BaseEntity } from '../common/base.entity';
 
 export enum CaseStatus {
   PENDING = 'pending_assessment',
@@ -10,9 +11,7 @@ export enum CaseStatus {
 }
 
 @Entity('cases')
-export class Case {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class Case extends BaseEntity {
 
   @Column({ name: 'control_no', unique: true })
   controlNo!: string;

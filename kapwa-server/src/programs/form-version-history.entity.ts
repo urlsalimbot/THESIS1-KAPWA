@@ -1,10 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Program } from './program.entity';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('form_version_history')
-export class FormVersionHistory {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class FormVersionHistory extends BaseEntity {
 
   @Column({ name: 'program_id' })
   programId: string;

@@ -8,7 +8,7 @@ describe('InterventionTypesService', () => {
   let service: InterventionTypesService;
   let repoMock: any;
 
-  const mockType: InterventionTypeEntity = {
+  const mockType = {
     id: '1a000000-0000-0000-0000-000000000001',
     code: 'FA',
     name: 'Financial Assistance',
@@ -16,15 +16,15 @@ describe('InterventionTypesService', () => {
     isActive: true,
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-01'),
-  };
+  } as InterventionTypeEntity;
 
-  const mockTypeInactive: InterventionTypeEntity = {
+  const mockTypeInactive = {
     ...mockType,
     id: '1a000000-0000-0000-0000-000000000008',
     code: 'LEGACY',
     name: 'Legacy Type',
     isActive: false,
-  };
+  } as InterventionTypeEntity;
 
   beforeEach(async () => {
     repoMock = {

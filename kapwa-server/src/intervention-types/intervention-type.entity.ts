@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('intervention_types')
-export class InterventionTypeEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class InterventionTypeEntity extends BaseEntity {
 
   @Column({ name: 'code', length: 10, unique: true })
   code!: string;

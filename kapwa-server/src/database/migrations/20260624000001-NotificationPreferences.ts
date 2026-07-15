@@ -6,7 +6,7 @@ export class NotificationPreferences2026062400000 implements MigrationInterface 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE notification_preferences (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+        id uuid DEFAULT uuid_generate_v7() PRIMARY KEY,
         user_id varchar NOT NULL,
         channel varchar NOT NULL,
         category varchar NOT NULL,

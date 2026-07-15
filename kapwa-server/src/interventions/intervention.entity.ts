@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Case } from '../cases/case.entity';
+import { BaseEntity } from '../common/base.entity';
 
 export enum FundSource {
   REGULAR = 'Regular',
@@ -14,9 +15,7 @@ export enum SignatureStatus {
 }
 
 @Entity('interventions')
-export class Intervention {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class Intervention extends BaseEntity {
 
   @Column({ name: 'case_id', nullable: true })
   caseId?: string;

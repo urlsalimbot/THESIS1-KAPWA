@@ -706,9 +706,9 @@ async function seed() {
   await q.query(`
     INSERT INTO form_version_history (id, program_id, form_template, version, created_at)
     VALUES
-      (uuid_generate_v4(), '${ID.prog_akap}',     '{"type":"object","title":"AKAP Application v1","properties":{"amount":{"type":"number"},"purpose":{"type":"string"}},"required":["amount","purpose"]}', 1, '2024-11-01 08:00:00'),
-      (uuid_generate_v4(), '${ID.prog_medical}',  '{"type":"object","title":"Medical Assistance v1","properties":{"hospital":{"type":"string"},"diagnosis":{"type":"string"},"amount":{"type":"number"}},"required":["hospital"]}', 1, '2024-11-01 08:00:00'),
-      (uuid_generate_v4(), '${ID.prog_education}','{"type":"object","title":"Educational Assistance v1","properties":{"school":{"type":"string"},"grade":{"type":"string"},"amount":{"type":"number"}},"required":["school"]}', 1, '2025-01-15 08:00:00')
+      (uuid_generate_v7(), '${ID.prog_akap}',     '{"type":"object","title":"AKAP Application v1","properties":{"amount":{"type":"number"},"purpose":{"type":"string"}},"required":["amount","purpose"]}', 1, '2024-11-01 08:00:00'),
+      (uuid_generate_v7(), '${ID.prog_medical}',  '{"type":"object","title":"Medical Assistance v1","properties":{"hospital":{"type":"string"},"diagnosis":{"type":"string"},"amount":{"type":"number"}},"required":["hospital"]}', 1, '2024-11-01 08:00:00'),
+      (uuid_generate_v7(), '${ID.prog_education}','{"type":"object","title":"Educational Assistance v1","properties":{"school":{"type":"string"},"grade":{"type":"string"},"amount":{"type":"number"}},"required":["school"]}', 1, '2025-01-15 08:00:00')
   `);
 
   // ==========================================================================

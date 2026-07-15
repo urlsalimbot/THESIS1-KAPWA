@@ -15,7 +15,7 @@ export class AuditHashChain2026061900000 implements MigrationInterface {
     // Per RESEARCH.md Open Question 1: persist idempotency keys in DB
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS idempotency_keys (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
         key TEXT UNIQUE NOT NULL,
         result JSONB NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()

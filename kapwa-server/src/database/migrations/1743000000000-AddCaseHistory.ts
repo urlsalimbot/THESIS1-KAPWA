@@ -12,7 +12,7 @@ name = 'AddCaseHistory1743000000000';
     `);
     await queryRunner.query(`
       CREATE TABLE "case_history" (
-        "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+        "id" uuid NOT NULL DEFAULT uuid_generate_v7(),
         "case_id" character varying NOT NULL,
         "from_status" "public"."case_history_from_status_enum",
         "to_status" "public"."case_history_to_status_enum" NOT NULL,

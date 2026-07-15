@@ -7,7 +7,7 @@ export class ProgramAssignments2026062200006 implements MigrationInterface {
     // 1. Create program_assignments table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS program_assignments (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
         case_id UUID NOT NULL,
         program_id UUID NOT NULL,
         status VARCHAR NOT NULL DEFAULT 'pending',
@@ -21,7 +21,7 @@ export class ProgramAssignments2026062200006 implements MigrationInterface {
     // 2. Create program_assignment_steps table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS program_assignment_steps (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
         assignment_id UUID NOT NULL,
         step_order INTEGER NOT NULL,
         step_name VARCHAR NOT NULL,

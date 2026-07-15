@@ -1,10 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { NotificationCategory } from './notification.entity';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('notification_preferences')
-export class NotificationPreference {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class NotificationPreference extends BaseEntity {
 
   @Column({ name: 'user_id' })
   userId: string;
