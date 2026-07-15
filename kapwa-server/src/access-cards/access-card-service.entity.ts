@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, Column } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('access_card_services')
-export class AccessCardService {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class AccessCardService extends BaseEntity {
 
   @Column({ name: 'access_card_code' })
   accessCardCode!: string;

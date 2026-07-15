@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('version_vectors')
-export class VersionVector {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+export class VersionVector extends BaseEntity {
 
   @Column({ name: 'device_id' })
   deviceId: string;

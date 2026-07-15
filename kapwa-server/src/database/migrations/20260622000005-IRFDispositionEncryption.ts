@@ -7,7 +7,7 @@ export class IrfDispositionEncryption2026062200005 implements MigrationInterface
     // 1. Create audit_log table for IRF audit logging
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
         action TEXT NOT NULL,
         reference_id TEXT,
         user_id TEXT,

@@ -39,7 +39,9 @@ interface FamilyMember {
   fullName: string;
   relationship: string;
   age: number;
-  statusIncome?: string;
+  occupation?: string;
+  income?: number;
+  status?: string;
   isPrimary: boolean;
 }
 
@@ -464,12 +466,15 @@ export function BeneficiaryViewPage() {
                     </span>
                     <div>
                       <p className="font-medium text-foreground">{m.fullName} {m.isPrimary && <span className="text-xs text-primary">(Primary)</span>}</p>
-                      <p className="text-xs text-muted-foreground">{m.relationship} · {m.age} yrs</p>
+                      <p className="text-xs text-muted-foreground">{m.relationship} · {m.age} yrs{m.occupation ? ` · ${m.occupation}` : ''}</p>
                     </div>
                   </div>
-                  {m.statusIncome && (
-                    <span className="text-xs text-muted-foreground">{m.statusIncome}</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {m.status && <span className="text-xs text-muted-foreground">{m.status}</span>}
+                    {m.income != null && (
+                      <span className="text-xs font-medium">₱{Number(m.income).toLocaleString()}</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -1,9 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { BaseEntity } from '../common/base.entity';
 
 @Entity('otp_codes')
-export class OtpCode {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export class OtpCode extends BaseEntity {
 
   @Column()
   phone!: string;

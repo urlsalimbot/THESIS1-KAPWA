@@ -34,11 +34,9 @@
         respond "OK" 200
     }
 
-    # Everything else → SPA static files
+    # Everything else → SPA client
     handle {
-        root * /var/www/kapwa
-        try_files {path} /index.html
-        file_server
+        reverse_proxy client:80
     }
 
     # Access logging
