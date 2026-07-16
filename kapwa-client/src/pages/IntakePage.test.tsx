@@ -30,7 +30,8 @@ vi.mock('../lib/api', () => ({
   },
 }));
 
-vi.mock('../lib/constants', () => ({
+vi.mock(import('../lib/constants'), async (importOriginal) => ({
+  ...(await importOriginal()),
   BARANGAYS: ['Barangay 1', 'Barangay 2'],
   SERVICE_TYPES: ['FA', 'CSR'],
 }));
