@@ -3,7 +3,8 @@ import { BaseEntity } from '../common/base.entity';
 
 export enum NotificationType {
   SMS = 'sms',
-  IN_APP = 'in_app'
+  IN_APP = 'in_app',
+  EMAIL = 'email'
 }
 
 export enum NotificationCategory {
@@ -39,6 +40,9 @@ export class Notification extends BaseEntity {
 
   @Column({ nullable: true })
   phone?: string;
+
+  @Column({ nullable: true })
+  email?: string;
 
   @Column({ name: 'is_read', default: false })
   isRead: boolean;

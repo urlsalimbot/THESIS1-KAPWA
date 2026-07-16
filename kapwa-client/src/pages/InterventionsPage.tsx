@@ -102,8 +102,6 @@ export function InterventionsPage() {
   }
 
   const columns: ColumnDef<Intervention>[] = [
-    { accessorKey: 'id', header: 'ID', cell: ({ row }) => <span className="font-medium">{row.original.id}</span> },
-    { accessorKey: 'caseId', header: 'Case ID' },
     { accessorKey: 'beneficiary', header: 'Beneficiary' },
     { accessorKey: 'type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.type}</Badge> },
     { accessorKey: 'description', header: 'Amount' },
@@ -162,7 +160,7 @@ export function InterventionsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Case ID (must be disbursed)</label>
-                  <Input required placeholder="Case UUID" value={form.caseId} onChange={e => update('caseId', e.target.value)} aria-label="Case ID" />
+                  <Input required placeholder="Paste Case ID" value={form.caseId} onChange={e => update('caseId', e.target.value)} aria-label="Case ID" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Type</label>

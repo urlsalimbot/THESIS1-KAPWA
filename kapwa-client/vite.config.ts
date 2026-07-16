@@ -17,6 +17,9 @@ export default {
     },
   },
   build: { outDir: 'dist' },
+  optimizeDeps: {
+    include: ['react-dom', 'react-dom/client'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

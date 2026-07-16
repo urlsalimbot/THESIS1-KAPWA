@@ -6,10 +6,12 @@ import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
 import { ChatMessage } from './chat.entity';
 import { User } from '../auth/user.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { Case } from '../cases/case.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatMessage, User]),
+    TypeOrmModule.forFeature([ChatMessage, User, Beneficiary, Case]),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),

@@ -9,12 +9,14 @@ import { JwtStrategy } from './jwt.strategy';
 import { User } from './user.entity';
 import { AbacService } from './services/abac.service';
 import { OtpModule } from '../otp/otp.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
     OtpModule,
+    EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

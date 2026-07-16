@@ -30,7 +30,7 @@ describe('Sidebar', () => {
 
   it('shows role-gated nav items for social_worker', () => {
     renderWithRouter(<Sidebar />);
-    expect(screen.getByText('Case Tracker')).toBeTruthy();
+    expect(screen.getByText('Cases')).toBeTruthy();
     expect(screen.getByText('Beneficiaries')).toBeTruthy();
   });
 

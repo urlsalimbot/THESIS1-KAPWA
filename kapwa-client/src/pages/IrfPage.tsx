@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useSWRConfig } from 'swr';
+import { useState } from 'react';
 import useSWR from 'swr';
 import { Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +11,6 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ColumnDef } from '@tanstack/react-table';
 
 interface IrfCase {

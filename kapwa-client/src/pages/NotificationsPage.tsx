@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { mutate } from 'swr';
@@ -9,6 +9,7 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { connectNotificationSocket, disconnectNotificationSocket } from '../lib/notification-socket';
 
 interface Notification {
   id: string; title: string; message: string; category: string;
@@ -44,9 +45,48 @@ export function NotificationsPage() {
   );
   const { data: unreadData } = useSWR<{ count: number }>(
     queryKeys.notifications.unreadCount(),
-    { refreshInterval: 30000 },
   );
   const unreadCount = unreadData?.count ?? 0;
+
+  useEffect(() => {
+    const token = localStorage.getItem('kapwa_token');
+    if (!token) return;
+    const sock = connectNotificationSocket(token);
+    const onNew = (notif: Notification) => {
+      mutate(queryKeys.notifications.list(), (current: Notification[] | undefined) =>
+        [notif, ...(current || [])],
+        false,
+      );
+      mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
+    };
+    const onUpdated = (data: { id: string; isRead: boolean }) => {
+      mutate(queryKeys.notifications.list(), (current: Notification[] | undefined) =>
+        (current || []).map(n => n.id === data.id ? { ...n, isRead: data.isRead } : n),
+        false,
+      );
+      mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
+    };
+    const onReadAll = () => {
+      mutate(queryKeys.notifications.list(), (current: Notification[] | undefined) =>
+        (current || []).map(n => ({ ...n, isRead: true })),
+        false,
+      );
+      mutate(queryKeys.notifications.unreadCount(), { count: 0 }, false);
+    };
+    const onUnreadCount = (data: { count: number }) => {
+      mutate(queryKeys.notifications.unreadCount(), data, false);
+    };
+    sock.on('notification:new', onNew);
+    sock.on('notification:updated', onUpdated);
+    sock.on('notifications:read-all', onReadAll);
+    sock.on('unread:count', onUnreadCount);
+    return () => {
+      sock.off('notification:new', onNew);
+      sock.off('notification:updated', onUpdated);
+      sock.off('notifications:read-all', onReadAll);
+      sock.off('unread:count', onUnreadCount);
+    };
+  }, []);
 
   const markRead = useSWRMutation(
     queryKeys.notifications.list(),
