@@ -90,18 +90,6 @@ export function IntakeReviewPage() {
     }
   }
 
-  function formatDate(iso: string | null) {
-    if (!iso) return 'None';
-    return new Date(iso).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-
-  function nextEligibleDate(lastCaseDate: string | null) {
-    if (!lastCaseDate) return 'Now';
-    const d = new Date(lastCaseDate);
-    d.setDate(d.getDate() + 30);
-    return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-
   return (
     <PageShell
       title="Potential Prior Record Match Review"
