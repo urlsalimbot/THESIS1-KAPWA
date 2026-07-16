@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './lib/auth-context';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { IntakePage } from './pages/IntakePage';
+import { IntakeReviewPage } from './pages/IntakeReviewPage';
 import { CasesPage } from './pages/CasesPage';
 import { CaseViewPage } from './pages/CaseViewPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
@@ -68,6 +69,7 @@ const router = createBrowserRouter([
   // === PROTECTED ROUTES ===
   { path: 'dashboard', element: <Private><DashboardPage /></Private> },
   { path: '/intake', element: <Private roles={['admin','social_worker','coordinator']}><IntakePage /></Private> },
+  { path: '/intake/review', element: <Private roles={['admin','social_worker','coordinator']}><IntakeReviewPage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker','coordinator']}><CasesPage /></Private> },
   { path: '/cases/:id', element: <Private roles={['admin','social_worker','coordinator']}><CaseViewPage /></Private> },
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
