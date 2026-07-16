@@ -42,3 +42,38 @@ export const IntakeInputSchema = z.object({
 });
 
 export type IntakeInput = z.infer<typeof IntakeInputSchema>;
+
+export const MatchCheckInputSchema = z.object({
+  surname: z.string().min(1),
+  firstName: z.string().min(1),
+  middleName: z.string().optional(),
+  familyMembers: z.array(z.object({
+    fullName: z.string().min(1),
+  })).optional(),
+  barangay: z.string().optional(),
+});
+
+export type MatchCheckInput = z.infer<typeof MatchCheckInputSchema>;
+
+export interface MatchCandidate {
+  householdId: string;
+  score: number;
+  primaryBeneficiary: {
+    id: string;
+    surname: string;
+    firstName: string;
+    middleName?: string;
+    gender: string;
+    age: number;
+    phone: string;
+    occupation: string;
+    estimatedMonthlyIncome: number;
+    civilStatus: string;
+    currentAddress: Record<string, string> | null;
+    philhealthNumber?: string;
+    category?: string;
+  };
+  allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;
+  familyMembers: Array<{ id: string; fullName: string; relationship: string; age: number; occupation: string; income: number; status: string }>;
+  lastApprovedCaseDate: string | null;
+}

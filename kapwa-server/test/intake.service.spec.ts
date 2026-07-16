@@ -200,6 +200,33 @@ describe('IntakeService — Consolidated Intake', () => {
     expect(mockQueryRunner.release).toHaveBeenCalled();
   });
 
+  describe('matchCheck', () => {
+    it('should call dataSource.query with surname and firstName', async () => {
+      mockDataSource.query = jest.fn().mockResolvedValue([]);
+
+      await service.matchCheck(
+        { surname: 'Dela Cruz', firstName: 'Juan', familyMembers: [] },
+        [],
+      );
+
+      expect(mockDataSource.query).toHaveBeenCalledWith(
+        expect.stringContaining('similarity'),
+        ['Dela Cruz', 'Juan', null],
+      );
+    });
+
+    it('should return empty candidates when no matches', async () => {
+      mockDataSource.query = jest.fn().mockResolvedValue([]);
+
+      const result = await service.matchCheck(
+        { surname: 'Nonexistent', firstName: 'Nobody' },
+        [],
+      );
+
+      expect(result).toEqual({ candidates: [] });
+    });
+  });
+
   // Test 5: Validation rejects invalid input
   it('should reject invalid IntakeInput via Zod schema validation', async () => {
     const { IntakeInputSchema } = await import('../src/intake/dto/intake.zod');
