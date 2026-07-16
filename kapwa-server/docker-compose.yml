@@ -102,6 +102,7 @@ services:
       context: ../kapwa-client
       args:
         VITE_API_URL: /api
+        VITE_WS_URL: ""
     container_name: kapwa-client
     restart: unless-stopped
     environment:
