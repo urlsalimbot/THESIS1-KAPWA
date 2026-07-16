@@ -200,6 +200,81 @@ describe('IntakeService — Consolidated Intake', () => {
     expect(mockQueryRunner.release).toHaveBeenCalled();
   });
 
+  describe('matchCheck', () => {
+    it('should call dataSource.query with surname and firstName', async () => {
+      mockDataSource.query = jest.fn().mockResolvedValue([]);
+
+      await service.matchCheck(
+        { surname: 'Dela Cruz', firstName: 'Juan', familyMembers: [] },
+        [],
+      );
+
+      expect(mockDataSource.query).toHaveBeenCalledWith(
+        expect.stringContaining('similarity'),
+        ['Dela Cruz', 'Juan', null],
+      );
+    });
+
+    it('should return empty candidates when no matches', async () => {
+      mockDataSource.query = jest.fn().mockResolvedValue([]);
+
+      const result = await service.matchCheck(
+        { surname: 'Nonexistent', firstName: 'Nobody' },
+        [],
+      );
+
+      expect(result).toEqual({ candidates: [] });
+    });
+  });
+
+  describe('confirmMatch', () => {
+    it('should throw NotFoundException for nonexistent household', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue(null) as any;
+
+      await expect(
+        service.confirmMatch('nonexistent-id', validInput, []),
+      ).rejects.toThrow('Household not found');
+    });
+
+    it('should throw ForbiddenException if worker not permitted for barangay', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'hh-id', barangay: 'Bigte' }) as any;
+
+      await expect(
+        service.confirmMatch('hh-id', validInput, ['Matictic']),
+      ).rejects.toThrow('You do not have permission for this barangay');
+    });
+
+    it('should create beneficiary with existing householdId on confirm', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+
+      const saveMock = mockQueryRunner.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'fm-1' })
+        .mockResolvedValueOnce({ id: 'fm-2' })
+        .mockResolvedValueOnce({ id: 'new-case-id', controlNo: 'KAPWA-2026-00001' })
+        .mockResolvedValueOnce({ id: 'cl-1' });
+
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+      (fmRepo.create as jest.Mock).mockReturnValue({});
+
+      casesService.generateControlNo = jest.fn().mockResolvedValue('KAPWA-2026-00001');
+      caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
+
+      const result = await service.confirmMatch('existing-hh', validInput, ['Bigte']);
+
+      expect(benRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ householdId: 'existing-hh' }),
+      );
+      expect(result).toHaveProperty('beneficiaryId', 'new-ben-id');
+      expect(result).toHaveProperty('status', 'pending_assessment');
+    });
+  });
+
   // Test 5: Validation rejects invalid input
   it('should reject invalid IntakeInput via Zod schema validation', async () => {
     const { IntakeInputSchema } = await import('../src/intake/dto/intake.zod');

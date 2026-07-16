@@ -24,13 +24,19 @@ vi.mock('../lib/sync', () => ({
 vi.mock('../lib/api', () => ({
   api: {
     get: vi.fn(),
-    post: vi.fn(() => Promise.resolve({ controlNo: 'NORZ-2026-0001' })),
+    post: vi.fn((path: string, _body?: unknown) => {
+      if (path === '/intake/match-check') {
+        return Promise.resolve({ candidates: [] });
+      }
+      return Promise.resolve({ caseId: 'case-id-1', controlNo: 'NORZ-2026-0001' });
+    }),
     put: vi.fn(),
     del: vi.fn(),
   },
 }));
 
-vi.mock('../lib/constants', () => ({
+vi.mock(import('../lib/constants'), async (importOriginal) => ({
+  ...(await importOriginal()),
   BARANGAYS: ['Barangay 1', 'Barangay 2'],
   SERVICE_TYPES: ['FA', 'CSR'],
 }));
