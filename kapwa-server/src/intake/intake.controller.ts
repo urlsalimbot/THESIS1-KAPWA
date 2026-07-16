@@ -1,11 +1,11 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { IntakeService } from './intake.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { IntakeInputSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput } from './dto/intake.zod';
+import { IntakeInputSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput, ConfirmMatchInputSchema, ConfirmMatchInput } from './dto/intake.zod';
 import { AuthenticatedRequest } from '../auth/types';
 
 @Controller('intake')
@@ -27,5 +27,16 @@ export class IntakeController {
   ) {
     const permittedBarangays: string[] = req.user?.permittedBarangays || [];
     return this.intakeService.matchCheck(body, permittedBarangays);
+  }
+
+  @Post('confirm/:householdId')
+  @Roles('admin', 'social_worker', 'coordinator')
+  async confirmMatch(
+    @Param('householdId') householdId: string,
+    @Body(new ZodPipe(ConfirmMatchInputSchema)) body: ConfirmMatchInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const permittedBarangays: string[] = req.user?.permittedBarangays || [];
+    return this.intakeService.confirmMatch(householdId, body, permittedBarangays);
   }
 }

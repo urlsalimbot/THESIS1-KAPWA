@@ -1,13 +1,13 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { FamilyMember } from '../beneficiaries/family-member.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
-import type { IntakeInput, MatchCheckInput, MatchCandidate } from './dto/intake.zod';
+import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse } from './dto/intake.zod';
 
 @Injectable()
 export class IntakeService {
@@ -210,5 +210,107 @@ export class IntakeService {
       }));
 
     return { candidates };
+  }
+
+  async confirmMatch(householdId: string, data: ConfirmMatchInput, workerBarangays: string[]): Promise<ConfirmMatchResponse> {
+    const household = await this.hhRepo.findOne({ where: { id: householdId } });
+    if (!household) throw new NotFoundException('Household not found');
+    if (workerBarangays.length > 0 && household.barangay && !workerBarangays.includes(household.barangay)) {
+      throw new ForbiddenException('You do not have permission for this barangay');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const beneficiary = this.benRepo.create({
+        surname: data.beneficiary.surname,
+        firstName: data.beneficiary.firstName,
+        middleName: data.beneficiary.middleName,
+        gender: data.beneficiary.gender,
+        dob: new Date(data.beneficiary.dob),
+        age: data.beneficiary.age || undefined,
+        placeOfBirth: data.beneficiary.placeOfBirth,
+        civilStatus: data.beneficiary.civilStatus,
+        phone: data.beneficiary.cellularNumber,
+        currentAddress: data.beneficiary.currentAddress,
+        provincialAddress: data.beneficiary.provincialAddress,
+        philhealthNumber: data.beneficiary.philhealthNumber || undefined,
+        occupation: data.beneficiary.occupation,
+        estimatedMonthlyIncome: data.beneficiary.estimatedMonthlyIncome,
+        address: data.beneficiary.currentAddress?.street
+          ? `${data.beneficiary.currentAddress.street}, ${data.beneficiary.currentAddress.barangay || ''}`
+          : undefined,
+        householdId,
+        consentStatus: 'active',
+      });
+      const savedBeneficiary = await queryRunner.manager.save(beneficiary);
+
+      if (data.familyMembers && data.familyMembers.length > 0) {
+        const validMembers = data.familyMembers.filter(m => m.fullName && m.fullName.trim().length > 0);
+        for (const fm of validMembers) {
+          const member = this.fmRepo.create({
+            householdId,
+            fullName: fm.fullName,
+            relationship: fm.relationship,
+            age: fm.age,
+            occupation: fm.occupation,
+            income: fm.income,
+            status: fm.status,
+          });
+          await queryRunner.manager.save(member);
+        }
+      }
+
+      const lastCase = await this.caseRepo.findOne({
+        where: { beneficiaryId: In(
+          (await this.benRepo.find({ where: { householdId }, select: ['id'] })).map(b => b.id)
+        ), status: CaseStatus.APPROVED },
+        order: { createdAt: 'DESC' },
+      });
+
+      const lastApprovedDate = lastCase?.createdAt || null;
+      const nextEligibleDate = lastApprovedDate
+        ? new Date(lastApprovedDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+        : new Date();
+
+      const controlNo = await this.casesService.generateControlNo();
+
+      const caseEntity = this.caseRepo.create({
+        controlNo,
+        beneficiaryId: savedBeneficiary.id,
+        status: CaseStatus.PENDING,
+        serviceRequested: data.case.serviceRequested,
+        requirementsChecklist: data.case.requirementsChecklist,
+        assignedWorkerId: data.case.assignedWorkerId,
+      });
+      const savedCase = await queryRunner.manager.save(caseEntity);
+
+      const consent = this.consentRepo.create({
+        beneficiaryId: savedBeneficiary.id,
+        purpose: 'registration',
+        channel: 'web',
+        status: 'active',
+      });
+      await queryRunner.manager.save(consent);
+
+      await queryRunner.commitTransaction();
+
+      return {
+        beneficiaryId: savedBeneficiary.id,
+        caseId: savedCase.id,
+        controlNo,
+        status: CaseStatus.PENDING,
+        nextEligibleDate: nextEligibleDate.toISOString(),
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(
+        error instanceof Error ? error.message : 'Confirm match transaction failed',
+      );
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

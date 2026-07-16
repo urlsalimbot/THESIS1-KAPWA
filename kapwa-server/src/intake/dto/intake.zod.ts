@@ -77,3 +77,14 @@ export interface MatchCandidate {
   familyMembers: Array<{ id: string; fullName: string; relationship: string; age: number; occupation: string; income: number; status: string }>;
   lastApprovedCaseDate: string | null;
 }
+
+export const ConfirmMatchInputSchema = IntakeInputSchema;
+export type ConfirmMatchInput = IntakeInput;
+
+export interface ConfirmMatchResponse {
+  beneficiaryId: string;
+  caseId: string;
+  controlNo: string;
+  status: string;
+  nextEligibleDate: string;
+}
