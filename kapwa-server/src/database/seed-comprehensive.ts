@@ -317,9 +317,9 @@ async function seed() {
     INSERT INTO users (id, email, password, role, full_name, phone, assigned_barangay, permitted_barangays, is_active, mfa_enabled)
     VALUES
       ('${ID.u_admin}',        'admin@mswdo.test',       '${adminPass}',   'admin',         'Rosario G. Mendoza',     '09171000001', NULL,      '{}',                                              true,  false),
-      ('${ID.u_worker_bigte}',   'worker1@mswdo.test',     '${workerPass}',  'social_worker', 'Juan Dela Cruz',         '09171000002', NULL,      '{"Bigte","Partida","Pugad","Sapang Kawayan","Tigbe"}', true, false),
-      ('${ID.u_worker_matictic}','worker2@mswdo.test',     '${workerPass}',  'social_worker', 'Lorna B. Santos',        '09171000003', NULL,      '{"Matictic","San Mateo","Tumana","Minuyan","Balayong","Alawihaw"}', true, false),
-      ('${ID.u_coordinator}',   'coordinator@mswdo.test',  '${coordPass}',   'coordinator',   'Emmanuel T. Reyes',      '09171000004', NULL,      '{"Bigte","Matictic","Partida","San Mateo","Tumana","Bitbit","Bangkal","Pugad","Sapang Kawayan","Tigbe","Minuyan","Balayong","Alawihaw"}', true, false),
+      ('${ID.u_worker_bigte}',   'worker1@mswdo.test',     '${workerPass}',  'social_worker', 'Juan Dela Cruz',         '09171000002', NULL,      '{"Bigte","Partida","Poblacion","Friendship Village Resources (FVR)","Tigbe"}', true, false),
+      ('${ID.u_worker_matictic}','worker2@mswdo.test',     '${workerPass}',  'social_worker', 'Lorna B. Santos',        '09171000003', NULL,      '{"Matictic","San Mateo","Pinagtulayan","Minuyan","San Lorenzo","Baraka"}', true, false),
+      ('${ID.u_coordinator}',   'coordinator@mswdo.test',  '${coordPass}',   'coordinator',   'Emmanuel T. Reyes',      '09171000004', NULL,      '{"Bigte","Matictic","Partida","San Mateo","Pinagtulayan","Bitungol","Bangkal","Poblacion","Friendship Village Resources (FVR)","Tigbe","Minuyan","San Lorenzo","Baraka"}', true, false),
       ('${ID.u_claimant_a}',    'pedro.claimant@test.com', '${claimantPass}','claimant',      'Pedro P. Reyes',         '09171000005', NULL,      '{}',                                               true,  false),
       ('${ID.u_claimant_b}',    'ana.claimant@test.com',   '${claimantPass}','claimant',      'Ana Marie L. Fernandez', '09171000006', NULL,      '{}',                                               true,  false),
       ('${ID.u_mayor}',         'mayor@mswdo.test',        '${mayorPass}',   'mayor',         'Felicisimo I. Santiago', '09171000007', NULL,      '{}',                                               true,  false),
@@ -341,17 +341,17 @@ async function seed() {
       ('${ID.b_reyes}',     'PHIL-9876-5432-1006','Reyes',     'Carmen',   'Villanueva','Female','1988-06-30','303 Purok 2, Partida, Norzagaray',     '09171234506','NORZ-AC-2025-0006','active','PWD','Norzagaray, Bulacan','Married','{"street":"303 Purok 2","barangay":"Partida","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"303 Purok 2","barangay":"Partida","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789006','Teacher',11000.00,37),
       ('${ID.b_mendoza}',   'PHIL-9876-5432-1007','Mendoza',   'Ricardo',  'Fernando','Male',   '1960-01-15','404 Purok 1, San Mateo, Norzagaray',   '09171234507','NORZ-AC-2025-0007','active','Senior Citizen','Norzagaray, Bulacan','Married','{"street":"404 Purok 1","barangay":"San Mateo","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"404 Purok 1","barangay":"San Mateo","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789007','Retired',3500.00,65),
       ('${ID.b_aquino}',    'PHIL-9876-5432-1008','Aquino',    'Sofia',    'Dela Cruz','Female','1998-12-25','505 Purok 2, San Mateo, Norzagaray',   '09171234508','NORZ-AC-2025-0008','active','Youth','Norzagaray, Bulacan','Single','{"street":"505 Purok 2","barangay":"San Mateo","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"505 Purok 2","barangay":"San Mateo","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789008','Student',9000.00,27),
-      ('${ID.b_rivera}',    'PHIL-9876-5432-1009','Rivera',    'Benigno',  'Cruz',    'Male',   '1975-08-19','606 Sitio Bakal, Tumana, Norzagaray',   '09171234509','NORZ-AC-2025-0009','active','Family','Norzagaray, Bulacan','Married','{"street":"606 Sitio Bakal","barangay":"Tumana","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"606 Sitio Bakal","barangay":"Tumana","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789009','Fisherman',8500.00,50),
-      ('${ID.b_villanueva}','PHIL-9876-5432-1010','Villanueva','Lydia',    'Santos',  'Female', '1985-03-10','707 Purok 3, Bitbit, Norzagaray',      '09171234510','NORZ-AC-2025-0010','active','PWD','Norzagaray, Bulacan','Married','{"street":"707 Purok 3","barangay":"Bitbit","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"707 Purok 3","barangay":"Bitbit","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789010','Housewife',6500.00,40),
+      ('${ID.b_rivera}',    'PHIL-9876-5432-1009','Rivera',    'Benigno',  'Cruz',    'Male',   '1975-08-19','606 Sitio Bakal, Pinagtulayan, Norzagaray',   '09171234509','NORZ-AC-2025-0009','active','Family','Norzagaray, Bulacan','Married','{"street":"606 Sitio Bakal","barangay":"Pinagtulayan","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"606 Sitio Bakal","barangay":"Pinagtulayan","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789009','Fisherman',8500.00,50),
+      ('${ID.b_villanueva}','PHIL-9876-5432-1010','Villanueva','Lydia',    'Santos',  'Female', '1985-03-10','707 Purok 3, Bitungol, Norzagaray',      '09171234510','NORZ-AC-2025-0010','active','PWD','Norzagaray, Bulacan','Married','{"street":"707 Purok 3","barangay":"Bitungol","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"707 Purok 3","barangay":"Bitungol","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789010','Housewife',6500.00,40),
       ('${ID.b_fernando}',  'PHIL-9876-5432-1011','Fernando',  'Gabriel',  'Reyes',   'Male',   '1992-10-05','808 Purok 4, Bangkal, Norzagaray',     '09171234511','NORZ-AC-2025-0011','revoked','Family','Norzagaray, Bulacan','Married','{"street":"808 Purok 4","barangay":"Bangkal","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"808 Purok 4","barangay":"Bangkal","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789011','Laborer',10000.00,33),
       ('${ID.b_lopez}',     'PHIL-9876-5432-1012','Lopez',     'Imelda',   'Alcala',  'Female', '1970-05-28','909 Purok 5, Bigte, Norzagaray',       '09171234512','NORZ-AC-2025-0012','active','Women','Norzagaray, Bulacan','Married','{"street":"909 Purok 5","barangay":"Bigte","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"909 Purok 5","barangay":"Bigte","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789012','Vendor',7500.00,55),
       -- 6 new beneficiaries in uncovered barangays (coordinator territory)
-      ('${ID.b_delacruz}',  'PHIL-9876-5432-1013','Dela Cruz', 'Nenita',   'Marquez', 'Female', '1953-03-25','111 Purok 1, Pugad, Norzagaray',       '09171234513','NORZ-AC-2025-0013','active','Senior Citizen','Norzagaray, Bulacan','Single','{"street":"111 Purok 1","barangay":"Pugad","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"111 Purok 1","barangay":"Pugad","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789013','Retired',6200.00,72),
-      ('${ID.b_martinez}',  'PHIL-9876-5432-1014','Martinez',  'Roberto',  'Fernandez','Male',   '1979-11-18','222 Purok 2, Sapang Kawayan, Norzagaray','09171234514','NORZ-AC-2025-0014','active','PWD','Norzagaray, Bulacan','Married','{"street":"222 Purok 2","barangay":"Sapang Kawayan","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"222 Purok 2","barangay":"Sapang Kawayan","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789014','Driver',3500.00,46),
+      ('${ID.b_delacruz}',  'PHIL-9876-5432-1013','Dela Cruz', 'Nenita',   'Marquez', 'Female', '1953-03-25','111 Purok 1, Poblacion, Norzagaray',       '09171234513','NORZ-AC-2025-0013','active','Senior Citizen','Norzagaray, Bulacan','Single','{"street":"111 Purok 1","barangay":"Poblacion","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"111 Purok 1","barangay":"Poblacion","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789013','Retired',6200.00,72),
+      ('${ID.b_martinez}',  'PHIL-9876-5432-1014','Martinez',  'Roberto',  'Fernandez','Male',   '1979-11-18','222 Purok 2, Friendship Village Resources (FVR), Norzagaray','09171234514','NORZ-AC-2025-0014','active','PWD','Norzagaray, Bulacan','Married','{"street":"222 Purok 2","barangay":"Friendship Village Resources (FVR)","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"222 Purok 2","barangay":"Friendship Village Resources (FVR)","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789014','Driver',3500.00,46),
       ('${ID.b_flores}',    'PHIL-9876-5432-1015','Flores',    'Maricel',  'Dimagiba', 'Female', '1992-07-08','333 Purok 1, Tigbe, Norzagaray',        '09171234515','NORZ-AC-2025-0015','active','Women','Norzagaray, Bulacan','Single','{"street":"333 Purok 1","barangay":"Tigbe","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"333 Purok 1","barangay":"Tigbe","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789015','Vendor',8000.00,33),
       ('${ID.b_gonzales}',  'PHIL-9876-5432-1016','Gonzales',  'Efren',    'Lansang',  'Male',   '1975-04-30','444 Purok 3, Minuyan, Norzagaray',      '09171234516','NORZ-AC-2025-0016','active','Family','Norzagaray, Bulacan','Married','{"street":"444 Purok 3","barangay":"Minuyan","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"444 Purok 3","barangay":"Minuyan","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789016','Farmer',5500.00,50),
-      ('${ID.b_navarro}',   'PHIL-9876-5432-1017','Navarro',   'Luzviminda','Torres',  'Female', '1957-09-14','555 Purok 2, Balayong, Norzagaray',    '09171234517','NORZ-AC-2025-0017','active','Senior Citizen','Norzagaray, Bulacan','Single','{"street":"555 Purok 2","barangay":"Balayong","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"555 Purok 2","barangay":"Balayong","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789017','Retired',4000.00,68),
-      ('${ID.b_soriano}',   'PHIL-9876-5432-1018','Soriano',   'Dante',    'Pascual',  'Male',   '2003-06-21','666 Purok 1, Alawihaw, Norzagaray',    '09171234518','NORZ-AC-2025-0018','active','Youth','Norzagaray, Bulacan','Single','{"street":"666 Purok 1","barangay":"Alawihaw","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"666 Purok 1","barangay":"Alawihaw","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789018','Student',3000.00,22)
+      ('${ID.b_navarro}',   'PHIL-9876-5432-1017','Navarro',   'Luzviminda','Torres',  'Female', '1957-09-14','555 Purok 2, San Lorenzo, Norzagaray',    '09171234517','NORZ-AC-2025-0017','active','Senior Citizen','Norzagaray, Bulacan','Single','{"street":"555 Purok 2","barangay":"San Lorenzo","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"555 Purok 2","barangay":"San Lorenzo","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789017','Retired',4000.00,68),
+      ('${ID.b_soriano}',   'PHIL-9876-5432-1018','Soriano',   'Dante',    'Pascual',  'Male',   '2003-06-21','666 Purok 1, Baraka, Norzagaray',    '09171234518','NORZ-AC-2025-0018','active','Youth','Norzagaray, Bulacan','Single','{"street":"666 Purok 1","barangay":"Baraka","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'{"street":"666 Purok 1","barangay":"Baraka","city":"Norzagaray","province":"Bulacan","postalCode":"3012"}'::jsonb,'123456789018','Student',3000.00,22)
   `);
 
   // ==========================================================================
@@ -370,12 +370,12 @@ async function seed() {
       ('${ID.hh_mendoza}', '${ID.b_mendoza}',  'San Mateo', 3500.00,  'Emmanuel T. Reyes'),
       ('${ID.hh_aquino}',  '${ID.b_aquino}',   'San Mateo', 9000.00,  'Emmanuel T. Reyes'),
       -- 6 new households in uncovered barangays
-      ('${ID.hh_delacruz}', '${ID.b_delacruz}', 'Pugad',         6200.00, 'Emmanuel T. Reyes'),
-      ('${ID.hh_martinez}', '${ID.b_martinez}', 'Sapang Kawayan',3500.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_delacruz}', '${ID.b_delacruz}', 'Poblacion',         6200.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_martinez}', '${ID.b_martinez}', 'Friendship Village Resources (FVR)',3500.00, 'Emmanuel T. Reyes'),
       ('${ID.hh_flores}',   '${ID.b_flores}',   'Tigbe',         8000.00, 'Emmanuel T. Reyes'),
       ('${ID.hh_gonzales}', '${ID.b_gonzales}', 'Minuyan',       5500.00, 'Emmanuel T. Reyes'),
-      ('${ID.hh_navarro}',  '${ID.b_navarro}',  'Balayong',      4000.00, 'Emmanuel T. Reyes'),
-      ('${ID.hh_soriano}',  '${ID.b_soriano}',  'Alawihaw',      3000.00, 'Emmanuel T. Reyes')
+      ('${ID.hh_navarro}',  '${ID.b_navarro}',  'San Lorenzo',      4000.00, 'Emmanuel T. Reyes'),
+      ('${ID.hh_soriano}',  '${ID.b_soriano}',  'Baraka',      3000.00, 'Emmanuel T. Reyes')
   `);
 
   // ==========================================================================
@@ -417,11 +417,11 @@ async function seed() {
       ('${ID.fm22}', '${ID.hh_aquino}',  'Sofia Aquino',       'Self',         27, '',                    NULL::decimal, 'Student',      true),
       ('${ID.fm23}', '${ID.hh_aquino}',  'Bella Aquino',       'Sibling',      19, '',                    NULL::decimal, 'Student',      false),
       ('${ID.fm24}', '${ID.hh_aquino}',  'Alfredo Aquino Sr.', 'Father',       55, 'Janitor',            6000,          'Employed',     false),
-      -- Dela Cruz household (Pugad)
+      -- Dela Cruz household (Poblacion)
       ('${ID.fm25}', '${ID.hh_delacruz}',  'Nenita Dela Cruz',     'Self',         72, 'Retired',            5000,          'Retired',      true),
       ('${ID.fm26}', '${ID.hh_delacruz}',  'Mario Dela Cruz',      'Spouse',       75, 'Pensioner',          3000,          'Retired',      false),
       ('${ID.fm27}', '${ID.hh_delacruz}',  'Susan Dela Cruz',      'Child',        35, 'Driver',             10000,         'Employed',     false),
-      -- Martinez household (Sapang Kawayan)
+      -- Martinez household (Friendship Village Resources (FVR))
       ('${ID.fm28}', '${ID.hh_martinez}',  'Roberto Martinez',     'Self',         45, 'Fruit Vendor',       10000,         'Self-Employed',true),
       ('${ID.fm29}', '${ID.hh_martinez}',  'Liza Martinez',        'Spouse',       42, 'Driver',             6000,          'Employed',     false),
       ('${ID.fm30}', '${ID.hh_martinez}',  'Kevin Martinez',       'Child',        16, '',                    NULL::decimal, 'Student',      false),
@@ -433,11 +433,11 @@ async function seed() {
       ('${ID.fm34}', '${ID.hh_gonzales}',  'Efren Gonzales',       'Self',         50, 'Factory Worker',     8000,          'Employed',     true),
       ('${ID.fm35}', '${ID.hh_gonzales}',  'Marilyn Gonzales',     'Spouse',       47, 'Cashier',            6000,          'Employed',     false),
       ('${ID.fm36}', '${ID.hh_gonzales}',  'John Gonzales',        'Child',        20, '',                    NULL::decimal, 'Student',      false),
-      -- Navarro household (Balayong)
+      -- Navarro household (San Lorenzo)
       ('${ID.fm37}', '${ID.hh_navarro}',   'Luzviminda Navarro',   'Self',         68, 'Pensioner',          2000,          'Retired',      true),
       ('${ID.fm38}', '${ID.hh_navarro}',   'Pedro Navarro',        'Spouse',       70, 'Retired',            2000,          'Retired',      false),
       ('${ID.fm39}', '${ID.hh_navarro}',   'Anna Navarro',         'Child',        30, 'Factory Worker',     15000,         'Employed',     false),
-      -- Soriano household (Alawihaw)
+      -- Soriano household (Baraka)
       ('${ID.fm40}', '${ID.hh_soriano}',   'Dante Soriano',        'Self',         22, '',                    NULL::decimal, 'Student',      true),
       ('${ID.fm41}', '${ID.hh_soriano}',   'Elena Soriano',        'Mother',       50, 'Laborer',            15000,         'Employed',     false),
       ('${ID.fm42}', '${ID.hh_soriano}',   'Karl Soriano',         'Sibling',      18, '',                    NULL::decimal, 'Student',      false)
@@ -613,7 +613,7 @@ async function seed() {
       ('${ID.irf3}','BLOTTER-2025-003','Exploitation',
        '2025-03-10 11:00:00','2025-03-08 06:00:00',
        '{"name":"Anonymous (thru hotline)","address":"N/A","phone":"N/A"}',
-       '{"name":"Unknown employer","address":"Quarry site, Bitbit","relationship":"Employer","age_est":null}',
+       '{"name":"Unknown employer","address":"Quarry site, Bitungol","relationship":"Employer","age_est":null}',
        decode(encode('Report of child labor at quarry site. Anonymous caller reported minors working in hazardous conditions.', 'base64'), 'base64'),
        'Referred to PNP','/sig/irf/msdw/20250310.png',NULL),
 
@@ -826,7 +826,7 @@ async function seed() {
       ('${ID.chat2}','${ID.u_worker_bigte}',  'Juan Dela Cruz',  '${ID.u_coordinator}',    'Noted, Emmanuel. Medical certificate is complete and legible. I will proceed with office assessment.',true,'CONV-2025-001','2025-03-07 16:00:00'),
       ('${ID.chat3}','${ID.u_coordinator}',   'Emmanuel Reyes',  '${ID.u_worker_bigte}',   'Thank you, Sir. PWD ID, med cert, and prescription verified during home visit – all uploaded to vault.',true,'CONV-2025-001','2025-03-08 09:00:00'),
       -- Social workers coordinate office tasks between themselves
-      ('${ID.chat4}','${ID.u_worker_matictic}','Lorna B. Santos', '${ID.u_worker_bigte}',  'Hi Juan, can you handle the pending case reviews for Tumana tomorrow? I have a seminar at the Municipal Hall.',true,'CONV-2025-002','2025-03-10 15:30:00'),
+      ('${ID.chat4}','${ID.u_worker_matictic}','Lorna B. Santos', '${ID.u_worker_bigte}',  'Hi Juan, can you handle the pending case reviews for Pinagtulayan tomorrow? I have a seminar at the Municipal Hall.',true,'CONV-2025-002','2025-03-10 15:30:00'),
       ('${ID.chat5}','${ID.u_worker_bigte}',  'Juan Dela Cruz',  '${ID.u_worker_matictic}','No problem, Lorna. I will process the pending assessments by end of day. Good luck at the seminar!',false,'CONV-2025-002',NULL),
       -- Coordinator requests expedited review from social worker
       ('${ID.chat6}','${ID.u_coordinator}',   'Emmanuel Reyes',  '${ID.u_worker_matictic}','Maam Lorna, requesting expedited review for burial assistance case NORZ-2025-0005. The family is requesting urgent processing.',true,'CONV-2025-003','2025-03-15 14:00:00'),

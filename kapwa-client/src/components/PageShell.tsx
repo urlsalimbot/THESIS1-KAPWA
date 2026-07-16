@@ -22,12 +22,12 @@ export function PageShell({ title, description, actions, cachedAt, children }: P
   }
 
   return (
-    <div className="flex flex-col gap-4 lg:gap-8">
-      <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-3 lg:gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold font-heading text-foreground">{title}</h1>
+          <h1 className="text-xl font-bold font-heading text-foreground">{title}</h1>
           {fullDescription && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {isStale && <Clock size={14} className="inline mr-1 align-text-top" aria-hidden="true" />}
               {fullDescription}
             </p>

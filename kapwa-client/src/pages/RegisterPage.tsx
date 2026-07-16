@@ -14,9 +14,19 @@ import { Loader2, HandHeart } from 'lucide-react';
 import { api } from '../lib/api';
 
 const barangays = [
-  'Bangkal', 'Binitagan', 'Bitungol', 'Matictic', 'Maturanoc',
-  'Minantok', 'Palayan', 'Pandawan', 'Pinagtulayan', 'Poblacion',
-  'San Mateo', 'Tigbe',
+  'Bangkal',
+  'Baraka',
+  'Bigte',
+  'Bitungol',
+  'Friendship Village Resources (FVR)',
+  'Matictic',
+  'Minuyan',
+  'Partida',
+  'Pinagtulayan',
+  'Poblacion',
+  'San Lorenzo',
+  'San Mateo',
+  'Tigbe',
 ];
 
 const registerSchema = z.object({

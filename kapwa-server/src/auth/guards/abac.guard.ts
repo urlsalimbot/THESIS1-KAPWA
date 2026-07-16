@@ -16,14 +16,18 @@ export class AbacGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const { user, query, params, body } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest();
+    const { user, query, params, body } = request;
     if (!user) return false;
 
     // Admin bypass
     if (user.role === 'admin') return true;
 
     // Consent-gated ABAC: auto-evaluate consent_ledger for beneficiary routes
-    const beneficiaryId = params?.beneficiaryId || params?.id || query?.beneficiaryId;
+    // On case routes (:id is a case UUID, not beneficiary UUID) — skip auto-resolve
+    const routePath = request.route?.path || request.url || '';
+    const isCaseRoute = /\/cases(\/|$)/.test(routePath);
+    const beneficiaryId = params?.beneficiaryId || (!isCaseRoute && params?.id) || query?.beneficiaryId;
     if (beneficiaryId) {
       const consent = await this.consentRepo.findOne({
         where: { beneficiaryId, status: 'active' },
@@ -37,8 +41,8 @@ export class AbacGuard implements CanActivate {
       RESOURCE_SENSITIVITY_KEY,
       [context.getHandler(), context.getClass()],
     ) || this.abacService.getResourceSensitivity(
-      context.switchToHttp().getRequest().route?.path || '',
-      context.switchToHttp().getRequest().method,
+      routePath,
+      request.method,
     );
 
     // Coordinator scoping
