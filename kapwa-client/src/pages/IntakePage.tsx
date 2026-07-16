@@ -111,37 +111,65 @@ export function IntakePage() {
       return;
     }
     setSubmitting(true);
+
+    const intakePayload = {
+      beneficiary: {
+        surname: form.surname,
+        firstName: form.firstName,
+        middleName: form.middleName || undefined,
+        gender: form.gender,
+        dob: form.dob,
+        age,
+        placeOfBirth: form.placeOfBirth,
+        civilStatus: form.civilStatus,
+        cellularNumber: form.cellularNumber,
+        currentAddress: form.currentAddress,
+        provincialAddress: form.provincialAddress,
+        philhealthNumber: form.philhealthNumber || undefined,
+        occupation: form.occupation,
+        estimatedMonthlyIncome: parseFloat(form.estimatedMonthlyIncome.replace(/,/g, '')) || 0,
+      },
+      familyMembers: family.filter(m => m.fullName.trim()).map(f => ({
+        fullName: f.fullName,
+        age: f.age || 0,
+        relationship: f.relationship,
+        occupation: f.occupation,
+        income: f.income ? parseFloat(f.income.replace(/,/g, '')) : undefined,
+        status: f.status || undefined,
+      })),
+      case: {},
+    };
+
     try {
-      const data = await api.post<{ caseId: string; controlNo: string }>('/intake', {
-        beneficiary: {
-          surname: form.surname,
-          firstName: form.firstName,
-          middleName: form.middleName || undefined,
-          gender: form.gender,
-          dob: form.dob,
-          age: age,
-          placeOfBirth: form.placeOfBirth,
-          civilStatus: form.civilStatus,
-          cellularNumber: form.cellularNumber,
-          currentAddress: form.currentAddress,
-          provincialAddress: form.provincialAddress,
-          philhealthNumber: form.philhealthNumber || undefined,
-          occupation: form.occupation,
-          estimatedMonthlyIncome: parseFloat(form.estimatedMonthlyIncome.replace(/,/g, '')) || 0,
-        },
-        familyMembers: family.filter(m => m.fullName.trim()).map(f => ({
-          fullName: f.fullName,
-          age: f.age || 0,
-          relationship: f.relationship,
-          occupation: f.occupation,
-          income: f.income ? parseFloat(f.income.replace(/,/g, '')) : undefined,
-          status: f.status || undefined,
-        })),
-        case: {},
-      });
-      navigate(`/cases/${data.caseId}`);
+      // Step 1: Check for prior records
+      const intakeCheckPayload = {
+        surname: form.surname,
+        firstName: form.firstName,
+        middleName: form.middleName || undefined,
+        familyMembers: family.filter(m => m.fullName.trim()).map(f => ({ fullName: f.fullName })),
+        barangay: form.currentAddress.barangay || undefined,
+      };
+
+      const matchResult = await api.post<{ candidates: unknown[] }>('/intake/match-check', intakeCheckPayload);
+
+      if (matchResult.candidates && matchResult.candidates.length > 0) {
+        // Show review page
+        navigate('/intake/review', {
+          state: { candidates: matchResult.candidates, intakeData: intakePayload },
+        });
+      } else {
+        // No matches — create new client directly
+        const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
+        navigate(`/cases/${data.caseId}`);
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to submit intake');
+      // On match-check error, fall through to normal intake
+      try {
+        const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
+        navigate(`/cases/${data.caseId}`);
+      } catch (fallbackErr: unknown) {
+        setError(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to submit intake');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +179,7 @@ export function IntakePage() {
     const addr = form[type];
     return (
       <div className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</h4>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</h3>
         <div className="space-y-2">
           <label className="text-sm font-medium">House/Unit No., Street, Subdivision</label>
           <Input value={addr.street} onChange={e => updateAddress(type, 'street', e.target.value)} aria-label={`${label} Street`} />
@@ -341,7 +369,7 @@ export function IntakePage() {
 
         <div className="flex gap-3">
           <Button type="submit" disabled={submitting} aria-label="Submit Intake">
-            {submitting ? 'Submitting...' : 'Submit Intake'}
+            {submitting ? 'Checking records...' : 'Submit & Check for Prior Records'}
           </Button>
         </div>
       </form>
