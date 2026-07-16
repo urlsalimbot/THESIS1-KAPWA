@@ -91,6 +91,20 @@ export class DashboardController {
     };
   }
 
+  @Get('trends')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @ApiOperation({ summary: 'Get monthly case/disbursement trends for past 6 months' })
+  async getTrends() {
+    return this.dashService.getTrends();
+  }
+
+  @Get('daily-counts')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @ApiOperation({ summary: 'Get daily intervention/case counts for a month' })
+  async getDailyCounts(@Query('year') year: string, @Query('month') month: string) {
+    return this.dashService.getDailyCounts(parseInt(year), parseInt(month));
+  }
+
   @Get('daily-tracker')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get daily case tracker' })

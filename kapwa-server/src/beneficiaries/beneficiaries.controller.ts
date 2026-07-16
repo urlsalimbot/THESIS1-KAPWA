@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { AuthenticatedRequest } from '../auth/types';
@@ -30,24 +31,28 @@ export class BeneficiariesController {
 
   @Get('dashboard')
   @Roles('claimant')
+  @Sensitivity('public')
   async dashboard(@Request() req: AuthenticatedRequest) {
     return this.benService.getMyServices(req.user?.id || req.user.id);
   }
 
   @Get('me/services')
   @Roles('claimant')
+  @Sensitivity('public')
   async getMyServices(@Request() req: AuthenticatedRequest) {
     return this.benService.getMyServices(req.user?.id || req.user.id);
   }
 
   @Get('me/access-card')
   @Roles('claimant')
+  @Sensitivity('public')
   async getMyAccessCard(@Request() req: AuthenticatedRequest) {
     return this.benService.getAccessCard(req.user?.id || req.user.id);
   }
 
   @Get('me/consent')
   @Roles('claimant')
+  @Sensitivity('public')
   async getMyConsent(@Request() req: AuthenticatedRequest) {
     return this.benService.getMyConsent(req.user?.id || req.user.id);
   }

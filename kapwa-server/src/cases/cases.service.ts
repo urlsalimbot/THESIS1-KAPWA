@@ -94,7 +94,10 @@ export class CasesService {
   }
 
   async findById(id: string) {
-    const c = await this.caseRepo.findOne({ where: { id }, relations: ['beneficiary'] });
+    const c = await this.caseRepo.findOne({
+      where: { id },
+      relations: ['beneficiary', 'beneficiary.household', 'beneficiary.household.members'],
+    });
     if (!c) throw new NotFoundException('Case not found');
     return c;
   }

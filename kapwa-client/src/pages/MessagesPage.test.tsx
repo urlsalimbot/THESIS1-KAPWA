@@ -59,12 +59,12 @@ describe('MessagesPage', () => {
 
   it('renders description text', async () => {
     renderWithSWR(<MessagesPage />);
-    expect(await screen.findByText(/Chat with other MSWDO team members/i)).toBeTruthy();
+    expect(await screen.findByText(/Chat with your team/i)).toBeTruthy();
   });
 
   it('renders New button', async () => {
     renderWithSWR(<MessagesPage />);
-    expect(await screen.findByRole('button', { name: /\+ New/i })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /New/i })).toBeTruthy();
   });
 
   it('has no a11y violations', async () => {

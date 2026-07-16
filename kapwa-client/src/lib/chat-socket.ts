@@ -13,14 +13,10 @@ export function connectSocket(token: string): Socket {
     transports: ['websocket', 'polling'],
   });
 
-  socket.on('connect', () => {
-  });
-
-  socket.on('disconnect', (reason) => {
-  });
-
-  socket.on('error', (err) => {
-    console.error('[WS] Error:', err);
+  socket.on('connect_error', (err) => {
+    if (err.message?.includes('Invalid token') || err.message?.includes('unauthorized')) {
+      socket?.disconnect();
+    }
   });
 
   return socket;

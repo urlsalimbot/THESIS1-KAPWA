@@ -3,11 +3,11 @@
 # Development: runs on :80 with plain HTTP
 
 :80 {
-    # Rate limiting — 60 events/minute per remote host
+    # Rate limiting — 600 events/minute (higher for ngrok tunnel — single egress IP)
     rate_limit {
         zone dynamic {
             key {remote_host}
-            events 60
+            events 600
             window 1m
         }
     }

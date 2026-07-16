@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './lib/auth-context';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { IntakePage } from './pages/IntakePage';
+import { IntakeReviewPage } from './pages/IntakeReviewPage';
 import { CasesPage } from './pages/CasesPage';
 import { CaseViewPage } from './pages/CaseViewPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
@@ -18,6 +19,7 @@ import { MessagesPage } from './pages/MessagesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { CaseTrackerPage } from './pages/CaseTrackerPage';
 import { CsrPage } from './pages/CsrPage';
+import { CreateCsrPage } from './pages/CreateCsrPage';
 import { AdminPage } from './pages/AdminPage';
 import { ClaimantDashboardPage } from './pages/ClaimantDashboardPage';
 import { FilingPage } from './pages/FilingPage';
@@ -30,6 +32,9 @@ import { MayorReportsPage } from './pages/MayorReportsPage';
 import { AuditorPage } from './pages/AuditorPage';
 import { IrfPage } from './pages/IrfPage';
 import { IrfDetailPage } from './pages/IrfDetailPage';
+import { CreateIrfPage } from './pages/CreateIrfPage';
+import { CreateInterventionPage } from './pages/CreateInterventionPage';
+import { CreateProgramPage } from './pages/CreateProgramPage';
 import { AccessCardPage } from './pages/AccessCardPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
 import { ProgramsPage } from './pages/ProgramsPage';
@@ -40,6 +45,9 @@ import { LandingPage } from './pages/LandingPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { Toaster } from '@/components/ui/sonner';
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -61,32 +69,40 @@ const router = createBrowserRouter([
       { index: true, element: <LandingPageRedirect /> },
       { path: 'about', element: <AboutPage /> },
       { path: 'contact', element: <ContactPage /> },
-      { path: 'register', element: <RegisterPage /> },
     ],
   },
   { path: 'login', element: <LoginPage /> },
+  { path: 'register', element: <RegisterPage /> },
+  { path: 'verify-email', element: <VerifyEmailPage /> },
+  { path: 'forgot-password', element: <ForgotPasswordPage /> },
+  { path: 'reset-password', element: <ResetPasswordPage /> },
   // === PROTECTED ROUTES ===
   { path: 'dashboard', element: <Private><DashboardPage /></Private> },
   { path: '/intake', element: <Private roles={['admin','social_worker','coordinator']}><IntakePage /></Private> },
+  { path: '/intake/review', element: <Private roles={['admin','social_worker','coordinator']}><IntakeReviewPage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker','coordinator']}><CasesPage /></Private> },
   { path: '/cases/:id', element: <Private roles={['admin','social_worker','coordinator']}><CaseViewPage /></Private> },
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
+  { path: '/interventions/new', element: <Private roles={['admin','social_worker']}><CreateInterventionPage /></Private> },
   { path: '/interventions', element: <Private roles={['admin','social_worker']}><InterventionsPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker','coordinator','mayor','auditor']}><CaseTrackerPage /></Private> },
+  { path: '/csr/new', element: <Private roles={['admin','social_worker']}><CreateCsrPage /></Private> },
   { path: '/csr', element: <Private roles={['admin','social_worker']}><CsrPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
   { path: '/filing', element: <Private roles={['admin','social_worker']}><FilingPage /></Private> },
   { path: '/approvals', element: <Private roles={['admin','social_worker']}><ApprovalPipelinePage /></Private> },
   { path: '/settings/mfa', element: <Navigate to="/settings" replace /> },
   { path: '/settings', element: <Private><SettingsPage /></Private> },
+  { path: '/irf/new', element: <Private roles={['admin','social_worker']}><CreateIrfPage /></Private> },
   { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
   { path: '/irf/:id', element: <Private roles={['admin','social_worker']}><IrfDetailPage /></Private> },
   { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
   { path: '/beneficiaries/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
+  { path: '/programs/new', element: <Private roles={['admin']}><CreateProgramPage /></Private> },
   { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
   { path: '/coordinator', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
-  { path: '/messages', element: <Private roles={['admin','social_worker','coordinator']}><MessagesPage /></Private> },
+  { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },
   { path: '/notifications', element: <Private><NotificationsPage /></Private> },
   { path: '/my-access-card', element: <Private roles={['claimant']}><MyAccessCardPage /></Private> },

@@ -132,30 +132,25 @@ export function AdminPage() {
               ) : auditLogsArr.length === 0 ? (
                 <EmptyState variant="no-data" />
               ) : (
-                auditLogsArr.map((log, idx) => log && (
-                  <div key={idx} className="mb-4 rounded bg-muted p-4 text-xs font-mono text-muted-foreground">
-                    {log.generatedAt && (
-                      <>
-                        <p className="mb-2 font-semibold text-foreground">COA Export Report</p>
-                        <p>Generated: {new Date(log.generatedAt).toLocaleString()}</p>
-                        <p>Period: {log.period?.startDate} – {log.period?.endDate}</p>
-                        <p>Total Interventions: {log.summary?.count || 0}</p>
-                        <p>Total Amount: ₱{(log.summary?.totalAmount || 0).toLocaleString()}</p>
-                        {log.interventions?.slice(0, 10).map((i: any) => (
-                          <p key={i.id} className="pl-4">{i.type} · ₱{Number(i.amount || 0).toLocaleString()} · {i.date ? new Date(i.date).toLocaleDateString() : ''}</p>
-                        ))}
-                      </>
-                    )}
-                    {log.valid !== undefined && (
-                      <>
-                        <p className="mt-2 mb-1 font-semibold text-foreground">Hash Chain Verification</p>
-                        <p className={log.valid ? 'text-green-600' : 'text-red-600'}>
-                          {log.valid ? '✓ Hash chain integrity verified' : '✗ Hash chain broken!'} {log.brokenAt && `at ${log.brokenAt}`}
+                <div className="divide-y">
+                  {auditLogsArr.map((log: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="text-xs font-mono">
+                          <span className="font-semibold text-foreground">{log.action}</span>
+                          <span className="text-muted-foreground"> on </span>
+                          <span className="font-mono text-muted-foreground">{log.recordId?.slice(0, 8)}…</span>
                         </p>
-                      </>
-                    )}
-                  </div>
-                ))
+                        <p className="text-xs text-muted-foreground">
+                          {log.data?.type} · ₱{Number(log.data?.amount || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>

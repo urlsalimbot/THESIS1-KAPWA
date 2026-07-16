@@ -41,6 +41,7 @@
     "react-error-boundary": "^6.1.2",
     "react-hook-form": "^7.80.0",
     "react-router-dom": "^6.21.1",
+    "recharts": "^3.9.2",
     "socket.io-client": "^4.8.3",
     "sonner": "^2.0.7",
     "swr": "^2.2.4",
@@ -70,5 +71,11 @@
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.9",
     "vitest-axe": "^0.1.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.0": true,
+    "tree-sitter@0.22.4": true,
+    "tree-sitter-javascript@0.23.1": true,
+    "tree-sitter-typescript@0.23.2": true
   }
 }

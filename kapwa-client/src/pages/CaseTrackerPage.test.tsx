@@ -72,16 +72,18 @@ describe('CaseTrackerPage', () => {
     expect(await screen.findByText('Total Cases Logged', {}, { timeout: 3000 })).toBeTruthy();
   });
 
-  it('renders date input', async () => {
+  it('renders date inputs', async () => {
     renderWithSWR(<CaseTrackerPage />);
-    expect(await screen.findByLabelText('Tracker Date')).toBeTruthy();
+    expect(await screen.findByLabelText('Date from')).toBeTruthy();
+    expect(await screen.findByLabelText('Date to')).toBeTruthy();
   });
 
-  it('api.get is called with tracker.daily and tracker.stats on mount', async () => {
+  it('api.get is called with tracker.daily or tracker.range and tracker.stats on mount', async () => {
     renderWithSWR(<CaseTrackerPage />);
     await screen.findByText('Total Cases Logged', {}, { timeout: 3000 });
     const allCalls = mockApiGet.mock.calls.map(c => JSON.stringify(c[0]));
-    expect(allCalls.some(c => c.includes('tracker') && c.includes('daily'))).toBe(true);
+    const hasTracker = allCalls.some(c => c.includes('tracker') && (c.includes('daily') || c.includes('range')));
+    expect(hasTracker).toBe(true);
     expect(allCalls.some(c => c.includes('tracker') && c.includes('stats'))).toBe(true);
   });
 

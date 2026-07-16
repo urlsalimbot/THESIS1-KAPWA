@@ -58,7 +58,7 @@ describe('AuthProvider — login', () => {
     });
 
     let captured: ReturnType<typeof useAuth> | null = null;
-    let result: { mfaRequired: boolean; tempToken: string } | void = undefined;
+    let result: Awaited<ReturnType<ReturnType<typeof useAuth>['login']>> = undefined;
     render(
       <MemoryRouter>
         <AuthProvider>
@@ -71,7 +71,7 @@ describe('AuthProvider — login', () => {
 
     expect(result).toEqual({ mfaRequired: true, tempToken: 'temp-1' });
     await waitFor(() => {
-      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1' });
+      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1', type: 'totp' });
     });
     expect(localStorage.getItem('kapwa_token')).toBeNull();
   });
@@ -129,7 +129,7 @@ describe('AuthProvider — login', () => {
 
     await act(async () => { await captured!.login('a@b.com', 'pass'); });
     await waitFor(() => {
-      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1' });
+      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1', type: 'totp' });
     });
 
     await act(async () => { await captured!.resolveMfa('123456'); });
@@ -165,11 +165,11 @@ describe('AuthProvider — login', () => {
 
     await act(async () => { await captured!.login('a@b.com', 'pass'); });
     await waitFor(() => {
-      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1' });
+      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1', type: 'totp' });
     });
 
     await act(async () => {
-      await expect(captured!.resolveMfa('wrong')).rejects.toThrow('MFA verification failed');
+      await expect(captured!.resolveMfa('wrong')).rejects.toThrow('Verification failed');
     });
 
     expect(localStorage.getItem('kapwa_token')).toBeNull();

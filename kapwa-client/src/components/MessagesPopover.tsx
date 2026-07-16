@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import useSWR from 'swr';
-import { useSWRConfig } from 'swr';
 import { queryKeys } from '../lib/query-keys';
+import { mutate as globalMutateFn } from 'swr';
 import { connectSocket } from '../lib/chat-socket';
 
 interface Conversation {
@@ -17,7 +17,6 @@ interface Conversation {
 
 export default function MessagesPopover() {
   const navigate = useNavigate();
-  const { mutate: globalMutate } = useSWRConfig();
   const [open, setOpen] = useState(false);
 
   const { data: conversations = [] } = useSWR<Conversation[]>(queryKeys.messages.list());
@@ -29,23 +28,33 @@ export default function MessagesPopover() {
     if (!token) return;
     const sock = connectSocket(token);
     const handler = () => {
-      globalMutate(queryKeys.messages.list());
-      globalMutate(queryKeys.messages.unread());
+      globalMutateFn(queryKeys.messages.list());
+      globalMutateFn(queryKeys.messages.unread());
     };
     sock.on('new_message', handler);
     return () => { sock.off('new_message', handler); };
-  }, [globalMutate]);
+  }, [globalMutateFn]);
+
+  const popTZ = 'Asia/Manila';
+  const popTimeFmt = new Intl.DateTimeFormat('en-PH', { timeZone: popTZ, hour: '2-digit', minute: '2-digit', hour12: false });
+  const popDateFmt = new Intl.DateTimeFormat('en-PH', { timeZone: popTZ, month: 'short', day: 'numeric' });
+  const popDateOnlyFmt = new Intl.DateTimeFormat('en-PH', { timeZone: popTZ, month: 'short', day: 'numeric', year: 'numeric' });
 
   function formatTime(dateStr: string) {
     const d = new Date(dateStr);
     const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return 'now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const todayStr = popDateOnlyFmt.format(now);
+    const dateStrFormatted = popDateOnlyFmt.format(d);
+    if (dateStrFormatted === todayStr) {
+      const diffMs = now.getTime() - d.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return popTimeFmt.format(d);
+    }
+    return popDateFmt.format(d);
   }
 
   const recent = conversations.slice(0, 5);
@@ -56,8 +65,8 @@ export default function MessagesPopover() {
         <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Messages">
           <MessageSquare size={20} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[16px] font-bold text-accent-foreground">
-              {unreadCount}
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
+              {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </button>

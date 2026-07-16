@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
-import { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '@/lib/auth-context';
@@ -30,6 +29,7 @@ function ProfileTab() {
 
   const [newEmail, setNewEmail] = useState('');
   const [emailPw, setEmailPw] = useState('');
+  const [emailChangeSent, setEmailChangeSent] = useState(false);
   const changeEmail = useSWRMutation(
     'change-email',
     async (_key: string, { arg }: { arg: { newEmail: string; currentPassword: string } }) => {
@@ -37,10 +37,10 @@ function ProfileTab() {
     },
     {
       onSuccess: () => {
-        toast.success('Email updated successfully');
+        setEmailChangeSent(true);
         setNewEmail('');
         setEmailPw('');
-        mutate(queryKeys.auth.me());
+        toast.success('Verification sent! Check your new email inbox.');
       },
       onError: (err) => {
         toast.error(err.message || 'Failed to update email');
@@ -335,37 +335,31 @@ function SecurityTab() {
 function NotificationsTab() {
   const { user } = useAuth();
   const hasPhone = !!user?.phone;
+  const hasEmail = !!user?.email;
 
-  const { data: prefs, isLoading } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
-  const toggleRef = useRef({ channel: '', category: '' });
+  const { data: prefs, isLoading, mutate: revalidatePrefs } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
+  const [toggling, setToggling] = useState<string | null>(null);
 
-  const updatePref = useSWRMutation(
-    queryKeys.notifications.preferences(),
-    async (_key: string, { arg }: { arg: { channel: 'sms' | 'in_app'; category: string; optedIn: boolean } }) => {
-      toggleRef.current = { channel: arg.channel, category: arg.category };
-      return api.put('/notifications/preferences', arg);
-    },
-    {
-      optimisticData: (current: NotificationPref[] | undefined) => {
-        if (!current) return current;
-        const { channel, category } = toggleRef.current;
-        return current.map(p =>
-          p.channel === channel && p.category === category
-            ? { ...p, optedIn: !p.optedIn }
-            : p
-        );
-      },
-      revalidate: false,
-      populateCache: true,
-      rollbackOnError: true,
-      onError: () => {
-        toast.error('Failed to update notification preference');
-      },
-    },
-  );
+  async function handleToggle(channel: string, category: string) {
+    const key = `${channel}:${category}`;
+    setToggling(key);
+    try {
+      const pref = Array.isArray(prefs) ? prefs.find(p => p.channel === channel && p.category === category) : null;
+      await api.put('/notifications/preferences', {
+        channel,
+        category,
+        optedIn: pref ? !pref.optedIn : true,
+      });
+      await revalidatePrefs();
+    } catch {
+      toast.error('Failed to update notification preference');
+    } finally {
+      setToggling(null);
+    }
+  }
 
   function isOptedIn(channel: string, category: string): boolean {
-    if (!prefs) return false;
+    if (!Array.isArray(prefs)) return false;
     const pref = prefs.find(p => p.channel === channel && p.category === category);
     return pref ? pref.optedIn : false;
   }
@@ -399,23 +393,24 @@ function NotificationsTab() {
                 <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Category</th>
                 <th className="text-center py-2 px-4 font-medium text-muted-foreground">In-App</th>
                 {hasPhone && <th className="text-center py-2 px-4 font-medium text-muted-foreground">SMS</th>}
+                {hasEmail && <th className="text-center py-2 px-4 font-medium text-muted-foreground">Email</th>}
               </tr>
             </thead>
             <tbody>
               {CATEGORIES.map(cat => (
                 <tr key={cat} className="border-b last:border-b-0">
                   <td className="py-3 pr-4">{categoryLabels[cat] || cat}</td>
-                  {CHANNELS.filter(ch => ch !== 'sms' || hasPhone).map(ch => (
+                  {['in_app', ...(hasPhone ? ['sms'] : []), ...(hasEmail ? ['email'] : [])].map(ch => (
                     <td key={ch} className="text-center py-3 px-4">
                       <button
-                        onClick={() => updatePref.trigger({ channel: ch, category: cat, optedIn: !isOptedIn(ch, cat) })}
-                        disabled={updatePref.isMutating}
+                        onClick={() => handleToggle(ch, cat)}
+                        disabled={toggling === `${ch}:${cat}`}
                         className={`inline-flex h-6 w-10 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                           isOptedIn(ch, cat) ? 'bg-primary' : 'bg-input'
                         }`}
                         role="switch"
                         aria-checked={isOptedIn(ch, cat)}
-                        aria-label={`${categoryLabels[cat] || cat} - ${ch === 'in_app' ? 'In-App' : 'SMS'}`}
+                        aria-label={`${categoryLabels[cat] || cat} - ${ch === 'in_app' ? 'In-App' : ch === 'sms' ? 'SMS' : 'Email'}`}
                       >
                         <span
                           className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform ${
@@ -429,12 +424,17 @@ function NotificationsTab() {
               ))}
             </tbody>
           </table>
+          {!hasPhone && (
+            <p className="text-xs text-muted-foreground mt-4">
+              SMS notifications require a phone number on your profile. Contact your administrator.
+            </p>
+          )}
+          {!hasEmail && (
+            <p className="text-xs text-muted-foreground mt-4">
+              Email notifications require a valid email on your profile.
+            </p>
+          )}
         </div>
-        {!hasPhone && (
-          <p className="text-xs text-muted-foreground mt-4">
-            SMS notifications require a phone number on your profile. Contact your administrator.
-          </p>
-        )}
       </CardContent>
     </Card>
   );

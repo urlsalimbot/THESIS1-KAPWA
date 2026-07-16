@@ -107,6 +107,11 @@
     min-height: 44px;
     min-width: 44px;
   }
+  /* undo the 44px rule for small-form-factor inputs */
+  input[type="checkbox"], input[type="radio"], [role="switch"] {
+    min-height: unset !important;
+    min-width: unset !important;
+  }
   .touch-sm {
     min-height: unset !important;
     min-width: unset !important;

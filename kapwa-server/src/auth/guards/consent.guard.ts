@@ -11,13 +11,14 @@ export class ConsentGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const { user, params, body } = request;
+    const { user, params, body } = context.switchToHttp().getRequest();
 
     if (!user) return false;
     if (user.role === 'admin' || user.role === 'auditor') return true;
 
-    const beneficiaryId = params?.beneficiaryId || params?.id || body?.beneficiaryId;
+    const routePath = context.switchToHttp().getRequest().route?.path || context.switchToHttp().getRequest().url || '';
+    const isCaseRoute = /\/cases(\/|$)/.test(routePath);
+    const beneficiaryId = params?.beneficiaryId || (!isCaseRoute && params?.id) || body?.beneficiaryId;
     if (!beneficiaryId) return true; // No beneficiary context = no consent check needed
 
     const consent = await this.consentRepo.findOne({
