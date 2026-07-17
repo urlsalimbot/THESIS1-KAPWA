@@ -18,6 +18,7 @@
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts src/database/migrations/Generation",
     "typeorm": "typeorm-ts-node-commonjs",
     "seed": "node dist/database/seed.js",
+    "seed:audit": "node dist/database/seed-audit.js",
     "test:unit": "jest --testPathPattern=unit",
     "seed:comprehensive": "node dist/database/seed-comprehensive.js"
   },

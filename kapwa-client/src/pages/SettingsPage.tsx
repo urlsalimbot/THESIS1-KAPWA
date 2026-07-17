@@ -337,26 +337,22 @@ function NotificationsTab() {
   const hasPhone = !!user?.phone;
 
   const { data: prefs, isLoading } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
-  const toggleRef = useRef({ channel: '', category: '' });
 
+  
   const updatePref = useSWRMutation(
     queryKeys.notifications.preferences(),
     async (_key: string, { arg }: { arg: { channel: 'sms' | 'in_app'; category: string; optedIn: boolean } }) => {
-      toggleRef.current = { channel: arg.channel, category: arg.category };
       return api.put('/notifications/preferences', arg);
     },
     {
-      optimisticData: (current: NotificationPref[] | undefined) => {
+      optimisticData: (current: NotificationPref[] | undefined, { arg }: { arg: { channel: string; category: string } }) => {
         if (!current) return current;
-        const { channel, category } = toggleRef.current;
         return current.map(p =>
-          p.channel === channel && p.category === category
+          p.channel === arg.channel && p.category === arg.category
             ? { ...p, optedIn: !p.optedIn }
             : p
         );
       },
-      revalidate: false,
-      populateCache: true,
       rollbackOnError: true,
       onError: () => {
         toast.error('Failed to update notification preference');
@@ -365,7 +361,7 @@ function NotificationsTab() {
   );
 
   function isOptedIn(channel: string, category: string): boolean {
-    if (!prefs) return false;
+    if (!Array.isArray(prefs)) return false;
     const pref = prefs.find(p => p.channel === channel && p.category === category);
     return pref ? pref.optedIn : false;
   }

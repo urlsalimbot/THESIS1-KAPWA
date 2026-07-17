@@ -7,6 +7,7 @@ import { NotificationPreference } from './notification-preference.entity';
 import { SmsGatewayService } from '../otp/sms-gateway.service';
 import { renderTemplate, SmsTemplateKey } from './sms-templates';
 import { UpdatePreferenceInput } from './dto/notifications.zod';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
@@ -14,11 +15,14 @@ export class NotificationsService {
     @InjectRepository(Notification) private notifRepo: Repository<Notification>,
     @InjectRepository(NotificationPreference) private notifPrefRepo: Repository<NotificationPreference>,
     private smsGateway: SmsGatewayService,
+    private notifGateway: NotificationsGateway,
   ) {}
 
   async create(notif: Partial<Notification>) {
     const n = this.notifRepo.create(notif);
-    return this.notifRepo.save(n);
+    const saved = await this.notifRepo.save(n);
+    this.notifGateway.emitToUser(saved.recipientId, 'notification:new', saved);
+    return saved;
   }
 
   async send(notifId: string) {
@@ -64,8 +68,13 @@ export class NotificationsService {
     });
   }
 
-  async markAsRead(id: string) {
+  async markAsRead(id: string, recipientId?: string) {
     await this.notifRepo.update(id, { isRead: true });
+    if (recipientId) {
+      this.notifGateway.emitToUser(recipientId, 'notification:updated', { id, isRead: true });
+      const count = await this.getUnreadCount(recipientId);
+      this.notifGateway.emitToUser(recipientId, 'unread:count', { count });
+    }
     return { message: 'Marked as read' };
   }
 
@@ -74,6 +83,9 @@ export class NotificationsService {
       { recipientId, isRead: false },
       { isRead: true },
     );
+    this.notifGateway.emitToUser(recipientId, 'notifications:read-all', {});
+    const count = await this.getUnreadCount(recipientId);
+    this.notifGateway.emitToUser(recipientId, 'unread:count', { count });
     return { message: 'All marked as read' };
   }
 
@@ -169,7 +181,13 @@ export class NotificationsService {
   }
 
   async delete(id: string) {
+    const notif = await this.notifRepo.findOne({ where: { id } });
     await this.notifRepo.delete(id);
+    if (notif) {
+      this.notifGateway.emitToUser(notif.recipientId, 'notification:deleted', { id });
+      const count = await this.getUnreadCount(notif.recipientId);
+      this.notifGateway.emitToUser(notif.recipientId, 'unread:count', { count });
+    }
     return { message: 'Notification deleted' };
   }
 }

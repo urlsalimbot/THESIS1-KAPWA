@@ -57,6 +57,12 @@ export class ChatController {
     return { status: 'read' };
   }
 
+  @Get('users')
+  @Roles('admin', 'social_worker', 'coordinator')
+  async getChatUsers(@Request() req: AuthenticatedRequest) {
+    return this.chatService.getChatUsers(req.user.id);
+  }
+
   @Get('unread')
   @Roles('admin', 'social_worker', 'coordinator')
   async getUnreadCount(@Request() req: AuthenticatedRequest) {

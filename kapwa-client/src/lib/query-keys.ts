@@ -36,6 +36,9 @@ export const queryKeys = {
   dashboard: {
     all: ['dashboard'] as const,
     stats: () => memo('dashboard.stats', () => ['dashboard'] as const),
+    trends: () => memo('dashboard.trends', () => ['dashboard', 'trends'] as const),
+    dailyCounts: (year: number, month: number) =>
+      memo(`dashboard.dailyCounts.${year}-${month}`, () => ['dashboard', 'daily-counts', { year, month }] as const),
     mayorReports: () => memo('dashboard.mayorReports', () => ['dashboard', 'reports', 'mayor'] as const),
   },
   notifications: {
@@ -46,10 +49,12 @@ export const queryKeys = {
   },
   audit: {
     all: ['audit'] as const,
-    hashChains: () => memo('audit.hashChains', () => ['audit', 'hash-chain'] as const),
+    hashChains: () => memo('audit.hashChains', () => ['audit', 'verify-all'] as const),
     consentLedger: (beneficiaryId?: string) =>
       memo(`audit.consentLedger.${beneficiaryId ?? ''}`, () =>
-        ['audit', 'consent-ledger', beneficiaryId ?? null] as const,
+        beneficiaryId
+          ? ['audit', 'consent-ledger', { beneficiaryId }] as const
+          : ['audit', 'consent-ledger'] as const,
       ),
   },
   admin: {
@@ -91,6 +96,7 @@ export const queryKeys = {
     conversation: (userId: string) =>
       memo(`chat.conversation.${userId}`, () => ['chat', 'conversation', userId] as const),
     unread: () => memo('chat.unread', () => ['chat', 'unread'] as const),
+    chatUsers: () => memo('chat.users', () => ['chat', 'users'] as const),
   },
   sync: {
     all: ['sync'] as const,

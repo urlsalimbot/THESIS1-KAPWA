@@ -45,8 +45,8 @@ export class NotificationsController {
 
   @Post(':id/read')
   @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor')
-  async markAsRead(@Param('id') id: string) {
-    return this.notifService.markAsRead(id);
+  async markAsRead(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.notifService.markAsRead(id, req.user.id);
   }
 
   @Post('read-all')

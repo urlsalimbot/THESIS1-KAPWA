@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Smartphone, HandHeart, ArrowLeft } from 'lucide-react';
+import { Loader2, Smartphone, HandHeart, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 const appendDomain = (v: string) => (v.includes('@') ? v : `${v}@mswdo.test`);
 const loginSchema = z.object({
@@ -22,6 +22,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [mfaValue, setMfaValue] = useState('');
   const [mfaSubmitting, setMfaSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, resolveMfa, cancelMfa, mfaChallenge } = useAuth();
   const navigate = useNavigate();
 
@@ -161,7 +162,17 @@ export function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter your password" className="h-11" {...field} />
+                      <div className="relative">
+                        <Input type={showPassword ? 'text' : 'password'} placeholder="Enter your password" className="h-11 pe-10" {...field} />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(v => !v)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

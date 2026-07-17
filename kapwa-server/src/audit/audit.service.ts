@@ -49,9 +49,9 @@ export class AuditService {
     consentLedger: { valid: boolean; brokenAt?: string };
   }> {
     const [int, cas, ben, con] = await Promise.all([
-      this.verifyHashChain(this.intRepo),
-      this.verifyHashChain(this.caseRepo),
-      this.verifyHashChain(this.benRepo),
+      this.verifyHashChain(this.intRepo, 'loggedAt'),
+      this.verifyHashChain(this.caseRepo, 'createdAt'),
+      this.verifyHashChain(this.benRepo, 'createdAt'),
       this.verifyHashChain(this.consentRepo, 'grantedAt'),
     ]);
     return { interventions: int, cases: cas, beneficiaries: ben, consentLedger: con };

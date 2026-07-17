@@ -84,4 +84,16 @@ export class ChatService {
       where: { recipientId: userId, isRead: false },
     });
   }
+
+  async getChatUsers(currentUserId: string) {
+    const users = await this.userRepo.find({
+      where: { isActive: true },
+      select: ['id', 'fullName', 'role'],
+    });
+    return users.filter(u => u.id !== currentUserId).map(u => ({
+      id: u.id,
+      fullName: u.fullName,
+      role: u.role,
+    }));
+  }
 }
