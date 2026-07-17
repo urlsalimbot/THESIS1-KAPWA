@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
-import { ArrowLeft, User, Users, Clock, AlertTriangle, CheckCircle, Phone, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, User, Users, Clock, AlertTriangle, CheckCircle, Phone, MapPin, Calendar, FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '../lib/auth-context';
