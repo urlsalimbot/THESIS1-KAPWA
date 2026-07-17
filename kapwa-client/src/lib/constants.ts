@@ -33,8 +33,4 @@ export const OTHER_ASSISTANCE = [
   'Food Pack', 'Used Clothing', 'Hot Meal', 'Assistive Devices', 'Other',
 ] as const;
 
-export const CITIES = ['Norzagaray', 'Angat', 'Baliuag', 'Bocaue', 'Malolos', 'Meycauayan', 'San Jose del Monte', 'Santa Maria'] as const;
-
-export const PROVINCES = ['Bulacan', 'Pampanga', 'Nueva Ecija', 'Rizal', 'Manila', 'Quezon City', 'Caloocan'] as const;
-
 export const FAMILY_MEMBER_STATUSES = ['Employed', 'Self-Employed', 'Unemployed', 'Student', 'Retired', 'Dependent', 'OFW'] as const;

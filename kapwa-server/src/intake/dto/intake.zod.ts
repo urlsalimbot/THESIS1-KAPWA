@@ -5,7 +5,9 @@ const AddressSchema = z.object({
   barangay: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
+  region: z.string().optional(),
   postalCode: z.string().optional(),
+  psgcCode: z.string().optional(),
 });
 
 export const IntakeInputSchema = z.object({

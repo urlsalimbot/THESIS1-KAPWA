@@ -5,9 +5,9 @@ import { PageShell } from '@/components/PageShell';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import {
-  BARANGAYS, CIVIL_STATUSES, CITIES, PROVINCES,
-} from '../lib/constants';
+import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
+import type { AddressFields } from '@/components/IntakeAddressBlock';
+import { CIVIL_STATUSES } from '../lib/constants';
 
 function computeAge(dob: string): number {
   if (!dob) return 0;
@@ -35,15 +35,7 @@ interface FamilyMember {
   status: string;
 }
 
-interface AddressFields {
-  street: string;
-  barangay: string;
-  city: string;
-  province: string;
-  postalCode: string;
-}
-
-const emptyAddress: AddressFields = { street: '', barangay: '', city: 'Norzagaray', province: 'Bulacan', postalCode: '' };
+const emptyAddress: AddressFields = { street: '', barangay: '', city: '', province: '0301400000', region: '03', postalCode: '', psgcCode: '' };
 
 export function IntakePage() {
   const navigate = useNavigate();
@@ -175,44 +167,6 @@ export function IntakePage() {
     }
   }
 
-  function AddressBlock({ type, label }: { type: 'currentAddress' | 'provincialAddress'; label: string }) {
-    const addr = form[type];
-    return (
-      <div className="space-y-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</h3>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">House/Unit No., Street, Subdivision</label>
-          <Input value={addr.street} onChange={e => updateAddress(type, 'street', e.target.value)} aria-label={`${label} Street`} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Barangay</label>
-            <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={addr.barangay} onChange={e => updateAddress(type, 'barangay', e.target.value)} aria-label={`${label} Barangay`}>
-              <option value="">Select...</option>
-              {BARANGAYS.map(b => <option key={b}>{b}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">City/Municipality</label>
-            <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={addr.city} onChange={e => updateAddress(type, 'city', e.target.value)} aria-label={`${label} City`}>
-              {CITIES.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Province</label>
-            <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={addr.province} onChange={e => updateAddress(type, 'province', e.target.value)} aria-label={`${label} Province`}>
-              {PROVINCES.map(p => <option key={p}>{p}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Postal Code</label>
-            <Input type="number" value={addr.postalCode} onChange={e => updateAddress(type, 'postalCode', e.target.value)} aria-label={`${label} Postal Code`} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <PageShell title="GIS Intake Form" description="Client Registration — Personal Information + Family Composition">
       {error && <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
@@ -287,9 +241,9 @@ export function IntakePage() {
 
             {/* 7-8. Addresses */}
             <Separator />
-            <AddressBlock type="currentAddress" label="7. Address (Current)" />
+            <IntakeAddressBlock value={form.currentAddress} onChange={(f, v) => updateAddress('currentAddress', f, v)} label="7. Address (Current)" />
             <Separator />
-            <AddressBlock type="provincialAddress" label="8. Provincial Address (Permanent)" />
+            <IntakeAddressBlock value={form.provincialAddress} onChange={(f, v) => updateAddress('provincialAddress', f, v)} label="8. Provincial Address (Permanent)" />
 
             {/* 9. PhilHealth */}
             <div className="space-y-2">
