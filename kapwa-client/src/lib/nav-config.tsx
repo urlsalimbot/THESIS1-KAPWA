@@ -1,6 +1,6 @@
 import {
   FilePlus, LayoutDashboard, Users, CheckCircle, FolderOpen, FileText,
-  ClipboardList, Shield, UserCircle, Stamp, Settings,
+  ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -48,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Claimant',
     items: [
       { path: '/my-dashboard', label: 'My Dashboard', icon: <UserCircle size={20} />, roles: ['claimant'] },
+      { path: '/messages', label: 'Messages', icon: <MessageSquare size={20} />, roles: ['claimant'] },
     ],
   },
 ];

@@ -6,11 +6,11 @@ interface User { id: string; email: string; fullName: string; role: string; }
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<{ mfaRequired: boolean; tempToken: string } | void>;
+  login: (email: string, password: string) => Promise<{ mfaRequired: boolean; tempToken: string } | User | void>;
   logout: () => void;
   loading: boolean;
-  mfaChallenge: { tempToken: string } | null;
-  resolveMfa: (code: string) => Promise<void>;
+  mfaChallenge: { tempToken: string; type: 'totp' | 'sms' } | null;
+  resolveMfa: (code: string) => Promise<User | undefined>;
   cancelMfa: () => void;
 }
 
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('kapwa_token'));
   const [loading, setLoading] = useState(true);
-  const [mfaChallenge, setMfaChallenge] = useState<{ tempToken: string } | null>(null);
+  const [mfaChallenge, setMfaChallenge] = useState<{ tempToken: string; type: 'totp' | 'sms' } | null>(null);
 
   useEffect(() => {
     if (token) fetchUser();
@@ -38,14 +38,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('Auth logout triggered:', reason);
       logout();
     }
+    function handleStorage(e: StorageEvent) {
+      if (e.key === 'kapwa_token' && !e.newValue) {
+        setToken(null);
+        setUser(null);
+      }
+    }
     window.addEventListener('kapwa:auth:logout', handleLogout);
-    return () => window.removeEventListener('kapwa:auth:logout', handleLogout);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('kapwa:auth:logout', handleLogout);
+      window.removeEventListener('storage', handleStorage);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchUser() {
     try {
-      // api.get reads kapwa_token from localStorage internally and surfaces non-2xx as ApiError
       const data = await api.get<{ user: User }>('/auth/me');
       if (data && data.user) {
         setUser(data.user);
@@ -54,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null);
       }
     } catch {
-      // ApiError(401) from /auth/me (after refresh) OR TypeError (network) — both clear the user
-      setUser(null);
+      // Don't clear user state on transient errors (429, 5xx, network).
+      // Only clear when the api.ts interceptor handles a 401 and fires kapwa:auth:logout.
     }
     setLoading(false);
   }
@@ -68,28 +77,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (!res.ok) throw new Error('Login failed');
     const data = await res.json();
-    if (data.mfaRequired) {
-      setMfaChallenge({ tempToken: data.tempToken });
+    if (data.mfaRequired || data.otpRequired) {
+      const type = data.otpRequired ? 'sms' : 'totp';
+      setMfaChallenge({ tempToken: data.tempToken, type });
       return { mfaRequired: true as const, tempToken: data.tempToken };
     }
     localStorage.setItem('kapwa_token', data.accessToken);
     setToken(data.accessToken);
     setUser(data.user);
+    return data.user;
   }
 
   async function resolveMfa(code: string) {
     if (!mfaChallenge) return;
-    const res = await fetch(`${API}/auth/mfa/verify`, {
+    const endpoint = mfaChallenge.type === 'sms' ? '/auth/login/otp-verify' : '/auth/mfa/verify';
+    const body = mfaChallenge.type === 'sms'
+      ? { tempToken: mfaChallenge.tempToken, otpCode: code }
+      : { tempToken: mfaChallenge.tempToken, code };
+    const res = await fetch(`${API}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tempToken: mfaChallenge.tempToken, code })
+      body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('MFA verification failed');
+    if (!res.ok) throw new Error('Verification failed');
     const data = await res.json();
     localStorage.setItem('kapwa_token', data.accessToken);
     setToken(data.accessToken);
     setUser(data.user);
     setMfaChallenge(null);
+    return data.user;
   }
 
   function cancelMfa() {

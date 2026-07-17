@@ -13,11 +13,9 @@ export function connectNotificationSocket(token: string): Socket {
   });
 
   socket.on('connect_error', (err) => {
-    console.error('[WS Notif] connect error:', err.message);
-  });
-
-  socket.on('error', (err) => {
-    console.error('[WS Notif] Error:', err);
+    if (err.message?.includes('Invalid token') || err.message?.includes('unauthorized')) {
+      socket?.disconnect();
+    }
   });
 
   return socket;

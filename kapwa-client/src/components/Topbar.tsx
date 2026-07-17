@@ -110,9 +110,10 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           </Link>
 
           {user && (
-            <Badge variant="secondary" className="hidden md:inline-flex text-[10px] font-semibold shrink-0">
-              {roleLabel}
-            </Badge>
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              <span className="text-sm font-medium text-foreground truncate max-w-[140px]">{user.fullName}</span>
+              <Badge variant="secondary" className="text-[10px] font-semibold">{roleLabel}</Badge>
+            </div>
           )}
 
           <div className="hidden md:flex items-center min-w-0 pl-3 border-l border-border ml-1">

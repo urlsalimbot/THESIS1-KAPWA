@@ -903,8 +903,8 @@ async function seed() {
   await q.query(`
     INSERT INTO version_vectors (device_id, table_name, local_version, server_version, last_synced_at)
     VALUES
-      ('DEV-BIGTE-001',   'cases',         5, 8, '2025-04-10 09:30:00'),
-      ('DEV-MATICTIC-001','interventions', 3, 10,'2025-04-05 10:00:00')
+      ('DEV-BIGTE-001',   'cases',         5, 8, NOW()),
+      ('DEV-MATICTIC-001','interventions', 3, 10,NOW())
   `);
 
   // ==========================================================================

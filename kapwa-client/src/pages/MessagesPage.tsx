@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 const safeDecodeJWT = (token: string) => { try { const b = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(atob(b)); } catch { return {}; } };
 
@@ -29,6 +30,7 @@ interface ChatUser {
 
 export function MessagesPage() {
   const { mutate: globalMutate } = useSWRConfig();
+  const { user } = useAuth();
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [pendingNew, setPendingNew] = useState<ChatMsg[]>([]);
   const [text, setText] = useState('');
@@ -72,7 +74,15 @@ export function MessagesPage() {
     if (!token) return;
     const sock = connectSocket(token);
     const handler = (msg: ChatMsg) => {
-      setPendingNew(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]));
+      setPendingNew(prev => {
+        const filtered = prev.filter(m => !(
+          m.id.startsWith('pending-') &&
+          m.senderId === msg.senderId &&
+          m.recipientId === msg.recipientId &&
+          m.content === msg.content
+        ));
+        return filtered.some(m => m.id === msg.id) ? filtered : [...filtered, msg];
+      });
       globalMutate(queryKeys.messages.list());
       const conv = activeConvRef.current;
       if (conv && (msg.senderId === conv || msg.recipientId === conv)) {
@@ -100,24 +110,55 @@ export function MessagesPage() {
     globalMutate(queryKeys.messages.list());
   }
 
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault();
+    console.log('handleSend called', { text: text.trim(), activeConv });
     if (!text.trim() || !activeConv) return;
     const token = localStorage.getItem('kapwa_token');
     const decoded = token ? safeDecodeJWT(token) : {};
     const senderName = decoded.email || decoded.sub || 'Unknown';
-    sendMessage(activeConv, text.trim(), senderName);
+    const content = text.trim();
+    const senderId = decoded.sub || '';
+
     setText('');
+
+    const optimistic: ChatMsg = {
+      id: `pending-${Date.now()}`,
+      senderId,
+      senderName,
+      recipientId: activeConv,
+      content,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    };
+    setPendingNew(prev => [...prev, optimistic]);
+
+    try {
+      const saved = await api.post<ChatMsg>('/chat/send', {
+        recipientId: activeConv,
+        content,
+        senderName,
+      });
+      setPendingNew(prev => prev.filter(m => m.id !== optimistic.id).concat(saved));
+      globalMutate(queryKeys.messages.conversation(activeConv));
+      globalMutate(queryKeys.messages.list());
+    } catch {
+      // message stays in pendingNew via optimistic entry
+    }
   }
 
   function getOtherName(userId: string) {
     const conv = conversations.find(c => c.userId === userId);
-    return conv?.name || userId.slice(0, 8);
+    if (conv?.name) return conv.name;
+    const user = allUsers.find(u => u.id === userId);
+    return user?.fullName || userId.slice(0, 8);
   }
 
   function getOtherRole(userId: string) {
     const conv = conversations.find(c => c.userId === userId);
-    return conv?.role;
+    if (conv?.role) return conv.role;
+    const user = allUsers.find(u => u.id === userId);
+    return user?.role;
   }
 
   function formatTime(dateStr: string) {
@@ -137,7 +178,7 @@ export function MessagesPage() {
   const unreadCount = (userId: string) => conversations.find(c => c.userId === userId)?.unread ?? 0;
 
   return (
-    <PageShell title="Messages" description="Chat with other MSWDO team members">
+    <PageShell title="Messages" description={user?.role === 'claimant' ? 'Chat with the MSWDO staff handling your case' : 'Chat with other MSWDO team members'}>
       <div className="flex h-[calc(100vh-12rem)] gap-0 rounded-lg border overflow-hidden">
         <div className="w-72 flex-shrink-0 border-r bg-card flex flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">

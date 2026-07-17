@@ -18,6 +18,15 @@ const loginSchema = z.object({
 });
 type LoginValues = z.infer<typeof loginSchema>;
 
+const roleRedirectMap: Record<string, string> = {
+  social_worker: '/dashboard',
+  admin: '/admin',
+  coordinator: '/coordinator',
+  claimant: '/my-dashboard',
+  mayor: '/reports',
+  auditor: '/audit-logs',
+};
+
 export function LoginPage() {
   const [error, setError] = useState('');
   const [mfaValue, setMfaValue] = useState('');
@@ -29,14 +38,19 @@ export function LoginPage() {
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
+    mode: 'onChange',
   });
+
+  function redirectAfterLogin(user: { role: string }) {
+    navigate(roleRedirectMap[user.role] || '/dashboard', { replace: true });
+  }
 
   async function onSubmit(values: LoginValues) {
     setError('');
     try {
       const result = await login(values.email, values.password);
-      if (!result?.mfaRequired) {
-        navigate('/dashboard', { replace: true });
+      if (result && 'role' in result) {
+        redirectAfterLogin(result);
       }
     } catch {
       setError('Invalid email or password. Please try again.');
@@ -49,8 +63,9 @@ export function LoginPage() {
     if (mfaValue.length !== 6) return;
     setMfaSubmitting(true);
     try {
-      await resolveMfa(mfaValue);
-      navigate('/dashboard', { replace: true });
+      const user = await resolveMfa(mfaValue);
+      if (user) redirectAfterLogin(user);
+      else navigate('/dashboard', { replace: true });
     } catch {
       setError('Invalid verification code. Please try again.');
     } finally {
@@ -59,6 +74,7 @@ export function LoginPage() {
   }
 
   // MFA Challenge Mode
+  const isSmsOtp = mfaChallenge?.type === 'sms';
   if (mfaChallenge) {
     return (
       <div className="relative flex items-center justify-center min-h-screen px-4 bg-background">
@@ -72,8 +88,8 @@ export function LoginPage() {
                 <Smartphone size={32} />
               </AvatarFallback>
             </Avatar>
-            <CardTitle>Two-Factor Authentication</CardTitle>
-            <CardDescription>Enter the verification code from your authenticator app.</CardDescription>
+            <CardTitle>{isSmsOtp ? 'One-Time Password' : 'Two-Factor Authentication'}</CardTitle>
+            <CardDescription>{isSmsOtp ? 'Enter the OTP sent to your phone.' : 'Enter the verification code from your authenticator app.'}</CardDescription>
           </CardHeader>
           <CardContent>
             {error && (

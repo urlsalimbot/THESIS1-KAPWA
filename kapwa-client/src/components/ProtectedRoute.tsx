@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser } from '../lib/auth-context';
+import * as auth from '../lib/auth-context';
 
 const roleRedirectMap: Record<string, string> = {
   social_worker: '/dashboard',
@@ -14,37 +14,46 @@ const roleRedirectMap: Record<string, string> = {
 export function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const navigate = useNavigate();
+  const checkingRef = useRef(false);
 
   useEffect(() => {
+    if (checkingRef.current) return;
     checkAuth();
   }, [navigate, roles]);
 
   async function checkAuth() {
+    checkingRef.current = true;
     const token = localStorage.getItem('kapwa_token');
     if (!token) {
+      checkingRef.current = false;
       navigate('/login', { replace: true });
       return;
     }
 
-    try {
-      const user = await getCurrentUser();
-      if (!user) {
-        localStorage.removeItem('kapwa_token');
-        navigate('/login', { replace: true });
+    const user = await auth.getCurrentUser();
+    if (!user) {
+      const storedToken = localStorage.getItem('kapwa_token');
+      if (storedToken) {
+        // Token exists but /auth/me failed (429, 5xx, network).
+        // The api.ts interceptor will fire kapwa:auth:logout if refresh fails with 401.
+        // Keep the session alive — don't de-auth on transient errors.
+        setAuthorized(true);
+        checkingRef.current = false;
         return;
       }
-
-      if (roles && roles.length > 0 && !roles.includes(user.role)) {
-        navigate(roleRedirectMap[user.role] || '/dashboard', { replace: true });
-        return;
-      }
-
-      setAuthorized(true);
-    } catch {
-      // Network error — backend unreachable. Don't redirect, let the page render.
-      // The app components will handle offline state gracefully.
-      setAuthorized(true);
+      checkingRef.current = false;
+      navigate('/login', { replace: true });
+      return;
     }
+
+    if (roles && roles.length > 0 && !roles.includes(user.role)) {
+      checkingRef.current = false;
+      navigate(roleRedirectMap[user.role] || '/dashboard', { replace: true });
+      return;
+    }
+
+    setAuthorized(true);
+    checkingRef.current = false;
   }
 
   if (authorized === null) {
