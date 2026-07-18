@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useSWRConfig } from 'swr';
+import { mutate as globalMutate } from 'swr';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { connectSocket, disconnectSocket, sendMessage, emitTyping } from '../lib/chat-socket';
@@ -29,7 +29,6 @@ interface ChatUser {
 }
 
 export function MessagesPage() {
-  const { mutate: globalMutate } = useSWRConfig();
   const { user } = useAuth();
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [pendingNew, setPendingNew] = useState<ChatMsg[]>([]);
