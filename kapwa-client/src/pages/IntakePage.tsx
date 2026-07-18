@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ const emptyAddress: AddressFields = { street: '', barangay: '', city: '', provin
 
 export function IntakePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({
     surname: '', firstName: '', middleName: '',
     gender: '' as string,
@@ -56,6 +57,27 @@ export function IntakePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [hasConsent, setHasConsent] = useState(false);
+
+  // Prefill form when navigated from beneficiary-view's "Add Case"
+  useEffect(() => {
+    const prefill = (location.state as { prefill?: Record<string, string> })?.prefill;
+    if (prefill) {
+      setForm(prev => ({
+        ...prev,
+        surname: prefill.surname ?? prev.surname,
+        firstName: prefill.firstName ?? prev.firstName,
+        middleName: prefill.middleName ?? prev.middleName,
+        gender: prefill.gender ?? prev.gender,
+        dob: prefill.dob ?? prev.dob,
+        placeOfBirth: prefill.placeOfBirth ?? prev.placeOfBirth,
+        civilStatus: prefill.civilStatus ?? prev.civilStatus,
+        cellularNumber: prefill.cellularNumber ?? prev.cellularNumber,
+        occupation: prefill.occupation ?? prev.occupation,
+        estimatedMonthlyIncome: prefill.estimatedMonthlyIncome ?? prev.estimatedMonthlyIncome,
+        philhealthNumber: prefill.philhealthNumber ?? prev.philhealthNumber,
+      }));
+    }
+  }, [location.state]);
 
   const age = computeAge(form.dob);
 
@@ -170,6 +192,11 @@ export function IntakePage() {
   return (
     <PageShell title="GIS Intake Form" description="Client Registration — Personal Information + Family Composition">
       {error && <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {(location.state as { prefill?: Record<string, string> })?.prefill && (
+        <div className="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+          Adding a case for <strong>{form.surname}, {form.firstName}</strong>. Review and modify details before submitting.
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
         {/* Section I: Personal Information */}
         <div className="rounded-lg border bg-card p-6">
@@ -216,7 +243,7 @@ export function IntakePage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">4a. Date of Birth *</label>
-                <Input type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} aria-label="Date of Birth" />
+                <Input type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} aria-label="Date of Birth" className="[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:opacity-60" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">4b. Place of Birth *</label>

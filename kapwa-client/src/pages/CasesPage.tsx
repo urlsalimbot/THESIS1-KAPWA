@@ -53,16 +53,15 @@ const STATUS_LABELS: Record<string, string> = {
 
 function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
   const ben = (c.beneficiary as Record<string, unknown>) || {};
-  const dob = ben.dob as string;
-  const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 0;
+  const age = (ben.age as number) || 0;
   return {
     id: c.id as string,
     no: i + 1,
     surname: (ben.surname as string) || '',
     first: (ben.firstName as string) || '',
     middle: (ben.middleName as string) || '',
-    gender: (ben.gender as string) || '',
-    ageRange: dob ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
+    gender: ((ben.gender as string) || '').trim(),
+    ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
     category: ((c.serviceRequested as string[]) || []).join(', '),
     barangay: ((ben.address as string) || '').split(',').pop()?.trim() || '',
     remarks: (c.remarks as string) || '',
@@ -165,16 +164,26 @@ export function CasesPage() {
   }
 
   const filteredCases = cases.filter(c => {
-    if (search && !c.surname.toLowerCase().includes(search.toLowerCase()) && !c.first.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const fullName = `${c.surname} ${c.first} ${c.middle}`.toLowerCase();
+      if (!fullName.includes(q)) return false;
+    }
     if (barangayFilter && c.barangay !== barangayFilter) return false;
     if (categoryFilter && c.category !== categoryFilter) return false;
     if (statusFilter && c.status !== statusFilter) return false;
-    if (genderFilter && c.gender !== genderFilter) return false;
+    if (genderFilter && c.gender.toLowerCase() !== genderFilter.toLowerCase()) return false;
     if (ageRangeFilter && c.ageRange !== ageRangeFilter) return false;
     if (slaFilter === 'overdue' && !c.slaOverdue) return false;
     if (slaFilter === 'on_track' && c.slaOverdue) return false;
-    if (dateFrom && c.createdAt && new Date(c.createdAt) < new Date(dateFrom)) return false;
-    if (dateTo && c.createdAt && new Date(c.createdAt) > new Date(`${dateTo}T23:59:59`)) return false;
+    if (dateFrom && c.createdAt) {
+      const from = new Date(dateFrom + 'T00:00:00Z');
+      if (new Date(c.createdAt) < from) return false;
+    }
+    if (dateTo && c.createdAt) {
+      const to = new Date(dateTo + 'T23:59:59Z');
+      if (new Date(c.createdAt) > to) return false;
+    }
     return true;
   });
 

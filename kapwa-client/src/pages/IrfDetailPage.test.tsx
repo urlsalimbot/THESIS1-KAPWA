@@ -54,7 +54,7 @@ describe('IrfDetailPage', () => {
         </Routes>
       </MemoryRouter>
     );
-    await screen.findByText('← IRF List');
+    await screen.findByText('IRF List');
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

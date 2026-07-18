@@ -195,11 +195,10 @@ export function CaseViewPage() {
 
   if (!caseData) {
     return (
-      <PageShell title="Case Not Found" description="">
+      <PageShell title="Case Not Found" description="" backTo={{ label: "Back to Cases", onClick: () => navigate('/cases') }}>
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <FileText size={40} className="mb-3 opacity-30" />
           <p className="text-sm">Case not found.</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/cases')}>Back to Cases</Button>
         </div>
       </PageShell>
     );
@@ -212,18 +211,13 @@ export function CaseViewPage() {
     <PageShell
       title={`Case ${caseData.controlNo}`}
       description={`Beneficiary: ${ben?.firstName || ''} ${ben?.surname || ''}`}
+      backTo={{ label: 'Back to Cases', onClick: () => navigate('/cases') }}
+      actions={caseData.slaOverdue ? (
+        <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+          <AlertTriangle size={12} /> OVERDUE
+        </span>
+      ) : undefined}
     >
-      {/* Top bar */}
-      <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/cases')}>
-          <ArrowLeft size={16} className="mr-1" /> Back to Cases
-        </Button>
-        {caseData.slaOverdue && (
-          <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-            <AlertTriangle size={12} /> OVERDUE
-          </span>
-        )}
-      </div>
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">

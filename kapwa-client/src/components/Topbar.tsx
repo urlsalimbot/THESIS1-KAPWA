@@ -128,8 +128,6 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
         <div className="flex items-center gap-2 shrink-0">
 
-          <Separator orientation="vertical" className="h-6 hidden md:block" />
-
           {canIntake && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -161,6 +159,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           )}
 
           <Separator orientation="vertical" className="h-6 hidden md:block" />
+          {/* ^ this separator stays (separates actions from notifications) */}
 
           <NotificationsDropdown />
           <MessagesPopover />

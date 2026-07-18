@@ -160,12 +160,18 @@ export function MessagesPage() {
     return user?.role;
   }
 
+  const TZ = 'Asia/Manila';
+  const timeFmt = new Intl.DateTimeFormat('en-PH', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false });
+  const dateFmt = new Intl.DateTimeFormat('en-PH', { timeZone: TZ, month: 'short', day: 'numeric' });
+  const dateOnlyFmt = new Intl.DateTimeFormat('en-PH', { timeZone: TZ, month: 'short', day: 'numeric', year: 'numeric' });
+
   function formatTime(dateStr: string) {
     const d = new Date(dateStr);
     const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    if (isToday) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const todayStr = dateOnlyFmt.format(now);
+    const dateStrFormatted = dateOnlyFmt.format(d);
+    if (dateStrFormatted === todayStr) return timeFmt.format(d);
+    return dateFmt.format(d);
   }
 
   const filteredUsers = allUsers.filter(

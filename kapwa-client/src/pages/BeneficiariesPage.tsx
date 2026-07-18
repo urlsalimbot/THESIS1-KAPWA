@@ -45,7 +45,6 @@ function mapBeneficiary(b: Record<string, unknown>): Beneficiary {
 }
 
 const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
-  { accessorKey: 'id', header: 'ID', cell: ({ row }) => <span className="font-medium">{row.original.id}</span> },
   { accessorKey: 'name', header: 'Name' },
   { accessorKey: 'age', header: 'Age', cell: ({ row }) => <Badge variant="outline">{row.original.age}</Badge> },
   { accessorKey: 'barangay', header: 'Barangay' },
@@ -70,6 +69,57 @@ const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
     cell: ({ row }) => <BeneficiaryActions id={row.original.id} />,
   },
 ];
+
+function FilterBar({ searchInput, onSearchChange, categoryFilter, onCategoryChange, barangayFilter, onBarangayChange }: {
+  searchInput: string;
+  onSearchChange: (v: string) => void;
+  categoryFilter: string;
+  onCategoryChange: (v: string) => void;
+  barangayFilter: string;
+  onBarangayChange: (v: string) => void;
+}) {
+  const nav = useNavigate();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <Button variant="default" size="sm" onClick={() => nav('/intake')} aria-label="+ New Beneficiary">+ New Beneficiary</Button>
+        <Button variant="outline" size="sm" aria-label="Import CSV">Import CSV</Button>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative">
+          <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            type="text"
+            aria-label="Search beneficiaries"
+            placeholder="Search by name..."
+            className="w-48 pl-8"
+            value={searchInput}
+            onChange={e => onSearchChange(e.target.value)}
+          />
+        </div>
+        <select
+          aria-label="Filter by category"
+          className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          value={categoryFilter}
+          onChange={e => onCategoryChange(e.target.value)}
+        >
+          {CATEGORIES.map(c => (
+            <option key={c} value={c === 'All Categories' ? '' : c}>{c}</option>
+          ))}
+        </select>
+        <select
+          aria-label="Filter by barangay"
+          className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          value={barangayFilter}
+          onChange={e => onBarangayChange(e.target.value)}
+        >
+          <option value="all">All Barangays</option>
+          {BARANGAYS.map(b => <option key={b}>{b}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
 
 export function BeneficiariesPage() {
   const navigate = useNavigate();
@@ -121,48 +171,14 @@ export function BeneficiariesPage() {
       description="Manage beneficiary records and household data"
       cachedAt={lastSync ?? undefined}
     >
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button variant="default" size="sm" onClick={() => navigate('/intake')} aria-label="+ New Beneficiary">+ New Beneficiary</Button>
-          <Button variant="outline" size="sm" aria-label="Import CSV">Import CSV</Button>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Search input with icon */}
-          <div className="relative">
-            <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              aria-label="Search beneficiaries"
-              placeholder="Search by name..."
-              className="w-48 pl-8"
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-            />
-          </div>
-          {/* Category dropdown */}
-          <select
-            aria-label="Filter by category"
-            className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
-          >
-            {CATEGORIES.map(c => (
-              <option key={c} value={c === 'All Categories' ? '' : c}>{c}</option>
-            ))}
-          </select>
-          {/* Barangay dropdown */}
-          <select
-            aria-label="Filter by barangay"
-            className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            value={barangayFilter}
-            onChange={e => setBarangayFilter(e.target.value)}
-          >
-            <option value="all">All Barangays</option>
-            {BARANGAYS.map(b => <option key={b}>{b}</option>)}
-          </select>
-        </div>
-      </div>
+      <FilterBar
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        categoryFilter={categoryFilter}
+        onCategoryChange={setCategoryFilter}
+        barangayFilter={barangayFilter}
+        onBarangayChange={setBarangayFilter}
+      />
 
       {/* Results count / loading indicator */}
       {canShowResults && (

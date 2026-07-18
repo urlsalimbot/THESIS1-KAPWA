@@ -75,7 +75,7 @@ export function CsrPage() {
     setMsg('');
     try {
       if (editingId) {
-        await api.put(`/csr/${editingId}`, form as unknown as Record<string, unknown>);
+        await api.patch(`/csr/${editingId}`, form as unknown as Record<string, unknown>);
         setMsg('CSR updated');
       } else {
         await api.post('/csr', form as unknown as Record<string, unknown>);
@@ -95,7 +95,7 @@ export function CsrPage() {
   }
 
   async function handleFinalize(id: string, finalized: boolean) {
-    await api.put(`/csr/${id}`, { finalized });
+    await api.patch(`/csr/${id}`, { finalized });
     globalMutate(queryKeys.csr.list());
   }
 

@@ -31,7 +31,9 @@ interface TrackerStats {
 
 export function CaseTrackerPage() {
   const { mutate: globalMutate } = useSWRConfig();
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const today = new Date().toISOString().split('T')[0];
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
   const [form, setForm] = useState({
     surname: '', firstName: '', middleName: '', gender: 'M',
     ageRange: '' as string, clientCategory: '' as string,
@@ -40,22 +42,28 @@ export function CaseTrackerPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: entries = [], isLoading: loading } = useSWR<TrackerEntry[]>(
-    queryKeys.tracker.daily({ date: selectedDate }),
-  );
+  const hasRange = dateFrom !== dateTo;
+  const swrKey = hasRange
+    ? queryKeys.tracker.range({ start: dateFrom + 'T00:00:00Z', end: dateTo + 'T23:59:59Z' })
+    : queryKeys.tracker.daily({ date: dateFrom + 'T00:00:00Z' });
+  const { data: entries = [], isLoading: loading } = useSWR<TrackerEntry[]>(swrKey, {
+    keepPreviousData: true,
+  });
   const { data: stats } = useSWR<TrackerStats>(queryKeys.tracker.stats());
   const lastSync = entries ? Date.now() : null;
+
+  const addDate = dateFrom;
 
   async function handleAddEntry(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     try {
       const payload = {
-        transactionDate: selectedDate,
+        transactionDate: addDate,
         ...form,
       };
       await api.post('/tracker', payload);
-      await globalMutate(queryKeys.tracker.daily({ date: selectedDate }));
+      await globalMutate(swrKey);
       await globalMutate(queryKeys.tracker.stats());
       setForm({ surname: '', firstName: '', middleName: '', gender: 'M', ageRange: '', clientCategory: '', barangay: '', interventionRemarks: '' });
       setShowForm(false);
@@ -93,10 +101,12 @@ export function CaseTrackerPage() {
         </Card>
       </div>
 
-      {/* Date Selector + Add Button */}
-      <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-foreground">Date:</label>
-        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} aria-label="Tracker Date" className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+      {/* Date Range Selectors + Add Button */}
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium text-foreground">From:</label>
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label="Date from" className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+        <label className="text-sm font-medium text-foreground">To:</label>
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label="Date to" className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
         <button onClick={() => setShowForm(!showForm)} className="ml-auto inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" aria-label="Add Entry">
           {showForm ? 'Cancel' : '+ Add Entry'}
         </button>

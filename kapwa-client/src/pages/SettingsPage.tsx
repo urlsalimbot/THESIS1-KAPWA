@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
-import { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '@/lib/auth-context';
@@ -336,29 +335,26 @@ function NotificationsTab() {
   const { user } = useAuth();
   const hasPhone = !!user?.phone;
 
-  const { data: prefs, isLoading } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
+  const { data: prefs, isLoading, mutate: revalidatePrefs } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
+  const [toggling, setToggling] = useState<string | null>(null);
 
-  
-  const updatePref = useSWRMutation(
-    queryKeys.notifications.preferences(),
-    async (_key: string, { arg }: { arg: { channel: 'sms' | 'in_app'; category: string; optedIn: boolean } }) => {
-      return api.put('/notifications/preferences', arg);
-    },
-    {
-      optimisticData: (current: NotificationPref[] | undefined, { arg }: { arg: { channel: string; category: string } }) => {
-        if (!current) return current;
-        return current.map(p =>
-          p.channel === arg.channel && p.category === arg.category
-            ? { ...p, optedIn: !p.optedIn }
-            : p
-        );
-      },
-      rollbackOnError: true,
-      onError: () => {
-        toast.error('Failed to update notification preference');
-      },
-    },
-  );
+  async function handleToggle(channel: 'sms' | 'in_app', category: string) {
+    const key = `${channel}:${category}`;
+    setToggling(key);
+    try {
+      const pref = Array.isArray(prefs) ? prefs.find(p => p.channel === channel && p.category === category) : null;
+      await api.put('/notifications/preferences', {
+        channel,
+        category,
+        optedIn: pref ? !pref.optedIn : true,
+      });
+      await revalidatePrefs();
+    } catch {
+      toast.error('Failed to update notification preference');
+    } finally {
+      setToggling(null);
+    }
+  }
 
   function isOptedIn(channel: string, category: string): boolean {
     if (!Array.isArray(prefs)) return false;
@@ -404,8 +400,8 @@ function NotificationsTab() {
                   {CHANNELS.filter(ch => ch !== 'sms' || hasPhone).map(ch => (
                     <td key={ch} className="text-center py-3 px-4">
                       <button
-                        onClick={() => updatePref.trigger({ channel: ch, category: cat, optedIn: !isOptedIn(ch, cat) })}
-                        disabled={updatePref.isMutating}
+                        onClick={() => handleToggle(ch as 'sms' | 'in_app', cat)}
+                        disabled={toggling === `${ch}:${cat}`}
                         className={`inline-flex h-6 w-10 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                           isOptedIn(ch, cat) ? 'bg-primary' : 'bg-input'
                         }`}

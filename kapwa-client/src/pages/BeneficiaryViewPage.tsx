@@ -244,11 +244,8 @@ export function BeneficiaryViewPage() {
     <PageShell
       title="Beneficiary Details"
       description={`Viewing information for ${beneficiary.name}`}
+      backTo={{ label: "Back", onClick: () => navigate(-1) }}
     >
-      <button onClick={() => navigate(-1)} className="no-print flex items-center gap-1 text-sm text-primary hover:underline mb-3">
-        <ArrowLeft size={16} /> Back
-      </button>
-
       {assignSuccess && (
         <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm font-medium text-green-700 mb-3">
           {assignSuccess}
@@ -292,7 +289,26 @@ export function BeneficiaryViewPage() {
                   <FileText size={16} />
                   <h3 className="text-xs font-semibold uppercase tracking-wider">Cases</h3>
                 </div>
-                <Button variant="ghost" size="icon" className="rounded-full h-7 w-7" aria-label="Add case"><Plus size={14} /></Button>
+                <Button variant="ghost" size="icon" className="rounded-full h-7 w-7" aria-label="Add case" onClick={() => {
+                  if (!ben) return;
+                  navigate('/intake', {
+                    state: {
+                      prefill: {
+                        surname: (ben.surname as string) || '',
+                        firstName: (ben.firstName as string) || '',
+                        middleName: (ben.middleName as string) || '',
+                        gender: (ben.gender as string) || '',
+                        dob: (ben.dob as string) || '',
+                        placeOfBirth: (ben.placeOfBirth as string) || '',
+                        civilStatus: (ben.civilStatus as string) || '',
+                        cellularNumber: (ben.phone as string) || '',
+                        occupation: (ben.occupation as string) || '',
+                        estimatedMonthlyIncome: (ben.estimatedMonthlyIncome as number)?.toString() || '',
+                        philhealthNumber: (ben.philhealthNumber as string) || '',
+                      },
+                    },
+                  });
+                }}><Plus size={14} /></Button>
               </div>
               {beneficiary.cases.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No active cases</p>

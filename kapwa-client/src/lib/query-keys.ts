@@ -87,6 +87,12 @@ export const queryKeys = {
         key.push(params);
         return key as readonly unknown[];
       }),
+    range: (params: { start: string; end: string }) =>
+      memo(`tracker.range.${params.start}.${params.end}`, () => {
+        const key: unknown[] = ['tracker', 'range'];
+        key.push(params);
+        return key as readonly unknown[];
+      }),
     stats: () => memo('tracker.stats', () => ['tracker', 'stats'] as const),
     list: () => memo('tracker.list', () => ['tracker', 'daily'] as const),
   },

@@ -26,11 +26,11 @@ export function MyAccessCardPage() {
       <PageShell
         title="My Access Card"
         description="Your KAPWA Access Card — read-only view"
+        backTo={{ label: 'Back to Dashboard', onClick: () => navigate('/my-dashboard') }}
       >
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertCircle className="text-gray-300 mb-4" size={48} />
           <p className="text-gray-500 mb-4">{displayError}</p>
-          <button onClick={() => navigate('/my-dashboard')} className="text-blue-600 text-sm underline">Back to Dashboard</button>
         </div>
       </PageShell>
     );
@@ -40,16 +40,13 @@ export function MyAccessCardPage() {
     <PageShell
       title="My Access Card"
       description="Your KAPWA Access Card — read-only view"
-    >
-
-      <div className="no-print flex gap-2 mb-4">
+      backTo={{ label: 'Back to Dashboard', onClick: () => navigate('/my-dashboard') }}
+      actions={
         <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark">
           <Printer size={14} /> Print Card
         </button>
-        <button onClick={() => navigate('/my-dashboard')} className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-          <ArrowLeft size={14} /> Back to Dashboard
-        </button>
-      </div>
+      }
+    >
 
       <div className="rounded-lg border bg-white p-6 max-w-lg">
         <div className="text-center mb-4">

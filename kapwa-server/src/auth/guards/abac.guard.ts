@@ -55,7 +55,8 @@ export class AbacGuard implements CanActivate {
 
     // Social worker scoping
     if (user.role === 'social_worker') {
-      if (resourceSensitivity === 'restricted' && !query?.legalBasis) return false;
+      const legalBasis = query?.legalBasis || body?.legalBasis;
+      if (resourceSensitivity === 'restricted' && !legalBasis) return false;
       const barangay = query?.barangay || params?.barangay || body?.barangay;
       if (barangay && !user.permittedBarangays?.includes(barangay)) return false;
       return true;
@@ -69,7 +70,8 @@ export class AbacGuard implements CanActivate {
 
     // Mayor/auditor: treat as social_worker scope + restricted access requires legal basis
     if (user.role === 'mayor' || user.role === 'auditor') {
-      if (resourceSensitivity === 'restricted' && !query?.legalBasis) return false;
+      const legalBasis = query?.legalBasis || body?.legalBasis;
+      if (resourceSensitivity === 'restricted' && !legalBasis) return false;
       return true;
     }
 
