@@ -9,7 +9,7 @@ export class NotificationPreference extends BaseEntity {
   userId: string;
 
   @Column({ name: 'channel', type: 'varchar' })
-  channel: 'sms' | 'in_app';
+  channel: 'sms' | 'in_app' | 'email';
 
   @Column({ name: 'category', type: 'enum', enum: NotificationCategory })
   category: NotificationCategory;

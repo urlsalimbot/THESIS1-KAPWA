@@ -75,7 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    if (!res.ok) throw new Error('Login failed');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Login failed');
+    }
     const data = await res.json();
     if (data.mfaRequired || data.otpRequired) {
       const type = data.otpRequired ? 'sms' : 'totp';

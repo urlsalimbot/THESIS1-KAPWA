@@ -230,7 +230,7 @@ export function BeneficiaryViewPage() {
 
   if (!beneficiary) {
     return (
-      <PageShell title="Beneficiary Details" description="">
+      <PageShell title="Beneficiary Details" description="" backTo={{ label: "Back", onClick: () => navigate(-1) }}>
         <EmptyState variant="no-data" />
       </PageShell>
     );

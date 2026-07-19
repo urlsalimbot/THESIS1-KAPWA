@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
+import { api } from '../lib/api';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,6 +30,7 @@ const roleRedirectMap: Record<string, string> = {
 
 export function LoginPage() {
   const [error, setError] = useState('');
+  const [emailNotVerified, setEmailNotVerified] = useState('');
   const [mfaValue, setMfaValue] = useState('');
   const [mfaSubmitting, setMfaSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -47,13 +49,19 @@ export function LoginPage() {
 
   async function onSubmit(values: LoginValues) {
     setError('');
+    setEmailNotVerified('');
     try {
       const result = await login(values.email, values.password);
       if (result && 'role' in result) {
         redirectAfterLogin(result);
       }
-    } catch {
-      setError('Invalid email or password. Please try again.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.toLowerCase().includes('verify your email')) {
+        setEmailNotVerified(values.email);
+      } else {
+        setError('Invalid email or password. Please try again.');
+      }
     }
   }
 
@@ -77,40 +85,81 @@ export function LoginPage() {
   const isSmsOtp = mfaChallenge?.type === 'sms';
   if (mfaChallenge) {
     return (
-      <div className="relative flex items-center justify-center min-h-screen px-4 bg-background">
+      <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden bg-background">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
+        </div>
         <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
           <ArrowLeft size={16} /> Back to Home
         </Link>
-        <Card className="w-full max-w-md mx-auto">
-          <CardHeader className="text-center">
-            <Avatar className="w-16 h-16 mx-auto mb-2">
-              <AvatarFallback>
-                <Smartphone size={32} />
+        <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
+          <CardHeader className="text-center pb-6">
+            <Avatar className="w-14 h-14 mx-auto mb-3 shadow-sm">
+              <AvatarFallback className="bg-accent/10">
+                <Smartphone size={28} className="text-accent" />
               </AvatarFallback>
             </Avatar>
-            <CardTitle>{isSmsOtp ? 'One-Time Password' : 'Two-Factor Authentication'}</CardTitle>
-            <CardDescription>{isSmsOtp ? 'Enter the OTP sent to your phone.' : 'Enter the verification code from your authenticator app.'}</CardDescription>
+            <CardTitle className="text-2xl tracking-tight">{isSmsOtp ? 'One-Time Password' : 'Two-Factor Authentication'}</CardTitle>
+            <CardDescription className="text-base">{isSmsOtp ? 'Enter the OTP sent to your phone.' : 'Enter the verification code from your authenticator app.'}</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-2">
             {error && (
-              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4" role="alert">
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-6" role="alert">
                 {error}
               </div>
             )}
-            <form onSubmit={handleMfaSubmit} className="space-y-4">
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="000000"
-                maxLength={6}
-                className="text-center tracking-[0.25em] text-2xl h-12 tabular-nums"
-                value={mfaValue}
-                onChange={(e) => setMfaValue(e.target.value.replace(/\D/g, ''))}
-                autoFocus
-              />
+            <form onSubmit={handleMfaSubmit} className="space-y-6">
+              <div className="flex gap-2 justify-center">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={mfaValue[i] || ''}
+                    onChange={(e) => {
+                      const dig = e.target.value.replace(/\D/g, '').slice(-1);
+                      if (!dig) return;
+                      const next = mfaValue.slice(0, i) + dig + mfaValue.slice(i + 1);
+                      setMfaValue(next.slice(0, 6));
+                      const inputs = (e.target as HTMLInputElement).closest('div')?.parentElement?.querySelectorAll('input');
+                      inputs?.[i + 1]?.focus();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace') {
+                        e.preventDefault();
+                        const arr = mfaValue.split('');
+                        if (arr[i]) {
+                          arr[i] = '';
+                          setMfaValue(arr.join(''));
+                        } else if (i > 0) {
+                          arr[i - 1] = '';
+                          setMfaValue(arr.join(''));
+                          const inputs = (e.target as HTMLInputElement).closest('div')?.parentElement?.querySelectorAll('input');
+                          inputs?.[i - 1]?.focus();
+                        }
+                      }
+                      if (e.key === 'ArrowLeft') {
+                        const inputs = (e.target as HTMLInputElement).closest('div')?.parentElement?.querySelectorAll('input');
+                        inputs?.[i - 1]?.focus();
+                      }
+                      if (e.key === 'ArrowRight') {
+                        const inputs = (e.target as HTMLInputElement).closest('div')?.parentElement?.querySelectorAll('input');
+                        inputs?.[i + 1]?.focus();
+                      }
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    autoFocus={i === 0}
+                    className="w-11 h-14 text-center text-xl font-semibold tracking-widest rounded-lg border border-input bg-background shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 tabular-nums transition-all duration-150"
+                    aria-label={`Digit ${i + 1}`}
+                  />
+                ))}
+              </div>
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-11"
                 disabled={mfaValue.length !== 6 || mfaSubmitting}
               >
                 {mfaSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}
@@ -118,7 +167,7 @@ export function LoginPage() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="justify-center">
+          <CardFooter className="justify-center pt-2 pb-6">
             <Button variant="ghost" onClick={() => { cancelMfa(); setMfaValue(''); setError(''); }}>
               Cancel
             </Button>
@@ -151,7 +200,28 @@ export function LoginPage() {
           <CardDescription className="text-base">MSWDO Norzagaray Social Welfare System</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
+          {emailNotVerified && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-3 rounded-md mb-4">
+              <p className="font-medium mb-1">Email not verified</p>
+              <p className="mb-2">Please check your inbox for the verification link.</p>
+              <button
+                type="button"
+                className="text-amber-900 underline underline-offset-2 hover:no-underline text-xs"
+                onClick={async () => {
+                  try {
+                    await api.post('/auth/resend-verification', { email: emailNotVerified });
+                    setEmailNotVerified('');
+                    setError('Verification email resent! Check your inbox.');
+                  } catch {
+                    setError('Failed to resend. Try again later.');
+                  }
+                }}
+              >
+                Resend verification email
+              </button>
+            </div>
+          )}
+          {error && !emailNotVerified && (
             <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4" role="alert">
               {error}
             </div>
@@ -194,6 +264,11 @@ export function LoginPage() {
                   </FormItem>
                 )}
               />
+              <div className="flex justify-end -mt-2">
+                <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
               <Button
                 type="submit"
                 className="w-full h-11"

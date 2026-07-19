@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState, memo, type FormEvent } from 'react';
 import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
-import { FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { api, downloadCsrPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -39,19 +39,14 @@ export function CsrPage() {
   const { mutate: globalMutate } = useSWRConfig();
   const { data: records = [], isLoading: loading } = useSWR<CsrRecord[]>(queryKeys.csr.list());
   const lastSync = records.length > 0 ? Date.now() : null;
+  const navigate = useNavigate();
 
-  const [showForm, setShowForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CsrForm>(emptyForm);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [msg, setMsg] = useState('');
-
-  function openNew() {
-    setForm(emptyForm);
-    setEditingId(null);
-    setShowForm(true);
-  }
 
   function openEdit(r: CsrRecord) {
     setForm({
@@ -63,25 +58,22 @@ export function CsrPage() {
       interventionPlan: r.interventionPlan || '', finalized: r.finalized,
     });
     setEditingId(r.id);
-    setShowForm(true);
+    setShowEditForm(true);
   }
 
   function updateForm(field: keyof CsrForm, value: string | number | boolean | string[]) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMsg('');
     try {
       if (editingId) {
         await api.patch(`/csr/${editingId}`, form as unknown as Record<string, unknown>);
         setMsg('CSR updated');
-      } else {
-        await api.post('/csr', form as unknown as Record<string, unknown>);
-        setMsg('CSR created');
       }
-      setShowForm(false);
+      setShowEditForm(false);
       globalMutate(queryKeys.csr.list());
     } catch (err: unknown) {
       setMsg(err instanceof Error ? err.message : 'Error saving CSR');
@@ -119,7 +111,7 @@ export function CsrPage() {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="default" onClick={openNew} aria-label="+ New CSR">+ New CSR</Button>
+          <Button variant="default" onClick={() => navigate('/csr/new')} aria-label="+ New CSR">+ New CSR</Button>
         </div>
         <div className="flex items-center gap-2">
           <Input
@@ -133,11 +125,11 @@ export function CsrPage() {
         </div>
       </div>
 
-      {/* New/Edit Form */}
-      {showForm && (
+      {/* Edit Form */}
+      {showEditForm && editingId && (
         <Card className="max-w-4xl">
           <CardHeader>
-            <CardTitle>{editingId ? 'Edit CSR' : 'New CSR Report'}</CardTitle>
+            <CardTitle>Edit CSR</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -206,8 +198,8 @@ export function CsrPage() {
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit" aria-label="Create CSR">{editingId ? 'Update CSR' : 'Create CSR'}</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)} aria-label="Cancel">Cancel</Button>
+                <Button type="submit" aria-label="Update CSR">Update CSR</Button>
+                <Button type="button" variant="outline" onClick={() => setShowEditForm(false)} aria-label="Cancel">Cancel</Button>
               </div>
             </form>
           </CardContent>
@@ -285,7 +277,7 @@ export function CsrPage() {
   );
 }
 
-const Section = React.memo(function Section({ label, value }: { label: string; value?: string }) {
+const Section = memo(function Section({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <div>

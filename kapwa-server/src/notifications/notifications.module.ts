@@ -7,6 +7,7 @@ import { NotificationsGateway } from './notifications.gateway';
 import { Notification } from './notification.entity';
 import { NotificationPreference } from './notification-preference.entity';
 import { OtpModule } from '../otp/otp.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { OtpModule } from '../otp/otp.module';
       secret: process.env.JWT_SECRET,
     }),
     OtpModule,
+    EmailModule,
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsGateway],

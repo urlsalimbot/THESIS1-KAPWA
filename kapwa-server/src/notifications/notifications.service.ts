@@ -8,6 +8,7 @@ import { SmsGatewayService } from '../otp/sms-gateway.service';
 import { renderTemplate, SmsTemplateKey } from './sms-templates';
 import { UpdatePreferenceInput } from './dto/notifications.zod';
 import { NotificationsGateway } from './notifications.gateway';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class NotificationsService {
@@ -16,6 +17,7 @@ export class NotificationsService {
     @InjectRepository(NotificationPreference) private notifPrefRepo: Repository<NotificationPreference>,
     private smsGateway: SmsGatewayService,
     private notifGateway: NotificationsGateway,
+    private emailService: EmailService,
   ) {}
 
   async create(notif: Partial<Notification>) {
@@ -36,6 +38,13 @@ export class NotificationsService {
     if (notif.channel === 'sms' && notif.phone) {
       const result = await this.smsGateway.sendSms(notif.phone, notif.message);
       sent = result.success;
+    } else if (notif.channel === 'email' && notif.email) {
+      try {
+        await this.emailService.sendNotificationEmail(notif.email, notif.title, notif.message);
+        sent = true;
+      } catch {
+        sent = false;
+      }
     }
 
     await this.notifRepo.update(notifId, { sent, sentAt: sent ? new Date() : undefined });
@@ -144,6 +153,13 @@ export class NotificationsService {
     if (notif.channel === 'sms' && notif.phone) {
       const result = await this.smsGateway.sendSms(notif.phone, notif.message);
       sent = result.success;
+    } else if (notif.channel === 'email' && notif.email) {
+      try {
+        await this.emailService.sendNotificationEmail(notif.email, notif.title, notif.message);
+        sent = true;
+      } catch {
+        sent = false;
+      }
     }
 
     await this.notifRepo.update(notifId, { sent, sentAt: sent ? new Date() : undefined });

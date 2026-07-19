@@ -61,3 +61,30 @@ export const ChangeEmailSchema = z.object({
 
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export type ChangeEmailInput = z.infer<typeof ChangeEmailSchema>;
+
+export const VerifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
+export const ResendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+export const ConfirmEmailChangeSchema = z.object({
+  token: z.string().min(1),
+});
+
+export type VerifyEmailInput = z.infer<typeof VerifyEmailSchema>;
+export type ResendVerificationInput = z.infer<typeof ResendVerificationSchema>;
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+export type ConfirmEmailChangeInput = z.infer<typeof ConfirmEmailChangeSchema>;

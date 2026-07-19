@@ -49,6 +49,30 @@ export class User extends BaseEntity {
   @Column({ name: 'token_version', default: 0 })
   tokenVersion!: number;
 
+  @Column({ name: 'email_verified', default: true })
+  emailVerified!: boolean;
+
+  @Column({ name: 'verification_token', nullable: true })
+  verificationToken?: string;
+
+  @Column({ name: 'verification_token_expires_at', nullable: true, type: 'timestamp' })
+  verificationTokenExpiresAt?: Date;
+
+  @Column({ name: 'reset_token', nullable: true })
+  resetToken?: string;
+
+  @Column({ name: 'reset_token_expires_at', nullable: true, type: 'timestamp' })
+  resetTokenExpiresAt?: Date;
+
+  @Column({ name: 'new_email', nullable: true })
+  newEmail?: string;
+
+  @Column({ name: 'new_email_token', nullable: true })
+  newEmailToken?: string;
+
+  @Column({ name: 'new_email_token_expires_at', nullable: true, type: 'timestamp' })
+  newEmailTokenExpiresAt?: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

@@ -14,7 +14,7 @@ export const CreateNotificationSchema = z.object({
 export type CreateNotificationInput = z.infer<typeof CreateNotificationSchema>;
 
 export const UpdatePreferenceSchema = z.object({
-  channel: z.enum(['sms', 'in_app']),
+  channel: z.enum(['sms', 'in_app', 'email']),
   category: z.nativeEnum(NotificationCategory),
   optedIn: z.boolean(),
 });
