@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight } from 'lucide-react';
+import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight, Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
 import { api } from '../lib/api';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 export function CoordinatorDashboardPage() {
+  const navigate = useNavigate();
   const [searchId, setSearchId] = useState('');
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchError, setSearchError] = useState('');
@@ -12,7 +16,26 @@ export function CoordinatorDashboardPage() {
   const [stats, setStats] = useState<any[]>([]);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+
+  const entryColumns: ColumnDef<any>[] = [
+    { accessorKey: 'id', header: 'Case ID' },
+    { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+    { accessorKey: 'category', header: 'Category' },
+    { accessorKey: 'barangay', header: 'Barangay' },
+    { accessorKey: 'remarks', header: 'Intervention/Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
+    { accessorKey: 'status', header: 'Status' },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs">{row.original.date}</span> },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View">
+          <Eye size={14} className="mr-1" /> View
+        </Button>
+      ),
+    },
+  ];
 
   useEffect(() => {
     loadData();
@@ -113,41 +136,22 @@ export function CoordinatorDashboardPage() {
         <h2 className="text-lg mb-3">Today's Tracker Entries</h2>
       </div>
 
-      <div className="rounded-lg">
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Case ID</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Barangay</th>
-                <th>Intervention/Remarks</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentEntries.map((c: any) => (
-                <tr key={c.id}>
-                  <td className="text-gray-500">{c.id}</td>
-                  <td className="font-medium text-gray-900">{c.name}</td>
-                  <td><span className="badge-category">{c.category}</span></td>
-                  <td className="text-gray-600">{c.barangay}</td>
-                  <td className="text-xs">{c.remarks}</td>
-                  <td><span className="badge">{c.status}</span></td>
-                  <td className="text-xs text-gray-500">{c.date}</td>
-                </tr>
-              ))}
-              {recentEntries.length === 0 && (
-                <tr><td colSpan={7} className="text-center text-gray-400 py-6">No entries today</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="pagination">
-          <span>{recentEntries.length} entries today</span>
-          <button className="px-3 py-1.5 text-xs" onClick={() => navigate('/tracker')}>View Full Tracker</button>
+      <div>
+        {recentEntries.length === 0 ? (
+          <div className="text-center py-8 text-sm text-muted-foreground">No entries today</div>
+        ) : (
+          <DataTable
+            columns={entryColumns}
+            data={recentEntries}
+            rowCount={recentEntries.length}
+            pagination={pagination}
+            onPaginationChange={setPagination}
+            sorting={[]}
+          />
+        )}
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-sm text-muted-foreground">{recentEntries.length} entries today</span>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/tracker')}>View Full Tracker</Button>
         </div>
       </div>
     </PageShell>

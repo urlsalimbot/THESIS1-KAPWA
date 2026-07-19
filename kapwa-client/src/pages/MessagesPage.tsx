@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { mutate as globalMutate } from 'swr';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
+import { useParams, useNavigate } from 'react-router-dom';
 import { connectSocket, disconnectSocket, emitTyping } from '../lib/chat-socket';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -95,6 +96,8 @@ function getDateSeparator(dateStr: string): string {
 }
 
 export function MessagesPage() {
+  const { userId: urlUserId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [pendingNew, setPendingNew] = useState<ChatMsg[]>([]);
@@ -184,6 +187,17 @@ export function MessagesPage() {
     return () => { disconnectSocket(); };
   }, []);
 
+  // Auto-select conversation from URL param
+  useEffect(() => {
+    if (urlUserId && urlUserId !== activeConv) {
+      setActiveConv(urlUserId);
+      setPendingNew([]);
+      setShowMobileConv(true);
+      readConversation.trigger({ otherUserId: urlUserId });
+      globalMutate(queryKeys.messages.list());
+    }
+  }, [urlUserId]);
+
   // Auto-scroll
   useEffect(() => {
     if (autoScroll) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -205,6 +219,7 @@ export function MessagesPage() {
     setShowMobileConv(true);
     readConversation.trigger({ otherUserId });
     globalMutate(queryKeys.messages.list());
+    navigate(`/messages/${otherUserId}`, { replace: true });
   }
 
   async function handleSend(e: React.FormEvent) {

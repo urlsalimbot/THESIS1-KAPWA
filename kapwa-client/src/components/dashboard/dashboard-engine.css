@@ -1,0 +1,11 @@
+.react-grid-item {
+  transition: none;
+}
+.react-grid-item.react-draggable-dragging {
+  z-index: 100;
+  opacity: 0.9;
+}
+.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.15) !important;
+  border-radius: var(--radius);
+}

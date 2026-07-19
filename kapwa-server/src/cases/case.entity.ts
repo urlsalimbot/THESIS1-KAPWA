@@ -83,6 +83,24 @@ export class Case extends BaseEntity {
   @Column({ name: 'client_signature', nullable: true, type: 'text' })
   clientSignature?: string;
 
+  @Column({ name: 'self_reliance_plan', type: 'text', nullable: true })
+  selfReliancePlan?: string;
+
+  @Column({ name: 'referrals', type: 'jsonb', nullable: true })
+  referrals?: Array<{
+    agencyName: string;
+    contactInfo?: string;
+    reason: string;
+    status: 'pending' | 'completed' | 'declined';
+    notes?: string;
+  }>;
+
+  @Column({ name: 'follow_up_date', type: 'date', nullable: true })
+  followUpDate?: string;
+
+  @Column({ name: 'exit_notes', type: 'text', nullable: true })
+  exitNotes?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

@@ -43,6 +43,9 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
+    # Uncomment for direct API access (bypassing Caddy), e.g. for debugging:
+    # ports:
+    #   - "3000:3000"
     environment:
       TZ: Asia/Manila
       DB_HOST: db
@@ -50,7 +53,7 @@ services:
     env_file:
       - ../infra/.env.production
     healthcheck:
-      test: ["CMD", "node", "-e", 'http=require("http");http.get("http://localhost:3000/api/",r=>process.exit(r.statusCode<500?0:1)).on("error",()=>process.exit(1))']
+      test: ["CMD", "node", "-e", 'http=require("http");http.get("http://localhost:3000/api/v1/",r=>process.exit(r.statusCode<500?0:1)).on("error",()=>process.exit(1))']
       interval: 15s
       timeout: 10s
       retries: 5
@@ -69,14 +72,12 @@ services:
       - "9000"
       - "9001"
     command: server /data --console-address ":9001"
-    environment:
-      TZ: Asia/Manila
     env_file:
       - ../infra/.env.production
     volumes:
       - minio-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      test: ["CMD-SHELL", "mc ready local 2>/dev/null || wget -qO- http://localhost:9000/minio/health/live || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -86,12 +87,10 @@ services:
     build:
       context: ../kapwa-client
       args:
-        VITE_API_URL: /api
+        VITE_API_URL: /api/v1
         VITE_WS_URL: ""
     container_name: kapwa-client
     restart: unless-stopped
-    environment:
-      TZ: Asia/Manila
     expose:
       - "80"
     healthcheck:
@@ -106,8 +105,6 @@ services:
       dockerfile: Dockerfile.caddy
     container_name: kapwa-caddy
     restart: unless-stopped
-    environment:
-      TZ: Asia/Manila
     ports:
       - "8090:80"
       - "443:443"

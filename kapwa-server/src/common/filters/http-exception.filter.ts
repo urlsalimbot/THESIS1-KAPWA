@@ -1,4 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { phTime } from '../utils';
 import { ThrottlerException } from '@nestjs/throttler';
 import { WsException } from '@nestjs/websockets';
 import { Response, Request } from 'express';
@@ -38,7 +39,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     response.status(status).json({
       statusCode: status,
       message: typeof message === 'string' ? message : (message as any).message || message,
-      timestamp: new Date().toISOString(),
+      timestamp: phTime(),
       path: request.url,
     });
   }

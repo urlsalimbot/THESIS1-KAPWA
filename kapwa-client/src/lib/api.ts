@@ -1,6 +1,6 @@
 import { ApiError } from './api-error';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'kapwa_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const TIMEOUT_MS = 10_000;
@@ -10,6 +10,11 @@ export const KAPWA_AUTH_LOGOUT_EVENT = 'kapwa:auth:logout';
 
 function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
+}
+
+function csrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
+  return match?.[1] ?? null;
 }
 
 // SWR's global fetcher receives the full queryKey tuple from queryKeys.*.
@@ -71,6 +76,10 @@ async function rawRequest<T>(
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (method !== 'GET') {
+      const csrf = csrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+    }
     const res = await fetch(url, {
       method,
       headers,

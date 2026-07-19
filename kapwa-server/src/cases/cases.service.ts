@@ -4,9 +4,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
+import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
+import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
+import { Person } from '../beneficiaries/person.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory } from '../notifications/notification.entity';
-import { AssessmentInput } from './dto/cases.zod';
+import { AssessmentInput, TransitionPlanInput } from './dto/cases.zod';
 import {
   SATURDAY, SUNDAY,
   PENDING_ESCALATION_DAYS, REVIEW_ESCALATION_DAYS, APPROVED_ESCALATION_DAYS,
@@ -21,6 +24,10 @@ export class CasesService {
     private caseRepo: Repository<Case>,
     @InjectRepository(CaseHistory)
     private historyRepo: Repository<CaseHistory>,
+    @InjectRepository(HouseholdMembership)
+    private familyRepo: Repository<HouseholdMembership>,
+    @InjectRepository(BeneficiaryClaimant)
+    private bcRepo: Repository<BeneficiaryClaimant>,
     private notifService: NotificationsService,
   ) {}
 
@@ -72,17 +79,64 @@ export class CasesService {
     throw lastError;
   }
 
-  async findAll(status?: CaseStatus) {
-    let cases: Case[];
-    if (status) {
-      cases = await this.caseRepo.find({ where: { status }, relations: ['beneficiary'], take: DEFAULT_LIST_LIMIT });
-    } else {
-      cases = await this.caseRepo.find({ relations: ['beneficiary'], take: DEFAULT_LIST_LIMIT });
+  async findAll(page = 1, limit = 10, filters?: { status?: CaseStatus; search?: string; barangay?: string; category?: string; gender?: string; ageRange?: string; sla?: string; dateFrom?: string; dateTo?: string }) {
+    const qb = this.caseRepo.createQueryBuilder('c')
+      .leftJoinAndSelect('c.beneficiary', 'beneficiary')
+      .leftJoinAndSelect('beneficiary.person', 'person');
+
+    if (filters?.status) {
+      qb.andWhere('c.status = :status', { status: filters.status });
     }
-    return cases.map(c => ({
+    if (filters?.search) {
+      qb.andWhere(
+        '(beneficiary.surname ILIKE :search OR beneficiary.firstName ILIKE :search OR beneficiary.middleName ILIKE :search)',
+        { search: `%${filters.search}%` },
+      );
+    }
+    if (filters?.barangay) {
+      qb.andWhere('beneficiary.address ILIKE :barangay', { barangay: `%${filters.barangay}%` });
+    }
+    if (filters?.gender) {
+      qb.andWhere('beneficiary.gender = :gender', { gender: filters.gender });
+    }
+    if (filters?.dateFrom) {
+      qb.andWhere('c.createdAt >= :dateFrom', { dateFrom: new Date(filters.dateFrom + 'T00:00:00Z') });
+    }
+    if (filters?.dateTo) {
+      qb.andWhere('c.createdAt <= :dateTo', { dateTo: new Date(filters.dateTo + 'T23:59:59Z') });
+    }
+
+    qb.skip((page - 1) * limit).take(limit).orderBy('c.createdAt', 'DESC');
+
+    const [cases, total] = await qb.getManyAndCount();
+
+    let filtered = cases.map(c => ({
       ...c,
       slaOverdue: this.computeSlaOverdue(c),
     }));
+
+    if (filters?.sla === 'overdue') {
+      filtered = filtered.filter(c => c.slaOverdue);
+    } else if (filters?.sla === 'on_track') {
+      filtered = filtered.filter(c => !c.slaOverdue);
+    }
+
+    // ageRange and category are client-calculated on beneficiary data, filter post-query
+    if (filters?.ageRange) {
+      filtered = filtered.filter(c => {
+        const age = c.beneficiary?.age || 0;
+        const range = age < 18 ? '0-17' : age > 59 ? '60+' : '18-59';
+        return range === filters.ageRange;
+      });
+    }
+    if (filters?.category) {
+      filtered = filtered.filter(c => {
+        const cats = (c.serviceRequested as string[]) || [];
+        return cats.some(cat => cat.toLowerCase().includes(filters.category!.toLowerCase()));
+      });
+    }
+
+    return { data: filtered, total };
   }
 
   async getCaseWithSla(id: string) {
@@ -96,9 +150,48 @@ export class CasesService {
   async findById(id: string) {
     const c = await this.caseRepo.findOne({
       where: { id },
-      relations: ['beneficiary', 'beneficiary.household', 'beneficiary.household.members'],
+      relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household', 'beneficiary.household.members'],
     });
     if (!c) throw new NotFoundException('Case not found');
+
+    // Load family members via household_memberships + persons
+    if (c.beneficiary?.householdId) {
+      const rows = await this.familyRepo.query(
+        `SELECT hm.id,
+                TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
+                hm.relationship, p.age, p.occupation, p.estimated_monthly_income AS income,
+                hm.status, hm.is_primary
+         FROM household_memberships hm
+         JOIN persons p ON p.id = hm.person_id
+         WHERE hm.household_id = $1
+         ORDER BY hm.is_primary DESC, p.first_name`,
+        [c.beneficiary.householdId],
+      );
+      (c.beneficiary.household as any).familyMembers = rows.map((r: any) => ({
+        id: r.id,
+        fullName: r.full_name,
+        relationship: r.relationship,
+        age: r.age,
+        occupation: r.occupation,
+        income: r.income != null ? Number(r.income) : null,
+        status: r.status || null,
+        isPrimary: r.is_primary,
+      }));
+    }
+
+    // Load claimant (if different from beneficiary)
+    if (c.beneficiary?.personId) {
+      const bc = await this.bcRepo.findOne({ where: { beneficiaryId: c.beneficiary.personId }, relations: ['claimant'] });
+      if (bc && bc.claimant && bc.claimantId !== c.beneficiary.personId) {
+        (c as any).claimant = {
+          fullName: `${bc.claimant.firstName || ''} ${bc.claimant.middleName ? bc.claimant.middleName + ' ' : ''}${bc.claimant.surname || ''}`.trim(),
+          relationship: bc.relationship,
+          phone: bc.claimant.phone,
+          address: bc.claimant.address,
+        };
+      }
+    }
+
     return c;
   }
 
@@ -160,6 +253,12 @@ export class CasesService {
     if (!transitions[c.status]?.includes(newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
     }
+    if (oldStatus === CaseStatus.PENDING && newStatus === CaseStatus.IN_REVIEW && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
+      throw new BadRequestException('Assessment must be completed before requesting review');
+    }
+    if (oldStatus === CaseStatus.APPROVED && newStatus === CaseStatus.DISBURSED && !c.certificateUrl && !c.pettyCashVoucherUrl) {
+      throw new BadRequestException('Documents must be uploaded before disbursement');
+    }
 
     const roleTransitions: Record<CaseStatus, string[]> = {
       [CaseStatus.PENDING]: ['social_worker', 'coordinator'],
@@ -208,6 +307,12 @@ export class CasesService {
     if (!transitions[c.status]?.includes(newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
     }
+    if (oldStatus === CaseStatus.PENDING && newStatus === CaseStatus.IN_REVIEW && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
+      throw new BadRequestException('Assessment must be completed before requesting review');
+    }
+    if (oldStatus === CaseStatus.APPROVED && newStatus === CaseStatus.DISBURSED && !c.certificateUrl && !c.pettyCashVoucherUrl) {
+      throw new BadRequestException('Documents must be uploaded before disbursement');
+    }
     const roleTransitions: Partial<Record<CaseStatus, string[]>> = {
       [CaseStatus.IN_REVIEW]: ['admin'],
       [CaseStatus.APPROVED]: ['admin'],
@@ -250,6 +355,9 @@ export class CasesService {
     if (userRole !== 'social_worker') {
       throw new ForbiddenException(`Role ${userRole} cannot request review`);
     }
+    if (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory) {
+      throw new BadRequestException('Assessment must be completed before requesting review (problems presented, social worker assessment, and client category are required)');
+    }
     const oldStatus = c.status;
     c.status = CaseStatus.IN_REVIEW;
     c.updatedAt = new Date();
@@ -265,6 +373,9 @@ export class CasesService {
     }
     if (userRole !== 'admin') {
       throw new ForbiddenException(`Role ${userRole} cannot disburse`);
+    }
+    if (!c.certificateUrl && !c.pettyCashVoucherUrl) {
+      throw new BadRequestException('Documents (certificate and/or petty cash voucher) must be uploaded before disbursement');
     }
     const oldStatus = c.status;
     c.status = CaseStatus.DISBURSED;
@@ -342,6 +453,13 @@ export class CasesService {
       updatedAt: new Date(),
     });
     return this.caseRepo.save(c);
+  }
+
+  async updateTransitionPlan(id: string, data: TransitionPlanInput) {
+    const caseEntity = await this.caseRepo.findOne({ where: { id } });
+    if (!caseEntity) throw new NotFoundException('Case not found');
+    Object.assign(caseEntity, data);
+    return this.caseRepo.save(caseEntity);
   }
 
   async getPendingDisbursed() {

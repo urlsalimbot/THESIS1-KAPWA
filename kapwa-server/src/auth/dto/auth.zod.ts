@@ -83,8 +83,13 @@ export const ConfirmEmailChangeSchema = z.object({
   token: z.string().min(1),
 });
 
+export const UpdatePhoneSchema = z.object({
+  phone: z.string().min(10).max(15),
+});
+
 export type VerifyEmailInput = z.infer<typeof VerifyEmailSchema>;
 export type ResendVerificationInput = z.infer<typeof ResendVerificationSchema>;
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type ConfirmEmailChangeInput = z.infer<typeof ConfirmEmailChangeSchema>;
+export type UpdatePhoneInput = z.infer<typeof UpdatePhoneSchema>;

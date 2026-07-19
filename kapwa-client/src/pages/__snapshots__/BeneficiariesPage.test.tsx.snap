@@ -8,17 +8,23 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
     <div
       class="flex items-start justify-between gap-3"
     >
-      <div>
-        <h1
-          class="text-xl font-bold font-heading text-foreground"
+      <div
+        class="flex items-center gap-3 min-w-0"
+      >
+        <div
+          class="min-w-0"
         >
-          Beneficiaries
-        </h1>
-        <p
-          class="text-xs text-muted-foreground mt-0.5"
-        >
-          Manage beneficiary records and household data
-        </p>
+          <h1
+            class="text-xl font-bold font-heading text-foreground truncate"
+          >
+            Beneficiaries
+          </h1>
+          <p
+            class="text-xs text-muted-foreground mt-0.5 truncate"
+          >
+            Manage beneficiary records and household data
+          </p>
+        </div>
       </div>
     </div>
     <div
@@ -76,95 +82,113 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
             value=""
           />
         </div>
-        <select
-          aria-label="Filter by category"
-          class="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
-            value=""
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All Categories
-          </option>
-          <option
-            value="Senior"
+            Category
+          </label>
+          <select
+            aria-label="Filter by category"
+            class="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            Senior
-          </option>
-          <option
-            value="PWD"
-          >
-            PWD
-          </option>
-          <option
-            value="Child"
-          >
-            Child
-          </option>
-          <option
-            value="Solo Parent"
-          >
-            Solo Parent
-          </option>
-          <option
-            value="Indigenous"
-          >
-            Indigenous
-          </option>
-          <option
-            value="Others"
-          >
-            Others
-          </option>
-        </select>
-        <select
-          aria-label="Filter by barangay"
-          class="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <option
+              value=""
+            >
+              All Categories
+            </option>
+            <option
+              value="Senior"
+            >
+              Senior
+            </option>
+            <option
+              value="PWD"
+            >
+              PWD
+            </option>
+            <option
+              value="Child"
+            >
+              Child
+            </option>
+            <option
+              value="Solo Parent"
+            >
+              Solo Parent
+            </option>
+            <option
+              value="Indigenous"
+            >
+              Indigenous
+            </option>
+            <option
+              value="Others"
+            >
+              Others
+            </option>
+          </select>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
-            value="all"
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All Barangays
-          </option>
-          <option>
-            Bangkal
-          </option>
-          <option>
-            Baraka
-          </option>
-          <option>
-            Bigte
-          </option>
-          <option>
-            Bitungol
-          </option>
-          <option>
-            Friendship Village Resources (FVR)
-          </option>
-          <option>
-            Matictic
-          </option>
-          <option>
-            Minuyan
-          </option>
-          <option>
-            Partida
-          </option>
-          <option>
-            Pinagtulayan
-          </option>
-          <option>
-            Poblacion
-          </option>
-          <option>
-            San Lorenzo
-          </option>
-          <option>
-            San Mateo
-          </option>
-          <option>
-            Tigbe
-          </option>
-        </select>
+            Barangay
+          </label>
+          <select
+            aria-label="Filter by barangay"
+            class="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option
+              value="all"
+            >
+              All Barangays
+            </option>
+            <option>
+              Bangkal
+            </option>
+            <option>
+              Baraka
+            </option>
+            <option>
+              Bigte
+            </option>
+            <option>
+              Bitungol
+            </option>
+            <option>
+              Friendship Village Resources (FVR)
+            </option>
+            <option>
+              Matictic
+            </option>
+            <option>
+              Minuyan
+            </option>
+            <option>
+              Partida
+            </option>
+            <option>
+              Pinagtulayan
+            </option>
+            <option>
+              Poblacion
+            </option>
+            <option>
+              San Lorenzo
+            </option>
+            <option>
+              San Mateo
+            </option>
+            <option>
+              Tigbe
+            </option>
+          </select>
+        </div>
       </div>
     </div>
     <div

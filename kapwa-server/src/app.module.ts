@@ -6,8 +6,6 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { SyncModule } from './sync/sync.module';
 import { CasesModule } from './cases/cases.module';
-import { InterventionsModule } from './interventions/interventions.module';
-import { InterventionTypesModule } from './intervention-types/intervention-types.module';
 import { ProgramsModule } from './programs/programs.module';
 import { BeneficiariesModule } from './beneficiaries/beneficiaries.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -21,6 +19,7 @@ import { ExportModule } from './export/export.module';
 import { FilingModule } from './filing/filing.module';
 import { UsersModule } from './users/users.module';
 import { AccessCardsModule } from './access-cards/access-cards.module';
+import { CaseInterventionsModule } from './case-interventions/case-interventions.module';
 import { LcrModule } from './lcr/lcr.module';
 import { SlaModule } from './sla/sla.module';
 import { OtpModule } from './otp/otp.module';
@@ -28,11 +27,14 @@ import { MinioModule } from './minio/minio.module';
 import { IntakeModule } from './intake/intake.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { CsrfGuard } from './common/csrf.guard';
 import { PiiMaskingInterceptor } from './beneficiaries/pii.interceptor';
+import { CommonModule } from './common/common.module';
 import { AppController } from './app.controller';
 
 @Module({
   imports: [
+    CommonModule,
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     TypeOrmModule.forRootAsync({
@@ -59,8 +61,6 @@ import { AppController } from './app.controller';
     AuthModule,
     SyncModule,
     CasesModule,
-    InterventionsModule,
-    InterventionTypesModule,
     ProgramsModule,
     BeneficiariesModule,
     NotificationsModule,
@@ -74,6 +74,7 @@ import { AppController } from './app.controller';
     FilingModule,
     UsersModule,
     AccessCardsModule,
+    CaseInterventionsModule,
     LcrModule,
     SlaModule,
     OtpModule,
@@ -83,6 +84,7 @@ import { AppController } from './app.controller';
   controllers: [AppController],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: PiiMaskingInterceptor },
   ],
