@@ -2,7 +2,7 @@ import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from './constants';
 import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { Intervention } from '../interventions/intervention.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
@@ -122,11 +122,35 @@ export class DashboardService {
       .orderBy('c.updated_at', 'DESC');
 
     if (barangay) {
-      qb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
+      qb.andWhere('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
     }
 
     paginate(qb, page, limit);
-    return qb.getMany();
+    try {
+      return await qb.getMany();
+    } catch {
+      // TypeORM relation column resolution can fail intermittently (GH#10421).
+      // Fallback: load cases and beneficiaries separately.
+      const qb2 = this.caseRepo
+        .createQueryBuilder('c')
+        .orderBy('c.updated_at', 'DESC');
+      if (barangay) {
+        qb2.where('c.beneficiary_id IN ' +
+          '(SELECT b2.id FROM beneficiaries b2 WHERE b2.address ILIKE :barangay)',
+          { barangay: `%${barangay}%` });
+      }
+      paginate(qb2, page, limit);
+      const cases = await qb2.getMany();
+      const benIds = cases.map(c => c.beneficiaryId).filter((id): id is string => !!id);
+      if (benIds.length > 0) {
+        const beneficiaries = await this.benRepo.find({ where: { id: In(benIds) } });
+        const benMap = new Map(beneficiaries.map(b => [b.id, b]));
+        for (const c of cases) {
+          if (c.beneficiaryId) (c as any).beneficiary = benMap.get(c.beneficiaryId);
+        }
+      }
+      return cases;
+    }
   }
 
   async getSlaCompliance() {

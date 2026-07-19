@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import UsersPanel from '@/components/UsersPanel';
+import { LcrImportTab } from '@/components/LcrImportTab';
 
 interface Program {
   id: string; name: string; category: string; isActive: boolean;
@@ -20,7 +22,9 @@ interface SyncEntry {
 }
 
 export function AdminPage() {
-  const [activeTab, setActiveTab] = useState<string>('programs');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'programs';
+  const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
 
   const { data: programsRaw, isLoading: loadingPrograms } = useSWR<Program[]>(
     activeTab === 'programs' ? queryKeys.admin.programs() : null,
@@ -54,6 +58,7 @@ export function AdminPage() {
           <TabsTrigger value="users">👥 Users</TabsTrigger>
           <TabsTrigger value="sync">🔄 Sync Queue</TabsTrigger>
           <TabsTrigger value="audit">📜 Audit Log</TabsTrigger>
+          <TabsTrigger value="lcr">📋 LCR Import</TabsTrigger>
         </TabsList>
 
         <TabsContent value="programs" className="space-y-4">
@@ -154,6 +159,10 @@ export function AdminPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="lcr" className="space-y-4">
+          <LcrImportTab />
         </TabsContent>
       </Tabs>
     </PageShell>
