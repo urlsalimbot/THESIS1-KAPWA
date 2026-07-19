@@ -36,7 +36,8 @@ export class DashboardController {
         recentCasesRaw = await this.dashService.getRecentCases(userBarangay);
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
-        this.logger.error('getRecentCases failed', errMsg);
+        const errStack = e instanceof Error ? e.stack : '';
+        this.logger.error('getRecentCases failed', errMsg, errStack);
       }
 
       return {

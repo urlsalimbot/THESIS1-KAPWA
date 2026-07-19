@@ -63,6 +63,7 @@ export const queryKeys = {
     users: () => memo('admin.users', () => ['users'] as const),
     syncEntries: () => memo('admin.syncEntries', () => ['sync', 'conflicts'] as const),
     auditLogs: () => memo('admin.auditLogs', () => ['audit', 'logs'] as const),
+    lcrImport: () => memo('admin.lcrImport', () => ['lcr', 'import'] as const),
   },
   accessCards: {
     all: ['access-cards'] as const,
