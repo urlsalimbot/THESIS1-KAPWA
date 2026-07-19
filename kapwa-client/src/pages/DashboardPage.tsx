@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, RefreshCw, Clock, DollarSign } from 'lucide-react';
 import useSWR from 'swr';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { QuickActionPanel } from '@/components/dashboard/QuickActionPanel';
 import { ClaimantWidgets } from '@/components/dashboard/widgets/ClaimantWidgets';
 import { MayorWidgets } from '@/components/dashboard/widgets/MayorWidgets';
@@ -157,6 +157,7 @@ function CalendarHeatmap({ data, year, month }: { data: DailyCounts; year: numbe
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const { user } = useAuth();
   const role = user?.role || '';
 
@@ -282,7 +283,7 @@ export function DashboardPage() {
         <Button variant="outline" size="sm" onClick={() => navigate('/cases')}>View All Cases</Button>
       </div>
 
-      <DataTable columns={dashboardCaseColumns} data={cases} rowCount={cases.length} pagination={{ pageIndex: 0, pageSize: 10 }} sorting={[]} />
+      <DataTable columns={dashboardCaseColumns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
     </PageShell>
   );
 }

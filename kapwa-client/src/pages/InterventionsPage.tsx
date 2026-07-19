@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useSWR from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 interface Intervention {
   id: string;
@@ -28,6 +28,7 @@ interface Intervention {
 
 export function InterventionsPage() {
   const navigate = useNavigate();
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const { data, isLoading: loading } = useSWR<Array<Record<string, unknown>>>('/interventions');
   const interventions: Intervention[] = (data || []).map((i) => {
     const beneficiary = (i.case as Record<string, unknown>)?.beneficiary as Record<string, unknown> || {};
@@ -103,7 +104,8 @@ export function InterventionsPage() {
           columns={columns}
           data={interventions}
           rowCount={interventions.length}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
+          pagination={pagination}
+          onPaginationChange={setPagination}
           sorting={[]}
         />
       )}

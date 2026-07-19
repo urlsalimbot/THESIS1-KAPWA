@@ -8,17 +8,23 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
     <div
       class="flex items-start justify-between gap-3"
     >
-      <div>
-        <h1
-          class="text-xl font-bold font-heading text-foreground"
+      <div
+        class="flex items-center gap-3 min-w-0"
+      >
+        <div
+          class="min-w-0"
         >
-          Case Tracker
-        </h1>
-        <p
-          class="text-xs text-muted-foreground mt-0.5"
-        >
-          Real-time view of processed interventions and logs.
-        </p>
+          <h1
+            class="text-xl font-bold font-heading text-foreground truncate"
+          >
+            Case Tracker
+          </h1>
+          <p
+            class="text-xs text-muted-foreground mt-0.5 truncate"
+          >
+            Real-time view of processed interventions and logs.
+          </p>
+        </div>
       </div>
     </div>
     <div
@@ -27,128 +33,200 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
       <div
         class="flex items-center gap-2 flex-wrap"
       >
-        <select
-          aria-label="Filter by barangay"
-          class="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
-            value=""
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All Barangays
-          </option>
-          <option
-            value="Barangay 1"
+            Barangay
+          </label>
+          <select
+            aria-label="Filter by barangay"
+            class="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            Barangay 1
-          </option>
-        </select>
-        <select
-          aria-label="Filter by category"
-          class="flex h-10 w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <option
+              value=""
+            >
+              All Barangays
+            </option>
+            <option
+              value="Barangay 1"
+            >
+              Barangay 1
+            </option>
+          </select>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
-            value=""
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All Categories
-          </option>
-          <option
-            value="Senior"
+            Category
+          </label>
+          <select
+            aria-label="Filter by category"
+            class="flex h-10 w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            Senior
-          </option>
-        </select>
-        <select
-          aria-label="Filter by status"
-          class="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <option
+              value=""
+            >
+              All Categories
+            </option>
+            <option
+              value="Senior"
+            >
+              Senior
+            </option>
+          </select>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
-            value=""
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All Statuses
-          </option>
-          <option
-            value="pending_assessment"
+            Status
+          </label>
+          <select
+            aria-label="Filter by status"
+            class="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            Pending
-          </option>
-          <option
-            value="in_review"
-          >
-            In Review
-          </option>
-          <option
-            value="approved"
-          >
-            Approved
-          </option>
-          <option
-            value="disbursed"
-          >
-            Disbursed
-          </option>
-          <option
-            value="closed"
-          >
-            Closed
-          </option>
-        </select>
-        <select
-          aria-label="Filter by gender"
-          class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <option
+              value=""
+            >
+              All Statuses
+            </option>
+            <option
+              value="pending_assessment"
+            >
+              Pending
+            </option>
+            <option
+              value="in_review"
+            >
+              In Review
+            </option>
+            <option
+              value="approved"
+            >
+              Approved
+            </option>
+            <option
+              value="disbursed"
+            >
+              Disbursed
+            </option>
+            <option
+              value="closed"
+            >
+              Closed
+            </option>
+          </select>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
-            value=""
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All Genders
-          </option>
-          <option
-            value="M"
+            Gender
+          </label>
+          <select
+            aria-label="Filter by gender"
+            class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            M
-          </option>
-        </select>
-        <select
-          aria-label="Filter by age range"
-          class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <option
+              value=""
+            >
+              All Genders
+            </option>
+            <option
+              value="M"
+            >
+              M
+            </option>
+          </select>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
-            value=""
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All Ages
-          </option>
-        </select>
-        <select
-          aria-label="Filter by SLA"
-          class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            Age Range
+          </label>
+          <select
+            aria-label="Filter by age range"
+            class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option
+              value=""
+            >
+              All Ages
+            </option>
+          </select>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
         >
-          <option
+          <label
+            class="text-xs text-muted-foreground font-medium"
+          >
+            SLA
+          </label>
+          <select
+            aria-label="Filter by SLA"
+            class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option
+              value=""
+            >
+              All SLA
+            </option>
+            <option
+              value="overdue"
+            >
+              Overdue
+            </option>
+            <option
+              value="on_track"
+            >
+              On Track
+            </option>
+          </select>
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
+        >
+          <label
+            class="text-xs text-muted-foreground font-medium"
+          >
+            Date From
+          </label>
+          <input
+            aria-label="Date from"
+            class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-36"
+            type="date"
             value=""
+          />
+        </div>
+        <div
+          class="flex flex-col gap-0.5"
+        >
+          <label
+            class="text-xs text-muted-foreground font-medium"
           >
-            All SLA
-          </option>
-          <option
-            value="overdue"
-          >
-            Overdue
-          </option>
-          <option
-            value="on_track"
-          >
-            On Track
-          </option>
-        </select>
-        <input
-          aria-label="Date from"
-          class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-36"
-          type="date"
-          value=""
-        />
-        <input
-          aria-label="Date to"
-          class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-36"
-          type="date"
-          value=""
-        />
+            Date To
+          </label>
+          <input
+            aria-label="Date to"
+            class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-36"
+            type="date"
+            value=""
+          />
+        </div>
         <button
           aria-label="Export CSV"
           class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"

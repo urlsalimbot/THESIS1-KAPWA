@@ -95,7 +95,7 @@ export default function MessagesPopover() {
                   'w-full text-left px-4 py-3 flex gap-3 hover:bg-muted/50 transition-colors border-b border-border last:border-b-0 cursor-pointer',
                   conv.unread > 0 && 'bg-muted/30'
                 )}
-                onClick={() => { setOpen(false); navigate('/messages'); }}
+                onClick={() => { setOpen(false); navigate(`/messages/${conv.userId}`); }}
               >
                 <div className="mt-0.5 shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground font-medium">
                   {(conv.name || '?').charAt(0)}

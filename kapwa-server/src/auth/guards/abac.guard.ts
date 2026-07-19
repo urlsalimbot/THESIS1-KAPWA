@@ -23,17 +23,20 @@ export class AbacGuard implements CanActivate {
     // Admin bypass
     if (user.role === 'admin') return true;
 
-    // Consent-gated ABAC: auto-evaluate consent_ledger for beneficiary routes
-    // On case routes (:id is a case UUID, not beneficiary UUID) — skip auto-resolve
+    // Consent-gated ABAC: auto-evaluate consent_ledger for beneficiary routes only
+    // Skip for case routes and IRF routes — their :id is not a beneficiary UUID
     const routePath = request.route?.path || request.url || '';
     const isCaseRoute = /\/cases(\/|$)/.test(routePath);
-    const beneficiaryId = params?.beneficiaryId || (!isCaseRoute && params?.id) || query?.beneficiaryId;
-    if (beneficiaryId) {
+    const isIrfRoute = /\/irf(\/|$)/.test(routePath);
+    const isBeneficiaryRoute = /\/beneficiaries(\/|$)/.test(routePath);
+    const beneficiaryId = params?.beneficiaryId || params?.id;
+    if (isBeneficiaryRoute && beneficiaryId) {
       const consent = await this.consentRepo.findOne({
-        where: { beneficiaryId, status: 'active' },
+        where: { beneficiaryId },
       });
-      if (!consent) {
-        throw new ForbiddenException('Beneficiary consent has been revoked or not granted');
+      // Only block when consent was explicitly revoked — missing record means not yet processed
+      if (consent && consent.status !== 'active') {
+        throw new ForbiddenException('Beneficiary consent has been revoked');
       }
     }
 

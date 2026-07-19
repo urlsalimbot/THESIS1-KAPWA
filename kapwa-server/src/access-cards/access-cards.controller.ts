@@ -16,7 +16,7 @@ export class AccessCardsController {
   constructor(private svc: AccessCardsService) {}
 
   @Post('assign/:beneficiaryId')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Generate and assign access card to beneficiary' })
   async assignCard(@Param('beneficiaryId', new ParseUUIDPipe()) beneficiaryId: string) {
     const accessCardCode = await this.svc.generateAndAssign(beneficiaryId);
@@ -45,7 +45,7 @@ export class AccessCardsController {
   }
 
   @Get()
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'List all access card services' })
   async findAll() {
     return this.svc.findAll();

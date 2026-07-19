@@ -70,17 +70,12 @@ export function MfaSetupPage() {
     );
   }
 
-  const mfaRoles = ['admin', 'mayor', 'auditor'];
-  const canSetup = user && mfaRoles.includes(user.role);
+  const canSetup = !!user;
 
   return (
     <PageShell title="Multi-Factor Authentication" description="Strengthen account security with TOTP via authenticator app.">
       <Card className="max-w-lg">
         <CardContent className="p-6">
-          {!canSetup && (
-            <p className="text-sm text-muted-foreground">MFA is available for admin, mayor, and auditor roles.</p>
-          )}
-
           {canSetup && step === 'idle' && !mfaEnabled && (
             <div>
               <div className="flex items-center gap-3 mb-4">

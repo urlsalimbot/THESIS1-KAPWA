@@ -3,22 +3,28 @@
 exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + recent cases table 1`] = `
 <div>
   <div
-    class="flex flex-col gap-4 lg:gap-8"
+    class="flex flex-col gap-3 lg:gap-4"
   >
     <div
-      class="flex items-start justify-between gap-4"
+      class="flex items-start justify-between gap-3"
     >
-      <div>
-        <h1
-          class="text-2xl font-bold font-heading text-foreground"
+      <div
+        class="flex items-center gap-3 min-w-0"
+      >
+        <div
+          class="min-w-0"
         >
-          Dashboard
-        </h1>
-        <p
-          class="text-sm text-muted-foreground mt-1"
-        >
-          Overview of social welfare operations and metrics.
-        </p>
+          <h1
+            class="text-xl font-bold font-heading text-foreground truncate"
+          >
+            Dashboard
+          </h1>
+          <p
+            class="text-xs text-muted-foreground mt-0.5 truncate"
+          >
+            Overview of social welfare operations and metrics.
+          </p>
+        </div>
       </div>
     </div>
     <div
@@ -387,6 +393,310 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
           >
             28 beneficiaries
           </p>
+        </div>
+      </div>
+    </div>
+    <div
+      class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6"
+    >
+      <div
+        class="rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md"
+      >
+        <div
+          class="flex flex-col space-y-1.5 p-6 pb-2"
+        >
+          <div
+            class="tracking-tight text-sm font-semibold"
+          >
+            Case Status
+          </div>
+        </div>
+        <div
+          class="p-6 pt-0 pb-3"
+        >
+          <div
+            class="recharts-responsive-container"
+            style="width: 100%; height: 200px; min-width: 0;"
+          >
+            <div
+              style="width: 0px; overflow-x: visible;"
+            />
+          </div>
+        </div>
+      </div>
+      <div
+        class="rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md"
+      >
+        <div
+          class="flex flex-col space-y-1.5 p-6 pb-2"
+        >
+          <div
+            class="tracking-tight text-sm font-semibold"
+          >
+            Monthly Trends (6mo)
+          </div>
+        </div>
+        <div
+          class="p-6 pt-0 pb-3"
+        >
+          <p
+            class="text-xs text-muted-foreground py-8 text-center"
+          >
+            No trend data
+          </p>
+        </div>
+      </div>
+      <div
+        class="rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md"
+      >
+        <div
+          class="flex flex-col space-y-1.5 p-6 pb-2"
+        >
+          <div
+            class="tracking-tight text-sm font-semibold"
+          >
+            Activity Calendar
+          </div>
+        </div>
+        <div
+          class="p-6 pt-0 pb-3"
+        >
+          <div>
+            <p
+              class="text-xs text-muted-foreground mb-2"
+            >
+              July 2026
+            </p>
+            <div
+              class="grid grid-cols-7 gap-0.5 text-[9px] leading-none"
+            >
+              <div
+                class="text-center text-[8px] text-muted-foreground py-0.5 font-medium"
+              >
+                Su
+              </div>
+              <div
+                class="text-center text-[8px] text-muted-foreground py-0.5 font-medium"
+              >
+                Mo
+              </div>
+              <div
+                class="text-center text-[8px] text-muted-foreground py-0.5 font-medium"
+              >
+                Tu
+              </div>
+              <div
+                class="text-center text-[8px] text-muted-foreground py-0.5 font-medium"
+              >
+                We
+              </div>
+              <div
+                class="text-center text-[8px] text-muted-foreground py-0.5 font-medium"
+              >
+                Th
+              </div>
+              <div
+                class="text-center text-[8px] text-muted-foreground py-0.5 font-medium"
+              >
+                Fr
+              </div>
+              <div
+                class="text-center text-[8px] text-muted-foreground py-0.5 font-medium"
+              >
+                Sa
+              </div>
+              <div />
+              <div />
+              <div />
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 1: 0 activities"
+              >
+                1
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 2: 0 activities"
+              >
+                2
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 3: 0 activities"
+              >
+                3
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 4: 0 activities"
+              >
+                4
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 5: 0 activities"
+              >
+                5
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 6: 0 activities"
+              >
+                6
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 7: 0 activities"
+              >
+                7
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 8: 0 activities"
+              >
+                8
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 9: 0 activities"
+              >
+                9
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 10: 0 activities"
+              >
+                10
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 11: 0 activities"
+              >
+                11
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 12: 0 activities"
+              >
+                12
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 13: 0 activities"
+              >
+                13
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 14: 0 activities"
+              >
+                14
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 15: 0 activities"
+              >
+                15
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 16: 0 activities"
+              >
+                16
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 17: 0 activities"
+              >
+                17
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 18: 0 activities"
+              >
+                18
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted ring-1 ring-primary text-muted-foreground"
+                title="July 2026 19: 0 activities"
+              >
+                19
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 20: 0 activities"
+              >
+                20
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 21: 0 activities"
+              >
+                21
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 22: 0 activities"
+              >
+                22
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 23: 0 activities"
+              >
+                23
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 24: 0 activities"
+              >
+                24
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 25: 0 activities"
+              >
+                25
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 26: 0 activities"
+              >
+                26
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 27: 0 activities"
+              >
+                27
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 28: 0 activities"
+              >
+                28
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 29: 0 activities"
+              >
+                29
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 30: 0 activities"
+              >
+                30
+              </div>
+              <div
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                title="July 2026 31: 0 activities"
+              >
+                31
+              </div>
+              <div />
+            </div>
+          </div>
         </div>
       </div>
     </div>

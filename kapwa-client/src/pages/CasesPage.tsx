@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '../lib/auth-context';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 interface CaseRow {
   id: string;
@@ -82,6 +82,7 @@ export function CasesPage() {
   const [genderFilter, setGenderFilter] = useState('');
   const [ageRangeFilter, setAgeRangeFilter] = useState('');
   const [slaFilter, setSlaFilter] = useState('');
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   // Per-action in-flight flags — preserves the existing per-row disabled-button behavior.
@@ -305,33 +306,57 @@ export function CasesPage() {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <select aria-label="Filter by barangay" className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={barangayFilter} onChange={e => setBarangayFilter(e.target.value)}>
-            <option value="">All Barangays</option>
-            {uniqueBarangays.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <select aria-label="Filter by category" className="flex h-10 w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
-            <option value="">All Categories</option>
-            {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select aria-label="Filter by status" className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="">All Statuses</option>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-          <select aria-label="Filter by gender" className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={genderFilter} onChange={e => setGenderFilter(e.target.value)}>
-            <option value="">All Genders</option>
-            {uniqueGenders.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-          <select aria-label="Filter by age range" className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={ageRangeFilter} onChange={e => setAgeRangeFilter(e.target.value)}>
-            <option value="">All Ages</option>
-            {uniqueAgeRanges.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-          <select aria-label="Filter by SLA" className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={slaFilter} onChange={e => setSlaFilter(e.target.value)}>
-            <option value="">All SLA</option>
-            <option value="overdue">Overdue</option>
-            <option value="on_track">On Track</option>
-          </select>
-          <Input type="date" aria-label="Date from" className="w-36" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-          <Input type="date" aria-label="Date to" className="w-36" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">Barangay</label>
+            <select aria-label="Filter by barangay" className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={barangayFilter} onChange={e => setBarangayFilter(e.target.value)}>
+              <option value="">All Barangays</option>
+              {uniqueBarangays.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">Category</label>
+            <select aria-label="Filter by category" className="flex h-10 w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+              <option value="">All Categories</option>
+              {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">Status</label>
+            <select aria-label="Filter by status" className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">All Statuses</option>
+              {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">Gender</label>
+            <select aria-label="Filter by gender" className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={genderFilter} onChange={e => setGenderFilter(e.target.value)}>
+              <option value="">All Genders</option>
+              {uniqueGenders.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">Age Range</label>
+            <select aria-label="Filter by age range" className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={ageRangeFilter} onChange={e => setAgeRangeFilter(e.target.value)}>
+              <option value="">All Ages</option>
+              {uniqueAgeRanges.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">SLA</label>
+            <select aria-label="Filter by SLA" className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={slaFilter} onChange={e => setSlaFilter(e.target.value)}>
+              <option value="">All SLA</option>
+              <option value="overdue">Overdue</option>
+              <option value="on_track">On Track</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">Date From</label>
+            <Input type="date" aria-label="Date from" className="w-36" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-muted-foreground font-medium">Date To</label>
+            <Input type="date" aria-label="Date to" className="w-36" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+          </div>
           {hasAnyFilter && (
             <Button variant="ghost" size="sm" onClick={clearFilters} aria-label="Clear filters">Clear</Button>
           )}
@@ -356,7 +381,8 @@ export function CasesPage() {
           columns={columns}
           data={filteredCases}
           rowCount={filteredCases.length}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
+          pagination={pagination}
+          onPaginationChange={setPagination}
           sorting={[]}
         />
       )}

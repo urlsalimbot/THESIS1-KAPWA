@@ -11,7 +11,7 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 const CATEGORIES = ['All Categories', 'Senior', 'PWD', 'Child', 'Solo Parent', 'Indigenous', 'Others'];
 
@@ -97,25 +97,31 @@ function FilterBar({ searchInput, onSearchChange, categoryFilter, onCategoryChan
             onChange={e => onSearchChange(e.target.value)}
           />
         </div>
-        <select
-          aria-label="Filter by category"
-          className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          value={categoryFilter}
-          onChange={e => onCategoryChange(e.target.value)}
-        >
-          {CATEGORIES.map(c => (
-            <option key={c} value={c === 'All Categories' ? '' : c}>{c}</option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter by barangay"
-          className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          value={barangayFilter}
-          onChange={e => onBarangayChange(e.target.value)}
-        >
-          <option value="all">All Barangays</option>
-          {BARANGAYS.map(b => <option key={b}>{b}</option>)}
-        </select>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-xs text-muted-foreground font-medium">Category</label>
+          <select
+            aria-label="Filter by category"
+            className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={categoryFilter}
+            onChange={e => onCategoryChange(e.target.value)}
+          >
+            {CATEGORIES.map(c => (
+              <option key={c} value={c === 'All Categories' ? '' : c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-xs text-muted-foreground font-medium">Barangay</label>
+          <select
+            aria-label="Filter by barangay"
+            className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={barangayFilter}
+            onChange={e => onBarangayChange(e.target.value)}
+          >
+            <option value="all">All Barangays</option>
+            {BARANGAYS.map(b => <option key={b}>{b}</option>)}
+          </select>
+        </div>
       </div>
     </div>
   );
@@ -124,6 +130,7 @@ function FilterBar({ searchInput, onSearchChange, categoryFilter, onCategoryChan
 export function BeneficiariesPage() {
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [barangayFilter, setBarangayFilter] = useState('all');
@@ -197,7 +204,8 @@ export function BeneficiariesPage() {
           columns={beneficiaryColumns}
           data={beneficiaries}
           rowCount={beneficiaries.length}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
+          pagination={pagination}
+          onPaginationChange={setPagination}
           sorting={[]}
         />
       )}

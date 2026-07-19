@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 interface IrfCase {
   id: string;
@@ -33,6 +33,7 @@ export function IrfPage() {
   const [legalBasis, setLegalBasis] = useState('');
   const [pdfPassword, setPdfPassword] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   async function handleExportPdf() {
     if (!exportIrfId || !legalBasis) return;
@@ -132,7 +133,8 @@ export function IrfPage() {
           columns={columns}
           data={irfs}
           rowCount={irfs.length}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
+          pagination={pagination}
+          onPaginationChange={setPagination}
           sorting={[]}
         />
       )}

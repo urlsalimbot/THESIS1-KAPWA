@@ -326,8 +326,7 @@ function SecurityTab() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const mfaRoles = ['admin', 'mayor', 'auditor'];
-  const canSetup = user && mfaRoles.includes(user.role);
+  const canSetup = !!user;
 
   if (isLoading) {
     return (
@@ -347,12 +346,6 @@ function SecurityTab() {
           <h2 className="text-sm font-semibold text-foreground">Multi-Factor Authentication</h2>
         </div>
         <div className="p-4">
-          {!canSetup && (
-            <div className="rounded-lg bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-              MFA is available for admin, mayor, and auditor roles.
-            </div>
-          )}
-
           {canSetup && step === 'idle' && !mfaEnabled && (
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="rounded-full bg-purple-100 p-5">

@@ -11,7 +11,7 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { CreditCard, Printer, Search, ClipboardList, Plus } from 'lucide-react';
 
 interface ServiceLog { id: string; accessCardCode: string; serviceType: string; serviceDate: string; servedBy?: string; remarks: string; createdAt: string; }
@@ -30,6 +30,7 @@ export function AccessCardPage() {
   const [cardData, setCardData] = useState<{ beneficiary: any; code: string; services: any[] } | null>(null);
   const [logForm, setLogForm] = useState({ accessCardCode: '', serviceType: '', serviceDate: '', remarks: '' });
   const [successBanner, setSuccessBanner] = useState('');
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [printBeneficiaryId, setPrintBeneficiaryId] = useState('');
 
   React.useEffect(() => {
@@ -253,7 +254,8 @@ export function AccessCardPage() {
             columns={columns}
             data={services}
             rowCount={services.length}
-            pagination={{ pageIndex: 0, pageSize: 10 }}
+            pagination={pagination}
+            onPaginationChange={setPagination}
             sorting={[]}
           />
         </div>
