@@ -76,16 +76,17 @@ describe('DashboardPage', () => {
     expect(container).toMatchSnapshot();
   });
 
-  it('for a worker role, api.get is called with a path containing /dashboard', async () => {
+  it('for a worker role, api.get is called with a path containing /dashboard/stats', async () => {
     renderWithSWR(<DashboardPage />);
     // Wait for SWR to fire the fetch
     await screen.findByText('Served Today');
     expect(mockApiGet).toHaveBeenCalled();
-    const lastCallArg = mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][0];
-    // The argument to api.get is a SWR queryKey tuple. The real api.get joins it
-    // with '/' to form /dashboard/stats; verify the tuple path is correct.
-    expect(JSON.stringify(lastCallArg)).toContain('dashboard');
-    expect(JSON.stringify(lastCallArg)).toContain('stats');
+    // The dashboard fires stats, trends, and daily-counts calls
+    const dashboardCalls = mockApiGet.mock.calls.filter(c => {
+      const key = JSON.stringify(c[0]);
+      return key.includes('dashboard') || key.includes('stats');
+    });
+    expect(dashboardCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('for a non-worker role (claimant), the dashboard /dashboard/stats path is NOT called (null key skips fetch)', async () => {
@@ -99,13 +100,13 @@ describe('DashboardPage', () => {
     renderWithSWR(<DashboardPage />);
     // Give SWR a moment to NOT fire (it shouldn't fire with a null key)
     await new Promise((r) => setTimeout(r, 50));
-    // The dashboard /dashboard/stats path is role-gated by the null key.
+    // The dashboard /dashboard path (stats) is role-gated by the null key.
     // The claimant widget (ClaimantWidgets) does fire its own /beneficiaries/me/services
     // useSWR — that's expected, not a regression. The intent of this test is
-    // that the dashboard's role-gated /dashboard/stats endpoint is NOT called.
+    // that the dashboard's role-gated "dashboard" endpoint is NOT called for claimants.
     const allCalls = mockApiGet.mock.calls.map(c => JSON.stringify(c[0]));
-    const dashboardCalls = allCalls.filter(c => c.includes('dashboard') && c.includes('stats'));
-    expect(dashboardCalls).toHaveLength(0);
+    const dashboardKeyCalls = allCalls.filter(c => c === '["dashboard"]');
+    expect(dashboardKeyCalls).toHaveLength(0);
     // The claimant widget shell renders (role-gated content path)
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
   });

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, RefreshCw, Clock, DollarSign } from 'lucide-react';
+import { TrendingUp, Clock, DollarSign, Plus } from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -13,13 +13,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
-import { QuickActionPanel } from '@/components/dashboard/QuickActionPanel';
 import { ClaimantWidgets } from '@/components/dashboard/widgets/ClaimantWidgets';
 import { MayorWidgets } from '@/components/dashboard/widgets/MayorWidgets';
 import { AuditorWidgets } from '@/components/dashboard/widgets/AuditorWidgets';
 import { CoordinatorWidgets } from '@/components/dashboard/widgets/CoordinatorWidgets';
 import { SlaTimer } from '@/components/sla/SlaTimer';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
 interface CaseRow { id: string; name: string; category: string; barangay: string; remarks: string; date: string; status: string; updatedAt?: string; }
@@ -90,7 +89,6 @@ const WORKER_ROLES = ['social_worker', 'admin'];
 
 const offlineStats: Stat[] = [
   { label: 'Served Today', value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
-  { label: 'Sync Status', value: 'Offline', change: 'Check connection', icon: RefreshCw, iconClass: 'bg-blue-50 text-cyan-600' },
   { label: 'Pending Review', value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
   { label: 'Disbursed This Month', value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
 ];
@@ -98,7 +96,6 @@ const offlineStats: Stat[] = [
 function mapStats(data: DashboardData): Stat[] {
   return [
     { label: 'Served Today', value: String(data.servedToday || 0), change: `${data.servedChange || '+0%'} from yesterday`, icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
-    { label: 'Sync Status', value: 'All Synced', change: `Last sync: ${data.lastSync || '2m ago'}`, icon: RefreshCw, iconClass: 'bg-blue-50 text-cyan-600' },
     { label: 'Pending Review', value: String(data.pendingReview || 0), change: `${data.urgentCount || 0} urgent`, icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
     { label: 'Disbursed This Month', value: `₱${data.disbursedMonth || 0}`, change: `${data.beneficiaryCount || 0} beneficiaries`, icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
   ];
@@ -186,8 +183,8 @@ export function DashboardPage() {
   if (loading) {
     return (
       <PageShell title="Dashboard" description="Overview of social welfare operations and metrics.">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}><CardContent className="p-4"><CardGridSkeleton /></CardContent></Card>
           ))}
         </div>
@@ -209,10 +206,13 @@ export function DashboardPage() {
   }
 
   return (
-    <PageShell title="Dashboard" description="Overview of social welfare operations and metrics." cachedAt={lastSync ?? undefined}>
-      <QuickActionPanel />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <PageShell title="Dashboard" description="Overview of social welfare operations and metrics." cachedAt={lastSync ?? undefined}
+      actions={
+        <Button size="sm" onClick={() => navigate('/intake')}>
+          <Plus size={14} className="mr-1" /> New Intake
+        </Button>
+      }>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map(s => <StatCard key={s.label} stat={s} />)}
       </div>
 
@@ -278,10 +278,7 @@ export function DashboardPage() {
       </div>
 
       {/* Recent Cases */}
-      <div className="flex items-center justify-between mt-6 mb-3">
-        <h2 className="text-lg font-semibold tracking-tight">Recent Cases</h2>
-        <Button variant="outline" size="sm" onClick={() => navigate('/cases')}>View All Cases</Button>
-      </div>
+      <h2 className="text-lg font-semibold tracking-tight mt-6 mb-3">Recent Cases</h2>
 
       <DataTable columns={dashboardCaseColumns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
     </PageShell>
