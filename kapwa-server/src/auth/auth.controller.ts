@@ -1,8 +1,8 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaSetupSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema } from './dto/auth.zod';
+import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaSetupSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
 
 @Controller('auth')
@@ -112,5 +112,15 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async confirmEmailChange(@Body(new ZodPipe(ConfirmEmailChangeSchema)) body: { token: string }) {
     return this.authService.confirmEmailChange(body.token);
+  }
+
+  @Post('update-phone')
+  @UseGuards(JwtAuthGuard)
+  async updatePhone(
+    @Request() req: AuthenticatedRequest,
+    @Body(new ZodPipe(UpdatePhoneSchema)) body: UpdatePhoneInput
+  ) {
+    if (!body.phone) throw new BadRequestException('Phone number is required');
+    return this.authService.updatePhone(req.user.id, body.phone);
   }
 }

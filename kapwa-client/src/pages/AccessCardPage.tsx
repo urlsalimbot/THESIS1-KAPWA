@@ -11,8 +11,8 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ColumnDef } from '@tanstack/react-table';
+import { CreditCard, Printer, Search, ClipboardList, Plus } from 'lucide-react';
 
 interface ServiceLog { id: string; accessCardCode: string; serviceType: string; serviceDate: string; servedBy?: string; remarks: string; createdAt: string; }
 
@@ -98,156 +98,165 @@ export function AccessCardPage() {
       description="Manage access card records"
       cachedAt={lastSync ?? undefined}
     >
-      {/* Success banner */}
       {successBanner && (
-        <div className="rounded bg-green-50 p-3 text-sm font-medium text-green-700 border border-green-200">
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700">
           {successBanner}
         </div>
       )}
 
-      {/* Section 1: Generate & Assign Access Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Generate & Assign Access Card</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Beneficiary ID (UUID)"
-              value={beneficiaryId}
-              onChange={e => setBeneficiaryId(e.target.value)}
-              aria-label="Beneficiary ID"
-              className="font-mono"
-            />
-            <Button
-              onClick={handleAssign}
-              disabled={assigning || !beneficiaryId.trim()}
-              aria-label="Generate and Assign Card"
-            >
-              {assigning ? 'Assigning...' : 'Generate & Assign Card'}
-            </Button>
+      {/* Single card with sections instead of separate Card components */}
+      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+        {/* Generate & Assign */}
+        <div>
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <CreditCard size={14} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Generate & Assign Access Card</h2>
           </div>
-          {assignedCode && (
-            <div className="mt-2 rounded bg-green-50 p-2 text-sm font-medium text-green-700">
-              Card Assigned: <span className="font-mono">{assignedCode}</span>
+          <div className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Beneficiary ID (UUID)"
+                value={beneficiaryId}
+                onChange={e => setBeneficiaryId(e.target.value)}
+                aria-label="Beneficiary ID"
+                className="font-mono h-9"
+              />
+              <Button
+                onClick={handleAssign}
+                disabled={assigning || !beneficiaryId.trim()}
+                aria-label="Generate and Assign Card"
+                className="shrink-0"
+              >
+                {assigning ? 'Assigning...' : <><Plus size={16} className="mr-1" /> Generate & Assign</>}
+              </Button>
             </div>
-          )}
-          {assignError && (
-            <div className="mt-2 rounded bg-red-50 p-2 text-sm text-red-700">{assignError}</div>
-          )}
-        </CardContent>
-      </Card>
+            {assignedCode && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                Card Assigned: <span className="font-mono">{assignedCode}</span>
+              </div>
+            )}
+            {assignError && (
+              <div className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">{assignError}</div>
+            )}
+          </div>
+        </div>
 
-      {/* Section 2: Quick Print — Card View */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Print — Card View</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
+        {/* Quick Print — Card View */}
+        <div>
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <Printer size={14} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Quick Print — Card View</h2>
+          </div>
+          <div className="p-4 flex items-center gap-2">
             <Input
               placeholder="Beneficiary ID (UUID)"
               value={printBeneficiaryId}
               onChange={e => setPrintBeneficiaryId(e.target.value)}
               aria-label="Print Card Beneficiary ID"
-              className="font-mono"
+              className="font-mono h-9"
             />
             <Button
               onClick={() => navigate(`/beneficiary/${printBeneficiaryId}/card/print`)}
               disabled={!printBeneficiaryId.trim()}
               aria-label="Go to Print View"
+              className="shrink-0"
             >
-              Print Card
+              <Printer size={16} className="mr-1" /> Print Card
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Section 3: Look Up Beneficiary Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Look Up Beneficiary Card</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 mb-2">
-            <Input
-              placeholder="Beneficiary ID (UUID)"
-              value={cardSearchInput}
-              onChange={e => setCardSearchInput(e.target.value)}
-              aria-label="Search Beneficiary Card"
-              className="font-mono"
-            />
-            <Button
-              onClick={handleSearchCard}
-              variant="secondary"
-              aria-label="Look up"
-            >
-              Look Up
-            </Button>
+        {/* Look Up Beneficiary Card */}
+        <div>
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <Search size={14} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Look Up Beneficiary Card</h2>
           </div>
-          {cardData && (
-            <div className="mt-2 rounded bg-blue-50 p-3 text-sm space-y-2">
-              <p className="font-medium text-blue-800">
-                Card: <span className="font-mono">{cardData.code}</span>
-              </p>
-              {cardData.beneficiary && (
-                <p className="text-blue-600 text-xs">
-                  {cardData.beneficiary.surname}, {cardData.beneficiary.first_name} — {cardData.beneficiary.barangay}
-                </p>
-              )}
+          <div className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Beneficiary ID (UUID)"
+                value={cardSearchInput}
+                onChange={e => setCardSearchInput(e.target.value)}
+                aria-label="Search Beneficiary Card"
+                className="font-mono h-9"
+              />
               <Button
-                onClick={() => navigate(`/beneficiary/${cardSearchInput}/card/print`)}
-                size="sm"
-                className="no-print"
-                aria-label="Print Card from search"
+                onClick={handleSearchCard}
+                variant="secondary"
+                aria-label="Look up"
+                className="shrink-0"
               >
-                Print Card
+                <Search size={16} className="mr-1" /> Look Up
               </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {cardData && (
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-3 text-sm space-y-2">
+                <p className="font-medium text-foreground">
+                  Card: <span className="font-mono">{cardData.code}</span>
+                </p>
+                {cardData.beneficiary && (
+                  <p className="text-xs text-muted-foreground">
+                    {cardData.beneficiary.surname}, {cardData.beneficiary.first_name} — {cardData.beneficiary.barangay}
+                  </p>
+                )}
+                <Button
+                  onClick={() => navigate(`/beneficiary/${cardSearchInput}/card/print`)}
+                  size="sm"
+                  variant="outline"
+                  aria-label="Print Card from search"
+                >
+                  <Printer size={14} className="mr-1" /> Print Card
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
 
-      {/* Section 4: Log Service to Access Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Log Service to Access Card</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={logService} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <Input placeholder="Access Card Code" aria-label="Access Card Code" value={logForm.accessCardCode} onChange={e => setLogForm({ ...logForm, accessCardCode: e.target.value })} required />
-            <select
-              value={logForm.serviceType}
-              onChange={e => setLogForm({ ...logForm, serviceType: e.target.value })}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              required
-              aria-label="Service Type"
-            >
-              <option value="">Service Type</option>
-              <option value="FA">Financial Assistance</option>
-              <option value="C">Counseling</option>
-              <option value="CSR">Case Study Report</option>
-              <option value="R">Referral</option>
-              <option value="H">Healthcare</option>
-              <option value="HV">Home Visit</option>
-            </select>
-            <Input type="date" value={logForm.serviceDate} onChange={e => setLogForm({ ...logForm, serviceDate: e.target.value })} aria-label="Service Date" required />
-            <Button type="submit" aria-label="Log Service">Log Service</Button>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Log Service to Access Card */}
+        <div>
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <ClipboardList size={14} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Log Service to Access Card</h2>
+          </div>
+          <div className="p-4">
+            <form onSubmit={logService} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+              <Input placeholder="Access Card Code" aria-label="Access Card Code" value={logForm.accessCardCode} onChange={e => setLogForm({ ...logForm, accessCardCode: e.target.value })} required className="h-9" />
+              <select
+                value={logForm.serviceType}
+                onChange={e => setLogForm({ ...logForm, serviceType: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                required
+                aria-label="Service Type"
+              >
+                <option value="">Service Type</option>
+                <option value="FA">Financial Assistance</option>
+                <option value="C">Counseling</option>
+                <option value="CSR">Case Study Report</option>
+                <option value="R">Referral</option>
+                <option value="H">Healthcare</option>
+                <option value="HV">Home Visit</option>
+              </select>
+              <Input type="date" value={logForm.serviceDate} onChange={e => setLogForm({ ...logForm, serviceDate: e.target.value })} aria-label="Service Date" required className="h-9" />
+              <Button type="submit" aria-label="Log Service">Log Service</Button>
+            </form>
+          </div>
+        </div>
+      </div>
 
       {/* Services Log Table */}
       {!loading && services.length === 0 ? (
         <EmptyState variant="no-data" />
       ) : (
-        <DataTable
-          columns={columns}
-          data={services}
-          rowCount={services.length}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
-          sorting={[]}
-        />
+        <div className="mt-4">
+          <DataTable
+            columns={columns}
+            data={services}
+            rowCount={services.length}
+            pagination={{ pageIndex: 0, pageSize: 10 }}
+            sorting={[]}
+          />
+        </div>
       )}
     </PageShell>
   );

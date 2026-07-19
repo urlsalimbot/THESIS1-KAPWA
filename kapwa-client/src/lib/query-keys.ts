@@ -61,7 +61,7 @@ export const queryKeys = {
     all: ['admin'] as const,
     programs: () => memo('admin.programs', () => ['programs'] as const),
     users: () => memo('admin.users', () => ['users'] as const),
-    syncEntries: () => memo('admin.syncEntries', () => ['sync', 'conflicts'] as const),
+    syncEntries: () => memo('admin.syncEntries', () => ['sync', 'conflicts', 'admin'] as const),
     auditLogs: () => memo('admin.auditLogs', () => ['audit', 'logs'] as const),
     lcrImport: () => memo('admin.lcrImport', () => ['lcr', 'import'] as const),
   },

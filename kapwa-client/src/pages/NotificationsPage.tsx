@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { mutate } from 'swr';
-import { Bell, BellRing, CheckCheck } from 'lucide-react';
+import { Bell, BellRing, CheckCheck, ExternalLink } from 'lucide-react';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -13,8 +14,20 @@ import { connectNotificationSocket, disconnectNotificationSocket } from '../lib/
 
 interface Notification {
   id: string; title: string; message: string; category: string;
-  isRead: boolean; createdAt: string;
+  isRead: boolean; createdAt: string; referenceId?: string;
 }
+
+const navTarget = (n: Notification): string => {
+  const map: Record<string, string> = {
+    case_update: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    approval: '/approvals',
+    disbursement: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
+    sync_conflict: '/tracker',
+    sla_escalation: '/tracker',
+  };
+  return map[n.category] || '/notifications';
+};
 
 const categoryLabels: Record<string, string> = {
   case_update: 'Case Update',
@@ -37,6 +50,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export function NotificationsPage() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const markReadIdRef = useRef<string | null>(null);
 
@@ -189,7 +203,10 @@ export function NotificationsPage() {
             {displayed.map(n => (
               <li key={n.id}>
                 <button
-                  onClick={() => !n.isRead && markRead.trigger({ id: n.id })}
+                  onClick={() => {
+                    if (!n.isRead) markRead.trigger({ id: n.id });
+                    navigate(navTarget(n));
+                  }}
                   disabled={markRead.isMutating}
                   className={cn(
                     'w-full text-left px-4 py-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer',
@@ -205,7 +222,10 @@ export function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className={cn('text-sm truncate', !n.isRead && 'font-semibold')}>{n.title}</span>
+                      <span className={cn('text-sm truncate flex items-center gap-1.5', !n.isRead && 'font-semibold')}>
+                        {n.title}
+                        <ExternalLink size={12} className="text-muted-foreground/40 shrink-0" />
+                      </span>
                       <span className="text-[10px] text-muted-foreground shrink-0">
                         {formatDate(n.createdAt)}
                       </span>

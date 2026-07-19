@@ -11,6 +11,7 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import type { ColumnDef } from '@tanstack/react-table';
 
 interface IrfCase {
@@ -25,34 +26,13 @@ interface IrfCase {
 
 export function IrfPage() {
   const navigate = useNavigate();
-  const { mutate: globalMutate } = useSWRConfig();
   const { data: irfs = [], isLoading: loading } = useSWR<IrfCase[]>(queryKeys.irf.list());
   const lastSync = irfs.length > 0 ? Date.now() : null;
 
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ caseCategory: '', narration: '', reporterName: '', reporterContact: '' });
   const [exportIrfId, setExportIrfId] = useState<string | null>(null);
   const [legalBasis, setLegalBasis] = useState('');
   const [pdfPassword, setPdfPassword] = useState('');
   const [exporting, setExporting] = useState(false);
-
-  function resetForm() {
-    setForm({ caseCategory: '', narration: '', reporterName: '', reporterContact: '' });
-    setShowForm(false);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      await api.post('/irf', {
-        caseCategory: form.caseCategory,
-        narration: form.narration,
-        itemAReportingPerson: { name: form.reporterName, contact: form.reporterContact },
-      });
-      resetForm();
-      globalMutate(queryKeys.irf.list());
-    } catch (err) { console.error(err); }
-  }
 
   async function handleExportPdf() {
     if (!exportIrfId || !legalBasis) return;
@@ -139,58 +119,10 @@ export function IrfPage() {
     >
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <Button variant="default" onClick={() => setShowForm(!showForm)} aria-label="New IRF">
-          {showForm ? 'Cancel' : '+ New IRF'}
+        <Button variant="default" onClick={() => navigate('/irf/new')} aria-label="+ New IRF">
+          + New IRF
         </Button>
       </div>
-
-      {/* New IRF Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>New Incident Report</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Case Category</label>
-                <select
-                  value={form.caseCategory}
-                  onChange={e => setForm({ ...form, caseCategory: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Case Category"
-                  required
-                >
-                  <option value="">Select...</option>
-                  <option value="Abuse">Abuse</option>
-                  <option value="Neglect">Neglect</option>
-                  <option value="Exploitation">Exploitation</option>
-                  <option value="Criminal">Criminal</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Reporter Name</label>
-                <Input required value={form.reporterName} onChange={e => setForm({ ...form, reporterName: e.target.value })} aria-label="Reporter Name" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Reporter Contact</label>
-                <Input value={form.reporterContact} onChange={e => setForm({ ...form, reporterContact: e.target.value })} aria-label="Reporter Contact" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Narration (AES-256 encrypted)</label>
-                <textarea
-                  value={form.narration}
-                  onChange={e => setForm({ ...form, narration: e.target.value })}
-                  className="flex h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Narration"
-                  required
-                />
-              </div>
-              <Button type="submit" aria-label="Submit IRF">Submit IRF</Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Data table / Empty state */}
       {!loading && irfs.length === 0 ? (

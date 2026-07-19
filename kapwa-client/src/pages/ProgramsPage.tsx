@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Plus, ChevronDown, ChevronUp, X, CheckCircle, XCircle, Clock, AlertTriangle, Shield } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FileText, Plus, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, AlertTriangle, Shield, ExternalLink, User } from 'lucide-react';
+import useSWR from 'swr';
 import { api } from '../lib/api';
 import { getCurrentUser } from '../lib/auth-context';
-import JsonSchemaForm from '../components/forms/JsonSchemaForm';
+import { useNavigate } from 'react-router-dom';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 interface ApprovalStep {
   stepName: string;
@@ -26,18 +31,6 @@ interface ProgramRecord {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-interface ProgramForm {
-  name: string;
-  category: string;
-  waitingPeriodDays: string;
-  legalBasis: string;
-  requiredDocuments: string[];
-  fundSources: string[];
-  approvalWorkflow: ApprovalStep[];
-  formTemplate: string;
-  isActive: boolean;
 }
 
 interface AssignmentStep {
@@ -66,63 +59,25 @@ interface ProgramAssignment {
   programName?: string;
 }
 
-const emptyForm: ProgramForm = {
-  name: '',
-  category: '',
-  waitingPeriodDays: '',
-  legalBasis: '',
-  requiredDocuments: [],
-  fundSources: [],
-  approvalWorkflow: [],
-  formTemplate: '',
-  isActive: true,
+const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode; className?: string }> = {
+  pending: { label: 'Pending', variant: 'secondary', icon: <Clock size={14} /> },
+  in_review: { label: 'In Review', variant: 'default', icon: <AlertTriangle size={14} /> },
+  approved: { label: 'Approved', variant: 'default', icon: <CheckCircle size={14} />, className: 'bg-emerald-500 hover:bg-emerald-500/80' },
+  rejected: { label: 'Rejected', variant: 'destructive', icon: <XCircle size={14} /> },
 };
 
-function parseJsonTemplate(s: string): Record<string, any> | null {
-  if (!s.trim()) return null;
-  try {
-    return JSON.parse(s);
-  } catch {
-    return null;
-  }
-}
-
-function getStatusBadge(status: string) {
-  switch (status) {
-    case 'pending': return { label: 'Pending', cls: 'bg-yellow-100 text-yellow-700' };
-    case 'in_review': return { label: 'In Review', cls: 'bg-blue-100 text-blue-700' };
-    case 'approved': return { label: 'Approved', cls: 'bg-green-100 text-green-700' };
-    case 'rejected': return { label: 'Rejected', cls: 'bg-red-100 text-red-700' };
-    default: return { label: status, cls: 'bg-gray-100 text-gray-500' };
-  }
-}
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'pending': return <Clock size={16} className="text-yellow-500" />;
-    case 'in_review': return <AlertTriangle size={16} className="text-blue-500" />;
-    case 'approved': return <CheckCircle size={16} className="text-green-500" />;
-    case 'rejected': return <XCircle size={16} className="text-red-500" />;
-    default: return null;
-  }
-}
 
 export function ProgramsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'programs' | 'assignments'>('programs');
   const [user, setUser] = useState<any>(null);
 
-  // Programs state
   const [records, setRecords] = useState<ProgramRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ProgramForm>(emptyForm);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [msg, setMsg] = useState('');
-  const [jsonError, setJsonError] = useState('');
 
-  // Assignments state
   const [assignments, setAssignments] = useState<ProgramAssignment[]>([]);
   const [assignLoading, setAssignLoading] = useState(false);
   const [expandedAssignId, setExpandedAssignId] = useState<string | null>(null);
@@ -146,10 +101,37 @@ export function ProgramsPage() {
     if (activeTab === 'assignments') loadAssignments();
   }, [activeTab]);
 
+  const { data: usersData } = useSWR(
+    activeTab === 'assignments' ? queryKeys.users.list() : null,
+  );
+  const { data: casesData } = useSWR(
+    activeTab === 'assignments' ? queryKeys.cases.list() : null,
+  );
+
+  const workerMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!usersData) return map;
+    const list = Array.isArray(usersData) ? usersData : (usersData as any)?.data ?? [];
+    for (const u of list) {
+      map[u.id] = u.fullName || u.email || u.id.slice(0, 8);
+    }
+    return map;
+  }, [usersData]);
+
+  const caseMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!casesData) return map;
+    const list = Array.isArray(casesData) ? casesData : [];
+    for (const c of list) {
+      map[c.id] = c.controlNo || c.id.slice(0, 8);
+    }
+    return map;
+  }, [casesData]);
+
   async function load(signal?: AbortSignal) {
     setLoading(true);
     try {
-      const data = await api.get("/programs");
+      const data = await api.get<ProgramRecord[]>("/programs");
       setRecords(data || []);
     } catch {
       setRecords([]);
@@ -160,8 +142,7 @@ export function ProgramsPage() {
   async function loadAssignments() {
     setAssignLoading(true);
     try {
-      const data = await api.get("/program-assignments");
-      // Enrich with program names
+      const data = await api.get<ProgramAssignment[]>("/program-assignments");
       const enriched = (data || []).map((a: ProgramAssignment) => {
         const prog = records.find(r => r.id === a.programId);
         return { ...a, programName: prog?.name || 'Unknown Program' };
@@ -178,152 +159,9 @@ export function ProgramsPage() {
     }
     setExpandedAssignId(id);
     try {
-      const detail = await api.get(`/program-assignments/${id}`);
+      const detail = await api.get<{ steps: AssignmentStep[]; status: ProgramAssignment['status'] }>(`/program-assignments/${id}`);
       setAssignments(prev => prev.map(a => a.id === id ? { ...a, steps: detail.steps, status: detail.status } : a));
     } catch { /* keep current state */ }
-  }
-
-  // Programs CRUD
-  function openNew() {
-    setForm(emptyForm);
-    setEditingId(null);
-    setJsonError('');
-    setShowForm(true);
-  }
-
-  function openEdit(r: ProgramRecord) {
-    setForm({
-      name: r.name || '',
-      category: r.category || '',
-      waitingPeriodDays: r.waitingPeriodDays != null ? String(r.waitingPeriodDays) : '',
-      legalBasis: r.legalBasis || '',
-      requiredDocuments: r.requiredDocuments || [],
-      fundSources: r.fundSources || [],
-      approvalWorkflow: r.approvalWorkflow || [],
-      formTemplate: r.formTemplate ? JSON.stringify(r.formTemplate, null, 2) : '',
-      isActive: r.isActive,
-    });
-    setEditingId(r.id);
-    setJsonError('');
-    setShowForm(true);
-  }
-
-  function updateForm(field: keyof ProgramForm, value: string | number | boolean | string[] | ApprovalStep[]) {
-    setForm(prev => ({ ...prev, [field]: value }));
-  }
-
-  function addRequiredDoc() {
-    setForm(prev => ({ ...prev, requiredDocuments: [...prev.requiredDocuments, ''] }));
-  }
-
-  function updateRequiredDoc(index: number, value: string) {
-    setForm(prev => {
-      const docs = [...prev.requiredDocuments];
-      docs[index] = value;
-      return { ...prev, requiredDocuments: docs };
-    });
-  }
-
-  function removeRequiredDoc(index: number) {
-    setForm(prev => ({
-      ...prev,
-      requiredDocuments: prev.requiredDocuments.filter((_, i) => i !== index),
-    }));
-  }
-
-  function addFundSource() {
-    setForm(prev => ({ ...prev, fundSources: [...prev.fundSources, ''] }));
-  }
-
-  function updateFundSource(index: number, value: string) {
-    setForm(prev => {
-      const sources = [...prev.fundSources];
-      sources[index] = value;
-      return { ...prev, fundSources: sources };
-    });
-  }
-
-  function removeFundSource(index: number) {
-    setForm(prev => ({
-      ...prev,
-      fundSources: prev.fundSources.filter((_, i) => i !== index),
-    }));
-  }
-
-  function addWorkflowStep() {
-    setForm(prev => ({
-      ...prev,
-      approvalWorkflow: [
-        ...prev.approvalWorkflow,
-        { stepName: '', approverRole: '', slaDays: 3, order: prev.approvalWorkflow.length },
-      ],
-    }));
-  }
-
-  function updateWorkflowStep(index: number, field: keyof ApprovalStep, value: string | number) {
-    setForm(prev => {
-      const steps = [...prev.approvalWorkflow];
-      steps[index] = { ...steps[index], [field]: value };
-      return { ...prev, approvalWorkflow: steps };
-    });
-  }
-
-  function removeWorkflowStep(index: number) {
-    setForm(prev => {
-      const steps = prev.approvalWorkflow
-        .filter((_, i) => i !== index)
-        .map((s, i) => ({ ...s, order: i }));
-      return { ...prev, approvalWorkflow: steps };
-    });
-  }
-
-  function getSubmitData(): Record<string, unknown> {
-    const data: Record<string, unknown> = {
-      name: form.name,
-      category: form.category || undefined,
-      waitingPeriodDays: form.waitingPeriodDays ? parseInt(form.waitingPeriodDays, 10) : undefined,
-      legalBasis: form.legalBasis || undefined,
-      requiredDocuments: form.requiredDocuments.filter(d => d.trim()).length > 0
-        ? form.requiredDocuments.filter(d => d.trim()) : undefined,
-      fundSources: form.fundSources.filter(s => s.trim()).length > 0
-        ? form.fundSources.filter(s => s.trim()) : undefined,
-      approvalWorkflow: form.approvalWorkflow.length > 0 ? form.approvalWorkflow : undefined,
-      isActive: form.isActive,
-    };
-    const parsed = parseJsonTemplate(form.formTemplate);
-    if (parsed) {
-      data.formTemplate = parsed;
-    }
-    return data;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg('');
-    setJsonError('');
-
-    if (form.formTemplate.trim()) {
-      const parsed = parseJsonTemplate(form.formTemplate);
-      if (!parsed) {
-        setJsonError('Invalid JSON in form template. Please fix syntax errors.');
-        return;
-      }
-    }
-
-    try {
-      const submitData = getSubmitData();
-      if (editingId) {
-        await api.put(`/programs/${editingId}`, submitData);
-        setMsg('Program updated successfully');
-      } else {
-        await api.post("/programs", submitData);
-        setMsg('Program created successfully');
-      }
-      setShowForm(false);
-      load();
-    } catch (err: unknown) {
-      setMsg(err instanceof Error ? err.message : 'Error saving program');
-    }
   }
 
   async function handleDelete(id: string) {
@@ -337,13 +175,11 @@ export function ProgramsPage() {
     }
   }
 
-  // Assignment actions
   async function handleApproveStep(assignmentId: string, stepOrder: number) {
     setActionMsg('');
     try {
       await api.post(`/program-assignments/${assignmentId}/steps/${stepOrder}/approve`, { stepOrder });
       setActionMsg(`Step ${stepOrder + 1} approved successfully`);
-      // Reload
       handleExpandAssignment(assignmentId);
       loadAssignments();
     } catch (err: unknown) {
@@ -392,7 +228,6 @@ export function ProgramsPage() {
     }
   }
 
-  // Filter assignments
   const filteredAssignments = assignments.filter(a => {
     if (assignFilter && a.status !== assignFilter) return false;
     if (caseSearch) {
@@ -407,8 +242,6 @@ export function ProgramsPage() {
     r.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const parsedFormTemplate = parseJsonTemplate(form.formTemplate);
-
   function canApproveStep(step: AssignmentStep): boolean {
     if (step.status !== 'pending') return false;
     if (!user) return false;
@@ -420,13 +253,12 @@ export function ProgramsPage() {
       title="Programs & Assignments"
       description="Configure programs and manage assignment approval workflow"
     >
-
-      {/* Tab toggle */}
-      <div className="mb-6 flex gap-1 rounded-lg bg-gray-100 p-1 w-fit">
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit mb-4">
         <button
           onClick={() => setActiveTab('programs')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'programs' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            activeTab === 'programs' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
           }`}
           aria-label="Programs tab"
         >
@@ -436,7 +268,7 @@ export function ProgramsPage() {
         <button
           onClick={() => setActiveTab('assignments')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'assignments' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            activeTab === 'assignments' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
           }`}
           aria-label="Assignments tab"
         >
@@ -446,16 +278,14 @@ export function ProgramsPage() {
       </div>
 
       {msg && (
-        <div className="mb-4 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-800">
-          {msg}
-        </div>
+        <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive mb-4">{msg}</div>
       )}
 
       {actionMsg && (
-        <div className={`mb-4 rounded border p-3 text-sm ${
+        <div className={`rounded-lg border px-4 py-3 text-sm mb-4 ${
           actionMsg.includes('Error') || actionMsg.includes('error')
-            ? 'border-red-300 bg-red-50 text-red-800'
-            : 'border-green-300 bg-green-50 text-green-800'
+            ? 'bg-destructive/10 border-destructive/20 text-destructive'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
         }`}>
           {actionMsg}
         </div>
@@ -464,324 +294,71 @@ export function ProgramsPage() {
       {/* ===== PROGRAMS TAB ===== */}
       {activeTab === 'programs' && (
         <>
-          <div className="toolbar">
-            <div className="toolbar-left">
-              <button className="btn btn-primary" onClick={openNew} aria-label="+ New Program">
-                <Plus size={16} className="inline mr-1" /> New Program
-              </button>
-            </div>
-            <div className="toolbar-right">
-              <input
-                type="text"
-                placeholder="Search programs..."
-                className="form-input max-w-xs"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                aria-label="Search programs"
-              />
-            </div>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <Button onClick={() => navigate('/programs/new')} aria-label="New Program" className="gap-1.5">
+              <Plus size={16} /> New Program
+            </Button>
+            <Input
+              type="text"
+              placeholder="Search programs..."
+              className="max-w-xs h-9"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              aria-label="Search programs"
+            />
           </div>
 
-          {showForm && (
-            <div className="card mb-6 max-w-4xl">
-              <h3 className="font-heading font-semibold mb-4">
-                {editingId ? 'Edit Program' : 'New Program'}
-              </h3>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Basic Information */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-primary">Basic Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="form-group">
-                      <label className="form-label">Program Name *</label>
-                      <input
-                        className="form-input"
-                        required
-                        value={form.name}
-                        onChange={e => updateForm('name', e.target.value)}
-                        placeholder="e.g. AICS, Medical Assistance"
-                        aria-label="Program Name"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Category</label>
-                      <input
-                        className="form-input"
-                        value={form.category}
-                        onChange={e => updateForm('category', e.target.value)}
-                        placeholder="e.g. Medical Assistance"
-                        aria-label="Category"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Waiting Period (days)</label>
-                      <input
-                        className="form-input"
-                        type="number"
-                        min="0"
-                        value={form.waitingPeriodDays}
-                        onChange={e => updateForm('waitingPeriodDays', e.target.value)}
-                        placeholder="e.g. 3"
-                        aria-label="Waiting Period Days"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Legal Basis</label>
-                      <input
-                        className="form-input"
-                        value={form.legalBasis}
-                        onChange={e => updateForm('legalBasis', e.target.value)}
-                        placeholder="e.g. RA 11223"
-                        aria-label="Legal Basis"
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group mt-3">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={form.isActive}
-                        onChange={e => updateForm('isActive', e.target.checked)}
-                        className="rounded border-gray-300 text-primary"
-                        aria-label="Active"
-                      />
-                      Active
-                    </label>
-                  </div>
-                </div>
-
-                {/* Required Documents */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-primary">Required Documents</h4>
-                  {form.requiredDocuments.map((doc, i) => (
-                    <div key={i} className="flex items-center gap-2 mb-2">
-                      <input
-                        className="form-input flex-1"
-                        value={doc}
-                        onChange={e => updateRequiredDoc(i, e.target.value)}
-                        placeholder="Document name (e.g. Valid ID)"
-                        aria-label={`Required document ${i + 1}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeRequiredDoc(i)}
-                        className="text-red-500 hover:text-red-700"
-                        aria-label={`Remove document ${i + 1}`}
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  <button type="button" className="btn-text btn-text-sm mt-1" onClick={addRequiredDoc} aria-label="Add document">
-                    + Add Document
-                  </button>
-                </div>
-
-                {/* Fund Sources */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-primary">Fund Sources</h4>
-                  {form.fundSources.map((src, i) => (
-                    <div key={i} className="flex items-center gap-2 mb-2">
-                      <input
-                        className="form-input flex-1"
-                        value={src}
-                        onChange={e => updateFundSource(i, e.target.value)}
-                        placeholder="Fund source (e.g. DSWD, LGU)"
-                        aria-label={`Fund source ${i + 1}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFundSource(i)}
-                        className="text-red-500 hover:text-red-700"
-                        aria-label={`Remove fund source ${i + 1}`}
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  <button type="button" className="btn-text btn-text-sm mt-1" onClick={addFundSource} aria-label="Add fund source">
-                    + Add Fund Source
-                  </button>
-                </div>
-
-                {/* Approval Workflow */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-primary">Approval Workflow</h4>
-                  {form.approvalWorkflow.map((step, i) => (
-                    <div key={i} className="mb-3 rounded border border-gray-200 bg-white p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-gray-500">Step {i + 1}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeWorkflowStep(i)}
-                          className="text-red-500 hover:text-red-700"
-                          aria-label={`Remove step ${i + 1}`}
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                        <div className="form-group">
-                          <label className="text-xs text-gray-500">Step Name</label>
-                          <input
-                            className="form-input text-sm"
-                            value={step.stepName}
-                            onChange={e => updateWorkflowStep(i, 'stepName', e.target.value)}
-                            placeholder="e.g. Intake Review"
-                            aria-label={`Step ${i + 1} name`}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="text-xs text-gray-500">Approver Role</label>
-                          <input
-                            className="form-input text-sm"
-                            value={step.approverRole}
-                            onChange={e => updateWorkflowStep(i, 'approverRole', e.target.value)}
-                            placeholder="e.g. social_worker"
-                            aria-label={`Step ${i + 1} approver role`}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="text-xs text-gray-500">SLA (days)</label>
-                          <input
-                            className="form-input text-sm"
-                            type="number"
-                            min="1"
-                            value={step.slaDays}
-                            onChange={e => updateWorkflowStep(i, 'slaDays', parseInt(e.target.value) || 1)}
-                            aria-label={`Step ${i + 1} SLA days`}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="text-xs text-gray-500">Order</label>
-                          <input
-                            className="form-input text-sm bg-gray-100"
-                            value={step.order}
-                            readOnly
-                            aria-label={`Step ${i + 1} order`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <button type="button" className="btn-text btn-text-sm mt-1" onClick={addWorkflowStep} aria-label="Add workflow step">
-                    + Add Step
-                  </button>
-                </div>
-
-                {/* Form Template (JSON Schema) */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-primary">Form Template (JSON Schema)</h4>
-                  <textarea
-                    className="form-input font-mono text-xs min-h-[120px]"
-                    value={form.formTemplate}
-                    onChange={e => {
-                      updateForm('formTemplate', e.target.value);
-                      setJsonError('');
-                    }}
-                    placeholder='Paste JSON Schema here, e.g.{"type":"object","properties":{"field1":{"type":"string"}}}'
-                    aria-label="Form Template JSON"
-                  />
-                  {jsonError && <p className="mt-1 text-xs text-red-500">{jsonError}</p>}
-
-                  {parsedFormTemplate && parsedFormTemplate.type === 'object' && (
-                    <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-3">
-                      <p className="mb-2 text-xs font-semibold text-blue-700">Form Preview</p>
-                      <JsonSchemaForm
-                        schema={parsedFormTemplate as any}
-                        readOnly={true}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button type="submit" className="btn btn-primary" aria-label="Save program">
-                    {editingId ? 'Update Program' : 'Create Program'}
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)} aria-label="Cancel">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
           {loading ? (
-            <div className="text-center py-8 text-gray-400">Loading programs...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading programs...</div>
           ) : filteredRecords.length === 0 ? (
-            <div className="card text-center py-12 text-gray-400">
+            <div className="rounded-lg border bg-card shadow-sm text-center py-12 text-muted-foreground">
               <FileText className="mx-auto mb-2" size={32} />
               <p>No programs configured yet. Create your first intervention program.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {filteredRecords.map(r => (
-                <div key={r.id} className="card">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-2 h-2 rounded-full ${r.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      <div>
-                        <span className="font-semibold text-primary">{r.name}</span>
-                        {r.category && <span className="ml-2 text-xs text-gray-400">| {r.category}</span>}
+                <div key={r.id} className="rounded-lg border bg-card shadow-sm overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${r.isActive ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
+                        <div>
+                          <span className="font-semibold text-foreground">{r.name}</span>
+                          {r.category && <span className="ml-2 text-xs text-muted-foreground">| {r.category}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {r.legalBasis && (
+                          <span className="text-xs text-muted-foreground hidden md:inline">{r.legalBasis}</span>
+                        )}
+                        <Badge variant={r.isActive ? 'default' : 'secondary'} className={`shrink-0 ${r.isActive ? 'bg-emerald-500' : ''}`}>
+                          {r.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {r.legalBasis && (
-                        <span className="text-xs text-gray-500 hidden md:inline">{r.legalBasis}</span>
-                      )}
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {r.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      {r.waitingPeriodDays != null && <span>Wait: {r.waitingPeriodDays}d</span>}
+                      {r.requiredDocuments?.length ? <span>Docs: {r.requiredDocuments.length}</span> : null}
+                      {r.fundSources?.length ? <span>Funds: {r.fundSources.join(', ')}</span> : null}
+                      {r.approvalWorkflow?.length ? <span>Steps: {r.approvalWorkflow.length}</span> : null}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/programs/${r.id}`)}
+                        aria-label="View details"
+                        className="h-8"
+                      >
+                        <ExternalLink size={14} className="mr-1" />
+                        View Details
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} aria-label="Delete" className="h-8 text-destructive hover:text-destructive">
+                        Delete
+                      </Button>
                     </div>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
-                    {r.waitingPeriodDays != null && <span>Wait: {r.waitingPeriodDays}d</span>}
-                    {r.requiredDocuments?.length ? <span>Docs: {r.requiredDocuments.length}</span> : null}
-                    {r.fundSources?.length ? <span>Funds: {r.fundSources.join(', ')}</span> : null}
-                    {r.approvalWorkflow?.length ? <span>Steps: {r.approvalWorkflow.length}</span> : null}
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <button
-                      onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                      className="btn-text btn-text-sm"
-                      aria-label="View details"
-                    >
-                      {expandedId === r.id ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />}
-                      {' '}{expandedId === r.id ? 'Collapse' : 'Details'}
-                    </button>
-                    <button onClick={() => openEdit(r)} className="btn-text btn-text-sm" aria-label="Edit">Edit</button>
-                    <button onClick={() => handleDelete(r.id)} className="btn-text btn-text-sm text-red-600" aria-label="Delete">Delete</button>
-                  </div>
-                  {expandedId === r.id && (
-                    <div className="mt-4 border-t border-gray-100 pt-4 text-sm space-y-3">
-                      <Section label="Category" value={r.category} />
-                      <Section label="Legal Basis" value={r.legalBasis} />
-                      <Section label="Waiting Period" value={r.waitingPeriodDays != null ? `${r.waitingPeriodDays} days` : undefined} />
-                      <Section label="Required Documents" value={r.requiredDocuments?.join(', ')} />
-                      <Section label="Fund Sources" value={r.fundSources?.join(', ')} />
-                      <Section label="Form Version" value={String(r.formVersion)} />
-                      {r.approvalWorkflow && r.approvalWorkflow.length > 0 && (
-                        <div>
-                          <span className="text-xs font-semibold text-gray-500">Approval Workflow</span>
-                          <div className="mt-1 space-y-1">
-                            {r.approvalWorkflow.map((s, i) => (
-                              <div key={i} className="flex items-center gap-2 text-xs text-gray-700">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold">
-                                  {s.order + 1}
-                                </span>
-                                <span className="font-medium">{s.stepName}</span>
-                                <span className="text-gray-400">→</span>
-                                <span>{s.approverRole}</span>
-                                <span className="text-gray-400">({s.slaDays}d SLA)</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <Section label="Form Template" value={r.formTemplate ? 'Configured' : 'None'} />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -792,153 +369,162 @@ export function ProgramsPage() {
       {/* ===== ASSIGNMENTS TAB ===== */}
       {activeTab === 'assignments' && (
         <>
-          <div className="toolbar">
-            <div className="toolbar-left">
-              <div className="flex items-center gap-2">
-                <select
-                  className="form-input text-sm"
-                  value={assignFilter}
-                  onChange={e => setAssignFilter(e.target.value)}
-                  aria-label="Filter by status"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_review">In Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <select
+                className="flex h-9 rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={assignFilter}
+                onChange={e => setAssignFilter(e.target.value)}
+                aria-label="Filter by status"
+              >
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="in_review">In Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
             </div>
-            <div className="toolbar-right">
-              <input
-                type="text"
-                placeholder="Search by case ID..."
-                className="form-input max-w-xs"
-                value={caseSearch}
-                onChange={e => setCaseSearch(e.target.value)}
-                aria-label="Search assignments by case ID"
-              />
-            </div>
+            <Input
+              type="text"
+              placeholder="Search by case ID..."
+              className="max-w-xs h-9"
+              value={caseSearch}
+              onChange={e => setCaseSearch(e.target.value)}
+              aria-label="Search assignments by case ID"
+            />
           </div>
 
           {assignLoading ? (
-            <div className="text-center py-8 text-gray-400">Loading assignments...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading assignments...</div>
           ) : filteredAssignments.length === 0 ? (
-            <div className="card text-center py-12 text-gray-400">
+            <div className="rounded-lg border bg-card shadow-sm text-center py-12 text-muted-foreground">
               <CheckCircle className="mx-auto mb-2" size={32} />
               <p>No program assignments found.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {filteredAssignments.map(a => {
-                const badge = getStatusBadge(a.status);
+                const sc = STATUS_CONFIG[a.status];
                 return (
-                  <div key={a.id} className="card">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(a.status)}
-                        <div>
-                          <span className="font-semibold text-primary">{a.programName || 'Program'}</span>
-                          <span className="ml-2 text-xs text-gray-400">Case: {a.caseId.slice(0, 8)}...</span>
+                  <div key={a.id} className="rounded-lg border bg-card shadow-sm overflow-hidden">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="text-muted-foreground">{sc?.icon}</div>
+                          <div>
+                            <span className="font-semibold text-foreground">{a.programName || 'Program'}</span>
+                            {caseMap[a.caseId] && <span className="ml-2 text-xs text-muted-foreground">Case: {caseMap[a.caseId]}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={sc?.variant || 'outline'} className={`shrink-0 gap-1 ${sc?.className || ''}`}>
+                            {sc?.icon}{sc?.label}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(a.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                          {badge.label}
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <User size={12} />
+                          {workerMap[a.assignedWorkerId] || `${a.assignedWorkerId?.slice(0, 8)}...`}
                         </span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(a.createdAt).toLocaleDateString()}
-                        </span>
+                        {a.currentStepOrder > 0 && <span>Current Step: {a.currentStepOrder + 1}</span>}
                       </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
-                      <span>Worker: {a.assignedWorkerId?.slice(0, 8)}...</span>
-                      {a.currentStepOrder > 0 && <span>Current Step: {a.currentStepOrder + 1}</span>}
-                    </div>
-                    <div className="mt-3">
-                      <button
-                        onClick={() => handleExpandAssignment(a.id)}
-                        className="btn-text btn-text-sm"
-                        aria-label="View steps"
-                      >
-                        {expandedAssignId === a.id ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />}
-                        {' '}{expandedAssignId === a.id ? 'Hide Steps' : 'View Steps'}
-                      </button>
-                    </div>
+                      <div className="mt-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExpandAssignment(a.id)}
+                          aria-label="View steps"
+                          className="h-8"
+                        >
+                          {expandedAssignId === a.id ? <ChevronUp size={14} className="mr-1" /> : <ChevronDown size={14} className="mr-1" />}
+                          {expandedAssignId === a.id ? 'Hide Steps' : 'View Steps'}
+                        </Button>
+                      </div>
 
-                    {expandedAssignId === a.id && a.steps && (
-                      <div className="mt-4 border-t border-gray-100 pt-4 space-y-3">
-                        <span className="text-xs font-semibold text-gray-500">Approval Steps</span>
-                        {a.steps.map((step, i) => {
-                          const stepBadge = getStatusBadge(step.status);
-                          const canAct = canApproveStep(step);
-                          return (
-                            <div key={step.id} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold shrink-0 ${
-                                step.status === 'approved' ? 'bg-green-500' :
-                                step.status === 'rejected' ? 'bg-red-500' :
-                                'bg-gray-400'
-                              }`}>
-                                {i + 1}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium text-gray-800">{step.stepName}</span>
-                                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${stepBadge.cls}`}>
-                                    {stepBadge.label}
-                                  </span>
-                                  <span className="text-xs text-gray-400">({step.approverRole})</span>
+                      {expandedAssignId === a.id && a.steps && (
+                        <div className="mt-4 border-t border-border/60 pt-4 space-y-3">
+                          <span className="text-xs text-muted-foreground font-semibold">Approval Steps</span>
+                          {a.steps.map((step, i) => {
+                            const stepSc = STATUS_CONFIG[step.status];
+                            const canAct = canApproveStep(step);
+                            return (
+                              <div key={step.id} className="flex items-start gap-3 rounded-lg border border-border bg-muted/20 p-3">
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold shrink-0 ${
+                                  step.status === 'approved' ? 'bg-emerald-500' :
+                                  step.status === 'rejected' ? 'bg-destructive' :
+                                  'bg-muted-foreground/40'
+                                }`}>
+                                  {i + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium text-foreground">{step.stepName}</span>
+                                    <Badge variant={stepSc?.variant || 'outline'} className={`shrink-0 text-[11px] gap-1 ${stepSc?.className || ''}`}>
+                                      {stepSc?.icon}{stepSc?.label}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">({step.approverRole})</span>
+                                  </div>
+                                  {step.remarks && (
+                                    <p className="mt-1 text-xs text-muted-foreground italic">
+                                      {step.status === 'rejected' ? 'Reason: ' : 'Note: '}
+                                      {step.remarks}
+                                    </p>
+                                  )}
+                                  {step.approvedBy && (
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                      {step.status === 'approved' ? 'Approved' : 'Processed'} by {step.approvedBy}
+                                      {step.approvedAt ? ` on ${new Date(step.approvedAt).toLocaleDateString()}` : ''}
+                                    </p>
+                                  )}
                                 </div>
-                                {step.remarks && (
-                                  <p className="mt-1 text-xs text-gray-500 italic">
-                                    {step.status === 'rejected' ? 'Reason: ' : 'Note: '}
-                                    {step.remarks}
-                                  </p>
-                                )}
-                                {step.approvedBy && (
-                                  <p className="mt-0.5 text-xs text-gray-400">
-                                    {step.status === 'approved' ? 'Approved' : 'Processed'} by {step.approvedBy}
-                                    {step.approvedAt ? ` on ${new Date(step.approvedAt).toLocaleDateString()}` : ''}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                {canAct && (
-                                  <>
-                                    <button
-                                      onClick={() => handleApproveStep(a.id, step.stepOrder)}
-                                      className="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-                                      aria-label={`Approve step ${i + 1}`}
-                                      title="Approve"
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {canAct && (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleApproveStep(a.id, step.stepOrder)}
+                                        aria-label={`Approve step ${i + 1}`}
+                                        title="Approve"
+                                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                      >
+                                        <CheckCircle size={16} />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => openRejectModal(a.id, step.stepOrder, step.stepName)}
+                                        aria-label={`Reject step ${i + 1}`}
+                                        title="Reject"
+                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      >
+                                        <XCircle size={16} />
+                                      </Button>
+                                    </>
+                                  )}
+                                  {user?.role === 'admin' && step.status === 'pending' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openOverrideModal(a.id, step.stepOrder, step.stepName)}
+                                      aria-label={`Override step ${i + 1}`}
+                                      title="Admin Override"
+                                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                     >
-                                      <CheckCircle size={14} />
-                                    </button>
-                                    <button
-                                      onClick={() => openRejectModal(a.id, step.stepOrder, step.stepName)}
-                                      className="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                                      aria-label={`Reject step ${i + 1}`}
-                                      title="Reject"
-                                    >
-                                      <XCircle size={14} />
-                                    </button>
-                                  </>
-                                )}
-                                {user?.role === 'admin' && step.status === 'pending' && (
-                                  <button
-                                    onClick={() => openOverrideModal(a.id, step.stepOrder, step.stepName)}
-                                    className="px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                    aria-label={`Override step ${i + 1}`}
-                                    title="Admin Override"
-                                  >
-                                    <Shield size={14} />
-                                  </button>
-                                )}
+                                      <Shield size={16} />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -948,12 +534,12 @@ export function ProgramsPage() {
           {/* Reject Modal */}
           {rejectModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setRejectModal(null)}>
-              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-                <h3 className="font-semibold mb-4">Reject Step: {rejectModal.stepName}</h3>
-                <div className="form-group mb-4">
-                  <label className="form-label">Reason for rejection *</label>
+              <div className="rounded-lg border bg-card shadow-lg p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+                <h3 className="text-sm font-semibold text-foreground mb-4">Reject Step: {rejectModal.stepName}</h3>
+                <div className="space-y-1 mb-4">
+                  <label className="text-xs text-muted-foreground font-medium">Reason for rejection *</label>
                   <textarea
-                    className="form-input min-h-[80px]"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y min-h-[80px]"
                     value={rejectReason}
                     onChange={e => setRejectReason(e.target.value)}
                     placeholder="Explain why this step is being rejected..."
@@ -961,21 +547,8 @@ export function ProgramsPage() {
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setRejectModal(null)}
-                    aria-label="Cancel rejection"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                    disabled={!rejectReason.trim()}
-                    onClick={handleConfirmReject}
-                    aria-label="Confirm rejection"
-                  >
-                    Reject Step
-                  </button>
+                  <Button variant="outline" onClick={() => setRejectModal(null)} aria-label="Cancel rejection">Cancel</Button>
+                  <Button variant="destructive" disabled={!rejectReason.trim()} onClick={handleConfirmReject} aria-label="Confirm rejection">Reject Step</Button>
                 </div>
               </div>
             </div>
@@ -984,12 +557,12 @@ export function ProgramsPage() {
           {/* Override Modal */}
           {overrideModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideModal(null)}>
-              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-                <h3 className="font-semibold mb-4">Admin Override: {overrideModal.stepName}</h3>
-                <div className="form-group mb-4">
-                  <label className="form-label">Override Status</label>
+              <div className="rounded-lg border bg-card shadow-lg p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+                <h3 className="text-sm font-semibold text-foreground mb-4">Admin Override: {overrideModal.stepName}</h3>
+                <div className="space-y-1 mb-4">
+                  <label className="text-xs text-muted-foreground font-medium">Override Status</label>
                   <select
-                    className="form-input"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     value={overrideStatus}
                     onChange={e => setOverrideStatus(e.target.value as 'approved' | 'rejected')}
                     aria-label="Override status"
@@ -998,10 +571,10 @@ export function ProgramsPage() {
                     <option value="rejected">Rejected</option>
                   </select>
                 </div>
-                <div className="form-group mb-4">
-                  <label className="form-label">Reason *</label>
+                <div className="space-y-1 mb-4">
+                  <label className="text-xs text-muted-foreground font-medium">Reason *</label>
                   <textarea
-                    className="form-input min-h-[80px]"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y min-h-[80px]"
                     value={overrideReason}
                     onChange={e => setOverrideReason(e.target.value)}
                     placeholder="Explain the override reason..."
@@ -1009,21 +582,15 @@ export function ProgramsPage() {
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setOverrideModal(null)}
-                    aria-label="Cancel override"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="btn bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50"
+                  <Button variant="outline" onClick={() => setOverrideModal(null)} aria-label="Cancel override">Cancel</Button>
+                  <Button
                     disabled={!overrideReason.trim()}
                     onClick={handleConfirmOverride}
                     aria-label="Confirm override"
+                    className="bg-orange-600 hover:bg-orange-700"
                   >
                     Apply Override
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1033,13 +600,3 @@ export function ProgramsPage() {
     </PageShell>
   );
 }
-
-const Section = React.memo(function Section({ label, value }: { label: string; value?: string }) {
-  if (!value) return null;
-  return (
-    <div>
-      <span className="text-xs font-semibold text-gray-500">{label}</span>
-      <p className="text-gray-700 whitespace-pre-wrap">{value}</p>
-    </div>
-  );
-});
