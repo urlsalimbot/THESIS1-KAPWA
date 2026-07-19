@@ -1,13 +1,17 @@
 import * as Minio from 'minio';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CircuitBreakerService } from '../common/circuit-breaker.service';
 
 @Injectable()
 export class MinioService implements OnModuleInit {
   private readonly logger = new Logger(MinioService.name);
   private client: Minio.Client;
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    @Optional() private cb?: CircuitBreakerService,
+  ) {
     const endPoint = this.config.get<string>('MINIO_ENDPOINT', 'minio');
     const port = this.config.get<number>('MINIO_PORT', 9000);
     const useSSL = this.config.get<string>('MINIO_USE_SSL', 'false') === 'true';
@@ -36,43 +40,42 @@ export class MinioService implements OnModuleInit {
     fileBuffer: Buffer,
     mimeType: string,
   ): Promise<string> {
-    await this.client.putObject(bucket, fileName, fileBuffer, fileBuffer.length, {
-      'Content-Type': mimeType,
-    });
-    return this.client.presignedGetObject(bucket, fileName, 24 * 60 * 60);
+    const fn = async () => {
+      await this.client.putObject(bucket, fileName, fileBuffer, fileBuffer.length, {
+        'Content-Type': mimeType,
+      });
+      return this.client.presignedGetObject(bucket, fileName, 24 * 60 * 60);
+    };
+    return this.cb ? this.cb.call('minio', fn) : fn();
   }
 
-  /**
-   * Generate a presigned GET URL for a file in a given bucket.
-   */
   async getSignedUrl(
     bucket: string,
     fileName: string,
     expirySeconds = 86400,
   ): Promise<string> {
-    return this.client.presignedGetObject(bucket, fileName, expirySeconds);
+    const fn = () => this.client.presignedGetObject(bucket, fileName, expirySeconds);
+    return this.cb ? this.cb.call('minio', fn) : fn();
   }
 
-  /**
-   * List all object keys in a bucket, optionally filtered by prefix.
-   */
   async listObjects(bucket: string, prefix?: string): Promise<string[]> {
-    const objects: string[] = [];
-    const stream = this.client.listObjects(bucket, prefix, true);
-    return new Promise<string[]>((resolve, reject) => {
-      stream.on('data', (obj: { name?: string }) => {
-        if (obj.name) objects.push(obj.name);
+    const fn = () => {
+      const objects: string[] = [];
+      const stream = this.client.listObjects(bucket, prefix, true);
+      return new Promise<string[]>((resolve, reject) => {
+        stream.on('data', (obj: { name?: string }) => {
+          if (obj.name) objects.push(obj.name);
+        });
+        stream.on('error', (err: Error) => reject(err));
+        stream.on('end', () => resolve(objects));
       });
-      stream.on('error', (err: Error) => reject(err));
-      stream.on('end', () => resolve(objects));
-    });
+    };
+    return this.cb ? this.cb.call('minio', fn) : fn();
   }
 
-  /**
-   * Delete a file from a bucket.
-   */
   async deleteFile(bucket: string, fileName: string): Promise<void> {
-    await this.client.removeObject(bucket, fileName);
+    const fn = () => this.client.removeObject(bucket, fileName);
+    return this.cb ? this.cb.call('minio', fn) : fn();
   }
 
   /**

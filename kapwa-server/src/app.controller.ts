@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { phTime } from './common/utils';
 
 @Controller()
 export class AppController {
@@ -9,6 +10,6 @@ export class AppController {
 
   @Get('health')
   health() {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    return { status: 'ok', timestamp: phTime() };
   }
 }

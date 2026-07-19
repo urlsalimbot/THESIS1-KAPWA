@@ -18,6 +18,8 @@ export const queryKeys = {
       return memo(`cases.list.${JSON.stringify(params)}`, () => key as readonly unknown[]);
     },
     detail: (id: string) => memo(`cases.detail.${id}`, () => ['cases', id] as const),
+    interventions: (caseId: string) =>
+      memo(`cases.interventions.${caseId}`, () => ['cases', caseId, 'interventions'] as const),
   },
   beneficiaries: {
     all: ['beneficiaries'] as const,
@@ -37,6 +39,7 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     stats: () => memo('dashboard.stats', () => ['dashboard'] as const),
     trends: () => memo('dashboard.trends', () => ['dashboard', 'trends'] as const),
+    metrics: () => memo('dashboard.metrics', () => ['dashboard', 'metrics'] as const),
     dailyCounts: (year: number, month: number) =>
       memo(`dashboard.dailyCounts.${year}-${month}`, () => ['dashboard', 'daily-counts', { year, month }] as const),
     mayorReports: () => memo('dashboard.mayorReports', () => ['dashboard', 'reports', 'mayor'] as const),
@@ -61,7 +64,7 @@ export const queryKeys = {
     all: ['admin'] as const,
     programs: () => memo('admin.programs', () => ['programs'] as const),
     users: () => memo('admin.users', () => ['users'] as const),
-    syncEntries: () => memo('admin.syncEntries', () => ['sync', 'conflicts'] as const),
+    syncEntries: () => memo('admin.syncEntries', () => ['sync', 'conflicts', 'admin'] as const),
     auditLogs: () => memo('admin.auditLogs', () => ['audit', 'logs'] as const),
     lcrImport: () => memo('admin.lcrImport', () => ['lcr', 'import'] as const),
   },
@@ -124,6 +127,11 @@ export const queryKeys = {
   intake: {
     all: ['intake'] as const,
     recent: () => memo('intake.recent', () => ['intake', 'recent'] as const),
+  },
+  interventions: {
+    all: ['interventions'] as const,
+    byCase: (caseId: string) =>
+      memo(`interventions.byCase.${caseId}`, () => ['interventions', 'case', caseId] as const),
   },
   programAssignments: {
     all: ['programAssignments'] as const,

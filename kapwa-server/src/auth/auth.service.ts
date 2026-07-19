@@ -301,6 +301,16 @@ export class AuthService {
     return { message: 'Email changed successfully.' };
   }
 
+  async updatePhone(userId: string, phone: string) {
+    const user = await this.findByIdWithSecret(userId);
+    if (!user) throw new UnauthorizedException();
+
+    user.phone = phone;
+    await this.userRepo.save(user);
+
+    return { message: 'Phone number updated successfully', phone };
+  }
+
   async verifySmsOtp(tempToken: string, otpCode: string) {
     try {
       const payload = this.jwtService.verify(tempToken) as any;

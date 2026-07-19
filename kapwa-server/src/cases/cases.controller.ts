@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
 import { CaseStatus } from './case.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,18 +12,34 @@ import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import {
   CreateCaseSchema, UpdateStatusSchema, ApproveCaseSchema,
   UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema, AssessmentSchema,
+  TransitionPlanSchema,
   CreateCaseInput, OverrideStatusInput, DisburseInput, AssessmentInput,
+  TransitionPlanInput,
 } from './dto/cases.zod';
 
 @Controller('cases')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 export class CasesController {
   constructor(private casesService: CasesService) {}
 
   @Get()
   @Roles('admin', 'social_worker', 'coordinator')
-  async findAll(@Query('status') status?: CaseStatus) {
-    return this.casesService.findAll(status);
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('status') status?: CaseStatus,
+    @Query('search') search?: string,
+    @Query('barangay') barangay?: string,
+    @Query('category') category?: string,
+    @Query('gender') gender?: string,
+    @Query('ageRange') ageRange?: string,
+    @Query('sla') sla?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.casesService.findAll(page, limit, { status, search, barangay, category, gender, ageRange, sla, dateFrom, dateTo });
   }
 
   @Get('disbursed/pending-intervention')
@@ -98,5 +115,14 @@ export class CasesController {
     @Body(new ZodPipe(AssessmentSchema)) body: AssessmentInput,
   ) {
     return this.casesService.updateAssessment(id, body);
+  }
+
+  @Patch(':id/transition-plan')
+  @Roles('admin', 'social_worker')
+  async updateTransitionPlan(
+    @Param('id') id: string,
+    @Body(new ZodPipe(TransitionPlanSchema)) body: TransitionPlanInput,
+  ) {
+    return this.casesService.updateTransitionPlan(id, body);
   }
 }

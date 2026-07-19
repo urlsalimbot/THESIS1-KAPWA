@@ -37,6 +37,7 @@ import { CreateInterventionPage } from './pages/CreateInterventionPage';
 import { CreateProgramPage } from './pages/CreateProgramPage';
 import { AccessCardPage } from './pages/AccessCardPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
+import { ProgramDetailPage } from './pages/ProgramDetailPage';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -100,9 +101,11 @@ const router = createBrowserRouter([
   { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
   { path: '/beneficiaries/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/programs/new', element: <Private roles={['admin']}><CreateProgramPage /></Private> },
+  { path: '/programs/:id', element: <Private roles={['admin']}><ProgramDetailPage /></Private> },
   { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
   { path: '/coordinator', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
+  { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },
   { path: '/notifications', element: <Private><NotificationsPage /></Private> },
   { path: '/my-access-card', element: <Private roles={['claimant']}><MyAccessCardPage /></Private> },
@@ -122,7 +125,7 @@ function swrErrorHandler(error: unknown) {
 export function MainRoutes() {
   return (
     <ThemeProvider>
-      <Toaster position="top-center" duration={Infinity} />
+      <Toaster position="top-center" closeButton duration={6000} />
       <AuthProvider>
         <SWRConfig
           value={{

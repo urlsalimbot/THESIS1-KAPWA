@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
 import { mutate } from 'swr';
+import { toast } from 'sonner';
 import { Bell, BellRing, CheckCheck, ExternalLink } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,7 @@ const navTarget = (n: Notification): string => {
     case_update: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
     approval: '/approvals',
     disbursement: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
-    chat: '/messages',
+    chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
     sync_conflict: '/tracker',
     sla_escalation: '/tracker',
   };
@@ -80,6 +81,16 @@ export default function NotificationsDropdown() {
         false,
       );
       mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
+      if (document.visibilityState !== 'hidden') {
+        toast(notif.title, {
+          description: notif.message,
+          action: {
+            label: 'View',
+            onClick: () => navigate(navTarget(notif)),
+          },
+          duration: 5000,
+        });
+      }
     };
     const onUpdated = (data: { id: string; isRead: boolean }) => {
       mutate(queryKeys.notifications.list(), (current: Notification[] | undefined) =>

@@ -60,3 +60,18 @@ export type UpdateDocumentsInput = z.infer<typeof UpdateDocumentsSchema>;
 export type OverrideStatusInput = z.infer<typeof OverrideStatusSchema>;
 export type DisburseInput = z.infer<typeof DisburseSchema>;
 export type AssessmentInput = z.infer<typeof AssessmentSchema>;
+
+export const TransitionPlanSchema = z.object({
+  selfReliancePlan: z.string().nullable().optional(),
+  referrals: z.array(z.object({
+    agencyName: z.string(),
+    contactInfo: z.string().nullable().optional(),
+    reason: z.string(),
+    status: z.enum(['pending', 'completed', 'declined']),
+    notes: z.string().nullable().optional(),
+  })).nullable().optional(),
+  followUpDate: z.string().nullable().optional(),
+  exitNotes: z.string().nullable().optional(),
+});
+
+export type TransitionPlanInput = z.infer<typeof TransitionPlanSchema>;

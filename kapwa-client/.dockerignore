@@ -1,12 +1,9 @@
 node_modules
+dist
 .git
+.env
+.env.*
 *.md
 coverage
 test
-tests
-.vite
-.gitignore
-.eslintrc*
-.prettierrc*
-tsconfig*.json
-vitest.config.*
+__snapshots__

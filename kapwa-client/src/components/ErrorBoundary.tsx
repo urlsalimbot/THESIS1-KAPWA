@@ -1,10 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ErrorBoundary as ReactErrorBoundary, type FallbackProps } from 'react-error-boundary';
-import { TriangleAlert } from 'lucide-react';
+import { AlertTriangle, WifiOff, RefreshCw, LayoutDashboard, ChevronDown, ChevronRight, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
-import { EmptyState } from './EmptyState';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 
 function isOfflineError(error: unknown): boolean {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
@@ -15,28 +14,83 @@ function isOfflineError(error: unknown): boolean {
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const [showDetails, setShowDetails] = useState(false);
+
   if (isOfflineError(error)) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <EmptyState variant="offline" onAction={resetErrorBoundary} />
+      <div className="min-h-[60vh] flex items-center justify-center p-6">
+        <Card className="w-full max-w-md shadow-lg border-destructive/20">
+          <CardHeader className="flex flex-col items-center gap-4 pt-10">
+            <div className="rounded-full bg-amber-100 p-4">
+              <WifiOff size={40} className="text-amber-600" />
+            </div>
+            <div className="text-center space-y-1">
+              <h2 className="text-xl font-semibold text-foreground">You're Offline</h2>
+              <p className="text-sm text-muted-foreground px-4">
+                Your device lost connection. Some features may be unavailable until you reconnect.
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button onClick={resetErrorBoundary} className="gap-2">
+              <RefreshCw size={16} />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-      <TriangleAlert size={48} className="text-destructive" />
-      <AriaLiveRegion role="alert" aria-live="assertive" message="Something went wrong">
-        <h2 className="text-lg font-semibold">Something went wrong</h2>
-      </AriaLiveRegion>
-      <p className="text-sm text-muted-foreground">
-        An unexpected error occurred. Please try again later.
-      </p>
-      <div className="flex gap-2">
-        <Button onClick={resetErrorBoundary}>Try Again</Button>
-        <Button variant="outline" asChild>
-          <Link to="/dashboard">Go to Dashboard</Link>
-        </Button>
-      </div>
+    <div className="min-h-[60vh] flex items-center justify-center p-6">
+      <Card className="w-full max-w-lg shadow-lg border-destructive/20">
+        <CardHeader className="flex flex-col items-center gap-4 pt-10">
+          <div className="rounded-full bg-destructive/10 p-4">
+            <AlertTriangle size={40} className="text-destructive" />
+          </div>
+          <div className="text-center space-y-1">
+            <h2 className="text-xl font-semibold text-foreground">Something went wrong</h2>
+            <p className="text-sm text-muted-foreground px-4">
+              An unexpected error occurred. Our team has been notified.
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="flex justify-center gap-3">
+          <Button onClick={resetErrorBoundary} className="gap-2">
+            <RefreshCw size={16} />
+            Try Again
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/dashboard" className="gap-2">
+              <LayoutDashboard size={16} />
+              Dashboard
+            </Link>
+          </Button>
+        </CardContent>
+        {(error != null) && (
+          <CardFooter className="flex-col items-stretch border-t px-6 py-4">
+            <button
+              onClick={() => setShowDetails(v => !v)}
+              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showDetails ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <Bug size={14} />
+              Error Details
+            </button>
+            {showDetails && (() => {
+              const err = error instanceof Error ? error : new Error(String(error));
+              return (
+                <pre className="mt-3 rounded-lg bg-muted p-4 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {err.name}: {err.message}
+                  {'\n\n'}
+                  {err.stack}
+                </pre>
+              );
+            })()}
+          </CardFooter>
+        )}
+      </Card>
     </div>
   );
 }

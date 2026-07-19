@@ -6,14 +6,48 @@ on:
   pull_request:
     branches: [main]
 
-defaults:
-  run:
-    working-directory: kapwa-client
-
 jobs:
-  test:
+  server-test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: kapwa-server
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: kapwa
+          POSTGRES_USER: kapwa
+          POSTGRES_PASSWORD: kapwa
+        options: >-
+          --health-cmd pg_isready -U kapwa
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
+      - run: npm test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: kapwa
+          DB_PASSWORD: kapwa
+          DB_NAME: kapwa
+
+  client-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: kapwa-client
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,10 +56,13 @@ jobs:
       - run: npm ci
       - run: npm run test:run
 
-  coverage:
-    needs: test
+  client-coverage:
+    needs: client-test
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: kapwa-client
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -49,5 +86,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npm run build
+      - name: Build server
+        working-directory: kapwa-server
+        run: npm ci --legacy-peer-deps && npm run build
+      - name: Build client
+        working-directory: kapwa-client
+        run: npm ci && npm run build
+      - name: Build Docker images
+        run: docker compose build

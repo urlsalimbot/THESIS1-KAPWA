@@ -1,7 +1,7 @@
 import {
   FilePlus, LayoutDashboard, Users, CheckCircle, FolderOpen, FileText,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
-  FileWarning, IdCard, ScrollText, BarChart3, History, Database,
+  FileWarning, IdCard, ScrollText, BarChart3, History,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -44,7 +44,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/admin', label: 'Admin Panel', icon: <Shield size={20} />, roles: ['admin'] },
       { path: '/programs', label: 'Programs', icon: <ScrollText size={20} />, roles: ['admin'] },
-      { path: '/admin?tab=lcr', label: 'LCR Import', icon: <Database size={20} />, roles: ['admin'] },
     ],
   },
 

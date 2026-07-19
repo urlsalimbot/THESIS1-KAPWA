@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
 import { IrfService } from './irf.service';
 import { IrfExportService } from './irf-export.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
@@ -38,6 +39,7 @@ export class IrfController {
 
   @Get()
   @Roles('admin', 'social_worker')
+  @Sensitivity('internal')
   @ApiOperation({ summary: 'List IRF cases (names masked)' })
   async findAll() {
     return this.irfService.findAll();
@@ -45,6 +47,7 @@ export class IrfController {
 
   @Get(':id')
   @Roles('admin', 'social_worker', 'auditor')
+  @Sensitivity('internal')
   @ApiOperation({ summary: 'Get IRF case (narration masked, names masked)' })
   async findOne(@Param('id') id: string) {
     return this.irfService.findById(id);
@@ -70,21 +73,21 @@ export class IrfController {
   // ---------- Dedicated FSM endpoints ----------
 
   @Patch(':id/refer-pnp')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Refer IRF to PNP (from Under Investigation)' })
   async referToPnp(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.irfService.referToPnp(id, req.user?.role);
   }
 
   @Patch(':id/refer-wcpd')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Refer IRF to WCPD (from Under Investigation)' })
   async referToWcpd(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.irfService.referToWcpd(id, req.user?.role);
   }
 
   @Patch(':id/dismiss')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Dismiss IRF (from Under Investigation)' })
   async dismiss(
     @Param('id') id: string,
@@ -95,14 +98,14 @@ export class IrfController {
   }
 
   @Patch(':id/close')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Close IRF (from Referred/Dismissed)' })
   async close(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.irfService.close(id, req.user?.role);
   }
 
   @Patch(':id/override-disposition')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Admin override of disposition (mandatory reason)' })
   async overrideDisposition(
     @Param('id') id: string,

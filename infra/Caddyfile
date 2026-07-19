@@ -1,6 +1,8 @@
 # Kapwa — Caddy 2 Reverse Proxy Configuration
 # Production: replace :80 with your domain + add tls directive
 # Development: runs on :80 with plain HTTP
+# After editing this file, reload without restarting:
+#   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 :80 {
     # Rate limiting — 600 events/minute (higher for ngrok tunnel — single egress IP)
@@ -23,11 +25,19 @@
 
     # Non-API routes: serve API / socket / health first
     handle /api/* {
-        reverse_proxy api:3000
+        reverse_proxy api:3000 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+        }
     }
 
     handle /socket.io/* {
-        reverse_proxy api:3000
+        reverse_proxy api:3000 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+        }
     }
 
     handle /health {
