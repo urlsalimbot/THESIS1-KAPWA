@@ -7,13 +7,12 @@ export class SmsGatewayService {
   private twilioClient: any = null;
 
   constructor(@Optional() private cb?: CircuitBreakerService) {
-    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    const sid = process.env.TWILIO_ACCOUNT_SID || '';
+    const token = process.env.TWILIO_AUTH_TOKEN || '';
+    if (sid.startsWith('AC') && token) {
       try {
         const twilio = require('twilio');
-        this.twilioClient = twilio(
-          process.env.TWILIO_ACCOUNT_SID,
-          process.env.TWILIO_AUTH_TOKEN,
-        );
+        this.twilioClient = twilio(sid, token);
         this.logger.log('Twilio SDK initialized');
       } catch (e) {
         this.logger.error('Failed to initialize Twilio SDK:', e);
