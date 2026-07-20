@@ -37,6 +37,7 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     stats: () => memo('dashboard.stats', () => ['dashboard'] as const),
     trends: () => memo('dashboard.trends', () => ['dashboard', 'trends'] as const),
+    metrics: () => memo('dashboard.metrics', () => ['dashboard', 'metrics'] as const),
     dailyCounts: (year: number, month: number) =>
       memo(`dashboard.dailyCounts.${year}-${month}`, () => ['dashboard', 'daily-counts', { year, month }] as const),
     mayorReports: () => memo('dashboard.mayorReports', () => ['dashboard', 'reports', 'mayor'] as const),

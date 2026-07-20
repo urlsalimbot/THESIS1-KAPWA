@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import useSWR from 'swr';
-import { Shield, CheckCircle, XCircle, Download, Search, RefreshCw } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Download, Search, RefreshCw, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
 import { queryKeys } from '../lib/query-keys';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 export function AuditorPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'hash' | 'consent'>('hash');
   const [beneficiaryFilter, setBeneficiaryFilter] = useState('');
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   const { data: hashChain, isLoading: loading, mutate: revalidateHash } = useSWR<Record<string, { valid: boolean; brokenAt?: string }>>(
     queryKeys.audit.hashChains(),
@@ -14,6 +20,30 @@ export function AuditorPage() {
   const { data: consentLedger = [], isLoading: ledgerLoading, mutate: revalidateLedger } = useSWR<any[]>(
     queryKeys.audit.consentLedger(beneficiaryFilter || undefined),
   );
+
+  const consentColumns: ColumnDef<any>[] = [
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span>{new Date(row.original.grantedAt || row.original.createdAt).toLocaleDateString()}</span> },
+    { accessorKey: 'channel', header: 'Channel' },
+    { accessorKey: 'purpose', header: 'Purpose' },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${row.original.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {row.original.status}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.caseId || row.original.id}`)} aria-label="View">
+          <Eye size={14} className="mr-1" /> View
+        </Button>
+      ),
+    },
+  ];
 
   async function reVerify() {
     await revalidateHash();
@@ -97,38 +127,20 @@ export function AuditorPage() {
             </button>
           </div>
 
-          <div className="rounded-lg border bg-white">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b bg-gray-50 text-gray-500">
-                    <th className="text-left px-4 py-2">Date</th>
-                    <th className="text-left px-4 py-2">Channel</th>
-                    <th className="text-left px-4 py-2">Purpose</th>
-                    <th className="text-left px-4 py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {consentLedger.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center px-4 py-8 text-gray-400">No consent records found</td></tr>
-                  ) : (
-                    consentLedger.map((r: any) => (
-                      <tr key={r.id} className="border-b border-gray-100">
-                        <td className="px-4 py-2">{new Date(r.grantedAt || r.createdAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-2">{r.channel}</td>
-                        <td className="px-4 py-2">{r.purpose}</td>
-                        <td className="px-4 py-2">
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            r.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>{r.status}</span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {consentLedger.length === 0 && !ledgerLoading ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">No consent records found</div>
+          ) : ledgerLoading ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">Loading...</div>
+          ) : (
+            <DataTable
+              columns={consentColumns}
+              data={consentLedger}
+              rowCount={consentLedger.length}
+              pagination={pagination}
+              onPaginationChange={setPagination}
+              sorting={[]}
+            />
+          )}
         </div>
       )}
     </PageShell>

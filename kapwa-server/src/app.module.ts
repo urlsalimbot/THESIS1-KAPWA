@@ -28,11 +28,14 @@ import { MinioModule } from './minio/minio.module';
 import { IntakeModule } from './intake/intake.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { CsrfGuard } from './common/csrf.guard';
 import { PiiMaskingInterceptor } from './beneficiaries/pii.interceptor';
+import { CommonModule } from './common/common.module';
 import { AppController } from './app.controller';
 
 @Module({
   imports: [
+    CommonModule,
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     TypeOrmModule.forRootAsync({
@@ -83,6 +86,7 @@ import { AppController } from './app.controller';
   controllers: [AppController],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: PiiMaskingInterceptor },
   ],

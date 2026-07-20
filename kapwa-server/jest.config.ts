@@ -6,7 +6,7 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(uuid|cockatiel)/)'],
   collectCoverageFrom: [
     'src/**/*.(t|j)s',
     '!src/**/*.interface.ts',

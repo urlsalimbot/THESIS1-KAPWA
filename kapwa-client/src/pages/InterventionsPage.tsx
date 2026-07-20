@@ -7,6 +7,7 @@ import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { DataTable } from '@/components/data-table';
+import { Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
@@ -74,6 +75,15 @@ export function InterventionsPage() {
       cell: ({ row }) => row.original.clientReceiptUrl
         ? <a href={row.original.clientReceiptUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm">View Receipt</a>
         : <span className="text-muted-foreground text-sm">None</span>,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.caseId}`)} aria-label="View Case">
+          <Eye size={14} className="mr-1" /> View
+        </Button>
+      ),
     },
   ];
 

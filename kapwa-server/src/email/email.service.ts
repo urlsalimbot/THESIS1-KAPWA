@@ -1,13 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { CircuitBreakerService } from '../common/circuit-breaker.service';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter | null = null;
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    @Optional() private cb?: CircuitBreakerService,
+  ) {
     const host = this.config.get<string>('EMAIL_HOST');
     const user = this.config.get<string>('EMAIL_USER');
     if (host && user) {
@@ -44,7 +48,7 @@ export class EmailService {
         <p style="margin-top:24px;font-size:13px;color:#666">Or paste this link in your browser:<br/>${link}</p>
         <p style="font-size:12px;color:#999">MSWDO Norzagaray &middot; KAPWA Social Welfare System</p>
       </div>`;
-    await this.send(to, 'Verify your KAPWA account', html);
+    await this.sendWithBreaker(to, 'Verify your KAPWA account', html);
   }
 
   async sendForgotPasswordEmail(to: string, token: string): Promise<void> {
@@ -57,7 +61,7 @@ export class EmailService {
         <p style="margin-top:24px;font-size:13px;color:#666">Or paste this link in your browser:<br/>${link}</p>
         <p style="font-size:12px;color:#999">If you didn't request this, you can safely ignore this email.</p>
       </div>`;
-    await this.send(to, 'Reset your KAPWA password', html);
+    await this.sendWithBreaker(to, 'Reset your KAPWA password', html);
   }
 
   async sendEmailChangeVerification(to: string, token: string): Promise<void> {
@@ -70,7 +74,7 @@ export class EmailService {
         <p style="margin-top:24px;font-size:13px;color:#666">Or paste this link in your browser:<br/>${link}</p>
         <p style="font-size:12px;color:#999">If you didn't request this, you can safely ignore this email.</p>
       </div>`;
-    await this.send(to, 'Confirm your new email for KAPWA', html);
+    await this.sendWithBreaker(to, 'Confirm your new email for KAPWA', html);
   }
 
   async sendNotificationEmail(to: string, subject: string, body: string): Promise<void> {
@@ -81,24 +85,28 @@ export class EmailService {
         <hr style="margin-top:24px;border:none;border-top:1px solid #eee" />
         <p style="font-size:12px;color:#999">MSWDO Norzagaray &middot; KAPWA Social Welfare System</p>
       </div>`;
-    await this.send(to, subject, html);
+    await this.sendWithBreaker(to, subject, html);
   }
 
-  private async send(to: string, subject: string, html: string): Promise<void> {
-    if (this.transporter) {
-      try {
-        await this.transporter.sendMail({
-          from: this.from(),
-          to,
-          subject,
-          html,
-        });
-        this.logger.log(`Email sent to ${to}: ${subject}`);
-      } catch (err) {
-        this.logger.error(`Failed to send email to ${to}:`, err);
+  private async sendWithBreaker(to: string, subject: string, html: string): Promise<void> {
+    const send = async () => {
+      if (this.transporter) {
+        try {
+          await this.transporter.sendMail({
+            from: this.from(),
+            to,
+            subject,
+            html,
+          });
+          this.logger.log(`Email sent to ${to}: ${subject}`);
+        } catch (err) {
+          this.logger.error(`Failed to send email to ${to}:`, err);
+        }
+      } else {
+        this.logger.log(`[EMAIL LOG] To: ${to} | Subject: ${subject} | Body: ${html}`);
       }
-    } else {
-      this.logger.log(`[EMAIL LOG] To: ${to} | Subject: ${subject} | Body: ${html}`);
-    }
+    };
+    if (this.cb) return this.cb.call('email', send);
+    return send();
   }
 }

@@ -12,6 +12,11 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+function csrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
+  return match?.[1] ?? null;
+}
+
 // SWR's global fetcher receives the full queryKey tuple from queryKeys.*.
 // Join array parts with '/' and serialize the last object element as query params.
 function normalizePath(path: string | readonly unknown[]): string {
@@ -71,6 +76,10 @@ async function rawRequest<T>(
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (method !== 'GET') {
+      const csrf = csrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+    }
     const res = await fetch(url, {
       method,
       headers,

@@ -47,6 +47,11 @@ export class DashboardController {
         urgentCount: sla.overdueCount || 0,
         disbursedMonth: metrics.totalDisbursedAmount || 0,
         beneficiaryCount: metrics.uniqueHouseholds || 0,
+        totalCases: metrics.totalCases || 0,
+        approvedCases: metrics.approvedCases || 0,
+        disbursedCases: metrics.disbursedCases || 0,
+        recentInterventions: metrics.recentInterventions || 0,
+        byStatus: metrics.byStatus || [],
         lastSync,
         recentCases: recentCasesRaw.map((c: any) => ({
           id: c.controlNo,

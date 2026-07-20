@@ -18,21 +18,21 @@
   .form-group { @apply mb-4; }
   .form-label { @apply block font-body text-sm font-medium text-foreground mb-1; }
   .form-input {
-    @apply w-full px-3 py-2 bg-[#F8FAFC] border border-border rounded font-body text-sm text-foreground outline-none;
+    @apply w-full px-3 py-2 bg-muted/20 border border-border rounded font-body text-sm text-foreground outline-none;
   }
   .form-input:focus {
     @apply border-accent shadow-[0_0_0_2px_rgba(3,105,161,0.2)];
   }
   .form-select {
-    @apply w-full px-3 py-2 bg-[#F8FAFC] border border-border rounded font-body text-sm text-foreground outline-none cursor-pointer;
+    @apply w-full px-3 py-2 bg-muted/20 border border-border rounded font-body text-sm text-foreground outline-none cursor-pointer;
   }
   .badge { @apply inline-block px-2 py-1 rounded text-xs font-medium font-body; }
-  .badge-category { @apply bg-[#E8ECF1] text-[#0F172A]; }
-  .badge-pending { @apply bg-[#FFF3CD] text-[#856404]; }
-  .badge-review { @apply bg-[#D1ECF1] text-[#0C5460]; }
-  .badge-approved { @apply bg-[#D4EDDA] text-[#155724]; }
-  .badge-disbursed { @apply bg-[#E2E3E5] text-[#383D41]; }
-  .badge-closed { @apply bg-[#F5F5F5] text-[#707070]; }
+  .badge-category { background-color: var(--badge-category-bg); color: var(--badge-category-fg); }
+  .badge-pending { background-color: var(--badge-pending-bg); color: var(--badge-pending-fg); }
+  .badge-review { background-color: var(--badge-review-bg); color: var(--badge-review-fg); }
+  .badge-approved { background-color: var(--badge-approved-bg); color: var(--badge-approved-fg); }
+  .badge-disbursed { background-color: var(--badge-disbursed-bg); color: var(--badge-disbursed-fg); }
+  .badge-closed { background-color: var(--badge-closed-bg); color: var(--badge-closed-fg); }
 
   .table-container {
     @apply bg-card border border-border rounded-lg overflow-hidden shadow-sm;
@@ -46,18 +46,20 @@
   .table td {
     @apply px-4 py-3 text-sm text-foreground border-r border-b border-border;
   }
-  .table tbody tr:nth-child(even) { @apply bg-[#F5F5F5]; }
-  .table tbody tr:hover { @apply bg-[#E8ECF1]; }
+  .table tbody tr:nth-child(even) { background-color: var(--table-stripe); }
+  .table tbody tr:hover { background-color: var(--table-hover); }
   .frozen-col { @apply sticky left-0 bg-inherit z-[1] shadow-[2px_0_4px_0px_rgba(0,0,0,0.05)]; }
   .table th.frozen-col { @apply bg-card; }
   .pagination {
     @apply flex items-center justify-between px-4 py-3 font-body text-sm text-muted-foreground border-t border-border;
   }
   .error-msg {
-    @apply px-4 py-3 bg-[#FFF3CD] text-[#856404] rounded font-body text-sm mb-4;
+    @apply px-4 py-3 rounded font-body text-sm mb-4;
+    background-color: var(--alert-error-bg); color: var(--alert-error-fg);
   }
   .success-msg {
-    @apply px-4 py-3 bg-[#D4EDDA] text-[#155724] rounded font-body text-sm mb-4;
+    @apply px-4 py-3 rounded font-body text-sm mb-4;
+    background-color: var(--alert-success-bg); color: var(--alert-success-fg);
   }
   .filter-pills {
     @apply flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-t-lg border-b-0;
@@ -65,7 +67,7 @@
   .filter-pill {
     @apply flex items-center gap-1 px-3 py-1.5 bg-card border border-border rounded-full font-body text-sm text-foreground cursor-pointer;
   }
-  .filter-pill:hover { @apply bg-[#F5F5F5]; }
+  .filter-pill:hover { @apply bg-muted/30; }
   .clear-btn {
     @apply ml-auto px-3 py-1.5 font-body text-sm font-medium text-accent bg-transparent border-none cursor-pointer;
   }
@@ -93,11 +95,11 @@
     @apply text-2xl font-bold text-foreground tracking-tight;
   }
   .search-bar { @apply relative w-64; }
-  .search-input { @apply w-full py-2 pl-9 pr-4 bg-[#F8FAFC] border border-border rounded-full font-body text-sm text-foreground outline-none; }
+  .search-input { @apply w-full py-2 pl-9 pr-4 bg-muted/20 border border-border rounded-full font-body text-sm text-foreground outline-none; }
   .search-input:focus { @apply border-accent; }
   .search-icon { @apply absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground; }
   .icon-btn { @apply w-10 h-10 rounded-full flex items-center justify-center bg-transparent border-none cursor-pointer text-muted-foreground; }
-  .icon-btn:hover { @apply bg-[#F5F6F7]; }
+  .icon-btn:hover { @apply bg-muted/30; }
 
   .card { @apply bg-card border border-border rounded-lg p-4 mb-4 shadow-sm; }
 }
@@ -139,6 +141,28 @@
   --border: #D8D4CE;
   --input: #D8D4CE;
   --ring: #1B3A5C;
+
+  --badge-pending-bg: #FFF3CD;
+  --badge-pending-fg: #856404;
+  --badge-review-bg: #D1ECF1;
+  --badge-review-fg: #0C5460;
+  --badge-approved-bg: #D4EDDA;
+  --badge-approved-fg: #155724;
+  --badge-disbursed-bg: #E2E3E5;
+  --badge-disbursed-fg: #383D41;
+  --badge-closed-bg: #F5F5F5;
+  --badge-closed-fg: #707070;
+  --badge-category-bg: #E8ECF1;
+  --badge-category-fg: #0F172A;
+
+  --table-stripe: #F5F5F5;
+  --table-hover: #E8ECF1;
+
+  --alert-success-bg: #D4EDDA;
+  --alert-success-fg: #155724;
+  --alert-error-bg: #FFF3CD;
+  --alert-error-fg: #856404;
+
   --font-heading: 'Geist', sans-serif;
   --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-xs: 0.75rem;
@@ -192,6 +216,27 @@
   --border: #2A3A4A;
   --input: #3D5A80;
   --ring: #E07A5F;
+
+  --badge-pending-bg: #5C4A0A;
+  --badge-pending-fg: #FFD666;
+  --badge-review-bg: #0E4D5C;
+  --badge-review-fg: #7FD1E0;
+  --badge-approved-bg: #1A4A2A;
+  --badge-approved-fg: #6FCF8A;
+  --badge-disbursed-bg: #3A3D41;
+  --badge-disbursed-fg: #C8CBD0;
+  --badge-closed-bg: #2A2A2A;
+  --badge-closed-fg: #A0A0A0;
+  --badge-category-bg: #2A3A4A;
+  --badge-category-fg: #D1D5DB;
+
+  --table-stripe: rgba(255, 255, 255, 0.03);
+  --table-hover: rgba(255, 255, 255, 0.06);
+
+  --alert-success-bg: rgba(52, 211, 153, 0.15);
+  --alert-success-fg: #6FCF8A;
+  --alert-error-bg: rgba(251, 191, 36, 0.15);
+  --alert-error-fg: #FFD666;
 }
 
 /* Theme reference for utility class generation — @theme inline per shadcn v4 */
@@ -216,6 +261,25 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
+  --color-badge-pending-bg: var(--badge-pending-bg);
+  --color-badge-pending-fg: var(--badge-pending-fg);
+  --color-badge-review-bg: var(--badge-review-bg);
+  --color-badge-review-fg: var(--badge-review-fg);
+  --color-badge-approved-bg: var(--badge-approved-bg);
+  --color-badge-approved-fg: var(--badge-approved-fg);
+  --color-badge-disbursed-bg: var(--badge-disbursed-bg);
+  --color-badge-disbursed-fg: var(--badge-disbursed-fg);
+  --color-badge-closed-bg: var(--badge-closed-bg);
+  --color-badge-closed-fg: var(--badge-closed-fg);
+  --color-badge-category-bg: var(--badge-category-bg);
+  --color-badge-category-fg: var(--badge-category-fg);
+  --color-table-stripe: var(--table-stripe);
+  --color-table-hover: var(--table-hover);
+  --color-alert-success-bg: var(--alert-success-bg);
+  --color-alert-success-fg: var(--alert-success-fg);
+  --color-alert-error-bg: var(--alert-error-bg);
+  --color-alert-error-fg: var(--alert-error-fg);
 
   --font-heading: 'Geist', sans-serif;
   --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

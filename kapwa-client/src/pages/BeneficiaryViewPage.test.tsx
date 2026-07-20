@@ -5,6 +5,10 @@ import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
 import { BeneficiaryViewPage } from './BeneficiaryViewPage';
 
+vi.mock('../components/family/FamilyGraph', () => ({
+  FamilyGraph: () => <div data-testid="family-graph-mock">Family Graph</div>,
+}));
+
 const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPost: vi.fn(),
@@ -35,8 +39,9 @@ const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFam
   mockFamilyGraph: {
     totalCount: 3,
     members: [
-      { id: 'FM-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, statusIncome: 'Employed', isPrimary: false, depth: 1 },
+      { id: 'FM-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, occupation: 'Housewife', income: 0, status: 'Unemployed', isPrimary: false, depth: 1 },
     ],
+    primary: { id: 'BEN-001', fullName: 'Juan Dela Cruz', relationship: 'Self', age: 34, isPrimary: true, depth: 0 },
   },
   mockTrackerEntries: [
     { id: 'T-1', trackerId: 'TRK-001', dailySeqNum: 1, interventionRemarks: 'Initial assessment' },

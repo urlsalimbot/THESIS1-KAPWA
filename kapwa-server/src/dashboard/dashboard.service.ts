@@ -1,12 +1,13 @@
 import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from './constants';
 import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { Intervention } from '../interventions/intervention.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { VersionVector } from '../sync/version-vector.entity';
+import { CacheService } from '../common/cache.service';
 
 @Injectable()
 export class DashboardService {
@@ -14,22 +15,26 @@ export class DashboardService {
     @InjectRepository(Case) private caseRepo: Repository<Case>,
     @InjectRepository(Intervention) private intRepo: Repository<Intervention>,
     @InjectRepository(Beneficiary) private benRepo: Repository<Beneficiary>,
-    @InjectRepository(VersionVector) private versionVectorRepo: Repository<VersionVector>
+    @InjectRepository(VersionVector) private versionVectorRepo: Repository<VersionVector>,
+    @Optional() private cache?: CacheService,
   ) {}
 
   async getLastSync(): Promise<string> {
-    const result = await this.versionVectorRepo
-      .createQueryBuilder('v')
-      .select('MAX(v.lastSyncedAt)', 'last_sync')
-      .getRawOne<{ last_sync: Date | null }>();
-    if (!result?.last_sync) return 'Never';
-    const diff = Date.now() - new Date(result.last_sync).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
+    if (!this.cache) return '';
+    return this.cache.wrap('dashboard:lastSync', async () => {
+      const result = await this.versionVectorRepo
+        .createQueryBuilder('v')
+        .select('MAX(v.lastSyncedAt)', 'last_sync')
+        .getRawOne<{ last_sync: Date | null }>();
+      if (!result?.last_sync) return 'Never';
+      const diff = Date.now() - new Date(result.last_sync).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      return `${Math.floor(hours / 24)}d ago`;
+    }, 10_000);
   }
 
   async getServedToday(): Promise<number> {
@@ -42,56 +47,64 @@ export class DashboardService {
     });
   }
 
+  invalidateCache(): void {
+    this.cache?.invalidate('^dashboard:');
+  }
+
   async getMetrics(barangay?: string) {
-    const caseQb = this.caseRepo.createQueryBuilder('c')
-      .leftJoin('c.beneficiary', 'b');
+    const key = `dashboard:metrics:${barangay ?? 'all'}`;
+    const compute = async () => {
+      const caseQb = this.caseRepo.createQueryBuilder('c')
+        .leftJoin('c.beneficiary', 'b');
 
-    if (barangay) {
-      caseQb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
-    }
+      if (barangay) {
+        caseQb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
+      }
 
-    const totalCases = await caseQb.clone().getCount();
-    const approved = await caseQb.clone()
-      .andWhere('c.status = :status', { status: CaseStatus.APPROVED }).getCount();
-    const disbursed = await caseQb.clone()
-      .andWhere('c.status = :status', { status: CaseStatus.DISBURSED }).getCount();
+      const totalCases = await caseQb.clone().getCount();
+      const approved = await caseQb.clone()
+        .andWhere('c.status = :status', { status: CaseStatus.APPROVED }).getCount();
+      const disbursed = await caseQb.clone()
+        .andWhere('c.status = :status', { status: CaseStatus.DISBURSED }).getCount();
 
-    const { total: totalDisbursed } = await this.intRepo
-      .createQueryBuilder('i')
-      .select('COALESCE(SUM(i.amount), 0)', 'total')
-      .getRawOne() as { total: string };
+      const { total: totalDisbursed } = await this.intRepo
+        .createQueryBuilder('i')
+        .select('COALESCE(SUM(i.amount), 0)', 'total')
+        .getRawOne() as { total: string };
 
-    const benQb = this.benRepo.createQueryBuilder('b');
-    if (barangay) {
-      benQb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
-    }
-    const { count: uniqueHouseholds } = await benQb
-      .select('COUNT(DISTINCT b.household_id)', 'count')
-      .getRawOne() as { count: string };
+      const benQb = this.benRepo.createQueryBuilder('b');
+      if (barangay) {
+        benQb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
+      }
+      const { count: uniqueHouseholds } = await benQb
+        .select('COUNT(DISTINCT b.household_id)', 'count')
+        .getRawOne() as { count: string };
 
-    const byStatus = await this.caseRepo
-      .createQueryBuilder('c')
-      .select('c.status', 'status')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy('c.status')
-      .getRawMany();
+      const byStatus = await this.caseRepo
+        .createQueryBuilder('c')
+        .select('c.status', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('c.status')
+        .getRawMany();
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentInterventions = await this.intRepo
-      .createQueryBuilder('i')
-      .where('i.logged_at > :date', { date: sevenDaysAgo })
-      .getCount();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recentInterventions = await this.intRepo
+        .createQueryBuilder('i')
+        .where('i.logged_at > :date', { date: sevenDaysAgo })
+        .getCount();
 
-    return {
-      totalCases,
-      approvedCases: approved,
-      disbursedCases: disbursed,
-      totalDisbursedAmount: Number(totalDisbursed),
-      uniqueHouseholds: Number(uniqueHouseholds),
-      byStatus,
-      recentInterventions,
+      return {
+        totalCases,
+        approvedCases: approved,
+        disbursedCases: disbursed,
+        totalDisbursedAmount: Number(totalDisbursed),
+        uniqueHouseholds: Number(uniqueHouseholds),
+        byStatus,
+        recentInterventions,
+      };
     };
+    return this.cache ? this.cache.wrap(key, compute, 30_000) : compute();
   }
 
   async getDailyTracker(date: Date) {
@@ -171,75 +184,82 @@ export class DashboardService {
   }
 
   async getTrends() {
-    const months: { label: string; offset: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      months.push({ label, offset: i });
-    }
+    const compute = async () => {
+      const months: { label: string; offset: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        months.push({ label, offset: i });
+      }
 
-    const results = await Promise.all(months.map(async (m) => {
-      const start = new Date();
-      start.setMonth(start.getMonth() - m.offset);
-      start.setDate(1); start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + 1);
+      const results = await Promise.all(months.map(async (m) => {
+        const start = new Date();
+        start.setMonth(start.getMonth() - m.offset);
+        start.setDate(1); start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + 1);
 
-      const casesCreated = await this.caseRepo.count({
-        where: { createdAt: start as any },
-      });
-      const disbursedAmount = await this.intRepo
-        .createQueryBuilder('i')
-        .select('COALESCE(SUM(i.amount), 0)', 'total')
-        .where('i.service_date >= :start AND i.service_date < :end', { start, end })
-        .getRawOne();
+        const casesCreated = await this.caseRepo.count({
+          where: { createdAt: start as any },
+        });
+        const disbursedAmount = await this.intRepo
+          .createQueryBuilder('i')
+          .select('COALESCE(SUM(i.amount), 0)', 'total')
+          .where('i.service_date >= :start AND i.service_date < :end', { start, end })
+          .getRawOne();
 
-      return {
-        month: m.label,
-        casesCreated,
-        disbursed: Number((disbursedAmount as any)?.total || 0),
-      };
-    }));
+        return {
+          month: m.label,
+          casesCreated,
+          disbursed: Number((disbursedAmount as any)?.total || 0),
+        };
+      }));
 
-    return results;
+      return results;
+    };
+    return this.cache ? this.cache.wrap('dashboard:trends', compute, 300_000) : compute();
   }
 
   async getDailyCounts(year: number, month: number) {
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 1);
+    const key = `dashboard:dailyCounts:${year}-${month}`;
+    const compute = async () => {
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 1);
 
-    const interventions = await this.intRepo
-      .createQueryBuilder('i')
-      .select('i.service_date', 'date')
-      .addSelect('COUNT(*)', 'count')
-      .where('i.service_date >= :start AND i.service_date < :end', { start, end })
-      .groupBy('i.service_date')
-      .orderBy('i.service_date', 'ASC')
-      .getRawMany();
+      const interventions = await this.intRepo
+        .createQueryBuilder('i')
+        .select('i.service_date', 'date')
+        .addSelect('COUNT(*)', 'count')
+        .where('i.service_date >= :start AND i.service_date < :end', { start, end })
+        .groupBy('i.service_date')
+        .orderBy('i.service_date', 'ASC')
+        .getRawMany();
 
-    const casesCreated = await this.caseRepo
-      .createQueryBuilder('c')
-      .select('c.created_at', 'date')
-      .addSelect('COUNT(*)', 'count')
-      .where('c.created_at >= :start AND c.created_at < :end', { start, end })
-      .groupBy('c.created_at')
-      .orderBy('c.created_at', 'ASC')
-      .getRawMany();
+      const casesCreated = await this.caseRepo
+        .createQueryBuilder('c')
+        .select('c.created_at', 'date')
+        .addSelect('COUNT(*)', 'count')
+        .where('c.created_at >= :start AND c.created_at < :end', { start, end })
+        .groupBy('c.created_at')
+        .orderBy('c.created_at', 'ASC')
+        .getRawMany();
 
-    const dayMap: Record<string, { interventions: number; cases: number }> = {};
-    for (const row of interventions) {
-      const d = new Date(row.date).toISOString().slice(0, 10);
-      if (!dayMap[d]) dayMap[d] = { interventions: 0, cases: 0 };
-      dayMap[d].interventions += Number(row.count);
-    }
-    for (const row of casesCreated) {
-      const d = new Date(row.date).toISOString().slice(0, 10);
-      if (!dayMap[d]) dayMap[d] = { interventions: 0, cases: 0 };
-      dayMap[d].cases += Number(row.count);
-    }
+      const dayMap: Record<string, { interventions: number; cases: number }> = {};
+      for (const row of interventions) {
+        const d = new Date(row.date).toISOString().slice(0, 10);
+        if (!dayMap[d]) dayMap[d] = { interventions: 0, cases: 0 };
+        dayMap[d].interventions += Number(row.count);
+      }
+      for (const row of casesCreated) {
+        const d = new Date(row.date).toISOString().slice(0, 10);
+        if (!dayMap[d]) dayMap[d] = { interventions: 0, cases: 0 };
+        dayMap[d].cases += Number(row.count);
+      }
 
-    return dayMap;
+      return dayMap;
+    };
+    return this.cache ? this.cache.wrap(key, compute, 120_000) : compute();
   }
 
   private calcAge(dob: Date): number {

@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
+import { useNavigate } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 import { BARANGAYS, AGE_RANGES, CLIENT_CATEGORIES } from '../lib/constants';
 
@@ -31,6 +36,8 @@ interface TrackerStats {
 
 export function CaseTrackerPage() {
   const { mutate: globalMutate } = useSWRConfig();
+  const navigate = useNavigate();
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const today = new Date().toISOString().split('T')[0];
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
@@ -70,6 +77,27 @@ export function CaseTrackerPage() {
     } catch (e) { console.error("CaseTracker:", e); }
     finally { setSubmitting(false); }
   }
+
+  const columns: ColumnDef<TrackerEntry>[] = [
+    { accessorKey: 'dailySeqNum', header: '#', cell: ({ row }) => <span className="font-mono text-xs">{row.original.dailySeqNum}</span> },
+    { accessorKey: 'surname', header: 'Surname' },
+    { accessorKey: 'firstName', header: 'First Name' },
+    { accessorKey: 'middleName', header: 'Middle Name' },
+    { accessorKey: 'gender', header: 'Gender' },
+    { accessorKey: 'ageRange', header: 'Age Range' },
+    { accessorKey: 'clientCategory', header: 'Category' },
+    { accessorKey: 'barangay', header: 'Barangay' },
+    { accessorKey: 'interventionRemarks', header: 'Intervention', cell: ({ row }) => <span className="font-mono text-xs">{row.original.interventionRemarks}</span> },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View">
+          <Eye size={14} className="mr-1" /> View
+        </Button>
+      ),
+    },
+  ];
 
   if (loading) {
     return (
@@ -171,32 +199,14 @@ export function CaseTrackerPage() {
       {!loading && entries.length === 0 ? (
         <EmptyState variant="no-data" />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="min-w-full divide-y divide-border text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                {['#','Surname','First Name','Middle Name','Gender','Age Range','Category','Barangay','Intervention'].map(h => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-card">
-              {entries.map(e => (
-                <tr key={e.id} className="hover:bg-muted/50">
-                  <td className="px-3 py-2 font-mono text-xs">{e.dailySeqNum}</td>
-                  <td className="px-3 py-2">{e.surname}</td>
-                  <td className="px-3 py-2">{e.firstName}</td>
-                  <td className="px-3 py-2">{e.middleName}</td>
-                  <td className="px-3 py-2">{e.gender}</td>
-                  <td className="px-3 py-2">{e.ageRange}</td>
-                  <td className="px-3 py-2">{e.clientCategory}</td>
-                  <td className="px-3 py-2">{e.barangay}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{e.interventionRemarks}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={entries}
+          rowCount={entries.length}
+          pagination={pagination}
+          onPaginationChange={setPagination}
+          sorting={[]}
+        />
       )}
     </PageShell>
   );

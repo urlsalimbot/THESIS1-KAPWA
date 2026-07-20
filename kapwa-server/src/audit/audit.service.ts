@@ -9,6 +9,7 @@ import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { FindOptionsWhere } from 'typeorm';
 import * as crypto from 'crypto';
+import { CacheService } from '../common/cache.service';
 
 @Injectable()
 export class AuditService {
@@ -21,6 +22,7 @@ export class AuditService {
     private readonly benRepo: Repository<Beneficiary>,
     @InjectRepository(ConsentLedger)
     private readonly consentRepo: Repository<ConsentLedger>,
+    private cache: CacheService,
   ) {}
 
   async verifyHashChain(
@@ -48,13 +50,15 @@ export class AuditService {
     beneficiaries: { valid: boolean; brokenAt?: string };
     consentLedger: { valid: boolean; brokenAt?: string };
   }> {
-    const [int, cas, ben, con] = await Promise.all([
-      this.verifyHashChain(this.intRepo, 'loggedAt'),
-      this.verifyHashChain(this.caseRepo, 'createdAt'),
-      this.verifyHashChain(this.benRepo, 'createdAt'),
-      this.verifyHashChain(this.consentRepo, 'grantedAt'),
-    ]);
-    return { interventions: int, cases: cas, beneficiaries: ben, consentLedger: con };
+    return this.cache.wrap('audit:verifyAllChains', async () => {
+      const [int, cas, ben, con] = await Promise.all([
+        this.verifyHashChain(this.intRepo, 'loggedAt'),
+        this.verifyHashChain(this.caseRepo, 'createdAt'),
+        this.verifyHashChain(this.benRepo, 'createdAt'),
+        this.verifyHashChain(this.consentRepo, 'grantedAt'),
+      ]);
+      return { interventions: int, cases: cas, beneficiaries: ben, consentLedger: con };
+    }, 60_000);
   }
 
   async verifyInterventionChain(startId?: string): Promise<{ valid: boolean; brokenAt?: string }> {

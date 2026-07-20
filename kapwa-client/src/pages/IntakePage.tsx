@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES } from '../lib/constants';
+import { Check } from 'lucide-react';
 
 function computeAge(dob: string): number {
   if (!dob) return 0;
@@ -33,6 +34,7 @@ interface FamilyMember {
   occupation: string;
   income: string;
   status: string;
+  done: boolean;
 }
 
 const emptyAddress: AddressFields = { street: '', barangay: '', city: '', province: '0301400000', region: '03', postalCode: '', psgcCode: '' };
@@ -101,11 +103,16 @@ export function IntakePage() {
       occupation: '',
       income: '',
       status: 'Employed',
+      done: false,
     }]);
   }
 
   function updateFamilyMember(id: string, field: string, value: string | number) {
     setFamily(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
+  }
+
+  function toggleDone(id: string) {
+    setFamily(prev => prev.map(m => m.id === id ? { ...m, done: !m.done } : m));
   }
 
   function removeFamilyMember(id: string) {
@@ -262,7 +269,7 @@ export function IntakePage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">6. Cellular Number *</label>
-                <Input type="tel" required value={form.cellularNumber} onChange={e => update('cellularNumber', e.target.value)} aria-label="Cellular Number" />
+                <Input type="tel" required value={form.cellularNumber} onChange={e => update('cellularNumber', e.target.value.replace(/\D/g, ''))} aria-label="Cellular Number" />
               </div>
             </div>
 
@@ -288,7 +295,7 @@ export function IntakePage() {
                 <label className="text-sm font-medium">11. Estimated Monthly Income *</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₱</span>
-                  <Input type="text" inputMode="numeric" required value={form.estimatedMonthlyIncome} onChange={e => update('estimatedMonthlyIncome', e.target.value.replace(/,/g, ''))} onBlur={e => update('estimatedMonthlyIncome', formatMoney(e.target.value))} aria-label="Estimated Monthly Income" className="pl-7" />
+                  <Input type="text" inputMode="numeric" required value={form.estimatedMonthlyIncome} onChange={e => update('estimatedMonthlyIncome', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) update('estimatedMonthlyIncome', formatMoney(v)); }} aria-label="Estimated Monthly Income" className="pl-7" />
                 </div>
               </div>
             </div>
@@ -303,28 +310,28 @@ export function IntakePage() {
           </div>
           {family.length === 0 && <p className="text-sm text-muted-foreground italic">No family members added</p>}
           {family.map(m => (
-            <div key={m.id} className="mb-3 flex flex-wrap items-end gap-2 rounded-lg border bg-muted/30 p-3">
+            <div key={m.id} className={`mb-3 flex flex-wrap items-end gap-2 rounded-lg border p-3 transition-colors ${m.done ? 'bg-green-50 border-green-300' : 'bg-muted/30'}`}>
               <div className="flex-1 min-w-[160px] space-y-1">
                 <label className="text-xs text-muted-foreground">Name *</label>
-                <Input className="h-8 text-sm" required value={m.fullName} onChange={e => updateFamilyMember(m.id, 'fullName', e.target.value)} aria-label="Family member name" />
+                <Input className="h-8 text-sm" required value={m.fullName} onChange={e => updateFamilyMember(m.id, 'fullName', e.target.value)} aria-label="Family member name" disabled={m.done} />
               </div>
               <div className="w-16 space-y-1">
                 <label className="text-xs text-muted-foreground">Age *</label>
-                <Input type="number" min="0" className="h-8 text-sm" required value={m.age} onChange={e => updateFamilyMember(m.id, 'age', e.target.value === '' ? '' : Number(e.target.value))} aria-label="Family member age" />
+                <Input type="number" min="0" className="h-8 text-sm" required value={m.age} onChange={e => updateFamilyMember(m.id, 'age', e.target.value === '' ? '' : Number(e.target.value))} aria-label="Family member age" disabled={m.done} />
               </div>
               <div className="w-28 space-y-1">
                 <label className="text-xs text-muted-foreground">Relationship *</label>
-                <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)} aria-label="Family member relationship">
+                <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)} aria-label="Family member relationship" disabled={m.done}>
                   {['Spouse','Child','Parent','Sibling','Grandparent','Other'].map(r => <option key={r}>{r}</option>)}
                 </select>
               </div>
               <div className="flex-1 min-w-[120px] space-y-1">
                 <label className="text-xs text-muted-foreground">Occupation</label>
-                <Input className="h-8 text-sm" value={m.occupation} onChange={e => updateFamilyMember(m.id, 'occupation', e.target.value)} aria-label="Family member occupation" />
+                <Input className="h-8 text-sm" value={m.occupation} onChange={e => updateFamilyMember(m.id, 'occupation', e.target.value)} aria-label="Family member occupation" disabled={m.done} />
               </div>
               <div className="w-28 space-y-1">
                 <label className="text-xs text-muted-foreground">Status *</label>
-                <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.status} onChange={e => updateFamilyMember(m.id, 'status', e.target.value)} aria-label="Family member status">
+                <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.status} onChange={e => updateFamilyMember(m.id, 'status', e.target.value)} aria-label="Family member status" disabled={m.done}>
                   {['Employed','Self-Employed','Unemployed','Student','Retired','Dependent','OFW'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
@@ -332,9 +339,13 @@ export function IntakePage() {
                 <label className="text-xs text-muted-foreground">Monthly Income</label>
                 <div className="relative">
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₱</span>
-                  <Input type="text" inputMode="numeric" className="h-8 text-sm pl-5" value={m.income} onChange={e => updateFamilyMember(m.id, 'income', e.target.value.replace(/,/g, ''))} onBlur={e => { const f = formatMoney(e.target.value); updateFamilyMember(m.id, 'income', f); }} aria-label="Family member income" />
+                  <Input type="text" inputMode="numeric" className="h-8 text-sm pl-5" value={m.income} onChange={e => updateFamilyMember(m.id, 'income', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) updateFamilyMember(m.id, 'income', formatMoney(v)); }} aria-label="Family member income" disabled={m.done} />
                 </div>
               </div>
+              <Button type="button" variant={m.done ? 'secondary' : 'default'} size="sm" onClick={() => toggleDone(m.id)} className="h-8 gap-1">
+                <Check size={14} />
+                {m.done ? 'Edit' : 'Done'}
+              </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => removeFamilyMember(m.id)} className="text-destructive h-8">Remove</Button>
             </div>
           ))}

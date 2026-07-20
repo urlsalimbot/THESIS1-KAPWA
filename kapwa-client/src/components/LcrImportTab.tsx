@@ -264,16 +264,16 @@ export function LcrImportTab() {
                 <p className="text-2xl font-bold">{batchResult.total}</p>
                 <p className="text-xs text-muted-foreground">Total</p>
               </div>
-              <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg text-center">
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{batchResult.created}</p>
+              <div className="p-4 bg-alert-success-bg rounded-lg text-center">
+                <p className="text-2xl font-bold text-alert-success-fg">{batchResult.created}</p>
                 <p className="text-xs text-muted-foreground">Created</p>
               </div>
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{batchResult.updated}</p>
+              <div className="p-4 bg-blue-100 text-blue-700 rounded-lg text-center">
+                <p className="text-2xl font-bold">{batchResult.updated}</p>
                 <p className="text-xs text-muted-foreground">Updated</p>
               </div>
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg text-center">
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{batchResult.skipped}</p>
+              <div className="p-4 bg-alert-error-bg rounded-lg text-center">
+                <p className="text-2xl font-bold text-alert-error-fg">{batchResult.skipped}</p>
                 <p className="text-xs text-muted-foreground">Skipped</p>
               </div>
             </div>

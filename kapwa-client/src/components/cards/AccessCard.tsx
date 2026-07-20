@@ -47,10 +47,10 @@ export function AccessCard({ beneficiary, services, printable = false }: AccessC
               <th className="text-left py-2">Agency</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-border">
             {services.map((s, i) => (
-              <tr key={s.id} className="hover:bg-[#E8F0F7] even:bg-[#F5F5F5]">
-                <td className="py-2 pr-2 text-gray-600">{i + 1}</td>
+              <tr key={s.id} className="hover:bg-table-hover even:bg-table-stripe">
+                <td className="py-2 pr-2 text-muted-foreground">{i + 1}</td>
                 <td className="py-2 pr-2">{new Date(s.serviceDate).toLocaleDateString()}</td>
                 <td className="py-2 pr-2">{s.serviceRendered}</td>
                 <td className="py-2 pr-2">{s.cost != null ? `₱${s.cost.toLocaleString()}` : '-'}</td>

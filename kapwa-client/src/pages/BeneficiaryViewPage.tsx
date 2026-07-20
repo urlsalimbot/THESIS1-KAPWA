@@ -94,11 +94,13 @@ export function BeneficiaryViewPage() {
   const { data: ben } = useSWR<Record<string, unknown>>(
     id ? queryKeys.beneficiaries.detail(id) : null,
   );
-  const { data: cases = [] } = useSWR<Array<Record<string, unknown>>>(queryKeys.cases.list());
-  const { data: famGraph } = useSWR<{ totalCount?: number; members?: FamilyMember[] }>(
-    id ? queryKeys.beneficiaries.familyGraph(id) : null,
-  );
-  const { data: trackerEntries = [], isLoading: trackerLoading } = useSWR<TrackerEntry[]>(
+  const { data: cases } = useSWR<Array<Record<string, unknown>>>(queryKeys.cases.list());
+  const { data: famGraph, isLoading: famLoading, error: famError } = useSWR<{
+    totalCount?: number;
+    members?: Array<FamilyMember & { depth: number; statusIncome?: string }>;
+    primary?: FamilyMember & { depth: number; statusIncome?: string };
+  }>(id ? queryKeys.beneficiaries.familyGraph(id) : null);
+  const { data: trackerEntries, isLoading: trackerLoading } = useSWR<TrackerEntry[]>(
     id ? queryKeys.tracker.list() : null,
   );
 
@@ -121,7 +123,7 @@ export function BeneficiaryViewPage() {
       const b = ben as Record<string, unknown>;
       const age = b.dob ? (() => { const today = new Date(); const birth = new Date(b.dob as string); let a = today.getFullYear() - birth.getFullYear(); if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) a--; return a; })() : 0;
       const addrParts = ((b.address as string) || '').split(',').map((s: string) => s.trim());
-      const beneficiaryCases = (cases as Array<Record<string, unknown>>).filter(
+      const beneficiaryCases = (cases || []).filter(
         (c) => c.beneficiaryId === id || ((c.beneficiary as Record<string, unknown>)?.id as string) === id,
       );
       setBeneficiary({
@@ -369,11 +371,11 @@ export function BeneficiaryViewPage() {
                 <ClipboardList size={16} />
                 <h3 className="text-xs font-semibold uppercase tracking-wider">Tracker Log</h3>
               </div>
-              {trackerEntries.length === 0 ? (
+              {(trackerEntries || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">No entries</p>
               ) : (
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                  {trackerEntries.map(entry => (
+                  {(trackerEntries || []).map(entry => (
                     <div key={entry.id} className="flex items-center justify-between rounded bg-muted/50 px-2.5 py-2 text-sm">
                       <div className="min-w-0 flex-1 mr-2">
                         <p className="font-medium text-foreground truncate">{entry.trackerId || 'Entry'}</p>
@@ -493,35 +495,60 @@ export function BeneficiaryViewPage() {
                 <span className="text-xs font-semibold uppercase tracking-wider">Family ({family.length})</span>
               </button>
               {familyExpanded && (
-                <div className="px-4 pb-3 space-y-1 max-h-48 overflow-y-auto">
-                  {family.map(m => (
-                    <div key={m.id} className="flex items-center justify-between rounded bg-muted/50 px-2.5 py-1.5 text-sm">
-                      <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-medium text-primary">
-                          {m.fullName.charAt(0)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{m.fullName} {m.isPrimary && <span className="text-[10px] text-primary">(Primary)</span>}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{m.relationship} · {m.age} yrs{m.occupation ? ` · ${m.occupation}` : ''}</p>
+                <div className="px-4 pb-3 space-y-1.5 max-h-64 overflow-y-auto">
+                  {family.map((m, i) => {
+                    const bgColors = ['bg-muted/40', 'bg-muted/20', 'bg-muted/30'];
+                    const dotColors = ['bg-primary', 'bg-accent', 'bg-secondary'];
+                    return (
+                      <div key={m.id} className={`rounded-lg ${bgColors[i % 3]} px-3 py-2 transition-colors hover:bg-muted/50`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${m.isPrimary ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground'} text-[10px] font-semibold shadow-sm`}>
+                              {m.fullName.charAt(0)}
+                              <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ${dotColors[i % 3]} ring-1 ring-card`} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-semibold text-foreground truncate">{m.fullName}</p>
+                                {m.isPrimary && <span className="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-medium text-primary leading-none">Primary</span>}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                <span>{m.relationship}</span>
+                                <span>&middot;</span>
+                                <span>{m.age} yrs</span>
+                                {m.occupation && <><span>&middot;</span><span className="truncate">{m.occupation}</span></>}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {m.status && (
+                              <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground leading-none">{m.status}</span>
+                            )}
+                            {m.income != null && (
+                              <span className="text-[10px] font-semibold text-foreground">₱{Number(m.income).toLocaleString()}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      {m.income != null && (
-                        <span className="text-[10px] font-medium shrink-0">₱{Number(m.income).toLocaleString()}</span>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
 
-          {/* Family Tree (collapsed by default, compact) */}
+          {/* Family Tree (interactive graph) */}
           <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
             <div className="flex items-center gap-2 text-primary mb-3">
               <UsersIcon size={16} />
               <h3 className="text-xs font-semibold uppercase tracking-wider">Family Tree</h3>
             </div>
-            {id && <FamilyGraph beneficiaryId={id} />}
+            <FamilyGraph
+              loading={famLoading && !famGraph}
+              error={famError ? (famError as any)?.message || 'Failed to load family graph' : null}
+              members={(famGraph?.members || []) as any}
+              primary={(famGraph?.primary || null) as any}
+            />
           </div>
 
           {/* Consent */}

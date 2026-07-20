@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
-import { CreditCard, Printer, Search, ClipboardList, Plus } from 'lucide-react';
+import { CreditCard, Printer, Search, ClipboardList, Plus, Eye } from 'lucide-react';
 
 interface ServiceLog { id: string; accessCardCode: string; serviceType: string; serviceDate: string; servedBy?: string; remarks: string; createdAt: string; }
 
@@ -83,6 +83,15 @@ export function AccessCardPage() {
     { accessorKey: 'servedBy', header: 'Served By', cell: ({ row }) => <span className="text-muted-foreground">{row.original.servedBy || '-'}</span> },
     { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-muted-foreground">{row.original.remarks || '-'}</span> },
     { accessorKey: 'createdAt', header: 'Logged At', cell: ({ row }) => <span className="text-muted-foreground">{new Date(row.original.createdAt).toLocaleDateString()}</span> },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/beneficiary/${row.original.id}/card`)} aria-label="View">
+          <Eye size={14} className="mr-1" /> View
+        </Button>
+      ),
+    },
   ];
 
   if (loading) {
