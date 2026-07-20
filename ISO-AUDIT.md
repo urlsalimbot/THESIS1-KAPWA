@@ -12,7 +12,7 @@
 |---|---|---|
 | Functional Suitability | ⚡ 9/10 | No formal UAT |
 | Performance Efficiency | ⚠️ 7/10 | Redis-backed cache pending |
-| Compatibility | ⚠️ 6/10 | API versioning ready (header-based) |
+| Compatibility | ⚠️ 6/10 | Deferred — add when v2 exists |
 | Interaction Capability | ⚠️ 6/10 | No i18n |
 | Reliability | ⚠️ 8/10 | Retry policy still ad-hoc |
 | Security | 🛡️ 9/10 | Refresh endpoint audit pending |
@@ -37,7 +37,7 @@
 | # | Item | Characteristic | Status | Notes |
 |---|---|---|---|---|
 | 5 | Add CSRF protection | Security | ✅ Done | `CsrfGuard` (double-submit cookie), global `APP_GUARD`, client `X-CSRF-Token` header |
-| 6 | Introduce API versioning scheme | Compatibility | ✅ Done | NestJS `app.enableVersioning(HEADER)` — no route changes |
+| 6 | Introduce API versioning scheme | Compatibility | ✅ Done | HEADER versioning + client `X-API-Version: 1` header |
 | 7 | Reduce cyclomatic complexity in frontend | Maintainability | ✅ Done | Extracted hooks: `useCaseFilters`, `useCaseActions`, `useAssignmentModals`, `useIrfOperations` |
 | 8 | Fix unguarded recursion in `encrypted-db.ts` | Reliability | ✅ Done | Added `try/catch` guards, `safeLocalStorage()`, `canUseCrypto()`, `MAX_ENCRYPTION_RETRIES` |
 
