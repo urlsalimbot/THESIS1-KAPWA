@@ -10,7 +10,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.HEADER, header: 'X-API-Version', defaultVersion: '1' });
+  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.use(helmet());
   app.use(cookieParser());
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -19,7 +19,7 @@ async function bootstrap() {
     origin: ['http://localhost:3001', 'http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
     credentials: true,
     methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-API-Version'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   });
 
   const config = new DocumentBuilder()

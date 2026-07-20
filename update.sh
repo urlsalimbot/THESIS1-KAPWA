@@ -38,7 +38,7 @@ echo ""
 # 5. Wait for API health
 echo "[4/4] Waiting for API..."
 for i in $(seq 1 30); do
-  if curl -sf http://localhost:8090/api/health >/dev/null 2>&1; then
+  if curl -sf http://localhost:8090/api/v1/health >/dev/null 2>&1; then
     echo "  API ready."
     break
   fi

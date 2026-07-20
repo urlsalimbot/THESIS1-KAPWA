@@ -1,7 +1,6 @@
 import { ApiError } from './api-error';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const API_VERSION = '1';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'kapwa_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const TIMEOUT_MS = 10_000;
@@ -74,7 +73,7 @@ async function rawRequest<T>(
     : internalController.signal;
 
   try {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-API-Version': API_VERSION };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
     if (method !== 'GET') {
@@ -109,7 +108,7 @@ async function refreshToken(): Promise<boolean> {
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Version': API_VERSION },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: refresh }),
       });
       if (!res.ok) {
@@ -194,7 +193,7 @@ async function rawUpload(path: string, file: Blob, fileName: string): Promise<st
   formData.append('file', file, fileName);
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: { 'X-API-Version': API_VERSION, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
@@ -219,7 +218,7 @@ export function dataURItoBlob(dataUrl: string): Blob {
 export async function downloadCsrPdf(controlNo: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE}/csr/${controlNo}/pdf`, {
-    headers: { 'X-API-Version': API_VERSION, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error('PDF download failed');
   const blob = await res.blob();
@@ -235,7 +234,7 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(
     `${API_BASE}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`,
-    { headers: { 'X-API-Version': API_VERSION, ...(token ? { Authorization: `Bearer ${token}` } : {}) } },
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
   if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
   const blob = await res.blob();
