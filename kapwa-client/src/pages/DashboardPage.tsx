@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, DollarSign, Plus, Eye } from 'lucide-react';
+import { TrendingUp, Clock, DollarSign, Plus, Eye, AlertTriangle, Search, Download } from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -29,7 +29,12 @@ import { DashboardEngine } from '@/components/dashboard/DashboardEngine';
 import type { WidgetConfig } from '@/components/dashboard/DashboardEngine';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
-interface CaseRow { id: string; name: string; category: string; barangay: string; remarks: string; date: string; status: string; updatedAt?: string; }
+interface CaseRow {
+  id: string; no: number; surname: string; first: string; middle: string;
+  gender: string; ageRange: string; category: string; barangay: string;
+  remarks: string; date: string; status: string; controlNo: string;
+  slaOverdue?: boolean; createdAt: string;
+}
 
 interface DashboardData {
   servedToday?: number; servedChange?: string; lastSync?: string;
@@ -48,48 +53,21 @@ interface DailyCounts {
   [day: string]: { interventions: number; cases: number };
 }
 
-function CaseActions({ id }: { id: string }) {
-  const nav = useNavigate();
-  return (
-    <Button variant="ghost" size="sm" onClick={() => nav(`/cases/${id}`)} aria-label="View Case">
-      <Eye size={14} className="mr-1" /> View
-    </Button>
-  );
-}
+const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  pending_assessment: 'outline',
+  in_review: 'secondary',
+  approved: 'default',
+  disbursed: 'secondary',
+  closed: 'outline',
+};
 
-const StatusBadge = React.memo(({ status }: { status: string }) => {
-  const variantMap: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-    approved: 'default', in_review: 'secondary', pending_assessment: 'outline', disbursed: 'secondary', closed: 'outline',
-  };
-  const labelMap: Record<string, string> = {
-    pending_assessment: 'Pending', in_review: 'In Review', approved: 'Approved', disbursed: 'Disbursed', closed: 'Closed',
-  };
-  return <Badge variant={variantMap[status] || 'outline'}>{labelMap[status] || status}</Badge>;
-});
-
-const DEFAULT_SLA_HOURS = 48;
-
-const dashboardCaseColumns: ColumnDef<CaseRow>[] = [
-  { accessorKey: 'id', header: 'Case ID', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.id}</span> },
-  { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
-  { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
-  { accessorKey: 'barangay', header: 'Barangay' },
-  { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-  { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-  {
-    accessorKey: 'sla', header: 'SLA', cell: ({ row }) => {
-      const { updatedAt } = row.original;
-      if (!updatedAt) return <span className="text-xs text-muted-foreground">&mdash;</span>;
-      return <SlaTimer stageStartedAt={updatedAt} slaHours={DEFAULT_SLA_HOURS} size="sm" />;
-    },
-  },
-  { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
-  {
-    id: 'actions',
-    header: 'Actions',
-    cell: ({ row }) => <CaseActions id={row.original.id} />,
-  },
-];
+const STATUS_LABELS: Record<string, string> = {
+  pending_assessment: 'Pending',
+  in_review: 'In Review',
+  approved: 'Approved',
+  disbursed: 'Disbursed',
+  closed: 'Closed',
+};
 
 const WORKER_ROLES = ['social_worker', 'admin'];
 
@@ -114,6 +92,32 @@ export function DashboardPage() {
   );
 
   const cases = useMemo(() => data?.recentCases ?? [], [data]);
+
+  const columns: ColumnDef<CaseRow>[] = [
+    { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.no}</span> },
+    { accessorKey: 'surname', header: 'Surname', cell: ({ row }) => <button className="font-medium text-primary hover:underline text-left" onClick={() => navigate(`/cases/${row.original.id}`)}>{row.original.surname}</button> },
+    { accessorKey: 'first', header: 'First' },
+    { accessorKey: 'middle', header: 'Middle' },
+    { accessorKey: 'gender', header: 'Gender' },
+    { accessorKey: 'ageRange', header: 'Age Range', cell: ({ row }) => <Badge variant="outline">{row.original.ageRange}</Badge> },
+    { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
+    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{STATUS_LABELS[row.original.status] || row.original.status}</Badge> },
+    { id: 'sla', header: 'SLA', cell: ({ row }) => row.original.slaOverdue ? (
+      <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+        <AlertTriangle size={12} /> OVERDUE
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">On Track</span>
+    )},
+    { accessorKey: 'barangay', header: 'Barangay' },
+    { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
+    { id: 'actions', header: 'Actions', cell: ({ row }) => (
+      <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View Case">
+        <Eye size={14} className="mr-1" /> View
+      </Button>
+    )},
+  ];
   const lastSync = data ? Date.now() : null;
   const loading = isLoading && WORKER_ROLES.includes(role);
 
@@ -194,7 +198,7 @@ export function DashboardPage() {
         </div>
         <div className="lg:col-span-2">
           <h2 className="text-lg font-semibold tracking-tight mb-3">Recent Cases</h2>
-          <DataTable columns={dashboardCaseColumns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
+          <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
         </div>
       </div>
     </PageShell>

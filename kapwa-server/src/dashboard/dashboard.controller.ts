@@ -6,6 +6,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { DashboardService } from './dashboard.service';
 import { CaseStatus } from '../cases/case.entity';
 import { AuthenticatedRequest } from '../auth/types';
+import { SLA_OVERDUE_DAYS } from './constants';
 
 @ApiTags('Dashboard')
 @Controller('dashboard')
@@ -53,15 +54,33 @@ export class DashboardController {
         recentInterventions: metrics.recentInterventions || 0,
         byStatus: metrics.byStatus || [],
         lastSync,
-        recentCases: recentCasesRaw.map((c: any) => ({
-          id: c.controlNo,
-          name: `${c.beneficiary?.firstName || ''} ${c.beneficiary?.surname || ''}`.trim(),
-          category: c.serviceRequested?.join(', ') || '',
-          barangay: c.beneficiary?.address?.split(',').pop()?.trim() || '',
-          remarks: c.remarks || '',
-          date: c.updatedAt,
-          status: c.status,
-        })),
+        recentCases: recentCasesRaw.map((c: any, i: number) => {
+          const ben = c.beneficiary || {};
+          const age = ben.age || 0;
+          const createdAt = c.createdAt?.toISOString?.() ?? c.createdAt ?? '';
+          const updatedAt = c.updatedAt?.toISOString?.() ?? c.updatedAt ?? '';
+          const overdueStatuses = [CaseStatus.PENDING, CaseStatus.IN_REVIEW];
+          const createdTime = new Date(createdAt).getTime();
+          const slaOverdue = overdueStatuses.includes(c.status) && !isNaN(createdTime)
+            && (Date.now() - createdTime) > SLA_OVERDUE_DAYS * 24 * 60 * 60 * 1000;
+          return {
+            id: c.id,
+            no: i + 1,
+            surname: ben.surname || '',
+            first: ben.firstName || '',
+            middle: ben.middleName || '',
+            gender: (ben.gender || '').trim(),
+            ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
+            category: (c.serviceRequested ?? []).join(', '),
+            status: c.status || 'pending_assessment',
+            slaOverdue,
+            barangay: (ben.address || '').split(',').pop()?.trim() || '',
+            remarks: c.remarks || '',
+            date: updatedAt,
+            controlNo: c.controlNo || '',
+            createdAt,
+          };
+        }),
       };
     } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : String(e);
