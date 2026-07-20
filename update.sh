@@ -12,7 +12,7 @@ cd "$(dirname "$0")"
 
 echo "=== Kapwa Update ==="
 echo ""
-COMPOSE="docker-compose -f kapwa-server/docker-compose.yml"
+COMPOSE="docker compose -f kapwa-server/docker-compose.yml"
 
 # 1. Validate .env.production
 if [ ! -f infra/.env.production ]; then
@@ -53,11 +53,11 @@ done
 # 6. Run pending migrations (never auto-seed — seeds truncate data)
 echo ""
 echo "  Running pending migrations..."
-if podman exec kapwa-api node dist/database/migrate.js 2>/dev/null; then
+if docker exec kapwa-api node dist/database/migrate.js 2>/dev/null; then
   echo "  Migrations applied."
 else
   echo "  WARNING: Migration command failed. Check if dist/ is built."
-  echo "  Manual: podman exec kapwa-api npm run migration:run"
+  echo "  Manual: docker exec kapwa-api npm run migration:run"
 fi
 
 echo ""
@@ -66,4 +66,4 @@ echo "  App:    http://localhost:8090"
 echo "  Swagger: http://localhost:8090/api/docs"
 echo ""
 echo "To reseed from scratch (WARNING: erases all data):"
-echo "  podman exec kapwa-api node dist/database/seed-comprehensive.js"
+echo "  docker exec kapwa-api node dist/database/seed-comprehensive.js"

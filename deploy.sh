@@ -5,7 +5,7 @@ set -euo pipefail
 # Kapwa — DigitalOcean Deployment Script
 # ============================================================
 # Prerequisites:
-#   1. A DigitalOcean Droplet (Ubuntu 24.04, Podman + Podman Compose)
+#   1. A DigitalOcean Droplet (Ubuntu 24.04, Docker + Docker Compose)
 #   2. DNS A record pointing your domain to the droplet IP
 #   3. This repo cloned on the droplet
 #   4. infra/.env.production filled with real secrets
@@ -15,7 +15,7 @@ cd "$(dirname "$0")"
 
 echo "=== Kapwa Deployment ==="
 echo ""
-COMPOSE="docker-compose -f kapwa-server/docker-compose.yml"
+COMPOSE="docker compose -f kapwa-server/docker-compose.yml"
 
 # 1. Validate .env.production
 if [ ! -f infra/.env.production ]; then
