@@ -130,7 +130,7 @@ function FilterBar({ searchInput, onSearchChange, categoryFilter, onCategoryChan
 export function BeneficiariesPage() {
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [barangayFilter, setBarangayFilter] = useState('all');
@@ -150,14 +150,17 @@ export function BeneficiariesPage() {
     search: debouncedSearch || undefined,
     category: categoryFilter || undefined,
     barangay: barangayFilter === 'all' ? undefined : barangayFilter,
+    page: pagination.pageIndex + 1,
+    limit: pagination.pageSize,
   };
   const swrKey = queryKeys.beneficiaries.list(params);
-  const { data, isLoading, isValidating } = useSWR<Record<string, unknown>[]>(swrKey, {
+  const { data, isLoading, isValidating } = useSWR<{ data: Record<string, unknown>[]; total: number }>(swrKey, {
     keepPreviousData: true,
   });
 
   // Map raw data → typed Beneficiary[] (memoized for React.memo compatibility)
-  const beneficiaries = useMemo(() => (data || []).map(mapBeneficiary), [data]);
+  const beneficiaries = useMemo(() => (data?.data || []).map(mapBeneficiary), [data]);
+  const total = data?.total ?? 0;
   const lastSync = data ? Date.now() : null;
 
   const loading = isLoading;
@@ -203,7 +206,7 @@ export function BeneficiariesPage() {
         <DataTable
           columns={beneficiaryColumns}
           data={beneficiaries}
-          rowCount={beneficiaries.length}
+          rowCount={total}
           pagination={pagination}
           onPaginationChange={setPagination}
           sorting={[]}

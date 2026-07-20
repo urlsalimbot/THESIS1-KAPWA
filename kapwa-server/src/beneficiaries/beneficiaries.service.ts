@@ -113,7 +113,8 @@ export class BeneficiariesService {
       }
     }
     paginate(qb, page, limit);
-    return qb.getMany();
+    const [data, total] = await qb.getManyAndCount();
+    return { data, total };
   }
 
   async findByUserId(userId: string) {
