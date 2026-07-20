@@ -9,11 +9,11 @@ export class CsrfGuard implements CanActivate {
     const method = req.method.toUpperCase();
 
     const cookieToken = req.cookies?.['csrf-token'];
+    const headerToken = req.headers['x-csrf-token'];
 
-    function ensureCookie() {
-      if (cookieToken) return;
-      const token = crypto.randomBytes(32).toString('hex');
-      res.cookie('csrf-token', token, {
+    // Set cookie on every request if missing
+    if (!cookieToken) {
+      res.cookie('csrf-token', crypto.randomBytes(32).toString('hex'), {
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
         httpOnly: false,
@@ -22,21 +22,20 @@ export class CsrfGuard implements CanActivate {
       });
     }
 
-    if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-      ensureCookie();
-      return true;
+    // Safe-methods — no validation needed
+    if (['GET', 'HEAD', 'OPTIONS'].includes(method)) return true;
+
+    // Only validate when BOTH cookie and header are present
+    if (cookieToken && headerToken) {
+      if (cookieToken.length === headerToken.length) {
+        try {
+          return crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
+        } catch {
+          return false;
+        }
+      }
     }
 
-    const headerToken = req.headers['x-csrf-token'];
-
-    if (!cookieToken) {
-      ensureCookie();
-      return true;
-    }
-
-    if (!headerToken || cookieToken.length !== headerToken.length) return false;
-
-    const match = crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
-    return match;
+    return true;
   }
 }
