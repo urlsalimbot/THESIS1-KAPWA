@@ -90,6 +90,7 @@ function FilterSelect({ label, value, onChange, options, className }: {
 function ActionsCell({ c, actionLoading, onAction }: {
   c: CaseRow; actionLoading: string | null; onAction: (action: string, id: string) => void;
 }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const role = user?.role || '';
   const buttons: { action: string; label: string }[] = [];
@@ -104,10 +105,11 @@ function ActionsCell({ c, actionLoading, onAction }: {
     buttons.push({ action: 'close', label: 'Close' });
   }
 
-  if (buttons.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
-
   return (
     <div className="flex gap-1">
+      <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${c.id}`)}>
+        View
+      </Button>
       {buttons.map(b => (
         <Button key={b.action} variant="outline" size="sm"
           disabled={actionLoading === c.id}
@@ -131,7 +133,6 @@ function exportCSV(rows: CaseRow[]) {
 }
 
 export function CasesPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { actionLoading, handleAction } = useCaseActions();
 
@@ -143,7 +144,7 @@ export function CasesPage() {
 
   const columns: ColumnDef<CaseRow>[] = [
     { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.no}</span> },
-    { accessorKey: 'surname', header: 'Surname', cell: ({ row }) => <button className="font-medium text-primary hover:underline text-left" onClick={() => navigate(`/cases/${row.original.id}`)}>{row.original.surname}</button> },
+    { accessorKey: 'surname', header: 'Surname' },
     { accessorKey: 'first', header: 'First' },
     { accessorKey: 'middle', header: 'Middle' },
     { accessorKey: 'gender', header: 'Gender' },

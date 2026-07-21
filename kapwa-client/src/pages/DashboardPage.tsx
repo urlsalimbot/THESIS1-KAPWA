@@ -25,8 +25,8 @@ import { TrendsChart } from '@/components/dashboard/TrendsChart';
 import { NeedsAttention } from '@/components/dashboard/NeedsAttention';
 import { BarangayBreakdown } from '@/components/dashboard/BarangayBreakdown';
 import { ActivityCalendar } from '@/components/dashboard/ActivityCalendar';
-import { DashboardEngine } from '@/components/dashboard/DashboardEngine';
-import type { WidgetConfig } from '@/components/dashboard/DashboardEngine';
+import { StaticDashboard } from '@/components/dashboard/StaticDashboard';
+import type { WidgetConfig } from '@/components/dashboard/StaticDashboard';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
 interface CaseRow {
@@ -95,7 +95,7 @@ export function DashboardPage() {
 
   const columns: ColumnDef<CaseRow>[] = [
     { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.no}</span> },
-    { accessorKey: 'surname', header: 'Surname', cell: ({ row }) => <button className="font-medium text-primary hover:underline text-left" onClick={() => navigate(`/cases/${row.original.id}`)}>{row.original.surname}</button> },
+    { accessorKey: 'surname', header: 'Surname' },
     { accessorKey: 'first', header: 'First' },
     { accessorKey: 'middle', header: 'Middle' },
     { accessorKey: 'gender', header: 'Gender' },
@@ -162,7 +162,6 @@ export function DashboardPage() {
     { key: 'case-status', component: <CaseStatusChart data={data?.byStatus || []} />, defaultW: 2, defaultH: 5, minH: 4 },
     { key: 'sla', component: <SlaWidget overdueCount={data?.urgentCount ?? 0} />, defaultW: 1, defaultH: 5, minH: 4 },
     { key: 'trends', component: <TrendsChart data={trends || []} />, defaultW: 2, defaultH: 5, minH: 4 },
-    { key: 'needs-attention', component: <NeedsAttention cases={cases} />, defaultW: 2, defaultH: 5, minH: 4 },
     { key: 'barangay', component: <BarangayBreakdown cases={barangayData} />, defaultW: 1, defaultH: 5, minH: 4 },
   ];
 
@@ -186,20 +185,21 @@ export function DashboardPage() {
       )}
 
       <div className="mt-4">
-        <DashboardEngine
-          widgets={widgets}
-          storageKey={`dashboard-layout-${role}`}
-        />
+        <StaticDashboard widgets={widgets} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+        <div className="lg:col-span-2">
+          <NeedsAttention cases={cases.map(c => ({ id: c.id, name: `${c.surname}, ${c.first}`.trim(), status: c.status }))} />
+        </div>
         <div className="lg:col-span-1">
           <ActivityCalendar data={dailyCounts ?? null} year={now.getFullYear()} month={now.getMonth() + 1} />
         </div>
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold tracking-tight mb-3">Recent Cases</h2>
-          <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
-        </div>
+      </div>
+
+      <div className="mt-4">
+        <h2 className="text-lg font-semibold tracking-tight mb-3">Recent Cases</h2>
+        <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
       </div>
     </PageShell>
   );

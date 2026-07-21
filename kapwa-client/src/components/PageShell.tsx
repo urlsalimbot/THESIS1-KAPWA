@@ -33,7 +33,7 @@ export function PageShell({ title, description, actions, backTo, cachedAt, child
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {backTo && (
-            <Button variant="ghost" size="sm" onClick={backTo.onClick} className="shrink-0 -ml-1.5">
+            <Button variant="outline" size="sm" onClick={backTo.onClick} className="shrink-0 -ml-1.5">
               <ArrowLeft size={16} className="mr-1" /> {backTo.label}
             </Button>
           )}

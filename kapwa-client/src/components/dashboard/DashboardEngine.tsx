@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import GridLayout, { Layout } from 'react-grid-layout';
+import GridLayout, { verticalCompactor } from 'react-grid-layout';
+import type { Layout, LayoutItem } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 
 export interface WidgetConfig {
@@ -18,7 +19,7 @@ interface DashboardEngineProps {
   storageKey?: string;
 }
 
-function getDefaultLayout(widgets: WidgetConfig[], cols: number): Layout[] {
+function getDefaultLayout(widgets: WidgetConfig[], cols: number): LayoutItem[] {
   return widgets.map((w, i) => ({
     i: w.key,
     x: i % cols,
@@ -30,6 +31,11 @@ function getDefaultLayout(widgets: WidgetConfig[], cols: number): Layout[] {
   }));
 }
 
+/**
+ * @deprecated Use `StaticDashboard` instead. This component uses `react-grid-layout`
+ * with drag-and-drop which caused viewport-dependent issues and added unnecessary
+ * complexity for a desktop-first internal tool. Kept for reference.
+ */
 export function DashboardEngine({
   widgets,
   rowHeight = 60,
@@ -49,7 +55,7 @@ export function DashboardEngine({
     return () => observer.disconnect();
   }, []);
 
-  const [layout, setLayout] = useState<Layout[]>(() => {
+  const [layout, setLayout] = useState<LayoutItem[]>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -60,42 +66,29 @@ export function DashboardEngine({
     return getDefaultLayout(widgets, cols);
   });
 
-  const onLayoutChange = useCallback((newLayout: Layout[]) => {
-    setLayout(newLayout);
+  const onLayoutChange = useCallback((newLayout: Layout) => {
+    setLayout([...newLayout]);
     try {
       localStorage.setItem(storageKey, JSON.stringify({ lg: newLayout }));
     } catch {}
   }, [storageKey]);
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1023px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
   return (
     <div ref={containerRef}>
       <GridLayout
         layout={layout}
-        cols={cols}
-        rowHeight={rowHeight}
         width={width}
         onLayoutChange={onLayoutChange}
-        isDraggable={!isMobile}
-        isResizable={!isMobile}
-        draggableHandle=".widget-drag-handle"
-        compactType="vertical"
+        gridConfig={{ cols, rowHeight, margin: [10, 10] as const }}
+        dragConfig={{ enabled: true, handle: '.widget-drag-handle' }}
+        resizeConfig={{ enabled: true }}
+        compactor={verticalCompactor}
       >
         {widgets.map(w => (
           <div key={w.key} className="relative">
-            {!isMobile && (
-              <div className="widget-drag-handle absolute top-1 right-2 z-10 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="3" cy="3" r="1"/><circle cx="9" cy="3" r="1"/><circle cx="3" cy="9" r="1"/><circle cx="9" cy="9" r="1"/><circle cx="3" cy="6" r="1"/><circle cx="9" cy="6" r="1"/></svg>
-              </div>
-            )}
+            <div className="widget-drag-handle absolute top-1 right-2 z-10 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="3" cy="3" r="1"/><circle cx="9" cy="3" r="1"/><circle cx="3" cy="9" r="1"/><circle cx="9" cy="9" r="1"/><circle cx="3" cy="6" r="1"/><circle cx="9" cy="6" r="1"/></svg>
+            </div>
             {w.component}
           </div>
         ))}
