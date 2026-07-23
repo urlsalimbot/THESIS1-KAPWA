@@ -73,7 +73,8 @@ export const queryKeys = {
     list: () => memo('accessCards.list', () => ['access-cards'] as const),
     log: () => memo('accessCards.log', () => ['access-cards', 'log'] as const),
     print: (id: string) => memo(`accessCards.print.${id}`, () => ['access-cards', 'print', id] as const),
-    summary: (id: string) => memo(`accessCards.summary.${id}`, () => ['access-cards', 'summary', id] as const),
+    summary: (benId: string) => memo(`accessCards.summary.${benId}`, () => ['access-cards', 'beneficiary', benId, 'card', 'summary'] as const),
+    detail: (benId: string) => memo(`accessCards.detail.${benId}`, () => ['access-cards', 'beneficiary', benId, 'card'] as const),
   },
   filing: {
     all: ['filing'] as const,
