@@ -73,6 +73,7 @@ export const queryKeys = {
     list: () => memo('accessCards.list', () => ['access-cards'] as const),
     log: () => memo('accessCards.log', () => ['access-cards', 'log'] as const),
     print: (id: string) => memo(`accessCards.print.${id}`, () => ['access-cards', 'print', id] as const),
+    summary: (id: string) => memo(`accessCards.summary.${id}`, () => ['access-cards', 'summary', id] as const),
   },
   filing: {
     all: ['filing'] as const,
@@ -87,18 +88,18 @@ export const queryKeys = {
     all: ['tracker'] as const,
     daily: (params: { date: string }) =>
       memo(`tracker.daily.${params.date}`, () => {
-        const key: unknown[] = ['tracker', 'daily'];
+        const key: unknown[] = ['cases', 'tracker', 'daily'];
         key.push(params);
         return key as readonly unknown[];
       }),
     range: (params: { start: string; end: string }) =>
       memo(`tracker.range.${params.start}.${params.end}`, () => {
-        const key: unknown[] = ['tracker', 'range'];
+        const key: unknown[] = ['cases', 'tracker', 'range'];
         key.push(params);
         return key as readonly unknown[];
       }),
-    stats: () => memo('tracker.stats', () => ['tracker', 'stats'] as const),
-    list: () => memo('tracker.list', () => ['tracker', 'daily'] as const),
+    stats: () => memo('tracker.stats', () => ['cases', 'tracker', 'stats'] as const),
+    list: () => memo('tracker.list', () => ['cases', 'tracker', 'daily'] as const),
   },
   messages: {
     all: ['chat'] as const,
@@ -127,11 +128,6 @@ export const queryKeys = {
   intake: {
     all: ['intake'] as const,
     recent: () => memo('intake.recent', () => ['intake', 'recent'] as const),
-  },
-  interventions: {
-    all: ['interventions'] as const,
-    byCase: (caseId: string) =>
-      memo(`interventions.byCase.${caseId}`, () => ['interventions', 'case', caseId] as const),
   },
   programAssignments: {
     all: ['programAssignments'] as const,

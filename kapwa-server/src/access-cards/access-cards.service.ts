@@ -40,6 +40,24 @@ export class AccessCardsService {
     }
   }
 
+  async getSummary(beneficiaryId: string) {
+    const ben = await this.repo.query(
+      'SELECT id, access_card_code, surname, first_name, barangay FROM beneficiaries WHERE id = $1',
+      [beneficiaryId]
+    );
+    if (!ben?.[0]?.access_card_code) {
+      throw new NotFoundException('Beneficiary has no Access Card');
+    }
+    const code = ben[0].access_card_code;
+    const services = await this.repo.find({ where: { accessCardCode: code } });
+    const byCategory: Record<string, number> = {};
+    for (const s of services) {
+      const cat = s.category || 'case_service';
+      byCategory[cat] = (byCategory[cat] || 0) + 1;
+    }
+    return { cardCode: code, total: services.length, byCategory };
+  }
+
   async findBeneficiaryCard(beneficiaryId: string) {
     const ben = await this.repo.query(
       'SELECT id, access_card_code, surname, first_name, barangay FROM beneficiaries WHERE id = $1',
@@ -55,7 +73,7 @@ export class AccessCardsService {
     return { beneficiary: ben[0], code: ben[0].access_card_code, services };
   }
 
-  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agency?: string; workerNameSign?: string }) {
+  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agency?: string; workerNameSign?: string; category?: string }) {
     const entry = this.repo.create({
       accessCardCode: data.accessCardCode,
       serviceRendered: data.serviceRendered,
@@ -63,15 +81,42 @@ export class AccessCardsService {
       cost: data.cost,
       agency: data.agency,
       workerNameSign: data.workerNameSign,
+      category: data.category || 'referral',
     });
     return this.repo.save(entry);
+  }
+
+  async autoLogFromIntervention(intervention: { caseId: string; serviceName: string; deliveryDate?: string; amount?: number }) {
+    const caseRow = await this.repo.query(
+      'SELECT id, beneficiary_id FROM cases WHERE id = $1',
+      [intervention.caseId]
+    );
+    if (!caseRow?.[0]?.beneficiary_id) return;
+    const ben = await this.repo.query(
+      'SELECT id, access_card_code FROM beneficiaries WHERE id = $1',
+      [caseRow[0].beneficiary_id]
+    );
+    if (!ben?.[0]?.access_card_code) return;
+    const entry = this.repo.create({
+      accessCardCode: ben[0].access_card_code,
+      serviceRendered: intervention.serviceName,
+      serviceDate: intervention.deliveryDate ? new Date(intervention.deliveryDate) : new Date(),
+      cost: intervention.amount,
+      category: 'case_service',
+    });
+    await this.repo.save(entry);
   }
 
   async findByCard(cardCode: string) {
     return this.repo.find({ where: { accessCardCode: cardCode }, order: { serviceDate: 'DESC' } });
   }
 
-  async findAll() {
-    return this.repo.find({ order: { serviceDate: 'DESC' }, take: DEFAULT_LIST_LIMIT });
+  async findAll(page = 1, limit = 10) {
+    const [data, total] = await this.repo.findAndCount({
+      order: { serviceDate: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
   }
 }
