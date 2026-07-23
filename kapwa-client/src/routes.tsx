@@ -37,6 +37,7 @@ import { CreateInterventionPage } from './pages/CreateInterventionPage';
 import { CreateProgramPage } from './pages/CreateProgramPage';
 import { AccessCardPage } from './pages/AccessCardPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
+import { AccessCardViewPage } from './pages/AccessCardViewPage';
 import { ProgramDetailPage } from './pages/ProgramDetailPage';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { Layout } from './components/Layout';
@@ -108,6 +109,7 @@ const router = createBrowserRouter([
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },
   { path: '/notifications', element: <Private><NotificationsPage /></Private> },
+  { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
   { path: '/my-access-card', element: <Private roles={['claimant']}><MyAccessCardPage /></Private> },
   { path: '/reports', element: <Private roles={['mayor']}><MayorReportsPage /></Private> },
   { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },
