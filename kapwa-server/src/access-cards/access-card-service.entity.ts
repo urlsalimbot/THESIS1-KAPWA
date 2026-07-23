@@ -22,6 +22,9 @@ export class AccessCardService extends BaseEntity {
   @Column({ name: 'worker_name_sign', nullable: true })
   workerNameSign?: string;
 
+  @Column({ name: 'category', nullable: true })
+  category?: string;
+
   @Column({ name: 'intervention_id', nullable: true })
   interventionId?: string;
 }
