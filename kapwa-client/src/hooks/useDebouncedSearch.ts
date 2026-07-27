@@ -32,11 +32,12 @@ export function useDebouncedSearch(query: string, delay = 300, limit = 10) {
     ? queryKeys.beneficiaries.list({ search: trimmed, limit })
     : null;
 
-  const { data, isLoading } = useSWR<Record<string, unknown>[]>(swrKey, {
+  const { data, isLoading } = useSWR<{ data: Record<string, unknown>[] } | Record<string, unknown>[]>(swrKey, {
     keepPreviousData: true,
   });
 
-  const results = useMemo(() => (data || []).map(mapToSearchResult), [data]);
+  const list = Array.isArray(data) ? data : (data as { data?: Record<string, unknown>[] })?.data || [];
+  const results = useMemo(() => list.map(mapToSearchResult), [list]);
 
   return { results, loading: isLoading };
 }

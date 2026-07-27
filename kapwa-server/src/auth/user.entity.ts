@@ -28,6 +28,18 @@ export class User extends BaseEntity {
   @Column({ name: 'phone', nullable: true })
   phone?: string;
 
+  @Column({ name: 'person_id', nullable: true })
+  personId?: string;
+
+  @Column({ name: 'pending_person_id', nullable: true })
+  pendingPersonId?: string;
+
+  @Column({ name: 'person_link_code', nullable: true })
+  personLinkCode?: string;
+
+  @Column({ name: 'person_link_code_expires_at', nullable: true, type: 'timestamp' })
+  personLinkCodeExpiresAt?: Date;
+
   @Column({ name: 'assigned_barangay', nullable: true })
   assignedBarangay?: string;
 

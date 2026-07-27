@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight, Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { api } from '../lib/api';
-import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 export function CoordinatorDashboardPage() {
   const navigate = useNavigate();
@@ -16,16 +16,37 @@ export function CoordinatorDashboardPage() {
   const [stats, setStats] = useState<any[]>([]);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const urlLimit = parseInt(searchParams.get('limit') || '10', 10);
+
+  const updateURL = useCallback((overrides: Record<string, string | undefined>) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of Object.entries(overrides)) {
+        if (v) next.set(k, v);
+        else next.delete(k);
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+
+  const onPaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      updateURL({ page: String(next.pageIndex + 1), limit: String(next.pageSize) });
+    },
+    [pagination, updateURL],
+  );
 
   const entryColumns: ColumnDef<any>[] = [
-    { accessorKey: 'id', header: 'Case ID' },
-    { accessorKey: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs">{row.original.date}</span> },
+    { id: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
     { accessorKey: 'category', header: 'Category' },
     { accessorKey: 'barangay', header: 'Barangay' },
     { accessorKey: 'remarks', header: 'Intervention/Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-    { accessorKey: 'status', header: 'Status' },
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs">{row.original.date}</span> },
     {
       id: 'actions',
       header: 'Actions',
@@ -123,7 +144,7 @@ export function CoordinatorDashboardPage() {
         {searchError && <p className="text-red-600 text-sm mt-2">{searchError}</p>}
         {searchResult && (
           <div className="mt-3 p-3 border rounded-lg bg-gray-50">
-            <p className="text-sm"><strong>Case:</strong> {searchResult.id}</p>
+            <p className="text-sm"><strong>Case:</strong> {searchResult.controlNo || '—'}</p>
             <p className="text-sm"><strong>Status:</strong> {searchResult.status}</p>
             <button onClick={() => navigate(`/cases/${searchResult.id}`)} className="text-blue-600 text-xs mt-1 flex items-center gap-1">
               View details <ArrowRight size={14} />
@@ -145,7 +166,7 @@ export function CoordinatorDashboardPage() {
             data={recentEntries}
             rowCount={recentEntries.length}
             pagination={pagination}
-            onPaginationChange={setPagination}
+            onPaginationChange={onPaginationChange}
             sorting={[]}
           />
         )}

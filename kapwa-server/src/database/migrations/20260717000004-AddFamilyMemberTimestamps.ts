@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddFamilyMemberTimestamps2026071700004 implements MigrationInterface {
-  name = 'AddFamilyMemberTimestamps2026071700004';
+export class ZAddFamilyMemberTimestamps2026071700004 implements MigrationInterface {
+  name = 'ZAddFamilyMemberTimestamps2026071700004';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);

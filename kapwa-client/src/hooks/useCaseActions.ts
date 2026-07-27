@@ -11,20 +11,20 @@ export function useCaseActions() {
 
   const { trigger: requestReview } = useSWRMutation(
     queryKeys.cases.all,
-    (_key, { arg }: { arg: { id: string } }) => api.put(`/cases/${arg.id}/request-review`),
+    (_key, { arg }: { arg: { id: string } }) => api.patch(`/cases/${arg.id}/request-review`),
   );
   const { trigger: disburseCase } = useSWRMutation(
     queryKeys.cases.all,
-    (_key, { arg }: { arg: { id: string } }) => api.put(`/cases/${arg.id}/disburse`, { status: 'disbursed' }),
+    (_key, { arg }: { arg: { id: string } }) => api.patch(`/cases/${arg.id}/disburse`, { status: 'transitioning' }),
   );
   const { trigger: closeCase } = useSWRMutation(
     queryKeys.cases.all,
-    (_key, { arg }: { arg: { id: string } }) => api.put(`/cases/${arg.id}/close`),
+    (_key, { arg }: { arg: { id: string } }) => api.patch(`/cases/${arg.id}/close`),
   );
   const { trigger: overrideCaseStatus } = useSWRMutation(
     queryKeys.cases.all,
     (_key, { arg }: { arg: { id: string; status: string; reason: string } }) =>
-      api.put(`/cases/${arg.id}/override-status`, { status: arg.status, reason: arg.reason }),
+      api.patch(`/cases/${arg.id}/override-status`, { status: arg.status, reason: arg.reason }),
   );
 
   async function handleAction(action: string, caseId: string) {
@@ -61,7 +61,7 @@ export function useCaseActions() {
             setActionLoading(null);
             return;
           }
-          await overrideCaseStatus({ id: caseId, status: 'approved', reason: 'admin override' });
+          await overrideCaseStatus({ id: caseId, status: 'active', reason: 'admin override' });
           break;
       }
       await mutate(queryKeys.cases.all, undefined, { revalidate: true });

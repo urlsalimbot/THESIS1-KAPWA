@@ -32,7 +32,8 @@ interface ApprovalCase {
 
 export function ApprovalPipelinePage() {
   const { mutate: globalMutate } = useSWRConfig();
-  const { data: cases = [], isLoading: loading } = useSWR<ApprovalCase[]>(queryKeys.cases.list());
+  const { data: rawCases, isLoading: loading } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list());
+  const cases = Array.isArray(rawCases) ? rawCases : (rawCases?.data ?? []);
   const [user, setUser] = useState<any>(null);
   const [selectedCase, setSelectedCase] = useState<ApprovalCase | null>(null);
   const [signature, setSignature] = useState<string>('');
@@ -69,10 +70,10 @@ export function ApprovalPipelinePage() {
     setSelectedIds(new Set());
   }, []);
 
-  const pipelineStatus = ['in_review', 'approved', 'disbursed'];
+  const pipelineStatus = ['in_review', 'active', 'transitioning'];
   const grouped = pipelineStatus.map(status => ({
     status,
-    label: status === 'in_review' ? 'In Review' : status === 'approved' ? 'Approved' : 'Disbursed',
+    label: status === 'in_review' ? 'In Review' : status === 'active' ? 'Active' : 'Transitioning',
     items: cases.filter(c => c.status === status),
   }));
 
@@ -90,7 +91,7 @@ export function ApprovalPipelinePage() {
     });
     if (res.ok) {
       const doc = await res.json();
-      await api.put(`/cases/${caseId}/documents`, { certificateUrl: `/api/filing/file/${doc.id}` });
+      await api.patch(`/cases/${caseId}/documents`, { certificateUrl: `/api/filing/file/${doc.id}` });
       globalMutate(queryKeys.cases.all);
     }
   }
@@ -108,7 +109,7 @@ export function ApprovalPipelinePage() {
     });
     if (res.ok) {
       const doc = await res.json();
-      await api.put(`/cases/${caseId}/documents`, { pettyCashVoucherUrl: `/api/filing/file/${doc.id}` });
+      await api.patch(`/cases/${caseId}/documents`, { pettyCashVoucherUrl: `/api/filing/file/${doc.id}` });
       globalMutate(queryKeys.cases.all);
     }
   }
@@ -116,8 +117,8 @@ export function ApprovalPipelinePage() {
   async function handleApprove(caseId: string) {
     setSaving(true);
     try {
-      const targetStatus = action === 'disburse' ? 'disbursed' : 'approved';
-      await api.put(`/cases/${caseId}/approve`, { status: targetStatus, signature });
+      const targetStatus = action === 'disburse' ? 'transitioning' : 'active';
+      await api.patch(`/cases/${caseId}/approve`, { status: targetStatus, signature });
       setSelectedCase(null);
       setAction(null);
       setSignature('');
@@ -198,7 +199,7 @@ export function ApprovalPipelinePage() {
               <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-base">
                 <span className={`w-2 h-2 rounded-full ${
                   group.status === 'in_review' ? 'bg-amber-400' :
-                  group.status === 'approved' ? 'bg-green-400' : 'bg-blue-400'
+                   group.status === 'active' ? 'bg-green-400' : 'bg-blue-400'
                 }`} />
                 {group.label}
                 <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.items.length}</span>
@@ -227,7 +228,7 @@ export function ApprovalPipelinePage() {
                       </div>
                       <Badge variant={
                         c.status === 'in_review' ? 'secondary' :
-                        c.status === 'approved' ? 'default' : 'secondary'
+                        c.status === 'active' ? 'default' : 'secondary'
                       }>{group.label}</Badge>
                     </div>
                     {c.serviceRequested && (
@@ -272,7 +273,7 @@ export function ApprovalPipelinePage() {
                       </div>
                     )}
 
-                    {(group.status === 'approved' || group.status === 'disbursed') && (
+                    {(group.status === 'active' || group.status === 'transitioning') && (
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
                         {c.certificateUrl && (
                           <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600">
@@ -284,9 +285,9 @@ export function ApprovalPipelinePage() {
                             <FileText size={14} /> View Voucher
                           </a>
                         )}
-                        {group.status === 'approved' && user?.role === 'admin' && (
+                        {group.status === 'active' && user?.role === 'admin' && (
                           <Button onClick={() => openApproval(c, 'disburse')} size="sm" variant="secondary" className="w-full mt-1">
-                            <ArrowRight size={14} /> Mark Disbursed
+                            <ArrowRight size={14} /> Mark Transitioned
                           </Button>
                         )}
                       </div>

@@ -1,13 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddIntakeFields2026071400003 implements MigrationInterface {
-  name = 'AddIntakeFields2026071400003';
+export class ZAddIntakeFields2026071400003 implements MigrationInterface {
+  name = 'ZAddIntakeFields2026071400003';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS place_of_birth TEXT`);
     await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS civil_status TEXT`);
     await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS current_address JSONB`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS provincial_address JSONB`);
     await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS philhealth_number TEXT`);
     await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS occupation TEXT`);
     await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS estimated_monthly_income DECIMAL(12,2)`);
@@ -34,7 +33,6 @@ export class AddIntakeFields2026071400003 implements MigrationInterface {
     await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS place_of_birth`);
     await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS civil_status`);
     await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS current_address`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS provincial_address`);
     await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS philhealth_number`);
     await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS occupation`);
     await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS estimated_monthly_income`);

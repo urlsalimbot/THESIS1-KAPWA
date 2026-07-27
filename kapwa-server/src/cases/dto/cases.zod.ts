@@ -63,6 +63,9 @@ export type AssessmentInput = z.infer<typeof AssessmentSchema>;
 
 export const TransitionPlanSchema = z.object({
   selfReliancePlan: z.string().nullable().optional(),
+  selfRelianceLevel: z.number().min(1).max(3).nullable().optional(),
+  sustainabilityPlan: z.string().nullable().optional(),
+  transitionDate: z.string().nullable().optional(),
   referrals: z.array(z.object({
     agencyName: z.string(),
     contactInfo: z.string().nullable().optional(),
@@ -74,4 +77,49 @@ export const TransitionPlanSchema = z.object({
   exitNotes: z.string().nullable().optional(),
 });
 
+export const AssessmentV2Schema = z.object({
+  problemsPresented: z.string().min(1, 'Problem/s presented is required'),
+  socialWorkerAssessment: z.string().min(1, 'Social worker assessment is required'),
+  clientCategory: z.enum([
+    'Children in Need of Special Protection',
+    'Youth in Need of Special Protection',
+    'Women in Especially Difficult Circumstances',
+    'Person with Disability',
+    'Senior Citizen',
+    'Family Head and Other Needy Adult',
+  ]),
+  frvaScore: z.number().min(0).max(100).optional(),
+  swdiScore: z.number().min(0).max(100).optional(),
+  familyDialogueNotes: z.string().optional(),
+  natureOfService: z.array(z.string()).optional(),
+  financialSubsidies: z.record(z.unknown()).optional(),
+  amountAssistance: z.number().positive().optional(),
+  modeFinancialAssistance: z.enum(['Cash', 'Cheque']).optional().nullable(),
+  sourceOfFund: z.string().optional(),
+  legislatorSpecify: z.string().optional().nullable(),
+  otherAssistance: z.record(z.unknown()).optional(),
+  interviewedBy: z.string().optional(),
+  clientSignature: z.string().optional(),
+});
+
+export const ClosureSchema = z.object({
+  closureOutcome: z.enum([
+    'graduated',
+    'self_sufficient',
+    'referred',
+    'incomplete',
+    'deceased',
+  ]),
+  exitNotes: z.string().optional(),
+  clientSignature: z.string().optional(),
+  closureDate: z.string().optional(),
+});
+
+export const RequirementsSchema = z.object({
+  requirementsChecklist: z.record(z.boolean()),
+});
+
 export type TransitionPlanInput = z.infer<typeof TransitionPlanSchema>;
+export type RequirementsInput = z.infer<typeof RequirementsSchema>;
+export type AssessmentV2Input = z.infer<typeof AssessmentV2Schema>;
+export type ClosureInput = z.infer<typeof ClosureSchema>;

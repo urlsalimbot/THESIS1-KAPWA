@@ -19,6 +19,7 @@ describe('IrfService', () => {
       create: jest.fn(),
       save: jest.fn(),
       update: jest.fn(),
+      findAndCount: jest.fn().mockResolvedValue([[], 0]),
       query: jest.fn().mockResolvedValue([]),
     };
 
@@ -79,12 +80,13 @@ describe('IrfService', () => {
           createdAt: new Date(),
         } as any,
       ];
-      repoMock.find.mockResolvedValue(rawRecords);
+      repoMock.findAndCount.mockResolvedValue([rawRecords, 1]);
 
-      const result = await service.findAll();
+      const result = await service.findAll(1, 10);
 
-      expect(result[0].itemBPersonReported!.surname).toBe('[REDACTED]');
-      expect(result[0].itemBPersonReported!.firstName).toBe('[REDACTED]');
+      expect(result.data[0].itemBPersonReported!.surname).toBe('[REDACTED]');
+      expect(result.data[0].itemBPersonReported!.firstName).toBe('[REDACTED]');
+      expect(result.total).toBe(1);
     });
   });
 

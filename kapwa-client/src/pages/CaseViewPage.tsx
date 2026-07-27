@@ -12,23 +12,26 @@ import { Separator } from '@/components/ui/separator';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper } from '@/components/case-view/CaseStepper';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
-import { StepInterventions } from '@/components/case-view/StepInterventions';
-import { StepExitPlan } from '@/components/case-view/StepExitPlan';
-import { StepSignatures } from '@/components/case-view/StepSignatures';
+import { StepImplementHIP } from '@/components/case-view/StepImplementHIP';
+import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDelivery';
+import { StepTransition } from '@/components/case-view/StepTransition';
+import { StepClosure } from '@/components/case-view/StepClosure';
 
 const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  pending_assessment: 'outline',
+  enrolled: 'outline',
+  assessed: 'secondary',
   in_review: 'secondary',
-  approved: 'default',
-  disbursed: 'secondary',
+  active: 'default',
+  transitioning: 'secondary',
   closed: 'outline',
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_assessment: 'Pending Assessment',
+  enrolled: 'Enrolled',
+  assessed: 'Assessed',
   in_review: 'In Review',
-  approved: 'Approved',
-  disbursed: 'Disbursed',
+  active: 'Active',
+  transitioning: 'Transitioning',
   closed: 'Closed',
 };
 
@@ -42,6 +45,9 @@ export function CaseViewPage() {
 
   const { data: caseData, isLoading } = useSWR<any>(
     id ? queryKeys.cases.detail(id) : null,
+  );
+  const { data: interventions = [] } = useSWR<any[]>(
+    id ? queryKeys.cases.interventions(id) : null,
   );
   const { data: history, isLoading: historyLoading } = useSWR<any[]>(
     id ? queryKeys.cases.detail(`${id}/history`) : null,
@@ -57,19 +63,22 @@ export function CaseViewPage() {
   const ageRange = dob ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '';
   const household = ben?.household;
 
-  const [editingAssessment, setEditingAssessment] = useState(false);
+
   const [assessment, setAssessment] = useState({
-    problemsPresented: '',
-    socialWorkerAssessment: '',
-    clientCategory: '',
-    natureOfService: [] as string[],
-    financialSubsidies: {} as Record<string, unknown>,
-    amountAssistance: '' as string | number,
-    modeFinancialAssistance: '',
-    sourceOfFund: '',
-    legislatorSpecify: '',
-    otherAssistance: {} as Record<string, unknown>,
-    clientSignature: '',
+    problemsPresented: caseData?.problemsPresented || '',
+    socialWorkerAssessment: caseData?.socialWorkerAssessment || '',
+    clientCategory: caseData?.clientCategory || '',
+    frvaScore: caseData?.frvaScore || null,
+    swdiScore: caseData?.swdiScore || null,
+    familyDialogueNotes: caseData?.familyDialogueNotes || '',
+    natureOfService: caseData?.natureOfService || ([] as string[]),
+    financialSubsidies: caseData?.financialSubsidies || ({} as Record<string, unknown>),
+    amountAssistance: caseData?.amountAssistance ?? ('' as string | number),
+    modeFinancialAssistance: caseData?.modeFinancialAssistance || '',
+    sourceOfFund: caseData?.sourceOfFund || '',
+    legislatorSpecify: caseData?.legislatorSpecify || '',
+    otherAssistance: caseData?.otherAssistance || ({} as Record<string, unknown>),
+    clientSignature: caseData?.clientSignature || '',
   });
   const [savingAssessment, setSavingAssessment] = useState(false);
 
@@ -79,6 +88,9 @@ export function CaseViewPage() {
         problemsPresented: caseData.problemsPresented || '',
         socialWorkerAssessment: caseData.socialWorkerAssessment || '',
         clientCategory: caseData.clientCategory || '',
+        frvaScore: caseData.frvaScore || null,
+        swdiScore: caseData.swdiScore || null,
+        familyDialogueNotes: caseData.familyDialogueNotes || '',
         natureOfService: (caseData.natureOfService || []) as string[],
         financialSubsidies: (caseData.financialSubsidies || {}) as Record<string, unknown>,
         amountAssistance: caseData.amountAssistance !== undefined && caseData.amountAssistance !== null ? caseData.amountAssistance : '',
@@ -100,9 +112,11 @@ export function CaseViewPage() {
         amountAssistance: typeof assessment.amountAssistance === 'string'
           ? (assessment.amountAssistance === '' ? undefined : parseFloat(assessment.amountAssistance.replace(/,/g, '')))
           : assessment.amountAssistance,
+        frvaScore: assessment.frvaScore || undefined,
+        swdiScore: assessment.swdiScore || undefined,
+        familyDialogueNotes: assessment.familyDialogueNotes || undefined,
       });
       await mutate(queryKeys.cases.detail(id!));
-      setEditingAssessment(false);
     } catch (e) {
       console.error('Failed to save assessment:', e);
     } finally {
@@ -130,13 +144,12 @@ export function CaseViewPage() {
   }
 
   const stepComponents = [
-    null,
     <StepAssessment key="assessment" caseData={caseData} assessment={assessment}
-      editingAssessment={editingAssessment} onEditToggle={() => setEditingAssessment(!editingAssessment)}
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment} />,
-    <StepInterventions key="interventions" caseId={id!} />,
-    <StepExitPlan key="exit" caseId={id!} caseData={caseData} />,
-    <StepSignatures key="signatures" caseData={caseData} />,
+    <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} />,
+    <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} />,
+    <StepTransition key="transition" caseId={id!} caseData={caseData} />,
+    <StepClosure key="closure" caseId={id!} caseData={caseData} />,
   ];
 
   return (
@@ -177,8 +190,8 @@ export function CaseViewPage() {
                 <p className="font-medium">{(caseData.serviceRequested || []).join(', ') || '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Assigned Worker ID</span>
-                <p className="font-medium">{caseData.assignedWorkerId || '—'}</p>
+                <span className="text-muted-foreground">Assigned Worker</span>
+                <p className="font-medium">{caseData.assignedWorker?.fullName || '—'}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Certificate URL</span>
@@ -205,18 +218,12 @@ export function CaseViewPage() {
 
           {/* Stepper */}
           <div className="rounded-lg border bg-card">
-            <CaseStepper currentStep={currentStep} onStepClick={setCurrentStep} />
+            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} />
           </div>
 
           {/* Active Step Content */}
           <div>
-            {currentStep === 0 ? (
-              <div className="rounded-lg border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-                Client profile data is shown in the sidebar. Select another step to continue.
-              </div>
-            ) : (
-              stepComponents[currentStep]
-            )}
+            {stepComponents[currentStep]}
           </div>
         </div>
 

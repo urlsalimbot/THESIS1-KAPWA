@@ -81,16 +81,14 @@ export default function NotificationsDropdown() {
         false,
       );
       mutate(queryKeys.notifications.unreadCount(), undefined, { revalidate: true });
-      if (document.visibilityState !== 'hidden') {
-        toast(notif.title, {
-          description: notif.message,
-          action: {
-            label: 'View',
-            onClick: () => navigate(navTarget(notif)),
-          },
-          duration: 5000,
-        });
-      }
+      toast(notif.title, {
+        description: notif.message,
+        action: {
+          label: 'View',
+          onClick: () => navigate(navTarget(notif)),
+        },
+        duration: 5000,
+      });
     };
     const onUpdated = (data: { id: string; isRead: boolean }) => {
       mutate(queryKeys.notifications.list(), (current: Notification[] | undefined) =>

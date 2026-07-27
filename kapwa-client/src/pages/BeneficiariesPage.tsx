@@ -1,6 +1,6 @@
-import { BARANGAYS } from '../lib/constants';
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { BARANGAYS, CLIENT_CATEGORIES } from '../lib/constants';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, Search, Loader2 } from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
@@ -11,11 +11,11 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
-const CATEGORIES = ['All Categories', 'Senior', 'PWD', 'Child', 'Solo Parent', 'Indigenous', 'Others'];
+const CATEGORIES = ['All Categories', ...CLIENT_CATEGORIES];
 
-interface Beneficiary { id: string; name: string; age: number; barangay: string; householdSize: number; programs: string[]; status: string; }
+interface Beneficiary { id: string; name: string; age: number; barangay: string; householdSize: number; category: string; status: string; }
 
 const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   active: 'default',
@@ -26,7 +26,7 @@ const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | '
 function BeneficiaryActions({ id }: { id: string }) {
   const nav = useNavigate();
   return (
-    <Button variant="ghost" size="sm" onClick={() => nav(`/beneficiaries/${id}`)} aria-label="View Beneficiary">
+    <Button variant="secondary" size="sm" onClick={() => nav(`/beneficiaries/${id}`)} aria-label="View Beneficiary">
       <Eye size={14} className="mr-1" /> View
     </Button>
   );
@@ -38,8 +38,8 @@ function mapBeneficiary(b: Record<string, unknown>): Beneficiary {
     name: `${(b.firstName as string) || ''} ${(b.surname as string) || ''}`.trim(),
     age: b.dob ? new Date().getFullYear() - new Date(b.dob as string).getFullYear() : 0,
     barangay: ((b.address as string) || '').split(',').pop()?.trim() || '',
-    householdSize: ((b.household as Record<string, unknown>)?.familyMembers as Array<unknown>)?.length || 1,
-    programs: (b.programs as string[]) || [],
+    householdSize: ((b.household as Record<string, unknown>)?.familyMemberCount as number) || 1,
+    category: (b.category as string) || '',
     status: (b.consentStatus as string) || 'active',
   };
 }
@@ -50,13 +50,9 @@ const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
   { accessorKey: 'barangay', header: 'Barangay' },
   { accessorKey: 'householdSize', header: 'Household', cell: ({ row }) => <span>{row.original.householdSize} members</span> },
   {
-    accessorKey: 'programs',
-    header: 'Programs',
-    cell: ({ row }) => (
-      <div className="flex gap-1 flex-wrap">
-        {row.original.programs.map(p => <Badge key={p} variant="secondary" className="text-xs">{p}</Badge>)}
-      </div>
-    ),
+    accessorKey: 'category',
+    header: 'Client Category',
+    cell: ({ row }) => <Badge variant="secondary" className="text-xs">{row.original.category || '—'}</Badge>,
   },
   {
     accessorKey: 'status',
@@ -129,36 +125,73 @@ function FilterBar({ searchInput, onSearchChange, categoryFilter, onCategoryChan
 
 export function BeneficiariesPage() {
   const navigate = useNavigate();
-  const [searchInput, setSearchInput] = useState('');
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [barangayFilter, setBarangayFilter] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Debounce search input — 300ms delay before triggering a key change.
-  // SWR doesn't debounce; we debounce the key here.
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const urlLimit = parseInt(searchParams.get('limit') || '10', 10);
+  const urlSearch = searchParams.get('search') || '';
+  const urlCategory = searchParams.get('category') || '';
+  const urlBarangay = searchParams.get('barangay') || 'all';
+
+  const [searchInput, setSearchInput] = useState(urlSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
+  const [categoryFilter, setCategoryFilter] = useState(urlCategory);
+  const [barangayFilter, setBarangayFilter] = useState(urlBarangay);
+
+  const updateURL = useCallback(
+    (overrides: Record<string, string | undefined>) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        for (const [k, v] of Object.entries(overrides)) {
+          if (v && v !== 'all') next.set(k, v);
+          else next.delete(k);
+        }
+        return next;
+      }, { replace: true });
+    },
+    [setSearchParams],
+  );
+
+  // Sync local state when URL changes externally (browser back/forward)
+  useEffect(() => {
+    setSearchInput(urlSearch);
+    setDebouncedSearch(urlSearch);
+    setCategoryFilter(urlCategory);
+    setBarangayFilter(urlBarangay);
+  }, [urlSearch, urlCategory, urlBarangay]);
+
+  // Debounce search input — 300ms delay before URL update
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchInput);
+      if (debouncedSearch !== urlSearch) {
+        updateURL({ search: debouncedSearch || undefined, page: '1' });
+      }
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [debouncedSearch, urlSearch, updateURL]);
 
-  // Build the SWR key from the debounced inputs. The key is reference-stable
-  // via the queryKeys factory memoization.
+  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+
+  const onPaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      updateURL({ page: String(next.pageIndex + 1), limit: String(next.pageSize) });
+    },
+    [pagination, updateURL],
+  );
+
   const params = {
     search: debouncedSearch || undefined,
     category: categoryFilter || undefined,
     barangay: barangayFilter === 'all' ? undefined : barangayFilter,
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
+    page: urlPage,
+    limit: urlLimit,
   };
   const swrKey = queryKeys.beneficiaries.list(params);
   const { data, isLoading, isValidating } = useSWR<{ data: Record<string, unknown>[]; total: number }>(swrKey, {
     keepPreviousData: true,
   });
 
-  // Map raw data → typed Beneficiary[] (memoized for React.memo compatibility)
   const beneficiaries = useMemo(() => (data?.data || []).map(mapBeneficiary), [data]);
   const total = data?.total ?? 0;
   const lastSync = data ? Date.now() : null;
@@ -183,14 +216,13 @@ export function BeneficiariesPage() {
     >
       <FilterBar
         searchInput={searchInput}
-        onSearchChange={setSearchInput}
+        onSearchChange={(v) => { setSearchInput(v); setDebouncedSearch(v); }}
         categoryFilter={categoryFilter}
-        onCategoryChange={setCategoryFilter}
+        onCategoryChange={(v) => { setCategoryFilter(v); updateURL({ category: v || undefined, page: '1' }); }}
         barangayFilter={barangayFilter}
-        onBarangayChange={setBarangayFilter}
+        onBarangayChange={(v) => { setBarangayFilter(v); updateURL({ barangay: v === 'all' ? undefined : v, page: '1' }); }}
       />
 
-      {/* Results count / loading indicator */}
       {canShowResults && (
         <div className="text-sm text-muted-foreground flex items-center gap-1">
           {fetching && <Loader2 size={14} className="animate-spin" />}
@@ -199,19 +231,14 @@ export function BeneficiariesPage() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && !fetching && beneficiaries.length === 0 ? (
-        <EmptyState variant={searchInput ? 'no-results' : 'no-data'} />
-      ) : (
-        <DataTable
-          columns={beneficiaryColumns}
-          data={beneficiaries}
-          rowCount={total}
-          pagination={pagination}
-          onPaginationChange={setPagination}
-          sorting={[]}
-        />
-      )}
+      <DataTable
+        columns={beneficiaryColumns}
+        data={beneficiaries}
+        rowCount={total}
+        pagination={pagination}
+        onPaginationChange={onPaginationChange}
+        sorting={[]}
+      />
     </PageShell>
   );
 }

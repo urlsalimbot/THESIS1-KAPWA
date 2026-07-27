@@ -18,15 +18,15 @@ export async function showBulkProgress(
       toast.loading(`${actionLabel} ${completed}/${total}...`, { id: toastId });
     } catch {
       failed.push(id);
-      toast.error(`${id}: ${actionLabel} failed`);
+      toast.error(`${actionLabel} failed`, { description: `${id} could not be processed.`, id: `err-${id}` });
     }
   }
 
   if (failed.length === 0) {
-    toast.success(`${actionLabel} complete for ${total} case${total === 1 ? '' : 's'}.`, { id: toastId });
+    toast.success(`${actionLabel} complete`, { description: `All ${total} case${total === 1 ? '' : 's'} processed.`, id: toastId });
   } else if (completed > 0) {
-    toast.warning(`${actionLabel}: ${completed}/${total} succeeded, ${failed.length} failed.`, { id: toastId });
+    toast.warning(`Partial success`, { description: `${completed}/${total} succeeded, ${failed.length} failed.`, id: toastId });
   } else {
-    toast.error(`${actionLabel} failed for all ${total} case${total === 1 ? '' : 's'}.`, { id: toastId });
+    toast.error(`${actionLabel} failed`, { description: `All ${total} case${total === 1 ? '' : 's'} failed.`, id: toastId });
   }
 }

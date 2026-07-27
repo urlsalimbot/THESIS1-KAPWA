@@ -4,7 +4,7 @@ export const BARANGAYS = [
   'San Lorenzo', 'San Mateo', 'Tigbe',
 ] as const;
 export const AGE_RANGES = ['0-7', '8-17', '18-59', '60+'] as const;
-export const CLIENT_CATEGORIES = ['Children', 'Youth', 'Women', 'PWD', 'Senior', 'Family'] as const;
+export const CLIENT_CATEGORIES = ['Children', 'Youth', 'Women', 'PWD', 'Senior', 'Indigent', '4Ps', 'IP', 'Family'] as const;
 export const SERVICE_TYPES = ['Financial Aid', 'Case Study Report', 'PWD Referral', 'Medical Assistance', 'Burial Assistance', 'Food Assistance', 'Educational Assistance', 'Transportation', 'Others'] as const;
 
 export const CIVIL_STATUSES = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as const;
@@ -15,6 +15,9 @@ export const CLIENT_CATEGORIES_V2 = [
   'Women in Especially Difficult Circumstances',
   'Person with Disability',
   'Senior Citizen',
+  'Indigent',
+  '4Ps',
+  'Indigenous Person',
   'Family Head and Other Needy Adult',
 ] as const;
 
@@ -34,3 +37,5 @@ export const OTHER_ASSISTANCE = [
 ] as const;
 
 export const FAMILY_MEMBER_STATUSES = ['Employed', 'Self-Employed', 'Unemployed', 'Student', 'Retired', 'Dependent', 'OFW'] as const;
+
+export const NAME_EXTENSIONS = ['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV'] as const;

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { PaginationState } from '@tanstack/react-table';
 
 interface CaseRow {
@@ -20,7 +20,9 @@ interface CaseRow {
 }
 
 export function useCaseFilters(cases: CaseRow[]) {
-  const [search, setSearch] = useState('');
+  const [searchRaw, setSearch] = useState('');
+  const [search, setDebounced] = useState('');
+  useEffect(() => { const t = setTimeout(() => setDebounced(searchRaw), 250); return () => clearTimeout(t); }, [searchRaw]);
   const [barangayFilter, setBarangayFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -75,7 +77,7 @@ export function useCaseFilters(cases: CaseRow[]) {
   }
 
   return {
-    search, setSearch,
+    search: searchRaw, setSearch,
     barangayFilter, setBarangayFilter,
     categoryFilter, setCategoryFilter,
     statusFilter, setStatusFilter,

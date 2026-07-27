@@ -30,21 +30,55 @@ set -a; source infra/.env.production; set +a
 : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}"
 
 # 3. Build and start all services
-echo "[1/3] Building images..."
+echo "[1/4] Building images..."
 $COMPOSE build --pull
 
-echo "[2/3] Starting services..."
+echo "[2/4] Starting services..."
 $COMPOSE up -d
 
 # 4. Wait for API health through Caddy
-echo "[3/3] Waiting for API..."
+echo "[3/4] Waiting for API..."
+API_READY=false
 for i in $(seq 1 30); do
     if curl -sf http://localhost:8090/api/v1/health >/dev/null 2>&1; then
         echo "  API ready."
+        API_READY=true
         break
     fi
+    echo "  Waiting... ($i/30)"
     sleep 2
 done
+
+if [ "$API_READY" != "true" ]; then
+    echo "  WARNING: API did not become healthy within 60s."
+    echo "  Check logs: $COMPOSE logs api"
+fi
+
+# 5. Run TypeORM migrations (with migrate.ts fallback)
+echo "[4/4] Running database migrations..."
+MIGRATIONS_OK=false
+if docker exec kapwa-api test -f dist/database/run-migrations.js 2>/dev/null; then
+  if docker exec kapwa-api node dist/database/run-migrations.js 2>/dev/null; then
+    echo "  TypeORM migrations applied."
+    MIGRATIONS_OK=true
+  else
+    echo "  WARNING: TypeORM migration command failed."
+    echo "  Will try supplementary migrations as fallback."
+  fi
+else
+  echo "  (run-migrations.js not found)"
+fi
+
+if [ "$MIGRATIONS_OK" != "true" ] && docker exec kapwa-api test -f dist/database/migrate.js 2>/dev/null; then
+  echo "  Running supplementary migrations (migrate.js)..."
+  if docker exec kapwa-api node dist/database/migrate.js 2>/dev/null; then
+    echo "  Supplementary migrations applied."
+    MIGRATIONS_OK=true
+  else
+    echo "  WARNING: Supplementary migration command failed."
+    echo "  Manual: docker exec kapwa-api node dist/database/migrate.js"
+  fi
+fi
 
 echo ""
 echo "=== Deployment complete ==="

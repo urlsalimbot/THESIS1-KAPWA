@@ -17,7 +17,7 @@ export class ConflictResolver {
     private readonly queueRepo: Repository<SyncQueue>,
   ) {}
 
-  private readonly FINANCIAL_TABLES = new Set(['interventions', 'disbursements', 'financial_assistance']);
+  private readonly FINANCIAL_TABLES = new Set<string>([]);
   private readonly NOTE_TABLES = new Set(['case_notes', 'activity_logs', 'remarks']);
   private readonly CONSENT_TABLES = new Set(['consent_ledger']);
 

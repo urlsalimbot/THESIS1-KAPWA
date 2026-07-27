@@ -23,7 +23,7 @@ const { mockApiGet, mockApiPost, mockApiPut, mockCases } = vi.hoisted(() => ({
     {
       id: 'C-002',
       controlNo: 'NORZ-2026-0002',
-      status: 'approved',
+      status: 'active',
       serviceRequested: ['Counseling'],
       certificateUrl: '/api/filing/file/cert-001',
       pettyCashVoucherUrl: '/api/filing/file/pcv-001',

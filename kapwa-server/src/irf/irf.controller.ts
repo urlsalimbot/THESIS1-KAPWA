@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Request, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Request, Res, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { z } from 'zod';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
+import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { IrfService } from './irf.service';
 import { IrfExportService } from './irf-export.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
@@ -41,8 +42,11 @@ export class IrfController {
   @Roles('admin', 'social_worker')
   @Sensitivity('internal')
   @ApiOperation({ summary: 'List IRF cases (names masked)' })
-  async findAll() {
-    return this.irfService.findAll();
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.irfService.findAll(page, limit);
   }
 
   @Get(':id')

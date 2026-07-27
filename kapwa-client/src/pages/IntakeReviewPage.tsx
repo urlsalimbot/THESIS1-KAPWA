@@ -69,10 +69,10 @@ export function IntakeReviewPage() {
         `/intake/confirm/${householdId}`,
         intakeData,
       );
-      toast.success(`Linked to existing household. Next case eligible: ${new Date(result.nextEligibleDate).toLocaleDateString()}`);
+      toast.success('Household linked', { description: `Next case eligible: ${new Date(result.nextEligibleDate).toLocaleDateString()}` });
       navigate(`/cases/${result.caseId}`);
     } catch {
-      toast.error('Failed to link to household. Please try again.');
+      toast.error('Failed to link to household', { description: 'Please try again.' });
     } finally {
       setLoadingId(null);
     }
@@ -84,7 +84,7 @@ export function IntakeReviewPage() {
       const result = await api.post<{ caseId: string; controlNo: string }>('/intake', intakeData);
       navigate(`/cases/${result.caseId}`);
     } catch {
-      toast.error('Failed to create new client record.');
+      toast.error('Failed to create client', { description: 'Please check your input and try again.' });
     } finally {
       setCreatingNew(false);
     }
@@ -123,7 +123,7 @@ export function IntakeReviewPage() {
                 <p className="text-xs text-muted-foreground">Family Members</p>
                 <ul className="list-disc list-inside text-xs">
                   {family.map((f: any, i: number) => (
-                    <li key={i}>{f.fullName} ({f.relationship})</li>
+                    <li key={i}>{f.surname}, {f.firstName} ({f.relationship})</li>
                   ))}
                 </ul>
               </div>

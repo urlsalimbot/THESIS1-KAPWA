@@ -2,32 +2,41 @@ import { BCRYPT_SALT_ROUNDS } from './constants';
 import { Logger, Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp';
 import { User } from './user.entity';
+import { Person } from '../beneficiaries/person.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { OtpService } from '../otp/otp.service';
+import { SmsGatewayService } from '../otp/sms-gateway.service';
 import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly LINK_CODE_EXPIRY_MS = 5 * 60 * 1000;
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(Person)
+    private personRepo: Repository<Person>,
+    @InjectRepository(Beneficiary)
+    private benRepo: Repository<Beneficiary>,
     private jwtService: JwtService,
     private otpService: OtpService,
+    private smsGateway: SmsGatewayService,
     private emailService: EmailService,
   ) {}
 
-  async register(data: { email: string; password: string; role?: string; fullName?: string; phone?: string }) {
+  async register(data: { email: string; password: string; role?: string; fullName?: string; phone?: string; dob?: string }) {
     const existing = await this.userRepo.findOne({ where: { email: data.email } });
     if (existing) throw new ConflictException('Email already registered');
 
     const hashed = await bcrypt.hash(data.password, BCRYPT_SALT_ROUNDS);
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const user = this.userRepo.create({
       email: data.email,
@@ -42,9 +51,61 @@ export class AuthService {
     });
     await this.userRepo.save(user);
 
+    let personFound = false;
+    let contactType: 'sms' | 'email' | null = null;
+
+    if (data.fullName && data.dob && data.phone) {
+      const inputDob = data.dob.replace(/-/g, '');
+      const inputName = data.fullName!.toLowerCase().replace(/\s+/g, ' ').trim();
+      const rawPhone = data.phone.replace(/\D/g, '');
+      const candidates = await this.personRepo
+        .createQueryBuilder('p')
+        .where('p.phone = :p1 OR p.phone = :p2', { p1: data.phone, p2: rawPhone })
+        .getMany();
+
+      const match = candidates.find(p => {
+        let personDob = '';
+        if (p.dob instanceof Date) {
+          personDob = `${p.dob.getFullYear()}${String(p.dob.getMonth()+1).padStart(2,'0')}${String(p.dob.getDate()).padStart(2,'0')}`;
+        } else if (p.dob) {
+          personDob = String(p.dob).replace(/-/g, '').slice(0, 8);
+        }
+        if (personDob !== inputDob) return false;
+        const personWords = `${p.surname} ${p.firstName}`.toLowerCase().replace(/,\s*/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+        const inputWords = inputName.replace(/,\s*/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+        return personWords === inputWords;
+      });
+
+      if (match) {
+        const code = String(100000 + Math.floor(Math.random() * 900000));
+        const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+
+        user.pendingPersonId = match.id;
+        user.personLinkCode = hashedCode;
+        user.personLinkCodeExpiresAt = new Date(Date.now() + this.LINK_CODE_EXPIRY_MS);
+        await this.userRepo.save(user);
+
+        if (match.phone) {
+          const smsResult = await this.smsGateway.sendSms(match.phone, `Your KAPWA verification code is: ${code}. Valid for 5 minutes.`);
+          if (smsResult.success) contactType = 'sms';
+        }
+        if (!contactType && (match.email || data.email)) {
+          await this.emailService.sendOtpEmail(match.email || data.email, code);
+          contactType = 'email';
+        }
+        personFound = true;
+      }
+    }
+
     await this.emailService.sendVerificationEmail(user.email, verificationToken);
 
-    return { message: 'Registration successful. Please check your email to verify your account.', email: user.email };
+    const result: any = { message: 'Registration successful. Please check your email to verify your account.', email: user.email };
+    if (personFound) {
+      result.personMatched = true;
+      result.contactType = contactType;
+      result.message = 'Registration successful. We found your record — please verify with the code sent to your ' + (contactType === 'sms' ? 'phone' : 'email') + '.';
+    }
+    return result;
   }
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -309,6 +370,79 @@ export class AuthService {
     await this.userRepo.save(user);
 
     return { message: 'Phone number updated successfully', phone };
+  }
+
+  async requestPersonLink(phone: string, dob: string, email: string) {
+    const dobNorm = dob.replace(/-/g, '');
+    const rawPhone = phone.replace(/\D/g, '');
+    const candidate = await this.personRepo
+      .createQueryBuilder('p')
+      .where('p.phone = :p1 OR p.phone = :p2', { p1: phone, p2: rawPhone })
+      .getOne();
+
+    if (!candidate) throw new BadRequestException('No matching person record found');
+
+    let personDob = '';
+    if (candidate.dob instanceof Date) {
+      personDob = `${candidate.dob.getFullYear()}${String(candidate.dob.getMonth()+1).padStart(2,'0')}${String(candidate.dob.getDate()).padStart(2,'0')}`;
+    } else if (candidate.dob) {
+      personDob = String(candidate.dob).replace(/-/g, '').slice(0, 8);
+    }
+    if (personDob !== dobNorm) throw new BadRequestException('No matching person record found');
+
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new UnauthorizedException('User not found');
+
+    const code = String(100000 + Math.floor(Math.random() * 900000));
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+
+    user.pendingPersonId = candidate.id;
+    user.personLinkCode = hashedCode;
+    user.personLinkCodeExpiresAt = new Date(Date.now() + this.LINK_CODE_EXPIRY_MS);
+    await this.userRepo.save(user);
+
+    let contactType: 'sms' | 'email' | null = null;
+    if (candidate.phone) {
+      const smsResult = await this.smsGateway.sendSms(candidate.phone, `Your KAPWA verification code is: ${code}. Valid for 5 minutes.`);
+      if (smsResult.success) contactType = 'sms';
+    }
+    if (!contactType && (candidate.email || email)) {
+      await this.emailService.sendOtpEmail(candidate.email || email, code);
+      contactType = 'email';
+    }
+
+    return { message: `Code sent to your ${contactType === 'sms' ? 'phone' : 'email'}`, contactType };
+  }
+
+  async verifyPersonLink(email: string, code: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new UnauthorizedException('User not found');
+    if (!user.pendingPersonId || !user.personLinkCode || !user.personLinkCodeExpiresAt) {
+      throw new BadRequestException('No pending link request. Please request a link code first.');
+    }
+    if (user.personLinkCodeExpiresAt < new Date()) {
+      throw new BadRequestException('Link code has expired. Please request a new one.');
+    }
+
+    const hashedInput = crypto.createHash('sha256').update(code).digest('hex');
+    if (hashedInput !== user.personLinkCode) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    const personId = user.pendingPersonId;
+    user.personId = personId;
+    user.pendingPersonId = null as any;
+    user.personLinkCode = null as any;
+    user.personLinkCodeExpiresAt = null as any;
+    await this.userRepo.save(user);
+
+    const beneficiary = await this.benRepo.findOne({ where: { personId } });
+    if (beneficiary) {
+      beneficiary.userId = user.id;
+      await this.benRepo.save(beneficiary);
+    }
+
+    return { message: 'Your account has been linked. You can now access your beneficiary profile.', personId };
   }
 
   async verifySmsOtp(tempToken: string, otpCode: string) {

@@ -88,6 +88,18 @@ export class EmailService {
     await this.sendWithBreaker(to, subject, html);
   }
 
+  async sendOtpEmail(to: string, code: string): Promise<void> {
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#1e3a5f">Verify Your Account</h2>
+        <p>Use the code below to link your account:</p>
+        <div style="font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;padding:16px;background:#f5f7fa;border-radius:8px;margin:16px 0">${code}</div>
+        <p style="font-size:13px;color:#666">This code expires in 5 minutes.</p>
+        <p style="font-size:12px;color:#999">MSWDO Norzagaray &middot; KAPWA Social Welfare System</p>
+      </div>`;
+    await this.sendWithBreaker(to, 'Your KAPWA verification code', html);
+  }
+
   private async sendWithBreaker(to: string, subject: string, html: string): Promise<void> {
     const send = async () => {
       if (this.transporter) {

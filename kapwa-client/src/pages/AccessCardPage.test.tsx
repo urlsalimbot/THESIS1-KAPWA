@@ -45,7 +45,7 @@ describe('AccessCardPage', () => {
     mockApiPost.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
-      if (k.includes('accessCards') && k.includes('list')) return Promise.resolve(mockServices);
+      if (k.includes('access-cards')) return Promise.resolve({ data: mockServices, total: mockServices.length });
       return Promise.resolve(null);
     });
     await mutate(() => true, undefined, { revalidate: false });

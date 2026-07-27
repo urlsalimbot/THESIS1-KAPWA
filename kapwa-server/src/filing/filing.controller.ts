@@ -20,25 +20,31 @@ export class FilingController {
   constructor(private filingService: FilingService) {}
 
   @Post('upload')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'claimant')
   @ApiOperation({ summary: 'Upload a document' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_SIZE } }))
   async upload(
     @UploadedFile() file: any,
-    @Body(new ZodPipe(UploadMetadataSchema)) metadata: { caseId?: string; beneficiaryId?: string; category?: string; notes?: string },
+    @Body(new ZodPipe(UploadMetadataSchema)) metadata: { caseId?: string; beneficiaryId?: string; category?: string; notes?: string; requirementKey?: string },
     @Request() req: any,
   ) {
     return this.filingService.upload(file, {
       ...metadata,
       uploadedBy: req.user?.id || req.user?.sub,
+      userId: req.user?.id || req.user?.sub,
+      personId: req.user?.personId,
+      userRole: req.user?.role,
     });
   }
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   @ApiOperation({ summary: 'List documents' })
-  async findAll(@Query('caseId') caseId?: string, @Query('beneficiaryId') beneficiaryId?: string) {
+  async findAll(@Query('caseId') caseId?: string, @Query('beneficiaryId') beneficiaryId?: string, @Query('requirementKey') requirementKey?: string) {
+    if (caseId && requirementKey !== undefined) {
+      return this.filingService.findByCaseAndRequirement(caseId, requirementKey || undefined);
+    }
     return this.filingService.findAll(caseId, beneficiaryId);
   }
 
@@ -50,7 +56,7 @@ export class FilingController {
   }
 
   @Get(':id/download')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   @ApiOperation({ summary: 'Download document file' })
   async download(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     const doc = await this.filingService.findOne(id);

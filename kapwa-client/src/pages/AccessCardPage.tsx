@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -11,7 +11,7 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 import { CreditCard, Printer, Search, ClipboardList, Plus, Eye } from 'lucide-react';
 
 interface ServiceLog { id: string; accessCardCode: string; serviceType: string; serviceDate: string; servedBy?: string; remarks: string; createdAt: string; }
@@ -19,8 +19,16 @@ interface ServiceLog { id: string; accessCardCode: string; serviceType: string; 
 export function AccessCardPage() {
   const navigate = useNavigate();
   const { mutate: globalMutate } = useSWRConfig();
-  const { data: services = [], isLoading: loading } = useSWR<ServiceLog[]>(queryKeys.accessCards.list());
-  const lastSync = services ? Date.now() : null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const urlLimit = parseInt(searchParams.get('limit') || '10', 10);
+  const { data: servicesResponse, isLoading: loading } = useSWR<{ data: ServiceLog[]; total: number }>(
+    [...queryKeys.accessCards.list(), { page: urlPage, limit: urlLimit }],
+    { keepPreviousData: true },
+  );
+  const services = servicesResponse?.data ?? [];
+  const servicesTotal = servicesResponse?.total ?? 0;
+  const lastSync = servicesResponse ? Date.now() : null;
 
   const [beneficiaryId, setBeneficiaryId] = useState('');
   const [assignedCode, setAssignedCode] = useState('');
@@ -30,10 +38,30 @@ export function AccessCardPage() {
   const [cardData, setCardData] = useState<{ beneficiary: any; code: string; services: any[] } | null>(null);
   const [logForm, setLogForm] = useState({ accessCardCode: '', serviceType: '', serviceDate: '', remarks: '' });
   const [successBanner, setSuccessBanner] = useState('');
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [printBeneficiaryId, setPrintBeneficiaryId] = useState('');
 
-  React.useEffect(() => {
+  const updateURL = useCallback((overrides: Record<string, string | undefined>) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of Object.entries(overrides)) {
+        if (v) next.set(k, v);
+        else next.delete(k);
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+
+  const onPaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      updateURL({ page: String(next.pageIndex + 1), limit: String(next.pageSize) });
+    },
+    [pagination, updateURL],
+  );
+
+  useEffect(() => {
     if (successBanner) {
       const t = setTimeout(() => setSuccessBanner(''), 3000);
       return () => clearTimeout(t);
@@ -262,9 +290,9 @@ export function AccessCardPage() {
           <DataTable
             columns={columns}
             data={services}
-            rowCount={services.length}
+            rowCount={servicesTotal}
             pagination={pagination}
-            onPaginationChange={setPagination}
+            onPaginationChange={onPaginationChange}
             sorting={[]}
           />
         </div>

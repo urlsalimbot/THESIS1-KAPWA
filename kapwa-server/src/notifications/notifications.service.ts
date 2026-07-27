@@ -100,10 +100,11 @@ export class NotificationsService {
 
   private statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      pending_assessment: 'Pending Assessment',
+      enrolled: 'Enrolled',
+      assessed: 'Assessed',
       in_review: 'In Review',
-      approved: 'Approved',
-      disbursed: 'Disbursed',
+      active: 'Active',
+      transitioning: 'Transitioning',
       closed: 'Closed',
     };
     return labels[status] || status;

@@ -2,7 +2,7 @@ import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, 
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaSetupSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput } from './dto/auth.zod';
+import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaSetupSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
 
 @Controller('auth')
@@ -122,5 +122,17 @@ export class AuthController {
   ) {
     if (!body.phone) throw new BadRequestException('Phone number is required');
     return this.authService.updatePhone(req.user.id, body.phone);
+  }
+
+  @Post('request-person-link')
+  @HttpCode(HttpStatus.OK)
+  async requestPersonLink(@Body(new ZodPipe(PersonLinkRequestSchema)) body: { phone: string; dob: string; email: string }) {
+    return this.authService.requestPersonLink(body.phone, body.dob, body.email);
+  }
+
+  @Post('verify-person-link')
+  @HttpCode(HttpStatus.OK)
+  async verifyPersonLink(@Body(new ZodPipe(PersonLinkVerifySchema)) body: { email: string; code: string }) {
+    return this.authService.verifyPersonLink(body.email, body.code);
   }
 }

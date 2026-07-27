@@ -32,7 +32,7 @@ check_service "PostgreSQL" "pg_isready -h ${DB_HOST:-db} -p ${DB_PORT:-5432} -U 
 check_service "MinIO S3 API" "curl -sf http://${MINIO_ENDPOINT:-localhost}:${MINIO_PORT:-9000}/minio/health/live"
 
 # API health
-check_service "NestJS API" "curl -sf http://localhost:3000/api/health 2>/dev/null || curl -sf http://api:3000/api/health"
+check_service "NestJS API" "curl -sf http://localhost:8090/api/v1/health"
 
 # Caddy health (via port 80)
 check_service "Caddy Proxy" "curl -sf http://localhost/health"

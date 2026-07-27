@@ -10,7 +10,7 @@ const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiDel, mockQueueFsm
     {
       id: 'C-001',
       controlNo: 'CN-001',
-      status: 'approved',
+      status: 'active',
       remarks: 'Monthly',
       updatedAt: '2026-06-28T00:00:00Z',
       slaOverdue: false,
@@ -116,7 +116,7 @@ describe('CasesPage', () => {
   it('a successful requestReview trigger calls api.put with /request-review', async () => {
     // Set role to social_worker + status to pending_assessment so the Request Review button shows
     mockApiGet.mockResolvedValue([
-      { ...mockCases[0], status: 'pending_assessment' },
+      { ...mockCases[0], status: 'enrolled' },
     ]);
 
     renderWithSWR(<CasesPage />);

@@ -45,11 +45,11 @@ export function CreateProgramPage() {
         workflowSteps: workflowSteps.filter(s => s.title.trim()),
         requirements: requirements.filter(r => r.item.trim()),
       });
-      toast.success('Program created successfully');
+      toast.success('Program created', { description: 'New program has been added.' });
       globalMutate(queryKeys.programs.list());
       navigate('/programs');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create program');
+      toast.error('Failed to create program', { description: err.message || 'Please check your input and try again.' });
     } finally {
       setSubmitting(false);
     }

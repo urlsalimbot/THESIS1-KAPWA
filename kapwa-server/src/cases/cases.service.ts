@@ -9,7 +9,7 @@ import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entit
 import { Person } from '../beneficiaries/person.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory } from '../notifications/notification.entity';
-import { AssessmentInput, TransitionPlanInput } from './dto/cases.zod';
+import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input } from './dto/cases.zod';
 import {
   SATURDAY, SUNDAY,
   PENDING_ESCALATION_DAYS, REVIEW_ESCALATION_DAYS, APPROVED_ESCALATION_DAYS,
@@ -62,7 +62,7 @@ export class CasesService {
         const controlNo = await this.generateControlNo();
         const c = this.caseRepo.create({
           controlNo,
-          status: CaseStatus.PENDING,
+          status: CaseStatus.ENROLLED,
           serviceRequested: data.serviceRequested,
           requirementsChecklist: data.requirementsChecklist,
           beneficiaryId: data.beneficiaryId,
@@ -82,22 +82,23 @@ export class CasesService {
   async findAll(page = 1, limit = 10, filters?: { status?: CaseStatus; search?: string; barangay?: string; category?: string; gender?: string; ageRange?: string; sla?: string; dateFrom?: string; dateTo?: string }) {
     const qb = this.caseRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'beneficiary')
-      .leftJoinAndSelect('beneficiary.person', 'person');
+      .leftJoinAndSelect('beneficiary.person', 'person')
+      .leftJoinAndSelect('c.assignedWorker', 'assignedWorker');
 
     if (filters?.status) {
       qb.andWhere('c.status = :status', { status: filters.status });
     }
     if (filters?.search) {
       qb.andWhere(
-        '(beneficiary.surname ILIKE :search OR beneficiary.firstName ILIKE :search OR beneficiary.middleName ILIKE :search)',
+        '(person.surname ILIKE :search OR person.first_name ILIKE :search OR person.middle_name ILIKE :search)',
         { search: `%${filters.search}%` },
       );
     }
     if (filters?.barangay) {
-      qb.andWhere('beneficiary.address ILIKE :barangay', { barangay: `%${filters.barangay}%` });
+      qb.andWhere('person.address ILIKE :barangay', { barangay: `%${filters.barangay}%` });
     }
     if (filters?.gender) {
-      qb.andWhere('beneficiary.gender = :gender', { gender: filters.gender });
+      qb.andWhere('person.gender = :gender', { gender: filters.gender });
     }
     if (filters?.dateFrom) {
       qb.andWhere('c.createdAt >= :dateFrom', { dateFrom: new Date(filters.dateFrom + 'T00:00:00Z') });
@@ -150,7 +151,7 @@ export class CasesService {
   async findById(id: string) {
     const c = await this.caseRepo.findOne({
       where: { id },
-      relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household', 'beneficiary.household.members'],
+      relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household', 'beneficiary.household.members', 'assignedWorker'],
     });
     if (!c) throw new NotFoundException('Case not found');
 
@@ -198,12 +199,14 @@ export class CasesService {
   private computeSlaOverdue(c: Case): boolean {
     const age = this.workingDays(c.createdAt, new Date());
     switch (c.status) {
-      case CaseStatus.PENDING:
+      case CaseStatus.ENROLLED:
         return age >= PENDING_ESCALATION_DAYS;
-      case CaseStatus.IN_REVIEW:
+      case CaseStatus.ASSESSED:
         return age >= REVIEW_ESCALATION_DAYS;
-      case CaseStatus.APPROVED:
+      case CaseStatus.IN_REVIEW:
         return age >= APPROVED_ESCALATION_DAYS;
+      case CaseStatus.ACTIVE:
+        return age >= 30;
       default:
         return false;
     }
@@ -241,115 +244,86 @@ export class CasesService {
   }
 
   async updateStatus(id: string, newStatus: CaseStatus, userRole?: string) {
-    const c = await this.findById(id);
-    const oldStatus = c.status;
+    return this.transition(id, newStatus, { userRole });
+  }
+
+  private async validateTransition(c: Case, newStatus: CaseStatus) {
     const transitions: Record<CaseStatus, CaseStatus[]> = {
-      [CaseStatus.PENDING]: [CaseStatus.IN_REVIEW, CaseStatus.CLOSED],
-      [CaseStatus.IN_REVIEW]: [CaseStatus.APPROVED, CaseStatus.CLOSED],
-      [CaseStatus.APPROVED]: [CaseStatus.DISBURSED, CaseStatus.CLOSED],
-      [CaseStatus.DISBURSED]: [CaseStatus.CLOSED],
+      [CaseStatus.ENROLLED]: [CaseStatus.ASSESSED, CaseStatus.CLOSED],
+      [CaseStatus.ASSESSED]: [CaseStatus.IN_REVIEW, CaseStatus.CLOSED],
+      [CaseStatus.IN_REVIEW]: [CaseStatus.ACTIVE, CaseStatus.CLOSED],
+      [CaseStatus.ACTIVE]: [CaseStatus.TRANSITIONING, CaseStatus.CLOSED],
+      [CaseStatus.TRANSITIONING]: [CaseStatus.CLOSED],
       [CaseStatus.CLOSED]: [],
     };
     if (!transitions[c.status]?.includes(newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
     }
-    if (oldStatus === CaseStatus.PENDING && newStatus === CaseStatus.IN_REVIEW && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
-      throw new BadRequestException('Assessment must be completed before requesting review');
+    if (c.status === CaseStatus.ENROLLED && newStatus === CaseStatus.ASSESSED && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
+      throw new BadRequestException('Assessment must be completed before transitioning to assessed');
     }
-    if (oldStatus === CaseStatus.APPROVED && newStatus === CaseStatus.DISBURSED && !c.certificateUrl && !c.pettyCashVoucherUrl) {
-      throw new BadRequestException('Documents must be uploaded before disbursement');
+    if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && (!c.frvaScore && !c.swdiScore)) {
+      throw new BadRequestException('FRVA or SWDI score must be provided before review');
     }
+    if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
+      const interventionCount = await this.getInterventionCount(c.id);
+      if (interventionCount === 0) {
+        throw new BadRequestException('At least one intervention must be logged before activating');
+      }
+    }
+    if (c.status === CaseStatus.ACTIVE && newStatus === CaseStatus.TRANSITIONING && (!c.selfRelianceLevel || !c.sustainabilityPlan)) {
+      throw new BadRequestException('Self-reliance level and sustainability plan are required for transition');
+    }
+    if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && (!c.clientSignature || !c.closureOutcome)) {
+      throw new BadRequestException('Client signature and closure outcome are required for closure');
+    }
+  }
 
-    const roleTransitions: Record<CaseStatus, string[]> = {
-      [CaseStatus.PENDING]: ['social_worker', 'coordinator'],
-      [CaseStatus.IN_REVIEW]: ['admin'],
-      [CaseStatus.APPROVED]: ['admin'],
-      [CaseStatus.DISBURSED]: ['admin'],
-      [CaseStatus.CLOSED]: ['admin', 'social_worker'],
+  private getTransitionRoles(status: CaseStatus): string[] {
+    const roleTransitions: Partial<Record<CaseStatus, string[]>> = {
+      [CaseStatus.ENROLLED]: ['social_worker', 'coordinator'],
+      [CaseStatus.ASSESSED]: ['social_worker', 'coordinator'],
+      [CaseStatus.IN_REVIEW]: ['admin', 'coordinator'],
+      [CaseStatus.ACTIVE]: ['admin', 'social_worker'],
+      [CaseStatus.TRANSITIONING]: ['social_worker', 'coordinator'],
+      [CaseStatus.CLOSED]: ['admin', 'social_worker', 'coordinator'],
     };
-    const allowedRoles = roleTransitions[c.status] || ['admin'];
-    if (userRole && !allowedRoles.includes(userRole)) {
-      throw new ForbiddenException(`Role ${userRole} cannot transition from ${c.status} to ${newStatus}`);
+    return roleTransitions[status] || ['admin'];
+  }
+
+  async transition(id: string, newStatus: CaseStatus, opts?: { signature?: string; userRole?: string; reason?: string; historyType?: 'standard' | 'override' }) {
+    const c = await this.findById(id);
+    const oldStatus = c.status;
+    await this.validateTransition(c, newStatus);
+
+    const allowedRoles = this.getTransitionRoles(c.status);
+    if (opts?.userRole && !allowedRoles.includes(opts.userRole)) {
+      throw new ForbiddenException(`Role ${opts.userRole} cannot transition from ${c.status} to ${newStatus}`);
     }
 
     c.status = newStatus;
+    if (opts?.signature) c.approvedBySignature = opts.signature;
+    if (opts?.userRole) c.approvedByRole = opts.userRole;
+    if (newStatus === CaseStatus.CLOSED) c.closureDate = new Date().toISOString().split('T')[0];
     c.updatedAt = new Date();
     await this.caseRepo.save(c);
 
-    await this.logHistory(id, oldStatus, newStatus, userRole);
+    await this.logHistory(id, oldStatus, newStatus, opts?.userRole, undefined, opts?.reason || `Transitioned by ${opts?.userRole || 'system'}`, opts?.historyType);
 
     if (c.assignedWorkerId) {
       await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.controlNo, newStatus);
-    }
-    if (newStatus === CaseStatus.DISBURSED && c.beneficiaryId) {
-      await this.notifService.create({
-        recipientId: c.beneficiaryId,
-        title: 'Disbursement Approved',
-        message: `Case ${c.controlNo} has been approved for disbursement. Please coordinate with the MSWDO office.`,
-        category: NotificationCategory.DISBURSEMENT,
-        referenceId: c.controlNo,
-      });
     }
 
     return c;
   }
 
   async approve(id: string, newStatus: CaseStatus, signature: string, userRole: string) {
-    const c = await this.findById(id);
-    const oldStatus = c.status;
-    const transitions: Record<CaseStatus, CaseStatus[]> = {
-      [CaseStatus.PENDING]: [CaseStatus.IN_REVIEW, CaseStatus.CLOSED],
-      [CaseStatus.IN_REVIEW]: [CaseStatus.APPROVED, CaseStatus.CLOSED],
-      [CaseStatus.APPROVED]: [CaseStatus.DISBURSED, CaseStatus.CLOSED],
-      [CaseStatus.DISBURSED]: [CaseStatus.CLOSED],
-      [CaseStatus.CLOSED]: [],
-    };
-    if (!transitions[c.status]?.includes(newStatus)) {
-      throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
-    }
-    if (oldStatus === CaseStatus.PENDING && newStatus === CaseStatus.IN_REVIEW && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
-      throw new BadRequestException('Assessment must be completed before requesting review');
-    }
-    if (oldStatus === CaseStatus.APPROVED && newStatus === CaseStatus.DISBURSED && !c.certificateUrl && !c.pettyCashVoucherUrl) {
-      throw new BadRequestException('Documents must be uploaded before disbursement');
-    }
-    const roleTransitions: Partial<Record<CaseStatus, string[]>> = {
-      [CaseStatus.IN_REVIEW]: ['admin'],
-      [CaseStatus.APPROVED]: ['admin'],
-      [CaseStatus.DISBURSED]: ['admin'],
-    };
-    const allowedRoles = roleTransitions[c.status] || ['admin'];
-    if (!allowedRoles.includes(userRole)) {
-      throw new ForbiddenException(`Role ${userRole} cannot approve this case`);
-    }
-
-    c.status = newStatus;
-    c.approvedBySignature = signature;
-    c.approvedByRole = userRole;
-    c.updatedAt = new Date();
-    await this.caseRepo.save(c);
-
-    await this.logHistory(id, oldStatus, newStatus, userRole, undefined, `Approved by ${userRole}`);
-
-    if (c.assignedWorkerId) {
-      await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.controlNo, newStatus);
-    }
-    if (newStatus === CaseStatus.DISBURSED && c.beneficiaryId) {
-      await this.notifService.create({
-        recipientId: c.beneficiaryId,
-        title: 'Disbursement Approved',
-        message: `Case ${c.controlNo} has been approved for disbursement. Please coordinate with the MSWDO office.`,
-        category: NotificationCategory.DISBURSEMENT,
-        referenceId: c.controlNo,
-      });
-    }
-
-    return c;
+    return this.transition(id, newStatus, { signature, userRole, reason: `Approved by ${userRole}` });
   }
 
   async requestReview(id: string, userRole?: string) {
     const c = await this.findById(id);
-    if (c.status !== CaseStatus.PENDING) {
+    if (c.status !== CaseStatus.ENROLLED) {
       throw new BadRequestException(`Cannot request review from ${c.status}`);
     }
     if (userRole !== 'social_worker') {
@@ -359,7 +333,7 @@ export class CasesService {
       throw new BadRequestException('Assessment must be completed before requesting review (problems presented, social worker assessment, and client category are required)');
     }
     const oldStatus = c.status;
-    c.status = CaseStatus.IN_REVIEW;
+    c.status = CaseStatus.ASSESSED;
     c.updatedAt = new Date();
     await this.caseRepo.save(c);
     await this.logHistory(id, oldStatus, c.status, userRole, undefined, undefined, 'standard');
@@ -367,48 +341,11 @@ export class CasesService {
   }
 
   async disburse(id: string, newStatus: CaseStatus, userRole?: string) {
-    const c = await this.findById(id);
-    if (c.status !== CaseStatus.APPROVED) {
-      throw new BadRequestException(`Cannot disburse from ${c.status}`);
-    }
-    if (userRole !== 'admin') {
-      throw new ForbiddenException(`Role ${userRole} cannot disburse`);
-    }
-    if (!c.certificateUrl && !c.pettyCashVoucherUrl) {
-      throw new BadRequestException('Documents (certificate and/or petty cash voucher) must be uploaded before disbursement');
-    }
-    const oldStatus = c.status;
-    c.status = CaseStatus.DISBURSED;
-    c.updatedAt = new Date();
-    await this.caseRepo.save(c);
-    await this.logHistory(id, oldStatus, c.status, userRole, undefined, 'Disbursed by admin');
-    if (c.beneficiaryId) {
-      await this.notifService.create({
-        recipientId: c.beneficiaryId,
-        title: 'Disbursement Approved',
-        message: `Case ${c.controlNo} has been approved for disbursement. Please coordinate with the MSWDO office.`,
-        category: NotificationCategory.DISBURSEMENT,
-        referenceId: c.controlNo,
-      });
-    }
-    return c;
+    return this.transition(id, newStatus, { userRole, reason: `Transitioned by ${userRole}` });
   }
 
   async close(id: string, newStatus: CaseStatus, userRole?: string) {
-    const c = await this.findById(id);
-    if (c.status !== CaseStatus.DISBURSED) {
-      throw new BadRequestException(`Cannot close from ${c.status}`);
-    }
-    const allowedRoles = ['admin', 'social_worker'];
-    if (!userRole || !allowedRoles.includes(userRole)) {
-      throw new ForbiddenException(`Role ${userRole} cannot close case`);
-    }
-    const oldStatus = c.status;
-    c.status = CaseStatus.CLOSED;
-    c.updatedAt = new Date();
-    await this.caseRepo.save(c);
-    await this.logHistory(id, oldStatus, c.status, userRole);
-    return c;
+    return this.transition(id, newStatus, { userRole, reason: 'Case closed' });
   }
 
   async overrideStatus(id: string, targetStatus: CaseStatus, reason: string, userRole?: string) {
@@ -462,7 +399,143 @@ export class CasesService {
     return this.caseRepo.save(caseEntity);
   }
 
+  async updateRequirements(id: string, data: RequirementsInput) {
+    const caseEntity = await this.caseRepo.findOne({ where: { id } });
+    if (!caseEntity) throw new NotFoundException('Case not found');
+    caseEntity.requirementsChecklist = data.requirementsChecklist;
+    return this.caseRepo.save(caseEntity);
+  }
+
   async getPendingDisbursed() {
-    return this.caseRepo.find({ where: { status: CaseStatus.DISBURSED }, take: DEFAULT_LIST_LIMIT });
+    return this.caseRepo.find({ where: { status: CaseStatus.ACTIVE }, take: DEFAULT_LIST_LIMIT });
+  }
+
+  private async getInterventionCount(caseId: string): Promise<number> {
+    const result = await this.caseRepo.query(
+      'SELECT COUNT(*) as count FROM case_interventions WHERE case_id = $1',
+      [caseId]
+    );
+    return parseInt(result[0]?.count || '0', 10);
+  }
+
+  async updateAssessmentV2(id: string, data: AssessmentV2Input) {
+    const c = await this.findById(id);
+    Object.assign(c, {
+      problemsPresented: data.problemsPresented,
+      socialWorkerAssessment: data.socialWorkerAssessment,
+      clientCategory: data.clientCategory,
+      frvaScore: data.frvaScore,
+      swdiScore: data.swdiScore,
+      familyDialogueNotes: data.familyDialogueNotes,
+      natureOfService: data.natureOfService,
+      financialSubsidies: data.financialSubsidies,
+      amountAssistance: data.amountAssistance,
+      modeFinancialAssistance: data.modeFinancialAssistance,
+      sourceOfFund: data.sourceOfFund,
+      legislatorSpecify: data.legislatorSpecify,
+      otherAssistance: data.otherAssistance,
+      interviewedBy: data.interviewedBy,
+      clientSignature: data.clientSignature,
+      updatedAt: new Date(),
+    });
+    return this.caseRepo.save(c);
+  }
+
+  async updateClosure(id: string, data: ClosureInput, userRole?: string) {
+    const c = await this.findById(id);
+    if (c.status !== CaseStatus.TRANSITIONING) {
+      throw new BadRequestException('Case must be in transitioning status to close');
+    }
+    const allowedRoles = ['admin', 'social_worker', 'coordinator'];
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      throw new ForbiddenException(`Role ${userRole} cannot close case`);
+    }
+    const oldStatus = c.status;
+    Object.assign(c, {
+      status: CaseStatus.CLOSED,
+      closureOutcome: data.closureOutcome,
+      exitNotes: data.exitNotes,
+      clientSignature: data.clientSignature || c.clientSignature,
+      closureDate: data.closureDate || new Date().toISOString().split('T')[0],
+      updatedAt: new Date(),
+    });
+    await this.caseRepo.save(c);
+    await this.logHistory(id, oldStatus, CaseStatus.CLOSED, userRole, undefined, `Closed with outcome: ${data.closureOutcome}`);
+    return c;
+  }
+
+  async getTrackerDaily(date?: string) {
+    const target = date ? new Date(date) : new Date();
+    const start = new Date(target);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(target);
+    end.setHours(23, 59, 59, 999);
+    return this.getTrackerEntries(start, end);
+  }
+
+  async getTrackerRange(startDate: string, endDate: string) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return this.getTrackerEntries(start, end);
+  }
+
+  private async getTrackerEntries(start: Date, end: Date) {
+    const rows = await this.caseRepo.query(
+      `SELECT
+        c.id,
+        c.control_no AS "controlNo",
+        c.created_at AS "transactionDate",
+        p.surname,
+        p.first_name AS "firstName",
+        p.middle_name AS "middleName",
+        p.gender,
+        CASE
+          WHEN p.age IS NULL THEN 'Unknown'
+          WHEN p.age < 18 THEN '0-17'
+          WHEN p.age > 59 THEN '60+'
+          ELSE '18-59'
+        END AS "ageRange",
+        c.client_category AS "clientCategory",
+        p.address AS barangay,
+        COALESCE(c.problems_presented, c.social_worker_assessment, '') AS "interventionRemarks",
+        ROW_NUMBER() OVER (PARTITION BY DATE(c.created_at) ORDER BY c.created_at) AS "dailySeqNum"
+      FROM cases c
+      LEFT JOIN beneficiaries b ON b.id = c.beneficiary_id
+      LEFT JOIN persons p ON p.id = b.person_id
+      WHERE c.created_at >= $1 AND c.created_at <= $2
+      ORDER BY c.created_at DESC, "dailySeqNum" ASC`,
+      [start, end],
+    );
+    return rows.map((r: any) => ({
+      id: r.id,
+      controlNo: r.controlNo,
+      transactionDate: r.transactionDate,
+      surname: r.surname || '',
+      firstName: r.firstName || '',
+      middleName: r.middleName || '',
+      gender: r.gender || '',
+      ageRange: r.ageRange,
+      clientCategory: r.clientCategory || '',
+      barangay: r.barangay || '',
+      interventionRemarks: r.interventionRemarks || '',
+      dailySeqNum: Number(r.dailySeqNum),
+    }));
+  }
+
+  async getTrackerStats() {
+    const totalResult = await this.caseRepo.query(`SELECT COUNT(*) AS count FROM cases`);
+    const total = parseInt(totalResult[0]?.count || '0', 10);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayResult = await this.caseRepo.query(
+      `SELECT COUNT(*) AS count FROM cases WHERE created_at >= $1`,
+      [today],
+    );
+    const todayEntries = parseInt(todayResult[0]?.count || '0', 10);
+
+    return { totalCasesLogged: total, todayEntries };
   }
 }

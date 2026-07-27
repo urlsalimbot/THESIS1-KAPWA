@@ -12,13 +12,6 @@ import { AuditService } from './audit.service';
 export class AuditController {
   constructor(private auditService: AuditService) {}
 
-  @Get('hash-chain')
-  @Roles('admin', 'auditor')
-  @ApiOperation({ summary: 'Verify SHA-256 hash chain for interventions' })
-  async verifyHashChain(@Query('startId') startId?: string) {
-    return this.auditService.verifyInterventionChain(startId);
-  }
-
   @Get('verify-all')
   @Roles('admin', 'auditor')
   @ApiOperation({ summary: 'Verify hash chain integrity across all audit tables' })

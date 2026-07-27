@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AuditHashChain2026061900000 implements MigrationInterface {
-  name = 'AuditHashChain2026061900000';
+export class ZAuditHashChain2026061900000 implements MigrationInterface {
+  name = 'ZAuditHashChain2026061900000';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // Add hash columns to tables that don't have them

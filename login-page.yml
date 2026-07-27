@@ -1,0 +1,147 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - link "KAPWA" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - navigation "Main navigation" [ref=e15]:
+          - link "Home" [ref=e16] [cursor=pointer]:
+            - /url: /
+          - link "About" [ref=e17] [cursor=pointer]:
+            - /url: /about
+          - link "Contact" [ref=e18] [cursor=pointer]:
+            - /url: /contact
+        - link "Login" [ref=e20] [cursor=pointer]:
+          - /url: /login
+    - main [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: MSWDO Norzagaray
+            - heading "Compassionate social welfare services for every resident" [level=1] [ref=e33]
+            - paragraph [ref=e34]: Empowering communities through accessible, transparent, and efficient social assistance programs in Norzagaray, Bulacan.
+            - generic [ref=e35]:
+              - button "Access Services" [ref=e36]
+              - link "Learn More" [ref=e37] [cursor=pointer]:
+                - /url: /about
+          - generic [ref=e39]:
+            - img "Community support and social welfare services in Norzagaray" [ref=e41]
+            - generic [ref=e42]:
+              - paragraph [ref=e43]: Active Programs
+              - paragraph [ref=e44]: "24"
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]: What We Offer
+            - heading "Our Services" [level=2] [ref=e51]
+            - paragraph [ref=e52]: Comprehensive social welfare programs designed to support every member of the Norzagaray community.
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - generic [ref=e55]: Social Welfare Counseling
+              - generic [ref=e60]: Professional counseling and psychosocial support for individuals, families, and communities in need.
+            - generic [ref=e62]:
+              - generic [ref=e63]: Livelihood Assistance
+              - generic [ref=e69]: Skills training, livelihood programs, and financial assistance for sustainable community development.
+            - generic [ref=e71]:
+              - generic [ref=e72]: Child and Youth Welfare
+              - generic [ref=e78]: Protection and development programs for children and youth, including educational support and intervention services.
+            - generic [ref=e80]:
+              - generic [ref=e81]: Senior Citizen Services
+              - generic [ref=e89]: Comprehensive support for senior citizens including social pensions, health services, and community engagement.
+            - generic [ref=e91]:
+              - generic [ref=e92]: Disaster Response
+              - generic [ref=e97]: Emergency relief, rehabilitation, and recovery assistance for families affected by natural disasters and crises.
+            - generic [ref=e99]:
+              - generic [ref=e100]: Family and Community Welfare
+              - generic [ref=e106]: Family counseling, community organizing, and welfare programs to strengthen family units and communities.
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - generic [ref=e112]: Getting Started
+            - heading "How to Avail Services" [level=2] [ref=e114]
+            - paragraph [ref=e115]: A simple four-step process to access the social welfare services you need.
+          - generic [ref=e116]:
+            - generic [ref=e124]:
+              - generic [ref=e125]: Step 1
+              - heading "Submit Application" [level=3] [ref=e127]
+              - paragraph [ref=e128]: Visit our office or apply online through the KAPWA portal. Provide your personal information and the type of assistance you need.
+            - generic [ref=e137]:
+              - generic [ref=e138]: Step 2
+              - heading "Initial Assessment" [level=3] [ref=e140]
+              - paragraph [ref=e141]: Your application is reviewed by our social workers to determine eligibility and the appropriate program for your situation.
+            - generic [ref=e149]:
+              - generic [ref=e150]: Step 3
+              - heading "Document Verification" [level=3] [ref=e152]
+              - paragraph [ref=e153]: Submit the required documents for validation. Our team will guide you through the requirements specific to your application.
+            - generic [ref=e160]:
+              - generic [ref=e161]: Step 4
+              - heading "Approval & Payout" [level=3] [ref=e163]
+              - paragraph [ref=e164]: Once approved, you will receive the assistance through your chosen mode of disbursement. We will notify you of the schedule.
+        - generic [ref=e166]:
+          - img "MSWDO Norzagaray office and staff" [ref=e169]
+          - generic [ref=e170]:
+            - heading "About MSWDO Norzagaray" [level=2] [ref=e177]
+            - paragraph [ref=e178]: The Municipal Social Welfare and Development Office (MSWDO) of Norzagaray, Bulacan is dedicated to providing comprehensive social welfare services to all residents. Our team of licensed social workers and dedicated staff work tirelessly to ensure that every individual and family in need receives the appropriate assistance, support, and care.
+            - link "Learn More" [ref=e179] [cursor=pointer]:
+              - /url: /about
+        - generic [ref=e181]:
+          - generic [ref=e182]:
+            - heading "Get in Touch" [level=2] [ref=e183]
+            - paragraph [ref=e184]: Reach out to us in person, by phone, or through our online contact form. We are here to serve you.
+          - generic [ref=e186]:
+            - generic [ref=e187]:
+              - generic [ref=e193]:
+                - paragraph [ref=e194]: Address
+                - paragraph [ref=e195]: Municipal Social Welfare and Development Office, Norzagaray, Bulacan
+              - generic [ref=e200]:
+                - paragraph [ref=e201]: Phone
+                - paragraph [ref=e202]: (044) 123-4567
+              - generic [ref=e208]:
+                - paragraph [ref=e209]: Email
+                - paragraph [ref=e210]: mswdo@norzagaray.gov.ph
+              - generic [ref=e216]:
+                - paragraph [ref=e217]: Office Hours
+                - paragraph [ref=e218]: Monday to Friday, 8:00 AM - 5:00 PM
+            - generic [ref=e219]:
+              - paragraph [ref=e220]: We are here to help. Visit us during office hours or send us a message through our contact form.
+              - link "Contact Us" [ref=e221] [cursor=pointer]:
+                - /url: /contact
+    - contentinfo [ref=e222]:
+      - generic [ref=e223]:
+        - generic [ref=e224]:
+          - generic [ref=e225]:
+            - link "KAPWA" [ref=e226] [cursor=pointer]:
+              - /url: /
+            - paragraph [ref=e234]: MSWDO Norzagaray — Empowering communities through compassionate social welfare services.
+          - generic [ref=e235]:
+            - heading "Quick Links" [level=4] [ref=e236]
+            - list [ref=e237]:
+              - listitem [ref=e238]:
+                - link "Home" [ref=e239] [cursor=pointer]:
+                  - /url: /
+              - listitem [ref=e240]:
+                - link "About" [ref=e241] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e242]:
+                - link "Services" [ref=e243] [cursor=pointer]:
+                  - /url: /#services
+              - listitem [ref=e244]:
+                - link "Contact" [ref=e245] [cursor=pointer]:
+                  - /url: /contact
+          - generic [ref=e246]:
+            - heading "Contact Us" [level=4] [ref=e247]
+            - list [ref=e248]:
+              - listitem [ref=e249]:
+                - generic [ref=e253]: Municipal Social Welfare and Development Office, Norzagaray, Bulacan
+              - listitem [ref=e254]:
+                - generic [ref=e257]: (044) 123-4567
+              - listitem [ref=e258]:
+                - generic [ref=e262]: mswdo@norzagaray.gov.ph
+        - generic [ref=e263]:
+          - paragraph [ref=e264]: © 2026 MSWDO Norzagaray. All rights reserved.
+          - generic [ref=e265]:
+            - link "Privacy Policy" [ref=e266] [cursor=pointer]:
+              - /url: /about
+            - link "Accessibility" [ref=e267] [cursor=pointer]:
+              - /url: /contact

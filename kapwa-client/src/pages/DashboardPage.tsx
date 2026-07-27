@@ -25,8 +25,6 @@ import { TrendsChart } from '@/components/dashboard/TrendsChart';
 import { NeedsAttention } from '@/components/dashboard/NeedsAttention';
 import { BarangayBreakdown } from '@/components/dashboard/BarangayBreakdown';
 import { ActivityCalendar } from '@/components/dashboard/ActivityCalendar';
-import { StaticDashboard } from '@/components/dashboard/StaticDashboard';
-import type { WidgetConfig } from '@/components/dashboard/StaticDashboard';
 
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
 interface CaseRow {
@@ -54,18 +52,20 @@ interface DailyCounts {
 }
 
 const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  pending_assessment: 'outline',
+  enrolled: 'outline',
+  assessed: 'secondary',
   in_review: 'secondary',
-  approved: 'default',
-  disbursed: 'secondary',
+  active: 'default',
+  transitioning: 'secondary',
   closed: 'outline',
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_assessment: 'Pending',
+  enrolled: 'Enrolled',
+  assessed: 'Assessed',
   in_review: 'In Review',
-  approved: 'Approved',
-  disbursed: 'Disbursed',
+  active: 'Active',
+  transitioning: 'Transitioning',
   closed: 'Closed',
 };
 
@@ -94,26 +94,16 @@ export function DashboardPage() {
   const cases = useMemo(() => data?.recentCases ?? [], [data]);
 
   const columns: ColumnDef<CaseRow>[] = [
-    { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.no}</span> },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
     { accessorKey: 'surname', header: 'Surname' },
     { accessorKey: 'first', header: 'First' },
     { accessorKey: 'middle', header: 'Middle' },
     { accessorKey: 'gender', header: 'Gender' },
-    { accessorKey: 'ageRange', header: 'Age Range', cell: ({ row }) => <Badge variant="outline">{row.original.ageRange}</Badge> },
     { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{STATUS_LABELS[row.original.status] || row.original.status}</Badge> },
-    { id: 'sla', header: 'SLA', cell: ({ row }) => row.original.slaOverdue ? (
-      <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-        <AlertTriangle size={12} /> OVERDUE
-      </span>
-    ) : (
-      <span className="inline-flex items-center gap-1 rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">On Track</span>
-    )},
     { accessorKey: 'barangay', header: 'Barangay' },
     { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
     { id: 'actions', header: 'Actions', cell: ({ row }) => (
-      <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View Case">
+      <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View Case">
         <Eye size={14} className="mr-1" /> View
       </Button>
     )},
@@ -158,13 +148,6 @@ export function DashboardPage() {
     );
   }
 
-  const widgets: WidgetConfig[] = [
-    { key: 'case-status', component: <CaseStatusChart data={data?.byStatus || []} />, defaultW: 2, defaultH: 5, minH: 4 },
-    { key: 'sla', component: <SlaWidget overdueCount={data?.urgentCount ?? 0} />, defaultW: 1, defaultH: 5, minH: 4 },
-    { key: 'trends', component: <TrendsChart data={trends || []} />, defaultW: 2, defaultH: 5, minH: 4 },
-    { key: 'barangay', component: <BarangayBreakdown cases={barangayData} />, defaultW: 1, defaultH: 5, minH: 4 },
-  ];
-
   return (
     <PageShell title="Dashboard" description="Overview of social welfare operations and metrics." cachedAt={lastSync ?? undefined}
       actions={
@@ -184,17 +167,13 @@ export function DashboardPage() {
         />
       )}
 
-      <div className="mt-4">
-        <StaticDashboard widgets={widgets} />
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
-        <div className="lg:col-span-2">
-          <NeedsAttention cases={cases.map(c => ({ id: c.id, name: `${c.surname}, ${c.first}`.trim(), status: c.status }))} />
-        </div>
-        <div className="lg:col-span-1">
-          <ActivityCalendar data={dailyCounts ?? null} year={now.getFullYear()} month={now.getMonth() + 1} />
-        </div>
+        <div className="lg:col-span-2"><CaseStatusChart data={data?.byStatus || []} /></div>
+        <div className="lg:col-span-1"><ActivityCalendar data={dailyCounts ?? null} year={now.getFullYear()} month={now.getMonth() + 1} /></div>
+        <div className="lg:col-span-2"><TrendsChart data={trends || []} /></div>
+        <div className="lg:row-span-2 lg:col-span-1"><BarangayBreakdown cases={barangayData} /></div>
+        <div className="lg:col-span-1"><div className="h-full overflow-y-auto" style={{ maxHeight: '300px' }}><SlaWidget overdueCount={data?.urgentCount ?? 0} /></div></div>
+        <div className="lg:col-span-1"><div className="h-full"><NeedsAttention cases={cases.map(c => ({ id: c.id, name: `${c.surname}, ${c.first}`.trim(), status: c.status }))} /></div></div>
       </div>
 
       <div className="mt-4">

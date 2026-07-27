@@ -1,10 +1,9 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useSWR, { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
-import { Search, Download, AlertTriangle } from 'lucide-react';
-import { useCaseFilters } from '../hooks/useCaseFilters';
+import { Search, Download, AlertTriangle, Eye } from 'lucide-react';
 import { useCaseActions } from '../hooks/useCaseActions';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -14,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '../lib/auth-context';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 interface CaseRow {
   id: string;
@@ -35,18 +34,20 @@ interface CaseRow {
 }
 
 const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  pending_assessment: 'outline',
+  enrolled: 'outline',
+  assessed: 'secondary',
   in_review: 'secondary',
-  approved: 'default',
-  disbursed: 'secondary',
+  active: 'default',
+  transitioning: 'secondary',
   closed: 'outline',
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_assessment: 'Pending',
+  enrolled: 'Enrolled',
+  assessed: 'Assessed',
   in_review: 'In Review',
-  approved: 'Approved',
-  disbursed: 'Disbursed',
+  active: 'Active',
+  transitioning: 'Transitioning',
   closed: 'Closed',
 };
 
@@ -66,7 +67,7 @@ function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
     remarks: (c.remarks as string) || '',
     date: c.updatedAt ? new Date(c.updatedAt as string).toLocaleString() : '',
     createdAt: (c.createdAt as string) || '',
-    status: (c.status as string) || 'pending_assessment',
+    status: (c.status as string) || 'enrolled',
     controlNo: (c.controlNo as string) || '',
     slaOverdue: (c.slaOverdue as boolean) || false,
   };
@@ -95,20 +96,20 @@ function ActionsCell({ c, actionLoading, onAction }: {
   const role = user?.role || '';
   const buttons: { action: string; label: string }[] = [];
 
-  if (c.status === 'pending_assessment' && role === 'social_worker') {
+  if (c.status === 'enrolled' && role === 'social_worker') {
     buttons.push({ action: 'request-review', label: 'Request Review' });
   }
-  if (c.status === 'approved' && role === 'admin') {
-    buttons.push({ action: 'disburse', label: 'Disburse' });
+  if (c.status === 'active' && role === 'admin') {
+    buttons.push({ action: 'transition', label: 'Transition' });
   }
-  if (c.status === 'disbursed' && (role === 'admin' || role === 'social_worker')) {
+  if (c.status === 'transitioning' && (role === 'admin' || role === 'social_worker')) {
     buttons.push({ action: 'close', label: 'Close' });
   }
 
   return (
     <div className="flex gap-1">
-      <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${c.id}`)}>
-        View
+      <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${c.id}`)}>
+        <Eye size={14} className="mr-1" /> View
       </Button>
       {buttons.map(b => (
         <Button key={b.action} variant="outline" size="sm"
@@ -122,8 +123,8 @@ function ActionsCell({ c, actionLoading, onAction }: {
 }
 
 function exportCSV(rows: CaseRow[]) {
-  const headers = ['No.','Surname','First','Middle','Gender','Age Range','Category','Status','SLA','Barangay','Remarks','Date'];
-  const data = rows.map(c => [c.no, c.surname, c.first, c.middle, c.gender, c.ageRange, c.category, STATUS_LABELS[c.status] || c.status, c.slaOverdue ? 'OVERDUE' : 'On Track', c.barangay, c.remarks, c.date]);
+  const headers = ['Date','Surname','First','Middle','Gender','Category','Barangay','Remarks'];
+  const data = rows.map(c => [c.date, c.surname, c.first, c.middle, c.gender, c.category, c.barangay, c.remarks]);
   const csv = [headers, ...data].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -135,34 +136,114 @@ function exportCSV(rows: CaseRow[]) {
 export function CasesPage() {
   const { user } = useAuth();
   const { actionLoading, handleAction } = useCaseActions();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data, isLoading } = useSWR<Record<string, unknown>[]>(queryKeys.cases.list());
-  const cases = useMemo(() => (data || []).map(mapCaseRow), [data]);
-  const lastSync = data ? Date.now() : null;
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const urlLimit = parseInt(searchParams.get('limit') || '10', 10);
+  const urlSearch = searchParams.get('search') || '';
+  const urlBarangay = searchParams.get('barangay') || '';
+  const urlCategory = searchParams.get('category') || '';
+  const urlStatus = searchParams.get('status') || '';
+  const urlGender = searchParams.get('gender') || '';
+  const urlAgeRange = searchParams.get('ageRange') || '';
+  const urlSla = searchParams.get('sla') || '';
+  const urlDateFrom = searchParams.get('dateFrom') || '';
+  const urlDateTo = searchParams.get('dateTo') || '';
 
-  const filters = useCaseFilters(cases);
+  const [searchInput, setSearchInput] = useState(urlSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
 
-  const columns: ColumnDef<CaseRow>[] = [
-    { accessorKey: 'no', header: 'No.', cell: ({ row }) => <span className="text-muted-foreground tabular-nums">{row.original.no}</span> },
+  const updateURL = useCallback(
+    (overrides: Record<string, string | undefined>) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        for (const [k, v] of Object.entries(overrides)) {
+          if (v) next.set(k, v);
+          else next.delete(k);
+        }
+        return next;
+      }, { replace: true });
+    },
+    [setSearchParams],
+  );
+
+  useEffect(() => {
+    setSearchInput(urlSearch);
+    setDebouncedSearch(urlSearch);
+  }, [urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (debouncedSearch !== urlSearch) {
+        updateURL({ search: debouncedSearch || undefined, page: '1' });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [debouncedSearch, urlSearch, updateURL]);
+
+  const listParams = useMemo(() => {
+    const p: Record<string, string> = {
+      page: String(urlPage),
+      limit: String(urlLimit),
+    };
+    if (debouncedSearch) p.search = debouncedSearch;
+    if (urlStatus) p.status = urlStatus;
+    if (urlBarangay) p.barangay = urlBarangay;
+    if (urlCategory) p.category = urlCategory;
+    if (urlGender) p.gender = urlGender;
+    if (urlAgeRange) p.ageRange = urlAgeRange;
+    if (urlSla) p.sla = urlSla;
+    if (urlDateFrom) p.dateFrom = urlDateFrom;
+    if (urlDateTo) p.dateTo = urlDateTo;
+    return p;
+  }, [urlPage, urlLimit, debouncedSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
+
+  const { data: caseResponse, isLoading } = useSWR<{ data: Record<string, unknown>[]; total: number }>(
+    queryKeys.cases.list(listParams),
+    { keepPreviousData: true },
+  );
+  const allCases = useMemo(() => (caseResponse?.data || []).map(mapCaseRow), [caseResponse]);
+  const caseTotal = caseResponse?.total ?? 0;
+  const lastSync = caseResponse ? Date.now() : null;
+
+  const uniqueBarangays = useMemo(() => [...new Set(allCases.map(c => c.barangay).filter(Boolean))], [allCases]);
+  const uniqueCategories = useMemo(() => [...new Set(allCases.map(c => c.category).filter(Boolean))], [allCases]);
+  const uniqueGenders = useMemo(() => [...new Set(allCases.map(c => c.gender).filter(Boolean))], [allCases]);
+  const uniqueAgeRanges = useMemo(() => [...new Set(allCases.map(c => c.ageRange).filter(Boolean))], [allCases]);
+
+  const hasAnyFilter = Boolean(debouncedSearch || urlBarangay || urlCategory || urlStatus || urlGender || urlAgeRange || urlSla || urlDateFrom || urlDateTo);
+
+  const clearFilters = useCallback(() => {
+    setSearchInput('');
+    setDebouncedSearch('');
+    updateURL({
+      search: undefined, barangay: undefined, category: undefined,
+      status: undefined, gender: undefined, ageRange: undefined,
+      sla: undefined, dateFrom: undefined, dateTo: undefined, page: undefined,
+    });
+  }, [updateURL]);
+
+  const columns = useMemo<ColumnDef<CaseRow>[]>(() => [
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
     { accessorKey: 'surname', header: 'Surname' },
     { accessorKey: 'first', header: 'First' },
     { accessorKey: 'middle', header: 'Middle' },
     { accessorKey: 'gender', header: 'Gender' },
-    { accessorKey: 'ageRange', header: 'Age Range', cell: ({ row }) => <Badge variant="outline">{row.original.ageRange}</Badge> },
     { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{STATUS_LABELS[row.original.status] || row.original.status}</Badge> },
-    { id: 'sla', header: 'SLA', cell: ({ row }) => row.original.slaOverdue ? (
-      <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-        <AlertTriangle size={12} /> OVERDUE
-      </span>
-    ) : (
-      <span className="inline-flex items-center gap-1 rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">On Track</span>
-    )},
     { accessorKey: 'barangay', header: 'Barangay' },
     { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
     { id: 'actions', header: 'Actions', cell: ({ row }) => <ActionsCell c={row.original} actionLoading={actionLoading} onAction={handleAction} /> },
-  ];
+  ], [actionLoading, handleAction]);
+
+  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+
+  const onPaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      updateURL({ page: String(next.pageIndex + 1), limit: String(next.pageSize) });
+    },
+    [pagination, updateURL],
+  );
 
   if (isLoading) {
     return (
@@ -176,47 +257,44 @@ export function CasesPage() {
     <PageShell title="Case Tracker" description="Real-time view of processed interventions and logs." cachedAt={lastSync ?? undefined}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <FilterSelect label="Barangay" value={filters.barangayFilter} onChange={filters.setBarangayFilter}
-            options={[{ value: '', label: 'All Barangays' }, ...filters.uniqueBarangays.map(b => ({ value: b, label: b }))]} className="w-40" />
-          <FilterSelect label="Category" value={filters.categoryFilter} onChange={filters.setCategoryFilter}
-            options={[{ value: '', label: 'All Categories' }, ...filters.uniqueCategories.map(c => ({ value: c, label: c }))]} className="w-44" />
-          <FilterSelect label="Status" value={filters.statusFilter} onChange={filters.setStatusFilter}
+          <FilterSelect label="Barangay" value={urlBarangay} onChange={(v) => updateURL({ barangay: v || undefined, page: '1' })}
+            options={[{ value: '', label: 'All Barangays' }, ...uniqueBarangays.map(b => ({ value: b, label: b }))]} className="w-40" />
+          <FilterSelect label="Category" value={urlCategory} onChange={(v) => updateURL({ category: v || undefined, page: '1' })}
+            options={[{ value: '', label: 'All Categories' }, ...uniqueCategories.map(c => ({ value: c, label: c }))]} className="w-44" />
+          <FilterSelect label="Status" value={urlStatus} onChange={(v) => updateURL({ status: v || undefined, page: '1' })}
             options={[{ value: '', label: 'All Statuses' }, ...Object.entries(STATUS_LABELS).map(([k, v]) => ({ value: k, label: v }))]} className="w-36" />
-          <FilterSelect label="Gender" value={filters.genderFilter} onChange={filters.setGenderFilter}
-            options={[{ value: '', label: 'All Genders' }, ...filters.uniqueGenders.map(g => ({ value: g, label: g }))]} className="w-32" />
-          <FilterSelect label="Age Range" value={filters.ageRangeFilter} onChange={filters.setAgeRangeFilter}
-            options={[{ value: '', label: 'All Ages' }, ...filters.uniqueAgeRanges.map(a => ({ value: a, label: a }))]} className="w-32" />
-          <FilterSelect label="SLA" value={filters.slaFilter} onChange={filters.setSlaFilter}
+          <FilterSelect label="Gender" value={urlGender} onChange={(v) => updateURL({ gender: v || undefined, page: '1' })}
+            options={[{ value: '', label: 'All Genders' }, ...uniqueGenders.map(g => ({ value: g, label: g }))]} className="w-32" />
+          <FilterSelect label="Age Range" value={urlAgeRange} onChange={(v) => updateURL({ ageRange: v || undefined, page: '1' })}
+            options={[{ value: '', label: 'All Ages' }, ...uniqueAgeRanges.map(a => ({ value: a, label: a }))]} className="w-32" />
+          <FilterSelect label="SLA" value={urlSla} onChange={(v) => updateURL({ sla: v || undefined, page: '1' })}
             options={[{ value: '', label: 'All SLA' }, { value: 'overdue', label: 'Overdue' }, { value: 'on_track', label: 'On Track' }]} className="w-32" />
           <div className="flex flex-col gap-0.5">
             <label className="text-xs text-muted-foreground font-medium">Date From</label>
-            <Input type="date" aria-label="Date from" className="w-36" value={filters.dateFrom} onChange={e => filters.setDateFrom(e.target.value)} />
+            <Input type="date" aria-label="Date from" className="w-36" value={urlDateFrom} onChange={e => updateURL({ dateFrom: e.target.value || undefined, page: '1' })} />
           </div>
           <div className="flex flex-col gap-0.5">
             <label className="text-xs text-muted-foreground font-medium">Date To</label>
-            <Input type="date" aria-label="Date to" className="w-36" value={filters.dateTo} onChange={e => filters.setDateTo(e.target.value)} />
+            <Input type="date" aria-label="Date to" className="w-36" value={urlDateTo} onChange={e => updateURL({ dateTo: e.target.value || undefined, page: '1' })} />
           </div>
-          {filters.hasAnyFilter && (
-            <Button variant="ghost" size="sm" onClick={filters.clearFilters} aria-label="Clear filters">Clear</Button>
+          {hasAnyFilter && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} aria-label="Clear filters">Clear</Button>
           )}
-          <Button variant="default" size="sm" onClick={() => exportCSV(filters.filteredCases)} aria-label="Export CSV">
+          <Button variant="default" size="sm" onClick={() => exportCSV(allCases)} aria-label="Export CSV">
             <Download size={16} /> Export CSV
           </Button>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input type="text" aria-label="Search cases" placeholder="Search records..." className="w-48 pl-8" value={filters.search} onChange={e => filters.setSearch(e.target.value)} />
+            <Input type="text" aria-label="Search cases" placeholder="Search records..." className="w-48 pl-8"
+              value={searchInput} onChange={e => { setSearchInput(e.target.value); setDebouncedSearch(e.target.value); }} />
           </div>
         </div>
       </div>
 
-      {!isLoading && filters.filteredCases.length === 0 ? (
-        <EmptyState variant={filters.hasAnyFilter ? 'no-results' : 'no-data'} />
-      ) : (
-        <DataTable columns={columns} data={filters.filteredCases} rowCount={filters.filteredCases.length}
-          pagination={filters.pagination} onPaginationChange={filters.setPagination} sorting={[]} />
-      )}
+      <DataTable columns={columns} data={allCases} rowCount={caseTotal}
+        pagination={pagination} onPaginationChange={onPaginationChange} sorting={[]} />
     </PageShell>
   );
 }

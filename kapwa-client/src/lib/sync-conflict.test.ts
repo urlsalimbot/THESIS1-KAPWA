@@ -11,13 +11,13 @@ vi.mock('./database', () => ({
 describe('Sync Conflict Resolution', () => {
   describe('mergeRecords', () => {
     it('should keep server version for financial fields', () => {
-      const server = { amount: 1000, status: 'approved' };
-      const client = { amount: 2000, status: 'disbursed' };
+      const server = { amount: 1000, status: 'active' };
+      const client = { amount: 2000, status: 'transitioning' };
       
       const result = mergeRecords(server as any, client as any);
       
       expect(result.amount).toBe(1000);
-      expect(result.status).toBe('approved');
+      expect(result.status).toBe('active');
     });
 
     it('should append notes chronologically', () => {
@@ -56,7 +56,7 @@ describe('Sync Conflict Resolution', () => {
         tableName: 'cases',
         recordId: 'c1',
         operation: 'UPDATE',
-        payload: { status: 'approved' },
+        payload: { status: 'active' },
         clientUpdatedAt: new Date().toISOString(),
         serverVersion: 1,
         status: 'pending',
@@ -69,13 +69,13 @@ describe('Sync Conflict Resolution', () => {
 
   describe('conflict resolution strategies', () => {
     it('should resolve as server - keep server data', () => {
-      const server = { amount: 1000, status: 'approved', notes: 'Server notes' };
-      const client = { amount: 2000, status: 'disbursed', notes: 'Client notes' };
+      const server = { amount: 1000, status: 'active', notes: 'Server notes' };
+      const client = { amount: 2000, status: 'transitioning', notes: 'Client notes' };
       
       const result = mergeRecords(server as any, client as any);
       
       expect(result.amount).toBe(1000);
-      expect(result.status).toBe('approved');
+      expect(result.status).toBe('active');
     });
 
     it('should resolve as client - keep client data for non-financial', () => {

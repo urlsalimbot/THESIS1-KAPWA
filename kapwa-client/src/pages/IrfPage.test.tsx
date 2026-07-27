@@ -48,7 +48,7 @@ describe('IrfPage', () => {
     mockApiPut.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
-      if (k.includes('irf') && k.includes('list')) return Promise.resolve(mockIrfs);
+      if (k.includes('irf')) return Promise.resolve({ data: mockIrfs, total: mockIrfs.length });
       return Promise.resolve(null);
     });
     await mutate(() => true, undefined, { revalidate: false });

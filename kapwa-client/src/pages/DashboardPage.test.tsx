@@ -21,7 +21,7 @@ const mockDashboardData = {
   disbursedMonth: 45000,
   beneficiaryCount: 28,
   recentCases: [
-    { id: 'C-001', name: 'Juan Dela Cruz', category: 'Senior', barangay: 'Barangay 1', remarks: 'Monthly assistance', date: '2026-06-28', status: 'approved' },
+    { id: 'C-001', name: 'Juan Dela Cruz', category: 'Senior', barangay: 'Barangay 1', remarks: 'Monthly assistance', date: '2026-06-28', status: 'active' },
   ],
 };
 

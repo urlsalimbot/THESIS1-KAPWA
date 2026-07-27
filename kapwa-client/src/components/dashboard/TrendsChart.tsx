@@ -31,7 +31,7 @@ export function TrendsChart({ data }: TrendsChartProps) {
             <YAxis tick={{ fontSize: 10 }} />
             <Tooltip contentStyle={{ fontSize: '12px' }} />
             <Bar dataKey="casesCreated" name="Cases" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="disbursed" name="Disbursed (₱)" fill="#10b981" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="transitioning" name="Transitioning (₱)" fill="#10b981" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

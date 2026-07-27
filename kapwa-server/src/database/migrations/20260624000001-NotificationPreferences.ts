@@ -5,7 +5,7 @@ export class NotificationPreferences2026062400000 implements MigrationInterface 
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      CREATE TABLE notification_preferences (
+      CREATE TABLE IF NOT EXISTS notification_preferences (
         id uuid DEFAULT uuid_generate_v7() PRIMARY KEY,
         user_id varchar NOT NULL,
         channel varchar NOT NULL,
@@ -17,7 +17,7 @@ export class NotificationPreferences2026062400000 implements MigrationInterface 
     `);
 
     await queryRunner.query(`
-      CREATE UNIQUE INDEX idx_notif_prefs_user_channel_category
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_notif_prefs_user_channel_category
       ON notification_preferences (user_id, channel, category)
     `);
 

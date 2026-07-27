@@ -1,8 +1,9 @@
 import { MAX_FILE_SIZE, DEFAULT_DOC_LIMIT } from './constants';
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, LessThan } from 'typeorm';
 import { DocumentVault } from './filing.entity';
+import { Case } from '../cases/case.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -13,11 +14,13 @@ export class FilingService {
   constructor(
     @InjectRepository(DocumentVault)
     private docRepo: Repository<DocumentVault>,
+    @InjectRepository(Case)
+    private caseRepo: Repository<Case>,
   ) {
     if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   }
 
-  async upload(file: { originalname: string; mimetype: string; size: number; buffer: Buffer }, metadata: { caseId?: string; beneficiaryId?: string; category?: string; notes?: string; uploadedBy?: string }) {
+  async upload(file: { originalname: string; mimetype: string; size: number; buffer: Buffer }, metadata: { caseId?: string; beneficiaryId?: string; category?: string; notes?: string; requirementKey?: string; uploadedBy?: string; userId?: string; personId?: string; userRole?: string }) {
     const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedMimes.includes(file.mimetype)) {
       throw new BadRequestException('Invalid file type. Allowed: PDF, JPEG, PNG, GIF, DOC');
@@ -25,6 +28,15 @@ export class FilingService {
     if (file.size > MAX_FILE_SIZE) {
       throw new BadRequestException('File too large. Max 10MB');
     }
+
+    if (metadata.userRole === 'claimant' && metadata.caseId) {
+      const c = await this.caseRepo.findOne({ where: { id: metadata.caseId }, relations: ['beneficiary'] });
+      if (!c) throw new NotFoundException('Case not found');
+      if (!metadata.personId || c.beneficiary?.personId !== metadata.personId) {
+        throw new ForbiddenException('You can only upload to your own case');
+      }
+    }
+
     const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\./g, '');
     const fileName = `${Date.now()}-${safeName}`;
     const filePath = path.join(UPLOAD_DIR, fileName);
@@ -39,9 +51,16 @@ export class FilingService {
       beneficiaryId: metadata.beneficiaryId,
       category: metadata.category,
       notes: metadata.notes,
+      requirementKey: metadata.requirementKey,
       uploadedBy: metadata.uploadedBy,
     });
     return this.docRepo.save(doc);
+  }
+
+  async findByCaseAndRequirement(caseId: string, requirementKey?: string) {
+    const where: FindOptionsWhere<DocumentVault> = { caseId };
+    if (requirementKey) where.requirementKey = requirementKey;
+    return this.docRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
   async findAll(caseId?: string, beneficiaryId?: string) {

@@ -9,7 +9,7 @@ interface StepSignaturesProps {
 }
 
 export function StepSignatures({ caseData }: StepSignaturesProps) {
-  const isApproved = caseData?.status === 'approved' || caseData?.status === 'disbursed' || caseData?.status === 'closed';
+  const isApproved = caseData?.status === 'active' || caseData?.status === 'transitioning' || caseData?.status === 'closed';
   const isClosed = caseData?.status === 'closed';
 
   return (
@@ -53,7 +53,7 @@ export function StepSignatures({ caseData }: StepSignaturesProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <span className="text-muted-foreground text-xs">Assigned Worker</span>
-              <p className="font-medium">{caseData?.assignedWorkerId || '—'}</p>
+              <p className="font-medium">{caseData?.assignedWorker?.fullName || '—'}</p>
             </div>
             <div>
               <span className="text-muted-foreground text-xs">Approved By</span>

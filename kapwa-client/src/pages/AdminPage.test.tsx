@@ -51,52 +51,45 @@ describe('AdminPage', () => {
 
   it('renders tab navigation', async () => {
     renderWithSWR(<AdminPage />);
-    expect(await screen.findByText(/Programs/)).toBeTruthy();
-    expect(screen.getByText(/Users/)).toBeTruthy();
+    expect(await screen.findByText(/Users/)).toBeTruthy();
     expect(screen.getByText(/Sync Queue/)).toBeTruthy();
     expect(screen.getByText(/Audit Log/)).toBeTruthy();
   });
 
-  it('renders Program Configurator card heading', async () => {
+  it('renders User Management card heading by default', async () => {
     renderWithSWR(<AdminPage />);
-    expect(await screen.findByText('Program Configurator')).toBeTruthy();
+    expect(await screen.findByText('User Management')).toBeTruthy();
   });
 
-  it('on default programs tab, api.get is called for /programs only', async () => {
+  it('on default users tab, api.get is called for /users only', async () => {
     renderWithSWR(<AdminPage />);
-    // Wait for the heading + the programs fetch
-    await screen.findByText('Program Configurator');
-    // All calls should reference the programs endpoint
+    // Wait for the heading + the users fetch
+    await screen.findByText('User Management');
+    // All calls should reference the users endpoint
     expect(mockApiGet).toHaveBeenCalled();
     const calledUrls = mockApiGet.mock.calls.map((c) => JSON.stringify(c[0]));
-    const hasPrograms = calledUrls.some((u) => u.includes('programs'));
-    expect(hasPrograms).toBe(true);
-    // Inactive tabs (users/sync/audit) should NOT have been fetched
-    const hasUsers = calledUrls.some((u) => u.includes('users') && !u.includes('programs'));
+    const hasUsers = calledUrls.some((u) => u.includes('users'));
+    expect(hasUsers).toBe(true);
+    // Inactive tabs (sync/audit) should NOT have been fetched
     const hasSync = calledUrls.some((u) => u.includes('sync-entries') || u.includes('sync/conflicts'));
     const hasAudit = calledUrls.some((u) => u.includes('audit-logs'));
-    expect(hasUsers).toBe(false);
     expect(hasSync).toBe(false);
     expect(hasAudit).toBe(false);
   });
 
-  it('clicking the Users tab fires an api.get call for /users', async () => {
+  it('clicking the Sync tab fires an api.get call for sync entries', async () => {
     renderWithSWR(<AdminPage />);
-    await screen.findByText('Program Configurator');
+    await screen.findByText('User Management');
     const initialCallCount = mockApiGet.mock.calls.length;
-    // Find the Users tab — Radix TabsTrigger has role="tab"
-    const usersTab = screen.getByRole('tab', { name: /users/i });
-    // Radix UI TabsTrigger activates on pointerdown, not click. fireEvent.mouseDown
-    // is the closest equivalent to a user event for this Radix component.
+    const syncTab = screen.getByRole('tab', { name: /sync/i });
     await act(async () => {
-      fireEvent.mouseDown(usersTab, { button: 0 });
+      fireEvent.mouseDown(syncTab, { button: 0 });
     });
-    // Wait for the user fetch — small wait for SWR to dispatch
     await new Promise((r) => setTimeout(r, 100));
     expect(mockApiGet.mock.calls.length).toBeGreaterThan(initialCallCount);
     const newCalls = mockApiGet.mock.calls.slice(initialCallCount);
-    const hasUsers = newCalls.some((c) => JSON.stringify(c[0]).includes('users'));
-    expect(hasUsers).toBe(true);
+    const hasSync = newCalls.some((c) => JSON.stringify(c[0]).includes('sync'));
+    expect(hasSync).toBe(true);
   });
 
   it('has no a11y violations', async () => {

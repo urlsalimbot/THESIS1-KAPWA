@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { FamilyMember } from './family-member.entity';
+import { HouseholdMembership } from './household-membership.entity';
 import { BaseEntity } from '../common/base.entity';
 
 @Entity('households')
@@ -20,6 +20,6 @@ export class Household extends BaseEntity {
   @CreateDateColumn({ name: 'verified_at' })
   verifiedAt!: Date;
 
-  @OneToMany(() => FamilyMember, fm => fm.household)
-  members!: FamilyMember[];
+  @OneToMany(() => HouseholdMembership, hm => hm.household)
+  members!: HouseholdMembership[];
 }

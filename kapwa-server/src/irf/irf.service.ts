@@ -43,7 +43,7 @@ export class IrfService {
          encrypted_narration = encrypt(
            convert_to($1, 'UTF8'),
            decode($2, 'hex'),
-           'aes-256-cbc/pad:pkcs'
+           'aes-cbc/pad:pkcs'
          ),
          key_wraps = $3::jsonb,
          key_version = COALESCE(key_version, 0) + 1
@@ -73,7 +73,7 @@ export class IrfService {
     };
 
     const irf = this.irfRepo.create(createData as any);
-    const [saved] = await this.irfRepo.save(irf as any);
+    const saved = await this.irfRepo.save(irf as any);
 
     if (narration) {
       await this.encryptWithPgcrypto(narration, saved.id);
@@ -82,18 +82,25 @@ export class IrfService {
     return this.findById(saved.id);
   }
 
-  async findAll() {
-    const items = await this.irfRepo.find({ order: { createdAt: 'DESC' }, take: 100 });
-    return items.map(i => ({
-      ...i,
-      encryptedNarration: undefined,
-      itemBPersonReported: i.itemBPersonReported
-        ? { ...i.itemBPersonReported, surname: '[REDACTED]', firstName: '[REDACTED]' }
-        : null,
-      itemAReportingPerson: i.itemAReportingPerson
-        ? { ...i.itemAReportingPerson, surname: '[REDACTED]', firstName: '[REDACTED]' }
-        : null,
-    }));
+  async findAll(page = 1, limit = 10) {
+    const [items, total] = await this.irfRepo.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      data: items.map(i => ({
+        ...i,
+        encryptedNarration: undefined,
+        itemBPersonReported: i.itemBPersonReported
+          ? { ...i.itemBPersonReported, surname: '[REDACTED]', firstName: '[REDACTED]' }
+          : null,
+        itemAReportingPerson: i.itemAReportingPerson
+          ? { ...i.itemAReportingPerson, surname: '[REDACTED]', firstName: '[REDACTED]' }
+          : null,
+      })),
+      total,
+    };
   }
 
   async findById(id: string) {
@@ -143,7 +150,7 @@ export class IrfService {
 
     const result = await this.irfRepo.query(
       `SELECT convert_from(
-         decrypt(encrypted_narration, decode($1, 'hex'), 'aes-256-cbc/pad:pkcs'),
+         decrypt(encrypted_narration, decode($1, 'hex'), 'aes-cbc/pad:pkcs'),
          'UTF8'
        ) AS narration
        FROM irf_cases WHERE id = $2`,
@@ -195,7 +202,7 @@ export class IrfService {
         const recordKeyHex = await this.irfKeyService.getRecordKey(id);
         const result = await this.irfRepo.query(
           `SELECT convert_from(
-             decrypt(encrypted_narration, decode($1, 'hex'), 'aes-256-cbc/pad:pkcs'),
+              decrypt(encrypted_narration, decode($1, 'hex'), 'aes-cbc/pad:pkcs'),
              'UTF8'
            ) AS narration
            FROM irf_cases WHERE id = $2`,

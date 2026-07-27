@@ -23,7 +23,12 @@ export class InterventionFields2026062200002 implements MigrationInterface {
     `);
 
     // 4. Create signature_status enum type
-    await queryRunner.query(`CREATE TYPE "public"."intervention_signature_status_enum" AS ENUM('signatures_pending', 'signatures_collected')`);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE TYPE "public"."intervention_signature_status_enum" AS ENUM('signatures_pending', 'signatures_collected');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
 
     // 5. Add client signature URL column
     await queryRunner.query(`ALTER TABLE interventions ADD COLUMN IF NOT EXISTS client_signature_url VARCHAR`);

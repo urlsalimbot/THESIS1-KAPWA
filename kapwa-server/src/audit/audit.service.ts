@@ -1,21 +1,16 @@
 import { HASH_CHAIN_BATCH_LIMIT, AUDIT_LOG_DEFAULT_LIMIT } from './constants';
 import { Injectable } from '@nestjs/common';
-import { Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Intervention } from '../interventions/intervention.entity';
 import { Case } from '../cases/case.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
-import { FindOptionsWhere } from 'typeorm';
 import * as crypto from 'crypto';
 import { CacheService } from '../common/cache.service';
 
 @Injectable()
 export class AuditService {
   constructor(
-    @InjectRepository(Intervention)
-    private readonly intRepo: Repository<Intervention>,
     @InjectRepository(Case)
     private readonly caseRepo: Repository<Case>,
     @InjectRepository(Beneficiary)
@@ -45,56 +40,22 @@ export class AuditService {
   }
 
   async verifyAllChains(): Promise<{
-    interventions: { valid: boolean; brokenAt?: string };
     cases: { valid: boolean; brokenAt?: string };
     beneficiaries: { valid: boolean; brokenAt?: string };
     consentLedger: { valid: boolean; brokenAt?: string };
   }> {
     return this.cache.wrap('audit:verifyAllChains', async () => {
-      const [int, cas, ben, con] = await Promise.all([
-        this.verifyHashChain(this.intRepo, 'loggedAt'),
+      const [cas, ben, con] = await Promise.all([
         this.verifyHashChain(this.caseRepo, 'createdAt'),
         this.verifyHashChain(this.benRepo, 'createdAt'),
         this.verifyHashChain(this.consentRepo, 'grantedAt'),
       ]);
-      return { interventions: int, cases: cas, beneficiaries: ben, consentLedger: con };
+      return { cases: cas, beneficiaries: ben, consentLedger: con };
     }, 60_000);
   }
 
-  async verifyInterventionChain(startId?: string): Promise<{ valid: boolean; brokenAt?: string }> {
-    const interventions = await this.intRepo.find({
-      order: { loggedAt: 'ASC' },
-      take: startId ? undefined : HASH_CHAIN_BATCH_LIMIT,
-    });
-    const startIdx = startId ? interventions.findIndex(i => i.id === startId) : 0;
-    if (startIdx === -1) return { valid: false, brokenAt: startId || 'unknown' };
-    for (let i = Math.max(startIdx, 1); i < interventions.length; i++) {
-      const prev = interventions[i - 1];
-      const curr = interventions[i];
-      if (!curr.hash) continue;
-      const expected = crypto.createHash('sha256')
-        .update(JSON.stringify({ id: prev.id, type: prev.interventionType, amount: prev.amount, hash: prev.hash }))
-        .digest('hex');
-      if (curr.hash !== expected) {
-        return { valid: false, brokenAt: curr.id };
-      }
-    }
-    return { valid: true };
-  }
-
   async getAuditLog(table: string, recordId: string, limit = AUDIT_LOG_DEFAULT_LIMIT) {
-    const ints = await this.intRepo.find({
-      where: { id: recordId } as any,
-      order: { loggedAt: 'DESC' },
-      take: limit,
-    });
-    return ints.map(i => ({
-      table,
-      recordId: i.id,
-      action: 'INSERT',
-      timestamp: i.loggedAt,
-      data: { type: i.interventionType, amount: i.amount },
-    }));
+    return [];
   }
 
   async getConsentLedger(beneficiaryId?: string, limit = 50) {
@@ -108,28 +69,11 @@ export class AuditService {
   }
 
   async exportForCoa(startDate: Date, endDate: Date) {
-    const where: FindOptionsWhere<Intervention> = {};
-    if (startDate) where.loggedAt = MoreThanOrEqual(startDate);
-    if (endDate) where.loggedAt = LessThanOrEqual(endDate);
-    if (startDate && endDate) where.loggedAt = Between(startDate, endDate);
-    const interventions = await this.intRepo.find({
-      where,
-      order: { loggedAt: 'ASC' },
-    });
     return {
       generatedAt: new Date(),
       period: { startDate, endDate },
-      interventions: interventions.map(i => ({
-        id: i.id,
-        type: i.interventionType,
-        amount: i.amount,
-        date: i.serviceDate,
-        voucherNo: i.voucherNo,
-      })),
-      summary: {
-        totalAmount: interventions.reduce((s, i) => s + Number(i.amount || 0), 0),
-        count: interventions.length,
-      },
+      interventions: [],
+      summary: { totalAmount: 0, count: 0 },
     };
   }
 }
