@@ -19,9 +19,12 @@ export class IrfDispositionEncryption2026062200005 implements MigrationInterface
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_reference ON audit_log(reference_id)`);
 
     // 2. Create disposition enum type
-    await queryRunner.query(
-      `CREATE TYPE irf_disposition AS ENUM ('Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed')`
-    );
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE TYPE irf_disposition AS ENUM ('Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
 
     // 3. Add new columns to irf_cases
     await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_wraps jsonb`);

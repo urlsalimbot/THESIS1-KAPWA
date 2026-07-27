@@ -1,18 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { Shield, CheckCircle, XCircle, Download, Search, RefreshCw, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '../lib/query-keys';
-import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 export function AuditorPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const urlLimit = parseInt(searchParams.get('limit') || '10', 10);
   const [activeTab, setActiveTab] = useState<'hash' | 'consent'>('hash');
   const [beneficiaryFilter, setBeneficiaryFilter] = useState('');
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+
+  const updateURL = useCallback((overrides: Record<string, string | undefined>) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of Object.entries(overrides)) {
+        if (v) next.set(k, v);
+        else next.delete(k);
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+
+  const onPaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      updateURL({ page: String(next.pageIndex + 1), limit: String(next.pageSize) });
+    },
+    [pagination, updateURL],
+  );
 
   const { data: hashChain, isLoading: loading, mutate: revalidateHash } = useSWR<Record<string, { valid: boolean; brokenAt?: string }>>(
     queryKeys.audit.hashChains(),
@@ -137,7 +160,7 @@ export function AuditorPage() {
               data={consentLedger}
               rowCount={consentLedger.length}
               pagination={pagination}
-              onPaginationChange={setPagination}
+              onPaginationChange={onPaginationChange}
               sorting={[]}
             />
           )}

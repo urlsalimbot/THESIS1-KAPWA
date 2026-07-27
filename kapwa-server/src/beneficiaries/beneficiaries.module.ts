@@ -3,18 +3,20 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BeneficiariesService } from './beneficiaries.service';
 import { BeneficiariesController } from './beneficiaries.controller';
 import { Beneficiary } from './beneficiary.entity';
+import { Person } from './person.entity';
+import { BeneficiaryRole } from './beneficiary-role.entity';
+import { HouseholdMembership } from './household-membership.entity';
+import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
 import { ConsentLedger } from './consent-ledger.entity';
 import { Case } from '../cases/case.entity';
-import { Intervention } from '../interventions/intervention.entity';
-import { FamilyMember } from './family-member.entity';
 import { ConsentGuard } from '../auth/guards/consent.guard';
 import { PiiMaskingInterceptor } from './pii.interceptor';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Beneficiary, ConsentLedger, FamilyMember, Case, Intervention]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Person, BeneficiaryRole, HouseholdMembership, BeneficiaryClaimant, Beneficiary, ConsentLedger, Case]), AuthModule],
   controllers: [BeneficiariesController],
   providers: [BeneficiariesService, ConsentGuard, PiiMaskingInterceptor],
-  exports: [BeneficiariesService, PiiMaskingInterceptor, TypeOrmModule.forFeature([ConsentLedger])],
+  exports: [BeneficiariesService, PiiMaskingInterceptor, TypeOrmModule.forFeature([ConsentLedger, Person])],
 })
 export class BeneficiariesModule {}

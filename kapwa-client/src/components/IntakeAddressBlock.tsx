@@ -34,6 +34,9 @@ export const IntakeAddressBlock = memo(function IntakeAddressBlock({ value, onCh
   const selectedProvince = selectedRegion?.provinces.find(p => p.code === value.province);
   const selectedMuncity = selectedProvince?.muncities.find(m => m.code === value.city);
   const isNcr = value.region === '13';
+  const regionName = selectedRegion?.name || value.region;
+  const provinceName = selectedProvince?.name || value.province;
+  const cityName = selectedMuncity?.name || value.city;
 
   function handleRegionChange(code: string) {
     onChange('region', code);
@@ -74,15 +77,15 @@ export const IntakeAddressBlock = memo(function IntakeAddressBlock({ value, onCh
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
             <label className="text-sm font-medium">Region</label>
-            <Input value={value.region} onChange={e => onChange('region', e.target.value)} aria-label={`${label} Region`} />
+            <Input value={regionName} onChange={e => onChange('region', e.target.value)} aria-label={`${label} Region`} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Province</label>
-            <Input value={value.province} onChange={e => onChange('province', e.target.value)} aria-label={`${label} Province`} />
+            <Input value={provinceName} onChange={e => onChange('province', e.target.value)} aria-label={`${label} Province`} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">City/Municipality</label>
-            <Input value={value.city} onChange={e => onChange('city', e.target.value)} aria-label={`${label} City`} />
+            <Input value={cityName} onChange={e => onChange('city', e.target.value)} aria-label={`${label} City`} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Barangay</label>
@@ -139,9 +142,6 @@ export const IntakeAddressBlock = memo(function IntakeAddressBlock({ value, onCh
             {selectedMuncity?.barangays.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
           </select>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-2">
           <label className="text-sm font-medium">House/Unit No., Street</label>
           <Input value={value.street} onChange={e => onChange('street', e.target.value)} aria-label={`${label} Street`} />

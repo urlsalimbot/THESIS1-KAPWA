@@ -5,6 +5,7 @@ export const UploadMetadataSchema = z.object({
   beneficiaryId: z.string().optional(),
   category: z.string().optional(),
   notes: z.string().optional(),
+  requirementKey: z.string().optional(),
 });
 
 export type UploadMetadataInput = z.infer<typeof UploadMetadataSchema>;

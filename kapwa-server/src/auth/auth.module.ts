@@ -7,13 +7,15 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from './user.entity';
+import { Person } from '../beneficiaries/person.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { AbacService } from './services/abac.service';
 import { OtpModule } from '../otp/otp.module';
 import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Person, Beneficiary]),
     PassportModule,
     OtpModule,
     EmailModule,

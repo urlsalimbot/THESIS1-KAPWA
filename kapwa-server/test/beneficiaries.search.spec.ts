@@ -2,11 +2,12 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service';
+import { Person } from '../src/beneficiaries/person.entity';
 import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
+import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
-import { FamilyMember } from '../src/beneficiaries/family-member.entity';
+import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
 import { Case } from '../src/cases/case.entity';
-import { Intervention } from '../src/interventions/intervention.entity';
 
 function createMockQb() {
   return {
@@ -18,6 +19,7 @@ function createMockQb() {
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
     getMany: jest.fn().mockResolvedValue([]),
+    getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
   };
 }
 
@@ -32,11 +34,12 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
     const module = await Test.createTestingModule({
       providers: [
         BeneficiariesService,
+        { provide: getRepositoryToken(Person), useValue: { find: jest.fn(), create: jest.fn(), save: jest.fn() } },
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
+        { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(ConsentLedger), useValue: { find: jest.fn(), findOne: jest.fn() } },
-        { provide: getRepositoryToken(FamilyMember), useValue: { find: jest.fn() } },
+        { provide: getRepositoryToken(HouseholdMembership), useValue: { find: jest.fn(), query: jest.fn() } },
         { provide: getRepositoryToken(Case), useValue: { find: jest.fn() } },
-        { provide: getRepositoryToken(Intervention), useValue: { find: jest.fn() } },
       ],
     }).compile();
 
@@ -51,7 +54,7 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
     await service.findAll(undefined, 'Dela Crus', 1, 100);
 
     expect(mockQb.andWhere).toHaveBeenCalledWith(
-      expect.stringContaining('similarity(b.surname, :search) > 0.3'),
+      expect.stringContaining('similarity(p.surname, :search) > 0.3'),
       expect.any(Object),
     );
     expect(mockQb.addSelect).toHaveBeenCalledWith(
@@ -78,7 +81,7 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
     await service.findAll('Norzagaray', undefined, 1, 100);
 
     expect(mockQb.andWhere).toHaveBeenCalledWith(
-      expect.stringContaining('b.address ILIKE :barangay'),
+      expect.stringContaining('p.address ILIKE :barangay'),
       expect.objectContaining({ barangay: expect.stringContaining('Norzagaray') }),
     );
   });
@@ -93,15 +96,18 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
     const allArgs = andWhereCalls.map((c: string[]) => c[0]).join(' ');
 
     expect(allArgs).toContain('ILIKE :barangay');
-    expect(allArgs).toContain('similarity(b.surname');
+    expect(allArgs).toContain('similarity(p.surname');
     expect(allArgs).toContain('b.category = :category');
   });
 
   // Test 5: Empty search — returns all beneficiaries
   it('should return all beneficiaries when no search, category, or barangay provided', async () => {
-    mockQb.getMany.mockResolvedValueOnce([
-      { id: '1', surname: 'Cruz', firstName: 'Juan' },
-      { id: '2', surname: 'Rosa', firstName: 'Maria' },
+    mockQb.getManyAndCount.mockResolvedValueOnce([
+      [
+        { id: '1', surname: 'Cruz', firstName: 'Juan' },
+        { id: '2', surname: 'Rosa', firstName: 'Maria' },
+      ],
+      2,
     ]);
     const results = await service.findAll(undefined, undefined, 1, 100);
 
@@ -112,7 +118,8 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
       expect.stringContaining('plainto_tsquery'),
       expect.any(Object),
     );
-    expect(results).toHaveLength(2);
+    expect(results.data).toHaveLength(2);
+    expect(results.total).toBe(2);
   });
 
   // Test 6: Short query guard — < 3 chars uses tsvector + ILIKE, NOT similarity
@@ -136,7 +143,7 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
 
     // addSelect with ts_rank + similarity combined score
     expect(mockQb.addSelect).toHaveBeenCalledWith(
-      expect.stringContaining('ts_rank(b.search_vector, plainto_tsquery'),
+      expect.stringContaining('ts_rank(p.search_vector, plainto_tsquery'),
       'rank',
     );
     // orderBy should use the rank alias

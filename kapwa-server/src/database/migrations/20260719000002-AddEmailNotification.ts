@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddEmailNotification20260719000002 implements MigrationInterface {
-  name = 'AddEmailNotification20260719000002';
+export class ZAddEmailNotification20260719000002 implements MigrationInterface {
+  name = 'ZAddEmailNotification2026071900002';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS email TEXT`);

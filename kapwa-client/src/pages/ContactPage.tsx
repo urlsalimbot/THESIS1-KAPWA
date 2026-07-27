@@ -44,13 +44,13 @@ export function ContactPage() {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success('Message sent. We will respond within 1-2 business days.');
+      toast.success('Message sent', { description: 'We will respond within 1-2 business days.' });
       setName('');
       setEmail('');
       setMessage('');
       setErrors({});
     } catch {
-      toast.error('Message failed to send. Please try again or call us directly.');
+      toast.error('Message failed', { description: 'Please try again or call us directly.' });
     } finally {
       setSubmitting(false);
     }

@@ -1,12 +1,14 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { User } from '../auth/user.entity';
 import { BaseEntity } from '../common/base.entity';
 
 export enum CaseStatus {
-  PENDING = 'pending_assessment',
+  ENROLLED = 'enrolled',
+  ASSESSED = 'assessed',
   IN_REVIEW = 'in_review',
-  APPROVED = 'approved',
-  DISBURSED = 'disbursed',
+  ACTIVE = 'active',
+  TRANSITIONING = 'transitioning',
   CLOSED = 'closed'
 }
 
@@ -25,7 +27,7 @@ export class Case extends BaseEntity {
   @Column({ name: 'requirements_checklist', type: 'jsonb', nullable: true })
   requirementsChecklist?: Record<string, boolean>;
 
-  @Column({ name: 'status', type: 'enum', enum: CaseStatus, default: CaseStatus.PENDING })
+  @Column({ name: 'status', type: 'enum', enum: CaseStatus, default: CaseStatus.ENROLLED })
   status!: CaseStatus;
 
   @Column({ name: 'certificate_url', nullable: true })
@@ -42,6 +44,13 @@ export class Case extends BaseEntity {
 
   @Column({ name: 'assigned_worker_id', nullable: true })
   assignedWorkerId?: string;
+
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'assigned_worker_id' })
+  assignedWorker?: User;
+
+  @Column({ name: 'assigned_worker_name', nullable: true })
+  assignedWorkerName?: string;
 
   @ManyToOne(() => Beneficiary, { nullable: true })
   @JoinColumn({ name: 'beneficiary_id' })
@@ -100,6 +109,38 @@ export class Case extends BaseEntity {
 
   @Column({ name: 'exit_notes', type: 'text', nullable: true })
   exitNotes?: string;
+
+  @Column({ name: 'frva_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  frvaScore?: number;
+
+  @Column({ name: 'swdi_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  swdiScore?: number;
+
+  @Column({ name: 'family_dialogue_notes', type: 'text', nullable: true })
+  familyDialogueNotes?: string;
+
+  @Column({ name: 'self_reliance_level', type: 'int', nullable: true })
+  selfRelianceLevel?: number;
+
+  @Column({ name: 'sustainability_plan', type: 'text', nullable: true })
+  sustainabilityPlan?: string;
+
+  @Column({ name: 'transition_date', type: 'date', nullable: true })
+  transitionDate?: string;
+
+  @Column({ name: 'closure_outcome', nullable: true })
+  closureOutcome?: string;
+
+  @Column({ name: 'closure_date', type: 'date', nullable: true })
+  closureDate?: string;
+
+  @Column({ name: 'follow_up_visits', type: 'jsonb', nullable: true })
+  followUpVisits?: Array<{
+    date: string;
+    type: string;
+    notes: string;
+    outcome: string;
+  }>;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

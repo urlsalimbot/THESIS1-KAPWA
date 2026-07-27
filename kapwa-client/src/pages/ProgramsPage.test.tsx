@@ -32,12 +32,12 @@ describe('ProgramsPage', () => {
 
   it('renders PageShell heading', async () => {
     render(<MemoryRouter><ProgramsPage /></MemoryRouter>);
-    expect(await screen.findByRole('heading', { name: /Programs/i })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Programs' })).toBeTruthy();
   });
 
   it('has no a11y violations', async () => {
     const { container } = render(<MemoryRouter><ProgramsPage /></MemoryRouter>);
-    await screen.findByRole('heading', { name: /Programs/i });
+    await screen.findByRole('heading', { name: 'Programs' });
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

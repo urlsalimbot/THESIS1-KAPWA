@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 const CHART_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#6b7280'];
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_assessment: 'Pending',
+  enrolled: 'Enrolled',
   in_review: 'In Review',
   approved: 'Approved',
   disbursed: 'Disbursed',

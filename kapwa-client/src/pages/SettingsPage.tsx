@@ -52,10 +52,10 @@ function ProfileTab() {
       onSuccess: () => {
         setNewEmail('');
         setEmailPw('');
-        toast.success('Verification sent! Check your new email inbox.');
+        toast.success('Verification sent', { description: 'Check your new email inbox.' });
       },
       onError: (err) => {
-        toast.error(err.message || 'Failed to update email');
+        toast.error('Failed to update email', { description: err.message || 'Please try again.' });
       },
     },
   );
@@ -73,14 +73,14 @@ function ProfileTab() {
     },
     {
       onSuccess: () => {
-        toast.success('Password changed successfully');
+        toast.success('Password changed', { description: 'Your password has been updated.' });
         setCurrentPw('');
         setNewPw('');
         setConfirmPw('');
         setPwError('');
       },
       onError: (err) => {
-        toast.error(err.message || 'Failed to change password');
+        toast.error('Failed to change password', { description: err.message || 'Please try again.' });
       },
     },
   );
@@ -90,16 +90,16 @@ function ProfileTab() {
 
   async function handleSavePhone() {
     if (!phone || phone.length < 10) {
-      toast.error('Please enter a valid phone number');
+      toast.error('Invalid phone number', { description: 'Please enter a valid phone number.' });
       return;
     }
     setPhoneSaving(true);
     try {
       await api.post('/auth/update-phone', { phone });
-      toast.success('Phone number updated');
+      toast.success('Phone number updated', { description: 'Your contact info has been saved.' });
       globalMutate(queryKeys.auth.me());
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update phone');
+      toast.error('Failed to update phone', { description: err.message || 'Please try again.' });
     } finally {
       setPhoneSaving(false);
     }
@@ -472,7 +472,7 @@ function NotificationsTab() {
       });
       await revalidatePrefs();
     } catch {
-      toast.error('Failed to update notification preference');
+      toast.error('Failed to update preference', { description: 'Please try again.' });
     } finally {
       setToggling(null);
     }

@@ -28,7 +28,7 @@ export class SlaService {
     let warnings = 0;
 
     const pendingOverdue = await this.caseRepo.find({
-      where: { status: CaseStatus.PENDING },
+      where: { status: CaseStatus.ENROLLED },
     });
     for (const c of pendingOverdue) {
       const age = this.workingDays(c.createdAt, new Date());
@@ -55,16 +55,16 @@ export class SlaService {
       }
     }
 
-    const approvedOverdue = await this.caseRepo.find({
-      where: { status: CaseStatus.APPROVED },
+    const activeOverdue = await this.caseRepo.find({
+      where: { status: CaseStatus.ACTIVE },
     });
-    for (const c of approvedOverdue) {
+    for (const c of activeOverdue) {
       const age = this.workingDays(c.createdAt, new Date());
       if (age >= APPROVED_ESCALATION_DAYS) {
-        await this.createAlert(c, 'approved', 'Admin attention required — case approved > 3 days without disbursement');
+        await this.createAlert(c, 'active', 'Admin attention required — case active > 3 days without transition');
         escalated++;
       } else if (age >= APPROVED_WARNING_DAYS) {
-        await this.createAlert(c, 'approved', 'Warning: case approved > 2 days without disbursement');
+        await this.createAlert(c, 'active', 'Warning: case active > 2 days without transition');
         warnings++;
       }
     }
@@ -75,10 +75,11 @@ export class SlaService {
 
   private statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      pending_assessment: 'Pending Assessment',
+      enrolled: 'Enrolled',
+      assessed: 'Assessed',
       in_review: 'In Review',
-      approved: 'Approved',
-      disbursed: 'Disbursed',
+      active: 'Active',
+      transitioning: 'Transitioning',
       closed: 'Closed',
     };
     return labels[status] || status;

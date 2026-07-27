@@ -3,11 +3,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service';
+import { Person } from '../src/beneficiaries/person.entity';
 import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
+import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
-import { FamilyMember } from '../src/beneficiaries/family-member.entity';
+import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
 import { Case } from '../src/cases/case.entity';
-import { Intervention } from '../src/interventions/intervention.entity';
 
 describe('BeneficiariesService — Consent Revoke', () => {
   let service: BeneficiariesService;
@@ -44,15 +45,10 @@ describe('BeneficiariesService — Consent Revoke', () => {
             }),
           },
         },
-        {
-          provide: getRepositoryToken(FamilyMember),
-          useValue: {
-            find: jest.fn(),
-            query: jest.fn().mockResolvedValue([]),
-          },
-        },
+        { provide: getRepositoryToken(Person), useValue: { create: jest.fn(), save: jest.fn(), findOne: jest.fn() } },
+        { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
+        { provide: getRepositoryToken(HouseholdMembership), useValue: { find: jest.fn(), query: jest.fn() } },
         { provide: getRepositoryToken(Case), useValue: { find: jest.fn().mockResolvedValue([]) } },
-        { provide: getRepositoryToken(Intervention), useValue: { find: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 

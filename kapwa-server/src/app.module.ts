@@ -12,7 +12,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { IrfModule } from './irf/irf.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ChatModule } from './chat/chat.module';
-import { TrackerModule } from './tracker/tracker.module';
+
 import { CsrModule } from './csr/csr.module';
 import { AuditModule } from './audit/audit.module';
 import { ExportModule } from './export/export.module';
@@ -67,7 +67,6 @@ import { AppController } from './app.controller';
     IrfModule,
     DashboardModule,
     ChatModule,
-    TrackerModule,
     CsrModule,
     AuditModule,
     ExportModule,

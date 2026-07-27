@@ -42,7 +42,7 @@ export class AccessCardsService {
 
   async getSummary(beneficiaryId: string) {
     const ben = await this.repo.query(
-      'SELECT id, access_card_code, surname, first_name, barangay FROM beneficiaries WHERE id = $1',
+      'SELECT b.id, b.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
     );
     if (!ben?.[0]?.access_card_code) {
@@ -60,7 +60,7 @@ export class AccessCardsService {
 
   async findBeneficiaryCard(beneficiaryId: string) {
     const ben = await this.repo.query(
-      'SELECT id, access_card_code, surname, first_name, barangay FROM beneficiaries WHERE id = $1',
+      'SELECT b.id, b.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
     );
     if (!ben?.[0]?.access_card_code) {

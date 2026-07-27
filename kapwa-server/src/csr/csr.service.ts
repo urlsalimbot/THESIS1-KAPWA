@@ -3,7 +3,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CsrRecord } from './csr.entity';
-import { Intervention } from '../interventions/intervention.entity';
 import * as PDFDocument from 'pdfkit';
 
 const CSR_PAD_WIDTH = 4;
@@ -12,8 +11,6 @@ export class CsrService {
   constructor(
     @InjectRepository(CsrRecord)
     private readonly csrRepo: Repository<CsrRecord>,
-    @InjectRepository(Intervention)
-    private readonly interventionRepo: Repository<Intervention>,
   ) {}
 
   async create(data: Partial<CsrRecord>, userId: string): Promise<CsrRecord> {
@@ -57,8 +54,8 @@ export class CsrService {
     await this.csrRepo.remove(record);
   }
 
-  async findInterventions(caseId: string) {
-    return this.interventionRepo.find({ where: { caseId }, order: { loggedAt: 'DESC' } });
+  async findInterventions(_caseId: string) {
+    return [];
   }
 
   async generatePdf(controlNo: string): Promise<Buffer> {

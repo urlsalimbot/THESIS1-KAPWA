@@ -25,13 +25,13 @@ export class CaseInterventionsController {
 
   @Patch(':id')
   @Roles('admin', 'social_worker')
-  update(@Param('id') id: string, @Body(new ZodPipe(UpdateCaseInterventionSchema)) body: UpdateCaseInterventionInput) {
-    return this.service.update(id, body);
+  update(@Param('caseId') caseId: string, @Param('id') id: string, @Body(new ZodPipe(UpdateCaseInterventionSchema)) body: UpdateCaseInterventionInput) {
+    return this.service.update(caseId, id, body);
   }
 
   @Delete(':id')
   @Roles('admin', 'social_worker')
-  delete(@Param('id') id: string) {
-    return this.service.delete(id);
+  delete(@Param('caseId') caseId: string, @Param('id') id: string) {
+    return this.service.delete(caseId, id);
   }
 }

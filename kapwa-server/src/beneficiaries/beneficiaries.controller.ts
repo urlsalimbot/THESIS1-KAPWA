@@ -1,4 +1,6 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { ClassSerializerInterceptor } from '@nestjs/common';
+import { instanceToPlain } from 'class-transformer';
 import { BeneficiariesService } from './beneficiaries.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
@@ -12,6 +14,8 @@ import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema } 
 
 @Controller('beneficiaries')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 export class BeneficiariesController {
   constructor(private benService: BeneficiariesService) {}
 
@@ -60,7 +64,9 @@ export class BeneficiariesController {
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   async findOne(@Param('id') id: string) {
-    return this.benService.findById(id);
+    const beneficiary = await this.benService.findById(id);
+    const claimant = await this.benService.getClaimant(id);
+    return { ...instanceToPlain(beneficiary), claimant };
   }
 
   @Get(':id/family-graph')

@@ -2,13 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DashboardService } from './dashboard.service';
 import { Case } from '../cases/case.entity';
-import { Intervention } from '../interventions/intervention.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 
 describe('DashboardService', () => {
   let service: DashboardService;
   let caseRepoMock: any;
-  let intRepoMock: any;
   let benRepoMock: any;
 
   beforeEach(async () => {
@@ -34,18 +32,6 @@ describe('DashboardService', () => {
       findOne: jest.fn(),
     };
 
-    intRepoMock = {
-      createQueryBuilder: jest.fn(() => ({
-        select: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue({ total: '10000' }),
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
-        getCount: jest.fn().mockResolvedValue(10),
-      })),
-      find: jest.fn(),
-    };
-
     benRepoMock = {
       createQueryBuilder: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
@@ -58,7 +44,6 @@ describe('DashboardService', () => {
       providers: [
         DashboardService,
         { provide: getRepositoryToken(Case), useValue: caseRepoMock },
-        { provide: getRepositoryToken(Intervention), useValue: intRepoMock },
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
       ],
     }).compile();
@@ -77,11 +62,6 @@ describe('DashboardService', () => {
   });
 
   it('returns daily tracker', async () => {
-    intRepoMock.createQueryBuilder = jest.fn(() => ({
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValue([]),
-    }));
     const result = await service.getDailyTracker(new Date());
     expect(result).toEqual([]);
   });

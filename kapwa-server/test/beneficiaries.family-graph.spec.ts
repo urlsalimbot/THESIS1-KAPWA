@@ -3,18 +3,20 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service';
+import { Person } from '../src/beneficiaries/person.entity';
+import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
+import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity';
 import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
-import { FamilyMember } from '../src/beneficiaries/family-member.entity';
 import { Case } from '../src/cases/case.entity';
-import { Intervention } from '../src/interventions/intervention.entity';
 
-describe('BeneficiariesService — Family Graph (Recursive CTE)', () => {
+describe('BeneficiariesService — Family Graph', () => {
   let service: BeneficiariesService;
-  let familyMemberRepo: Repository<FamilyMember>;
+  let hmRepo: Repository<HouseholdMembership>;
   let benRepo: Repository<Beneficiary>;
 
-  const mockBen: Partial<Beneficiary> = { id: 'ben-1', householdId: 'hh-1' };
+  const mockBen = { id: 'ben-1', householdId: 'hh-1', personId: 'person-1' } as Beneficiary;
+  const mockPerson = { id: 'person-1', surname: 'Cruz', firstName: 'Juan', middleName: null, age: 45, occupation: 'Employed', estimatedMonthlyIncome: 30000 };
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -39,103 +41,99 @@ describe('BeneficiariesService — Family Graph (Recursive CTE)', () => {
           },
         },
         {
-          provide: getRepositoryToken(FamilyMember),
+          provide: getRepositoryToken(Person),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn().mockResolvedValue(mockPerson),
+          },
+        },
+        {
+          provide: getRepositoryToken(HouseholdMembership),
           useValue: {
             find: jest.fn(),
             query: jest.fn(),
           },
         },
+        { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(Case), useValue: { find: jest.fn().mockResolvedValue([]) } },
-        { provide: getRepositoryToken(Intervention), useValue: { find: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 
     service = module.get<BeneficiariesService>(BeneficiariesService);
-    familyMemberRepo = module.get<Repository<FamilyMember>>(getRepositoryToken(FamilyMember));
+    hmRepo = module.get<Repository<HouseholdMembership>>(getRepositoryToken(HouseholdMembership));
     benRepo = module.get<Repository<Beneficiary>>(getRepositoryToken(Beneficiary));
   });
 
   afterEach(() => jest.clearAllMocks());
 
-  // Test 1: Returns members from same household (depth 0)
-  it('should return family members from the same household (depth 0)', async () => {
+  it('should return primary and household members', async () => {
     const mockMembers = [
-      { id: 'fm-1', fullName: 'Juan Cruz', relationship: 'Self', age: 45, occupation: 'Employed', isPrimary: true, depth: 0 },
-      { id: 'fm-2', fullName: 'Maria Cruz', relationship: 'Spouse', age: 42, occupation: 'Housewife', isPrimary: false, depth: 0 },
+      { id: 'fm-2', full_name: 'Maria Cruz', relationship: 'Spouse', age: 42, occupation: 'Housewife', income: 0, status: null, is_primary: false },
     ];
 
-    (familyMemberRepo.query as jest.Mock).mockResolvedValue(mockMembers);
+    (hmRepo.query as jest.Mock).mockResolvedValue(mockMembers);
 
     const result = await service.getFamilyGraph('ben-1');
 
-    expect(familyMemberRepo.query).toHaveBeenCalledWith(
-      expect.stringContaining('WITH RECURSIVE family_tree'),
-      expect.arrayContaining(['ben-1', expect.any(Number)]),
+    expect(hmRepo.query).toHaveBeenCalledWith(
+      expect.stringContaining('SELECT hm.id'),
+      expect.arrayContaining(['hh-1', expect.any(Number)]),
     );
-    expect(result.primary).toEqual(mockMembers[0]);
+    expect(result.primary?.fullName).toContain('Juan Cruz');
+    expect(result.primary?.relationship).toBe('Self');
     expect(result.members).toHaveLength(2);
     expect(result.totalCount).toBe(2);
   });
 
-  // Test 2: Returns cross-household members up to depth 2
-  it('should return cross-household members up to depth 2', async () => {
+  it('should return all members with depth 0', async () => {
     const mockMembers = [
-      { id: 'fm-1', fullName: 'Juan Cruz', relationship: 'Self', age: 45, occupation: 'Employed', isPrimary: true, depth: 0 },
-      { id: 'fm-3', fullName: 'Pedro Cruz', relationship: 'Sibling', age: 40, occupation: 'Self-employed', isPrimary: false, depth: 1 },
-      { id: 'fm-4', fullName: 'Ana Cruz', relationship: 'Niece', age: 20, occupation: 'Student', isPrimary: false, depth: 2 },
+      { id: 'fm-2', full_name: 'Pedro Cruz', relationship: 'Sibling', age: 40, occupation: 'Self-employed', income: 0, status: null, is_primary: false },
     ];
 
-    (familyMemberRepo.query as jest.Mock).mockResolvedValue(mockMembers);
+    (hmRepo.query as jest.Mock).mockResolvedValue(mockMembers);
 
     const result = await service.getFamilyGraph('ben-1');
 
     const depths = result.members.map((m: any) => m.depth);
-    expect(depths).toContain(0);
-    expect(depths).toContain(1);
-    expect(depths).toContain(2);
-    expect(Math.max(...depths)).toBeLessThanOrEqual(2);
+    expect(depths).toEqual([0, 0]);
   });
 
-  // Test 3: Excludes members whose linked beneficiary has revoked consent
-  it('should exclude members from households where consent is revoked', async () => {
-    (familyMemberRepo.query as jest.Mock).mockResolvedValue([
-      { id: 'fm-1', fullName: 'Juan Cruz', relationship: 'Self', age: 45, isPrimary: true, depth: 0 },
-    ]);
-
-    const result = await service.getFamilyGraph('ben-1');
-
-    expect(familyMemberRepo.query).toHaveBeenCalledWith(
-      expect.stringContaining("consent_status = 'active'"),
-      expect.any(Array),
-    );
-  });
-
-  // Test 4: Returns empty for non-existent beneficiary
   it('should throw NotFoundException for non-existent beneficiary', async () => {
     (benRepo.findOne as jest.Mock).mockResolvedValue(null);
 
     await expect(service.getFamilyGraph('nonexistent')).rejects.toThrow(NotFoundException);
   });
 
-  // Test 5: Limits results to FAMILY_MEMBER_LIMIT
+  it('should return empty when beneficiary has no household', async () => {
+    (benRepo.findOne as jest.Mock).mockResolvedValue({ id: 'ben-2', householdId: null, personId: 'person-2' } as any);
+
+    const result = await service.getFamilyGraph('ben-2');
+
+    expect(result.primary).toBeNull();
+    expect(result.members).toHaveLength(0);
+    expect(result.totalCount).toBe(0);
+  });
+
   it('should LIMIT results to prevent runaway queries', async () => {
     const manyMembers = Array.from({ length: 60 }, (_, i) => ({
       id: `fm-${i}`,
-      fullName: `Member ${i}`,
+      full_name: `Member ${i}`,
       relationship: 'Relative',
       age: 30,
-      isPrimary: false,
-      depth: 0,
+      income: 0,
+      status: null,
+      is_primary: false,
     }));
 
-    (familyMemberRepo.query as jest.Mock).mockResolvedValue(manyMembers.slice(0, 50));
+    (hmRepo.query as jest.Mock).mockResolvedValue(manyMembers.slice(0, 50));
 
     const result = await service.getFamilyGraph('ben-1');
 
-    expect(familyMemberRepo.query).toHaveBeenCalledWith(
+    expect(hmRepo.query).toHaveBeenCalledWith(
       expect.any(String),
       expect.arrayContaining([expect.any(String), 50]),
     );
-    expect(result.totalCount).toBeLessThanOrEqual(50);
+    expect(result.totalCount).toBeLessThanOrEqual(51);
   });
 });

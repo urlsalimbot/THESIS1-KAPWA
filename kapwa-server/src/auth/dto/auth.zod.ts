@@ -7,6 +7,7 @@ export const UserCreateSchema = z.object({
   role: z.enum(['social_worker', 'admin', 'coordinator', 'claimant', 'mayor', 'auditor']).default('social_worker'),
   fullName: z.string().optional(),
   phone: z.string().optional(),
+  dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
   assignedBarangay: z.string().optional(),
   permittedBarangays: z.array(z.string()).optional()
 });
@@ -92,4 +93,18 @@ export type ResendVerificationInput = z.infer<typeof ResendVerificationSchema>;
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type ConfirmEmailChangeInput = z.infer<typeof ConfirmEmailChangeSchema>;
+export const PersonLinkRequestSchema = z.object({
+  phone: z.string().min(10).max(15),
+  dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  email: z.string().email(),
+});
+
+export const PersonLinkVerifySchema = z.object({
+  email: z.string().email(),
+  code: z.string().length(6),
+});
+
+export type PersonLinkRequestInput = z.infer<typeof PersonLinkRequestSchema>;
+export type PersonLinkVerifyInput = z.infer<typeof PersonLinkVerifySchema>;
+
 export type UpdatePhoneInput = z.infer<typeof UpdatePhoneSchema>;

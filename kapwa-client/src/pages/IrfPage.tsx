@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, exportIrfPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 interface IrfCase {
   id: string;
@@ -26,14 +26,42 @@ interface IrfCase {
 
 export function IrfPage() {
   const navigate = useNavigate();
-  const { data: irfs = [], isLoading: loading } = useSWR<IrfCase[]>(queryKeys.irf.list());
-  const lastSync = irfs.length > 0 ? Date.now() : null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const urlLimit = parseInt(searchParams.get('limit') || '10', 10);
+  const { data: irfResponse, isLoading: loading } = useSWR<{ data: IrfCase[]; total: number }>(
+    [...queryKeys.irf.list(), { page: urlPage, limit: urlLimit }],
+    { keepPreviousData: true },
+  );
+  const irfs = irfResponse?.data ?? [];
+  const irfTotal = irfResponse?.total ?? 0;
+  const lastSync = irfResponse ? Date.now() : null;
 
   const [exportIrfId, setExportIrfId] = useState<string | null>(null);
   const [legalBasis, setLegalBasis] = useState('');
   const [pdfPassword, setPdfPassword] = useState('');
   const [exporting, setExporting] = useState(false);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+
+  const updateURL = useCallback((overrides: Record<string, string | undefined>) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of Object.entries(overrides)) {
+        if (v) next.set(k, v);
+        else next.delete(k);
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+
+  const onPaginationChange = useCallback(
+    (updater: Updater<PaginationState>) => {
+      const next = typeof updater === 'function' ? updater(pagination) : updater;
+      updateURL({ page: String(next.pageIndex + 1), limit: String(next.pageSize) });
+    },
+    [pagination, updateURL],
+  );
 
   async function handleExportPdf() {
     if (!exportIrfId || !legalBasis) return;
@@ -132,9 +160,9 @@ export function IrfPage() {
         <DataTable
           columns={columns}
           data={irfs}
-          rowCount={irfs.length}
+          rowCount={irfTotal}
           pagination={pagination}
-          onPaginationChange={setPagination}
+          onPaginationChange={onPaginationChange}
           sorting={[]}
         />
       )}

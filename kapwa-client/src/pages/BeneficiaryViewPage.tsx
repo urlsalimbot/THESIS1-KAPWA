@@ -79,18 +79,20 @@ const statusBadgeVariant: Record<
   string,
   "default" | "secondary" | "outline" | "destructive"
 > = {
-  approved: "default",
-  disbursed: "secondary",
-  pending_assessment: "outline",
+  enrolled: "outline",
+  assessed: "secondary",
+  in_review: "secondary",
   active: "default",
+  transitioning: "secondary",
   closed: "outline",
 };
 
 const statusBadgeLabel: Record<string, string> = {
-  approved: "Approved",
-  disbursed: "Disbursed",
-  pending_assessment: "Pending",
+  enrolled: "Enrolled",
+  assessed: "Assessed",
+  in_review: "In Review",
   active: "Active",
+  transitioning: "Transitioning",
   closed: "Closed",
 };
 
@@ -468,7 +470,7 @@ export function BeneficiaryViewPage() {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[10px] text-muted-foreground">{c.date}</span>
                         <StatusBadge status={c.status} />
-                        {c.status === "disbursed" && (
+                        {c.status === "transitioning" && (
                           <Button variant="default" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setInterventionCaseId(c.id === interventionCaseId ? null : c.id)}>
                             <ClipboardList size={10} className="mr-1" /> Log
                           </Button>

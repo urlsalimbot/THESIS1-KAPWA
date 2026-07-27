@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
@@ -10,12 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import UsersPanel from '@/components/UsersPanel';
 import { LcrImportTab } from '@/components/LcrImportTab';
-import { Activity, Database, FileText, Shield, Users, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
-
-interface Program {
-  id: string; name: string; category: string; isActive: boolean;
-  waitingPeriodDays: number; fundSources: string[];
-}
+import { Activity, Database, Users, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 interface SyncEntry {
   id: string; deviceId: string; tableName: string; operation: string;
@@ -35,24 +29,19 @@ function TabIcon({ icon: Icon, active }: { icon: typeof Database; active: boolea
 
 export function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'programs';
+  const activeTab = searchParams.get('tab') || 'users';
   const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
 
-  const { data: programsRaw, isLoading: loadingPrograms } = useSWR<Program[]>(
-    activeTab === 'programs' ? queryKeys.admin.programs() : null,
-  );
   const { data: syncEntriesRaw, isLoading: loadingSync } = useSWR<SyncEntry[]>(
     activeTab === 'sync' ? queryKeys.admin.syncEntries() : null,
   );
   const { data: auditLogs, isLoading: loadingAudit } = useSWR<unknown>(
     activeTab === 'audit' ? queryKeys.admin.auditLogs() : null,
   );
-  const programs = programsRaw ?? [];
   const syncEntries = syncEntriesRaw ?? [];
   const auditLogsArr = Array.isArray(auditLogs) ? auditLogs as any[] : [];
 
   const loading =
-    (activeTab === 'programs' && loadingPrograms) ||
     (activeTab === 'sync' && loadingSync) ||
     (activeTab === 'audit' && loadingAudit);
 
@@ -66,9 +55,6 @@ export function AdminPage() {
     >
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="programs" className="flex items-center gap-2">
-            <TabIcon icon={FileText} active={activeTab === 'programs'} /> Programs
-          </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <TabIcon icon={Users} active={activeTab === 'users'} /> Users
           </TabsTrigger>
@@ -82,47 +68,6 @@ export function AdminPage() {
             <TabIcon icon={Database} active={activeTab === 'lcr'} /> LCR Import
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="programs" className="space-y-4 mt-6">
-          <Card className="shadow-sm border-border/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-primary/10 p-2">
-                    <FileText size={18} className="text-primary" />
-                  </div>
-                  <CardTitle className="text-sm">Program Configurator</CardTitle>
-                </div>
-                <Badge variant="outline" className="text-xs">{programs.length} program{programs.length !== 1 ? 's' : ''}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <TableSkeleton rows={4} />
-              ) : programs.length === 0 ? (
-                <div className="py-8">
-                  <EmptyState variant="no-data" />
-                </div>
-              ) : (
-                <div className="divide-y divide-border/60">
-                  {programs.map(p => (
-                    <div key={p.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{p.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {p.category}{p.waitingPeriodDays ? ` · ${p.waitingPeriodDays}d waiting` : ''}{p.fundSources?.length ? ` · ${p.fundSources.join(', ')}` : ''}
-                        </p>
-                      </div>
-                      <Badge variant={p.isActive ? 'default' : 'secondary'} className="shrink-0 ml-3">
-                        {p.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="users" className="mt-6">
           <Card className="shadow-sm border-border/60">

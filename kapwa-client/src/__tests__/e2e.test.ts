@@ -136,7 +136,7 @@ describe('Sprint 1: Backend Core', () => {
       const c = await res.json();
       caseId = c.id;
       expect(c.controlNo).toBeDefined();
-      expect(c.status).toBe('pending_assessment');
+      expect(c.status).toBe('enrolled');
     });
 
     it('should enforce FSM transition', async () => {
@@ -146,7 +146,7 @@ describe('Sprint 1: Backend Core', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: 'approved' })
+        body: JSON.stringify({ status: 'active' })
       });
       
       expect(res.status).toBe(400);

@@ -28,6 +28,9 @@ export class DocumentVault extends BaseEntity {
   @Column({ nullable: true })
   notes?: string;
 
+  @Column({ name: 'requirement_key', nullable: true })
+  requirementKey?: string;
+
   @Column({ name: 'uploaded_by', nullable: true })
   uploadedBy?: string;
 

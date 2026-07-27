@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import useSWR from 'swr';
+import { useState, useRef } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Calendar, DollarSign } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Upload, Download, X } from 'lucide-react';
 import { SERVICE_TYPES, NATURE_OF_SERVICE } from '@/lib/constants';
 
 interface Intervention {
@@ -26,13 +27,17 @@ interface Program {
   id: string;
   name: string;
   category?: string;
+  requiredDocuments?: string[];
 }
 
 interface StepInterventionsProps {
   caseId: string;
+  caseData: any;
+  userRole?: string;
 }
 
-export function StepInterventions({ caseId }: StepInterventionsProps) {
+export function StepInterventions({ caseId, caseData, userRole }: StepInterventionsProps) {
+  const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
     queryKeys.cases.interventions(caseId),
   );
@@ -50,6 +55,29 @@ export function StepInterventions({ caseId }: StepInterventionsProps) {
     notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const [savingReqs, setSavingReqs] = useState(false);
+
+  const checklist = (caseData?.requirementsChecklist || {}) as Record<string, boolean>;
+
+  const programIds = [...new Set(interventions.map(i => i.programId).filter(Boolean))];
+  const allRequirements = programs
+    .filter(p => programIds.includes(p.id) && p.requiredDocuments?.length)
+    .flatMap(p => p.requiredDocuments!)
+    .filter((v, i, a) => a.indexOf(v) === i);
+
+  const { data: docs = [] } = useSWR<any[]>(
+    caseId && allRequirements.length > 0 ? `/filing?caseId=${caseId}` : null,
+  );
+  const docsByRequirement: Record<string, any[]> = {};
+  for (const d of docs) {
+    const k = d.requirementKey || '__uncategorized__';
+    if (!docsByRequirement[k]) docsByRequirement[k] = [];
+    docsByRequirement[k].push(d);
+  }
+
+  const [uploading, setUploading] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const canUpload = userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole);
 
   async function handleAdd() {
     setSaving(true);
@@ -86,7 +114,38 @@ export function StepInterventions({ caseId }: StepInterventionsProps) {
     }
   }
 
+  async function toggleRequirement(key: string) {
+    const updated = { ...checklist, [key]: !checklist[key] };
+    setSavingReqs(true);
+    try {
+      await api.patch(`/cases/${caseId}/requirements`, { requirementsChecklist: updated });
+      await globalMutate(queryKeys.cases.detail(caseId));
+    } catch (e) {
+      console.error('Failed to update requirements:', e);
+    } finally {
+      setSavingReqs(false);
+    }
+  }
+
+  async function handleUpload(key: string, file: File) {
+    if (!file) return;
+    setUploading(key);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('caseId', caseId);
+      form.append('requirementKey', key);
+      await api.upload('/filing/upload', form);
+      await globalMutate(`/filing?caseId=${caseId}`);
+    } catch (e) {
+      console.error('Upload failed:', e);
+    } finally {
+      setUploading(null);
+    }
+  }
+
   const totalAmount = interventions.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const completedCount = allRequirements.filter(r => checklist[r]).length;
 
   return (
     <div className="space-y-4">
@@ -120,7 +179,7 @@ export function StepInterventions({ caseId }: StepInterventionsProps) {
             >
               <option value="">— Select a program —</option>
               {programs.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} req.)` : ''}</option>
               ))}
               <optgroup label="Other Services">
                 {SERVICE_TYPES.map(s => (
@@ -236,6 +295,92 @@ export function StepInterventions({ caseId }: StepInterventionsProps) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Requirements Checklist */}
+      {allRequirements.length > 0 && (
+        <div className="rounded-lg border bg-card">
+          <div className="px-4 py-3 flex items-center gap-2">
+            <FileCheck size={16} className="text-primary" />
+            <h3 className="text-sm font-semibold">Requirements</h3>
+            <span className="text-xs text-muted-foreground ml-auto">{completedCount}/{allRequirements.length} complete</span>
+          </div>
+          <Separator />
+          <div className="px-4 py-3 space-y-2">
+            {allRequirements.map(req => {
+              const done = checklist[req];
+              const uploadedDocs = docsByRequirement[req] || [];
+              return (
+                <div key={req} className="border rounded-md overflow-hidden">
+                  <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted transition-colors">
+                    <button
+                      onClick={() => toggleRequirement(req)}
+                      disabled={savingReqs}
+                      className="flex items-center gap-3 flex-1 text-left"
+                    >
+                      {done
+                        ? <CheckCircle2 size={18} className="text-primary shrink-0" />
+                        : <Circle size={18} className="text-muted-foreground shrink-0" />
+                      }
+                      <span className={`text-sm ${done ? 'line-through text-muted-foreground' : ''}`}>{req}</span>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {uploadedDocs.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] gap-1">
+                          <FileText size={10} /> {uploadedDocs.length}
+                        </Badge>
+                      )}
+                      {canUpload && (
+                        <>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
+                            className="hidden"
+                            ref={el => { fileInputRefs.current[req] = el; }}
+                            onChange={e => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUpload(req, f);
+                              e.target.value = '';
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={uploading === req}
+                            onClick={() => fileInputRefs.current[req]?.click()}
+                          >
+                            {uploading === req
+                              ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              : <Upload size={14} />
+                            }
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {uploadedDocs.length > 0 && (
+                    <div className="px-3 pb-2 space-y-1">
+                      {uploadedDocs.map((doc: any) => (
+                        <div key={doc.id} className="flex items-center gap-2 text-xs text-muted-foreground pl-9">
+                          <FileText size={10} />
+                          <a
+                            href={api.url(`/filing/${doc.id}/download`)}
+                            className="hover:underline truncate"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {doc.originalName}
+                          </a>
+                          <span className="text-[10px]">({(doc.fileSize / 1024).toFixed(0)} KB)</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

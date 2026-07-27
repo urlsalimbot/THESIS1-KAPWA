@@ -80,7 +80,7 @@ export function LcrImportTab() {
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.surname || !form.firstName || !form.dob) {
-      toast.error('Surname, First Name, and Date of Birth are required.');
+      toast.error('Missing required fields', { description: 'Surname, First Name, and Date of Birth are required.' });
       return;
     }
     setImporting(true);
@@ -93,9 +93,9 @@ export function LcrImportTab() {
       if (!body.gender) delete body.gender;
       const result = await api.post<SingleImportResult>('/lcr/import', body);
       setSingleResult(result);
-      toast.success(`Record ${result.action} successfully.`);
+      toast.success(`Record ${result.action}`, { description: 'Import completed successfully.' });
     } catch (err: any) {
-      toast.error(err?.message || 'Import failed.');
+      toast.error('Import failed', { description: err?.message || 'Please try again.' });
     } finally {
       setImporting(false);
     }
@@ -110,15 +110,15 @@ export function LcrImportTab() {
       try {
         const records = ext === 'json' ? parseJSON(text) : parseCSV(text);
         if (records.length === 0) {
-          toast.error('No records found in file.');
+          toast.error('No records found', { description: 'The file appears to be empty.' });
           return;
         }
         setParsedRecords(records);
         setParsedFileName(file.name);
         setBatchResult(null);
-        toast.success(`Parsed ${records.length} record(s) from ${file.name}`);
+        toast.success(`Parsed ${records.length} record(s)`, { description: `From ${file.name}` });
       } catch {
-        toast.error('Failed to parse file. Check the format.');
+        toast.error('Failed to parse file', { description: 'Please check the format.' });
       }
     };
     reader.readAsText(file);
@@ -130,9 +130,9 @@ export function LcrImportTab() {
     try {
       const result = await api.post<BatchImportResult>('/lcr/import-batch', { records: parsedRecords });
       setBatchResult(result);
-      toast.success(`Import complete: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped.`);
+      toast.success('Import complete', { description: `${result.created} created, ${result.updated} updated, ${result.skipped} skipped.` });
     } catch (err: any) {
-      toast.error(err?.message || 'Batch import failed.');
+      toast.error('Batch import failed', { description: err?.message || 'Please try again.' });
     } finally {
       setImporting(false);
     }

@@ -14,13 +14,13 @@
     "typecheck": "tsc --noEmit",
     "migrate": "node dist/database/migrate.js",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
+    "migration:run:prod": "node dist/database/run-migrations.js",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts src/database/migrations/Generation",
     "typeorm": "typeorm-ts-node-commonjs",
-    "seed": "node dist/database/seed.js",
-    "seed:audit": "node dist/database/seed-audit.js",
-    "test:unit": "jest --testPathPattern=unit",
-    "seed:comprehensive": "node dist/database/seed-comprehensive.js"
+    "seed": "npx ts-node src/database/seed-accounts.ts",
+"seed:programs": "npx ts-node src/database/seed-programs.ts",
+    "test:unit": "jest --testPathPattern=unit"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

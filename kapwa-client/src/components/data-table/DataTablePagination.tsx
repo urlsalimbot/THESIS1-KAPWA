@@ -10,10 +10,12 @@ import {
 
 export interface DataTablePaginationProps<TData> {
   table: Table<TData>;
+  total?: number;
 }
 
 export function DataTablePagination<TData>({
   table,
+  total,
 }: DataTablePaginationProps<TData>) {
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
@@ -21,7 +23,7 @@ export function DataTablePagination<TData>({
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <p className="text-sm text-muted-foreground">
-        Page {pageIndex + 1} of {pageCount} ({table.getFilteredRowModel().rows.length} total)
+        Page {pageIndex + 1} of {pageCount} ({total ?? table.getFilteredRowModel().rows.length} total)
       </p>
       <div className="flex items-center gap-1">
         <Pagination>

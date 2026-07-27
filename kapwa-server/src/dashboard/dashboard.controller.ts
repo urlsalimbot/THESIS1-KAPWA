@@ -49,36 +49,35 @@ export class DashboardController {
         disbursedMonth: metrics.totalDisbursedAmount || 0,
         beneficiaryCount: metrics.uniqueHouseholds || 0,
         totalCases: metrics.totalCases || 0,
-        approvedCases: metrics.approvedCases || 0,
-        disbursedCases: metrics.disbursedCases || 0,
+        activeCases: metrics.activeCases || 0,
+        transitioningCases: metrics.transitioningCases || 0,
         recentInterventions: metrics.recentInterventions || 0,
         byStatus: metrics.byStatus || [],
         lastSync,
         recentCases: recentCasesRaw.map((c: any, i: number) => {
           const ben = c.beneficiary || {};
-          const age = ben.age || 0;
-          const createdAt = c.createdAt?.toISOString?.() ?? c.createdAt ?? '';
-          const updatedAt = c.updatedAt?.toISOString?.() ?? c.updatedAt ?? '';
-          const overdueStatuses = [CaseStatus.PENDING, CaseStatus.IN_REVIEW];
-          const createdTime = new Date(createdAt).getTime();
+          const person = ben.person || {};
+          const age = person.age || 0;
+          const overdueStatuses = [CaseStatus.ENROLLED, CaseStatus.ASSESSED, CaseStatus.IN_REVIEW];
+          const createdTime = new Date(c.createdAt).getTime();
           const slaOverdue = overdueStatuses.includes(c.status) && !isNaN(createdTime)
             && (Date.now() - createdTime) > SLA_OVERDUE_DAYS * 24 * 60 * 60 * 1000;
           return {
             id: c.id,
             no: i + 1,
-            surname: ben.surname || '',
-            first: ben.firstName || '',
-            middle: ben.middleName || '',
-            gender: (ben.gender || '').trim(),
+            surname: person.surname || '',
+            first: person.firstName || '',
+            middle: person.middleName || '',
+            gender: (person.gender || '').trim(),
             ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
             category: (c.serviceRequested ?? []).join(', '),
-            status: c.status || 'pending_assessment',
+            status: c.status || 'enrolled',
             slaOverdue,
-            barangay: (ben.address || '').split(',').pop()?.trim() || '',
+            barangay: (person.address || '').split(',').pop()?.trim() || '',
             remarks: c.remarks || '',
-            date: updatedAt,
+            date: c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : '',
             controlNo: c.controlNo || '',
-            createdAt,
+            createdAt: c.createdAt?.toISOString?.() ?? c.createdAt ?? '',
           };
         }),
       };

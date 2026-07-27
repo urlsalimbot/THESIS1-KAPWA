@@ -1,7 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Intervention } from '../interventions/intervention.entity';
 import { CsrService } from './csr.service';
 import { CsrRecord } from './csr.entity';
 
@@ -24,7 +22,6 @@ describe('CsrService', () => {
       providers: [
         CsrService,
         { provide: getRepositoryToken(CsrRecord), useValue: repoMock },
-        { provide: getRepositoryToken(Intervention), useValue: repoMock },
       ],
     }).compile();
 

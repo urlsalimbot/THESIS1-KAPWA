@@ -13,7 +13,7 @@ describe('ConflictResolutionDialog', () => {
     tableName: 'cases',
     recordId: 'C-001',
     operation: 'UPDATE' as const,
-    payload: { status: 'approved', amount: 5000 },
+    payload: { status: 'active', amount: 5000 },
     clientUpdatedAt: new Date().toISOString(),
     serverVersion: 3,
     status: 'conflict' as const,

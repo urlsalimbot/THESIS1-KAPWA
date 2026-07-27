@@ -14,13 +14,13 @@ interface NeedsAttentionProps {
 }
 
 const ACTION_LABELS: Record<string, string> = {
-  pending_assessment: 'Assess',
+  enrolled: 'Assess',
   in_review: 'Review',
 };
 
 export function NeedsAttention({ cases }: NeedsAttentionProps) {
   const navigate = useNavigate();
-  const needsAttention = cases.filter(c => c.status === 'pending_assessment' || c.status === 'in_review').slice(0, 5);
+  const needsAttention = cases.filter(c => c.status === 'enrolled' || c.status === 'in_review').slice(0, 5);
 
   if (needsAttention.length === 0) {
     return (
@@ -39,7 +39,7 @@ export function NeedsAttention({ cases }: NeedsAttentionProps) {
           Needs Attention ({needsAttention.length})
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 overflow-y-auto max-h-[260px]">
         {needsAttention.map(c => (
           <div key={c.id} className="flex items-center justify-between gap-2 rounded-md border p-2.5">
             <div className="min-w-0 flex-1">

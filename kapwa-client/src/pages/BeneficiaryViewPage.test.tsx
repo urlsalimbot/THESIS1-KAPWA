@@ -31,7 +31,7 @@ const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFam
       id: 'C-001',
       controlNo: 'NORZ-2026-0001',
       beneficiaryId: 'BEN-001',
-      status: 'approved',
+      status: 'active',
       serviceRequested: ['Financial Assistance'],
       createdAt: '2026-06-01T00:00:00Z',
     },
@@ -80,7 +80,7 @@ describe('BeneficiaryViewPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
-      if (k.includes('cases') && k.includes('list')) return Promise.resolve(mockCases);
+      if (k.includes('cases') && k.includes('list')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
       if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
       return Promise.resolve(null);

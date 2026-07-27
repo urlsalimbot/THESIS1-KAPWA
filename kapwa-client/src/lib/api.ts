@@ -184,6 +184,22 @@ export const api = {
     executeWithRetry<T>('PATCH', path, body, opts?.signal),
   del: <T>(path: ApiPath, opts?: { signal?: AbortSignal }) =>
     executeWithRetry<T>('DELETE', path, undefined, opts?.signal),
+  url: (path: string) => `${API_BASE}${normalizePath(path)}`,
+  upload: async <T>(path: string, formData: FormData, opts?: { signal?: AbortSignal }): Promise<T> => {
+    const token = getToken();
+    const url = `${API_BASE}${normalizePath(path)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+      signal: opts?.signal,
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => null);
+      throw new ApiError(res.status, errBody, res.statusText);
+    }
+    return res.json();
+  },
 };
 
 // FormData uploads (D-10 deferred — api client only handles JSON).
@@ -201,9 +217,9 @@ async function rawUpload(path: string, file: Blob, fileName: string): Promise<st
   return data.url;
 }
 export const uploadSignature = (file: Blob, fileName: string) =>
-  rawUpload('/interventions/upload-signature', file, fileName);
+  rawUpload('/minio/upload', file, fileName);
 export const uploadReceipt = (file: Blob, fileName: string) =>
-  rawUpload('/interventions/upload-receipt', file, fileName);
+  rawUpload('/minio/upload', file, fileName);
 
 export function dataURItoBlob(dataUrl: string): Blob {
   const [header, base64] = dataUrl.split(',');

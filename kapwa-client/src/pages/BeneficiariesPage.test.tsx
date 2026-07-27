@@ -8,7 +8,7 @@ import { BeneficiariesPage } from './BeneficiariesPage';
 const { mockBeneficiaries, mockApiGet } = vi.hoisted(() => ({
   mockBeneficiaries: [
     { id: 'BEN-001', firstName: 'Juan', surname: 'Dela Cruz', barangay: 'Poblacion', status: 'active', category: 'Senior', phone: '09171234567' },
-    { id: 'BEN-002', firstName: 'Maria', surname: 'Santos', barangay: 'Poblacion', status: 'approved', category: 'PWD', phone: '09189876543' },
+    { id: 'BEN-002', firstName: 'Maria', surname: 'Santos', barangay: 'Poblacion', status: 'active', category: 'PWD', phone: '09189876543' },
   ],
   mockApiGet: vi.fn(),
 }));

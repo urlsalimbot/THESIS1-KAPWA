@@ -130,12 +130,6 @@ export const queryKeys = {
     all: ['intake'] as const,
     recent: () => memo('intake.recent', () => ['intake', 'recent'] as const),
   },
-  programAssignments: {
-    all: ['programAssignments'] as const,
-    list: () => memo('programAssignments.list', () => ['program-assignments'] as const),
-    detail: (id: string) =>
-      memo(`programAssignments.detail.${id}`, () => ['program-assignments', id] as const),
-  },
   auth: {
     me: () => memo('auth.me', () => ['auth', 'me'] as const),
   },

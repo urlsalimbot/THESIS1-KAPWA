@@ -30,7 +30,6 @@ const ALLOWED_COLUMNS = new Set([
   "social_worker_position","referral_origin","reason_for_referral","problem_presented",
   "family_background","socio_economic_profile","assessment_analysis","recommendation",
   "intervention_plan","client_signature_url","worker_signature_url","finalized","created_by",
-  "daily_seq_num","transaction_date","age_range","client_category","intervention_remarks",
   "full_name","relationship","intervention_id",
   // Allow SLA field on cases
   "sla_overdue"
@@ -47,12 +46,13 @@ function sanitizePayload(payload: Record<string, any>): Record<string, any> {
   return sanitized;
 }
 
-// Per D-04: valid FSM transitions for cases
+// Per D-04: valid FSM transitions for cases (KilosUnlad statuses)
 const VALID_FSM_TRANSITIONS: Record<string, string[]> = {
-  pending_assessment: ['in_review'],
-  in_review: ['approved', 'pending_assessment'],
-  approved: ['disbursed', 'in_review'],
-  disbursed: ['closed'],
+  enrolled: ['assessed', 'closed'],
+  assessed: ['in_review', 'closed'],
+  in_review: ['active', 'closed'],
+  active: ['transitioning', 'closed'],
+  transitioning: ['closed'],
   closed: [],
 };
 
@@ -284,7 +284,7 @@ export class SyncService {
       );
       if (rows.length === 0) return null; // record doesn't exist — let normal apply handle it
 
-      const currentStatus: string = rows[0].status || 'pending_assessment';
+      const currentStatus: string = rows[0].status || 'enrolled';
 
       if (!isValidFsmTransition(currentStatus, requestedStatus)) {
         // D-04: Transition no longer valid — case state has moved past the expected state
@@ -499,7 +499,6 @@ export class SyncService {
       programs: 'programs',
       users: 'users',
       households: 'households',
-      family_members: 'family_members',
       consent_ledger: 'consent_ledger',
       irf_cases: 'irf_cases',
       notifications: 'notifications',

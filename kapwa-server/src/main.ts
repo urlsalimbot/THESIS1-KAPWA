@@ -6,7 +6,17 @@ import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
+async function runMigrations() {
+  try {
+    const { migrate } = await import('./database/migrate');
+    await migrate();
+  } catch (err) {
+    console.error('Migration startup failed, continuing:', err.message);
+  }
+}
+
 async function bootstrap() {
+  await runMigrations();
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');

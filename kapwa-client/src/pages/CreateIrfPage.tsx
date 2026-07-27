@@ -24,12 +24,12 @@ export function CreateIrfPage() {
         narration: form.narration,
         itemAReportingPerson: { name: form.reporterName, contact: form.reporterContact },
       });
-      toast.success('IRF created successfully');
+      toast.success('IRF created', { description: 'Incident report has been filed.' });
       globalMutate(queryKeys.irf.list());
       navigate('/irf');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to create IRF');
+      toast.error('Failed to create IRF', { description: 'Please check your input and try again.' });
     } finally {
       setSubmitting(false);
     }

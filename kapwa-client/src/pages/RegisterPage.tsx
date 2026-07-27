@@ -86,7 +86,7 @@ export function RegisterPage() {
       });
       setRegisteredEmail(values.email);
     } catch {
-      toast.error('Registration failed. Please check your information and try again.');
+      toast.error('Registration failed', { description: 'Please check your information and try again.' });
     } finally {
       setSubmitting(false);
     }
@@ -118,9 +118,9 @@ export function RegisterPage() {
                 onClick={async () => {
                   try {
                     await api.post('/auth/resend-verification', { email: registeredEmail });
-                    toast.success('Verification email resent!');
+                    toast.success('Verification email resent', { description: 'Check your inbox.' });
                   } catch {
-                    toast.error('Failed to resend. Try again later.');
+                    toast.error('Failed to resend', { description: 'Try again later.' });
                   }
                 }}
               >

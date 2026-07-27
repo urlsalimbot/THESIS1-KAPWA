@@ -1,39 +1,50 @@
 import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
+import { Person } from './person.entity';
 import { Beneficiary } from './beneficiary.entity';
+import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
 import { ConsentLedger } from './consent-ledger.entity';
-import { FamilyMember } from './family-member.entity';
+import { HouseholdMembership } from './household-membership.entity';
 import { Case } from '../cases/case.entity';
-import { Intervention } from '../interventions/intervention.entity';
-
 const FAMILY_MEMBER_LIMIT = 50;
 @Injectable()
 export class BeneficiariesService {
   constructor(
+    @InjectRepository(Person)
+    private personRepo: Repository<Person>,
     @InjectRepository(Beneficiary)
     private benRepo: Repository<Beneficiary>,
+    @InjectRepository(BeneficiaryClaimant)
+    private bcRepo: Repository<BeneficiaryClaimant>,
     @InjectRepository(ConsentLedger)
     private consentRepo: Repository<ConsentLedger>,
-    @InjectRepository(FamilyMember)
-    private familyMemberRepo: Repository<FamilyMember>,
+    @InjectRepository(HouseholdMembership)
+    private hmRepo: Repository<HouseholdMembership>,
     @InjectRepository(Case)
     private caseRepo: Repository<Case>,
-    @InjectRepository(Intervention)
-    private intRepo: Repository<Intervention>,
   ) {}
 
-  async createBeneficiary(data: Partial<Beneficiary>) {
-    const ben = this.benRepo.create({
+  async createBeneficiary(data: {
+    surname: string; firstName: string; middleName?: string;
+    gender: string; dob: Date; address?: string; phone?: string;
+    philsysNumber?: string; accessCardCode?: string; householdId?: string;
+  }) {
+    const person = this.personRepo.create({
       surname: data.surname,
       firstName: data.firstName,
       middleName: data.middleName,
-      gender: data.gender,
+      gender: data.gender as 'Male' | 'Female',
       dob: data.dob,
       address: data.address,
       phone: data.phone,
       philsysNumber: data.philsysNumber,
+    });
+    const savedPerson = await this.personRepo.save(person);
+
+    const ben = this.benRepo.create({
+      personId: savedPerson.id,
       accessCardCode: data.accessCardCode,
       householdId: data.householdId,
       consentStatus: 'active',
@@ -58,73 +69,87 @@ export class BeneficiariesService {
     category?: string,
   ) {
     const qb = this.benRepo.createQueryBuilder('b')
-      .leftJoinAndSelect('b.household', 'h')
-      .addSelect(sub => sub
-        .select('COALESCE(COUNT(DISTINCT i.id), 0)', 'cnt')
-        .from('interventions', 'i')
-        .innerJoin('cases', 'c', 'c.id = i.case_id')
-        .where('c.beneficiary_id = b.id'),
-        'intervention_count'
-      )
-      .addSelect(sub => sub
-        .select('MAX(i.service_date)', 'last')
-        .from('interventions', 'i')
-        .innerJoin('cases', 'c', 'c.id = i.case_id')
-        .where('c.beneficiary_id = b.id'),
-        'last_intervention_date'
-      );
+      .leftJoinAndSelect('b.person', 'p')
+      .leftJoinAndSelect('b.household', 'h');
     if (barangay) {
-      qb.andWhere('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
+      qb.andWhere('p.address ILIKE :barangay', { barangay: `%${barangay}%` });
     }
     if (category) {
       qb.andWhere('b.category = :category', { category });
     }
     if (search && search.length >= 2) {
       if (search.length >= 3) {
-        // Full trigram + tsvector path: similarity() for typo tolerance, ts_rank for BM25 ranking
         qb.andWhere(
-          `(b.search_vector @@ plainto_tsquery('english', :search)
-            OR similarity(b.surname, :search) > 0.3
-            OR similarity(b.first_name, :search) > 0.3
+          `(p.search_vector @@ plainto_tsquery('english', :search)
+            OR similarity(p.surname, :search) > 0.3
+            OR similarity(p.first_name, :search) > 0.3
             OR b.category ILIKE :categoryMatch
-            OR b.address ILIKE :addressMatch)`,
+            OR p.address ILIKE :addressMatch)`,
           { search, categoryMatch: `%${search}%`, addressMatch: `%${search}%` },
         );
-
         qb.addSelect(
-          `COALESCE(ts_rank(b.search_vector, plainto_tsquery('english', :search2)), 0) +
-          COALESCE(similarity(b.surname, :search2), 0) +
-          COALESCE(similarity(b.first_name, :search2), 0)`,
+          `COALESCE(ts_rank(p.search_vector, plainto_tsquery('english', :search2)), 0) +
+          COALESCE(similarity(p.surname, :search2), 0) +
+          COALESCE(similarity(p.first_name, :search2), 0)`,
           'rank',
         ).orderBy('rank', 'DESC');
-
         qb.setParameters({ search, search2: search, categoryMatch: `%${search}%` });
       } else {
-        // Short query (2 chars): tsvector + ILIKE fallback only; no trigram to avoid
-        // false positives per RESEARCH.md Pitfall 3
         qb.andWhere(
-          `(b.search_vector @@ plainto_tsquery('english', :search)
-            OR b.surname ILIKE :like
-            OR b.first_name ILIKE :like
-            OR b.address ILIKE :like)`,
+          `(p.search_vector @@ plainto_tsquery('english', :search)
+            OR p.surname ILIKE :like
+            OR p.first_name ILIKE :like
+            OR p.address ILIKE :like)`,
           { search, like: `%${search}%` },
         );
-        qb.orderBy('ts_rank(b.search_vector, plainto_tsquery(:search))', 'DESC');
+        qb.orderBy('ts_rank(p.search_vector, plainto_tsquery(:search))', 'DESC');
       }
     }
+
     paginate(qb, page, limit);
     const [data, total] = await qb.getManyAndCount();
+
+    // Enrich with family member counts from household_memberships
+    const householdIds = data
+      .map(b => b.household?.id)
+      .filter((id): id is string => !!id);
+    if (householdIds.length > 0) {
+      const counts: Array<{ household_id: string; cnt: string }> = await this.benRepo.query(
+        `SELECT hm.household_id, COUNT(*)::text AS cnt
+         FROM household_memberships hm
+         WHERE hm.household_id = ANY($1)
+         GROUP BY hm.household_id`,
+        [householdIds],
+      );
+      const countMap = new Map(counts.map(r => [r.household_id, parseInt(r.cnt, 10)]));
+      for (const b of data) {
+        if (b.household?.id) {
+          (b.household as any).familyMemberCount = countMap.get(b.household.id) || 0;
+        }
+      }
+    }
+
     return { data, total };
   }
 
   async findByUserId(userId: string) {
-    return this.benRepo.findOne({ where: { userId } });
+    return this.benRepo.findOne({ where: { userId }, relations: ['person'] });
   }
 
   async findById(id: string) {
-    const ben = await this.benRepo.findOne({ where: { id }, relations: ['household'] });
+    const ben = await this.benRepo.findOne({ where: { id }, relations: ['household', 'person'] });
     if (!ben) throw new NotFoundException('Beneficiary not found');
     return ben;
+  }
+
+  async getClaimant(beneficiaryId: string): Promise<{ person: Person; relationship: string } | null> {
+    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id', 'personId'] });
+    if (!ben || !ben.personId) return null;
+    const bc = await this.bcRepo.findOne({ where: { beneficiaryId: ben.personId }, relations: ['claimant'] });
+    if (!bc || !bc.claimant) return null;
+    const samePerson = bc.claimantId === ben.personId;
+    if (samePerson) return null;
+    return { person: bc.claimant, relationship: bc.relationship };
   }
 
   async update(id: string, data: Partial<Beneficiary>) {
@@ -137,59 +162,60 @@ export class BeneficiariesService {
   async getFamilyGraph(beneficiaryId: string) {
     const ben = await this.benRepo.findOne({
       where: { id: beneficiaryId },
-      select: ['id', 'householdId'],
+      select: ['id', 'householdId', 'personId'],
     });
     if (!ben) throw new NotFoundException('Beneficiary not found');
+    if (!ben.householdId) return { primary: null, members: [], totalCount: 0 };
 
-    // Recursive CTE up to 2 degrees with consent filtering
-    const members = await this.familyMemberRepo.query(
-      `WITH RECURSIVE family_tree AS (
-        -- Base: direct household members
-         SELECT fm.id, fm.full_name, fm.relationship, fm.age,
-               fm.occupation, fm.is_primary, fm.household_id, 0 AS depth
-        FROM family_members fm
-        JOIN households h ON h.id = fm.household_id
-        WHERE h.primary_beneficiary_id = $1
+    const person = await this.personRepo.findOne({
+      where: { id: ben.personId },
+      select: ['id', 'surname', 'firstName', 'middleName', 'age', 'occupation', 'estimatedMonthlyIncome'],
+    });
 
-        UNION
+    const primaryMember = person ? {
+      id: `primary-${ben.id}`,
+      fullName: `${person.firstName} ${person.middleName ? person.middleName + ' ' : ''}${person.surname}`.trim(),
+      relationship: 'Self',
+      age: person.age ?? 0,
+      occupation: person.occupation ?? null,
+      income: person.estimatedMonthlyIncome != null ? Number(person.estimatedMonthlyIncome) : null,
+      status: null,
+      isPrimary: true,
+      depth: 0,
+    } : null;
 
-        -- Recursive: members of linked households within 2 degrees
-        SELECT fm.id, fm.full_name, fm.relationship, fm.age,
-               fm.occupation, fm.is_primary, fm.household_id, ft.depth + 1
-        FROM family_members fm
-        JOIN households h ON h.id = fm.household_id
-        JOIN family_tree ft ON ft.depth < 2
-          AND fm.household_id != ft.household_id
-          AND EXISTS (
-            SELECT 1 FROM beneficiaries b
-            WHERE b.household_id = fm.household_id
-              AND b.consent_status = 'active'
-          )
-      )
-      SELECT DISTINCT id, full_name, relationship, age,
-             occupation, is_primary, depth
-      FROM family_tree
-      ORDER BY depth, is_primary DESC, full_name
-      LIMIT $2`,
-      [beneficiaryId, FAMILY_MEMBER_LIMIT],
+    const members = await this.hmRepo.query(
+      `SELECT hm.id,
+              TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
+              hm.relationship, p.age, p.occupation, p.estimated_monthly_income AS income,
+              hm.status, hm.is_primary
+       FROM household_memberships hm
+       JOIN persons p ON p.id = hm.person_id
+       WHERE hm.household_id = $1
+       ORDER BY hm.is_primary DESC, p.surname, p.first_name
+       LIMIT $2`,
+      [ben.householdId, FAMILY_MEMBER_LIMIT],
     );
 
     const camelCase = (m: any) => ({
       id: m.id,
-      fullName: m.full_name || m.fullName,
+      fullName: m.full_name,
       relationship: m.relationship,
       age: m.age,
       occupation: m.occupation,
-      isPrimary: m.is_primary || m.isPrimary,
-      depth: m.depth,
+      income: m.income != null ? Number(m.income) : null,
+      status: m.status || null,
+      isPrimary: m.is_primary,
+      depth: 0,
     });
     const mapped = members.map(camelCase);
-    const primary = mapped.find((m: any) => m.isPrimary) || mapped[0] || null;
-    return { primary, members: mapped, totalCount: mapped.length };
+
+    const allMembers = primaryMember ? [primaryMember, ...mapped] : mapped;
+    const primary = primaryMember || allMembers[0] || null;
+    return { primary, members: allMembers, totalCount: allMembers.length };
   }
 
   async revokeConsent(beneficiaryId: string, body: { reason?: string }) {
-    // Find most recent active consent ledger entry
     const ledger = await this.consentRepo.findOne({
       where: { beneficiaryId, status: 'active' },
       order: { grantedAt: 'DESC' as any },
@@ -213,9 +239,8 @@ export class BeneficiariesService {
     if (!ben) return { services: [], caseStatus: 'No active case' };
     const cases = await this.caseRepo.find({ where: { beneficiaryId: ben.id } });
     const latestCase = cases[cases.length - 1];
-    const services = await this.intRepo.find({ where: { caseId: In(cases.map(c => c.id)) }, order: { loggedAt: 'DESC' } });
     return {
-      services: services.map(s => ({ id: s.id, type: s.interventionType, date: s.serviceDate, amount: s.amount, status: 'completed' })),
+      services: [],
       caseStatus: latestCase ? latestCase.status.replace('_', ' ') : 'No active case',
     };
   }
@@ -227,29 +252,24 @@ export class BeneficiariesService {
   }
 
   async getAccessCard(userId: string) {
-    const ben = await this.benRepo.findOne({ where: { userId } });
+    const ben = await this.benRepo.findOne({ where: { userId }, relations: ['person'] });
     if (!ben || !ben.accessCardCode) {
       throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
     }
-    const services = await this.intRepo.query(
-      `SELECT service_date, service_rendered, agency FROM access_card_services WHERE access_card_code = $1 ORDER BY service_date DESC LIMIT 18`,
-      [ben.accessCardCode]
-    );
     return {
       code: ben.accessCardCode,
-      beneficiary: { name: ben.firstName + ' ' + ben.surname, barangay: (ben.address || '').split(',').pop()?.trim() },
-      services,
-      remainingSlots: 18 - services.length,
+      beneficiary: {
+        name: (ben.person?.firstName || '') + ' ' + (ben.person?.surname || ''),
+        barangay: (ben.person?.address || '').split(',').pop()?.trim(),
+      },
+      services: [],
+      remainingSlots: 18,
     };
   }
 
   async checkConsent(beneficiaryId: string, purpose: string): Promise<boolean> {
     const record = await this.consentRepo.findOne({
-      where: {
-        beneficiaryId,
-        purpose,
-        status: 'active',
-      },
+      where: { beneficiaryId, purpose, status: 'active' },
     });
     return !!record;
   }

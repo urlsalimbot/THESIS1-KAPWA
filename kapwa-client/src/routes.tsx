@@ -14,7 +14,6 @@ import { CaseViewPage } from './pages/CaseViewPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { BeneficiariesPage } from './pages/BeneficiariesPage';
 import { BeneficiaryViewPage } from './pages/BeneficiaryViewPage';
-import { InterventionsPage } from './pages/InterventionsPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { CaseTrackerPage } from './pages/CaseTrackerPage';
@@ -33,7 +32,6 @@ import { AuditorPage } from './pages/AuditorPage';
 import { IrfPage } from './pages/IrfPage';
 import { IrfDetailPage } from './pages/IrfDetailPage';
 import { CreateIrfPage } from './pages/CreateIrfPage';
-import { CreateInterventionPage } from './pages/CreateInterventionPage';
 import { CreateProgramPage } from './pages/CreateProgramPage';
 import { AccessCardPage } from './pages/AccessCardPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
@@ -86,8 +84,6 @@ const router = createBrowserRouter([
   { path: '/cases/:id', element: <Private roles={['admin','social_worker','coordinator']}><CaseViewPage /></Private> },
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
-  { path: '/interventions/new', element: <Private roles={['admin','social_worker']}><CreateInterventionPage /></Private> },
-  { path: '/interventions', element: <Private roles={['admin','social_worker']}><InterventionsPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker','coordinator','mayor','auditor']}><CaseTrackerPage /></Private> },
   { path: '/csr/new', element: <Private roles={['admin','social_worker']}><CreateCsrPage /></Private> },
   { path: '/csr', element: <Private roles={['admin','social_worker']}><CsrPage /></Private> },

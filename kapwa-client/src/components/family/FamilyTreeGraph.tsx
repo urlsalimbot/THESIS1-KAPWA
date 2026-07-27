@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   Handle,
   Position,
   NodeProps,
@@ -175,13 +174,6 @@ export function FamilyTreeGraph({ members, primary }: FamilyTreeGraphProps) {
           <Controls
             showInteractive={false}
             className="!bg-card !border-border [&_button]:!border-border [&_button]:!text-muted-foreground [&_button:hover]:!bg-muted [&_svg]:!fill-muted-foreground"
-          />
-          <MiniMap
-            nodeStrokeColor="#D8D4CE"
-            nodeColor="#E5E2DD"
-            nodeBorderRadius={4}
-            maskColor="rgba(0,0,0,0.08)"
-            className="!border-border !shadow-sm"
           />
         </ReactFlow>
       </div>
