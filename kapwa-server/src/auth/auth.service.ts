@@ -127,16 +127,6 @@ export class AuthService {
       return { mfaRequired: true, tempToken };
     }
 
-    if (user.role === 'coordinator') {
-      if (!user.phone) throw new BadRequestException('Coordinator must have a phone number configured for OTP');
-      await this.otpService.requestOtp(user.phone);
-      const tempToken = this.jwtService.sign(
-        { sub: user.id, email: user.email, role: user.role, smsOtpChallenge: true, tokenVersion: user.tokenVersion },
-        { expiresIn: '5m' },
-      );
-      return { otpRequired: true, tempToken, phone: user.phone.replace(/\d(?=\d{4})/g, '*') };
-    }
-
     return this.issueTokens(user);
   }
 
