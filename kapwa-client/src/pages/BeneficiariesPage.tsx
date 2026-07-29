@@ -80,7 +80,6 @@ function FilterBar({ searchInput, onSearchChange, onSearch, categoryFilter, onCa
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <Button variant="default" size="sm" onClick={() => nav('/intake')} aria-label="+ New Beneficiary">+ New Beneficiary</Button>
-        <Button variant="outline" size="sm" aria-label="Import CSV">Import CSV</Button>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative">
