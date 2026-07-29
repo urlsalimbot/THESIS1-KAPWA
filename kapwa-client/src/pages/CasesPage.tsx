@@ -122,16 +122,16 @@ function ActionsCell({ c, actionLoading, onAction }: {
   );
 }
 
-function exportCSV(rows: CaseRow[]) {
-  const headers = ['Date','Surname','First','Middle','Gender','Category','Barangay','Remarks'];
-  const data = rows.map(c => [c.date, c.surname, c.first, c.middle, c.gender, c.category, c.barangay, c.remarks]);
-  const csv = [headers, ...data].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = window.document.createElement('a');
-  a.href = url; a.download = 'cases-export.csv'; a.click();
-  URL.revokeObjectURL(url);
-}
+// function exportCSV(rows: CaseRow[]) {
+//   const headers = ['Date','Surname','First','Middle','Gender','Category','Barangay','Remarks'];
+//   const data = rows.map(c => [c.date, c.surname, c.first, c.middle, c.gender, c.category, c.barangay, c.remarks]);
+//   const csv = [headers, ...data].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+//   const blob = new Blob([csv], { type: 'text/csv' });
+//   const url = URL.createObjectURL(blob);
+//   const a = window.document.createElement('a');
+//   a.href = url; a.download = 'cases-export.csv'; a.click();
+//   URL.revokeObjectURL(url);
+// }
 
 export function CasesPage() {
   const { user } = useAuth();
@@ -274,9 +274,6 @@ export function CasesPage() {
           {hasAnyFilter && (
             <Button variant="ghost" size="sm" onClick={clearFilters} aria-label="Clear filters">Clear</Button>
           )}
-          <Button variant="default" size="sm" onClick={() => exportCSV(allCases)} aria-label="Export CSV">
-            <Download size={16} /> Export CSV
-          </Button>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
