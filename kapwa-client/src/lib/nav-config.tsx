@@ -1,7 +1,7 @@
 import {
   FilePlus, LayoutDashboard, Users, CheckCircle,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
-  FileWarning, IdCard, ScrollText, BarChart3, History, Send,
+  FileWarning, IdCard, ScrollText, BarChart3, History, Send, BadgeCheck,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -20,22 +20,21 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Core',
     items: [
-      { path: '/intake', label: 'General Intake', icon: <FilePlus size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
-      { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor'] },
-      { path: '/cases', label: 'Cases', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
+      { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'social_worker', 'mayor', 'auditor'] },
+      { path: '/coordinator/dashboard', label: 'Barangay Coordinator', icon: <LayoutDashboard size={20} />, roles: ['coordinator'] },
+      { path: '/intake', label: 'General Intake', icon: <FilePlus size={20} />, roles: ['admin', 'social_worker',] },
+      { path: '/referrals', label: 'Referrals', icon: <Send size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
+      { path: '/cases', label: 'Cases', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
+      { path: '/coordinator/access-cards', label: 'Access Cards', icon: <BadgeCheck size={20} />, roles: ['coordinator'] },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { path: '/coordinator', label: 'Barangay Coordinator', icon: <LayoutDashboard size={20} />, roles: ['coordinator'] },
-      { path: '/referrals', label: 'Referrals', icon: <Send size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/irf', label: 'Incident Reports', icon: <FileWarning size={20} />, roles: ['admin', 'social_worker'] },
-
       { path: '/approvals', label: 'Approvals', icon: <Stamp size={20} />, roles: ['admin', 'social_worker'] },
-
     ],
   },
   {
