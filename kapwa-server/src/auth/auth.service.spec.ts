@@ -99,21 +99,13 @@ describe('AuthService', () => {
       expect(result.user).toEqual({ id: '1', email: 'a@a.com', role: 'social_worker', fullName: 'Test' });
     });
 
-    it('should require SMS OTP for coordinator with phone', async () => {
+    it('should issue tokens for coordinator without OTP', async () => {
       const user = { id: '2', email: 'coord@test.com', role: 'coordinator' as any, phone: '+639171234567', fullName: 'Coord' } as User;
-      const result = await service.login(user) as { otpRequired: boolean; tempToken: string; phone: string };
-      expect(otpMock.requestOtp).toHaveBeenCalledWith('+639171234567');
-      expect(result.otpRequired).toBe(true);
-      expect(result.tempToken).toBe('signed-token');
-      expect(result.phone).toContain('*');
+      const result = await service.login(user) as { accessToken: string };
+      expect(result.accessToken).toBe('signed-token');
     });
 
-    it('should throw if coordinator has no phone', async () => {
-      const user = { id: '3', email: 'coord@test.com', role: 'coordinator' as any, phone: undefined } as User;
-      await expect(service.login(user)).rejects.toThrow('Coordinator must have a phone number configured for OTP');
-    });
-
-    it('should still respect existing MFA over coordinator OTP', async () => {
+    it('should still respect existing MFA over coordinator', async () => {
       const user = { id: '4', email: 'coord@test.com', role: 'coordinator' as any, phone: '+639171234567', mfaEnabled: true, fullName: 'Coord' } as User;
       const result = await service.login(user) as { mfaRequired: boolean; tempToken: string };
       expect(result.mfaRequired).toBe(true);

@@ -13,21 +13,19 @@ const ACCOUNT = {
   claimant2:    { id: '10000000-0000-0000-0000-000000000006', email: 'ana.claimant@test.com',  role: 'claimant',       fullName: 'Ana Marie L. Fernandez', phone: '09171000006' },
   mayor:        { id: '10000000-0000-0000-0000-000000000007', email: 'mayor@mswdo.test',       role: 'mayor',          fullName: 'Felicisimo I. Santiago', phone: '09171000007' },
   auditor:      { id: '10000000-0000-0000-0000-000000000008', email: 'auditor@mswdo.test',     role: 'auditor',        fullName: 'Teresita Q. Valdez',     phone: '09171000008' },
-  mfaAdmin:     { id: '10000000-0000-0000-0000-000000000009', email: 'mfa-admin@mswdo.test',   role: 'admin',          fullName: 'MFA Admin',              phone: null },
 };
 
 type AccountDef = typeof ACCOUNT[keyof typeof ACCOUNT];
 
-const ACCOUNT_CREDENTIALS: Record<string, { password: string; mfaSecret: string | null }> = {
-  admin:        { password: 'admin123',       mfaSecret: null },
-  worker1:      { password: 'worker123',      mfaSecret: null },
-  worker2:      { password: 'worker123',      mfaSecret: null },
-  coordinator:  { password: 'coordinator123', mfaSecret: null },
-  claimant1:    { password: 'claimant123',    mfaSecret: null },
-  claimant2:    { password: 'claimant123',    mfaSecret: null },
-  mayor:        { password: 'mayor123',       mfaSecret: null },
-  auditor:      { password: 'auditor123',     mfaSecret: null },
-  mfaAdmin:     { password: 'admin123',       mfaSecret: 'JBSWY3DPEHPK3PXP' },
+const ACCOUNT_CREDENTIALS: Record<string, { password: string }> = {
+  admin:        { password: 'admin123' },
+  worker1:      { password: 'worker123' },
+  worker2:      { password: 'worker123' },
+  coordinator:  { password: 'coordinator123' },
+  claimant1:    { password: 'claimant123' },
+  claimant2:    { password: 'claimant123' },
+  mayor:        { password: 'mayor123' },
+  auditor:      { password: 'auditor123' },
 };
 
 function permittedBarangays(key: string): string[] {
@@ -48,21 +46,20 @@ async function seedAccounts(dataSource: DataSource) {
       Object.entries(ACCOUNT_CREDENTIALS).map(async ([key, cred]) => ({
         key,
         hash: await bcrypt.hash(cred.password, SALT_ROUNDS),
-        mfaSecret: cred.mfaSecret,
       })),
     );
 
-    for (const { key, hash, mfaSecret } of passwords) {
+    for (const { key, hash } of passwords) {
       const acct = ACCOUNT[key as keyof typeof ACCOUNT];
       if (!acct) continue;
 
       const bangs = permittedBarangays(key);
 
       await q.query(
-        `INSERT INTO users (id, email, password, role, full_name, phone, permitted_barangays, is_active, email_verified, mfa_enabled, mfa_secret)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::text[],true,true,$8,$9)
+        `INSERT INTO users (id, email, password, role, full_name, phone, permitted_barangays, is_active, email_verified)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::text[],true,true)
          ON CONFLICT (id) DO NOTHING`,
-        [acct.id, acct.email, hash, acct.role, acct.fullName, acct.phone, bangs, mfaSecret ? true : false, mfaSecret],
+        [acct.id, acct.email, hash, acct.role, acct.fullName, acct.phone, bangs],
       );
     }
 
