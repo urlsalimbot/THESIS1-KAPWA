@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
-import { Search, TrendingUp, Clock, ClipboardList, ArrowRight } from 'lucide-react';
+import { Search, TrendingUp, Clock, ClipboardList, ArrowRight, Send } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
@@ -15,9 +15,17 @@ export function CoordinatorWidgets() {
     recentCases?: any[];
   }>(queryKeys.dashboard.stats());
 
+  const { data: refCounts } = useSWR<{ total: number; pending: number }>(
+    'referral-counts',
+    () => api.get('/referrals/counts'),
+    { revalidateOnFocus: false },
+  );
+
   const caseCount = data?.pendingReview || 0;
   const servedToday = data?.servedToday || 0;
   const pendingReview = data?.pendingReview || 0;
+  const referralTotal = refCounts?.total ?? 0;
+  const referralPending = refCounts?.pending ?? 0;
   const recentEntries = data?.recentCases || [];
 
   const [searchId, setSearchId] = useState('');
@@ -52,7 +60,7 @@ export function CoordinatorWidgets() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
@@ -80,7 +88,31 @@ export function CoordinatorWidgets() {
             <div className="text-2xl font-bold text-foreground font-heading">{pendingReview}</div>
           </CardContent>
         </Card>
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/coordinator/referrals')}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">My Referrals</span>
+              <Send className="ml-auto text-purple-600" size={16} />
+            </div>
+            <div className="text-2xl font-bold text-foreground font-heading">{referralTotal}</div>
+            <div className="text-xs mt-1 text-muted-foreground">{referralPending} pending</div>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <div className="border-b px-4 py-3 flex items-center justify-between">
+          <h3 className="font-semibold text-sm text-primary">Quick Actions</h3>
+        </div>
+        <CardContent className="p-4 flex gap-2">
+          <Button size="sm" onClick={() => navigate('/coordinator/referrals/new')}>
+            <Send size={14} className="mr-1" /> New Referral
+          </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/referrals')}>
+            View Referrals
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <div className="border-b px-4 py-3">

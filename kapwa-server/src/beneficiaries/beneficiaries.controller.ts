@@ -21,6 +21,7 @@ export class BeneficiariesController {
 
   @Get()
   @Roles('admin', 'social_worker', 'coordinator', 'mayor')
+  @Sensitivity('internal')
   async findAll(
     @Query('barangay') barangay?: string,
     @Query('search') search?: string,

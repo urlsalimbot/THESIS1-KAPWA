@@ -5,12 +5,14 @@ import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { FileText, CheckCircle, Clock, ExternalLink } from 'lucide-react';
+import { FileText, CheckCircle, Clock, ExternalLink, Download, Lock } from 'lucide-react';
+import { downloadCsrPdf } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
 
 interface StepClosureProps {
   caseId: string;
   caseData: any;
+  readOnly?: boolean;
 }
 
 const CLOSURE_OUTCOMES = [
@@ -21,7 +23,7 @@ const CLOSURE_OUTCOMES = [
   { value: 'deceased', label: 'Deceased', description: 'Client has passed away' },
 ];
 
-export function StepClosure({ caseId, caseData }: StepClosureProps) {
+export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
 
@@ -66,8 +68,6 @@ export function StepClosure({ caseId, caseData }: StepClosureProps) {
         exitNotes: closure.exitNotes || null,
         clientSignature: closure.clientSignature,
       });
-      // Then close the case
-      await api.patch(`/cases/${caseId}/status`, { status: 'closed' });
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
       console.error('Failed to close case:', e);
@@ -83,7 +83,10 @@ export function StepClosure({ caseId, caseData }: StepClosureProps) {
       {/* Closure Status */}
       <div className="rounded-lg border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Case Closure</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">Case Closure</h3>
+            {readOnly && <Lock size={14} className="text-muted-foreground" />}
+          </div>
           <Badge variant={isClosed ? 'default' : 'outline'} className="text-sm">
             {isClosed ? <CheckCircle size={12} className="mr-1" /> : <Clock size={12} className="mr-1" />}
             {isClosed ? 'Closed' : 'Open'}
@@ -114,7 +117,7 @@ export function StepClosure({ caseId, caseData }: StepClosureProps) {
                 checked={closure.closureOutcome === outcome.value}
                 onChange={e => setClosure(c => ({ ...c, closureOutcome: e.target.value }))}
                 className="mt-0.5"
-                disabled={isClosed}
+                disabled={isClosed || readOnly}
               />
               <div>
                 <p className="text-sm font-medium">{outcome.label}</p>
@@ -137,7 +140,7 @@ export function StepClosure({ caseId, caseData }: StepClosureProps) {
             value={closure.exitNotes}
             onChange={e => setClosure(c => ({ ...c, exitNotes: e.target.value }))}
             placeholder="Final notes before case closure..."
-            disabled={isClosed}
+            disabled={isClosed || readOnly}
           />
         </div>
       </div>
@@ -237,23 +240,31 @@ export function StepClosure({ caseId, caseData }: StepClosureProps) {
       {/* Action Buttons */}
       {!isClosed && (
         <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={saving} variant="outline">
-            {saving ? 'Saving...' : 'Save Progress'}
-          </Button>
-          <Button
-            onClick={handleFinalClosure}
-            disabled={saving || !closure.closureOutcome || !closure.clientSignature}
-            variant="default"
-          >
-            {saving ? 'Closing...' : 'Close Case'}
-          </Button>
+          {!readOnly && (
+            <Button onClick={handleSave} disabled={saving} variant="outline">
+              {saving ? 'Saving...' : 'Save Progress'}
+            </Button>
+          )}
+          {!readOnly && (
+            <Button
+              onClick={handleFinalClosure}
+              disabled={saving || !closure.closureOutcome || !closure.clientSignature}
+              variant="default"
+            >
+              {saving ? 'Closing...' : 'Close Case'}
+            </Button>
+          )}
         </div>
       )}
 
-      {/* Export to PDF placeholder */}
+      {/* Download CSR PDF */}
       <div className="rounded-lg border bg-card px-4 py-3">
-        <Button variant="outline" className="w-full" disabled>
-          <FileText size={14} className="mr-2" /> Export Case to PDF (Coming Soon)
+        <Button
+          variant="outline"
+          className="w-full gap-2"
+          onClick={() => downloadCsrPdf(caseId)}
+        >
+          <Download size={14} /> Download Case Study Report (CSR)
         </Button>
       </div>
     </div>

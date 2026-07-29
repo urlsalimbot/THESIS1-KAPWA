@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const CreateCaseInterventionSchema = z.object({
-  programId: z.string().uuid().nullable().optional(),
+  programId: z.string().nullable().optional(),
   serviceName: z.string().min(1),
   category: z.string().nullable().optional(),
   deliveryDate: z.string().nullable().optional(),

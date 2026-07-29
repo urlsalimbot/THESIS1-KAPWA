@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Lock } from 'lucide-react';
 
 interface Referral {
   agencyName: string;
@@ -19,9 +19,11 @@ interface Referral {
 interface StepIntegratedDeliveryProps {
   caseId: string;
   caseData: any;
+  userRole?: string;
+  readOnly?: boolean;
 }
 
-export function StepIntegratedDelivery({ caseId, caseData }: StepIntegratedDeliveryProps) {
+export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }: StepIntegratedDeliveryProps) {
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
 
@@ -74,10 +76,15 @@ export function StepIntegratedDelivery({ caseId, caseData }: StepIntegratedDeliv
       {/* Referrals */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Referrals to Other Agencies (Optional)</h3>
-          <Button variant="outline" size="sm" onClick={addReferral} disabled={!newReferral.agencyName}>
-            <Plus size={14} className="mr-1" /> Add Referral (Optional)
-          </Button>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">Referrals to Other Agencies (Optional)</h3>
+            {readOnly && <Lock size={14} className="text-muted-foreground" />}
+          </div>
+          {!readOnly && (
+            <Button variant="outline" size="sm" onClick={addReferral} disabled={!newReferral.agencyName}>
+              <Plus size={14} className="mr-1" /> Add Referral (Optional)
+            </Button>
+          )}
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
@@ -162,11 +169,77 @@ export function StepIntegratedDelivery({ caseId, caseData }: StepIntegratedDeliv
       </div>
 
       {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Service Delivery'}
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Service Delivery'}
+          </Button>
+        </div>
+      )}
+
+      {/* Status transitions */}
+      {caseData?.status === 'in_review' && userRole === 'admin' && (
+        <div className="rounded-lg border bg-primary/5 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary">Ready for approval</p>
+              <p className="text-xs text-muted-foreground">Case is in review. Approve to activate services.</p>
+            </div>
+            <ApproveButton caseId={caseId} mutate={mutate} />
+          </div>
+        </div>
+      )}
+      {caseData?.status === 'active' && userRole === 'admin' && (
+        <div className="rounded-lg border bg-primary/5 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary">Services delivered</p>
+              <p className="text-xs text-muted-foreground">Mark case as transitioning to begin graduation process.</p>
+            </div>
+            <DisburseButton caseId={caseId} mutate={mutate} />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function ApproveButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const [loading, setLoading] = useState(false);
+  async function handleApprove() {
+    setLoading(true);
+    try {
+      await api.patch(`/cases/${caseId}/approve`, { status: 'active', signature: '' });
+      await mutate(queryKeys.cases.detail(caseId));
+    } catch (e) {
+      console.error('Failed to approve:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button onClick={handleApprove} disabled={loading} size="sm">
+      {loading ? 'Approving...' : '✓ Approve Case'}
+    </Button>
+  );
+}
+
+function DisburseButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const [loading, setLoading] = useState(false);
+  async function handleDisburse() {
+    setLoading(true);
+    try {
+      await api.patch(`/cases/${caseId}/disburse`, { status: 'transitioning' });
+      await mutate(queryKeys.cases.detail(caseId));
+    } catch (e) {
+      console.error('Failed to disburse:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button onClick={handleDisburse} disabled={loading} size="sm">
+      {loading ? 'Processing...' : '→ Mark for Graduation'}
+    </Button>
   );
 }

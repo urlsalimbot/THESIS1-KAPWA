@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
-import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText } from 'lucide-react';
-import { api } from '../lib/api';
+import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock } from 'lucide-react';
+import { api, downloadCsrPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
@@ -26,6 +26,20 @@ const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destr
   closed: 'outline',
 };
 
+function findFirstPendingStep(caseData: any, interventionCount: number): number {
+  const checks = [
+    (d: any) => !!d?.problemsPresented && !!d?.clientCategory,
+    () => interventionCount > 0,
+    (d: any) => interventionCount > 0 || (d?.referrals?.length || 0) > 0,
+    (d: any) => !!d?.selfRelianceLevel && !!d?.sustainabilityPlan,
+    (d: any) => !!d?.clientSignature && !!d?.closureOutcome,
+  ];
+  for (let i = 0; i < checks.length; i++) {
+    if (!checks[i](caseData)) return i;
+  }
+  return checks.length - 1;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   enrolled: 'Enrolled',
   assessed: 'Assessed',
@@ -38,10 +52,11 @@ const STATUS_LABELS: Record<string, string> = {
 export function CaseViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { mutate } = useSWRConfig();
+  const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
+  const initialNavDone = useRef(false);
 
   const { data: caseData, isLoading } = useSWR<any>(
     id ? queryKeys.cases.detail(id) : null,
@@ -49,6 +64,14 @@ export function CaseViewPage() {
   const { data: interventions = [] } = useSWR<any[]>(
     id ? queryKeys.cases.interventions(id) : null,
   );
+
+  useEffect(() => {
+    if (caseData && !initialNavDone.current) {
+      const pending = findFirstPendingStep(caseData, interventions.length);
+      setCurrentStep(pending);
+      initialNavDone.current = true;
+    }
+  }, [caseData, interventions]);
   const { data: history, isLoading: historyLoading } = useSWR<any[]>(
     id ? queryKeys.cases.detail(`${id}/history`) : null,
   );
@@ -56,6 +79,15 @@ export function CaseViewPage() {
   const { data: famGraph, isLoading: famLoading } = useSWR<{ members: Array<Record<string, unknown>>; primary: Record<string, unknown> }>(
     benId ? queryKeys.beneficiaries.familyGraph(benId) : null,
   );
+
+  const caseClosed = caseData?.status === 'closed';
+  const stepDone = useMemo(() => [
+    !!caseData?.problemsPresented && !!caseData?.clientCategory,
+    interventions.length > 0,
+    interventions.length > 0 || (caseData?.referrals?.length || 0) > 0,
+    !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan,
+    !!caseData?.clientSignature && !!caseData?.closureOutcome,
+  ], [caseData, interventions]);
 
   const ben = caseData?.beneficiary;
   const dob = ben?.dob;
@@ -144,12 +176,13 @@ export function CaseViewPage() {
   }
 
   const stepComponents = [
-    <StepAssessment key="assessment" caseData={caseData} assessment={assessment}
-      onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment} />,
-    <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} />,
-    <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} />,
-    <StepTransition key="transition" caseId={id!} caseData={caseData} />,
-    <StepClosure key="closure" caseId={id!} caseData={caseData} />,
+    <StepAssessment key="assessment" caseId={id!} caseData={caseData} assessment={assessment}
+      onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
+      userRole={user?.role} readOnly={stepDone[0] || caseClosed} />,
+    <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[1] || caseClosed} />,
+    <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[2] || caseClosed} />,
+    <StepTransition key="transition" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[3] || caseClosed} />,
+    <StepClosure key="closure" caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed} />,
   ];
 
   return (
@@ -179,9 +212,21 @@ export function CaseViewPage() {
                   Updated {new Date(caseData.updatedAt).toLocaleDateString()}
                 </p>
               </div>
-              <Badge variant={STATUS_BADGES[caseData.status] || 'outline'} className="text-sm px-3 py-1">
-                {STATUS_LABELS[caseData.status] || caseData.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={STATUS_BADGES[caseData.status] || 'outline'} className="text-sm px-3 py-1">
+                  {STATUS_LABELS[caseData.status] || caseData.status}
+                </Badge>
+                {caseData.status === 'closed' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => downloadCsrPdf(id!)}
+                  >
+                    <Download size={14} /> Case Study Report
+                  </Button>
+                )}
+              </div>
             </div>
             <Separator />
             <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -372,54 +417,102 @@ export function CaseViewPage() {
               </div>
             </div>
           )}
+
+          {/* Incident Reports */}
+          <div className="rounded-lg border bg-card">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileWarning size={20} className="text-primary" />
+                <h3 className="text-sm font-semibold">Incident Reports</h3>
+              </div>
+              <Button size="sm" onClick={() => navigate(`/irf/new?caseId=${id}`)}>
+                <Plus size={14} className="mr-1" /> New IRF from Case
+              </Button>
+            </div>
+            <Separator />
+            <IrfCaseList caseId={id!} />
+          </div>
+
+          {/* Case History */}
+          {history && history.length > 0 && (
+            <div className="rounded-lg border bg-card">
+              <div className="px-4 py-3 flex items-center gap-3">
+                <Clock size={20} className="text-primary" />
+                <h3 className="text-sm font-semibold">Case History</h3>
+                {historyLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
+              </div>
+              <Separator />
+              <div className="px-4 py-3">
+                <div className="relative pl-5 space-y-3">
+                  {history.map((entry: any, i: number) => (
+                    <div key={entry.id} className="relative">
+                      {i < history.length - 1 && (
+                        <div className="absolute left-[-18px] top-[18px] w-px h-full bg-border" />
+                      )}
+                      <div className="absolute left-[-22px] top-[6px] w-2.5 h-2.5 rounded-full border-2 border-primary bg-background" />
+                      <div className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {entry.fromStatus
+                              ? `${STATUS_LABELS[entry.fromStatus] || entry.fromStatus} → ${STATUS_LABELS[entry.toStatus] || entry.toStatus}`
+                              : STATUS_LABELS[entry.toStatus] || entry.toStatus}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">
+                            {entry.transitionType}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(entry.createdAt).toLocaleString()}
+                          {entry.changedByRole && ` · by ${entry.changedByRole.replace(/_/g, ' ')}`}
+                        </p>
+                        {entry.remarks && (
+                          <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{entry.remarks}</p>
+                        )}
+                        {entry.overrideReason && (
+                          <p className="text-xs text-amber-600 mt-0.5">Override: {entry.overrideReason}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Case History (full width, below both columns) */}
-      {history && history.length > 0 && (
-        <div className="rounded-lg border bg-card mt-4">
-          <div className="px-4 py-3 flex items-center gap-3">
-            <Clock size={20} className="text-primary" />
-            <h3 className="text-sm font-semibold">Case History</h3>
-            {historyLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
-          </div>
-          <Separator />
-          <div className="px-4 py-3">
-            <div className="relative pl-5 space-y-3">
-              {history.map((entry: any, i: number) => (
-                <div key={entry.id} className="relative">
-                  {i < history.length - 1 && (
-                    <div className="absolute left-[-18px] top-[18px] w-px h-full bg-border" />
-                  )}
-                  <div className="absolute left-[-22px] top-[6px] w-2.5 h-2.5 rounded-full border-2 border-primary bg-background" />
-                  <div className="text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">
-                        {entry.fromStatus
-                          ? `${STATUS_LABELS[entry.fromStatus] || entry.fromStatus} → ${STATUS_LABELS[entry.toStatus] || entry.toStatus}`
-                          : STATUS_LABELS[entry.toStatus] || entry.toStatus}
-                      </span>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">
-                        {entry.transitionType}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(entry.createdAt).toLocaleString()}
-                      {entry.changedByRole && ` · by ${entry.changedByRole.replace(/_/g, ' ')}`}
-                    </p>
-                    {entry.remarks && (
-                      <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{entry.remarks}</p>
-                    )}
-                    {entry.overrideReason && (
-                      <p className="text-xs text-amber-600 mt-0.5">Override: {entry.overrideReason}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </PageShell>
+    );
+}
+
+function IrfCaseList({ caseId }: { caseId: string }) {
+  const navigate = useNavigate();
+  const [irfs, setIrfs] = useState<any[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get(`/irf/by-case/${caseId}`).then((d: any) => setIrfs(d)).finally(() => setLoading(false));
+  }, [caseId]);
+
+  if (loading) return <div className="px-4 py-6 text-sm text-muted-foreground">Loading IRFs...</div>;
+
+  if (!irfs || irfs.length === 0) {
+    return <div className="px-4 py-6 text-sm text-muted-foreground">No incident reports linked to this case.</div>;
+  }
+
+  return (
+    <div className="divide-y">
+      {irfs.map((irf: any) => (
+        <div key={irf.id} className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/irf/${irf.id}`)}>
+          <div>
+            <p className="text-sm font-medium">{irf.blotterEntryNumber}</p>
+            <p className="text-xs text-muted-foreground">{irf.caseCategory} &middot; {new Date(irf.createdAt).toLocaleDateString()}</p>
+          </div>
+          <Badge variant={irf.caseDisposition === 'Closed' ? 'default' : 'secondary'} className="text-xs">
+            {irf.caseDisposition}
+          </Badge>
+        </div>
+      ))}
+    </div>
   );
 }
+

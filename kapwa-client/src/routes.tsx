@@ -17,25 +17,26 @@ import { BeneficiaryViewPage } from './pages/BeneficiaryViewPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { CaseTrackerPage } from './pages/CaseTrackerPage';
-import { CsrPage } from './pages/CsrPage';
-import { CreateCsrPage } from './pages/CreateCsrPage';
 import { AdminPage } from './pages/AdminPage';
 import { ClaimantDashboardPage } from './pages/ClaimantDashboardPage';
-import { FilingPage } from './pages/FilingPage';
 import { ApprovalPipelinePage } from './pages/ApprovalPipelinePage';
 import { MfaSetupPage } from './pages/MfaSetupPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CoordinatorDashboardPage } from './pages/CoordinatorDashboardPage';
-import { MyAccessCardPage } from './pages/MyAccessCardPage';
+import { CoordinatorReferralFormPage } from './pages/CoordinatorReferralFormPage';
+import { CoordinatorReferralListPage } from './pages/CoordinatorReferralListPage';
+import { ReferralReviewPage } from './pages/ReferralReviewPage';
+import { ReferralsPage } from './pages/ReferralsPage';
+import { AccessCardViewPage } from './pages/AccessCardViewPage';
+import { AccessCardPrintView } from './pages/AccessCardPrintView';
+
 import { MayorReportsPage } from './pages/MayorReportsPage';
 import { AuditorPage } from './pages/AuditorPage';
 import { IrfPage } from './pages/IrfPage';
 import { IrfDetailPage } from './pages/IrfDetailPage';
 import { CreateIrfPage } from './pages/CreateIrfPage';
 import { CreateProgramPage } from './pages/CreateProgramPage';
-import { AccessCardPage } from './pages/AccessCardPage';
-import { AccessCardPrintView } from './pages/AccessCardPrintView';
-import { AccessCardViewPage } from './pages/AccessCardViewPage';
+
 import { ProgramDetailPage } from './pages/ProgramDetailPage';
 import { ProgramsPage } from './pages/ProgramsPage';
 import { Layout } from './components/Layout';
@@ -85,28 +86,30 @@ const router = createBrowserRouter([
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker','coordinator','mayor','auditor']}><CaseTrackerPage /></Private> },
-  { path: '/csr/new', element: <Private roles={['admin','social_worker']}><CreateCsrPage /></Private> },
-  { path: '/csr', element: <Private roles={['admin','social_worker']}><CsrPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
-  { path: '/filing', element: <Private roles={['admin','social_worker']}><FilingPage /></Private> },
   { path: '/approvals', element: <Private roles={['admin','social_worker']}><ApprovalPipelinePage /></Private> },
   { path: '/settings/mfa', element: <Navigate to="/settings" replace /> },
   { path: '/settings', element: <Private><SettingsPage /></Private> },
   { path: '/irf/new', element: <Private roles={['admin','social_worker']}><CreateIrfPage /></Private> },
   { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
   { path: '/irf/:id', element: <Private roles={['admin','social_worker']}><IrfDetailPage /></Private> },
-  { path: '/access-cards', element: <Private roles={['admin','social_worker']}><AccessCardPage /></Private> },
-  { path: '/beneficiaries/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
+
   { path: '/programs/new', element: <Private roles={['admin']}><CreateProgramPage /></Private> },
   { path: '/programs/:id', element: <Private roles={['admin']}><ProgramDetailPage /></Private> },
   { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
-  { path: '/coordinator', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
+  { path: '/coordinator', element: <Navigate to="/coordinator/dashboard" replace /> },
+  { path: '/coordinator/dashboard', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
+  { path: '/coordinator/referrals', element: <Private roles={['coordinator']}><CoordinatorReferralListPage /></Private> },
+  { path: '/coordinator/referrals/new', element: <Private roles={['coordinator']}><CoordinatorReferralFormPage /></Private> },
+  { path: '/referrals', element: <Private roles={['admin','social_worker','coordinator']}><ReferralsPage /></Private> },
+  { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
+  { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
+  { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },
   { path: '/notifications', element: <Private><NotificationsPage /></Private> },
-  { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
-  { path: '/my-access-card', element: <Private roles={['claimant']}><MyAccessCardPage /></Private> },
+
   { path: '/reports', element: <Private roles={['mayor']}><MayorReportsPage /></Private> },
   { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },

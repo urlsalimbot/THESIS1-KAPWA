@@ -39,7 +39,7 @@ describe('queryKeys factory', () => {
   });
 
   it('exposes at least 9 resource subtrees for the top resource groups', () => {
-    const required = ['cases', 'beneficiaries', 'dashboard', 'notifications', 'audit', 'admin', 'accessCards', 'filing', 'programs'];
+    const required = ['cases', 'beneficiaries', 'dashboard', 'notifications', 'audit', 'admin', 'accessCards', 'programs'];
     for (const key of required) {
       expect(queryKeys).toHaveProperty(key);
     }

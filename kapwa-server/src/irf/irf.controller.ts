@@ -64,6 +64,14 @@ export class IrfController {
     return this.irfService.create(body);
   }
 
+  @Get('by-case/:caseId')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @Sensitivity('internal')
+  @ApiOperation({ summary: 'List IRFs linked to a case' })
+  async findByCase(@Param('caseId') caseId: string) {
+    return this.irfService.findByCaseId(caseId);
+  }
+
   @Patch(':id/narration')
   @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Update IRF narration (re-encrypted via pgcrypto)' })

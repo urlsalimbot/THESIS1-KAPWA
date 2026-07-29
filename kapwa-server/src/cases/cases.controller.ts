@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
+import { CasesExportService } from './cases-export.service';
 import { CaseStatus } from './case.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedRequest } from '../auth/types';
@@ -32,7 +33,10 @@ import {
 @UseInterceptors(ClassSerializerInterceptor)
 @SerializeOptions({ strategy: 'exposeAll' })
 export class CasesController {
-  constructor(private casesService: CasesService) {}
+  constructor(
+    private casesService: CasesService,
+    private casesExportService: CasesExportService,
+  ) {}
 
   @Get()
   @Roles('admin', 'social_worker', 'coordinator')
@@ -171,5 +175,17 @@ export class CasesController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.casesService.updateClosure(id, body, req.user?.role);
+  }
+
+  @Get(':id/csr-pdf')
+  @Roles('admin', 'social_worker', 'coordinator')
+  async downloadCsrPdf(@Param('id') id: string, @Res() res: any) {
+    const pdf = await this.casesExportService.generateCsrPdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="CSR-${id}.pdf"`,
+      'Content-Length': pdf.length,
+    });
+    res.end(pdf);
   }
 }

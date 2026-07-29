@@ -53,6 +53,9 @@ export class AbacGuard implements CanActivate {
       if (resourceSensitivity !== 'public' && resourceSensitivity !== 'internal') return false;
       const barangay = query?.barangay || params?.barangay || body?.barangay;
       if (barangay && barangay !== user.assignedBarangay) return false;
+      if (!barangay && isBeneficiaryRoute && user.assignedBarangay) {
+        query.barangay = user.assignedBarangay;
+      }
       return true;
     }
 

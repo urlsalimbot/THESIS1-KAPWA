@@ -151,9 +151,14 @@ export function DashboardPage() {
   return (
     <PageShell title="Dashboard" description="Overview of social welfare operations and metrics." cachedAt={lastSync ?? undefined}
       actions={
-        <Button size="sm" onClick={() => navigate('/intake')}>
-          <Plus size={14} className="mr-1" /> New Intake
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate('/intake/referrals')}>
+            Review Referrals
+          </Button>
+          <Button size="sm" onClick={() => navigate('/intake')}>
+            <Plus size={14} className="mr-1" /> New Intake
+          </Button>
+        </div>
       }>
 
       {data && (

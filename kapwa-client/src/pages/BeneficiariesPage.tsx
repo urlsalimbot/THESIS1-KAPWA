@@ -66,9 +66,10 @@ const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
   },
 ];
 
-function FilterBar({ searchInput, onSearchChange, categoryFilter, onCategoryChange, barangayFilter, onBarangayChange }: {
+function FilterBar({ searchInput, onSearchChange, onSearch, categoryFilter, onCategoryChange, barangayFilter, onBarangayChange }: {
   searchInput: string;
   onSearchChange: (v: string) => void;
+  onSearch: () => void;
   categoryFilter: string;
   onCategoryChange: (v: string) => void;
   barangayFilter: string;
@@ -91,8 +92,10 @@ function FilterBar({ searchInput, onSearchChange, categoryFilter, onCategoryChan
             className="w-48 pl-8"
             value={searchInput}
             onChange={e => onSearchChange(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') onSearch(); }}
           />
         </div>
+        <Button size="sm" onClick={onSearch}>Search</Button>
         <div className="flex flex-col gap-0.5">
           <label className="text-xs text-muted-foreground font-medium">Category</label>
           <select
@@ -134,7 +137,6 @@ export function BeneficiariesPage() {
   const urlBarangay = searchParams.get('barangay') || 'all';
 
   const [searchInput, setSearchInput] = useState(urlSearch);
-  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
   const [categoryFilter, setCategoryFilter] = useState(urlCategory);
   const [barangayFilter, setBarangayFilter] = useState(urlBarangay);
 
@@ -155,20 +157,15 @@ export function BeneficiariesPage() {
   // Sync local state when URL changes externally (browser back/forward)
   useEffect(() => {
     setSearchInput(urlSearch);
-    setDebouncedSearch(urlSearch);
     setCategoryFilter(urlCategory);
     setBarangayFilter(urlBarangay);
   }, [urlSearch, urlCategory, urlBarangay]);
 
-  // Debounce search input — 300ms delay before URL update
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (debouncedSearch !== urlSearch) {
-        updateURL({ search: debouncedSearch || undefined, page: '1' });
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [debouncedSearch, urlSearch, updateURL]);
+  function handleSearch() {
+    if (searchInput !== urlSearch) {
+      updateURL({ search: searchInput || undefined, page: '1' });
+    }
+  }
 
   const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
 
@@ -181,7 +178,7 @@ export function BeneficiariesPage() {
   );
 
   const params = {
-    search: debouncedSearch || undefined,
+    search: urlSearch || undefined,
     category: categoryFilter || undefined,
     barangay: barangayFilter === 'all' ? undefined : barangayFilter,
     page: urlPage,
@@ -216,7 +213,8 @@ export function BeneficiariesPage() {
     >
       <FilterBar
         searchInput={searchInput}
-        onSearchChange={(v) => { setSearchInput(v); setDebouncedSearch(v); }}
+        onSearchChange={(v) => setSearchInput(v)}
+        onSearch={handleSearch}
         categoryFilter={categoryFilter}
         onCategoryChange={(v) => { setCategoryFilter(v); updateURL({ category: v || undefined, page: '1' }); }}
         barangayFilter={barangayFilter}
@@ -227,7 +225,7 @@ export function BeneficiariesPage() {
         <div className="text-sm text-muted-foreground flex items-center gap-1">
           {fetching && <Loader2 size={14} className="animate-spin" />}
           {!fetching && `Showing ${beneficiaries.length} result${beneficiaries.length !== 1 ? 's' : ''}`}
-          {!fetching && debouncedSearch && ` for "${debouncedSearch}"`}
+          {!fetching && urlSearch && ` for "${urlSearch}"`}
         </div>
       )}
 

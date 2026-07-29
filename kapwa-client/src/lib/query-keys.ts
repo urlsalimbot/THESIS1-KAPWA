@@ -76,10 +76,6 @@ export const queryKeys = {
     summary: (benId: string) => memo(`accessCards.summary.${benId}`, () => ['access-cards', 'beneficiary', benId, 'card', 'summary'] as const),
     detail: (benId: string) => memo(`accessCards.detail.${benId}`, () => ['access-cards', 'beneficiary', benId, 'card'] as const),
   },
-  filing: {
-    all: ['filing'] as const,
-    list: () => memo('filing.list', () => ['filing'] as const),
-  },
   programs: {
     all: ['programs'] as const,
     list: () => memo('programs.list', () => ['programs'] as const),
@@ -121,10 +117,6 @@ export const queryKeys = {
     all: ['irf'] as const,
     list: () => memo('irf.list', () => ['irf'] as const),
     detail: (id: string) => memo(`irf.detail.${id}`, () => ['irf', id] as const),
-  },
-  csr: {
-    all: ['csr'] as const,
-    list: () => memo('csr.list', () => ['csr'] as const),
   },
   intake: {
     all: ['intake'] as const,

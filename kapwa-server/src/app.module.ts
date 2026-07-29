@@ -25,6 +25,7 @@ import { SlaModule } from './sla/sla.module';
 import { OtpModule } from './otp/otp.module';
 import { MinioModule } from './minio/minio.module';
 import { IntakeModule } from './intake/intake.module';
+import { ReferralsModule } from './referrals/referrals.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { CsrfGuard } from './common/csrf.guard';
@@ -79,6 +80,7 @@ import { AppController } from './app.controller';
     OtpModule,
     MinioModule,
     IntakeModule,
+    ReferralsModule,
   ],
   controllers: [AppController],
   providers: [

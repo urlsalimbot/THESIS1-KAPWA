@@ -73,7 +73,7 @@ export class AccessCardsService {
     return { beneficiary: ben[0], code: ben[0].access_card_code, services };
   }
 
-  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agency?: string; workerNameSign?: string; category?: string }) {
+  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agency?: string; workerNameSign?: string; category?: string; loggedBy?: string; sourceBarangay?: string }) {
     const entry = this.repo.create({
       accessCardCode: data.accessCardCode,
       serviceRendered: data.serviceRendered,
@@ -82,6 +82,8 @@ export class AccessCardsService {
       agency: data.agency,
       workerNameSign: data.workerNameSign,
       category: data.category || 'referral',
+      loggedBy: data.loggedBy,
+      sourceBarangay: data.sourceBarangay,
     });
     return this.repo.save(entry);
   }
@@ -111,8 +113,11 @@ export class AccessCardsService {
     return this.repo.find({ where: { accessCardCode: cardCode }, order: { serviceDate: 'DESC' } });
   }
 
-  async findAll(page = 1, limit = 10) {
+  async findAll(page = 1, limit = 10, sourceBarangay?: string) {
+    const where: any = {};
+    if (sourceBarangay) where.sourceBarangay = sourceBarangay;
     const [data, total] = await this.repo.findAndCount({
+      where,
       order: { serviceDate: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

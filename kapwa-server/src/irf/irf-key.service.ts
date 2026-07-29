@@ -12,7 +12,15 @@ export class IrfKeyService {
 
   private getMasterKey(): Buffer {
     const keyHex = process.env.IRF_ENCRYPTION_KEY;
-    if (!keyHex) throw new Error('IRF_ENCRYPTION_KEY not configured');
+    if (!keyHex) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('IRF_ENCRYPTION_KEY not configured — set a 64-char hex key before deploying to production');
+      }
+      const generated = crypto.randomBytes(32).toString('hex');
+      process.env.IRF_ENCRYPTION_KEY = generated;
+      console.warn('IRF_ENCRYPTION_KEY not set — generated ephemeral key (valid for this session only)');
+      return Buffer.from(generated, 'hex').subarray(0, 32);
+    }
     return Buffer.from(keyHex, 'hex').subarray(0, 32);
   }
 

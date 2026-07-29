@@ -27,4 +27,10 @@ export class AccessCardService extends BaseEntity {
 
   @Column({ name: 'intervention_id', nullable: true })
   interventionId?: string;
+
+  @Column({ name: 'logged_by', nullable: true })
+  loggedBy?: string;
+
+  @Column({ name: 'source_barangay', nullable: true })
+  sourceBarangay?: string;
 }

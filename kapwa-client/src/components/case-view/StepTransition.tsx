@@ -5,7 +5,7 @@ import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Calendar, FileText } from 'lucide-react';
+import { Plus, Trash2, Calendar, FileText, Lock } from 'lucide-react';
 
 interface FollowUpVisit {
   date: string;
@@ -17,9 +17,11 @@ interface FollowUpVisit {
 interface StepTransitionProps {
   caseId: string;
   caseData: any;
+  userRole?: string;
+  readOnly?: boolean;
 }
 
-export function StepTransition({ caseId, caseData }: StepTransitionProps) {
+export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTransitionProps) {
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
 
@@ -77,7 +79,10 @@ export function StepTransition({ caseId, caseData }: StepTransitionProps) {
       {/* Self-Reliance Assessment */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Self-Reliance Assessment</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">Self-Reliance Assessment</h3>
+            {readOnly && <Lock size={14} className="text-muted-foreground" />}
+          </div>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
@@ -112,7 +117,10 @@ export function StepTransition({ caseId, caseData }: StepTransitionProps) {
       {/* Sustainability Plan */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Sustainability Plan</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">Sustainability Plan</h3>
+            {readOnly && <Lock size={14} className="text-muted-foreground" />}
+          </div>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
@@ -249,11 +257,46 @@ export function StepTransition({ caseId, caseData }: StepTransitionProps) {
       </div>
 
       {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Transition Plan'}
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Transition Plan'}
+          </Button>
+        </div>
+      )}
+
+      {/* Status transition */}
+      {caseData?.status === 'active' && userRole === 'admin' && (
+        <div className="rounded-lg border bg-primary/5 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary">Transition plan ready</p>
+              <p className="text-xs text-muted-foreground">Mark case as transitioning to begin graduation process.</p>
+            </div>
+            <TransitionButton caseId={caseId} mutate={mutate} />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function TransitionButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const [loading, setLoading] = useState(false);
+  async function handleTransition() {
+    setLoading(true);
+    try {
+      await api.patch(`/cases/${caseId}/disburse`, { status: 'transitioning' });
+      await mutate(queryKeys.cases.detail(caseId));
+    } catch (e) {
+      console.error('Failed to transition:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button onClick={handleTransition} disabled={loading} size="sm">
+      {loading ? 'Processing...' : '→ Mark Ready for Graduation'}
+    </Button>
   );
 }

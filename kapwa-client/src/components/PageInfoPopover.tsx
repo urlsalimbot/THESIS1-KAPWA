@@ -149,30 +149,7 @@ const ROUTE_HELP: Record<string, RouteHelp> = {
       { q: 'How do I export audit logs?', a: 'Use the Export button in the Audit section to download logs as CSV.' },
     ],
   },
-  '/csr': {
-    title: 'CSR Generator',
-    tips: [
-      'Select a beneficiary to auto-populate case study fields.',
-      'Review the generated report before printing.',
-      'CSR documents are stored in the beneficiary\'s record.',
-    ],
-    faqs: [
-      { q: 'What format are CSRs generated in?', a: 'CSRs are generated as formatted documents ready for printing or PDF export.' },
-      { q: 'Can I customize the template?', a: 'Templates follow MSWDO standards. Contact an admin for template modifications.' },
-    ],
-  },
-  '/filing': {
-    title: 'Digital Filing',
-    tips: [
-      'Upload documents in PDF or image format for case records.',
-      'Tag documents with categories for easier retrieval.',
-      'Signed documents can be uploaded alongside unsigned versions.',
-    ],
-    faqs: [
-      { q: 'Is there a file size limit?', a: 'Individual files are capped at 10 MB. For larger files, split them into multiple uploads.' },
-      { q: 'Are uploaded documents backed up?', a: 'Yes — all documents are stored securely with automated backups.' },
-    ],
-  },
+
   '/irf': {
     title: 'Incident Report Forms (IRF)',
     tips: [
@@ -185,18 +162,7 @@ const ROUTE_HELP: Record<string, RouteHelp> = {
       { q: 'Can I print an IRF?', a: 'Yes — use the Print option in the IRF detail view for a formatted copy.' },
     ],
   },
-  '/access-cards': {
-    title: 'Access Cards',
-    tips: [
-      'Access Cards serve as beneficiary identification for aid distribution.',
-      'Print and laminate cards for distribution to eligible beneficiaries.',
-      'Verify beneficiary information before generating a card.',
-    ],
-    faqs: [
-      { q: 'How is an Access Card different from a Beneficiary record?', a: 'The Access Card is a printable ID document. The beneficiary record is the full case profile.' },
-      { q: 'Can I replace a lost card?', a: 'Yes — generate a new card from the beneficiary profile. Old cards are invalidated.' },
-    ],
-  },
+
   '/programs': {
     title: 'Programs & Assignments',
     tips: [

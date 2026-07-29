@@ -151,7 +151,6 @@ export function CasesPage() {
   const urlDateTo = searchParams.get('dateTo') || '';
 
   const [searchInput, setSearchInput] = useState(urlSearch);
-  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
 
   const updateURL = useCallback(
     (overrides: Record<string, string | undefined>) => {
@@ -169,24 +168,20 @@ export function CasesPage() {
 
   useEffect(() => {
     setSearchInput(urlSearch);
-    setDebouncedSearch(urlSearch);
   }, [urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (debouncedSearch !== urlSearch) {
-        updateURL({ search: debouncedSearch || undefined, page: '1' });
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [debouncedSearch, urlSearch, updateURL]);
+  function handleSearch() {
+    if (searchInput !== urlSearch) {
+      updateURL({ search: searchInput || undefined, page: '1' });
+    }
+  }
 
   const listParams = useMemo(() => {
     const p: Record<string, string> = {
       page: String(urlPage),
       limit: String(urlLimit),
     };
-    if (debouncedSearch) p.search = debouncedSearch;
+    if (urlSearch) p.search = urlSearch;
     if (urlStatus) p.status = urlStatus;
     if (urlBarangay) p.barangay = urlBarangay;
     if (urlCategory) p.category = urlCategory;
@@ -196,7 +191,7 @@ export function CasesPage() {
     if (urlDateFrom) p.dateFrom = urlDateFrom;
     if (urlDateTo) p.dateTo = urlDateTo;
     return p;
-  }, [urlPage, urlLimit, debouncedSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
+  }, [urlPage, urlLimit, urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
 
   const { data: caseResponse, isLoading } = useSWR<{ data: Record<string, unknown>[]; total: number }>(
     queryKeys.cases.list(listParams),
@@ -211,11 +206,10 @@ export function CasesPage() {
   const uniqueGenders = useMemo(() => [...new Set(allCases.map(c => c.gender).filter(Boolean))], [allCases]);
   const uniqueAgeRanges = useMemo(() => [...new Set(allCases.map(c => c.ageRange).filter(Boolean))], [allCases]);
 
-  const hasAnyFilter = Boolean(debouncedSearch || urlBarangay || urlCategory || urlStatus || urlGender || urlAgeRange || urlSla || urlDateFrom || urlDateTo);
+  const hasAnyFilter = Boolean(urlSearch || urlBarangay || urlCategory || urlStatus || urlGender || urlAgeRange || urlSla || urlDateFrom || urlDateTo);
 
   const clearFilters = useCallback(() => {
     setSearchInput('');
-    setDebouncedSearch('');
     updateURL({
       search: undefined, barangay: undefined, category: undefined,
       status: undefined, gender: undefined, ageRange: undefined,
@@ -288,8 +282,9 @@ export function CasesPage() {
           <div className="relative">
             <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input type="text" aria-label="Search cases" placeholder="Search records..." className="w-48 pl-8"
-              value={searchInput} onChange={e => { setSearchInput(e.target.value); setDebouncedSearch(e.target.value); }} />
+              value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }} />
           </div>
+          <Button size="sm" onClick={handleSearch}>Search</Button>
         </div>
       </div>
 

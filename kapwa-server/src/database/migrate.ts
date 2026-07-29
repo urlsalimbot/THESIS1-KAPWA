@@ -155,6 +155,7 @@ export async function migrate() {
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_wraps JSONB`);
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_version INT DEFAULT 1`);
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS dismissal_reason TEXT`);
+  await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS case_id UUID REFERENCES cases(id)`);
 
   await q.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS consent_skipped BOOLEAN DEFAULT FALSE`);
   await q.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS email VARCHAR`);
@@ -164,6 +165,31 @@ export async function migrate() {
   await q.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS requirement_key VARCHAR`);
 
   await q.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS category VARCHAR`);
+  await q.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS logged_by UUID REFERENCES users(id)`);
+  await q.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS source_barangay TEXT`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS referrals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    coordinator_id UUID NOT NULL REFERENCES users(id),
+    barangay TEXT NOT NULL,
+    surname TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    middle_name TEXT,
+    extension TEXT,
+    gender TEXT NOT NULL,
+    dob DATE NOT NULL,
+    address JSONB,
+    phone TEXT,
+    reason TEXT NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined')),
+    decline_reason TEXT,
+    case_id UUID REFERENCES cases(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_referral_coordinator ON referrals(coordinator_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_referral_status ON referrals(status)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_referral_barangay ON referrals(barangay)`);
 
   await q.query(`CREATE INDEX IF NOT EXISTS idx_notif_recipient ON notifications(recipient_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_notif_read ON notifications(recipient_id, is_read)`);
