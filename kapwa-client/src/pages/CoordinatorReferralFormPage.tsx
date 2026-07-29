@@ -4,7 +4,8 @@ import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Send, AlertTriangle } from 'lucide-react';
 
 export function CoordinatorReferralFormPage() {
   const navigate = useNavigate();
@@ -50,93 +51,111 @@ export function CoordinatorReferralFormPage() {
 
   return (
     <PageShell title="New Referral" description="Refer a barangay resident to MSWDO for assessment.">
-      <div className="mb-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/coordinator/referrals')}>
-          <ArrowLeft size={14} className="mr-1" /> Back to Referrals
-        </Button>
-      </div>
+      {error && (
+        <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800 flex items-center gap-2">
+          <AlertTriangle size={14} className="shrink-0" /> {error}
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-        <div className="space-y-4">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Personal Information</p>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Surname *</label>
-              <Input required value={form.surname} onChange={e => update('surname', e.target.value)} />
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+        {/* Personal Information */}
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Personal Information</h2>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Name of the Resident</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Surname *</label>
+                  <Input required value={form.surname} onChange={e => update('surname', e.target.value)} aria-label="surname" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">First Name *</label>
+                  <Input required value={form.firstName} onChange={e => update('firstName', e.target.value)} aria-label="firstName" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Middle Name</label>
+                  <Input value={form.middleName} onChange={e => update('middleName', e.target.value)} aria-label="middleName" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Extension</label>
+                  <select
+                    value={form.extension}
+                    onChange={e => update('extension', e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="extension"
+                  >
+                    <option value="">N/A</option>
+                    <option value="Jr.">Jr.</option>
+                    <option value="Sr.">Sr.</option>
+                    <option value="III">III</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">First Name *</label>
-              <Input required value={form.firstName} onChange={e => update('firstName', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Middle Name</label>
-              <Input value={form.middleName} onChange={e => update('middleName', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Extension</label>
-              <Input value={form.extension} onChange={e => update('extension', e.target.value)} placeholder="Jr., III" />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Gender *</label>
-              <select
-                required
-                value={form.gender}
-                onChange={e => update('gender', e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select...</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Date of Birth *</label>
-              <Input type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Phone</label>
-              <Input value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="09XX-XXX-XXXX" />
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sex *</label>
+                <div className="flex h-10 items-center gap-4">
+                  {['Male', 'Female'].map(s => (
+                    <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="gender" value={s} checked={form.gender === s} onChange={e => update('gender', e.target.value)} className="text-primary" required />
+                      {s}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date of Birth *</label>
+                <Input type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} aria-label="dob" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone</label>
+                <Input type="tel" value={form.phone} onChange={e => update('phone', e.target.value)} aria-label="phone" placeholder="0917XXX-XXXX" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Address</p>
+        {/* Address */}
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Address</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Street / Purok</label>
-              <Input value={form.street} onChange={e => update('street', e.target.value)} />
+              <Input value={form.street} onChange={e => update('street', e.target.value)} aria-label="street" />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Barangay</label>
-              <Input value={form.barangay} onChange={e => update('barangay', e.target.value)} />
+              <Input value={form.barangay} onChange={e => update('barangay', e.target.value)} aria-label="barangay" />
             </div>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Referral Details</p>
-          <div className="space-y-1.5">
+        {/* Referral Details */}
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Referral Details</h2>
+          <div className="space-y-2">
             <label className="text-sm font-medium">Reason for Referral *</label>
             <textarea
               required
               value={form.reason}
               onChange={e => update('reason', e.target.value)}
               rows={4}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[100px]"
               placeholder="Describe why this resident is being referred to MSWDO..."
             />
           </div>
         </div>
 
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        <Button type="submit" disabled={submitting}>
-          <Send size={14} className="mr-1" /> {submitting ? 'Submitting...' : 'Submit Referral'}
-        </Button>
+        <div className="flex justify-end gap-2">
+          <Button type="submit" disabled={submitting}>
+            <Send size={14} className="mr-1" /> {submitting ? 'Submitting...' : 'Submit Referral'}
+          </Button>
+        </div>
       </form>
     </PageShell>
   );

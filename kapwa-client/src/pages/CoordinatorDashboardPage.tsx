@@ -1,11 +1,13 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight, Eye, Send, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingUp, Clock, ClipboardList, MessageSquare, ArrowRight, Eye, Send, ExternalLink, Search, Loader2, BadgeCheck } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { api } from '../lib/api';
-import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 
 export function CoordinatorDashboardPage() {
   const navigate = useNavigate();
@@ -15,49 +17,7 @@ export function CoordinatorDashboardPage() {
   const [searching, setSearching] = useState(false);
   const [stats, setStats] = useState<any[]>([]);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
-  const [referralCounts, setReferralCounts] = useState<{ total: number; pending: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const urlLimit = parseInt(searchParams.get('limit') || '10', 10);
-
-  const updateURL = useCallback((overrides: Record<string, string | undefined>) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      for (const [k, v] of Object.entries(overrides)) {
-        if (v) next.set(k, v);
-        else next.delete(k);
-      }
-      return next;
-    }, { replace: true });
-  }, [setSearchParams]);
-
-  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
-
-  const onPaginationChange = useCallback(
-    (updater: Updater<PaginationState>) => {
-      const next = typeof updater === 'function' ? updater(pagination) : updater;
-      updateURL({ page: String(next.pageIndex + 1), limit: String(next.pageSize) });
-    },
-    [pagination, updateURL],
-  );
-
-  const entryColumns: ColumnDef<any>[] = [
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs">{row.original.date}</span> },
-    { id: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
-    { accessorKey: 'category', header: 'Category' },
-    { accessorKey: 'barangay', header: 'Barangay' },
-    { accessorKey: 'remarks', header: 'Intervention/Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View">
-          <Eye size={14} className="mr-1" /> View
-        </Button>
-      ),
-    },
-  ];
 
   useEffect(() => {
     loadData();
@@ -69,20 +29,20 @@ export function CoordinatorDashboardPage() {
         api.get<any>('/dashboard'),
         api.get<{ total: number; pending: number }>('/referrals/counts').catch(() => null),
       ]);
-      setReferralCounts(refCounts);
+      const referralsText = refCounts ? `${refCounts.pending} pending of ${refCounts.total}` : '—';
       setStats([
-        { label: 'Served Today', value: String(data.servedToday || 0), change: `${data.servedChange || '+0%'} from yesterday`, icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
-        { label: 'Pending Cases', value: String(data.pendingReview || 0), change: `${data.urgentCount || 0} urgent`, icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-        { label: 'My Referrals', value: String(refCounts?.total ?? '--'), change: `${refCounts?.pending ?? 0} pending`, icon: Send, iconClass: 'bg-purple-100 text-purple-700' },
-        { label: 'Messages', value: String(data.unreadMessages || 0), change: 'Unread messages', icon: MessageSquare, iconClass: 'bg-blue-50 text-cyan-600' },
+        { label: 'Served Today', value: String(data.servedToday || 0), change: `${data.servedChange || '+0%'} from yesterday`, icon: TrendingUp },
+        { label: 'Pending Cases', value: String(data.pendingReview || 0), change: `${data.urgentCount || 0} urgent`, icon: Clock },
+        { label: 'My Referrals', value: String(refCounts?.total ?? '--'), change: referralsText, icon: Send },
+        { label: 'Messages', value: String(data.unreadMessages || 0), change: 'Unread messages', icon: MessageSquare },
       ]);
       setRecentEntries(data.recentCases || []);
     } catch {
       setStats([
-        { label: 'Served Today', value: '--', change: 'Offline', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
-        { label: 'Pending Cases', value: '--', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-        { label: 'My Referrals', value: '--', change: 'Offline', icon: Send, iconClass: 'bg-purple-100 text-purple-700' },
-        { label: 'Messages', value: '--', change: 'N/A', icon: MessageSquare, iconClass: 'bg-blue-50 text-cyan-600' },
+        { label: 'Served Today', value: '--', change: 'Offline', icon: TrendingUp },
+        { label: 'Pending Cases', value: '--', change: 'N/A', icon: Clock },
+        { label: 'My Referrals', value: '--', change: 'Offline', icon: Send },
+        { label: 'Messages', value: '--', change: 'N/A', icon: MessageSquare },
       ]);
     }
     setLoading(false);
@@ -103,92 +63,120 @@ export function CoordinatorDashboardPage() {
     setSearching(false);
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading dashboard...</div>;
+  const entryColumns: ColumnDef<any>[] = [
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
+    { id: 'name', header: 'Name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+    { accessorKey: 'category', header: 'Category' },
+    { accessorKey: 'barangay', header: 'Barangay' },
+    { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks}</span> },
+    {
+      id: 'actions', header: '',
+      cell: ({ row }) => (
+        <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View Case">
+          <Eye size={14} className="mr-1" /> View
+        </Button>
+      ),
+    },
+  ];
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading dashboard...</div>;
 
   return (
     <PageShell
       title="Coordinator Dashboard"
       description="Overview of barangay social welfare activities."
+      actions={
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate('/referrals')}>
+            <ExternalLink size={14} className="mr-1" /> View Referrals
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/coordinator/access-cards')}>
+            <BadgeCheck size={14} className="mr-1" /> Access Cards
+          </Button>
+          <Button size="sm" onClick={() => navigate('/coordinator/referrals/new')}>
+            <Send size={14} className="mr-1" /> New Referral
+          </Button>
+        </div>
+      }
     >
-
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map(s => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-gray-500 text-xs uppercase tracking-wide">{s.label}</span>
-                <div className={`ml-auto rounded-full w-8 h-8 flex items-center justify-center ${s.iconClass}`}>
-                  <Icon size={16} />
+            <Card key={s.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{s.label}</span>
+                  <div className="ml-auto rounded-full w-8 h-8 flex items-center justify-center bg-muted shadow-sm">
+                    <Icon size={16} />
+                  </div>
                 </div>
-              </div>
-              <div className="text-2xl font-bold text-gray-900">{s.value}</div>
-              <div className="text-xs mt-1">{s.change}</div>
-            </div>
+                <div className="text-2xl font-bold text-foreground font-heading tracking-tight tabular-nums mb-0.5">{s.value}</div>
+                <p className="text-xs text-muted-foreground">{s.change}</p>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      <div className="flex gap-3 mb-6">
-        <Button onClick={() => navigate('/coordinator/referrals/new')}>
-          <Send size={14} className="mr-1" /> New Referral
-        </Button>
-        <Button variant="outline" onClick={() => navigate('/referrals')}>
-          <ExternalLink size={14} className="mr-1" /> View Referrals
-        </Button>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-lg mb-3">Quick Case Search</h2>
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input
-              type="text"
-              value={searchId}
-              onChange={e => setSearchId(e.target.value)}
-              placeholder="Enter Case ID..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button type="submit" disabled={searching} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-            {searching ? 'Searching...' : 'Search'}
-          </button>
-        </form>
-        {searchError && <p className="text-red-600 text-sm mt-2">{searchError}</p>}
-        {searchResult && (
-          <div className="mt-3 p-3 border rounded-lg bg-gray-50">
-            <p className="text-sm"><strong>Case:</strong> {searchResult.controlNo || '—'}</p>
-            <p className="text-sm"><strong>Status:</strong> {searchResult.status}</p>
-            <button onClick={() => navigate(`/cases/${searchResult.id}`)} className="text-blue-600 text-xs mt-1 flex items-center gap-1">
-              View details <ArrowRight size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="mb-4">
-        <h2 className="text-lg mb-3">Today's Tracker Entries</h2>
-      </div>
-
-      <div>
-        {recentEntries.length === 0 ? (
-          <div className="text-center py-8 text-sm text-muted-foreground">No entries today</div>
-        ) : (
-          <DataTable
-            columns={entryColumns}
-            data={recentEntries}
-            rowCount={recentEntries.length}
-            pagination={pagination}
-            onPaginationChange={onPaginationChange}
-            sorting={[]}
-          />
-        )}
-        <div className="flex items-center justify-between mt-3">
-          <span className="text-sm text-muted-foreground">{recentEntries.length} entries today</span>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/tracker')}>View Full Tracker</Button>
+      <Card className="mt-4">
+        <div className="border-b px-4 py-3">
+          <h3 className="text-sm font-semibold">Quick Case Search</h3>
         </div>
-      </div>
+        <CardContent className="p-4">
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="relative flex-1 max-w-md">
+              <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                aria-label="Search cases"
+                placeholder="Enter Case ID..."
+                className="w-full pl-8"
+                value={searchId}
+                onChange={e => setSearchId(e.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={searching}>
+              {searching ? <Loader2 size={14} className="animate-spin mr-1" /> : <Search size={14} className="mr-1" />}
+              {searching ? 'Searching...' : 'Search'}
+            </Button>
+          </form>
+          {searchError && <p className="text-destructive text-sm mt-2">{searchError}</p>}
+          {searchResult && (
+            <div className="mt-3 p-3 border rounded-lg bg-muted/50">
+              <p className="text-sm"><strong>Case:</strong> {searchResult.controlNo || '—'}</p>
+              <p className="text-sm"><strong>Status:</strong> {searchResult.status}</p>
+              <Button variant="link" size="sm" className="h-auto p-0 mt-1 text-xs" onClick={() => navigate(`/cases/${searchResult.id}`)}>
+                View details <ArrowRight size={14} className="ml-1" />
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <div className="border-b px-4 py-3">
+          <h3 className="text-sm font-semibold">Today's Tracker Entries</h3>
+        </div>
+        <CardContent className="p-4">
+          {recentEntries.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">No entries today</div>
+          ) : (
+            <DataTable
+              columns={entryColumns}
+              data={recentEntries}
+              rowCount={recentEntries.length}
+              pagination={{ pageIndex: 0, pageSize: 10 }}
+              onPaginationChange={() => {}}
+              sorting={[]}
+            />
+          )}
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-sm text-muted-foreground">{recentEntries.length} entries today</span>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/tracker')}>View Full Tracker</Button>
+          </div>
+        </CardContent>
+      </Card>
     </PageShell>
   );
 }

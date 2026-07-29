@@ -79,7 +79,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
   const roleLabel = user?.role
     ? ({ admin: 'MSWDO Admin', social_worker: 'MSWDO Social Worker', coordinator: 'Brgy Coordinator', claimant: 'Claimant', mayor: "Mayor's Office", auditor: 'Auditor' } as Record<string, string>)[user.role] || user.role.replace(/_/g, ' ')
     : '';
-  const canIntake = isAdmin || isSocialWorker || isCoordinator;
+  const canIntake = isAdmin || isSocialWorker;
   const canApprove = isAdmin || isSocialWorker;
 
   const handleLogout = useCallback(() => {
@@ -121,9 +121,9 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           </div>
         </div>
 
-        {/* Center: search */}
+        {/* Center: search — spacer when absent */}
         <div className="flex-1 flex items-center justify-center px-4">
-          <GlobalSearch />
+          {(isAdmin || isSocialWorker) && <GlobalSearch />}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

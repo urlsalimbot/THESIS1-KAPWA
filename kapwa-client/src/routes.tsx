@@ -28,6 +28,7 @@ import { CoordinatorReferralListPage } from './pages/CoordinatorReferralListPage
 import { ReferralReviewPage } from './pages/ReferralReviewPage';
 import { ReferralsPage } from './pages/ReferralsPage';
 import { AccessCardViewPage } from './pages/AccessCardViewPage';
+import { CoordinatorAccessCardsPage } from './pages/CoordinatorAccessCardsPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
 
 import { MayorReportsPage } from './pages/MayorReportsPage';
@@ -79,8 +80,8 @@ const router = createBrowserRouter([
   { path: 'reset-password', element: <ResetPasswordPage /> },
   // === PROTECTED ROUTES ===
   { path: 'dashboard', element: <Private><DashboardPage /></Private> },
-  { path: '/intake', element: <Private roles={['admin','social_worker','coordinator']}><IntakePage /></Private> },
-  { path: '/intake/review', element: <Private roles={['admin','social_worker','coordinator']}><IntakeReviewPage /></Private> },
+  { path: '/intake', element: <Private roles={['admin','social_worker']}><IntakePage /></Private> },
+  { path: '/intake/review', element: <Private roles={['admin','social_worker']}><IntakeReviewPage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker','coordinator']}><CasesPage /></Private> },
   { path: '/cases/:id', element: <Private roles={['admin','social_worker','coordinator']}><CaseViewPage /></Private> },
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
@@ -101,6 +102,7 @@ const router = createBrowserRouter([
   { path: '/coordinator/dashboard', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
   { path: '/coordinator/referrals', element: <Private roles={['coordinator']}><CoordinatorReferralListPage /></Private> },
   { path: '/coordinator/referrals/new', element: <Private roles={['coordinator']}><CoordinatorReferralFormPage /></Private> },
+  { path: '/coordinator/access-cards', element: <Private roles={['coordinator']}><CoordinatorAccessCardsPage /></Private> },
   { path: '/referrals', element: <Private roles={['admin','social_worker','coordinator']}><ReferralsPage /></Private> },
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
