@@ -42,6 +42,9 @@ export class IrfCase extends BaseEntity {
   @Column('jsonb', { nullable: true })
   itemBPersonReported?: Record<string, any>;
 
+  @Column({ name: 'case_id', nullable: true })
+  caseId?: string;
+
   @Column({ type: 'bytea', nullable: true, name: 'encrypted_narration' })
   encryptedNarration?: Buffer;
 

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Upload, Download, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Upload, Download, X, Lock } from 'lucide-react';
 import { SERVICE_TYPES, NATURE_OF_SERVICE } from '@/lib/constants';
 
 interface Intervention {
@@ -34,9 +34,10 @@ interface StepImplementHIPProps {
   caseId: string;
   caseData: any;
   userRole?: string;
+  readOnly?: boolean;
 }
 
-export function StepImplementHIP({ caseId, caseData, userRole }: StepImplementHIPProps) {
+export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepImplementHIPProps) {
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
     queryKeys.cases.interventions(caseId),
@@ -152,17 +153,20 @@ export function StepImplementHIP({ caseId, caseData, userRole }: StepImplementHI
       {/* Summary */}
       <div className="rounded-lg border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold">Intervention Record</h3>
-            <p className="text-xs text-muted-foreground">
-              {interventions.length} intervention{interventions.length !== 1 ? 's' : ''} delivered
-              {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} total`}
-            </p>
+            {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
-          <Button size="sm" onClick={() => setAdding(!adding)}>
-            <Plus size={14} className="mr-1" /> Add Intervention
-          </Button>
+          {!readOnly && (
+            <Button size="sm" onClick={() => setAdding(!adding)}>
+              <Plus size={14} className="mr-1" /> Add Intervention
+            </Button>
+          )}
         </div>
+        <p className="text-xs text-muted-foreground">
+          {interventions.length} intervention{interventions.length !== 1 ? 's' : ''} delivered
+          {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} total`}
+        </p>
       </div>
 
       {/* Add Form */}
@@ -289,9 +293,11 @@ export function StepImplementHIP({ caseId, caseData, userRole }: StepImplementHI
                   </div>
                   {intv.notes && <p className="text-xs text-muted-foreground/70 mt-1">{intv.notes}</p>}
                 </div>
-                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)}>
-                  <Trash2 size={14} />
-                </Button>
+                {!readOnly && (
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)}>
+                    <Trash2 size={14} />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -316,7 +322,7 @@ export function StepImplementHIP({ caseId, caseData, userRole }: StepImplementHI
                   <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted transition-colors">
                     <button
                       onClick={() => toggleRequirement(req)}
-                      disabled={savingReqs}
+                      disabled={savingReqs || readOnly}
                       className="flex items-center gap-3 flex-1 text-left"
                     >
                       {done
@@ -383,6 +389,39 @@ export function StepImplementHIP({ caseId, caseData, userRole }: StepImplementHI
           </div>
         </div>
       )}
+
+      {/* Status transition */}
+      {!readOnly && interventions.length > 0 && caseData?.status === 'assessed' && userRole === 'social_worker' && (
+        <div className="rounded-lg border bg-primary/5 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary">Interventions recorded</p>
+              <p className="text-xs text-muted-foreground">Submit for admin review to activate the case.</p>
+            </div>
+            <ReviewButton caseId={caseId} mutate={mutate} />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function ReviewButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const [loading, setLoading] = useState(false);
+  async function handleReview() {
+    setLoading(true);
+    try {
+      await api.patch(`/cases/${caseId}/status`, { status: 'in_review' });
+      await mutate(queryKeys.cases.detail(caseId));
+    } catch (e) {
+      console.error('Failed to submit for review:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button onClick={handleReview} disabled={loading} size="sm">
+      {loading ? 'Submitting...' : 'Submit for Review →'}
+    </Button>
   );
 }

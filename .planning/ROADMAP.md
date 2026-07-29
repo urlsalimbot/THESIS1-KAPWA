@@ -119,6 +119,48 @@ Plans:
 
 ---
 
+## Phase 19: Barangay Coordinator Module — Referral System
+
+**Goal:** Barangay coordinator refers any resident to MSWDO intake pipeline. Coordinator tracks status (pending/accepted/declined).
+
+**Requirements:** COORD-01 (referral create), COORD-02 (referral review), COORD-03 (status tracking)
+
+**Success criteria:**
+
+1. Coordinator can submit referral for any barangay resident (not just existing beneficiaries)
+2. MSWDO sees referrals in a dedicated queue, accepts (→ creates intake) or declines with reason
+3. Coordinator dashboard shows referral stats and recent referrals
+4. Coordinator can view status of all their referrals
+
+**Plans:** 6 tasks (referral entity, service+controller, coordinator client pages, MSWDO review page, dashboard updates, router)
+
+Plan:
+
+- [ ] 19-01-PLAN.md — Referral system (entity → service → controller → coordinator UI → MSWDO review → dashboard)
+
+---
+
+## Phase 20: Barangay Coordinator Module — Access Card Management
+
+**Goal:** Coordinator can assign, verify, and log activities on access cards within their barangay.
+
+**Requirements:** COORD-04 (card verification), COORD-05 (card assignment), COORD-06 (activity logging)
+
+**Success criteria:**
+
+1. Coordinator can verify a card by code → sees beneficiary info + service history
+2. Coordinator can assign new cards to beneficiaries in their barangay
+3. Coordinator can log activities (community_service, seminar, distribution, other)
+4. Coordinator can see their activity log history
+
+**Plans:** 6 tasks (permission updates, migration, barangay-scoped lookup, access card page, activity form, router)
+
+Plan:
+
+- [ ] 20-01-PLAN.md — Access card management (permissions → migration → coordinator UI → activity logging)
+
+---
+
 ## Progress
 
 | Phase | Status | Requirements | Plans |
@@ -129,8 +171,11 @@ Plans:
 | 15 | ⊙ | TST-01, TST-02, TST-03, TST-04 | 4/0 |
 | 16 | ⊙ | ERR-01, TST-05, A11Y-01, A11Y-02, TST-06 (folded from 17) | 3/0 |
 | 17 | 3/3 | Complete   | 2026-07-08 |
+| 18 | ⬜ | KILOS-01–KILOS-08 | — |
+| 19 | ⬜ | COORD-01, COORD-02, COORD-03 | — |
+| 20 | ⬜ | COORD-04, COORD-05, COORD-06 | — |
 
-**6 phases | 18 requirements | Ready to plan ✓**
+**9 phases | 27 requirements | Ready to plan ✓**
 
 ---
 *Roadmap created: 2026-07-05*

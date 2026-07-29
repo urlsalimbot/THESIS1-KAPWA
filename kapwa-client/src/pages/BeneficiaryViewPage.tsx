@@ -259,14 +259,13 @@ export function BeneficiaryViewPage() {
         receiptUrl = await uploadReceipt(intReceiptFile, intReceiptFile.name);
       }
 
-      await api.post("/interventions", {
-        caseId: interventionCaseId,
-        interventionType: intForm.type,
+      await api.post(`/cases/${interventionCaseId}/interventions`, {
+        serviceName: intForm.type,
+        category: intForm.type,
+        deliveryDate: new Date().toISOString().split('T')[0],
         amount: parseFloat(intForm.amount) || 0,
         fundSource: intForm.fundSource,
-        workerSignatureUrl: workerSignatureUrl || undefined,
-        clientReceiptUrl: receiptUrl || undefined,
-      } as Record<string, unknown>);
+      });
 
       setInterventionCaseId(null);
       setIntForm({ type: "FA", amount: "", fundSource: "Regular" });

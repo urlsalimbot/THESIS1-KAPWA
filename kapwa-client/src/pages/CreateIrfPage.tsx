@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSWRConfig } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -7,12 +7,22 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Shield, User, Phone } from 'lucide-react';
+import { Shield, User, Phone, Calendar, Flag } from 'lucide-react';
 
 export function CreateIrfPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const caseId = searchParams.get('caseId');
   const { mutate: globalMutate } = useSWRConfig();
-  const [form, setForm] = useState({ caseCategory: '', narration: '', reporterName: '', reporterContact: '' });
+  const [form, setForm] = useState({
+    caseCategory: '',
+    narration: '',
+    reporterName: '',
+    reporterContact: '',
+    reportedPersonName: '',
+    reportedPersonContact: '',
+    incidentDate: '',
+  });
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -22,7 +32,12 @@ export function CreateIrfPage() {
       await api.post('/irf', {
         caseCategory: form.caseCategory,
         narration: form.narration,
+        datetimeIncident: form.incidentDate || undefined,
+        caseId: caseId || undefined,
         itemAReportingPerson: { name: form.reporterName, contact: form.reporterContact },
+        itemBPersonReported: form.reportedPersonName
+          ? { name: form.reportedPersonName, contact: form.reportedPersonContact || undefined }
+          : undefined,
       });
       toast.success('IRF created', { description: 'Incident report has been filed.' });
       globalMutate(queryKeys.irf.list());
@@ -42,13 +57,13 @@ export function CreateIrfPage() {
       backTo={{ label: 'IRF List', onClick: () => navigate('/irf') }}
     >
       <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Case Category + Reporter */}
+        {/* Case Category + Incident Date */}
         <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
           <div className="border-b bg-muted/30 px-4 py-2.5">
             <h2 className="text-sm font-semibold text-foreground">Case Details</h2>
           </div>
           <div className="p-4 space-y-4">
-            <div className="grid grid-cols-[1fr_1fr_1.5fr] gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground font-medium">Case Category *</label>
                 <select
@@ -67,21 +82,50 @@ export function CreateIrfPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                  <User size={12} /> Reporter Name *
+                  <Calendar size={12} /> Date of Incident
                 </label>
-                <Input required value={form.reporterName} onChange={e => setForm({ ...form, reporterName: e.target.value })} className="h-9" aria-label="Reporter Name" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                  <Phone size={12} /> Reporter Contact
-                </label>
-                <Input value={form.reporterContact} onChange={e => setForm({ ...form, reporterContact: e.target.value })} className="h-9" aria-label="Reporter Contact" />
+                <Input type="date" value={form.incidentDate} onChange={e => setForm({ ...form, incidentDate: e.target.value })} className="h-9" aria-label="Date of Incident" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Narration — takes the full visual weight */}
+        {/* Persons Involved */}
+        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="border-b bg-muted/30 px-4 py-2.5">
+            <h2 className="text-sm font-semibold text-foreground">Persons Involved</h2>
+          </div>
+          <div className="p-4 space-y-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><User size={12} /> Reporting Person</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Name *</label>
+                  <Input required value={form.reporterName} onChange={e => setForm({ ...form, reporterName: e.target.value })} className="h-9" aria-label="Reporter Name" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Contact</label>
+                  <Input value={form.reporterContact} onChange={e => setForm({ ...form, reporterContact: e.target.value })} className="h-9" aria-label="Reporter Contact" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><Flag size={12} /> Person Reported</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Name</label>
+                  <Input value={form.reportedPersonName} onChange={e => setForm({ ...form, reportedPersonName: e.target.value })} className="h-9" aria-label="Reported Person Name" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Contact</label>
+                  <Input value={form.reportedPersonContact} onChange={e => setForm({ ...form, reportedPersonContact: e.target.value })} className="h-9" aria-label="Reported Person Contact" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Narration */}
         <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Shield size={14} className="text-accent" />

@@ -62,6 +62,7 @@ export class IrfService {
 
     const createData: Record<string, unknown> = {
       blotterEntryNumber: blotterNo,
+      caseId: irfData.caseId || null,
       caseCategory: irfData.caseCategory,
       datetimeReported: irfData.datetimeReported || new Date(),
       datetimeIncident: irfData.datetimeIncident,
@@ -80,6 +81,26 @@ export class IrfService {
     }
 
     return this.findById(saved.id);
+  }
+
+  async findByCaseId(caseId: string) {
+    const items = await this.irfRepo.find({
+      where: { caseId },
+      order: { createdAt: 'DESC' },
+    });
+    return items.map(i => {
+      const { encryptedNarration, ...safe } = i;
+      return {
+        ...safe,
+        encryptedNarration: !!i.encryptedNarration,
+        itemBPersonReported: i.itemBPersonReported
+          ? { ...i.itemBPersonReported, surname: '[REDACTED]', firstName: '[REDACTED]' }
+          : null,
+        itemAReportingPerson: i.itemAReportingPerson
+          ? { ...i.itemAReportingPerson, surname: '[REDACTED]', firstName: '[REDACTED]' }
+          : null,
+      };
+    });
   }
 
   async findAll(page = 1, limit = 10) {

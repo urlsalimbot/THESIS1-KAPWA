@@ -230,18 +230,18 @@ export function dataURItoBlob(dataUrl: string): Blob {
   return new Blob([array], { type: mime });
 }
 
-// Blob downloads (D-10 deferred — api client only handles JSON).
-export async function downloadCsrPdf(controlNo: string) {
+export async function downloadCsrPdf(caseId: string) {
   const token = localStorage.getItem(TOKEN_KEY);
-  const res = await fetch(`${API_BASE}/csr/${controlNo}/pdf`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error('PDF download failed');
+  const res = await fetch(
+    `${API_BASE}/cases/${caseId}/csr-pdf`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  if (!res.ok) throw new Error(`CSR export failed: ${res.status}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = `CSR-${controlNo}.pdf`;
+  a.download = `CSR-${caseId}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight, Eye } from 'lucide-react';
+import { TrendingUp, RefreshCw, Search, ClipboardList, MessageSquare, Clock, ArrowRight, Eye, Send, ExternalLink } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ export function CoordinatorDashboardPage() {
   const [searching, setSearching] = useState(false);
   const [stats, setStats] = useState<any[]>([]);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
+  const [referralCounts, setReferralCounts] = useState<{ total: number; pending: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -64,11 +65,15 @@ export function CoordinatorDashboardPage() {
 
   async function loadData() {
     try {
-      const data = await api.get<any>('/dashboard');
+      const [data, refCounts] = await Promise.all([
+        api.get<any>('/dashboard'),
+        api.get<{ total: number; pending: number }>('/referrals/counts').catch(() => null),
+      ]);
+      setReferralCounts(refCounts);
       setStats([
         { label: 'Served Today', value: String(data.servedToday || 0), change: `${data.servedChange || '+0%'} from yesterday`, icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
         { label: 'Pending Cases', value: String(data.pendingReview || 0), change: `${data.urgentCount || 0} urgent`, icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-        { label: 'Today Entries', value: String((data.recentCases || []).length), change: 'Tracker entries today', icon: ClipboardList, iconClass: 'bg-green-100 text-green-800' },
+        { label: 'My Referrals', value: String(refCounts?.total ?? '--'), change: `${refCounts?.pending ?? 0} pending`, icon: Send, iconClass: 'bg-purple-100 text-purple-700' },
         { label: 'Messages', value: String(data.unreadMessages || 0), change: 'Unread messages', icon: MessageSquare, iconClass: 'bg-blue-50 text-cyan-600' },
       ]);
       setRecentEntries(data.recentCases || []);
@@ -76,7 +81,7 @@ export function CoordinatorDashboardPage() {
       setStats([
         { label: 'Served Today', value: '--', change: 'Offline', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
         { label: 'Pending Cases', value: '--', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-        { label: 'Today Entries', value: '--', change: 'Check connection', icon: ClipboardList, iconClass: 'bg-green-100 text-green-800' },
+        { label: 'My Referrals', value: '--', change: 'Offline', icon: Send, iconClass: 'bg-purple-100 text-purple-700' },
         { label: 'Messages', value: '--', change: 'N/A', icon: MessageSquare, iconClass: 'bg-blue-50 text-cyan-600' },
       ]);
     }
@@ -122,6 +127,15 @@ export function CoordinatorDashboardPage() {
             </div>
           );
         })}
+      </div>
+
+      <div className="flex gap-3 mb-6">
+        <Button onClick={() => navigate('/coordinator/referrals/new')}>
+          <Send size={14} className="mr-1" /> New Referral
+        </Button>
+        <Button variant="outline" onClick={() => navigate('/referrals')}>
+          <ExternalLink size={14} className="mr-1" /> View Referrals
+        </Button>
       </div>
 
       <div className="mb-6">

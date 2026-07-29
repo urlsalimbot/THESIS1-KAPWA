@@ -78,10 +78,6 @@ function itemLabel(item: QueuedChange): ItemLabel {
       const type = p.intervention_type as string | undefined;
       return { primary: type ?? 'Intervention', secondary: item.recordId.slice(0, 8) };
     }
-    case 'csr_reports': {
-      const cn = p.control_no as string | undefined;
-      return { primary: cn ? cn : 'CSR Report', secondary: item.recordId.slice(0, 8) };
-    }
     case 'irf_cases': {
       const blotter = p.blotter_entry_number as string | undefined;
       return { primary: blotter ?? 'IRF Case', secondary: item.recordId.slice(0, 8) };

@@ -16,6 +16,19 @@ async function runMigrations() {
 }
 
 async function bootstrap() {
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.IRF_ENCRYPTION_KEY) {
+      throw new Error(
+        'IRF_ENCRYPTION_KEY is required in production — generate one with: openssl rand -hex 32'
+      );
+    }
+    if (Buffer.from(process.env.IRF_ENCRYPTION_KEY, 'hex').length < 32) {
+      throw new Error(
+        'IRF_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)'
+      );
+    }
+  }
+
   await runMigrations();
   const app = await NestFactory.create(AppModule);
 
