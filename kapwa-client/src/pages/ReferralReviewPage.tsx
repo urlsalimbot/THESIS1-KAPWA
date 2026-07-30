@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -140,22 +141,22 @@ export function ReferralReviewPage() {
   if (loading) {
     return (
       <PageShell title="Referral Review" description="Review and process barangay referrals.">
-        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+        <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5">
             <h2 className="text-sm font-semibold text-foreground">Pending Referrals</h2>
           </div>
           <div className="p-4 space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="h-4 bg-muted rounded w-1/4" />
-                <div className="h-4 bg-muted rounded w-1/6" />
-                <div className="h-4 bg-muted rounded w-1/6" />
-                <div className="h-4 bg-muted rounded w-1/3" />
-                <div className="h-8 bg-muted rounded w-24 ml-auto" />
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-4 w-1/6" />
+                <Skeleton className="h-4 w-1/6" />
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-8 w-24 ml-auto" />
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       </PageShell>
     );
   }
@@ -168,7 +169,7 @@ export function ReferralReviewPage() {
           <p className="text-sm">No pending referrals.</p>
         </div>
       ) : (
-        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+        <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Inbox size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold text-foreground">Pending Referrals</h2>
@@ -176,7 +177,7 @@ export function ReferralReviewPage() {
           <div className="p-0">
             <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
           </div>
-        </div>
+        </Card>
       )}
 
       <Dialog open={!!declineModal} onOpenChange={(open) => { if (!open) { setDeclineModal(null); setDeclineReason(''); } }}>
