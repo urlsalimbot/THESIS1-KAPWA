@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -293,9 +293,13 @@ export class IntakeService {
       throw new ForbiddenException('You do not have permission for this barangay');
     }
 
+    const [lk1, lk2] = this.hashToLockPair(
+      data.beneficiary.surname, data.beneficiary.firstName, data.beneficiary.dob,
+    );
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction('SERIALIZABLE');
+    await queryRunner.startTransaction();
+    await queryRunner.query(`SELECT pg_advisory_xact_lock($1, $2)`, [lk1, lk2]);
 
     try {
       const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true);
@@ -307,7 +311,7 @@ export class IntakeService {
       });
       const savedBeneficiary = await queryRunner.manager.save(beneficiary);
 
-      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, false);
+      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true);
       await queryRunner.manager.save(queryRunner.manager.create(BeneficiaryClaimant, {
         beneficiaryId: benPerson.id,
         claimantId: claimPerson.id,
@@ -320,50 +324,46 @@ export class IntakeService {
         const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
         for (const fm of validMembers) {
           const memberPerson = await this.findOrCreatePerson({
-            surname: fm.surname,
-            firstName: fm.firstName,
-            middleName: fm.middleName,
-            extension: fm.extension,
-            gender: 'Male' as const,
-            dob: new Date(),
-            age: fm.age,
-            occupation: fm.occupation,
+            surname: fm.surname, firstName: fm.firstName,
+            middleName: fm.middleName, extension: fm.extension,
+            gender: (fm.gender || 'Male') as 'Male' | 'Female',
+            dob: fm.dob ? new Date(fm.dob) : new Date(),
+            age: fm.age, occupation: fm.occupation,
             estimatedMonthlyIncome: fm.income,
-          }, queryRunner, false);
+          }, queryRunner, true);
           const membership = queryRunner.manager.create(HouseholdMembership, {
-            personId: memberPerson.id,
-            householdId,
-            relationship: fm.relationship,
-            isPrimary: false,
+            personId: memberPerson.id, householdId,
+            relationship: fm.relationship, isPrimary: false,
             status: fm.status,
           });
           await queryRunner.manager.save(membership);
         }
       }
 
-      const lastCase = await this.caseRepo.findOne({
-        where: { beneficiaryId: In(
-          (await this.benRepo.find({ where: { householdId }, select: ['id'] })).map(b => b.id)
-        ), status: CaseStatus.ACTIVE },
+      const recentCase = await this.caseRepo.findOne({
+        where: {
+          beneficiaryId: In(
+            (await this.benRepo.find({ where: { householdId }, select: ['id'] })).map(b => b.id)
+          ),
+          createdAt: MoreThan(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+        },
         order: { createdAt: 'DESC' },
       });
 
-      const lastApprovedDate = lastCase?.createdAt || null;
-      const nextEligibleDate = lastApprovedDate
-        ? new Date(lastApprovedDate.getTime() + 30 * 24 * 60 * 60 * 1000)
-        : new Date();
+      const controlNo = recentCase ? undefined : await this.casesService.generateControlNo();
 
-      const controlNo = await this.casesService.generateControlNo();
-
-      const caseEntity = this.caseRepo.create({
-        controlNo,
-        beneficiaryId: savedBeneficiary.id,
-        status: CaseStatus.ENROLLED,
-        serviceRequested: data.case.serviceRequested,
-        requirementsChecklist: data.case.requirementsChecklist,
-        assignedWorkerId: data.case.assignedWorkerId,
-      });
-      const savedCase = await queryRunner.manager.save(caseEntity);
+      let savedCase = null;
+      if (!recentCase) {
+        const caseEntity = this.caseRepo.create({
+          controlNo,
+          beneficiaryId: savedBeneficiary.id,
+          status: CaseStatus.ENROLLED,
+          serviceRequested: data.case.serviceRequested,
+          requirementsChecklist: data.case.requirementsChecklist,
+          assignedWorkerId: data.case.assignedWorkerId,
+        });
+        savedCase = await queryRunner.manager.save(caseEntity);
+      }
 
       const consent = this.consentRepo.create({
         beneficiaryId: savedBeneficiary.id,
@@ -375,12 +375,19 @@ export class IntakeService {
 
       await queryRunner.commitTransaction();
 
+      const existingCaseDate = recentCase?.createdAt?.toISOString() || null;
+
       return {
+        updated: true,
+        caseCreated: !recentCase,
         beneficiaryId: savedBeneficiary.id,
-        caseId: savedCase.id,
-        controlNo,
-        status: CaseStatus.ENROLLED,
-        nextEligibleDate: nextEligibleDate.toISOString(),
+        caseId: savedCase?.id || null,
+        controlNo: controlNo || null,
+        status: recentCase ? null : CaseStatus.ENROLLED,
+        existingCaseDate,
+        message: recentCase
+          ? `Info updated. No new case created — this household already has a case from ${new Date(recentCase.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}.`
+          : 'Info updated and new case created.',
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -390,5 +397,17 @@ export class IntakeService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  private hashToLockPair(surname: string, firstName: string, dob?: string): [number, number] {
+    const str = `${surname.toLowerCase()},${firstName.toLowerCase()},${dob || ''}`;
+    let h1 = 5381;
+    let h2 = 52711;
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      h1 = ((h1 << 5) + h1 + code) | 0;
+      h2 = ((h2 << 13) - h2 + code) | 0;
+    }
+    return [Math.abs(h1 || 1), Math.abs(h2 || 1)];
   }
 }
