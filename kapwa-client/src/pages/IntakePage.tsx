@@ -425,7 +425,7 @@ export function IntakePage() {
         <div className="rounded-lg border">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <User size={16} className="text-muted-foreground" />
-            <h3 className="text-sm font-semibold">I. Beneficiary Information</h3>
+            <h2 className="text-sm font-semibold">I. Beneficiary Information</h2>
           </div>
           <div className="p-6">
             <PersonFields prefix="ben" form={beneficiary} onChange={updateBeneficiary} onAddressChange={updateBenAddress} errors={benErrors} />
@@ -436,7 +436,7 @@ export function IntakePage() {
         <div className="rounded-lg border">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <UserCheck size={16} className="text-muted-foreground" />
-            <h3 className="text-sm font-semibold">II. Claimant Information</h3>
+            <h2 className="text-sm font-semibold">II. Claimant Information</h2>
             <div className="ml-auto">
               <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                 <input
@@ -479,7 +479,7 @@ export function IntakePage() {
         <div className="rounded-lg border">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Users size={16} className="text-muted-foreground" />
-            <h3 className="text-sm font-semibold">III. Family Composition</h3>
+            <h2 className="text-sm font-semibold">III. Family Composition</h2>
             <div className="ml-auto">
               <Button type="button" variant="outline" size="sm" onClick={addFamilyMember}>+ Add Member</Button>
             </div>
@@ -555,7 +555,7 @@ export function IntakePage() {
         <div className="rounded-lg border">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <ShieldCheck size={16} className="text-muted-foreground" />
-            <h3 className="text-sm font-semibold">Data Privacy Consent</h3>
+            <h2 className="text-sm font-semibold">Data Privacy Consent</h2>
           </div>
           <div className="p-6">
             <label className="flex items-start gap-2 text-sm cursor-pointer">
