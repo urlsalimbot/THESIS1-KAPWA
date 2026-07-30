@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -92,22 +93,27 @@ export function CoordinatorReferralListPage() {
   if (loading) {
     return (
       <PageShell title="My Referrals" description="View the status of your referrals to MSWDO.">
-        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+        <div className="mb-4">
+          <Button onClick={() => navigate('/coordinator/referrals/new')}>
+            <Plus size={14} className="mr-1" /> New Referral
+          </Button>
+        </div>
+        <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5">
             <h2 className="text-sm font-semibold text-foreground">My Referrals</h2>
           </div>
           <div className="p-4 space-y-3">
             {[1,2,3].map(i => (
-              <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="h-4 bg-muted rounded w-1/4" />
-                <div className="h-4 bg-muted rounded w-1/6" />
-                <div className="h-4 bg-muted rounded w-1/6" />
-                <div className="h-4 bg-muted rounded w-1/3" />
-                <div className="h-8 bg-muted rounded w-16 ml-auto" />
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-4 w-1/6" />
+                <Skeleton className="h-4 w-1/6" />
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-8 w-16 ml-auto" />
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       </PageShell>
     );
   }
@@ -126,7 +132,7 @@ export function CoordinatorReferralListPage() {
           <p className="text-sm">No referrals yet.</p>
         </div>
       ) : (
-        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+        <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Send size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold text-foreground">My Referrals</h2>
@@ -134,7 +140,7 @@ export function CoordinatorReferralListPage() {
           <div className="p-0">
             <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
           </div>
-        </div>
+        </Card>
       )}
 
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
@@ -145,25 +151,25 @@ export function CoordinatorReferralListPage() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
-              <span className="text-xs text-muted-foreground">Name</span>
+              <span className="text-xs text-muted-foreground font-medium">Name</span>
               <p className="font-medium">{selected?.surname}, {selected?.firstName}</p>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground">Barangay</span>
+              <span className="text-xs text-muted-foreground font-medium">Barangay</span>
               <p className="font-medium">{selected?.barangay}</p>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground">Status</span>
+              <span className="text-xs text-muted-foreground font-medium">Status</span>
               <p className="font-medium">
                 {selected && <Badge variant={variantMap[selected.status] || 'secondary'}>{selected.status}</Badge>}
               </p>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground">Date</span>
+              <span className="text-xs text-muted-foreground font-medium">Date</span>
               <p className="font-medium">{selected && new Date(selected.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="col-span-2">
-              <span className="text-xs text-muted-foreground">Reason</span>
+              <span className="text-xs text-muted-foreground font-medium">Reason</span>
               <p className="font-medium">{selected?.reason}</p>
             </div>
             {selected?.declineReason && (
@@ -174,7 +180,7 @@ export function CoordinatorReferralListPage() {
             )}
             {selected?.case?.controlNo && (
               <div>
-                <span className="text-xs text-muted-foreground">Case No.</span>
+                <span className="text-xs text-muted-foreground font-medium">Case No.</span>
                 <p className="font-medium">{selected.case.controlNo}</p>
               </div>
             )}
