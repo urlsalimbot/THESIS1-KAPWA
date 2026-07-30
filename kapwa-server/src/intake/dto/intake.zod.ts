@@ -3,12 +3,12 @@ import { z } from 'zod';
 const NAME_EXTENSIONS = ['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV'] as const;
 
 const AddressSchema = z.object({
-  street: z.string().optional(),
-  barangay: z.string().optional(),
-  city: z.string().optional(),
-  province: z.string().optional(),
-  region: z.string().optional(),
-  postalCode: z.string().optional(),
+  street: z.string().min(1, 'Street is required'),
+  barangay: z.string().min(1, 'Barangay is required'),
+  city: z.string().min(1, 'City is required'),
+  province: z.string().min(1, 'Province is required'),
+  region: z.string().min(1, 'Region is required'),
+  postalCode: z.string().min(1, 'Postal code is required'),
   psgcCode: z.string().optional(),
 });
 
@@ -22,12 +22,12 @@ const PersonSchema = z.object({
   age: z.number().int().positive().optional(),
   placeOfBirth: z.string().min(1, 'Place of birth is required'),
   civilStatus: z.enum(['Single', 'Married', 'Widowed', 'Separated', 'Annulled']),
-  cellularNumber: z.string().min(1, 'Cellular number is required'),
+  cellularNumber: z.string().regex(/^09\d{9}$/, 'Must be a valid 11-digit PH mobile number starting with 09'),
   email: z.string().email('Email is required').min(1, 'Email is required'),
   currentAddress: AddressSchema,
   philhealthNumber: z.string().optional(),
   occupation: z.string().min(1, 'Occupation is required'),
-  estimatedMonthlyIncome: z.number().positive('Estimated monthly income is required'),
+  estimatedMonthlyIncome: z.number().nonnegative('Monthly income must be 0 or higher'),
 });
 
 const FamilyMemberSchema = z.object({
