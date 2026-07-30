@@ -1,6 +1,7 @@
 import { useState, memo } from 'react';
 import { Input } from '@/components/ui/input';
 import psgcRaw from '@/lib/psgc.json';
+import { POSTAL_CODES } from '@/lib/postal-codes';
 
 type PsgcBarangay = { code: string; name: string };
 type PsgcMuncity = { code: string; name: string; barangays: PsgcBarangay[] };
@@ -62,6 +63,13 @@ export const IntakeAddressBlock = memo(function IntakeAddressBlock({ value, onCh
     onChange('city', code);
     onChange('barangay', '');
     onChange('psgcCode', '');
+    const muncity = selectedProvince?.muncities.find(m => m.code === code);
+    if (muncity) {
+      const name = muncity.name.trim();
+      if (POSTAL_CODES[name]) {
+        onChange('postalCode', POSTAL_CODES[name]);
+      }
+    }
   }
 
   function handleBarangayChange(code: string) {
