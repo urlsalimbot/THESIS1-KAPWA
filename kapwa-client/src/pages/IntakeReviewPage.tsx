@@ -5,12 +5,13 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MatchCandidate {
   householdId: string;
   score: number;
+  caseExistsWithin30Days: boolean;
   primaryBeneficiary: {
     id: string; surname: string; firstName: string; middleName?: string;
     gender: string; age: number; phone: string; occupation: string;
@@ -25,20 +26,43 @@ interface MatchCandidate {
 
 interface LocationState {
   candidates: MatchCandidate[];
-  intakeData: unknown;
+  intakeData: any;
 }
 
-function ScoreBar({ score }: { score: number }) {
-  const pct = Math.round(score * 100);
-  const color = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-500' : 'bg-orange-500';
+function confidenceLabel(score: number): { label: string; className: string } {
+  if (score >= 0.8) return { label: 'Very likely the same person', className: 'bg-green-100 text-green-800 border-green-300' };
+  if (score >= 0.5) return { label: 'Some similarities', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
+  return { label: 'Same surname only', className: 'bg-gray-100 text-gray-600 border-gray-300' };
+}
+
+function eligibilityNote(candidate: MatchCandidate): { text: string; icon: 'check' | 'info' } {
+  if (candidate.caseExistsWithin30Days) {
+    return { text: 'Has an active case — info will be updated, no new case will be created.', icon: 'info' };
+  }
+  if (candidate.lastApprovedCaseDate) {
+    const d = new Date(candidate.lastApprovedCaseDate);
+    return { text: `Last case: ${d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })} — eligible for a new case.`, icon: 'check' };
+  }
+  return { text: 'No prior case on record — a new case will be created.', icon: 'check' };
+}
+
+function MatchRow({ label, newVal, existingVal }: { label: string; newVal: string; existingVal: string }) {
+  const match = newVal.toLowerCase() === existingVal.toLowerCase();
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-sm font-semibold tabular-nums w-10 text-right">{pct}%</span>
+    <div className="grid grid-cols-[1fr_auto_1fr_24px] gap-2 items-center text-sm py-1.5 border-b border-gray-100 last:border-0">
+      <span className="text-right text-muted-foreground">{newVal || '—'}</span>
+      <span className="text-xs text-muted-foreground mx-2">{label}</span>
+      <span className="text-left font-medium">{existingVal || '—'}</span>
+      <span className={match ? 'text-green-600' : 'text-gray-300'}>{match ? '✅' : '○'}</span>
     </div>
   );
+}
+
+function formatIntakeField(beneficiary: Record<string, any>, field: string): string {
+  if (field === 'age') return String(beneficiary.age || '');
+  if (field === 'barangay') return beneficiary.currentAddress?.barangay || '';
+  if (field === 'estimatedMonthlyIncome') return `₱${(beneficiary.estimatedMonthlyIncome || 0).toLocaleString()}`;
+  return String(beneficiary[field] || '');
 }
 
 export function IntakeReviewPage() {
@@ -62,17 +86,24 @@ export function IntakeReviewPage() {
   const intake = (intakeData as any)?.beneficiary || {};
   const family = (intakeData as any)?.familyMembers || [];
 
-  async function handleLink(householdId: string) {
+  const sorted = [...candidates].sort((a, b) => b.score - a.score);
+
+  async function handleConfirm(householdId: string) {
     setLoadingId(householdId);
     try {
-      const result = await api.post<{ caseId: string; controlNo: string; nextEligibleDate: string }>(
+      const result = await api.post<{ caseCreated: boolean; caseId?: string; message: string }>(
         `/intake/confirm/${householdId}`,
         intakeData,
       );
-      toast.success('Household linked', { description: `Next case eligible: ${new Date(result.nextEligibleDate).toLocaleDateString()}` });
-      navigate(`/cases/${result.caseId}`);
+      if (result.caseCreated) {
+        toast.success('Client registered', { description: result.message });
+        navigate(`/cases/${result.caseId}`);
+      } else {
+        toast.info('Info updated', { description: result.message });
+        navigate(`/cases`);
+      }
     } catch {
-      toast.error('Failed to link to household', { description: 'Please try again.' });
+      toast.error('Failed to update', { description: 'Please try again.' });
     } finally {
       setLoadingId(null);
     }
@@ -92,227 +123,98 @@ export function IntakeReviewPage() {
 
   return (
     <PageShell
-      title="Potential Prior Record Match Review"
-      description="Review potential household matches before creating a new record."
+      title="Check for Prior Records"
+      description="We found records that may belong to this client."
     >
-      <div className="flex gap-6">
-        {/* LEFT: Current Intake Summary */}
-        <div className="w-80 shrink-0 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Current Intake</h2>
-          <Card className="p-4 space-y-3 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">Name</p>
-              <p className="font-medium">{intake.surname}, {intake.firstName} {intake.middleName || ''}</p>
-            </div>
-            {intake.currentAddress && (
-              <div>
-                <p className="text-xs text-muted-foreground">Address</p>
-                <p>{intake.currentAddress.street || ''}, {intake.currentAddress.barangay || ''}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground">Demographics</p>
-              <p>{intake.gender} · {intake.age || ''} yrs · {intake.civilStatus || ''}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Contact</p>
-              <p>{intake.cellularNumber || ''}</p>
-            </div>
-            {family.length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground">Family Members</p>
-                <ul className="list-disc list-inside text-xs">
-                  {family.map((f: any, i: number) => (
-                    <li key={i}>{f.surname}, {f.firstName} ({f.relationship})</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground">Income</p>
-              <p>₱{(intake.estimatedMonthlyIncome || 0).toLocaleString()}/mo</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Occupation</p>
-              <p>{intake.occupation || ''}</p>
-            </div>
-          </Card>
-        </div>
+      {sorted.length === 0 && (
+        <Card className="p-8 text-center text-muted-foreground">
+          <AlertTriangle size={32} className="mx-auto mb-2 opacity-40" />
+          <p>No prior records found for this name.</p>
+          <Button variant="default" className="mt-4" onClick={handleCreateNew} disabled={creatingNew}>
+            {creatingNew ? 'Creating...' : 'Continue as new client'}
+          </Button>
+        </Card>
+      )}
 
-        {/* RIGHT: Potential Matches */}
-        <div className="flex-1 space-y-4 min-w-0">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Potential Matches ({candidates.length})
-          </h2>
+      <div className="space-y-6">
+        {sorted.map((c) => {
+          const cLabel = confidenceLabel(c.score);
+          const elig = eligibilityNote(c);
+          return (
+            <Card key={c.householdId} className="overflow-hidden" data-testid="match-card">
+              <div className={`px-4 py-2 border-b text-sm font-medium ${cLabel.className}`}>
+                {cLabel.label}
+              </div>
 
-          {candidates.length === 0 && (
-            <Card className="p-8 text-center text-muted-foreground">
-              <AlertTriangle size={32} className="mx-auto mb-2 opacity-40" />
-              <p>No prior records found for this name.</p>
+              <div className="p-4 space-y-3">
+                <p className="text-base font-semibold">
+                  Is this <span className="text-primary">{c.primaryBeneficiary.firstName} {c.primaryBeneficiary.surname}</span>?
+                </p>
+
+                <div className="bg-gray-50 rounded-lg p-4 space-y-1">
+                  <div className="grid grid-cols-[1fr_auto_1fr_24px] gap-2 text-xs text-muted-foreground pb-1 border-b border-gray-200 mb-1">
+                    <span className="text-right">You entered</span>
+                    <span />
+                    <span>Existing record</span>
+                    <span />
+                  </div>
+
+                  <MatchRow label="Name" newVal={`${intake.surname}, ${intake.firstName}`} existingVal={`${c.primaryBeneficiary.surname}, ${c.primaryBeneficiary.firstName}`} />
+                  <MatchRow label="Age" newVal={formatIntakeField(intake, 'age')} existingVal={String(c.primaryBeneficiary.age)} />
+                  <MatchRow label="Barangay" newVal={formatIntakeField(intake, 'barangay')} existingVal={c.primaryBeneficiary.currentAddress?.barangay || ''} />
+                  {c.primaryBeneficiary.philhealthNumber && (
+                    <MatchRow label="PhilHealth" newVal={formatIntakeField(intake, 'philhealthNumber')} existingVal={c.primaryBeneficiary.philhealthNumber} />
+                  )}
+                </div>
+
+                <div className={`flex items-start gap-2 text-sm p-3 rounded-lg ${elig.icon === 'info' ? 'bg-blue-50 text-blue-800' : 'bg-green-50 text-green-800'}`}>
+                  {elig.icon === 'info' ? <Info size={16} className="mt-0.5 shrink-0" /> : <CheckCircle size={16} className="mt-0.5 shrink-0" />}
+                  <span>{elig.text}</span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleConfirm(c.householdId)}
+                    disabled={loadingId === c.householdId}
+                  >
+                    {loadingId === c.householdId
+                      ? 'Updating...'
+                      : c.caseExistsWithin30Days
+                        ? `Yes, update info`
+                        : `Yes, update info & create case`}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      toast('Marked as different. You can choose another match or create a new record below.');
+                    }}
+                  >
+                    No, different person
+                  </Button>
+                </div>
+              </div>
             </Card>
-          )}
+          );
+        })}
 
-          {candidates.map((c, i) => (
-            <MatchCard
-              key={c.householdId}
-              candidate={c}
-              index={i}
-              loading={loadingId === c.householdId}
-              onLink={() => handleLink(c.householdId)}
-            />
-          ))}
+        <Separator className="my-2" />
 
-          <Separator className="my-4" />
-
-          <div className="text-center space-y-2">
-            <p className="text-xs text-muted-foreground">
-              If none of these match your client, create a new record.
-            </p>
-            <Button
-              variant="outline"
-              onClick={handleCreateNew}
-              disabled={creatingNew}
-            >
-              {creatingNew ? 'Creating...' : 'Create New Client'}
-            </Button>
-          </div>
+        <div className="text-center space-y-2 py-4">
+          <p className="text-sm text-muted-foreground">
+            None of these match your client?
+          </p>
+          <Button
+            variant="outline"
+            onClick={handleCreateNew}
+            disabled={creatingNew}
+          >
+            {creatingNew ? 'Registering...' : 'Register as new client'}
+          </Button>
         </div>
       </div>
     </PageShell>
-  );
-}
-
-function MatchCard({ candidate: c, index, loading, onLink }: {
-  candidate: MatchCandidate;
-  index: number;
-  loading: boolean;
-  onLink: () => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <Card className="overflow-hidden">
-      {/* Header (collapsed view) */}
-      <div className="p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground">Match #{index + 1}</span>
-          <ScoreBar score={c.score} />
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-semibold">{c.primaryBeneficiary.surname}, {c.primaryBeneficiary.firstName}</p>
-            <p className="text-sm text-muted-foreground">
-              {c.primaryBeneficiary.gender} · {c.primaryBeneficiary.age} yrs · {c.primaryBeneficiary.currentAddress?.barangay || ''}
-            </p>
-          </div>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onLink}
-            disabled={loading}
-          >
-            {loading ? 'Linking...' : 'Link to This Household'}
-          </Button>
-        </div>
-        <div className="flex gap-4 text-xs text-muted-foreground">
-          <span>Members: {c.familyMembers.length}</span>
-          {c.lastApprovedCaseDate && (
-            <>
-              <span>Last case: {new Date(c.lastApprovedCaseDate).toLocaleDateString()}</span>
-              <span>Next eligible: {new Date(new Date(c.lastApprovedCaseDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-            </>
-          )}
-        </div>
-        <button
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          {expanded ? 'Show Less' : 'Show More'}
-        </button>
-      </div>
-
-      {/* Expanded details */}
-      {expanded && (
-        <div className="border-t px-4 py-3 space-y-3 text-sm bg-muted/20">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Phone</p>
-              <p>{c.primaryBeneficiary.phone || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">PhilHealth</p>
-              <p>{c.primaryBeneficiary.philhealthNumber || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Civil Status</p>
-              <p>{c.primaryBeneficiary.civilStatus || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Occupation</p>
-              <p>{c.primaryBeneficiary.occupation || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Monthly Income</p>
-              <p>₱{(c.primaryBeneficiary.estimatedMonthlyIncome || 0).toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Category</p>
-              <p>{c.primaryBeneficiary.category || '—'}</p>
-            </div>
-          </div>
-
-          {c.primaryBeneficiary.currentAddress && (
-            <div>
-              <p className="text-xs text-muted-foreground">Full Address</p>
-              <p className="text-xs">
-                {c.primaryBeneficiary.currentAddress.street || ''}, {c.primaryBeneficiary.currentAddress.barangay || ''}, {c.primaryBeneficiary.currentAddress.city || ''}, {c.primaryBeneficiary.currentAddress.province || ''}
-              </p>
-            </div>
-          )}
-
-          {c.familyMembers.length > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">All Family Members</p>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-muted-foreground border-b">
-                    <th className="text-left py-1">Name</th>
-                    <th className="text-left py-1">Relationship</th>
-                    <th className="text-right py-1">Age</th>
-                    <th className="text-left py-1">Occupation</th>
-                    <th className="text-right py-1">Income</th>
-                    <th className="text-left py-1">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {c.familyMembers.map(fm => (
-                    <tr key={fm.id} className="border-b border-muted/30">
-                      <td className="py-1">{fm.fullName}</td>
-                      <td className="py-1">{fm.relationship}</td>
-                      <td className="py-1 text-right">{fm.age}</td>
-                      <td className="py-1">{fm.occupation || '—'}</td>
-                      <td className="py-1 text-right">{fm.income ? `₱${fm.income}` : '—'}</td>
-                      <td className="py-1">{fm.status || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {c.allBeneficiaries.length > 1 && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Other Beneficiaries in Household</p>
-              <div className="flex flex-wrap gap-2">
-                {c.allBeneficiaries.filter(b => b.id !== c.primaryBeneficiary.id).map(b => (
-                  <span key={b.id} className="text-xs bg-muted px-2 py-1 rounded">{b.surname}, {b.firstName}</span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
   );
 }
