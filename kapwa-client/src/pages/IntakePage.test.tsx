@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { IntakePage } from './IntakePage';
+import { api } from '../lib/api';
 
 const queueCalls: unknown[][] = [];
 const mockQueueChange = vi.fn((...args: unknown[]) => {
@@ -106,8 +107,69 @@ describe('IntakePage — offline path', () => {
         <IntakePage />
       </MemoryRouter>
     );
-    await screen.findByRole('heading', { name: /GIS Intake Form/i });
+    await screen.findByRole('heading', { name: /General Intake Form/i });
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+describe('IntakePage — validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+  });
+
+  async function fillBeneficiary() {
+    fireEvent.change(screen.getByLabelText('ben-surname'), { target: { value: 'Dela Cruz' } });
+    fireEvent.change(screen.getByLabelText('ben-firstName'), { target: { value: 'Juan' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Male' }));
+    fireEvent.change(screen.getByLabelText('ben-dob'), { target: { value: '1990-01-15' } });
+    fireEvent.change(screen.getByLabelText('ben-placeOfBirth'), { target: { value: 'Manila' } });
+    fireEvent.change(screen.getByLabelText('ben-civilStatus'), { target: { value: 'Single' } });
+    fireEvent.change(screen.getByLabelText('ben-cellularNumber'), { target: { value: '09171234567' } });
+    fireEvent.change(screen.getByLabelText('ben-email'), { target: { value: 'juan@example.com' } });
+    fireEvent.click(screen.getByText('Barangay not listed? Enter manually'));
+    fireEvent.change(screen.getByLabelText('Address Street'), { target: { value: '123 Rizal St' } });
+    fireEvent.change(screen.getByLabelText('Address Barangay'), { target: { value: 'Bangkal' } });
+    fireEvent.change(screen.getByLabelText('Address City'), { target: { value: 'Norzagaray' } });
+    fireEvent.change(screen.getByLabelText('Address Postal Code'), { target: { value: '3012' } });
+    fireEvent.change(screen.getByLabelText('ben-occupation'), { target: { value: 'Fisherman' } });
+    fireEvent.change(screen.getByLabelText('ben-income'), { target: { value: '15000' } });
+  }
+
+  function submitForm() {
+    const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
+    fireEvent.submit(form);
+  }
+
+  it('shows error banner when submitting empty form', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    submitForm();
+    expect(await screen.findByText('Please fix the highlighted fields below.')).toBeInTheDocument();
+  });
+
+  it('submits successfully with valid data and beneficiary as claimant', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+
+    submitForm();
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalled();
+    });
   });
 });
