@@ -35,6 +35,8 @@ const FamilyMemberSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   middleName: z.string().optional(),
   extension: z.enum(NAME_EXTENSIONS).optional(),
+  gender: z.string().optional(),
+  dob: z.string().optional(),
   age: z.number().int().positive('Age is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   occupation: z.string().min(1, 'Occupation is required'),
@@ -99,9 +101,12 @@ export const ConfirmMatchInputSchema = IntakeInputSchema;
 export type ConfirmMatchInput = IntakeInput;
 
 export interface ConfirmMatchResponse {
+  updated: boolean;
+  caseCreated: boolean;
   beneficiaryId: string;
-  caseId: string;
-  controlNo: string;
-  status: string;
-  nextEligibleDate: string;
+  caseId: string | null;
+  controlNo: string | null;
+  status: string | null;
+  existingCaseDate: string | null;
+  message: string;
 }

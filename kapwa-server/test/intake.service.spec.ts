@@ -80,6 +80,7 @@ describe('IntakeService — Consolidated Intake', () => {
       commitTransaction: jest.fn(),
       rollbackTransaction: jest.fn(),
       release: jest.fn(),
+      query: jest.fn().mockResolvedValue(undefined),
       manager: {
         save: saveMock,
         create: createMock,
