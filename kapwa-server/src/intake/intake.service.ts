@@ -233,6 +233,12 @@ export class IntakeService {
          )) FROM household_memberships hm
            JOIN persons p3 ON p3.id = hm.person_id
            WHERE hm.household_id = h.id) AS family_members,
+        (SELECT EXISTS(
+          SELECT 1 FROM cases c
+          JOIN beneficiaries b3 ON b3.id = c.beneficiary_id
+          WHERE b3.household_id = h.id
+          AND c.created_at > NOW() - INTERVAL '30 days'
+        )) AS case_exists_30d,
         (SELECT MAX(c.created_at) FROM cases c
          JOIN beneficiaries b3 ON b3.id = c.beneficiary_id
           WHERE b3.household_id = h.id AND c.status = 'active') AS last_case_date
@@ -256,6 +262,7 @@ export class IntakeService {
       .map(r => ({
         householdId: r.household_id,
         score: parseFloat(r.score) || 0,
+        caseExistsWithin30Days: Boolean(r.case_exists_30d),
         primaryBeneficiary: {
           id: r.ben_id,
           surname: r.surname,

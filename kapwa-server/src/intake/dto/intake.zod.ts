@@ -74,6 +74,7 @@ export type MatchCheckInput = z.infer<typeof MatchCheckInputSchema>;
 export interface MatchCandidate {
   householdId: string;
   score: number;
+  caseExistsWithin30Days: boolean;
   primaryBeneficiary: {
     id: string;
     surname: string;
