@@ -444,9 +444,11 @@ export function IntakePage() {
                   checked={beneficiaryIsClaimant}
                   onChange={e => {
                     setBeneficiaryIsClaimant(e.target.checked);
+                    setError('');
                     if (e.target.checked) {
                       setClaimant(emptyPerson);
                       setRelationshipToBeneficiary('');
+                      setClaimErrors({});
                     }
                   }}
                   className="rounded border-input text-primary"
@@ -559,7 +561,7 @@ export function IntakePage() {
           </div>
           <div className="p-6">
             <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={hasConsent} onChange={e => setHasConsent(e.target.checked)} className="mt-0.5 rounded border-input text-primary" />
+              <input type="checkbox" checked={hasConsent} onChange={e => { setHasConsent(e.target.checked); setError(''); }} className="mt-0.5 rounded border-input text-primary" />
               <span>I confirm the beneficiary has given consent per Data Privacy Act (RA 10173) and this data will be logged in the consent ledger</span>
             </label>
           </div>
