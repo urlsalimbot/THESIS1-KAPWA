@@ -230,6 +230,7 @@ export function IntakePage() {
 
   function updateBeneficiary(field: string, value: string) {
     setBeneficiary(prev => ({ ...prev, [field]: value }));
+    setError('');
     setBenErrors(prev => {
       const next = { ...prev };
       delete next[`ben.${field}`];
@@ -239,6 +240,7 @@ export function IntakePage() {
 
   function updateClaimant(field: string, value: string) {
     setClaimant(prev => ({ ...prev, [field]: value }));
+    setError('');
     setClaimErrors(prev => {
       const next = { ...prev };
       delete next[`claim.${field}`];
@@ -248,6 +250,7 @@ export function IntakePage() {
 
   function updateBenAddress(type: 'currentAddress', field: string, value: string) {
     setBeneficiary(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }));
+    setError('');
     setBenErrors(prev => {
       const next = { ...prev };
       delete next[`ben.${field}`];
@@ -257,6 +260,7 @@ export function IntakePage() {
 
   function updateClaimAddress(type: 'currentAddress', field: string, value: string) {
     setClaimant(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }));
+    setError('');
     setClaimErrors(prev => {
       const next = { ...prev };
       delete next[`claim.${field}`];
