@@ -4,8 +4,11 @@ import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Send, AlertTriangle } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { User, MapPin, FileText, Phone, Send } from 'lucide-react';
 
 export function CoordinatorReferralFormPage() {
   const navigate = useNavigate();
@@ -41,9 +44,11 @@ export function CoordinatorReferralFormPage() {
         address: { street: form.street, barangay: form.barangay },
         reason: form.reason,
       });
+      toast.success('Referral submitted', { description: 'Resident has been referred to MSWDO for assessment.' });
       navigate('/coordinator/referrals');
     } catch (err: any) {
       setError(err?.message || 'Failed to submit referral');
+      toast.error('Failed to submit referral', { description: err?.message || 'Please try again.' });
     } finally {
       setSubmitting(false);
     }
@@ -52,54 +57,57 @@ export function CoordinatorReferralFormPage() {
   return (
     <PageShell title="New Referral" description="Refer a barangay resident to MSWDO for assessment.">
       {error && (
-        <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800 flex items-center gap-2">
-          <AlertTriangle size={14} className="shrink-0" /> {error}
+        <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+          <span className="size-4 rounded-full bg-destructive/20 flex items-center justify-center text-[10px] font-bold shrink-0">!</span> {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
         {/* Personal Information */}
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Personal Information</h2>
-          <div className="space-y-4">
+        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <User size={16} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Personal Information</h2>
+          </div>
+          <div className="p-4 space-y-4">
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Name of the Resident</p>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Surname *</label>
-                  <Input required value={form.surname} onChange={e => update('surname', e.target.value)} aria-label="surname" />
+              <span className="text-xs text-muted-foreground font-medium">Name of the Resident</span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
+                <div className="space-y-1.5">
+                  <span className="text-xs text-muted-foreground font-medium">Surname *</span>
+                  <Input className="h-9" required value={form.surname} onChange={e => update('surname', e.target.value)} aria-label="surname" />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">First Name *</label>
-                  <Input required value={form.firstName} onChange={e => update('firstName', e.target.value)} aria-label="firstName" />
+                <div className="space-y-1.5">
+                  <span className="text-xs text-muted-foreground font-medium">First Name *</span>
+                  <Input className="h-9" required value={form.firstName} onChange={e => update('firstName', e.target.value)} aria-label="firstName" />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Middle Name</label>
-                  <Input value={form.middleName} onChange={e => update('middleName', e.target.value)} aria-label="middleName" />
+                <div className="space-y-1.5">
+                  <span className="text-xs text-muted-foreground font-medium">Middle Name</span>
+                  <Input className="h-9" value={form.middleName} onChange={e => update('middleName', e.target.value)} aria-label="middleName" />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Extension</label>
-                  <select
-                    value={form.extension}
-                    onChange={e => update('extension', e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    aria-label="extension"
-                  >
-                    <option value="">N/A</option>
-                    <option value="Jr.">Jr.</option>
-                    <option value="Sr.">Sr.</option>
-                    <option value="III">III</option>
-                  </select>
+                <div className="space-y-1.5">
+                  <span className="text-xs text-muted-foreground font-medium">Extension</span>
+                  <Select value={form.extension} onValueChange={v => update('extension', v)}>
+                    <SelectTrigger aria-label="extension" className="h-9">
+                      <SelectValue placeholder="N/A" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">N/A</SelectItem>
+                      <SelectItem value="Jr.">Jr.</SelectItem>
+                      <SelectItem value="Sr.">Sr.</SelectItem>
+                      <SelectItem value="III">III</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
 
-            <Separator />
+            <div className="h-px bg-border" />
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Sex *</label>
-                <div className="flex h-10 items-center gap-4">
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Sex *</span>
+                <div className="flex h-9 items-center gap-4">
                   {['Male', 'Female'].map(s => (
                     <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="radio" name="gender" value={s} checked={form.gender === s} onChange={e => update('gender', e.target.value)} className="text-primary" required />
@@ -108,46 +116,50 @@ export function CoordinatorReferralFormPage() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Date of Birth *</label>
-                <Input type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} aria-label="dob" />
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Date of Birth *</span>
+                <Input className="h-9" type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} aria-label="dob" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Phone</label>
-                <Input type="tel" value={form.phone} onChange={e => update('phone', e.target.value)} aria-label="phone" placeholder="0917XXX-XXXX" />
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Phone</span>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input className="h-9 pl-9" type="tel" value={form.phone} onChange={e => update('phone', e.target.value)} aria-label="phone" placeholder="0917XXX-XXXX" />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Address */}
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Address</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Street / Purok</label>
-              <Input value={form.street} onChange={e => update('street', e.target.value)} aria-label="street" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Barangay</label>
-              <Input value={form.barangay} onChange={e => update('barangay', e.target.value)} aria-label="barangay" />
+        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <MapPin size={16} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Address</h2>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Street / Purok</span>
+                <Input className="h-9" value={form.street} onChange={e => update('street', e.target.value)} aria-label="street" />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Barangay</span>
+                <Input className="h-9" value={form.barangay} onChange={e => update('barangay', e.target.value)} aria-label="barangay" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Referral Details */}
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Referral Details</h2>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Reason for Referral *</label>
-            <textarea
-              required
-              value={form.reason}
-              onChange={e => update('reason', e.target.value)}
-              rows={4}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[100px]"
-              placeholder="Describe why this resident is being referred to MSWDO..."
-            />
+        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <FileText size={16} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Referral Details</h2>
+          </div>
+          <div className="p-4 space-y-1.5">
+            <span className="text-xs text-muted-foreground font-medium">Reason for Referral *</span>
+            <Textarea required value={form.reason} onChange={e => update('reason', e.target.value)} placeholder="Describe why this resident is being referred to MSWDO..." />
           </div>
         </div>
 
