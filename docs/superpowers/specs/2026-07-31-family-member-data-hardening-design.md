@@ -82,7 +82,7 @@ dob: fm.dob ? new Date(fm.dob) : new Date(),           // →  dob: new Date(fm.
 age: fm.age,                                           // →  age: fm.age ?? computeAgeFromDob(fm.dob)
 ```
 
-Values are guaranteed by the schema; the garbage defaults are deleted.
+Values are guaranteed by the schema; the garbage defaults are deleted. When `fm.age` is absent, the server computes full years between `dob` and today (same formula as the client's `computeAge`: subtract birth year, then decrement if this year's birthday has not occurred yet).
 
 ## Edge Cases
 
