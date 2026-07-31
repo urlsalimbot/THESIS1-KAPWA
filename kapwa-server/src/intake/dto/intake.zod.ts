@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { computeAgeFromDob } from '../compute-age';
 
 const NAME_EXTENSIONS = ['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV'] as const;
 
@@ -30,17 +31,22 @@ const PersonSchema = z.object({
   estimatedMonthlyIncome: z.number().nonnegative('Monthly income must be 0 or higher'),
 });
 
-const FamilyMemberSchema = z.object({
+export const FamilyMemberSchema = z.object({
   surname: z.string().min(1, 'Surname is required'),
   firstName: z.string().min(1, 'First name is required'),
   middleName: z.string().optional(),
   extension: z.enum(NAME_EXTENSIONS).optional(),
-  gender: z.string().optional(),
-  dob: z.string().optional(),
-  age: z.number().int().positive('Age is required'),
+  gender: z.enum(['Male', 'Female'], { message: 'Sex is required' }),
+  dob: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
+    .refine((d) => {
+      const age = computeAgeFromDob(d);
+      return !Number.isNaN(age) && age >= 0 && age <= 120;
+    }, 'Date of birth must be a real date and at most 120 years ago'),
+  age: z.number().int().min(0).optional(),
   relationship: z.string().min(1, 'Relationship is required'),
-  occupation: z.string().min(1, 'Occupation is required'),
-  income: z.number().positive().optional(),
+  occupation: z.string().optional(),
+  income: z.number().nonnegative('Monthly income must be 0 or higher').optional(),
   status: z.string().optional(),
 });
 
@@ -57,6 +63,8 @@ export const IntakeInputSchema = z.object({
     assignedWorkerId: z.string().optional(),
   }),
 });
+
+export type FamilyMemberInput = z.infer<typeof FamilyMemberSchema>;
 
 export type IntakeInput = z.infer<typeof IntakeInputSchema>;
 
