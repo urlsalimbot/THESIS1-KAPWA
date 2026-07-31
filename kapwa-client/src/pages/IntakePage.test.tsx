@@ -264,7 +264,7 @@ describe('IntakePage — family member sex and dob', () => {
       (call: unknown[]) => call[0] === '/intake',
     );
     expect(intakeCall).toBeDefined();
-    expect(intakeCall[1].familyMembers[0]).toMatchObject({
+    expect(intakeCall?.[1].familyMembers[0]).toMatchObject({
       gender: 'Female',
       dob: today,
       age: 0,
