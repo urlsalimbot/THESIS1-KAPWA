@@ -33,7 +33,8 @@ interface FamilyMember {
   firstName: string;
   middleName: string;
   extension: string;
-  age: number | '';
+  gender: string;
+  dob: string;
   relationship: string;
   occupation: string;
   income: string;
@@ -272,7 +273,7 @@ export function IntakePage() {
     setFamily(prev => [...prev, {
       id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       surname: '', firstName: '', middleName: '', extension: '',
-      age: '' as const,
+      gender: '', dob: '',
       relationship: 'Spouse',
       occupation: '',
       income: '',
@@ -420,7 +421,7 @@ export function IntakePage() {
           Adding a case for <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>. Review and modify details before submitting.
         </div>
       )}
-      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="max-w-4xl mx-auto space-y-6">
         {/* Section I: Beneficiary */}
         <div className="rounded-lg border">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
@@ -488,68 +489,84 @@ export function IntakePage() {
           </div>
           <div className="p-6">
             {family.length === 0 && <p className="text-sm text-muted-foreground italic">No family members added</p>}
-            {family.map(m => (
-              <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bg-green-50 border-green-300' : 'bg-muted/30'}`}>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Surname *</label>
-                    <Input className="h-8 text-sm" required value={m.surname} onChange={e => updateFamilyMember(m.id, 'surname', e.target.value)} aria-label="FM surname" disabled={m.done} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">First Name *</label>
-                    <Input className="h-8 text-sm" required value={m.firstName} onChange={e => updateFamilyMember(m.id, 'firstName', e.target.value)} aria-label="FM first name" disabled={m.done} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Middle Name</label>
-                    <Input className="h-8 text-sm" value={m.middleName} onChange={e => updateFamilyMember(m.id, 'middleName', e.target.value)} aria-label="FM middle name" disabled={m.done} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Ext</label>
-                    <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.extension} onChange={e => updateFamilyMember(m.id, 'extension', e.target.value)} aria-label="FM extension" disabled={m.done}>
-                      {NAME_EXTENSIONS.map(e => <option key={e} value={e === 'N/A' ? '' : e}>{e}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Age *</label>
-                    <Input type="number" min="0" className="h-8 text-sm" required value={m.age} onChange={e => updateFamilyMember(m.id, 'age', e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))} aria-label="FM age" disabled={m.done} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Relationship *</label>
-                    <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)} aria-label="FM relationship" disabled={m.done}>
-                      {['Spouse','Child','Parent','Sibling','Grandparent','Other'].map(r => <option key={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Occupation</label>
-                    <Input className="h-8 text-sm" value={m.occupation} onChange={e => updateFamilyMember(m.id, 'occupation', e.target.value)} aria-label="FM occupation" disabled={m.done} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Status *</label>
-                    <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.status} onChange={e => updateFamilyMember(m.id, 'status', e.target.value)} aria-label="FM status" disabled={m.done}>
-                      {FAMILY_MEMBER_STATUSES.map(s => <option key={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Monthly Income</label>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₱</span>
-                      <Input type="text" inputMode="numeric" className="h-8 text-sm pl-5" value={m.income} onChange={e => updateFamilyMember(m.id, 'income', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) updateFamilyMember(m.id, 'income', formatMoney(v)); }} aria-label="FM income" disabled={m.done} />
+            {family.map(m => {
+              const dobError = m.dob && (!/^\d{4}-\d{2}-\d{2}$/.test(m.dob) || computeAge(m.dob) < 0 || computeAge(m.dob) > 120) ? 'Invalid date of birth' : '';
+              return (
+                <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bg-green-50 border-green-300' : 'bg-muted/30'}`}>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Surname *</label>
+                      <Input className="h-8 text-sm" required value={m.surname} onChange={e => updateFamilyMember(m.id, 'surname', e.target.value)} aria-label="FM surname" disabled={m.done} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">First Name *</label>
+                      <Input className="h-8 text-sm" required value={m.firstName} onChange={e => updateFamilyMember(m.id, 'firstName', e.target.value)} aria-label="FM first name" disabled={m.done} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Middle Name</label>
+                      <Input className="h-8 text-sm" value={m.middleName} onChange={e => updateFamilyMember(m.id, 'middleName', e.target.value)} aria-label="FM middle name" disabled={m.done} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Ext</label>
+                      <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.extension} onChange={e => updateFamilyMember(m.id, 'extension', e.target.value)} aria-label="FM extension" disabled={m.done}>
+                        {NAME_EXTENSIONS.map(e => <option key={e} value={e === 'N/A' ? '' : e}>{e}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Sex *</label>
+                      <div className="flex gap-3 h-8 items-center">
+                        {(['Male', 'Female'] as const).map(s => (
+                          <label key={s} className="flex items-center gap-1 text-sm cursor-pointer">
+                            <input type="radio" name={`fm-${m.id}-gender`} value={s} checked={m.gender === s} onChange={() => updateFamilyMember(m.id, 'gender', s)} aria-label="FM gender" disabled={m.done} />
+                            {s}
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Date of Birth *</label>
+                      <Input type="date" className="h-8 text-sm" required value={m.dob} onChange={e => updateFamilyMember(m.id, 'dob', e.target.value)} aria-label="FM dob" disabled={m.done} />
+                      {dobError && <p className="text-xs text-destructive mt-1">{dobError}</p>}
+                      {!dobError && m.dob && <p className="text-xs text-muted-foreground mt-1">Age: {computeAge(m.dob)}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Relationship *</label>
+                      <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)} aria-label="FM relationship" disabled={m.done}>
+                        {['Spouse','Child','Parent','Sibling','Grandparent','Other'].map(r => <option key={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Occupation</label>
+                      <Input className="h-8 text-sm" value={m.occupation} onChange={e => updateFamilyMember(m.id, 'occupation', e.target.value)} aria-label="FM occupation" disabled={m.done} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Status *</label>
+                      <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.status} onChange={e => updateFamilyMember(m.id, 'status', e.target.value)} aria-label="FM status" disabled={m.done}>
+                        {FAMILY_MEMBER_STATUSES.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Monthly Income</label>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₱</span>
+                        <Input type="text" inputMode="numeric" className="h-8 text-sm pl-5" value={m.income} onChange={e => updateFamilyMember(m.id, 'income', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) updateFamilyMember(m.id, 'income', formatMoney(v)); }} aria-label="FM income" disabled={m.done} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant={m.done ? 'secondary' : 'default'} size="sm" onClick={() => toggleDone(m.id)} disabled={!m.done && (!m.surname || !m.firstName || !m.gender || !m.dob || !!dobError || !m.relationship || !m.status)} className="h-8 gap-1">
+                      <Check size={14} />
+                      {m.done ? 'Edit' : 'Done'}
+                    </Button>
+                    {!m.done && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFamilyMember(m.id)} className="text-destructive h-8">Remove</Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant={m.done ? 'secondary' : 'default'} size="sm" onClick={() => toggleDone(m.id)} disabled={!m.done && (!m.surname || !m.firstName || !m.age || !m.relationship || !m.status)} className="h-8 gap-1">
-                    <Check size={14} />
-                    {m.done ? 'Edit' : 'Done'}
-                  </Button>
-                  {!m.done && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => removeFamilyMember(m.id)} className="text-destructive h-8">Remove</Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
