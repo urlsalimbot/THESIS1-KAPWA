@@ -41,12 +41,23 @@ export class IntakeService {
       : this.personRepo.save(entity);
 
     if (deduplicate) {
+      let existing: Person | null = null;
       if (data.philhealthNumber) {
-        const byPhilhealth = await find({ philhealthNumber: data.philhealthNumber });
-        if (byPhilhealth) return byPhilhealth;
+        existing = await find({ philhealthNumber: data.philhealthNumber });
       }
-      const byNameDob = await find({ surname: data.surname, firstName: data.firstName, dob: data.dob });
-      if (byNameDob) return byNameDob;
+      if (!existing) {
+        existing = await find({ surname: data.surname, firstName: data.firstName, dob: data.dob });
+      }
+      if (existing) {
+        const updatable = { ...data } as Partial<Person>;
+        for (const [k, v] of Object.entries(updatable)) {
+          if (v === undefined || v === null || v === '') delete (updatable as Record<string, unknown>)[k];
+        }
+        if (data.currentAddress && typeof data.currentAddress === 'object') {
+          updatable.currentAddress = { ...(existing.currentAddress || {}), ...data.currentAddress };
+        }
+        return save(Object.assign(existing, updatable));
+      }
     }
     return save(this.personRepo.create(data as Person));
   }
@@ -304,21 +315,35 @@ export class IntakeService {
     try {
       const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true);
 
-      const beneficiary = this.benRepo.create({
-        personId: benPerson.id,
-        householdId,
-        consentStatus: 'active',
+      let savedBeneficiary = await queryRunner.manager.findOne(Beneficiary, {
+        where: { personId: benPerson.id },
       });
-      const savedBeneficiary = await queryRunner.manager.save(beneficiary);
+      if (!savedBeneficiary) {
+        savedBeneficiary = await queryRunner.manager.save(queryRunner.manager.create(Beneficiary, {
+          personId: benPerson.id,
+          householdId,
+          consentStatus: 'active',
+        }));
+      }
 
       const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true);
-      await queryRunner.manager.save(queryRunner.manager.create(BeneficiaryClaimant, {
-        beneficiaryId: benPerson.id,
-        claimantId: claimPerson.id,
-        relationship: data.claimant.relationshipToBeneficiary,
-        isPrimary: true,
-        calendarYear: new Date().getFullYear(),
-      }));
+      const existingClaimantLink = await queryRunner.manager.findOne(BeneficiaryClaimant, {
+        where: { beneficiaryId: benPerson.id, isPrimary: true },
+      });
+      if (existingClaimantLink) {
+        if (existingClaimantLink.relationship !== data.claimant.relationshipToBeneficiary) {
+          existingClaimantLink.relationship = data.claimant.relationshipToBeneficiary;
+          await queryRunner.manager.save(existingClaimantLink);
+        }
+      } else {
+        await queryRunner.manager.save(queryRunner.manager.create(BeneficiaryClaimant, {
+          beneficiaryId: benPerson.id,
+          claimantId: claimPerson.id,
+          relationship: data.claimant.relationshipToBeneficiary,
+          isPrimary: true,
+          calendarYear: new Date().getFullYear(),
+        }));
+      }
 
       if (data.familyMembers && data.familyMembers.length > 0) {
         const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
@@ -331,12 +356,17 @@ export class IntakeService {
             age: fm.age, occupation: fm.occupation,
             estimatedMonthlyIncome: fm.income,
           }, queryRunner, true);
-          const membership = queryRunner.manager.create(HouseholdMembership, {
-            personId: memberPerson.id, householdId,
-            relationship: fm.relationship, isPrimary: false,
-            status: fm.status,
+          const existingMembership = await queryRunner.manager.findOne(HouseholdMembership, {
+            where: { personId: memberPerson.id, householdId },
           });
-          await queryRunner.manager.save(membership);
+          if (!existingMembership) {
+            const membership = queryRunner.manager.create(HouseholdMembership, {
+              personId: memberPerson.id, householdId,
+              relationship: fm.relationship, isPrimary: false,
+              status: fm.status,
+            });
+            await queryRunner.manager.save(membership);
+          }
         }
       }
 
