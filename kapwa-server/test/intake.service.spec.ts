@@ -64,7 +64,7 @@ describe('IntakeService — Consolidated Intake', () => {
       relationshipToBeneficiary: 'Spouse',
     },
     familyMembers: [
-      { surname: 'Dela Cruz', firstName: 'Jose', middleName: '', age: 10, relationship: 'Child', occupation: 'Student' },
+      { surname: 'Dela Cruz', firstName: 'Jose', middleName: '', gender: 'Male', dob: '2015-06-15', age: 10, relationship: 'Child', occupation: 'Student' },
     ],
     case: {},
   };
@@ -312,7 +312,8 @@ describe('IntakeService — Consolidated Intake', () => {
 
       const result = await service.confirmMatch('existing-hh', validInput, ['Bigte']);
 
-      expect(benRepo.create).toHaveBeenCalledWith(
+      expect(mockQueryRunner.manager.create).toHaveBeenCalledWith(
+        Beneficiary,
         expect.objectContaining({ householdId: 'existing-hh' }),
       );
       expect(result).toHaveProperty('beneficiaryId', 'new-ben-id');
