@@ -221,4 +221,53 @@ describe('IntakePage — family member sex and dob', () => {
     expect(screen.getByText('Invalid date of birth')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
   });
+
+  it('submits gender, dob, and computed age for each member', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+
+    fireEvent.change(screen.getByLabelText('ben-surname'), { target: { value: 'Dela Cruz' } });
+    fireEvent.change(screen.getByLabelText('ben-firstName'), { target: { value: 'Juan' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Male' }));
+    fireEvent.change(screen.getByLabelText('ben-dob'), { target: { value: '1990-01-15' } });
+    fireEvent.change(screen.getByLabelText('ben-placeOfBirth'), { target: { value: 'Manila' } });
+    fireEvent.change(screen.getByLabelText('ben-civilStatus'), { target: { value: 'Single' } });
+    fireEvent.change(screen.getByLabelText('ben-cellularNumber'), { target: { value: '09171234567' } });
+    fireEvent.change(screen.getByLabelText('ben-email'), { target: { value: 'juan@example.com' } });
+    fireEvent.click(screen.getByText('Barangay not listed? Enter manually'));
+    fireEvent.change(screen.getByLabelText('Address Street'), { target: { value: '123 Rizal St' } });
+    fireEvent.change(screen.getByLabelText('Address Barangay'), { target: { value: 'Bangkal' } });
+    fireEvent.change(screen.getByLabelText('Address City'), { target: { value: 'Norzagaray' } });
+    fireEvent.change(screen.getByLabelText('Address Postal Code'), { target: { value: '3012' } });
+    fireEvent.change(screen.getByLabelText('ben-occupation'), { target: { value: 'Fisherman' } });
+    fireEvent.change(screen.getByLabelText('ben-income'), { target: { value: '15000' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Member/i }));
+    fireEvent.change(screen.getByLabelText('FM surname'), { target: { value: 'Reyes' } });
+    fireEvent.change(screen.getByLabelText('FM first name'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getAllByLabelText('FM gender')[1]);
+    const today = new Date().toLocaleDateString('en-CA');
+    fireEvent.change(screen.getByLabelText('FM dob'), { target: { value: today } });
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const intakeCall = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: unknown[]) => call[0] === '/intake',
+    );
+    expect(intakeCall).toBeDefined();
+    expect(intakeCall[1].familyMembers[0]).toMatchObject({
+      gender: 'Female',
+      dob: today,
+      age: 0,
+    });
+  });
 });
