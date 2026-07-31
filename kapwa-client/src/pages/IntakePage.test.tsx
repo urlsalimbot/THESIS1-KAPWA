@@ -173,3 +173,52 @@ describe('IntakePage — validation', () => {
     });
   });
 });
+
+describe('IntakePage — family member sex and dob', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+  });
+
+  async function renderWithMember() {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('button', { name: /Add Member/i }));
+  }
+
+  it('renders sex radios and a dob input, and no manual age input', async () => {
+    await renderWithMember();
+    expect(screen.getAllByLabelText('FM gender').length).toBe(2);
+    expect(screen.getByLabelText('FM dob')).toBeInTheDocument();
+    expect(screen.queryByLabelText('FM age')).not.toBeInTheDocument();
+  });
+
+  it('keeps Done disabled until gender and dob are provided', async () => {
+    await renderWithMember();
+    fireEvent.change(screen.getByLabelText('FM surname'), { target: { value: 'Reyes' } });
+    fireEvent.change(screen.getByLabelText('FM first name'), { target: { value: 'Ana' } });
+    const done = screen.getByRole('button', { name: 'Done' });
+    expect(done).toBeDisabled();
+    fireEvent.click(screen.getAllByLabelText('FM gender')[1]);
+    expect(done).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('FM dob'), { target: { value: '2015-08-10' } });
+    expect(done).toBeEnabled();
+    fireEvent.click(done);
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+  });
+
+  it('blocks Done when the dob is more than 120 years ago', async () => {
+    await renderWithMember();
+    fireEvent.change(screen.getByLabelText('FM surname'), { target: { value: 'Reyes' } });
+    fireEvent.change(screen.getByLabelText('FM first name'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getAllByLabelText('FM gender')[0]);
+    fireEvent.change(screen.getByLabelText('FM dob'), { target: { value: '1800-01-01' } });
+    expect(screen.getByText('Invalid date of birth')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
+  });
+});
