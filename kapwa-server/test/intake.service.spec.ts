@@ -321,6 +321,50 @@ describe('IntakeService — Consolidated Intake', () => {
     });
   });
 
+  describe('family member person build', () => {
+    it('should save the member person with gender, dob, and computed age', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(2026, 6, 31, 12));
+
+      const saveMock = mockQueryRunner.manager.save as jest.Mock;
+      // save order: Person(ben), Beneficiary, Person(claimant), BeneficiaryClaimant, Household, Beneficiary(update), Person(FM), HouseholdMembership, Case, ConsentLedger
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid-1' })
+        .mockResolvedValueOnce({ id: benUuid })
+        .mockResolvedValueOnce({ id: claimUuid })
+        .mockResolvedValueOnce({ id: bcUuid })
+        .mockResolvedValueOnce({ id: hhUuid })
+        .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: caseUuid })
+        .mockResolvedValueOnce({ id: clUuid });
+
+      (personRepo.create as jest.Mock).mockImplementation((data: any) => data);
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+
+      try {
+        await service.submitIntake({
+          ...validInput,
+          familyMembers: [
+            { surname: 'Dela Cruz', firstName: 'Jose', gender: 'Female', dob: '2010-06-15', relationship: 'Child' },
+          ],
+        });
+
+        const fmSaveCall = saveMock.mock.calls[6];
+        expect(fmSaveCall[0]).toBe(Person);
+        expect(fmSaveCall[1]).toMatchObject({ surname: 'Dela Cruz', firstName: 'Jose', gender: 'Female' });
+        expect(fmSaveCall[1].dob).toEqual(new Date('2010-06-15'));
+        expect(fmSaveCall[1].age).toBe(16);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
   // Test 5: Validation rejects invalid input
   it('should reject invalid IntakeInput via Zod schema validation', async () => {
     const { IntakeInputSchema } = await import('../src/intake/dto/intake.zod');

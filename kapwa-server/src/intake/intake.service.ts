@@ -9,6 +9,7 @@ import { Household } from '../beneficiaries/household.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
+import { memberToPerson } from './member-person';
 import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse } from './dto/intake.zod';
 
 @Injectable()
@@ -137,17 +138,7 @@ export class IntakeService {
       if (data.familyMembers && data.familyMembers.length > 0) {
         const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
         for (const fm of validMembers) {
-          const memberPerson = await this.findOrCreatePerson({
-            surname: fm.surname,
-            firstName: fm.firstName,
-            middleName: fm.middleName,
-            extension: fm.extension,
-            gender: 'Male' as const,
-            dob: new Date(),
-            age: fm.age,
-            occupation: fm.occupation,
-            estimatedMonthlyIncome: fm.income,
-          }, queryRunner, false);
+          const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, false);
           const membership = queryRunner.manager.create(HouseholdMembership, {
             personId: memberPerson.id,
             householdId: savedHousehold.id,
@@ -348,14 +339,7 @@ export class IntakeService {
       if (data.familyMembers && data.familyMembers.length > 0) {
         const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
         for (const fm of validMembers) {
-          const memberPerson = await this.findOrCreatePerson({
-            surname: fm.surname, firstName: fm.firstName,
-            middleName: fm.middleName, extension: fm.extension,
-            gender: (fm.gender || 'Male') as 'Male' | 'Female',
-            dob: fm.dob ? new Date(fm.dob) : new Date(),
-            age: fm.age, occupation: fm.occupation,
-            estimatedMonthlyIncome: fm.income,
-          }, queryRunner, true);
+          const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true);
           const existingMembership = await queryRunner.manager.findOne(HouseholdMembership, {
             where: { personId: memberPerson.id, householdId },
           });
