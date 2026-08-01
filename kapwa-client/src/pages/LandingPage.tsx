@@ -4,6 +4,7 @@ import { HandHeart, ArrowRight } from 'lucide-react';
 import { ServicesGrid } from '@/components/ServicesGrid';
 import { ApplicationSteps } from '@/components/ApplicationSteps';
 import { ContactInfo } from '@/components/ContactInfo';
+import { LatestAnnouncements } from '@/components/announcements/LatestAnnouncements';
 
 export function LandingPage() {
   return (
@@ -68,6 +69,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <LatestAnnouncements />
 
       {/* 2. Services Section */}
       <section id="services" className="py-16 md:py-24 bg-muted/30 rounded-2xl -mx-4 px-4">
