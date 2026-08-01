@@ -26,7 +26,7 @@ export class AccessCardsService {
       const code = `NORZ-AC-${year}-${String(seqId).padStart(ACCESS_CARD_PAD_WIDTH, '0')}`;
 
       await queryRunner.manager.query(
-        `UPDATE beneficiaries SET access_card_code = $1 WHERE id = $2`,
+        `UPDATE households SET access_card_code = $1 WHERE id = (SELECT household_id FROM beneficiaries WHERE id = $2)`,
         [code, beneficiaryId]
       );
 
@@ -42,7 +42,7 @@ export class AccessCardsService {
 
   async getSummary(beneficiaryId: string) {
     const ben = await this.repo.query(
-      'SELECT b.id, b.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
+      'SELECT b.id, h.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN households h ON h.id = b.household_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
     );
     if (!ben?.[0]?.access_card_code) {
@@ -60,7 +60,7 @@ export class AccessCardsService {
 
   async findBeneficiaryCard(beneficiaryId: string) {
     const ben = await this.repo.query(
-      'SELECT b.id, b.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
+      'SELECT b.id, h.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN households h ON h.id = b.household_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
     );
     if (!ben?.[0]?.access_card_code) {
@@ -95,7 +95,7 @@ export class AccessCardsService {
     );
     if (!caseRow?.[0]?.beneficiary_id) return;
     const ben = await this.repo.query(
-      'SELECT id, access_card_code FROM beneficiaries WHERE id = $1',
+      'SELECT b.id, h.access_card_code FROM beneficiaries b JOIN households h ON h.id = b.household_id WHERE b.id = $1',
       [caseRow[0].beneficiary_id]
     );
     if (!ben?.[0]?.access_card_code) return;

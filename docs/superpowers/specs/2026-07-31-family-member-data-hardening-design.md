@@ -1,5 +1,7 @@
 # Family Member Data Hardening — Require Gender and Date of Birth
 
+**Status: IMPLEMENTED (2026-07-31).** Shipped across 7 task commits (server: `ef1827c`, `9569276`, `061ae17`, `160e44c`, `172c9f5`, `221ea09`; client: `9efea31`, `667ee11`, `c9db04d`). `172c9f5` is the pre-existing dirty-tree confirmMatch/person-merge work that Task 4's file shared, split into its own commit. E2E-verified live (cases `KAPWA-2026-00007`, `KAPWA-2026-00009`): member person rows carry submitted gender/dob and derived age; Done gate + API 400 on missing gender/dob; multi-member and info-merge regression clean. Pre-existing dirty-tree failures in `src/{notifications,chat,dashboard,filing,cases,sync/conflict-resolver,auth}` (server) and 12 client suites remain unchanged/out of scope.
+
 Relates to: `2026-07-30-intake-form-hardening-design.md` (family-member validation gap)
 
 ## Problem

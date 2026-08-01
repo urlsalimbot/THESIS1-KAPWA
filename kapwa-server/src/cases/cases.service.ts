@@ -95,7 +95,7 @@ export class CasesService {
       );
     }
     if (filters?.barangay) {
-      qb.andWhere('person.address ILIKE :barangay', { barangay: `%${filters.barangay}%` });
+      qb.andWhere('(person.current_address->>\'barangay\') ILIKE :barangay OR person.address ILIKE :barangay', { barangay: `%${filters.barangay}%` });
     }
     if (filters?.gender) {
       qb.andWhere('person.gender = :gender', { gender: filters.gender });
@@ -498,7 +498,7 @@ export class CasesService {
           ELSE '18-59'
         END AS "ageRange",
         c.client_category AS "clientCategory",
-        p.address AS barangay,
+        COALESCE(NULLIF(p.current_address->>'barangay', ''), p.address) AS barangay,
         COALESCE(c.problems_presented, c.social_worker_assessment, '') AS "interventionRemarks",
         ROW_NUMBER() OVER (PARTITION BY DATE(c.created_at) ORDER BY c.created_at) AS "dailySeqNum"
       FROM cases c

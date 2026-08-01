@@ -14,9 +14,6 @@ export class Beneficiary extends BaseEntity {
   @JoinColumn({ name: 'person_id' })
   person?: Person;
 
-  @Column({ name: 'access_card_code', unique: true, nullable: true })
-  accessCardCode?: string;
-
   @Column({ name: 'user_id', nullable: true })
   userId?: string;
 

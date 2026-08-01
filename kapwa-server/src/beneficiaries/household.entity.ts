@@ -17,6 +17,9 @@ export class Household extends BaseEntity {
   @Column({ name: 'verified_by', nullable: true })
   verifiedBy?: string;
 
+  @Column({ name: 'access_card_code', nullable: true })
+  accessCardCode?: string;
+
   @CreateDateColumn({ name: 'verified_at' })
   verifiedAt!: Date;
 

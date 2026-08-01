@@ -111,13 +111,13 @@ export function DataTable<TData, TValue>({
   return (
     <div>
       {children && <div className="flex items-center py-4">{children}</div>}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+              <TableHeader className="bg-muted/40">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(

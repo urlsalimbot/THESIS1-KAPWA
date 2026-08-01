@@ -52,3 +52,11 @@ kapwa-client/tsconfig.tsbuildinfo
 # once real values are added — use .env with actual secrets instead)
 .env.production
 infra/.env.production
+
+# Test artifacts
+kapwa-server/uploads/
+*.test.pdf
+fm-card-negative-empty-sex-dob.png
+fm-card-sex-dob.png
+intake-before.png
+intake-empty-submit.png

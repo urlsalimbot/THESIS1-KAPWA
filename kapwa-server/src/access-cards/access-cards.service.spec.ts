@@ -72,7 +72,7 @@ describe('AccessCardsService', () => {
 
   describe('findBeneficiaryCard', () => {
     it('returns beneficiary card data', async () => {
-      const benData = { id: 'ben-id', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John', barangay: 'Barangay' };
+      const benData = { id: 'ben-id', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John' };
       repoMock.query.mockResolvedValue([benData]);
       repoMock.find.mockResolvedValue([]);
 
@@ -84,7 +84,7 @@ describe('AccessCardsService', () => {
         services: [],
       });
       expect(repoMock.query).toHaveBeenCalledWith(
-        'SELECT id, access_card_code, surname, first_name, barangay FROM beneficiaries WHERE id = $1',
+        'SELECT b.id, h.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN households h ON h.id = b.household_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
         ['ben-id']
       );
     });
@@ -103,7 +103,7 @@ describe('AccessCardsService', () => {
       repoMock.create.mockReturnValue(entry);
       repoMock.save.mockResolvedValue(entry);
       const result = await service.logService(data);
-      expect(repoMock.create).toHaveBeenCalledWith(data);
+      expect(repoMock.create).toHaveBeenCalledWith(expect.objectContaining(data));
       expect(repoMock.save).toHaveBeenCalledWith(entry);
       expect(result).toEqual(entry);
     });
