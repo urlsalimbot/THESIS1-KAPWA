@@ -30,6 +30,9 @@ import { ReferralsPage } from './pages/ReferralsPage';
 import { AccessCardViewPage } from './pages/AccessCardViewPage';
 import { CoordinatorAccessCardsPage } from './pages/CoordinatorAccessCardsPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
+import { AnnouncementPage } from './pages/AnnouncementPage';
+import { AnnouncementsPage } from './components/announcements/AnnouncementsPage';
+import { AnnouncementEditPage } from './components/announcements/AnnouncementEditPage';
 
 import { MayorReportsPage } from './pages/MayorReportsPage';
 import { AuditorPage } from './pages/AuditorPage';
@@ -71,6 +74,7 @@ const router = createBrowserRouter([
       { index: true, element: <LandingPageRedirect /> },
       { path: 'about', element: <AboutPage /> },
       { path: 'contact', element: <ContactPage /> },
+      { path: 'announcements/:slug', element: <AnnouncementPage /> },
     ],
   },
   { path: 'login', element: <LoginPage /> },
@@ -115,6 +119,9 @@ const router = createBrowserRouter([
   { path: '/reports', element: <Private roles={['mayor']}><MayorReportsPage /></Private> },
   { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },
+  { path: '/announcements/manage', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementsPage /></Private> },
+  { path: '/announcements/manage/new', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementEditPage /></Private> },
+  { path: '/announcements/manage/:id', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementEditPage /></Private> },
   { path: '*', element: <Navigate to="/" /> },
 ]);
 
