@@ -98,6 +98,15 @@ export const queryKeys = {
     stats: () => memo('tracker.stats', () => ['cases', 'tracker', 'stats'] as const),
     list: () => memo('tracker.list', () => ['cases', 'tracker', 'daily'] as const),
   },
+  announcements: {
+    all: ['announcements'] as const,
+    list: () => memo('announcements.list', () => ['announcements'] as const),
+    public: {
+      list: () => memo('announcements.public.list', () => ['announcements', 'public'] as const),
+      detail: (slug: string) =>
+        memo(`announcements.public.${slug}`, () => ['announcements', 'public', slug] as const),
+    },
+  },
   messages: {
     all: ['chat'] as const,
     list: () => memo('chat.list', () => ['chat', 'conversations'] as const),
