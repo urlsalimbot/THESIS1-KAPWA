@@ -26,6 +26,7 @@ import { OtpModule } from './otp/otp.module';
 import { MinioModule } from './minio/minio.module';
 import { IntakeModule } from './intake/intake.module';
 import { ReferralsModule } from './referrals/referrals.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { CsrfGuard } from './common/csrf.guard';
@@ -81,6 +82,7 @@ import { AppController } from './app.controller';
     MinioModule,
     IntakeModule,
     ReferralsModule,
+    AnnouncementsModule,
   ],
   controllers: [AppController],
   providers: [
