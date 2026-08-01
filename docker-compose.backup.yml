@@ -1,0 +1,26 @@
+services:
+  backup:
+    image: minio/mc:latest
+    entrypoint: |
+      sh -c "
+        apk add --no-cache postgresql-client openssl dcron &&
+        echo '0 2 * * * /bin/sh /backup.sh >> /var/log/backup.log 2>&1' > /var/spool/cron/crontabs/root &&
+        dcron -f -L /var/log/backup.log
+      "
+    environment:
+      DB_HOST: postgres
+      DB_USER: kapwa
+      DB_PASSWORD: ${DB_PASSWORD:-kapwa}
+      DB_NAME: kapwa
+      MINIO_ENDPOINT: minio:9000
+      MINIO_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      BACKUP_BUCKET: backups
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-changeme-in-production}
+      RETENTION_DAYS: "30"
+    volumes:
+      - ./kapwa-server/scripts/backup.sh:/backup.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped

@@ -47,10 +47,11 @@ export class DashboardService {
     const key = `dashboard:metrics:${barangay ?? 'all'}`;
     const compute = async () => {
       const caseQb = this.caseRepo.createQueryBuilder('c')
-        .leftJoin('c.beneficiary', 'b');
+        .leftJoin('c.beneficiary', 'b')
+        .leftJoin('b.person', 'p');
 
       if (barangay) {
-        caseQb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
+        caseQb.where('(p.current_address->>\'barangay\') ILIKE :barangay OR p.address ILIKE :barangay', { barangay: `%${barangay}%` });
       }
 
       const totalCases = await caseQb.clone().getCount();
@@ -61,9 +62,10 @@ export class DashboardService {
 
       const totalDisbursed = 0;
 
-      const benQb = this.benRepo.createQueryBuilder('b');
+      const benQb = this.benRepo.createQueryBuilder('b')
+        .leftJoin('b.person', 'p');
       if (barangay) {
-        benQb.where('b.address ILIKE :barangay', { barangay: `%${barangay}%` });
+        benQb.where('(p.current_address->>\'barangay\') ILIKE :barangay OR p.address ILIKE :barangay', { barangay: `%${barangay}%` });
       }
       const { count: uniqueHouseholds } = await benQb
         .select('COUNT(DISTINCT b.household_id)', 'count')
@@ -103,7 +105,7 @@ export class DashboardService {
       .orderBy('c.updated_at', 'DESC');
 
     if (barangay) {
-      qb.andWhere('p.address ILIKE :barangay', { barangay: `%${barangay}%` });
+      qb.andWhere('(p.current_address->>\'barangay\') ILIKE :barangay OR p.address ILIKE :barangay', { barangay: `%${barangay}%` });
     }
 
     paginate(qb, page, limit);
@@ -117,7 +119,8 @@ export class DashboardService {
         .orderBy('c.updated_at', 'DESC');
       if (barangay) {
         qb2.where('c.beneficiary_id IN ' +
-          '(SELECT b2.id FROM beneficiaries b2 WHERE b2.address ILIKE :barangay)',
+          '(SELECT b2.id FROM beneficiaries b2 JOIN persons b2p ON b2p.id = b2.person_id ' +
+          'WHERE (b2p.current_address->>\'barangay\') ILIKE :barangay OR b2p.address ILIKE :barangay)',
           { barangay: `%${barangay}%` });
       }
       paginate(qb2, page, limit);

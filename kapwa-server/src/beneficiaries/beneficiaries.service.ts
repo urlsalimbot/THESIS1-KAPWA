@@ -29,7 +29,7 @@ export class BeneficiariesService {
   async createBeneficiary(data: {
     surname: string; firstName: string; middleName?: string;
     gender: string; dob: Date; address?: string; phone?: string;
-    philsysNumber?: string; accessCardCode?: string; householdId?: string;
+    philsysNumber?: string; householdId?: string;
   }) {
     const person = this.personRepo.create({
       surname: data.surname,
@@ -45,7 +45,6 @@ export class BeneficiariesService {
 
     const ben = this.benRepo.create({
       personId: savedPerson.id,
-      accessCardCode: data.accessCardCode,
       householdId: data.householdId,
       consentStatus: 'active',
     });
@@ -252,12 +251,12 @@ export class BeneficiariesService {
   }
 
   async getAccessCard(userId: string) {
-    const ben = await this.benRepo.findOne({ where: { userId }, relations: ['person'] });
-    if (!ben || !ben.accessCardCode) {
+    const ben = await this.benRepo.findOne({ where: { userId }, relations: ['person', 'household'] });
+    if (!ben || !ben.household?.accessCardCode) {
       throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
     }
     return {
-      code: ben.accessCardCode,
+      code: ben.household.accessCardCode,
       beneficiary: {
         name: (ben.person?.firstName || '') + ' ' + (ben.person?.surname || ''),
         barangay: (ben.person?.address || '').split(',').pop()?.trim(),

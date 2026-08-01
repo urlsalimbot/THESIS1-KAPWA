@@ -217,35 +217,6 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
             value=""
           />
         </div>
-        <button
-          aria-label="Export CSV"
-          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-download"
-            fill="none"
-            height="16"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="16"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 15V3"
-            />
-            <path
-              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-            />
-            <path
-              d="m7 10 5 5 5-5"
-            />
-          </svg>
-           Export CSV
-        </button>
       </div>
       <div
         class="flex items-center gap-2"
@@ -283,11 +254,16 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
             value=""
           />
         </div>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
+        >
+          Search
+        </button>
       </div>
     </div>
     <div>
       <div
-        class="rounded-md border overflow-x-auto"
+        class="rounded-md border bg-card shadow-sm overflow-x-auto"
       >
         <div
           class="relative w-full overflow-auto"
@@ -296,7 +272,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
             class="w-full caption-bottom text-sm"
           >
             <thead
-              class="[&_tr]:border-b"
+              class="[&_tr]:border-b bg-muted/40"
             >
               <tr
                 class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"

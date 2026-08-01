@@ -49,7 +49,7 @@ interface PersonForm {
   philhealthNumber: string; occupation: string; estimatedMonthlyIncome: string;
 }
 
-const emptyAddress: AddressFields = { street: '', barangay: '', city: '', province: '0301400000', region: '03', postalCode: '', psgcCode: '' };
+const emptyAddress: AddressFields = { street: '', barangay: '', city: '0301413000', province: '0301400000', region: '03', postalCode: '3013', psgcCode: '' };
 
 const emptyPerson = (): PersonForm => ({
   surname: '', firstName: '', middleName: '', extension: '',
@@ -425,7 +425,7 @@ export function IntakePage() {
       )}
       <form onSubmit={handleSubmit} noValidate className="max-w-4xl mx-auto space-y-6">
         {/* Section I: Beneficiary */}
-        <div className="rounded-lg border">
+        <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <User size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold">I. Beneficiary Information</h2>
@@ -436,7 +436,7 @@ export function IntakePage() {
         </div>
 
         {/* Section II: Claimant */}
-        <div className="rounded-lg border">
+        <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <UserCheck size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold">II. Claimant Information</h2>
@@ -481,7 +481,7 @@ export function IntakePage() {
         </div>
 
         {/* Section III: Family Composition */}
-        <div className="rounded-lg border">
+        <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Users size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold">III. Family Composition</h2>
@@ -573,7 +573,7 @@ export function IntakePage() {
         </div>
 
         {/* Data Privacy Consent */}
-        <div className="rounded-lg border">
+        <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <ShieldCheck size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold">Data Privacy Consent</h2>

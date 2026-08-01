@@ -73,7 +73,7 @@ export class DashboardController {
             category: (c.serviceRequested ?? []).join(', '),
             status: c.status || 'enrolled',
             slaOverdue,
-            barangay: (person.address || '').split(',').pop()?.trim() || '',
+            barangay: (person.currentAddress?.barangay || '').trim() || (person.address || '').split(',').pop()?.trim() || '',
             remarks: c.remarks || '',
             date: c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : '',
             controlNo: c.controlNo || '',

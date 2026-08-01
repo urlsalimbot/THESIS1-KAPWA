@@ -137,7 +137,7 @@ export class CasesExportService {
       { label: 'Address', value: person?.address || '—' },
       { label: 'Barangay', value: household?.barangay || person?.address?.split(',').pop()?.trim() || '—' },
       { label: 'Estimated Income', value: household?.estimatedIncome ? `₱${Number(household.estimatedIncome).toLocaleString()}/mo` : '—' },
-      { label: 'Access Card', value: ben?.accessCardCode || '—' },
+      { label: 'Access Card', value: household?.accessCardCode || '—' },
       { label: 'Philsys #', value: person?.philsysNumber || '—' },
     ];
 

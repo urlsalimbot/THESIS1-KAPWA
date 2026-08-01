@@ -9,7 +9,6 @@ export const CreateBeneficiarySchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   philsysNumber: z.string().optional(),
-  accessCardCode: z.string().optional(),
   householdId: z.string().uuid().optional(),
 });
 

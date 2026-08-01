@@ -34,6 +34,7 @@ describe('DashboardService', () => {
 
     benRepoMock = {
       createQueryBuilder: jest.fn(() => ({
+        leftJoin: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         getRawOne: jest.fn().mockResolvedValue({ count: '25' }),

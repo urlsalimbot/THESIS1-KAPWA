@@ -1,7 +1,7 @@
 export const POSTAL_CODES: Record<string, string> = {
-  'Norzagaray': '3012',
+  'Norzagaray': '3013',
   'City of San Jose Del Monte': '3023',
-  'Angat': '3013',
+  'Angat': '3012',
   'Bustos': '3007',
   'City of Baliwag': '3006',
   'Plaridel': '3004',

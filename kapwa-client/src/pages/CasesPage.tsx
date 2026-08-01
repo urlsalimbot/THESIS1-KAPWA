@@ -63,7 +63,7 @@ function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
     gender: ((ben.gender as string) || '').trim(),
     ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
     category: ((c.serviceRequested as string[]) || []).join(', '),
-    barangay: ((ben.address as string) || '').split(',').pop()?.trim() || '',
+    barangay: ((ben.currentAddress as Record<string, string> | undefined)?.barangay || '').trim() || ((ben.address as string) || '').split(',').pop()?.trim() || '',
     remarks: (c.remarks as string) || '',
     date: c.updatedAt ? new Date(c.updatedAt as string).toLocaleString() : '',
     createdAt: (c.createdAt as string) || '',
