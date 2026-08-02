@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useSWR from 'swr';
 import { api } from '@/lib/api';
@@ -37,12 +37,14 @@ export function AnnouncementEditPage() {
   const [excerpt, setExcerpt] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [saving, setSaving] = useState(false);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (data) {
+    if (data && !initialized.current) {
       setTitle(data.title);
       setExcerpt(data.excerpt || '');
       setBodyHtml(data.bodyHtml || '');
+      initialized.current = true;
     }
   }, [data]);
 

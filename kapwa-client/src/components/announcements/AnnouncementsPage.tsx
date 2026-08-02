@@ -29,26 +29,42 @@ export function AnnouncementsPage() {
 
   const handleDelete = async (id: string, title: string) => {
     if (!window.confirm(`Delete "${title}"?`)) return;
-    await api.del(['announcements', id]);
-    toast.success('Deleted');
-    mutate();
+    try {
+      await api.del(['announcements', id]);
+      toast.success('Deleted');
+      mutate();
+    } catch {
+      toast.error('Failed to delete announcement');
+    }
   };
 
   const handlePublishToggle = async (a: Announcement) => {
-    if (a.status === 'published') {
-      await api.patch(['announcements', a.id], { status: 'draft' });
-      toast.success('Unpublished');
-    } else {
-      await api.patch(['announcements', a.id], { status: 'published' });
-      toast.success('Published');
+    try {
+      if (a.status === 'published') {
+        await api.patch(['announcements', a.id], { status: 'draft' });
+        toast.success('Unpublished');
+      } else {
+        await api.patch(['announcements', a.id], { status: 'published' });
+        toast.success('Published');
+      }
+      mutate();
+    } catch {
+      toast.error(
+        a.status === 'published'
+          ? 'Failed to unpublish announcement'
+          : 'Failed to publish announcement',
+      );
     }
-    mutate();
   };
 
   const handlePinToggle = async (a: Announcement) => {
-    await api.patch(['announcements', a.id, 'pin']);
-    toast.success(a.pinned ? 'Unpinned' : 'Pinned');
-    mutate();
+    try {
+      await api.patch(['announcements', a.id, 'pin']);
+      toast.success(a.pinned ? 'Unpinned' : 'Pinned');
+      mutate();
+    } catch {
+      toast.error(a.pinned ? 'Failed to unpin announcement' : 'Failed to pin announcement');
+    }
   };
 
   if (error) return <p className="p-4 text-destructive">Failed to load announcements.</p>;
