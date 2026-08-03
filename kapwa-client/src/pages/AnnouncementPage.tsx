@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { Pin, ArrowLeft } from 'lucide-react';
+import { Pin, ArrowLeft, Megaphone, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AnnouncementDetail {
@@ -15,6 +15,14 @@ interface AnnouncementDetail {
   publishedAt: string | null;
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 export function AnnouncementPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data, isLoading, error } = useSWR(
@@ -25,7 +33,13 @@ export function AnnouncementPage() {
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4">
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 w-40 bg-muted rounded" />
+          <div className="h-10 w-3/4 bg-muted rounded" />
+          <div className="h-4 w-full bg-muted rounded" />
+          <div className="h-4 w-5/6 bg-muted rounded" />
+          <div className="h-4 w-full bg-muted rounded" />
+        </div>
       </div>
     );
   }
@@ -33,7 +47,7 @@ export function AnnouncementPage() {
   if (error || !data) {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4 text-center">
-        <h1 className="text-2xl font-bold">Article not found</h1>
+        <h1 className="text-2xl font-bold font-heading">Article not found</h1>
         <p className="text-muted-foreground mt-2">This announcement may have been removed or is no longer published.</p>
         <Button asChild variant="outline" className="mt-4">
           <Link to="/">Back to home</Link>
@@ -43,32 +57,59 @@ export function AnnouncementPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
+    <div className="max-w-3xl mx-auto py-10 md:py-16 px-4">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
+      >
         <ArrowLeft size={16} />
         Back to home
       </Link>
 
       <article>
-        <div className="flex items-center gap-2 mb-2">
-          {data.pinned && <Pin size={16} className="text-primary" />}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-5">
+          <Megaphone size={14} className="text-accent" />
+          <span className="text-xs font-medium text-accent tracking-wide">Announcement</span>
+        </div>
+
+        <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance leading-tight mb-5">
+          {data.title}
+        </h1>
+
+        <div className="flex items-center gap-3 mb-8">
+          {data.pinned && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent">
+              <Pin size={13} />
+              Pinned
+            </span>
+          )}
           {data.publishedAt && (
-            <time className="text-sm text-muted-foreground">
-              {new Date(data.publishedAt).toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
+            <time className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+              <CalendarDays size={14} />
+              {formatDate(data.publishedAt)}
             </time>
           )}
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight mb-6">{data.title}</h1>
+        {data.excerpt && (
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed text-pretty mb-8 border-l-2 border-accent/40 pl-4">
+            {data.excerpt}
+          </p>
+        )}
 
         <div
-          className="prose prose-slate max-w-none"
+          className="prose prose-slate max-w-none prose-headings:font-heading prose-headings:tracking-tight prose-a:text-primary prose-img:rounded-lg prose-img:my-6 dark:prose-invert"
           dangerouslySetInnerHTML={{ __html: data.bodyHtml }}
         />
+
+        <div className="mt-12 pt-8 border-t flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            MSWDO Norzagaray — Municipal Social Welfare &amp; Development Office
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/">Back to home</Link>
+          </Button>
+        </div>
       </article>
     </div>
   );
