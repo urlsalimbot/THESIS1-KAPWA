@@ -20,19 +20,22 @@ export class AgencyPortalService {
     if (!agency) {
       throw new NotFoundException('Agency not found');
     }
+    const scoped = referrals.filter(
+      r => r.fromAgencyId === agencyId || r.toAgencyId === agencyId,
+    );
     const counts = {
-      total: referrals.length,
-      sent: referrals.filter(r => r.fromAgencyId === agencyId).length,
-      received: referrals.filter(r => r.toAgencyId === agencyId).length,
+      total: scoped.length,
+      sent: scoped.filter(r => r.fromAgencyId === agencyId).length,
+      received: scoped.filter(r => r.toAgencyId === agencyId).length,
       byStatus: {
-        referred: referrals.filter(r => r.status === 'referred').length,
-        received: referrals.filter(r => r.status === 'received').length,
-        actioned: referrals.filter(r => r.status === 'actioned').length,
-        closed: referrals.filter(r => r.status === 'closed').length,
-        declined: referrals.filter(r => r.status === 'declined').length,
+        referred: scoped.filter(r => r.status === 'referred').length,
+        received: scoped.filter(r => r.status === 'received').length,
+        actioned: scoped.filter(r => r.status === 'actioned').length,
+        closed: scoped.filter(r => r.status === 'closed').length,
+        declined: scoped.filter(r => r.status === 'declined').length,
       },
     };
-    return { agency, counts, recent: referrals.slice(0, 5) };
+    return { agency, counts, recent: scoped.slice(0, 5) };
   }
 
   async getProfile(caller: User): Promise<Agency | null> {

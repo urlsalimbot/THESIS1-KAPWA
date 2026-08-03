@@ -65,6 +65,10 @@ async function seedAccounts(dataSource: DataSource) {
       );
     }
 
+    await q.query(
+      `UPDATE users SET agency_id = (SELECT id FROM agencies WHERE code = 'RHU') WHERE email = 'rhu.staff@norzagaray.test'`,
+    );
+
     console.log('Accounts seeded: ' + Object.keys(ACCOUNT).length);
     console.log('');
     console.log('  Credentials:');
