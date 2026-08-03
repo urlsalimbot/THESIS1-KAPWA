@@ -19,7 +19,12 @@ function mapToSearchResult(raw: Record<string, unknown>): SearchResult {
   };
 }
 
-export function useDebouncedSearch(query: string, delay = 300, limit = 10) {
+export function useDebouncedSearch(
+  query: string,
+  delay = 300,
+  limit = 10,
+  fetcher?: (q: string) => Promise<SearchResult[]>,
+) {
   const [debouncedQuery, setDebouncedQuery] = useState(query);
 
   useEffect(() => {
@@ -28,16 +33,27 @@ export function useDebouncedSearch(query: string, delay = 300, limit = 10) {
   }, [query, delay]);
 
   const trimmed = debouncedQuery.trim();
-  const swrKey = trimmed
-    ? queryKeys.beneficiaries.list({ search: trimmed, limit })
+  const swrKey: string | readonly unknown[] | null = trimmed
+    ? fetcher
+      ? ['debounced-search', trimmed]
+      : queryKeys.beneficiaries.list({ search: trimmed, limit })
     : null;
 
-  const { data, isLoading } = useSWR<{ data: Record<string, unknown>[] } | Record<string, unknown>[]>(swrKey, {
-    keepPreviousData: true,
-  });
+  const { data, isLoading } = useSWR<SearchResult[] | { data: Record<string, unknown>[] } | Record<string, unknown>[]>(
+    swrKey,
+    fetcher
+      ? (key: readonly unknown[]) => fetcher(String((key as readonly string[])[1]))
+      : undefined,
+    {
+      keepPreviousData: true,
+    },
+  );
 
-  const list = Array.isArray(data) ? data : (data as { data?: Record<string, unknown>[] })?.data || [];
-  const results = useMemo(() => list.map(mapToSearchResult), [list]);
+  const results = useMemo(() => {
+    if (fetcher) return (data as SearchResult[]) || [];
+    const list = Array.isArray(data) ? data : (data as { data?: Record<string, unknown>[] })?.data || [];
+    return list.map(mapToSearchResult);
+  }, [data, fetcher]);
 
   return { results, loading: isLoading };
 }

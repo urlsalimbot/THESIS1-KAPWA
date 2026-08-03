@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../../lib/api';
-import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
+import { useDebouncedSearch, SearchResult } from '@/hooks/useDebouncedSearch';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { Agency, LEGAL_BASIS_OPTIONS } from './referral-utils';
@@ -8,9 +8,11 @@ import { Agency, LEGAL_BASIS_OPTIONS } from './referral-utils';
 export function CreateReferralForm({
   agencies,
   onCreated,
+  searchFetcher,
 }: {
   agencies: Agency[];
   onCreated: () => void;
+  searchFetcher?: (q: string) => Promise<SearchResult[]>;
 }) {
   const [toAgencyId, setToAgencyId] = useState('');
   const [reason, setReason] = useState('');
@@ -20,7 +22,7 @@ export function CreateReferralForm({
   const [selected, setSelected] = useState<{ beneficiaryId: string; label: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const { results, loading } = useDebouncedSearch(query, 300, 8);
+  const { results, loading } = useDebouncedSearch(query, 300, 8, searchFetcher);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
