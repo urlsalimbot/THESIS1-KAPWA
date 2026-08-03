@@ -11,6 +11,8 @@ import { Repository } from 'typeorm';
 import { User } from '../auth/user.entity';
 import { Agency } from '../agencies/agency.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { Person } from '../beneficiaries/person.entity';
+import { Household } from '../beneficiaries/household.entity';
 import { Case } from '../cases/case.entity';
 import { CasesService } from '../cases/cases.service';
 import {
@@ -91,6 +93,42 @@ export class InterAgencyReferralsService {
   async findByPerson(personId: string, caller: User) {
     const scoped = await this.findInbox(caller);
     return scoped.filter(r => r.personId === personId);
+  }
+
+  async searchBeneficiaries(q: string, caller: User) {
+    if (caller.role !== 'admin' && !caller.agencyId) return [];
+
+    const qb = this.repo
+      .createQueryBuilder('r')
+      .innerJoin(Beneficiary, 'b', 'b.person_id = r.person_id')
+      .innerJoin(Person, 'p', 'p.id = b.person_id')
+      .leftJoin(Household, 'h', 'h.id = b.household_id')
+      .select('b.id', 'id')
+      .addSelect(`TRIM(CONCAT(p.first_name, ' ', p.surname))`, 'full_name')
+      .addSelect(`COALESCE(h.access_card_code, p.philsys_number)`, 'control_no')
+      .addSelect('h.barangay', 'barangay')
+      .where('(p.first_name ILIKE :q OR p.surname ILIKE :q)', { q: `%${q}%` })
+      .orderBy('p.surname', 'ASC')
+      .limit(10);
+
+    if (caller.role !== 'admin') {
+      qb.andWhere('(r.from_agency_id = :agencyId OR r.to_agency_id = :agencyId)', {
+        agencyId: caller.agencyId,
+      });
+    }
+
+    const rows = await qb.getRawMany<{
+      id: string;
+      full_name: string;
+      control_no: string | null;
+      barangay: string | null;
+    }>();
+    return rows.map(r => ({
+      id: r.id,
+      fullName: r.full_name,
+      controlNo: r.control_no ?? null,
+      barangay: r.barangay ?? null,
+    }));
   }
 
   async receive(id: string, caller: User) {

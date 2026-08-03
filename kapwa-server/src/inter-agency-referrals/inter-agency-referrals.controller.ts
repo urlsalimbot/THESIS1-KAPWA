@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -44,6 +45,13 @@ export class InterAgencyReferralsController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.svc.findByPerson(personId, req.user);
+  }
+
+  @Get('beneficiary-search')
+  @Roles('admin', 'social_worker', 'agency_staff')
+  @ApiOperation({ summary: 'Search referral-derived beneficiaries by name for the caller agency' })
+  async beneficiarySearch(@Query('q') q: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.searchBeneficiaries(q || '', req.user);
   }
 
   @Post()

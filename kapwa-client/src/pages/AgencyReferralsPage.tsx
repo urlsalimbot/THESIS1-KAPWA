@@ -59,6 +59,7 @@ export function AgencyReferralsPage() {
       <CreateReferralForm
         agencies={agencies || []}
         onCreated={() => mutate(queryKeys.interAgencyReferrals.inbox())}
+        searchFetcher={q => api.get(`/inter-agency-referrals/beneficiary-search?q=${encodeURIComponent(q)}`)}
       />
 
       <div className="mt-4 mb-2 flex gap-1">

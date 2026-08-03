@@ -20,7 +20,7 @@ describe('InterAgencyReferralsService', () => {
   let casesServiceMock: any;
 
   beforeEach(async () => {
-    repoMock = { create: jest.fn(), save: jest.fn(), findOne: jest.fn(), find: jest.fn() };
+    repoMock = { create: jest.fn(), save: jest.fn(), findOne: jest.fn(), find: jest.fn(), createQueryBuilder: jest.fn() };
     agencyRepoMock = { findOne: jest.fn() };
     benRepoMock = { findOne: jest.fn() };
     caseRepoMock = { findOne: jest.fn() };
@@ -146,6 +146,65 @@ describe('InterAgencyReferralsService', () => {
     it('caller with no agency sees nothing', async () => {
       const result = await service.findInbox(agencyUser('u1', ''));
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('searchBeneficiaries', () => {
+    function qbMock() {
+      return {
+        innerJoin: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn(),
+      };
+    }
+
+    it('agency caller gets only beneficiaries in referrals touching their agency', async () => {
+      const qb = qbMock();
+      qb.getRawMany.mockResolvedValue([
+        { id: 'b1', full_name: 'Juan Santos', control_no: 'KAPWA-C-1', barangay: 'Bigte' },
+      ]);
+      repoMock.createQueryBuilder = jest.fn().mockReturnValue(qb);
+
+      const result = await service.searchBeneficiaries('juan', agencyUser('u1', 'ag-rhu'));
+
+      expect(repoMock.createQueryBuilder).toHaveBeenCalledWith('r');
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        '(r.from_agency_id = :agencyId OR r.to_agency_id = :agencyId)',
+        { agencyId: 'ag-rhu' },
+      );
+      expect(qb.limit).toHaveBeenCalledWith(10);
+      expect(result).toEqual([
+        { id: 'b1', fullName: 'Juan Santos', controlNo: 'KAPWA-C-1', barangay: 'Bigte' },
+      ]);
+    });
+
+    it('no agencyId resolves [] without throwing', async () => {
+      await expect(service.searchBeneficiaries('juan', agencyUser('u1', ''))).resolves.toEqual([]);
+      expect(repoMock.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('admin caller searches referral-derived beneficiaries without agency scoping', async () => {
+      const qb = qbMock();
+      qb.getRawMany.mockResolvedValue([
+        { id: 'b2', full_name: 'Maria Cruz', control_no: null, barangay: null },
+      ]);
+      repoMock.createQueryBuilder = jest.fn().mockReturnValue(qb);
+
+      const result = await service.searchBeneficiaries('maria', {
+        id: 'u-admin',
+        role: 'admin',
+      } as any);
+
+      expect(qb.andWhere).not.toHaveBeenCalled();
+      expect(result).toEqual([
+        { id: 'b2', fullName: 'Maria Cruz', controlNo: null, barangay: null },
+      ]);
     });
   });
 
