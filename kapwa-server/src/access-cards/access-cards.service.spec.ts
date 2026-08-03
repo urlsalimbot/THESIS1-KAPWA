@@ -2,11 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccessCardsService } from './access-cards.service';
 import { AccessCardService } from './access-card-service.entity';
+import { Agency } from '../agencies/agency.entity';
+import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 
 describe('AccessCardsService', () => {
   let service: AccessCardsService;
   let repoMock: any;
   let queryRunnerMock: any;
+  let agencyRepoMock: any;
+  let consentRepoMock: any;
+  let referralRepoMock: any;
 
   beforeEach(async () => {
     queryRunnerMock = {
@@ -30,10 +36,16 @@ describe('AccessCardsService', () => {
         },
       },
     };
+    agencyRepoMock = { findOne: jest.fn() };
+    consentRepoMock = { findOne: jest.fn() };
+    referralRepoMock = { find: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccessCardsService,
         { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
+        { provide: getRepositoryToken(Agency), useValue: agencyRepoMock },
+        { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
+        { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepoMock },
       ],
     }).compile();
     service = module.get<AccessCardsService>(AccessCardsService);
@@ -119,6 +131,90 @@ describe('AccessCardsService', () => {
         order: { serviceDate: 'DESC' },
       });
       expect(result).toEqual(services);
+    });
+  });
+
+  describe('logService agency resolution', () => {
+    it('stores agencyId directly when provided', async () => {
+      repoMock.create.mockImplementation((dto: any) => dto);
+      repoMock.save.mockImplementation(async (dto: any) => ({ id: 's1', ...dto }));
+      const result = await service.logService({
+        accessCardCode: 'NORZ-AC-2026-0042',
+        serviceRendered: 'Medical Aid',
+        serviceDate: new Date(),
+        agencyId: 'ag-1',
+      });
+      expect(result).toEqual(expect.objectContaining({ id: 's1', agencyId: 'ag-1' }));
+      expect(agencyRepoMock.findOne).not.toHaveBeenCalled();
+    });
+
+    it('resolves a freeform code to agencyId', async () => {
+      agencyRepoMock.findOne.mockResolvedValue({ id: 'ag-1', code: 'RHU' });
+      repoMock.create.mockImplementation((dto: any) => dto);
+      repoMock.save.mockImplementation(async (dto: any) => ({ id: 's1', ...dto }));
+      const result = await service.logService({
+        accessCardCode: 'NORZ-AC-2026-0042',
+        serviceRendered: 'Medical Aid',
+        serviceDate: new Date(),
+        agency: 'rhu',
+      });
+      expect(agencyRepoMock.findOne).toHaveBeenCalledWith({ where: [{ code: 'RHU' }, { name: 'rhu' }] });
+      expect(result).toEqual(expect.objectContaining({ id: 's1', agencyId: 'ag-1' }));
+    });
+
+    it('throws 422 for an unknown freeform code', async () => {
+      agencyRepoMock.findOne.mockResolvedValue(null);
+      await expect(
+        service.logService({
+          accessCardCode: 'NORZ-AC-2026-0042',
+          serviceRendered: 'Medical Aid',
+          serviceDate: new Date(),
+          agency: 'bogus',
+        }),
+      ).rejects.toThrow('Unknown agency: bogus');
+    });
+  });
+
+  describe('getAgencySummary', () => {
+    const admin = { id: 'u1', role: 'admin', agencyId: 'ag-1' } as any;
+    const swAg1 = { id: 'u2', role: 'social_worker', agencyId: 'ag-1' } as any;
+
+    it('splits services by caller agency and includes referral history for admin', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue({ id: 'c1' });
+      repoMock.find.mockResolvedValue([
+        { id: 's1', agencyId: 'ag-1' },
+        { id: 's2', agencyId: 'ag-2' },
+        { id: 's3', agencyId: null },
+      ]);
+      referralRepoMock.find.mockResolvedValue([{ id: 'r1', fromAgencyId: 'ag-2', toAgencyId: 'ag-1' }]);
+
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', admin);
+
+      expect(result.sharingConsentActive).toBe(true);
+      expect(result.servicesRendered.map((s: any) => s.id)).toEqual(['s1', 's2', 's3']);
+      expect(result.servicesFromOtherAgencies.map((s: any) => s.id)).toEqual(['s2']);
+      expect(result.referralHistory).toEqual([{ id: 'r1', fromAgencyId: 'ag-2', toAgencyId: 'ag-1' }]);
+    });
+
+    it('masks other-agency services when consent is inactive', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue(null);
+      repoMock.find.mockResolvedValue([
+        { id: 's1', agencyId: 'ag-1' },
+        { id: 's2', agencyId: 'ag-2' },
+      ]);
+
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', swAg1);
+
+      expect(result.sharingConsentActive).toBe(false);
+      expect(result.servicesRendered.map((s: any) => s.id)).toEqual(['s1']);
+      expect(result.servicesFromOtherAgencies).toEqual([]);
+    });
+
+    it('throws NotFoundException when card code has no beneficiary', async () => {
+      repoMock.query.mockResolvedValue([]);
+      await expect(service.getAgencySummary('NORZ-AC-0000', admin)).rejects.toThrow('No access card found for this code');
     });
   });
 });
