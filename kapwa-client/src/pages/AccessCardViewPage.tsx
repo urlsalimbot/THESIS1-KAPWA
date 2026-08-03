@@ -8,7 +8,7 @@ import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus } from 'lucide-react';
+import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight } from 'lucide-react';
 
 interface AccessCardService {
   id: string;
@@ -17,6 +17,8 @@ interface AccessCardService {
   serviceRendered: string;
   cost?: number;
   agency?: string;
+  agencyId?: string;
+  agencyRef?: { id: string; code: string; name: string };
   workerNameSign?: string;
   category?: string;
 }
@@ -35,6 +37,41 @@ const CATEGORY_TAB_LABELS: Record<string, string> = {
   referral: 'Referrals',
   community_service: 'Community',
   seminar: 'Seminars',
+};
+
+interface ReferralSummary {
+  id: string;
+  fromAgencyId: string;
+  toAgencyId: string;
+  status: string;
+  reason: string;
+  outcome?: string;
+  fromAgency?: { id: string; code: string; name: string };
+  toAgency?: { id: string; code: string; name: string };
+  createdAt: string;
+}
+
+interface AgencySummary {
+  cardCode: string;
+  person: { id: string; firstName: string; surname: string };
+  servicesRendered: AccessCardService[];
+  servicesFromOtherAgencies: AccessCardService[];
+  referralHistory: ReferralSummary[];
+  sharingConsentActive: boolean;
+}
+
+interface Agency {
+  id: string;
+  code: string;
+  name: string;
+}
+
+const REFERRAL_STATUS_LABELS: Record<string, string> = {
+  referred: 'Referred',
+  received: 'Received',
+  actioned: 'Actioned',
+  closed: 'Closed',
+  declined: 'Declined',
 };
 
 function CategoryBadge({ category }: { category?: string }) {
@@ -56,7 +93,7 @@ export function AccessCardViewPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ serviceRendered: '', serviceDate: '', cost: '', agency: '', workerNameSign: '', category: 'referral' });
+  const [addForm, setAddForm] = useState({ serviceRendered: '', serviceDate: '', cost: '', agencyId: '', workerNameSign: '', category: 'referral' });
   const [adding, setAdding] = useState(false);
 
   const { data: ben } = useSWR<Record<string, unknown>>(
@@ -68,6 +105,11 @@ export function AccessCardViewPage() {
   const { data: cardData, mutate: cardMutate } = useSWR<{ beneficiary: any; code: string; services: AccessCardService[] }>(
     id ? queryKeys.accessCards.detail(id) : null,
   );
+
+  const { data: summary } = useSWR<AgencySummary>(
+    cardData?.code ? queryKeys.accessCards.agencySummary(cardData.code) : null,
+  );
+  const { data: agencies } = useSWR<Agency[]>(queryKeys.agencies.list());
 
   const filteredServices = (cardData?.services || []).filter(
     s => !activeTab || s.category === activeTab,
@@ -83,13 +125,13 @@ export function AccessCardViewPage() {
         serviceRendered: addForm.serviceRendered,
         serviceDate: addForm.serviceDate,
         cost: addForm.cost ? parseFloat(addForm.cost) : undefined,
-        agency: addForm.agency || undefined,
+        agencyId: addForm.agencyId || undefined,
         workerNameSign: addForm.workerNameSign || undefined,
         category: addForm.category,
       });
       await cardMutate();
       setShowAddForm(false);
-      setAddForm({ serviceRendered: '', serviceDate: '', cost: '', agency: '', workerNameSign: '', category: 'referral' });
+      setAddForm({ serviceRendered: '', serviceDate: '', cost: '', agencyId: '', workerNameSign: '', category: 'referral' });
     } catch (err) {
       console.error('Failed to add entry:', err);
     } finally {
@@ -169,7 +211,7 @@ export function AccessCardViewPage() {
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CreditCard size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold">Service Records</h3>
+            <h3 className="text-sm font-semibold">Services Rendered</h3>
           </div>
           <Button size="sm" onClick={() => setShowAddForm(true)}>
             <Plus size={14} className="mr-1" /> Add Entry
@@ -234,8 +276,19 @@ export function AccessCardViewPage() {
                 <input type="number" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">Agency</label>
-                <input className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.agency} onChange={e => setAddForm(f => ({ ...f, agency: e.target.value }))} />
+                <label className="text-xs font-medium" htmlFor="access-card-agency">Agency *</label>
+                <select
+                  id="access-card-agency"
+                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                  value={addForm.agencyId}
+                  onChange={e => setAddForm(f => ({ ...f, agencyId: e.target.value }))}
+                  required
+                >
+                  <option value="">Select agency...</option>
+                  {(agencies || []).map(a => (
+                    <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium">Worker Name</label>
@@ -261,7 +314,7 @@ export function AccessCardViewPage() {
                     <p className="font-medium truncate">{s.serviceRendered}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(s.serviceDate).toLocaleDateString()}
-                      {s.agency && ` · ${s.agency}`}
+                      {s.agencyRef?.name || s.agency}
                       {s.workerNameSign && ` · ${s.workerNameSign}`}
                     </p>
                   </div>
@@ -274,6 +327,61 @@ export function AccessCardViewPage() {
           )}
         </div>
       </div>
+
+      {summary && summary.servicesFromOtherAgencies.length > 0 && (
+        <div className="rounded-lg bg-card p-4 shadow-sm border border-border mt-4">
+          <div className="flex items-center gap-2 text-primary mb-3">
+            <Building2 size={16} />
+            <h3 className="text-xs font-semibold uppercase tracking-wider">Services From Other Agencies</h3>
+          </div>
+          {!summary.sharingConsentActive && (
+            <p className="text-xs text-muted-foreground mb-2">
+              Inter-agency sharing consent is not active — shown to MSWDO only.
+            </p>
+          )}
+          <div className="space-y-1">
+            {summary.servicesFromOtherAgencies.map(s => (
+              <div key={s.id} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{s.serviceRendered}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(s.serviceDate).toLocaleDateString()}
+                    {s.agencyRef?.name && ` · ${s.agencyRef.name}`}
+                  </p>
+                </div>
+                {s.cost != null && Number(s.cost) > 0 && (
+                  <span className="text-xs font-semibold shrink-0">₱{Number(s.cost).toLocaleString()}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {summary && summary.referralHistory.length > 0 && (
+        <div className="rounded-lg bg-card p-4 shadow-sm border border-border mt-4">
+          <div className="flex items-center gap-2 text-primary mb-3">
+            <ArrowLeftRight size={16} />
+            <h3 className="text-xs font-semibold uppercase tracking-wider">Referrals History</h3>
+          </div>
+          <div className="space-y-1">
+            {summary.referralHistory.map(r => (
+              <div key={r.id} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                <Badge variant={r.status === 'declined' ? 'destructive' : 'secondary'} className="text-[10px]">
+                  {REFERRAL_STATUS_LABELS[r.status] || r.status}
+                </Badge>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{r.reason}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(r.fromAgency?.name || r.fromAgencyId)} → {(r.toAgency?.name || r.toAgencyId)} ·{' '}
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
