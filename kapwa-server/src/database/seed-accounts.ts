@@ -13,6 +13,7 @@ const ACCOUNT = {
   claimant2:    { id: '10000000-0000-0000-0000-000000000006', email: 'ana.claimant@test.com',  role: 'claimant',       fullName: 'Ana Marie L. Fernandez', phone: '09171000006' },
   mayor:        { id: '10000000-0000-0000-0000-000000000007', email: 'mayor@mswdo.test',       role: 'mayor',          fullName: 'Felicisimo I. Santiago', phone: '09171000007' },
   auditor:      { id: '10000000-0000-0000-0000-000000000008', email: 'auditor@mswdo.test',     role: 'auditor',        fullName: 'Teresita Q. Valdez',     phone: '09171000008' },
+  rhu_staff:    { id: '20000000-0000-0000-0000-000000000009', email: 'rhu.staff@norzagaray.test', role: 'agency_staff', fullName: 'Dra. RHU Staff',    phone: '09179999999' },
 };
 
 type AccountDef = typeof ACCOUNT[keyof typeof ACCOUNT];
@@ -26,6 +27,7 @@ const ACCOUNT_CREDENTIALS: Record<string, { password: string }> = {
   claimant2:    { password: 'claimant123' },
   mayor:        { password: 'mayor123' },
   auditor:      { password: 'auditor123' },
+  rhu_staff:    { password: 'rhu123' },
 };
 
 function permittedBarangays(key: string): string[] {
