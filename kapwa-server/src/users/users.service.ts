@@ -13,6 +13,7 @@ export interface CreateUserInput {
   phone?: string;
   assigned_barangay?: string;
   permitted_barangays?: string[];
+  agency_id?: string;
 }
 
 @Injectable()
@@ -63,6 +64,7 @@ export class UsersService {
       fullName: dto.full_name,
       phone: dto.phone,
       assignedBarangay: dto.assigned_barangay,
+      agencyId: dto.agency_id,
       permittedBarangays: dto.permitted_barangays || [],
     });
 
@@ -80,13 +82,14 @@ export class UsersService {
     return safe;
   }
 
-  async update(id: string, data: { fullName?: string; role?: string; isActive?: boolean; assignedBarangay?: string; permittedBarangays?: string[] }) {
+  async update(id: string, data: { fullName?: string; role?: string; isActive?: boolean; assignedBarangay?: string; permittedBarangays?: string[]; agencyId?: string }) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     if (data.role) user.role = data.role as UserRole;
     if (data.fullName !== undefined) user.fullName = data.fullName;
     if (data.isActive !== undefined) user.isActive = data.isActive;
     if (data.assignedBarangay !== undefined) user.assignedBarangay = data.assignedBarangay;
+    if (data.agencyId !== undefined) user.agencyId = data.agencyId;
     if (data.permittedBarangays !== undefined) user.permittedBarangays = data.permittedBarangays;
     await this.userRepo.save(user);
     const { password, ...safe } = user;

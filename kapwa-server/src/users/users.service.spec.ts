@@ -95,6 +95,24 @@ describe('UsersService', () => {
       await expect(service.createUser(dto)).rejects.toThrow(BadRequestException);
       expect(mockRepo.save).not.toHaveBeenCalled();
     });
+
+    it('should persist agencyId for agency_staff role', async () => {
+      const dto = {
+        email: 'rhu@norzagaray.test',
+        password: 'password123',
+        role: UserRole.AGENCY_STAFF,
+        agency_id: 'ag-rhu',
+      };
+
+      mockRepo.findOne.mockResolvedValue(null);
+      mockRepo.create.mockImplementation((dto: any) => dto);
+      mockRepo.save.mockImplementation(async (dto: any) => ({ id: 'u1', ...dto, password: 'hashed' }));
+
+      const result = await service.createUser(dto);
+
+      expect(result.agencyId).toBe('ag-rhu');
+      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ agencyId: 'ag-rhu', role: UserRole.AGENCY_STAFF }));
+    });
   });
 
   describe('findAll', () => {
@@ -129,6 +147,17 @@ describe('UsersService', () => {
       expect(mockRepo.save).toHaveBeenCalled();
       expect(result.isActive).toBe(false);
       expect(result).not.toHaveProperty('password');
+    });
+  });
+
+  describe('update', () => {
+    it('should persist agencyId', async () => {
+      const user = { id: 'u1', role: UserRole.AGENCY_STAFF, agencyId: undefined, save: jest.fn() };
+      mockRepo.findOne.mockResolvedValue(user);
+
+      await service.update('u1', { agencyId: 'ag-rhu' });
+
+      expect(user.agencyId).toBe('ag-rhu');
     });
   });
 });

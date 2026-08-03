@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const UserRoleEnum = z.enum([
-  'admin', 'social_worker', 'coordinator', 'claimant', 'mayor', 'auditor'
+  'admin', 'social_worker', 'coordinator', 'claimant', 'mayor', 'auditor', 'agency_staff'
 ]);
 
 export const CreateUserInputSchema = z.object({
@@ -12,6 +12,7 @@ export const CreateUserInputSchema = z.object({
   phone: z.string().optional(),
   assigned_barangay: z.string().optional(),
   permitted_barangays: z.array(z.string()).optional(),
+  agency_id: z.string().uuid().optional(),
 }).strict();
 
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
@@ -22,6 +23,7 @@ export const UpdateUserSchema = z.object({
   isActive: z.boolean().optional(),
   assignedBarangay: z.string().optional(),
   permittedBarangays: z.array(z.string()).optional(),
+  agencyId: z.string().uuid().optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
