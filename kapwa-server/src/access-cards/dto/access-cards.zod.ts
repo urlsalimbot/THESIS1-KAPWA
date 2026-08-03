@@ -11,8 +11,8 @@ export const LogServiceSchema = z
     workerNameSign: z.string().optional(),
     category: z.enum(['case_service', 'referral', 'community_service', 'seminar']).optional().default('referral'),
   })
-  .refine(dto => Boolean(dto.agencyId) || Boolean(dto.agency && dto.agency.trim()), {
-    message: 'Agency is required: provide agencyId or an agency code',
+  .refine(dto => Boolean(dto.agencyId) !== Boolean(dto.agency && dto.agency.trim()), {
+    message: 'Agency is required: provide exactly one of agencyId or an agency code',
   });
 
 export type LogServiceInput = z.infer<typeof LogServiceSchema>;
