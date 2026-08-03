@@ -1,8 +1,11 @@
-import { DEFAULT_LIST_LIMIT } from '../common/constants';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccessCardService } from './access-card-service.entity';
+import { Agency } from '../agencies/agency.entity';
+import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
+import { User } from '../auth/user.entity';
 
 const ACCESS_CARD_PAD_WIDTH = 4;
 @Injectable()
@@ -10,6 +13,12 @@ export class AccessCardsService {
   constructor(
     @InjectRepository(AccessCardService)
     private repo: Repository<AccessCardService>,
+    @InjectRepository(Agency)
+    private agencyRepo: Repository<Agency>,
+    @InjectRepository(ConsentLedger)
+    private consentRepo: Repository<ConsentLedger>,
+    @InjectRepository(InterAgencyReferral)
+    private referralRepo: Repository<InterAgencyReferral>,
   ) {}
 
   async generateAndAssign(beneficiaryId: string): Promise<string> {
@@ -73,19 +82,98 @@ export class AccessCardsService {
     return { beneficiary: ben[0], code: ben[0].access_card_code, services };
   }
 
-  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agency?: string; workerNameSign?: string; category?: string; loggedBy?: string; sourceBarangay?: string }) {
+  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agency?: string; agencyId?: string; workerNameSign?: string; category?: string; loggedBy?: string; sourceBarangay?: string }) {
+    let agencyId = data.agencyId;
+    if (!agencyId && data.agency && data.agency.trim()) {
+      agencyId = await this.resolveAgencyId(data.agency);
+    }
     const entry = this.repo.create({
       accessCardCode: data.accessCardCode,
       serviceRendered: data.serviceRendered,
       serviceDate: data.serviceDate,
       cost: data.cost,
       agency: data.agency,
+      agencyId,
       workerNameSign: data.workerNameSign,
       category: data.category || 'referral',
       loggedBy: data.loggedBy,
       sourceBarangay: data.sourceBarangay,
     });
     return this.repo.save(entry);
+  }
+
+  private async resolveAgencyId(agencyText: string): Promise<string> {
+    const trimmed = agencyText.trim();
+    const agency = await this.agencyRepo.findOne({
+      where: [{ code: trimmed.toUpperCase() }, { name: trimmed }],
+    });
+    if (!agency) throw new UnprocessableEntityException(`Unknown agency: ${agencyText}`);
+    return agency.id;
+  }
+
+  async getAgencySummary(cardCode: string, caller: User) {
+    const rows = await this.repo.query(
+      `SELECT b.id AS beneficiary_id, b.person_id, p.surname, p.first_name
+       FROM households h
+       JOIN beneficiaries b ON b.household_id = h.id
+       JOIN persons p ON p.id = b.person_id
+       WHERE h.access_card_code = $1
+       LIMIT 1`,
+      [cardCode],
+    );
+    if (!rows?.[0]) throw new NotFoundException('No access card found for this code');
+    const ben = rows[0];
+
+    const consent = await this.consentRepo.findOne({
+      where: { beneficiaryId: ben.beneficiary_id, purpose: 'inter_agency_sharing', status: 'active' },
+    });
+    const sharingConsentActive = !!consent;
+    const isAdmin = caller.role === 'admin';
+    const callerAgency = caller.agencyId;
+
+    const services = await this.repo.find({
+      where: { accessCardCode: cardCode },
+      order: { serviceDate: 'DESC' },
+      relations: ['agencyRef'],
+    });
+
+    const servicesRendered = services.filter(s =>
+      isAdmin || !callerAgency || s.agencyId === callerAgency || !s.agencyId,
+    );
+
+    const servicesFromOtherAgencies =
+      sharingConsentActive || isAdmin
+        ? services.filter(s => callerAgency && s.agencyId && s.agencyId !== callerAgency)
+        : [];
+
+    let referralHistory: InterAgencyReferral[];
+    if (isAdmin || caller.role === 'claimant') {
+      referralHistory = await this.referralRepo.find({
+        where: { personId: ben.person_id },
+        order: { createdAt: 'DESC' },
+        relations: ['fromAgency', 'toAgency', 'case'],
+      });
+    } else if (callerAgency) {
+      referralHistory = await this.referralRepo.find({
+        where: [
+          { personId: ben.person_id, fromAgencyId: callerAgency },
+          { personId: ben.person_id, toAgencyId: callerAgency },
+        ],
+        order: { createdAt: 'DESC' },
+        relations: ['fromAgency', 'toAgency', 'case'],
+      });
+    } else {
+      referralHistory = [];
+    }
+
+    return {
+      cardCode,
+      person: { id: ben.person_id, firstName: ben.first_name, surname: ben.surname },
+      servicesRendered,
+      servicesFromOtherAgencies,
+      referralHistory,
+      sharingConsentActive,
+    };
   }
 
   async autoLogFromIntervention(intervention: { caseId: string; serviceName: string; deliveryDate?: string; amount?: number }) {

@@ -1,5 +1,6 @@
-import { Entity, Column } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../common/base.entity';
+import { Agency } from '../agencies/agency.entity';
 
 @Entity('access_card_services')
 export class AccessCardService extends BaseEntity {
@@ -18,6 +19,13 @@ export class AccessCardService extends BaseEntity {
 
   @Column({ name: 'agency', nullable: true })
   agency?: string;
+
+  @Column({ name: 'agency_id', nullable: true })
+  agencyId?: string;
+
+  @ManyToOne(() => Agency, { nullable: true })
+  @JoinColumn({ name: 'agency_id' })
+  agencyRef?: Agency;
 
   @Column({ name: 'worker_name_sign', nullable: true })
   workerNameSign?: string;

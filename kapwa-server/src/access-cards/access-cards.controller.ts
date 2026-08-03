@@ -53,6 +53,13 @@ export class AccessCardsController {
     });
   }
 
+  @Get(':code/summary')
+  @Roles('admin', 'social_worker', 'claimant', 'coordinator')
+  @ApiOperation({ summary: 'Get agency view of a card: rendered, other-agency, referrals' })
+  async agencySummary(@Param('code') code: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.getAgencySummary(code, req.user);
+  }
+
   @Get(':cardCode')
   @Roles('admin', 'social_worker', 'claimant', 'coordinator')
   @ApiOperation({ summary: 'Get services by card code' })
