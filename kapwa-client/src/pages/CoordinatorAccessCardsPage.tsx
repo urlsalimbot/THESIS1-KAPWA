@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,7 +155,9 @@ function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () =
   const [category, setCategory] = useState('community_service');
   const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [remarks, setRemarks] = useState('');
+  const [agencyId, setAgencyId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(queryKeys.agencies.list());
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -164,6 +168,7 @@ function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () =
         serviceRendered: remarks,
         serviceDate,
         category,
+        agencyId,
       });
       onLogged();
     } catch {}
@@ -197,6 +202,20 @@ function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () =
               <label className="text-xs font-medium text-muted-foreground">Date *</label>
               <Input type="date" value={serviceDate} onChange={e => setServiceDate(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Agency *</label>
+            <select
+              value={agencyId}
+              onChange={e => setAgencyId(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              required
+            >
+              <option value="">Select agency...</option>
+              {(agencies || []).map(a => (
+                <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Remarks *</label>
