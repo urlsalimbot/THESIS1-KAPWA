@@ -259,5 +259,50 @@ describe('AccessCardsService', () => {
       expect(result.servicesFromOtherAgencies).toEqual([]);
       expect(referralRepoMock.find).not.toHaveBeenCalled();
     });
+
+    it('claimant whose personId matches the card person sees servicesRendered', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue(null);
+      repoMock.find.mockResolvedValue([
+        { id: 's1', agencyId: 'ag-1' },
+        { id: 's2', agencyId: 'ag-2' },
+      ]);
+
+      const claimant = { id: 'u3', role: 'claimant', personId: 'p1' } as any;
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', claimant);
+
+      expect(result.servicesRendered.map((s: any) => s.id)).toEqual(['s1', 's2']);
+      expect(result.servicesFromOtherAgencies).toEqual([]);
+    });
+
+    it('claimant whose personId differs gets masked servicesRendered', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue(null);
+      repoMock.find.mockResolvedValue([
+        { id: 's1', agencyId: 'ag-1' },
+        { id: 's2', agencyId: 'ag-2' },
+      ]);
+
+      const claimant = { id: 'u3', role: 'claimant', personId: 'p9' } as any;
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', claimant);
+
+      expect(result.servicesRendered).toEqual([]);
+      expect(result.servicesFromOtherAgencies).toEqual([]);
+    });
+
+    it('claimant with no personId gets masked servicesRendered', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue(null);
+      repoMock.find.mockResolvedValue([
+        { id: 's1', agencyId: 'ag-1' },
+        { id: 's2', agencyId: 'ag-2' },
+      ]);
+
+      const claimant = { id: 'u3', role: 'claimant' } as any;
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', claimant);
+
+      expect(result.servicesRendered).toEqual([]);
+      expect(result.servicesFromOtherAgencies).toEqual([]);
+    });
   });
 });

@@ -130,6 +130,8 @@ export class AccessCardsService {
     const sharingConsentActive = !!consent;
     const isAdmin = caller.role === 'admin';
     const callerAgency = caller.agencyId;
+    const isOwnPerson =
+      caller.role === 'claimant' && !!caller.personId && caller.personId === ben.person_id;
 
     const services = await this.repo.find({
       where: { accessCardCode: cardCode },
@@ -137,9 +139,12 @@ export class AccessCardsService {
       relations: ['agencyRef'],
     });
 
-    const servicesRendered = services.filter(s =>
-      isAdmin || !callerAgency || s.agencyId === callerAgency || !s.agencyId,
-    );
+    const servicesRendered =
+      caller.role === 'claimant' && !isOwnPerson
+        ? []
+        : services.filter(s =>
+            isAdmin || !callerAgency || s.agencyId === callerAgency || !s.agencyId,
+          );
 
     const servicesFromOtherAgencies =
       sharingConsentActive || isAdmin
@@ -148,7 +153,6 @@ export class AccessCardsService {
 
     let referralHistory: InterAgencyReferral[];
     if (caller.role === 'claimant') {
-      const isOwnPerson = !!caller.personId && caller.personId === ben.person_id;
       referralHistory = isOwnPerson
         ? await this.referralRepo.find({
             where: { personId: ben.person_id },
