@@ -155,6 +155,7 @@ describe('InterAgencyReferralsService', () => {
         innerJoin: jest.fn().mockReturnThis(),
         leftJoin: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
+        distinct: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -187,6 +188,31 @@ describe('InterAgencyReferralsService', () => {
     it('no agencyId resolves [] without throwing', async () => {
       await expect(service.searchBeneficiaries('juan', agencyUser('u1', ''))).resolves.toEqual([]);
       expect(repoMock.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('empty query resolves [] without invoking the query builder', async () => {
+      const result = await service.searchBeneficiaries('   ', agencyUser('u1', 'ag-rhu'));
+      expect(result).toEqual([]);
+      expect(repoMock.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('escapes ilike wildcards, dedupes via distinct, and null-safes the full name', async () => {
+      const qb = qbMock();
+      qb.getRawMany.mockResolvedValue([]);
+      repoMock.createQueryBuilder = jest.fn().mockReturnValue(qb);
+
+      await service.searchBeneficiaries('100%_x', { id: 'u-admin', role: 'admin' } as any);
+
+      expect(qb.distinct).toHaveBeenCalled();
+      expect(qb.where).toHaveBeenCalledWith(
+        expect.stringContaining("ESCAPE '\\'"),
+        { q: '%100\\%\\_x%' },
+      );
+      expect(qb.addSelect).toHaveBeenCalledWith(
+        expect.stringContaining('COALESCE(p.first_name'),
+        'full_name',
+      );
+      expect(qb.addSelect).toHaveBeenCalledWith('p.surname', 'surname');
     });
 
     it('admin caller searches referral-derived beneficiaries without agency scoping', async () => {
