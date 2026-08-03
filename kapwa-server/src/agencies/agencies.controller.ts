@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -24,7 +24,7 @@ export class AgenciesController {
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Get an agency by id' })
-  async findById(@Param('id') id: string) {
+  async findById(@Param('id', new ParseUUIDPipe()) id: string) {
     const agency = await this.svc.findById(id);
     if (!agency) throw new NotFoundException('Agency not found');
     return agency;
