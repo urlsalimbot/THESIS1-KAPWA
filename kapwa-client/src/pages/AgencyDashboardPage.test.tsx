@@ -61,4 +61,11 @@ describe('AgencyDashboardPage', () => {
     expect(await screen.findByText('Medical follow-up')).toBeTruthy();
     expect(screen.getByText('Referred')).toBeTruthy();
   });
+
+  it('renders an error message when the dashboard fetch fails', async () => {
+    mockApiGet.mockReset();
+    mockApiGet.mockRejectedValue(new Error('network down'));
+    renderWithSWR(<AgencyDashboardPage />);
+    expect(await screen.findByText('Failed to load dashboard')).toBeTruthy();
+  });
 });
