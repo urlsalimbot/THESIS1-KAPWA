@@ -27,6 +27,7 @@ import { CoordinatorReferralFormPage } from './pages/CoordinatorReferralFormPage
 import { CoordinatorReferralListPage } from './pages/CoordinatorReferralListPage';
 import { ReferralReviewPage } from './pages/ReferralReviewPage';
 import { ReferralsPage } from './pages/ReferralsPage';
+import { InterAgencyReferralsPage } from './pages/InterAgencyReferralsPage';
 import { AccessCardViewPage } from './pages/AccessCardViewPage';
 import { CoordinatorAccessCardsPage } from './pages/CoordinatorAccessCardsPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
@@ -111,6 +112,7 @@ const router = createBrowserRouter([
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },
+  { path: '/intake/inter-agency-referrals', element: <Private roles={['admin','social_worker']}><InterAgencyReferralsPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },
