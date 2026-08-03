@@ -43,6 +43,9 @@ export class User extends BaseEntity {
   @Column({ name: 'assigned_barangay', nullable: true })
   assignedBarangay?: string;
 
+  @Column({ name: 'agency_id', nullable: true })
+  agencyId?: string;
+
   @Column({ name: 'permitted_barangays', type: 'text', array: true, default: [] })
   permittedBarangays!: string[];
 
