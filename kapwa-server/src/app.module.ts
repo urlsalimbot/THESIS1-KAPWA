@@ -28,6 +28,7 @@ import { IntakeModule } from './intake/intake.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AgenciesModule } from './agencies/agencies.module';
+import { InterAgencyReferralsModule } from './inter-agency-referrals/inter-agency-referrals.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { CsrfGuard } from './common/csrf.guard';
@@ -85,6 +86,7 @@ import { AppController } from './app.controller';
     ReferralsModule,
     AnnouncementsModule,
     AgenciesModule,
+    InterAgencyReferralsModule,
   ],
   controllers: [AppController],
   providers: [
