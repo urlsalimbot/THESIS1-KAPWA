@@ -5,6 +5,18 @@ import { expect, vi } from 'vitest';
 
 expect.extend(axeMatchers);
 
+// jsdom lacks pointer capture APIs used by Radix (Select/Dropdown) on pointer events
+if (typeof Element !== 'undefined' && !Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.setPointerCapture = () => {};
+  Element.prototype.releasePointerCapture = () => {};
+}
+
+// jsdom lacks scrollIntoView; Radix Select calls it when opening
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Mock localStorage for all environments (Node 26 + jsdom compat)
 const store: Record<string, string> = {};
 const mockStorage: Storage = {

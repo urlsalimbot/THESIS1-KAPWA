@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 
 const { mockGetCurrentUser } = vi.hoisted(() => ({
@@ -81,5 +81,35 @@ describe('ProtectedRoute', () => {
     await waitFor(() => {
       expect(screen.queryByText('Protected')).toBeNull();
     });
+  });
+
+  it('redirects agency_staff to /agency/dashboard when hitting a guarded route not in their roles', async () => {
+    localStorage.setItem('kapwa_token', 'test');
+    mockGetCurrentUser.mockResolvedValue({
+      id: '1',
+      email: 'staff@norzagaray.test',
+      fullName: 'Dra. RHU Staff',
+      role: 'agency_staff',
+      agencyId: '20000000-0000-0000-0000-000000000009',
+    });
+    render(
+      <MemoryRouter initialEntries={['/cases']}>
+        <Routes>
+          <Route
+            path="/cases"
+            element={
+              <ProtectedRoute roles={['admin', 'social_worker', 'coordinator']}>
+                <div>Protected Cases</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/agency/dashboard" element={<div>Agency Dashboard</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await waitFor(() => {
+      expect(screen.queryByText('Protected Cases')).toBeNull();
+    });
+    expect(await screen.findByText('Agency Dashboard')).toBeTruthy();
   });
 });

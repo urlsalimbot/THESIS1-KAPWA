@@ -5,13 +5,14 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { AgencyReferralsPage } from './AgencyReferralsPage';
 
-const { mockApiGet, mockApiPatch } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPatch, mockApiPost } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPatch: vi.fn(),
+  mockApiPost: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
-  api: { get: (...args: unknown[]) => mockApiGet(...args), post: vi.fn(), patch: (...args: unknown[]) => mockApiPatch(...args), put: vi.fn(), del: vi.fn() },
+  api: { get: (...args: unknown[]) => mockApiGet(...args), post: (...args: unknown[]) => mockApiPost(...args), patch: (...args: unknown[]) => mockApiPatch(...args), put: vi.fn(), del: vi.fn() },
 }));
 
 vi.mock('../lib/auth-context', () => ({
@@ -30,8 +31,14 @@ describe('AgencyReferralsPage', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();
     mockApiPatch.mockReset();
+    mockApiPost.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
+      if (k.includes('beneficiary-search')) {
+        return Promise.resolve([
+          { id: 'b1', fullName: 'Juan Santos', controlNo: 'KAPWA-C-1', barangay: 'Bigte' },
+        ]);
+      }
       if (k.includes('inter-agency-referrals')) {
         return Promise.resolve([
           {
@@ -41,6 +48,14 @@ describe('AgencyReferralsPage', () => {
             fromAgency: { id: 'ag-mswdo', code: 'MSWDO', name: 'Municipal Social Welfare' },
             toAgency: { id: 'ag-rhu', code: 'RHU', name: 'Rural Health Unit - Norzagaray' },
             person: { id: 'p1', firstName: 'Juan', surname: 'Santos' },
+          },
+          {
+            id: 'r2', personId: 'p2', fromAgencyId: 'ag-mswdo', toAgencyId: 'ag-rhu',
+            status: 'actioned', reason: 'Physical therapy', legalBasisCode: 'public_authority_sec13',
+            createdAt: '2026-08-01T00:00:00.000Z',
+            fromAgency: { id: 'ag-mswdo', code: 'MSWDO', name: 'Municipal Social Welfare' },
+            toAgency: { id: 'ag-rhu', code: 'RHU', name: 'Rural Health Unit - Norzagaray' },
+            person: { id: 'p2', firstName: 'Ana', surname: 'Dizon' },
           },
         ]);
       }
@@ -62,5 +77,49 @@ describe('AgencyReferralsPage', () => {
     const receiveButton = await screen.findByRole('button', { name: 'Receive' });
     await user.click(receiveButton);
     expect(mockApiPatch).toHaveBeenCalledWith('/inter-agency-referrals/r1/receive', undefined);
+  });
+
+  it('create flow: searches scoped beneficiaries, selects one, and posts a referral', async () => {
+    const user = userEvent.setup();
+    renderWithSWR(<AgencyReferralsPage />);
+
+    await user.selectOptions(await screen.findByLabelText('To Agency *'), 'MSWDO — Municipal Social Welfare');
+
+    await user.type(screen.getByPlaceholderText('Search beneficiary by name...'), 'juan');
+    const resultButton = await screen.findByRole('button', { name: /Juan Santos/ }, { timeout: 3000 });
+    await user.click(resultButton);
+
+    await user.type(await screen.findByLabelText('Reason *'), 'Medical follow-up');
+    await user.click(screen.getByRole('button', { name: 'Create Referral' }));
+
+    await vi.waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/inter-agency-referrals',
+        expect.objectContaining({
+          beneficiaryId: 'b1',
+          toAgencyId: 'ag-mswdo',
+          reason: 'Medical follow-up',
+        }),
+      );
+    });
+  });
+
+  it('close flow: actioned referral is closed with an outcome via PATCH', async () => {
+    const user = userEvent.setup();
+    renderWithSWR(<AgencyReferralsPage />);
+
+    expect(await screen.findByText('Physical therapy')).toBeTruthy();
+    const closeButton = await screen.findByRole('button', { name: 'Close' });
+    expect(closeButton).toBeDisabled();
+
+    await user.type(screen.getByPlaceholderText('Outcome'), 'Completed');
+    expect(closeButton).not.toBeDisabled();
+    await user.click(closeButton);
+
+    await vi.waitFor(() => {
+      expect(mockApiPatch).toHaveBeenCalledWith('/inter-agency-referrals/r2/close', {
+        outcome: 'Completed',
+      });
+    });
   });
 });
