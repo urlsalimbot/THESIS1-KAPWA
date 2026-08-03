@@ -26,6 +26,7 @@ const roleRedirectMap: Record<string, string> = {
   claimant: '/my-dashboard',
   mayor: '/reports',
   auditor: '/audit-logs',
+  agency_staff: '/agency/dashboard',
 };
 
 export function LoginPage() {
