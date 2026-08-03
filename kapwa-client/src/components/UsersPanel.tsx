@@ -427,7 +427,10 @@ export default function UsersPanel() {
                 <Input id="panel-barangays" value={formPermittedBarangays} onChange={e => setFormPermittedBarangays(e.target.value)} placeholder="Norzagaray, Angat, San Jose" />
               </div>
               <div className="md:col-span-2 flex justify-end">
-                <Button type="submit" disabled={formSubmitting}>
+                <Button
+                  type="submit"
+                  disabled={formSubmitting || (formRole === 'agency_staff' && !createAgencyId)}
+                >
                   {formSubmitting ? 'Creating...' : 'Create User'}
                 </Button>
               </div>
