@@ -68,7 +68,7 @@ export class AccessCardsController {
   }
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'List all access card services' })
   async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
