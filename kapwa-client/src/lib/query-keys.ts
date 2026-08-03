@@ -75,6 +75,16 @@ export const queryKeys = {
     print: (id: string) => memo(`accessCards.print.${id}`, () => ['access-cards', 'print', id] as const),
     summary: (benId: string) => memo(`accessCards.summary.${benId}`, () => ['access-cards', 'beneficiary', benId, 'card', 'summary'] as const),
     detail: (benId: string) => memo(`accessCards.detail.${benId}`, () => ['access-cards', 'beneficiary', benId, 'card'] as const),
+    agencySummary: (code: string) =>
+      memo(`accessCards.agencySummary.${code}`, () => ['access-cards', code, 'summary'] as const),
+  },
+  agencies: {
+    all: ['agencies'] as const,
+    list: () => memo('agencies.list', () => ['agencies'] as const),
+  },
+  interAgencyReferrals: {
+    all: ['inter-agency-referrals'] as const,
+    inbox: () => memo('iar.inbox', () => ['inter-agency-referrals', 'inbox'] as const),
   },
   programs: {
     all: ['programs'] as const,
