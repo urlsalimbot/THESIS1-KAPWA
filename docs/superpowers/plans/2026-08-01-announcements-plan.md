@@ -26,7 +26,7 @@
 
 **Produces:** Running `announcements` table in PostgreSQL with all columns.
 
-- [ ] **Step 1: Write the migration file**
+- [x] **Step 1: Write the migration file**
 
 ```typescript
 import { MigrationInterface, QueryRunner } from 'typeorm';
@@ -62,19 +62,18 @@ export class CreateAnnouncements20260801000000 implements MigrationInterface {
 }
 ```
 
-- [ ] **Step 2: Start the server to verify migration runs**
+- [x] **Step 2: Verify migration runs**
 
-Run: `cd kapwa-server && npm run start:dev`
-Expected: Server starts without migration errors. Check logs for migration success.
+Ran `npm run migration:run` — executed successfully (`Migration CreateAnnouncements20260801000000 has been executed successfully`).
 
-- [ ] **Step 3: Verify table exists in the database**
+- [x] **Step 3: Verify table exists in the database**
 
 Run: `docker exec kapwa-db-dev psql -U kapwa -d kapwa -c "\d announcements"`
 Expected: Table schema output matches the CREATE TABLE statement.
 
-- [ ] **Step 4: Stop the dev server**
+- [x] **Step 4: Stop the dev server** (no dev server was running; DB container kapwa-db-dev started and left running)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit** (9637d57)
 
 ```bash
 git add kapwa-server/src/database/migrations/20260801000000-CreateAnnouncements.ts
