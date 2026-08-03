@@ -96,7 +96,10 @@ export class InterAgencyReferralsService {
   }
 
   async searchBeneficiaries(q: string, caller: User) {
+    if (!q.trim()) return [];
     if (caller.role !== 'admin' && !caller.agencyId) return [];
+
+    const escaped = q.trim().replace(/[%_]/g, (m) => '\\' + m);
 
     const qb = this.repo
       .createQueryBuilder('r')
@@ -104,10 +107,18 @@ export class InterAgencyReferralsService {
       .innerJoin(Person, 'p', 'p.id = b.person_id')
       .leftJoin(Household, 'h', 'h.id = b.household_id')
       .select('b.id', 'id')
-      .addSelect(`TRIM(CONCAT(p.first_name, ' ', p.surname))`, 'full_name')
+      .distinct()
+      .addSelect(
+        `TRIM(CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.surname, '')))`,
+        'full_name',
+      )
       .addSelect(`COALESCE(h.access_card_code, p.philsys_number)`, 'control_no')
       .addSelect('h.barangay', 'barangay')
-      .where('(p.first_name ILIKE :q OR p.surname ILIKE :q)', { q: `%${q}%` })
+      .addSelect('p.surname', 'surname')
+      .where(
+        `(p.first_name ILIKE :q ESCAPE '\\' OR p.surname ILIKE :q ESCAPE '\\')`,
+        { q: `%${escaped}%` },
+      )
       .orderBy('p.surname', 'ASC')
       .limit(10);
 
