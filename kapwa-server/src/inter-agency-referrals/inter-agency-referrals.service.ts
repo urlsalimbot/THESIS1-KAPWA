@@ -46,7 +46,7 @@ export class InterAgencyReferralsService {
   ) {}
 
   async create(dto: CreateInterAgencyReferralInput, caller: User) {
-    if (caller.role !== 'admin' && !caller.agencyId) {
+    if (!caller.agencyId) {
       throw new ForbiddenException('Your account is not linked to an agency');
     }
     const fromAgencyId = caller.agencyId as string;

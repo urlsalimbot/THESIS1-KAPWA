@@ -147,7 +147,16 @@ export class AccessCardsService {
         : [];
 
     let referralHistory: InterAgencyReferral[];
-    if (isAdmin || caller.role === 'claimant') {
+    if (caller.role === 'claimant') {
+      const isOwnPerson = !!caller.personId && caller.personId === ben.person_id;
+      referralHistory = isOwnPerson
+        ? await this.referralRepo.find({
+            where: { personId: ben.person_id },
+            order: { createdAt: 'DESC' },
+            relations: ['fromAgency', 'toAgency', 'case'],
+          })
+        : [];
+    } else if (isAdmin) {
       referralHistory = await this.referralRepo.find({
         where: { personId: ben.person_id },
         order: { createdAt: 'DESC' },

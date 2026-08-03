@@ -216,5 +216,48 @@ describe('AccessCardsService', () => {
       repoMock.query.mockResolvedValue([]);
       await expect(service.getAgencySummary('NORZ-AC-0000', admin)).rejects.toThrow('No access card found for this code');
     });
+
+    it('claimant whose personId matches the card person sees referral history', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue(null);
+      repoMock.find.mockResolvedValue([]);
+      referralRepoMock.find.mockResolvedValue([{ id: 'r1', fromAgencyId: 'ag-1', toAgencyId: 'ag-2' }]);
+
+      const claimant = { id: 'u3', role: 'claimant', personId: 'p1' } as any;
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', claimant);
+
+      expect(result.referralHistory).toEqual([{ id: 'r1', fromAgencyId: 'ag-1', toAgencyId: 'ag-2' }]);
+      expect(result.servicesFromOtherAgencies).toEqual([]);
+      expect(referralRepoMock.find).toHaveBeenCalledTimes(1);
+    });
+
+    it('claimant whose personId differs gets masked referral history and no other-agency services', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue(null);
+      repoMock.find.mockResolvedValue([
+        { id: 's1', agencyId: 'ag-1' },
+        { id: 's2', agencyId: 'ag-2' },
+      ]);
+
+      const claimant = { id: 'u3', role: 'claimant', personId: 'p9' } as any;
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', claimant);
+
+      expect(result.referralHistory).toEqual([]);
+      expect(result.servicesFromOtherAgencies).toEqual([]);
+      expect(referralRepoMock.find).not.toHaveBeenCalled();
+    });
+
+    it('claimant with no personId gets masked referral history', async () => {
+      repoMock.query.mockResolvedValue([{ beneficiary_id: 'b1', person_id: 'p1', first_name: 'Juan', surname: 'Dela Cruz' }]);
+      consentRepoMock.findOne.mockResolvedValue(null);
+      repoMock.find.mockResolvedValue([]);
+
+      const claimant = { id: 'u3', role: 'claimant' } as any;
+      const result = await service.getAgencySummary('NORZ-AC-2026-0042', claimant);
+
+      expect(result.referralHistory).toEqual([]);
+      expect(result.servicesFromOtherAgencies).toEqual([]);
+      expect(referralRepoMock.find).not.toHaveBeenCalled();
+    });
   });
 });

@@ -44,6 +44,12 @@ describe('InterAgencyReferralsService', () => {
       await expect(service.create({ toAgencyId: 'ag-2', reason: 'x', legalBasisCode: 'c' } as any, agencyUser('u1', ''))).rejects.toThrow('Your account is not linked to an agency');
     });
 
+    it('rejects admin with no linked agency', async () => {
+      await expect(
+        service.create({ toAgencyId: 'ag-2', reason: 'x', legalBasisCode: 'c' } as any, { id: 'u-admin', role: 'admin' } as any),
+      ).rejects.toThrow('Your account is not linked to an agency');
+    });
+
     it('rejects unknown target agency with 422', async () => {
       agencyRepoMock.findOne.mockResolvedValue(null);
       await expect(

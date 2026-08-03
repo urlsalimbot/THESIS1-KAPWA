@@ -71,10 +71,12 @@ function ReferralCard({
   referral,
   myAgencyId,
   onTransition,
+  disabled,
 }: {
   referral: InterAgencyReferral;
   myAgencyId?: string;
   onTransition: (id: string, action: string, body?: Record<string, string>) => Promise<void>;
+  disabled?: boolean;
 }) {
   const [outcome, setOutcome] = useState('');
   const isReceiver = referral.toAgencyId === myAgencyId;
@@ -114,7 +116,7 @@ function ReferralCard({
       )}
       {canReceive && (
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => onTransition(referral.id, 'receive')}>
+          <Button size="sm" onClick={() => onTransition(referral.id, 'receive')} disabled={disabled}>
             Receive
           </Button>
           <Button
@@ -125,13 +127,14 @@ function ReferralCard({
                 declinedReason: 'Unable to accommodate',
               })
             }
+            disabled={disabled}
           >
             Decline
           </Button>
         </div>
       )}
       {canAction && (
-        <Button size="sm" onClick={() => onTransition(referral.id, 'action')}>
+        <Button size="sm" onClick={() => onTransition(referral.id, 'action')} disabled={disabled}>
           Mark Actioned
         </Button>
       )}
@@ -146,7 +149,7 @@ function ReferralCard({
           <Button
             size="sm"
             onClick={() => onTransition(referral.id, 'close', { outcome })}
-            disabled={!outcome.trim()}
+            disabled={disabled || !outcome.trim()}
           >
             Close
           </Button>
@@ -325,6 +328,8 @@ export function InterAgencyReferralsPage() {
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
   const [filter, setFilter] = useState<'all' | 'received' | 'sent'>('all');
+  const [transitioning, setTransitioning] = useState(false);
+  const [transitionError, setTransitionError] = useState('');
 
   const { data: referrals, isLoading } = useSWR<InterAgencyReferral[]>(
     queryKeys.interAgencyReferrals.inbox(),
@@ -340,8 +345,16 @@ export function InterAgencyReferralsPage() {
   });
 
   async function transition(id: string, action: string, body?: Record<string, string>) {
-    await api.patch(`/inter-agency-referrals/${id}/${action}`, body);
-    await mutate(queryKeys.interAgencyReferrals.inbox());
+    setTransitioning(true);
+    setTransitionError('');
+    try {
+      await api.patch(`/inter-agency-referrals/${id}/${action}`, body);
+      await mutate(queryKeys.interAgencyReferrals.inbox());
+    } catch (err: any) {
+      setTransitionError(err?.message || 'Failed to update referral');
+    } finally {
+      setTransitioning(false);
+    }
   }
 
   if (isLoading) {
@@ -376,12 +389,14 @@ export function InterAgencyReferralsPage() {
         ))}
       </div>
 
+      {transitionError && <p className="text-xs text-destructive mb-2">{transitionError}</p>}
+
       {visible.length === 0 ? (
         <EmptyState variant="no-data" />
       ) : (
         <div className="space-y-3">
           {visible.map(r => (
-            <ReferralCard key={r.id} referral={r} myAgencyId={myAgencyId} onTransition={transition} />
+            <ReferralCard key={r.id} referral={r} myAgencyId={myAgencyId} onTransition={transition} disabled={transitioning} />
           ))}
         </div>
       )}
