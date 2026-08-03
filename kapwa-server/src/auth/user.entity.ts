@@ -7,7 +7,8 @@ export enum UserRole {
   COORDINATOR = 'coordinator',
   CLAIMANT = 'claimant',
   MAYOR = 'mayor',
-  AUDITOR = 'auditor'
+  AUDITOR = 'auditor',
+  AGENCY_STAFF = 'agency_staff'
 }
 
 @Entity('users')
