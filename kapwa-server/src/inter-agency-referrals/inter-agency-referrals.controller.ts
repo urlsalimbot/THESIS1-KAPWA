@@ -30,14 +30,14 @@ export class InterAgencyReferralsController {
   constructor(private readonly svc: InterAgencyReferralsService) {}
 
   @Get('inbox')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'List referrals for the caller agency' })
   async inbox(@Request() req: AuthenticatedRequest) {
     return this.svc.findInbox(req.user);
   }
 
   @Get('person/:personId')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'List referrals for a person' })
   async byPerson(
     @Param('personId', new ParseUUIDPipe()) personId: string,
@@ -47,7 +47,7 @@ export class InterAgencyReferralsController {
   }
 
   @Post()
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Create an inter-agency referral' })
   async create(
     @Body(new ZodPipe(CreateInterAgencyReferralSchema)) dto: any,
@@ -57,21 +57,21 @@ export class InterAgencyReferralsController {
   }
 
   @Patch(':id/receive')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Mark referral as received' })
   async receive(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.receive(id, req.user);
   }
 
   @Patch(':id/action')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Mark referral as actioned' })
   async action(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.action(id, req.user);
   }
 
   @Patch(':id/close')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Close referral with outcome' })
   async close(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -82,7 +82,7 @@ export class InterAgencyReferralsController {
   }
 
   @Patch(':id/decline')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Decline a referred referral' })
   async decline(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -93,7 +93,7 @@ export class InterAgencyReferralsController {
   }
 
   @Post(':id/promote-to-case')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Promote a referral into a case' })
   async promoteToCase(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.promoteToCase(id, req.user);

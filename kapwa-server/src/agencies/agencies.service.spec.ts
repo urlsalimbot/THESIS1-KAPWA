@@ -53,4 +53,10 @@ describe('AgenciesService', () => {
     expect(result).toEqual(expect.objectContaining({ id: 'a2', code: 'NGO1', name: 'NGO One', isActive: true }));
     expect(repoMock.create).toHaveBeenCalledWith(expect.objectContaining({ code: 'NGO1' }));
   });
+
+  it('findById returns null when missing', async () => {
+    repoMock.findOne.mockResolvedValue(null);
+    const result = await service.findById('nope');
+    expect(result).toBeNull();
+  });
 });

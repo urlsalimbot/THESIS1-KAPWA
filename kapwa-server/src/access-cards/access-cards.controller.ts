@@ -32,14 +32,14 @@ export class AccessCardsController {
   }
 
   @Get('beneficiary/:id/card')
-  @Roles('admin', 'social_worker', 'claimant', 'coordinator')
+  @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Get beneficiary card details' })
   async findBeneficiaryCard(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.svc.findBeneficiaryCard(id);
   }
 
   @Post('log')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Log a service to an access card' })
   async logService(
     @Body(new ZodPipe(LogServiceSchema)) body: { accessCardCode: string; serviceRendered: string; serviceDate: string; cost?: number; agency?: string; workerNameSign?: string; category?: string },
@@ -54,21 +54,21 @@ export class AccessCardsController {
   }
 
   @Get(':code/summary')
-  @Roles('admin', 'social_worker', 'claimant', 'coordinator')
+  @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Get agency view of a card: rendered, other-agency, referrals' })
   async agencySummary(@Param('code') code: string, @Request() req: AuthenticatedRequest) {
     return this.svc.getAgencySummary(code, req.user);
   }
 
   @Get(':cardCode')
-  @Roles('admin', 'social_worker', 'claimant', 'coordinator')
+  @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Get services by card code' })
   async findByCard(@Param('cardCode') cardCode: string) {
     return this.svc.findByCard(cardCode);
   }
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'List all access card services' })
   async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
