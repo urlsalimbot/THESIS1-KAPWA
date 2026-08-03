@@ -5,12 +5,14 @@ import { IrfExportService } from './irf-export.service';
 import { IrfService } from './irf.service';
 import { IrfAuditService } from './irf-audit.service';
 import { IrfCase } from './irf-case.entity';
+import { AgenciesService } from '../agencies/agencies.service';
 
 describe('IrfExportService', () => {
   let service: IrfExportService;
   let irfServiceMock: any;
   let auditMock: any;
   let irfRepoMock: any;
+  let agenciesServiceMock: any;
 
   const sampleCaseData = {
     case: {
@@ -35,6 +37,8 @@ describe('IrfExportService', () => {
     irfServiceMock = { exportWcpd: jest.fn() };
     auditMock = { logAccess: jest.fn() };
     irfRepoMock = { findOne: jest.fn() };
+    agenciesServiceMock = { findByCode: jest.fn() };
+    agenciesServiceMock.findByCode.mockResolvedValue({ name: 'Municipal Social Welfare and Development Office' });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -42,6 +46,7 @@ describe('IrfExportService', () => {
         { provide: getRepositoryToken(IrfCase), useValue: irfRepoMock },
         { provide: IrfService, useValue: irfServiceMock },
         { provide: IrfAuditService, useValue: auditMock },
+        { provide: AgenciesService, useValue: agenciesServiceMock },
       ],
     }).compile();
     service = module.get<IrfExportService>(IrfExportService);

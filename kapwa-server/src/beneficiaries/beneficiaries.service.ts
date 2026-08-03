@@ -31,7 +31,7 @@ export class BeneficiariesService {
     gender: string; dob: Date; address?: string; phone?: string;
     philsysNumber?: string; householdId?: string;
   }) {
-    const person = this.personRepo.create({
+    const personData = {
       surname: data.surname,
       firstName: data.firstName,
       middleName: data.middleName,
@@ -40,8 +40,19 @@ export class BeneficiariesService {
       address: data.address,
       phone: data.phone,
       philsysNumber: data.philsysNumber,
-    });
-    const savedPerson = await this.personRepo.save(person);
+    };
+
+    let savedPerson: Person;
+    if (data.philsysNumber) {
+      const existing = await this.personRepo.findOne({ where: { philsysNumber: data.philsysNumber } });
+      if (existing) {
+        savedPerson = existing;
+      } else {
+        savedPerson = await this.personRepo.save(this.personRepo.create(personData));
+      }
+    } else {
+      savedPerson = await this.personRepo.save(this.personRepo.create(personData));
+    }
 
     const ben = this.benRepo.create({
       personId: savedPerson.id,
