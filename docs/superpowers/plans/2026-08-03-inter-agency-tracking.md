@@ -2852,3 +2852,5 @@ git commit -m "feat: show agency-scoped service and referral history on access c
 **Placeholder scan:** no TBD/TODO; every step has concrete code or commands.
 
 **Type consistency:** `Agency` (`id/code/name/type`), `InterAgencyReferralStatus`, `getAgencySummary` return shape, `queryKeys.agencies.list()` → `['agencies']` and `queryKeys.interAgencyReferrals.inbox()` → `['inter-agency-referrals','inbox']` are identical across server and client tasks. `useDebouncedSearch` result `id` = beneficiary id is mapped to `beneficiaryId` in the create payload, matching the server DTO's `beneficiaryId` field (resolved to `person_id` server-side).
+
+**Known limitation — inter_agency_sharing consent has no grant path:** the "Services From Other Agencies" section of the access card is effectively MSWDO/admin-only until an inter-agency-sharing consent-grant flow ships. No consent writer in the codebase currently emits `purpose: 'inter_agency_sharing'`, so `sharingConsentActive` is always `false` and `servicesFromOtherAgencies` stays `[]` for agency staff. Building a consent-grant flow was deliberately out of scope for this branch (documented only).
