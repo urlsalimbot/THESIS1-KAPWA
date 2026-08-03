@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { IrfCase } from './irf-case.entity';
 import { IrfService } from './irf.service';
 import { IrfAuditService } from './irf-audit.service';
+import { AgenciesService } from '../agencies/agencies.service';
 
 @Injectable()
 export class IrfExportService {
@@ -13,10 +14,18 @@ export class IrfExportService {
     @InjectRepository(IrfCase) private irfRepo: Repository<IrfCase>,
     private irfService: IrfService,
     private irfAuditService: IrfAuditService,
+    private agenciesService: AgenciesService,
   ) {}
+
+  private async agencyLabel(): Promise<string> {
+    const mswdo = await this.agenciesService.findByCode('MSWDO');
+    return mswdo?.name || 'MSWDO Norzagaray';
+  }
 
   async exportPdf(id: string, legalBasis: string, password: string, userId: string): Promise<Buffer> {
     if (!legalBasis) throw new ForbiddenException('Legal basis code is required');
+
+    const agencyName = await this.agencyLabel();
 
     const irfData = await this.irfService.exportWcpd(id, legalBasis);
     if (!irfData) throw new NotFoundException('IRF case not found');
@@ -37,7 +46,7 @@ export class IrfExportService {
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       info: {
         Title: `IRF-${irfData.case?.blotterEntryNumber || id}`,
-        Author: 'MSWDO Norzagaray',
+        Author: agencyName,
         Subject: 'Incident Report Form — WCPD Export',
       },
       userPassword: password,
@@ -54,7 +63,7 @@ export class IrfExportService {
     // Build PDF content
     // Header
     doc.fontSize(16).font('Helvetica-Bold').text('INCIDENT REPORT FORM', { align: 'center' });
-    doc.fontSize(10).font('Helvetica').text('MSWDO Norzagaray, Bulacan', { align: 'center' });
+    doc.fontSize(10).font('Helvetica').text(`${agencyName}, Bulacan`, { align: 'center' });
     doc.moveDown();
     doc.fontSize(8).text(`Generated: ${new Date().toISOString()} | Format: WCPD-EXPORT-v1`, { align: 'right' });
     doc.moveDown();
@@ -112,7 +121,7 @@ export class IrfExportService {
     doc.moveDown(0.5);
     doc.fontSize(8).font('Helvetica-Oblique')
       .text(`Exported under legal basis code: ${legalBasis}`, { align: 'center' })
-      .text(`Agency: MSWDO Norzagaray`, { align: 'center' });
+      .text(`Agency: ${agencyName}`, { align: 'center' });
 
     doc.end();
 
@@ -136,12 +145,14 @@ export class IrfExportService {
       format: 'json',
     });
 
+    const agencyName = await this.agencyLabel();
+
     return {
       exportMetadata: {
         format: 'WCPD-EXPORT-v1',
         generatedAt: new Date().toISOString(),
         legalBasis,
-        agency: 'MSWDO Norzagaray',
+        agency: agencyName,
         encrypted: false,
       },
       case: irfData.case,

@@ -8,9 +8,10 @@ import { IrfExportService } from './irf-export.service';
 import { IrfCase } from './irf-case.entity';
 import { AuthModule } from '../auth/auth.module';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
+import { AgenciesModule } from '../agencies/agencies.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([IrfCase, ConsentLedger]), AuthModule],
+  imports: [TypeOrmModule.forFeature([IrfCase, ConsentLedger]), AuthModule, AgenciesModule],
   controllers: [IrfController],
   providers: [IrfService, IrfKeyService, IrfAuditService, IrfExportService],
   exports: [IrfService, IrfExportService],
