@@ -86,6 +86,10 @@ export const queryKeys = {
     all: ['inter-agency-referrals'] as const,
     inbox: () => memo('iar.inbox', () => ['inter-agency-referrals', 'inbox'] as const),
   },
+  agencyPortal: {
+    dashboard: () => memo('agencyPortal.dashboard', () => ['agency-portal', 'dashboard'] as const),
+    profile: () => memo('agencyPortal.profile', () => ['agency-portal', 'profile'] as const),
+  },
   programs: {
     all: ['programs'] as const,
     list: () => memo('programs.list', () => ['programs'] as const),
