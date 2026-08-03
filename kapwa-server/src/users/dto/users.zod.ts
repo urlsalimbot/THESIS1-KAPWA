@@ -13,7 +13,15 @@ export const CreateUserInputSchema = z.object({
   assigned_barangay: z.string().optional(),
   permitted_barangays: z.array(z.string()).optional(),
   agency_id: z.string().uuid().optional(),
-}).strict();
+}).strict().superRefine((data, ctx) => {
+  if (data.role === 'agency_staff' && !data.agency_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['agency_id'],
+      message: 'Agency is required for agency_staff users',
+    });
+  }
+});
 
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
 
