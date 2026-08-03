@@ -4,6 +4,7 @@ import { mutate } from 'swr';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
 import { Search, Plus, RotateCcw, Pencil, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
+import { queryKeys } from '../lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,7 @@ import {
 interface AppUser {
   id: string; email: string; fullName: string; role: string;
   assignedBarangay: string; isActive: boolean; createdAt: string;
-  phone?: string; permittedBarangays?: string[];
+  phone?: string; permittedBarangays?: string[]; agencyId?: string;
 }
 
 interface UsersResponse {
@@ -42,6 +43,7 @@ const ROLE_LABELS: Record<string, string> = {
   claimant: 'Claimant',
   mayor: "Mayor's Office",
   auditor: 'Auditor',
+  agency_staff: 'Agency Staff',
 };
 
 const ROLE_OPTIONS = Object.keys(ROLE_LABELS);
@@ -95,6 +97,7 @@ export default function UsersPanel() {
   const [editRole, setEditRole] = useState('');
   const [editBarangay, setEditBarangay] = useState('');
   const [editPermittedBarangays, setEditPermittedBarangays] = useState('');
+  const [editAgencyId, setEditAgencyId] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
   // Create form state
@@ -106,11 +109,14 @@ export default function UsersPanel() {
   const [formPhone, setFormPhone] = useState('');
   const [formBarangay, setFormBarangay] = useState('');
   const [formPermittedBarangays, setFormPermittedBarangays] = useState('');
+  const [createAgencyId, setCreateAgencyId] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formSuccess, setFormSuccess] = useState('');
   const [formError, setFormError] = useState('');
 
   const effectiveRole = roleFilter === 'all' ? undefined : roleFilter;
+
+  const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(queryKeys.agencies.list());
 
   const { data: response, isLoading } = useSWR<UsersResponse>(
     ['users', search, effectiveRole, pagination.pageIndex + 1, pagination.pageSize] as const,
@@ -147,6 +153,7 @@ export default function UsersPanel() {
     setEditRole(user.role);
     setEditBarangay(user.assignedBarangay || '');
     setEditPermittedBarangays((user.permittedBarangays || []).join(', '));
+    setEditAgencyId(user.agencyId || '');
   }
 
   async function saveEdit() {
@@ -163,6 +170,7 @@ export default function UsersPanel() {
       } else {
         body.permittedBarangays = [];
       }
+      if (editAgencyId) body.agencyId = editAgencyId;
       await api.put(`/users/${editUser.id}`, body);
       setEditUser(null);
       await revalidate();
@@ -207,6 +215,7 @@ export default function UsersPanel() {
       if (formPermittedBarangays.trim()) {
         body.permitted_barangays = formPermittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
       }
+      if (createAgencyId) body.agency_id = createAgencyId;
       const data = await api.post<{ user?: { email?: string } }>('/users', body);
       setFormSuccess(`User ${data.user?.email || formEmail} created successfully`);
       setFormEmail('');
@@ -216,6 +225,7 @@ export default function UsersPanel() {
       setFormPhone('');
       setFormBarangay('');
       setFormPermittedBarangays('');
+      setCreateAgencyId('');
       await revalidate();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Failed to create user');
@@ -389,6 +399,21 @@ export default function UsersPanel() {
                   </SelectContent>
                 </Select>
               </div>
+              {formRole === 'agency_staff' && (
+                <div className="space-y-1">
+                  <Label htmlFor="panel-agency">Agency *</Label>
+                  <Select value={createAgencyId} onValueChange={setCreateAgencyId}>
+                    <SelectTrigger id="panel-agency" className="h-10">
+                      <SelectValue placeholder="Select agency..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(agencies || []).map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label htmlFor="panel-phone">Phone</Label>
                 <Input id="panel-phone" value={formPhone} onChange={e => setFormPhone(e.target.value)} placeholder="09171234567" />
@@ -454,6 +479,21 @@ export default function UsersPanel() {
                 </SelectContent>
               </Select>
             </div>
+            {editRole === 'agency_staff' && (
+              <div className="space-y-1">
+                <Label htmlFor="edit-agency">Agency</Label>
+                <Select value={editAgencyId} onValueChange={setEditAgencyId}>
+                  <SelectTrigger id="edit-agency">
+                    <SelectValue placeholder="Select agency..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(agencies || []).map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
               <Label htmlFor="edit-barangay">Assigned Barangay</Label>
               <Input id="edit-barangay" value={editBarangay} onChange={e => setEditBarangay(e.target.value)} />
