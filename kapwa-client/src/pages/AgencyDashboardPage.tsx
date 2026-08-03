@@ -20,12 +20,20 @@ interface DashboardData {
 }
 
 export function AgencyDashboardPage() {
-  const { data, isLoading } = useSWR<DashboardData>(queryKeys.agencyPortal.dashboard());
+  const { data, isLoading, error } = useSWR<DashboardData>(queryKeys.agencyPortal.dashboard());
 
   if (isLoading) {
     return (
       <PageShell title="Agency Dashboard" description="Overview of your agency's referrals">
         <CardGridSkeleton />
+      </PageShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageShell title="Agency Dashboard" description="Overview of your agency's referrals">
+        <p className="text-sm text-destructive">Failed to load dashboard</p>
       </PageShell>
     );
   }
