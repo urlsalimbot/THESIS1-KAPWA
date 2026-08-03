@@ -28,6 +28,10 @@ import { CoordinatorReferralListPage } from './pages/CoordinatorReferralListPage
 import { ReferralReviewPage } from './pages/ReferralReviewPage';
 import { ReferralsPage } from './pages/ReferralsPage';
 import { InterAgencyReferralsPage } from './pages/InterAgencyReferralsPage';
+import { AgencyDashboardPage } from './pages/AgencyDashboardPage';
+import { AgencyReferralsPage } from './pages/AgencyReferralsPage';
+import { AgencyCardActivitiesPage } from './pages/AgencyCardActivitiesPage';
+import { AgencyProfilePage } from './pages/AgencyProfilePage';
 import { AccessCardViewPage } from './pages/AccessCardViewPage';
 import { CoordinatorAccessCardsPage } from './pages/CoordinatorAccessCardsPage';
 import { AccessCardPrintView } from './pages/AccessCardPrintView';
@@ -113,6 +117,11 @@ const router = createBrowserRouter([
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },
   { path: '/intake/inter-agency-referrals', element: <Private roles={['admin','social_worker']}><InterAgencyReferralsPage /></Private> },
+  { path: '/agency', element: <Navigate to="/agency/dashboard" replace /> },
+  { path: '/agency/dashboard', element: <Private roles={['agency_staff','admin']}><AgencyDashboardPage /></Private> },
+  { path: '/agency/referrals', element: <Private roles={['agency_staff','admin']}><AgencyReferralsPage /></Private> },
+  { path: '/agency/card-activities', element: <Private roles={['agency_staff','admin']}><AgencyCardActivitiesPage /></Private> },
+  { path: '/agency/profile', element: <Private roles={['agency_staff','admin']}><AgencyProfilePage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },

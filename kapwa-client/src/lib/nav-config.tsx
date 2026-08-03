@@ -2,7 +2,7 @@ import {
   FilePlus, LayoutDashboard, Users, CheckCircle,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
   FileWarning, IdCard, ScrollText, BarChart3, History, Send, BadgeCheck,
-  Megaphone, ArrowLeftRight,
+  Megaphone, ArrowLeftRight, Building2,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -29,6 +29,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/cases', label: 'Cases', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/coordinator/access-cards', label: 'Access Cards', icon: <BadgeCheck size={20} />, roles: ['coordinator'] },
+    ],
+  },
+  {
+    label: 'Agency Portal',
+    items: [
+      { path: '/agency/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['agency_staff', 'admin'] },
+      { path: '/agency/referrals', label: 'Referrals', icon: <Send size={20} />, roles: ['agency_staff', 'admin'] },
+      { path: '/agency/card-activities', label: 'Card Activities', icon: <BadgeCheck size={20} />, roles: ['agency_staff', 'admin'] },
+      { path: '/agency/profile', label: 'Agency Profile', icon: <Building2 size={20} />, roles: ['agency_staff', 'admin'] },
     ],
   },
   {

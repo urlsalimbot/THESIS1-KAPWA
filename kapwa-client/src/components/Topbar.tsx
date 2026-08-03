@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/lib/theme-context';
 import { useAuth } from '@/lib/auth-context';
+import useSWR from 'swr';
+import { queryKeys } from '@/lib/query-keys';
 import { createBreadcrumbs } from '@/lib/breadcrumbs';
 import {
   Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink,
@@ -76,8 +78,18 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
   const isSocialWorker = user?.role === 'social_worker';
   const isCoordinator = user?.role === 'coordinator';
 
+  const isAgencyStaff = user?.role === 'agency_staff';
+  const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(
+    isAgencyStaff ? queryKeys.agencies.list() : null,
+  );
+  const agencyLabel = isAgencyStaff && user?.agencyId
+    ? (agencies || []).find(a => a.id === user.agencyId)?.name || 'Agency Staff'
+    : '';
+
   const roleLabel = user?.role
-    ? ({ admin: 'MSWDO Admin', social_worker: 'MSWDO Social Worker', coordinator: 'Brgy Coordinator', claimant: 'Claimant', mayor: "Mayor's Office", auditor: 'Auditor' } as Record<string, string>)[user.role] || user.role.replace(/_/g, ' ')
+    ? isAgencyStaff
+      ? agencyLabel
+      : ({ admin: 'MSWDO Admin', social_worker: 'MSWDO Social Worker', coordinator: 'Brgy Coordinator', claimant: 'Claimant', mayor: "Mayor's Office", auditor: 'Auditor' } as Record<string, string>)[user.role] || user.role.replace(/_/g, ' ')
     : '';
   const canIntake = isAdmin || isSocialWorker;
   const canApprove = isAdmin || isSocialWorker;
