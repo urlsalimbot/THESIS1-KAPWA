@@ -42,11 +42,16 @@ vi.mock('../lib/constants', async (importOriginal) => ({
   SERVICE_TYPES: ['FA', 'CSR'],
 }));
 
+vi.mock('../lib/auth-context', () => ({
+  useAuth: () => ({ user: { id: 'u1', email: 'worker@kapwa.ph', fullName: 'Worker One', role: 'social_worker' } }),
+}));
+
 describe('IntakePage — offline path', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     queueCalls.length = 0;
     onlineStatus = true;
+    localStorage.clear();
   });
 
   it('should export IntakePage component', async () => {
@@ -113,14 +118,7 @@ describe('IntakePage — offline path', () => {
   });
 });
 
-describe('IntakePage — validation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    queueCalls.length = 0;
-    onlineStatus = true;
-  });
-
-  async function fillBeneficiary() {
+async function fillBeneficiary() {
     fireEvent.change(screen.getByLabelText('ben-surname'), { target: { value: 'Dela Cruz' } });
     fireEvent.change(screen.getByLabelText('ben-firstName'), { target: { value: 'Juan' } });
     fireEvent.click(screen.getByRole('radio', { name: 'Male' }));
@@ -138,10 +136,19 @@ describe('IntakePage — validation', () => {
     fireEvent.change(screen.getByLabelText('ben-income'), { target: { value: '15000' } });
   }
 
-  function submitForm() {
-    const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
-    fireEvent.submit(form);
-  }
+function submitForm() {
+  const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
+  fireEvent.submit(form);
+}
+
+describe('IntakePage — validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
 
   it('shows error banner when submitting empty form', async () => {
     render(
@@ -179,6 +186,7 @@ describe('IntakePage — family member sex and dob', () => {
     vi.clearAllMocks();
     queueCalls.length = 0;
     onlineStatus = true;
+    localStorage.clear();
   });
 
   async function renderWithMember() {
@@ -277,6 +285,7 @@ describe('IntakePage — batch family submit', () => {
     vi.clearAllMocks();
     queueCalls.length = 0;
     onlineStatus = true;
+    localStorage.clear();
   });
 
   async function renderWithMember() {
@@ -345,5 +354,78 @@ describe('IntakePage — batch family submit', () => {
         relationship: 'Spouse',
       });
     });
+  });
+});
+
+describe('IntakePage — user-scoped draft', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
+  const seedDraft = (surname: string) => ({
+    data: {
+      beneficiary: { surname, firstName: '', middleName: '', extension: '', gender: '', dob: '', placeOfBirth: '', civilStatus: '', cellularNumber: '', email: '', currentAddress: { street: '', barangay: '', city: '0301413000', province: '0301400000', region: '03', postalCode: '3013', psgcCode: '' }, philhealthNumber: '', occupation: '', estimatedMonthlyIncome: '' },
+      claimant: { surname: '', firstName: '', middleName: '', extension: '', gender: '', dob: '', placeOfBirth: '', civilStatus: '', cellularNumber: '', email: '', currentAddress: {}, philhealthNumber: '', occupation: '', estimatedMonthlyIncome: '' },
+      relationshipToBeneficiary: '',
+      family: [],
+      beneficiaryIsClaimant: false,
+      hasConsent: false,
+    },
+    savedAt: 'x',
+  });
+
+  it('restores only the current user draft on mount', async () => {
+    localStorage.setItem('kapwa:intake:draft:u1', JSON.stringify(seedDraft('Dela Cruz')));
+    localStorage.setItem('kapwa:intake:draft:u2', JSON.stringify(seedDraft('Reyes')));
+
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByDisplayValue('Dela Cruz')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Reyes')).not.toBeInTheDocument();
+  });
+
+  it('autosaves the form under the user-scoped draft key', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    fireEvent.change(screen.getByLabelText('ben-surname'), { target: { value: 'Santos' } });
+
+    await waitFor(() => {
+      const raw = localStorage.getItem('kapwa:intake:draft:u1');
+      expect(raw).not.toBeNull();
+      expect(JSON.parse(raw!).data.beneficiary.surname).toBe('Santos');
+    }, { timeout: 4000 });
+  });
+
+  it('clears only the current user draft after submit', async () => {
+    localStorage.setItem('kapwa:intake:draft:u1', JSON.stringify(seedDraft('Stale')));
+    localStorage.setItem('kapwa:intake:draft:u2', JSON.stringify(seedDraft('Untouched')));
+
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    expect(localStorage.getItem('kapwa:intake:draft:u1')).toBeNull();
+    expect(localStorage.getItem('kapwa:intake:draft:u2')).not.toBeNull();
   });
 });

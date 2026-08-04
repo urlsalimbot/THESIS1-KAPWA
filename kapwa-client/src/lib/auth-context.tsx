@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { api } from './api';
+import { clearDraft } from '../hooks/useIntakeAutosave';
 
 interface User { id: string; email: string; fullName: string; role: string; phone?: string; agencyId?: string; }
 
@@ -25,6 +26,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [mfaChallenge, setMfaChallenge] = useState<{ tempToken: string; type: 'totp' | 'sms' } | null>(null);
 
+  // Track the current user id in a ref so the mount-scoped logout/storage handlers
+  // (which close over first-render values) can purge the right user's intake draft.
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user]);
+
   useEffect(() => {
     if (token) fetchUser();
     else setLoading(false);
@@ -40,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     function handleStorage(e: StorageEvent) {
       if (e.key === 'kapwa_token' && !e.newValue) {
+        if (userIdRef.current) clearDraft(userIdRef.current);
         setToken(null);
         setUser(null);
       }
@@ -116,6 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    // Purge the intake draft for the current user — PII must not survive a session
+    // handoff on a shared field tablet.
+    if (userIdRef.current) clearDraft(userIdRef.current);
     localStorage.removeItem('kapwa_token');
     setToken(null);
     setUser(null);

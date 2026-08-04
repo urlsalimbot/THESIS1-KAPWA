@@ -96,6 +96,89 @@ describe('AuthProvider — kapwa:auth:logout subscriber', () => {
   });
 });
 
+describe('AuthProvider — logout purges the intake draft', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+    localStorage.setItem('kapwa_token', 'test-tok');
+    localStorage.removeItem('kapwa:intake:draft:u1');
+    localStorage.removeItem('kapwa:intake:draft:u2');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('clears the current user intake draft on kapwa:auth:logout', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+    });
+
+    localStorage.setItem('kapwa:intake:draft:u1', JSON.stringify({ data: { surname: 'A' }, savedAt: 'x' }));
+    localStorage.setItem('kapwa:intake:draft:u2', JSON.stringify({ data: { surname: 'B' }, savedAt: 'x' }));
+
+    const onAuth = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={onAuth} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const lastCall = onAuth.mock.calls[onAuth.mock.calls.length - 1][0];
+      expect(lastCall.user).not.toBeNull();
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('kapwa:auth:logout', { detail: { reason: 'refresh_failed' } }));
+    });
+
+    await waitFor(() => {
+      expect(localStorage.getItem('kapwa_token')).toBeNull();
+    });
+    expect(localStorage.getItem('kapwa:intake:draft:u1')).toBeNull();
+    expect(localStorage.getItem('kapwa:intake:draft:u2')).not.toBeNull();
+  });
+
+  it('clears the current user intake draft when the token is removed from another tab', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+    });
+
+    localStorage.setItem('kapwa:intake:draft:u1', JSON.stringify({ data: { surname: 'A' }, savedAt: 'x' }));
+
+    const onAuth = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={onAuth} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const lastCall = onAuth.mock.calls[onAuth.mock.calls.length - 1][0];
+      expect(lastCall.user).not.toBeNull();
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'kapwa_token', newValue: null, oldValue: 'test-tok' }));
+    });
+
+    await waitFor(() => {
+      expect(localStorage.getItem('kapwa:intake:draft:u1')).toBeNull();
+    });
+  });
+});
+
 // =============================================================
 // Tests for the fetchUser → api.get('/auth/me') migration (Plan 14-02 Task 1).
 // The api.get internally calls fetch, so we spy on the global fetch to verify
