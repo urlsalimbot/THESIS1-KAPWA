@@ -67,9 +67,10 @@ export function CaseTrackerPage() {
   const swrKey = hasRange
     ? queryKeys.tracker.range({ start: dateFrom + 'T00:00:00Z', end: dateTo + 'T23:59:59Z' })
     : queryKeys.tracker.daily({ date: dateFrom + 'T00:00:00Z' });
-  const { data: entries = [], isLoading: loading, error, mutate } = useSWR<TrackerEntry[]>(swrKey, {
+  const { data, isLoading: loading, error, mutate } = useSWR<TrackerEntry[]>(swrKey, {
     keepPreviousData: true,
   });
+  const entries = data ?? [];
   const { data: stats } = useSWR<TrackerStats>(queryKeys.tracker.stats());
   const lastSync = entries ? Date.now() : null;
 
@@ -104,7 +105,7 @@ export function CaseTrackerPage() {
     );
   }
 
-  if (error && entries.length === 0) {
+  if (error && !data) {
     return (
       <PageShell title="Daily Case Tracker" description="Case Tracker Log — derived from cases">
         <ErrorState title="Could not load case tracker" message="Check your internet connection and try again." onRetry={() => mutate()} />
