@@ -45,7 +45,8 @@ export function AdminWipePage() {
     }
   }
 
-  const [wipeInput, setWipeInput] = useState('');
+  const [wipeInputs, setWipeInputs] = useState<Record<string, string>>({});
+  const [wipeDialogOpen, setWipeDialogOpen] = useState<Record<string, boolean>>({});
 
   return (
     <PageShell title="Remote Device Wipe" description="FR-26 — Invalidate sessions and unlink devices">
@@ -68,7 +69,10 @@ export function AdminWipePage() {
                 <span className="font-semibold">{d.email}</span>
                 <span className="ml-3 text-sm text-muted-foreground font-mono">{d.deviceId}</span>
               </div>
-              <AlertDialog onOpenChange={() => setWipeInput('')}>
+              <AlertDialog open={wipeDialogOpen[d.id] ?? false} onOpenChange={open => {
+                setWipeDialogOpen(prev => ({ ...prev, [d.id]: open }));
+                if (!open) setWipeInputs(prev => ({ ...prev, [d.id]: '' }));
+              }}>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm">
                     <AlertTriangle size={14} className="mr-1" /> Wipe Device
@@ -85,14 +89,18 @@ export function AdminWipePage() {
                   </AlertDialogHeader>
                   <Input
                     placeholder='Type "WIPE" to confirm'
-                    value={wipeInput}
-                    onChange={e => setWipeInput(e.target.value)}
+                    value={wipeInputs[d.id] ?? ''}
+                    onChange={e => setWipeInputs(prev => ({ ...prev, [d.id]: e.target.value }))}
                   />
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      disabled={wipeInput !== 'WIPE'}
-                      onClick={() => handleWipe('device', d.deviceId, d.email)}
+                      disabled={(wipeInputs[d.id] ?? '') !== 'WIPE'}
+                      onClick={async () => {
+                        await handleWipe('device', d.deviceId, d.email);
+                        setWipeDialogOpen(prev => ({ ...prev, [d.id]: false }));
+                        setWipeInputs(prev => ({ ...prev, [d.id]: '' }));
+                      }}
                     >
                       Confirm Wipe
                     </AlertDialogAction>
