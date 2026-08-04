@@ -115,9 +115,17 @@ describe('ExportService', () => {
       caseRepo.query.mockResolvedValue([]);
       await service.monthlyFundUtilization('2026-08');
       const [sql, params] = caseRepo.query.mock.calls[0];
-      expect(sql).toContain('JOIN cases c ON c.id = ci.case_id');
+      expect(sql).toContain('JOIN cases c ON c.id::text = ci.case_id');
       expect(sql).toContain("c.status = 'transitioning'");
       expect(params).toEqual(['2026-08-01', '2026-09-01']);
+    });
+
+    it('casts the join so uuid case ids match text case_id values', async () => {
+      caseRepo.query.mockResolvedValue([]);
+      await service.monthlyFundUtilization('2026-08');
+      const [sql] = caseRepo.query.mock.calls[0];
+      expect(sql).toContain('c.id::text = ci.case_id');
+      expect(sql).not.toMatch(/c\.id\s*=\s*ci\.case_id/);
     });
   });
 
