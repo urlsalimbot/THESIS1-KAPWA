@@ -39,7 +39,17 @@ const ALLOWED_COLUMNS = new Set([
 
 const FSM_CONTROL_FIELDS = new Set(['_fsmTransition', '_clientUpdatedAt']);
 
+// S-06: reject unknown underscore-prefixed meta fields instead of silently stripping them.
+function assertNoUnknownMetaFields(payload: Record<string, any>): void {
+  for (const [k] of Object.entries(payload)) {
+    if (k.startsWith('_') && !FSM_CONTROL_FIELDS.has(k)) {
+      throw new BadRequestException(`Unknown meta fields: ${k}`);
+    }
+  }
+}
+
 function sanitizePayload(payload: Record<string, any>): Record<string, any> {
+  assertNoUnknownMetaFields(payload);
   const sanitized: Record<string, any> = {};
   for (const [k, v] of Object.entries(payload)) {
     if (FSM_CONTROL_FIELDS.has(k)) continue; // strip FSM control fields
@@ -73,6 +83,11 @@ export class SyncService implements OnApplicationShutdown {
 
   async processDelta(batch: SyncRequestInput) {
     const { deviceId, changes, versionVectors, idempotencyKey, signature } = batch;
+
+    // S-06: reject unknown meta fields before any processing or caching
+    for (const change of changes) {
+      assertNoUnknownMetaFields(change.payload ?? {});
+    }
 
     const cached = await this.getIdempotencyResult(idempotencyKey);
     if (cached) return cached;

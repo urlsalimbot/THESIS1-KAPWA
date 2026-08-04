@@ -208,4 +208,13 @@ describe('SyncService', () => {
       expect(result.results[0].status).toBe('applied');
     });
   });
+
+  it('rejects payloads with unknown underscore-prefixed meta fields', async () => {
+    const payload = { _fsmTransition: true, _status: 'disbursed', first_name: 'X' };
+    const input = {
+      deviceId: 'd1', changes: [{ id: 'c1', tableName: 'cases', recordId: 'r1', operation: 'UPDATE' as const, payload, clientUpdatedAt: new Date().toISOString() }],
+      versionVectors: [], idempotencyKey: 'k1', signature: 'sig',
+    };
+    await expect(service.processDelta(input)).rejects.toThrow('Unknown meta fields');
+  });
 });
