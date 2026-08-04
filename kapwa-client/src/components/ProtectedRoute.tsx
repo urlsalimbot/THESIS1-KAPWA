@@ -1,16 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as auth from '../lib/auth-context';
-
-const roleRedirectMap: Record<string, string> = {
-  social_worker: '/dashboard',
-  admin: '/admin',
-  coordinator: '/coordinator',
-  claimant: '/my-dashboard',
-  mayor: '/reports',
-  auditor: '/audit-logs',
-  agency_staff: '/agency/dashboard',
-};
+import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 
 export function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -49,7 +40,7 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
 
     if (roles && roles.length > 0 && !roles.includes(user.role)) {
       checkingRef.current = false;
-      navigate(roleRedirectMap[user.role] || '/dashboard', { replace: true });
+      navigate(ROLE_REDIRECT_MAP[user.role] || '/dashboard', { replace: true });
       return;
     }
 
