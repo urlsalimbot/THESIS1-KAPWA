@@ -6,6 +6,8 @@ import { VersionVector } from './version-vector.entity';
 import { ConflictResolver } from './conflict-resolver';
 import { SyncRequestInput } from './dto/sync.zod';
 import { IntakeService } from '../intake/intake.service';
+import { isValidTransition } from '../cases/case-fsm';
+import { CaseStatus } from '../cases/case.entity';
 
 const IDEMPOTENCY_TTL_MS = 86_400_000; // 24h
 const MAX_CACHE_SIZE = 10_000;
@@ -46,20 +48,6 @@ function sanitizePayload(payload: Record<string, any>): Record<string, any> {
   return sanitized;
 }
 
-// Per D-04: valid FSM transitions for cases (KilosUnlad statuses)
-const VALID_FSM_TRANSITIONS: Record<string, string[]> = {
-  enrolled: ['assessed', 'closed'],
-  assessed: ['in_review', 'closed'],
-  in_review: ['active', 'closed'],
-  active: ['transitioning', 'closed'],
-  transitioning: ['closed'],
-  closed: [],
-};
-
-function isValidFsmTransition(currentStatus: string, requestedStatus: string): boolean {
-  const allowed = VALID_FSM_TRANSITIONS[currentStatus];
-  return allowed ? allowed.includes(requestedStatus) : false;
-}
 
 @Injectable()
 export class SyncService {
@@ -286,7 +274,7 @@ export class SyncService {
 
       const currentStatus: string = rows[0].status || 'enrolled';
 
-      if (!isValidFsmTransition(currentStatus, requestedStatus)) {
+      if (!isValidTransition(currentStatus as CaseStatus, requestedStatus as CaseStatus)) {
         // D-04: Transition no longer valid — case state has moved past the expected state
         await this.queueRepo.save(this.queueRepo.create({
           deviceId: '__rejected__', // placeholder — will be updated on conflict save
