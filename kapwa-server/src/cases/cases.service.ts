@@ -3,6 +3,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
+import { isValidTransition, canTransition, CASE_FSM_ROLES } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
@@ -248,15 +249,7 @@ export class CasesService {
   }
 
   private async validateTransition(c: Case, newStatus: CaseStatus) {
-    const transitions: Record<CaseStatus, CaseStatus[]> = {
-      [CaseStatus.ENROLLED]: [CaseStatus.ASSESSED, CaseStatus.CLOSED],
-      [CaseStatus.ASSESSED]: [CaseStatus.IN_REVIEW, CaseStatus.CLOSED],
-      [CaseStatus.IN_REVIEW]: [CaseStatus.ACTIVE, CaseStatus.CLOSED],
-      [CaseStatus.ACTIVE]: [CaseStatus.TRANSITIONING, CaseStatus.CLOSED],
-      [CaseStatus.TRANSITIONING]: [CaseStatus.CLOSED],
-      [CaseStatus.CLOSED]: [],
-    };
-    if (!transitions[c.status]?.includes(newStatus)) {
+    if (!isValidTransition(c.status, newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
     }
     if (c.status === CaseStatus.ENROLLED && newStatus === CaseStatus.ASSESSED && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
@@ -280,15 +273,7 @@ export class CasesService {
   }
 
   private getTransitionRoles(status: CaseStatus): string[] {
-    const roleTransitions: Partial<Record<CaseStatus, string[]>> = {
-      [CaseStatus.ENROLLED]: ['social_worker', 'coordinator'],
-      [CaseStatus.ASSESSED]: ['social_worker', 'coordinator'],
-      [CaseStatus.IN_REVIEW]: ['admin', 'coordinator'],
-      [CaseStatus.ACTIVE]: ['admin', 'social_worker'],
-      [CaseStatus.TRANSITIONING]: ['social_worker', 'coordinator'],
-      [CaseStatus.CLOSED]: ['admin', 'social_worker', 'coordinator'],
-    };
-    return roleTransitions[status] || ['admin'];
+    return CASE_FSM_ROLES[status] || ['admin'];
   }
 
   async transition(id: string, newStatus: CaseStatus, opts?: { signature?: string; userRole?: string; reason?: string; historyType?: 'standard' | 'override' }) {
@@ -297,7 +282,7 @@ export class CasesService {
     await this.validateTransition(c, newStatus);
 
     const allowedRoles = this.getTransitionRoles(c.status);
-    if (opts?.userRole && !allowedRoles.includes(opts.userRole)) {
+    if (opts?.userRole && opts.userRole !== 'admin' && !allowedRoles.includes(opts.userRole)) {
       throw new ForbiddenException(`Role ${opts.userRole} cannot transition from ${c.status} to ${newStatus}`);
     }
 
