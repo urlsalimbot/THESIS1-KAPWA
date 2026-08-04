@@ -209,6 +209,8 @@ export function IntakePage() {
   const [hasConsent, setHasConsent] = useState(false);
   const [benErrors, setBenErrors] = useState<ValidationErrors>({});
   const [claimErrors, setClaimErrors] = useState<ValidationErrors>({});
+  const [submittedCase, setSubmittedCase] = useState<{ caseId: string } | null>(null);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
 
   const formSnapshot = useMemo(() => ({
     beneficiary,
@@ -346,6 +348,47 @@ export function IntakePage() {
     };
   }
 
+  function familyMembersPayload() {
+    return family.filter(m => m.surname.trim()).map(f => ({
+      surname: f.surname,
+      firstName: f.firstName,
+      middleName: f.middleName || undefined,
+      extension: f.extension || undefined,
+      gender: f.gender,
+      dob: f.dob,
+      age: computeAge(f.dob),
+      relationship: f.relationship,
+      occupation: f.occupation,
+      income: f.income ? parseFloat(f.income.replace(/,/g, '')) : undefined,
+      status: f.status || undefined,
+    }));
+  }
+
+  function completeIntake(caseId: string) {
+    if (family.some(m => m.surname.trim())) {
+      setSubmittedCase({ caseId });
+    } else {
+      navigate(`/cases/${caseId}`);
+    }
+  }
+
+  async function handleBatchSubmit() {
+    if (!submittedCase) return;
+    setBatchSubmitting(true);
+    setError('');
+    try {
+      await api.post('/intake/batch-family', {
+        primary: personToPayload(beneficiary),
+        members: familyMembersPayload(),
+      });
+      navigate(`/cases/${submittedCase.caseId}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit batch family intake');
+    } finally {
+      setBatchSubmitting(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -397,19 +440,7 @@ export function IntakePage() {
       claimant: beneficiaryIsClaimant
         ? { ...personToPayload(beneficiary), relationshipToBeneficiary: 'Self' }
         : { ...personToPayload(claimant), relationshipToBeneficiary },
-      familyMembers: family.filter(m => m.surname.trim()).map(f => ({
-        surname: f.surname,
-        firstName: f.firstName,
-        middleName: f.middleName || undefined,
-        extension: f.extension || undefined,
-        gender: f.gender,
-        dob: f.dob,
-        age: computeAge(f.dob),
-        relationship: f.relationship,
-        occupation: f.occupation,
-        income: f.income ? parseFloat(f.income.replace(/,/g, '')) : undefined,
-        status: f.status || undefined,
-      })),
+      familyMembers: familyMembersPayload(),
       case: {},
     };
 
@@ -430,13 +461,13 @@ export function IntakePage() {
       } else {
         clearDraft();
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
-        navigate(`/cases/${data.caseId}`);
+        completeIntake(data.caseId);
       }
     } catch (err: unknown) {
       try {
         clearDraft();
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
-        navigate(`/cases/${data.caseId}`);
+        completeIntake(data.caseId);
       } catch (fallbackErr: unknown) {
         setError(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to submit intake');
       }
@@ -627,6 +658,26 @@ export function IntakePage() {
           </Button>
         </div>
       </form>
+
+      {submittedCase && (
+        <div className="mt-6 max-w-4xl mx-auto rounded-lg border bg-card p-6 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Users size={16} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Add another family member as a batch?</h2>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Submit {family.filter(m => m.surname.trim()).length} member(s) together with this household in one flow.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Button type="button" onClick={handleBatchSubmit} disabled={batchSubmitting} aria-label="Yes, add as batch">
+              {batchSubmitting ? 'Adding members...' : 'Yes, add as batch'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => navigate(`/cases/${submittedCase.caseId}`)}>
+              No, view case
+            </Button>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }

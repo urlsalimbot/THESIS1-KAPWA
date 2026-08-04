@@ -10,7 +10,7 @@ import { Case, CaseStatus } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { memberToPerson } from './member-person';
-import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse } from './dto/intake.zod';
+import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse, BatchFamilyInput } from './dto/intake.zod';
 
 @Injectable()
 export class IntakeService {
@@ -189,6 +189,24 @@ export class IntakeService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async submitBatchFamily(input: BatchFamilyInput): Promise<{
+    beneficiaryId: string;
+    caseId: string;
+    controlNo: string;
+    status: string;
+  }> {
+    const primary = input.primary as unknown as IntakeInput['beneficiary'];
+    return this.submitIntake({
+      beneficiary: primary,
+      claimant: {
+        ...primary,
+        relationshipToBeneficiary: 'Self',
+      } as unknown as IntakeInput['claimant'],
+      familyMembers: input.members,
+      case: {},
+    });
   }
 
   async matchCheck(data: MatchCheckInput, workerBarangays: string[]): Promise<{ candidates: MatchCandidate[] }> {
