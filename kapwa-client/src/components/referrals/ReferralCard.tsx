@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { InterAgencyReferral, STATUS_LABELS, StatusTimeline } from './referral-utils';
 
 export function ReferralCard({
@@ -55,18 +59,27 @@ export function ReferralCard({
           <Button size="sm" onClick={() => onTransition(referral.id, 'receive')} disabled={disabled}>
             Receive
           </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() =>
-              onTransition(referral.id, 'decline', {
-                declinedReason: 'Unable to accommodate',
-              })
-            }
-            disabled={disabled}
-          >
-            Decline
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" disabled={disabled}>
+                Decline
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Decline Referral?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will decline the referral for this beneficiary. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep Referral</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onTransition(referral.id, 'decline', { declinedReason: 'Unable to accommodate' })}>
+                  Decline
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
       {canAction && (
@@ -82,13 +95,30 @@ export function ReferralCard({
             placeholder="Outcome"
             className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
           />
-          <Button
-            size="sm"
-            onClick={() => onTransition(referral.id, 'close', { outcome })}
-            disabled={disabled || !outcome.trim()}
-          >
-            Close
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                disabled={disabled || !outcome.trim()}
+              >
+                Close
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Close Referral?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently close the referral for this beneficiary. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep Open</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onTransition(referral.id, 'close', { outcome })}>
+                  Close Referral
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </div>

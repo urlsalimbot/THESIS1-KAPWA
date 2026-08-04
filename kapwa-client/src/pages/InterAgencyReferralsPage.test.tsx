@@ -86,6 +86,44 @@ describe('InterAgencyReferralsPage', () => {
     expect(mockApiPatch).toHaveBeenCalledWith('/inter-agency-referrals/r1/receive', undefined);
   });
 
+  it('requires confirmation before closing a referral', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('inter-agency-referrals')) {
+        return Promise.resolve([
+          {
+            id: 'r2',
+            personId: 'p1',
+            fromAgencyId: 'ag-2',
+            toAgencyId: 'ag-1',
+            status: 'actioned',
+            reason: 'Medical follow-up needed',
+            legalBasisCode: 'public_authority_sec13',
+            createdAt: '2026-08-01T00:00:00.000Z',
+            fromAgency: { id: 'ag-2', code: 'RHU', name: 'Rural Health Unit - Norzagaray' },
+            toAgency: { id: 'ag-1', code: 'MSWDO', name: 'Municipal Social Welfare and Development Office' },
+            person: { id: 'p1', firstName: 'Juan', surname: 'Dela Cruz' },
+          },
+        ]);
+      }
+      if (k.includes('agencies')) {
+        return Promise.resolve([
+          { id: 'ag-1', code: 'MSWDO', name: 'Municipal Social Welfare and Development Office' },
+          { id: 'ag-2', code: 'RHU', name: 'Rural Health Unit - Norzagaray' },
+        ]);
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    const user = userEvent.setup();
+    renderWithSWR(<InterAgencyReferralsPage />);
+    await user.type(await screen.findByPlaceholderText('Outcome'), 'Completed');
+    const closeButton = await screen.findByRole('button', { name: /close/i });
+    await user.click(closeButton);
+    expect(screen.getByText(/cannot be undone/i)).toBeDefined();
+  });
+
   it('creates a referral from the form', async () => {
     const user = userEvent.setup();
     renderWithSWR(<InterAgencyReferralsPage />);
