@@ -122,4 +122,25 @@ describe('AgencyReferralsPage', () => {
       });
     });
   });
+
+  it('renders ErrorState with a retry button when referrals fail to load', async () => {
+    mockApiGet.mockRejectedValue(new Error('network down'));
+    renderWithSWR(<AgencyReferralsPage />);
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText('Could not load referrals')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy();
+  });
+
+  it('refetches when Try again is clicked after a load failure', async () => {
+    const user = userEvent.setup();
+    mockApiGet.mockRejectedValue(new Error('network down'));
+    renderWithSWR(<AgencyReferralsPage />);
+    await screen.findByRole('alert');
+    mockApiGet.mockResolvedValue([]);
+    const callsBefore = mockApiGet.mock.calls.length;
+    await user.click(screen.getByRole('button', { name: /try again/i }));
+    await vi.waitFor(() => {
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+  });
 });

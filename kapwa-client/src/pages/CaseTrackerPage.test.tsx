@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
@@ -92,5 +92,25 @@ describe('CaseTrackerPage', () => {
     await screen.findByRole('heading', { name: 'Daily Case Tracker' });
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  it('renders ErrorState with a retry button when the tracker fails to load', async () => {
+    mockApiGet.mockRejectedValue(new Error('network down'));
+    renderWithSWR(<CaseTrackerPage />);
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText('Could not load case tracker')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy();
+  });
+
+  it('refetches when Try again is clicked after a load failure', async () => {
+    mockApiGet.mockRejectedValue(new Error('network down'));
+    renderWithSWR(<CaseTrackerPage />);
+    await screen.findByRole('alert');
+    mockApiGet.mockResolvedValue(mockEntries);
+    const callsBefore = mockApiGet.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    await vi.waitFor(() => {
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
   });
 });

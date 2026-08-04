@@ -7,6 +7,7 @@ import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -184,7 +185,7 @@ export function BeneficiariesPage() {
     limit: urlLimit,
   };
   const swrKey = queryKeys.beneficiaries.list(params);
-  const { data, isLoading, isValidating } = useSWR<{ data: Record<string, unknown>[]; total: number }>(swrKey, {
+  const { data, isLoading, isValidating, error, mutate } = useSWR<{ data: Record<string, unknown>[]; total: number }>(swrKey, {
     keepPreviousData: true,
   });
 
@@ -200,6 +201,14 @@ export function BeneficiariesPage() {
     return (
       <PageShell title="Beneficiaries" description="Manage beneficiary records and household data">
         <TableSkeleton rows={8} />
+      </PageShell>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <PageShell title="Beneficiaries" description="Manage beneficiary records and household data">
+        <ErrorState title="Could not load beneficiaries" message="Check your internet connection and try again." onRetry={() => mutate()} />
       </PageShell>
     );
   }
