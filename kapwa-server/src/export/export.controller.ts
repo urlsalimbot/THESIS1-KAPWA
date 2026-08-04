@@ -10,10 +10,16 @@ import { ExportService } from './export.service';
 
 const GenerateCertificateSchema = z.object({
   type: z.enum(['indigency', 'eligibility', 'referral']),
-  fullName: z.string().min(1, 'Full name is required'),
-  address: z.string().optional(),
-  date: z.string().min(1, 'Issue date is required'),
-  details: z.string().optional(),
+  fullName: z
+    .string()
+    .trim()
+    .min(1, 'Full name is required')
+    .max(255, 'Full name must be 255 characters or fewer'),
+  address: z.string().trim().optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Issue date must be in YYYY-MM-DD format'),
+  details: z.string().trim().optional(),
 });
 
 @ApiTags('Export')

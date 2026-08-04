@@ -280,10 +280,13 @@ export async function downloadCertificate(
   });
   if (!res.ok) throw new Error(`Certificate export failed: ${res.status}`);
   const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match?.[1] || `certificate-${type}.pdf`;
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = `certificate-${type}.pdf`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }

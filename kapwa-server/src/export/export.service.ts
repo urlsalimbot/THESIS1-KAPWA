@@ -214,7 +214,7 @@ export class ExportService {
 
     doc.end();
     await done;
-    this.logger.warn(`EXPORT: certificate of ${type} for ${data.fullName}`);
+    this.logger.warn(`EXPORT: certificate of ${type}`);
     return { buffer: Buffer.concat(chunks), filename: `certificate-${type}-${Date.now()}.pdf` };
   }
 

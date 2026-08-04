@@ -315,7 +315,7 @@ export function BeneficiaryViewPage() {
       await downloadCertificate(type, {
         fullName: beneficiary.name,
         address:
-          ((ben as any)?.address as string) ||
+          ((ben as Record<string, unknown>)?.address as string) ||
           [beneficiary.purok, beneficiary.barangay].filter(Boolean).join(", ") ||
           undefined,
         date: new Date().toISOString().split("T")[0],
