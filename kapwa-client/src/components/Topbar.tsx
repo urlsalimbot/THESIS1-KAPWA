@@ -24,7 +24,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Sun, Moon, Menu, Plus, CheckSquare, LogOut, Settings, User, HandHeart, WifiOff } from 'lucide-react';
+import { Sun, Moon, Menu, Plus, Check, CheckSquare, LogOut, Settings, User, HandHeart, WifiOff, Monitor } from 'lucide-react';
 import { useConnectivity } from '@/hooks/useConnectivity';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -223,10 +223,24 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {mounted && (
-                <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                  {resolvedTheme === 'dark' ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
-                  {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuLabel className="font-semibold">Theme</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setTheme('light')}>
+                    <Sun size={16} className="mr-2" />
+                    Light
+                    {theme === 'light' && <Check size={14} className="ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme('dark')}>
+                    <Moon size={16} className="mr-2" />
+                    Dark
+                    {theme === 'dark' && <Check size={14} className="ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme('system')}>
+                    <Monitor size={16} className="mr-2" />
+                    System
+                    {theme === 'system' && <Check size={14} className="ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                </>
               )}
               <DropdownMenuItem asChild>
                 <Link to="/settings" className="flex items-center gap-2 no-underline">

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { Topbar } from './Topbar';
@@ -17,13 +18,19 @@ const mockUseAuth = vi.hoisted(() => vi.fn(() => ({
 
 const mockOnline = vi.hoisted(() => ({ value: true }));
 const mockPending = vi.hoisted(() => ({ value: 0 }));
+const mockThemeState = vi.hoisted(() => ({ theme: 'light', resolved: 'light' }));
+const mockSetTheme = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/auth-context', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
 vi.mock('@/lib/theme-context', () => ({
-  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
+  useTheme: () => ({
+    theme: mockThemeState.theme,
+    resolvedTheme: mockThemeState.resolved,
+    setTheme: mockSetTheme,
+  }),
 }));
 
 vi.mock('@/hooks/useConnectivity', () => ({
@@ -111,7 +118,6 @@ describe('role-gated shell widgets', () => {
       cancelMfa: vi.fn(),
     });
   });
-
   it('does not render MessagesPopover for agency_staff', async () => {
     const { queryByLabelText } = renderWithTopbar({ role: 'agency_staff' });
     expect(queryByLabelText(/messages/i)).toBeNull();
@@ -125,6 +131,39 @@ describe('role-gated shell widgets', () => {
   it('renders NotificationsDropdown for auditor', async () => {
     const { queryByLabelText } = renderWithTopbar({ role: 'auditor' });
     expect(queryByLabelText(/notifications/i)).not.toBeNull();
+  });
+});
+
+describe('theme toggle menu', () => {
+  afterEach(() => {
+    mockSetTheme.mockClear();
+    mockThemeState.theme = 'light';
+    mockThemeState.resolved = 'light';
+  });
+
+  it('offers Light, Dark, and System options', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<Topbar />);
+    await user.click(screen.getByLabelText('Open user menu'));
+    expect(screen.getByText('Light')).toBeTruthy();
+    expect(screen.getByText('Dark')).toBeTruthy();
+    expect(screen.getByText('System')).toBeTruthy();
+  });
+
+  it('selecting System calls setTheme with system', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<Topbar />);
+    await user.click(screen.getByLabelText('Open user menu'));
+    await user.click(screen.getByText('System'));
+    expect(mockSetTheme).toHaveBeenCalledWith('system');
+  });
+
+  it('selecting Dark calls setTheme with dark', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<Topbar />);
+    await user.click(screen.getByLabelText('Open user menu'));
+    await user.click(screen.getByText('Dark'));
+    expect(mockSetTheme).toHaveBeenCalledWith('dark');
   });
 });
 

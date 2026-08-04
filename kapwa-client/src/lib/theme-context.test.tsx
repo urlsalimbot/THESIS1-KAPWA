@@ -48,6 +48,7 @@ function Probe() {
       <span data-testid="resolved">{resolvedTheme}</span>
       <button onClick={() => setTheme('light')}>set light</button>
       <button onClick={() => setTheme('dark')}>set dark</button>
+      <button onClick={() => setTheme('system')}>set system</button>
     </div>
   );
 }
@@ -140,5 +141,25 @@ describe('ThemeProvider setTheme', () => {
     expect(theme()).toBe('dark');
     expect(htmlHasDark()).toBe(true);
     expect(localStorage.getItem('kapwa-theme')).toBe('dark');
+  });
+
+  it('returns to system mode and re-attaches the OS preference listener', () => {
+    const mql = installMatchMedia(false);
+    const { getByText } = renderProbe();
+    act(() => getByText('set dark').click());
+    expect(theme()).toBe('dark');
+
+    act(() => getByText('set system').click());
+    expect(theme()).toBe('system');
+    expect(resolved()).toBe('light');
+    expect(localStorage.getItem('kapwa-theme')).toBe('system');
+
+    act(() => mql.fire(true));
+    expect(resolved()).toBe('dark');
+    expect(htmlHasDark()).toBe(true);
+
+    act(() => mql.fire(false));
+    expect(resolved()).toBe('light');
+    expect(htmlHasDark()).toBe(false);
   });
 });
