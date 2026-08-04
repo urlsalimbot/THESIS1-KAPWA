@@ -124,6 +124,40 @@ describe('ThemeProvider default', () => {
   });
 });
 
+describe('ThemeProvider no-FOUC', () => {
+  it('applies the resolved theme to <html> during the render phase, before any effect runs', () => {
+    installMatchMedia(true);
+    let darkDuringRender: boolean | null = null;
+    const SniffDuringRender = () => {
+      darkDuringRender = document.documentElement.classList.contains('dark');
+      return null;
+    };
+    render(
+      <ThemeProvider>
+        <SniffDuringRender />
+        <Probe />
+      </ThemeProvider>,
+    );
+    expect(darkDuringRender).toBe(true);
+  });
+
+  it('keeps <html> light during the render phase when the resolved theme is light', () => {
+    installMatchMedia(false);
+    let darkDuringRender: boolean | null = null;
+    const SniffDuringRender = () => {
+      darkDuringRender = document.documentElement.classList.contains('dark');
+      return null;
+    };
+    render(
+      <ThemeProvider>
+        <SniffDuringRender />
+        <Probe />
+      </ThemeProvider>,
+    );
+    expect(darkDuringRender).toBe(false);
+  });
+});
+
 describe('ThemeProvider setTheme', () => {
   it('applies and persists an explicit theme', () => {
     installMatchMedia(true);
