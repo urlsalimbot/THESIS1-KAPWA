@@ -64,6 +64,13 @@ export const IntakeInputSchema = z.object({
   }),
 });
 
+export const batchFamilySchema = z.object({
+  primary: PersonSchema.partial(),
+  members: z.array(FamilyMemberSchema),
+});
+
+export type BatchFamilyInput = z.infer<typeof batchFamilySchema>;
+
 export type FamilyMemberInput = z.infer<typeof FamilyMemberSchema>;
 
 export type IntakeInput = z.infer<typeof IntakeInputSchema>;

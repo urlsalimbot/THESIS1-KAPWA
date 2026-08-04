@@ -1,4 +1,14 @@
-import { FamilyMemberSchema } from './intake.zod';
+import { FamilyMemberSchema, batchFamilySchema } from './intake.zod';
+
+describe('batch-family schema', () => {
+  it('validates a primary plus member array', () => {
+    const result = batchFamilySchema.safeParse({
+      primary: { surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', dob: '1990-01-01' },
+      members: [{ surname: 'Dela Cruz', firstName: 'Ana', gender: 'Female', dob: '1992-02-02', relationship: 'Spouse' }],
+    });
+    expect(result.success).toBe(true);
+  });
+});
 
 describe('FamilyMemberSchema', () => {
   const base = {

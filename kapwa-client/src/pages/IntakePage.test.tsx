@@ -271,3 +271,78 @@ describe('IntakePage — family member sex and dob', () => {
     });
   });
 });
+
+describe('IntakePage — batch family submit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+  });
+
+  async function renderWithMember() {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+
+    fireEvent.change(screen.getByLabelText('ben-surname'), { target: { value: 'Dela Cruz' } });
+    fireEvent.change(screen.getByLabelText('ben-firstName'), { target: { value: 'Juan' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Male' }));
+    fireEvent.change(screen.getByLabelText('ben-dob'), { target: { value: '1990-01-15' } });
+    fireEvent.change(screen.getByLabelText('ben-placeOfBirth'), { target: { value: 'Manila' } });
+    fireEvent.change(screen.getByLabelText('ben-civilStatus'), { target: { value: 'Single' } });
+    fireEvent.change(screen.getByLabelText('ben-cellularNumber'), { target: { value: '09171234567' } });
+    fireEvent.change(screen.getByLabelText('ben-email'), { target: { value: 'juan@example.com' } });
+    fireEvent.click(screen.getByText('Barangay not listed? Enter manually'));
+    fireEvent.change(screen.getByLabelText('Address Street'), { target: { value: '123 Rizal St' } });
+    fireEvent.change(screen.getByLabelText('Address Barangay'), { target: { value: 'Bangkal' } });
+    fireEvent.change(screen.getByLabelText('Address City'), { target: { value: 'Norzagaray' } });
+    fireEvent.change(screen.getByLabelText('Address Postal Code'), { target: { value: '3012' } });
+    fireEvent.change(screen.getByLabelText('ben-occupation'), { target: { value: 'Fisherman' } });
+    fireEvent.change(screen.getByLabelText('ben-income'), { target: { value: '15000' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Member/i }));
+    fireEvent.change(screen.getByLabelText('FM surname'), { target: { value: 'Dela Cruz' } });
+    fireEvent.change(screen.getByLabelText('FM first name'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getAllByLabelText('FM gender')[1]);
+    fireEvent.change(screen.getByLabelText('FM dob'), { target: { value: '1992-02-02' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+  }
+
+  it('shows an optional batch prompt after a successful single submit', async () => {
+    await renderWithMember();
+    const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
+    fireEvent.submit(form);
+
+    expect(await screen.findByText(/Add another family member as a batch\?/i)).toBeInTheDocument();
+  });
+
+  it('posts the queued members to /intake/batch-family with the primary address pre-filled', async () => {
+    await renderWithMember();
+    const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
+    fireEvent.submit(form);
+
+    const confirm = await screen.findByRole('button', { name: /Yes, add as batch/i });
+    fireEvent.click(confirm);
+
+    await waitFor(() => {
+      const batchCall = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+        (call: unknown[]) => call[0] === '/intake/batch-family',
+      );
+      expect(batchCall).toBeDefined();
+      expect(batchCall?.[1].primary).toMatchObject({
+        currentAddress: expect.objectContaining({ barangay: 'Bangkal' }),
+      });
+      expect(batchCall?.[1].members[0]).toMatchObject({
+        surname: 'Dela Cruz',
+        firstName: 'Ana',
+        gender: 'Female',
+        relationship: 'Spouse',
+      });
+    });
+  });
+});

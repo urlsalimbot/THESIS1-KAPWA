@@ -5,7 +5,7 @@ import { AbacGuard } from '../auth/guards/abac.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { IntakeInputSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput, ConfirmMatchInputSchema, ConfirmMatchInput } from './dto/intake.zod';
+import { IntakeInputSchema, IntakeInput, MatchCheckInputSchema, MatchCheckInput, ConfirmMatchInputSchema, ConfirmMatchInput, batchFamilySchema, BatchFamilyInput } from './dto/intake.zod';
 import { AuthenticatedRequest } from '../auth/types';
 
 @Controller('intake')
@@ -17,6 +17,12 @@ export class IntakeController {
   @Roles('admin', 'social_worker')
   async submitIntake(@Body(new ZodPipe(IntakeInputSchema)) body: IntakeInput) {
     return this.intakeService.submitIntake(body);
+  }
+
+  @Post('batch-family')
+  @Roles('admin', 'social_worker')
+  async submitBatchFamily(@Body(new ZodPipe(batchFamilySchema)) body: BatchFamilyInput) {
+    return this.intakeService.submitBatchFamily(body);
   }
 
   @Post('match-check')
