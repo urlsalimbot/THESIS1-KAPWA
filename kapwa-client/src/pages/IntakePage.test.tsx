@@ -321,7 +321,7 @@ describe('IntakePage — batch family submit', () => {
     expect(await screen.findByText(/Add another family member as a batch\?/i)).toBeInTheDocument();
   });
 
-  it('posts the queued members to /intake/batch-family with the primary address pre-filled', async () => {
+  it('posts the queued members to /intake/batch-family with the primary address pre-filled and the completed intake caseId', async () => {
     await renderWithMember();
     const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
     fireEvent.submit(form);
@@ -334,6 +334,7 @@ describe('IntakePage — batch family submit', () => {
         (call: unknown[]) => call[0] === '/intake/batch-family',
       );
       expect(batchCall).toBeDefined();
+      expect(batchCall?.[1].caseId).toBe('case-id-1');
       expect(batchCall?.[1].primary).toMatchObject({
         currentAddress: expect.objectContaining({ barangay: 'Bangkal' }),
       });

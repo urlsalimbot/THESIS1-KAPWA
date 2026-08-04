@@ -367,6 +367,7 @@ describe('IntakeService — Consolidated Intake', () => {
 
   describe('submitBatchFamily', () => {
     const batchInput: BatchFamilyInput = {
+      caseId: caseUuid,
       primary: {
         surname: 'Dela Cruz',
         firstName: 'Juan',
@@ -379,25 +380,22 @@ describe('IntakeService — Consolidated Intake', () => {
       ],
     };
 
-    it('creates the primary case, a household, and links members, returning the primary caseId', async () => {
+    it('links members to the existing household and returns the existing caseId without creating new records', async () => {
+      caseRepo.findOne = jest.fn().mockResolvedValue({
+        id: caseUuid,
+        beneficiaryId: benUuid,
+        controlNo: 'KAPWA-2026-00001',
+        status: CaseStatus.ENROLLED,
+      } as any);
+      benRepo.findOne = jest.fn().mockResolvedValue({ id: benUuid, householdId: hhUuid } as any);
+
       const saveMock = mockQueryRunner.manager.save as jest.Mock;
       saveMock
-        .mockResolvedValueOnce({ id: 'person-uuid-1' })
-        .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz', consentStatus: 'active' })
-        .mockResolvedValueOnce({ id: claimUuid })
-        .mockResolvedValueOnce({ id: bcUuid })
-        .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
-        .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
         .mockResolvedValueOnce({ id: 'fm-person-1' })
-        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
-        .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001', status: CaseStatus.ENROLLED })
-        .mockResolvedValueOnce({ id: clUuid, status: 'active' });
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' });
 
-      (personRepo.create as jest.Mock).mockReturnValue({});
-      (benRepo.create as jest.Mock).mockReturnValue({});
-      (hhRepo.create as jest.Mock).mockReturnValue({});
-      (caseRepo.create as jest.Mock).mockReturnValue({});
-      (consentRepo.create as jest.Mock).mockReturnValue({});
+      (mockQueryRunner.manager.create as jest.Mock).mockImplementation((_entity: unknown, data?: unknown) => data ?? {});
+      (personRepo.create as jest.Mock).mockImplementation((data: any) => data);
 
       const result = await service.submitBatchFamily(batchInput);
 
@@ -405,13 +403,53 @@ describe('IntakeService — Consolidated Intake', () => {
       expect(mockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
       expect(result).toHaveProperty('caseId', caseUuid);
       expect(result).toHaveProperty('beneficiaryId', benUuid);
+      expect(result).toHaveProperty('controlNo', 'KAPWA-2026-00001');
       expect(result).toHaveProperty('status', CaseStatus.ENROLLED);
-      expect(hhRepo.create).toHaveBeenCalledWith(expect.objectContaining({ barangay: 'Bigte' }));
+      // No new Beneficiary / Household / Case created
+      expect(benRepo.create).not.toHaveBeenCalled();
+      expect(hhRepo.create).not.toHaveBeenCalled();
+      expect(caseRepo.create).not.toHaveBeenCalled();
+      // Members linked to the primary's existing household
+      const membershipSave = saveMock.mock.calls.find(
+        (call: unknown[]) => call.length === 1 && (call[0] as { householdId?: string })?.householdId === hhUuid,
+      );
+      expect(membershipSave).toBeDefined();
+      expect((membershipSave as unknown[])[0]).toMatchObject({
+        personId: 'fm-person-1',
+        householdId: hhUuid,
+        relationship: 'Spouse',
+        isPrimary: false,
+      });
+    });
+
+    it('does not duplicate a membership when the member is already linked to the household', async () => {
+      caseRepo.findOne = jest.fn().mockResolvedValue({
+        id: caseUuid,
+        beneficiaryId: benUuid,
+        controlNo: 'KAPWA-2026-00001',
+        status: CaseStatus.ENROLLED,
+      } as any);
+      benRepo.findOne = jest.fn().mockResolvedValue({ id: benUuid, householdId: hhUuid } as any);
+
+      const findOneMock = mockQueryRunner.manager.findOne as jest.Mock;
+      findOneMock
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' });
+      (mockQueryRunner.manager.save as jest.Mock).mockResolvedValue({ id: 'fm-person-1' });
+
+      const result = await service.submitBatchFamily(batchInput);
+
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+      expect(result).toHaveProperty('caseId', caseUuid);
+      const saveMock = mockQueryRunner.manager.save as jest.Mock;
+      expect(saveMock.mock.calls.some(
+        (call: unknown[]) => call.length === 1 && (call[0] as { householdId?: string })?.householdId === hhUuid,
+      )).toBe(false);
     });
 
     it('rejects a batch payload missing the members array', async () => {
       const { batchFamilySchema } = await import('../src/intake/dto/intake.zod');
-      const result = batchFamilySchema.safeParse({ primary: { surname: 'Dela Cruz', firstName: 'Juan' } } as any);
+      const result = batchFamilySchema.safeParse({ caseId: caseUuid, primary: { surname: 'Dela Cruz', firstName: 'Juan' } } as any);
       expect(result.success).toBe(false);
     });
   });
