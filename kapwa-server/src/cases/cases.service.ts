@@ -3,7 +3,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
-import { isValidTransition, canTransition, CASE_FSM_ROLES } from './case-fsm';
+import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
@@ -272,17 +272,12 @@ export class CasesService {
     }
   }
 
-  private getTransitionRoles(status: CaseStatus): string[] {
-    return CASE_FSM_ROLES[status] || ['admin'];
-  }
-
   async transition(id: string, newStatus: CaseStatus, opts?: { signature?: string; userRole?: string; reason?: string; historyType?: 'standard' | 'override' }) {
     const c = await this.findById(id);
     const oldStatus = c.status;
     await this.validateTransition(c, newStatus);
 
-    const allowedRoles = this.getTransitionRoles(c.status);
-    if (opts?.userRole && opts.userRole !== 'admin' && !allowedRoles.includes(opts.userRole)) {
+    if (opts?.userRole && !canTransition(c.status, opts.userRole)) {
       throw new ForbiddenException(`Role ${opts.userRole} cannot transition from ${c.status} to ${newStatus}`);
     }
 
