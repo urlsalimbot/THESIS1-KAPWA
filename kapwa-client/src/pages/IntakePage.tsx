@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useIntakeAutosave, loadDraft, clearDraft } from '@/hooks/useIntakeAutosave';
+import { useAuth } from '@/lib/auth-context';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
@@ -199,6 +200,8 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
 export function IntakePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const [beneficiary, setBeneficiary] = useState<PersonForm>(emptyPerson);
   const [claimant, setClaimant] = useState<PersonForm>(emptyPerson);
   const [relationshipToBeneficiary, setRelationshipToBeneficiary] = useState('');
@@ -221,10 +224,11 @@ export function IntakePage() {
     hasConsent,
   }), [beneficiary, claimant, relationshipToBeneficiary, family, beneficiaryIsClaimant, hasConsent]);
 
-  useIntakeAutosave(formSnapshot);
+  useIntakeAutosave(formSnapshot, userId);
 
   useEffect(() => {
-    const draft = loadDraft();
+    if (!userId) return;
+    const draft = loadDraft(userId);
     if (draft?.data && !location.state?.prefill) {
       const d = draft.data as {
         beneficiary: PersonForm;
@@ -241,7 +245,7 @@ export function IntakePage() {
       setBeneficiaryIsClaimant(d.beneficiaryIsClaimant);
       setHasConsent(d.hasConsent);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const prefill = (location.state as { prefill?: Record<string, string> })?.prefill;
@@ -455,18 +459,18 @@ export function IntakePage() {
       });
 
       if (matchResult.candidates && matchResult.candidates.length > 0) {
-        clearDraft();
+        clearDraft(userId);
         navigate('/intake/review', {
           state: { candidates: matchResult.candidates, intakeData: intakePayload },
         });
       } else {
-        clearDraft();
+        clearDraft(userId);
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);
       }
     } catch (err: unknown) {
       try {
-        clearDraft();
+        clearDraft(userId);
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);
       } catch (fallbackErr: unknown) {
