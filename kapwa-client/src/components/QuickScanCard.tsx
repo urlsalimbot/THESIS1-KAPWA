@@ -27,16 +27,21 @@ export function QuickScanCard({ onLogged }: QuickScanCardProps) {
   const [code, setCode] = useState('');
   const [result, setResult] = useState<AccessCardSummary | null>(null);
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   async function verify() {
+    if (verifying) return;
     setError('');
     setResult(null);
     if (!code.trim()) return;
+    setVerifying(true);
     try {
       const data = await api.get<AccessCardSummary>(`/access-cards/${code.trim()}/summary`);
       setResult(data);
     } catch {
       setError('Card not found. Check the code and try again.');
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -53,7 +58,7 @@ export function QuickScanCard({ onLogged }: QuickScanCardProps) {
           onChange={e => setCode(e.target.value.toUpperCase())}
           onKeyDown={e => { if (e.key === 'Enter') verify(); }}
         />
-        <Button onClick={verify} disabled={!code.trim()}>Verify Card</Button>
+        <Button onClick={verify} disabled={!code.trim() || verifying}>Verify Card</Button>
         {result && <p className="text-sm text-green-700">{personName || 'Card valid'}</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
         {result && (
