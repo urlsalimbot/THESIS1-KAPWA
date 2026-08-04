@@ -24,7 +24,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Sun, Moon, Menu, Plus, CheckSquare, LogOut, Settings, User, HandHeart } from 'lucide-react';
+import { Sun, Moon, Menu, Plus, CheckSquare, LogOut, Settings, User, HandHeart, WifiOff } from 'lucide-react';
+import { useConnectivity } from '@/hooks/useConnectivity';
+import { useSyncStatus } from '@/hooks/useSyncStatus';
 import NotificationsDropdown from './NotificationsDropdown';
 import MessagesPopover from './MessagesPopover';
 import { NOTIFICATION_ROLES, CHAT_ROLES } from '@/lib/role-access';
@@ -96,6 +98,9 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
     : '';
   const canIntake = isAdmin || isSocialWorker;
   const canApprove = isAdmin || isSocialWorker;
+
+  const online = useConnectivity();
+  const { pending } = useSyncStatus();
 
   const handleLogout = useCallback(() => {
     logout();
@@ -183,6 +188,17 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
           <Separator orientation="vertical" className="h-6" />
 
+          {!online && (
+            <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50" aria-label="Offline indicator">
+              <WifiOff size={12} className="mr-1" /> Offline
+            </Badge>
+          )}
+          {pending > 0 && online && (
+            <Badge variant="outline" className="border-blue-400 text-blue-600 bg-blue-50" aria-label="Pending sync count">
+              {pending} pending
+            </Badge>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -227,6 +243,12 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           </DropdownMenu>
         </div>
       </header>
+
+      {!online && pending > 0 && (
+        <div className="fixed top-[4.5rem] left-0 right-0 z-50 bg-amber-500 text-white px-4 py-1.5 text-center text-xs font-medium" role="alert">
+          You are offline — {pending} change(s) pending sync. Do not clear app data.
+        </div>
+      )}
 
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent>
