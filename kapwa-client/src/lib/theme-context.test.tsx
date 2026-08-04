@@ -5,6 +5,7 @@ import { ThemeProvider, useTheme } from './theme-context';
 interface MatchMediaMock {
   matches: boolean;
   media: string;
+  onchange: null;
   addEventListener: (type: string, cb: EventListener) => void;
   removeEventListener: (type: string, cb: EventListener) => void;
   addListener: (cb: EventListener) => void;
@@ -18,6 +19,7 @@ function installMatchMedia(initialMatches: boolean): MatchMediaMock {
   const mql: MatchMediaMock = {
     matches: initialMatches,
     media: '(prefers-color-scheme: dark)',
+    onchange: null,
     addEventListener: (type, cb) => {
       if (type === 'change') listeners.add(cb);
     },
