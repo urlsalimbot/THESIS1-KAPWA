@@ -50,5 +50,17 @@ describe('BottomNav', () => {
       render(<MemoryRouter><BottomNav /></MemoryRouter>);
       expect(screen.getByLabelText(/new intake/i)).toBeDefined();
     });
+
+    it('labels the quick action as New Referral for coordinator', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { role: 'coordinator' } } as ReturnType<typeof useAuth>);
+      render(<MemoryRouter><BottomNav /></MemoryRouter>);
+      expect(screen.getByLabelText('New Referral (Quick Action)')).toBeDefined();
+    });
+
+    it('labels the quick action as New Referral for agency_staff', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { role: 'agency_staff' } } as ReturnType<typeof useAuth>);
+      render(<MemoryRouter><BottomNav /></MemoryRouter>);
+      expect(screen.getByLabelText('New Referral (Quick Action)')).toBeDefined();
+    });
   });
 });

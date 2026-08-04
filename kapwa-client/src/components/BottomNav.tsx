@@ -22,6 +22,12 @@ const QUICK_ACTIONS: Record<string, string | null> = {
   agency_staff: '/agency/referrals',
 };
 
+const QUICK_ACTION_LABELS: Record<string, string> = {
+  '/intake': 'New Intake (Quick Action)',
+  '/coordinator/referrals/new': 'New Referral (Quick Action)',
+  '/agency/referrals': 'New Referral (Quick Action)',
+};
+
 export function BottomNav() {
   const isMobile = useMediaQuery('(max-width: 767px)');
   const location = useLocation();
@@ -36,14 +42,15 @@ export function BottomNav() {
     .map(item => ({ path: item.path, label: item.label, icon: item.icon }));
 
   const quickPath = QUICK_ACTIONS[role] ?? null;
+  const quickLabel = quickPath ? QUICK_ACTION_LABELS[quickPath] ?? 'Quick Action' : null;
 
   return (
     <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border h-16 lg:hidden">
       <div className="flex items-center justify-around h-full px-2">
-        {quickPath && (
+        {quickPath && quickLabel && (
           <Link
             to={quickPath}
-            aria-label="New Intake (Quick Action)"
+            aria-label={quickLabel}
             className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center -mt-4 shadow-lg min-w-0 flex-shrink-0"
           >
             <Plus size={24} aria-hidden="true" />
