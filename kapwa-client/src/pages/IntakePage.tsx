@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useIntakeAutosave, loadDraft, clearDraft } from '@/hooks/useIntakeAutosave';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
@@ -209,6 +210,37 @@ export function IntakePage() {
   const [benErrors, setBenErrors] = useState<ValidationErrors>({});
   const [claimErrors, setClaimErrors] = useState<ValidationErrors>({});
 
+  const formSnapshot = useMemo(() => ({
+    beneficiary,
+    claimant,
+    relationshipToBeneficiary,
+    family,
+    beneficiaryIsClaimant,
+    hasConsent,
+  }), [beneficiary, claimant, relationshipToBeneficiary, family, beneficiaryIsClaimant, hasConsent]);
+
+  useIntakeAutosave(formSnapshot);
+
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft?.data && !location.state?.prefill) {
+      const d = draft.data as {
+        beneficiary: PersonForm;
+        claimant: PersonForm;
+        relationshipToBeneficiary: string;
+        family: FamilyMember[];
+        beneficiaryIsClaimant: boolean;
+        hasConsent: boolean;
+      };
+      setBeneficiary(d.beneficiary);
+      setClaimant(d.claimant);
+      setRelationshipToBeneficiary(d.relationshipToBeneficiary);
+      setFamily(d.family ?? []);
+      setBeneficiaryIsClaimant(d.beneficiaryIsClaimant);
+      setHasConsent(d.hasConsent);
+    }
+  }, []);
+
   useEffect(() => {
     const prefill = (location.state as { prefill?: Record<string, string> })?.prefill;
     if (prefill) {
@@ -391,15 +423,18 @@ export function IntakePage() {
       });
 
       if (matchResult.candidates && matchResult.candidates.length > 0) {
+        clearDraft();
         navigate('/intake/review', {
           state: { candidates: matchResult.candidates, intakeData: intakePayload },
         });
       } else {
+        clearDraft();
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         navigate(`/cases/${data.caseId}`);
       }
     } catch (err: unknown) {
       try {
+        clearDraft();
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         navigate(`/cases/${data.caseId}`);
       } catch (fallbackErr: unknown) {
