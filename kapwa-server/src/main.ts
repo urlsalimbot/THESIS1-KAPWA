@@ -31,6 +31,7 @@ async function bootstrap() {
 
   await runMigrations();
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
 
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
