@@ -6,7 +6,7 @@ import { queryKeys } from './query-keys';
 import { api } from './api';
 
 // Tiny test component that runs a useSWR hook with the given key
-function FetchComponent({ swrKey }: { swrKey: readonly ['dashboard', 'stats'] | null }) {
+function FetchComponent({ swrKey }: { swrKey: readonly string[] | null }) {
   const { data } = useSWR(swrKey);
   return <div>{data ? JSON.stringify(data) : 'loading'}</div>;
 }
@@ -41,7 +41,7 @@ describe('SWRConfig global options', () => {
 
     render(
       <SWRConfig value={{ fetcher: api.get, dedupingInterval: 0 }}>
-        <FetchComponent swrKey={queryKeys.dashboard.stats() as unknown as readonly ['dashboard']} />
+        <FetchComponent swrKey={queryKeys.dashboard.stats()} />
       </SWRConfig>,
     );
 

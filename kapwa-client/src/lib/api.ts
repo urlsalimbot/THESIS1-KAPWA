@@ -19,6 +19,8 @@ function csrfToken(): string | null {
 
 // SWR's global fetcher receives the full queryKey tuple from queryKeys.*.
 // Join array parts with '/' and serialize the last object element as query params.
+export type ApiPath = string | readonly unknown[];
+
 function normalizePath(path: string | readonly unknown[]): string {
   if (Array.isArray(path)) {
     const parts = [...path];
@@ -34,7 +36,7 @@ function normalizePath(path: string | readonly unknown[]): string {
     }
     return '/' + parts.filter((p) => p !== null && p !== undefined && p !== '').join('/') + queryString;
   }
-  return path;
+  return path as string;
 }
 
 function jitteredDelay(baseMs: number): number {
@@ -139,14 +141,15 @@ async function refreshToken(): Promise<boolean> {
 
 async function executeWithRetry<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-  path: string,
+  path: ApiPath,
   body: unknown,
   signal: AbortSignal | undefined,
   isRetry: boolean = false,
   attempt: number = 0,
 ): Promise<T> {
+  const normalized = normalizePath(path);
   try {
-    return await rawRequest<T>(method, path, body, signal);
+    return await rawRequest<T>(method, normalized, body, signal);
   } catch (err) {
     /**
      * On 401, attempt /auth/refresh exactly once via single-flight pattern.
@@ -156,7 +159,7 @@ async function executeWithRetry<T>(
     if (err instanceof ApiError && err.status === 401 && !isRetry) {
       const refreshed = await refreshToken();
       if (refreshed) {
-        return executeWithRetry<T>(method, path, body, signal, true, attempt);
+        return executeWithRetry<T>(method, normalized, body, signal, true, attempt);
       }
       throw err;
     }
@@ -165,13 +168,11 @@ async function executeWithRetry<T>(
       (err instanceof DOMException && err.name === 'AbortError' && !signal?.aborted);
     if (isRetryableError && method === 'GET' && attempt < MAX_RETRIES) {
       await sleep(delayForAttempt(attempt), signal);
-      return executeWithRetry<T>(method, path, body, signal, isRetry, attempt + 1);
+      return executeWithRetry<T>(method, normalized, body, signal, isRetry, attempt + 1);
     }
     throw err;
   }
 }
-
-export type ApiPath = string | readonly unknown[];
 
 export const api = {
   get: <T>(path: ApiPath, opts?: { signal?: AbortSignal }) =>

@@ -96,7 +96,8 @@ describe('usePiiMasking', () => {
     const callArgs = fetchSpy.mock.calls[0];
     expect(String(callArgs[0])).toContain('/beneficiaries/b1/audit/unmask');
     expect(callArgs[1]).toMatchObject({ method: 'POST' });
-    expect(JSON.parse(callArgs[1].body)).toEqual({ field: 'name', reason: 'testing' });
+    const body = (callArgs[1] as RequestInit)?.body;
+    expect(JSON.parse(typeof body === 'string' ? body : String(body))).toEqual({ field: 'name', reason: 'testing' });
     fetchSpy.mockRestore();
   });
 });

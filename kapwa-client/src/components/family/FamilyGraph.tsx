@@ -1,15 +1,6 @@
 import { Loader2, Users } from 'lucide-react';
 import { FamilyTreeGraph } from './FamilyTreeGraph';
-
-interface FamilyMemberNode {
-  id: string;
-  fullName: string;
-  relationship: string;
-  age: number;
-  statusIncome?: string;
-  isPrimary: boolean;
-  depth: number;
-}
+import type { FamilyMemberNode } from './FamilyTreeGraph';
 
 interface FamilyGraphProps {
   loading: boolean;
