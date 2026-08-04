@@ -8,11 +8,13 @@ import {
   NodeProps,
   useNodesState,
   useEdgesState,
+  type Node,
+  type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { User } from 'lucide-react';
 
-interface FamilyMemberNode {
+export interface FamilyMemberNode extends Record<string, unknown> {
   id: string;
   fullName: string;
   relationship: string;
@@ -21,6 +23,9 @@ interface FamilyMemberNode {
   isPrimary: boolean;
   depth: number;
 }
+
+type FamilyFlowNode = Node<FamilyMemberNode>;
+type FamilyFlowEdge = Edge;
 
 interface FamilyTreeGraphProps {
   members: FamilyMemberNode[];
@@ -32,7 +37,7 @@ const NODE_HEIGHT = 72;
 const LAYER_GAP_Y = 100;
 const NODE_GAP_X = 24;
 
-function computeLayout(members: FamilyMemberNode[], primary: FamilyMemberNode | null) {
+function computeLayout(members: FamilyMemberNode[], primary: FamilyMemberNode | null): { nodes: FamilyFlowNode[]; edges: FamilyFlowEdge[] } {
   const all = primary ? [primary, ...members.filter(m => m.id !== primary.id)] : [...members];
   const byDepth: Record<number, FamilyMemberNode[]> = {};
   all.forEach(m => {
@@ -40,8 +45,8 @@ function computeLayout(members: FamilyMemberNode[], primary: FamilyMemberNode | 
     byDepth[m.depth].push(m);
   });
   const depths = Object.keys(byDepth).map(Number).sort();
-  const nodes: any[] = [];
-  const edges: any[] = [];
+  const nodes: FamilyFlowNode[] = [];
+  const edges: FamilyFlowEdge[] = [];
 
   depths.forEach((depth) => {
     const layer = byDepth[depth];
@@ -50,7 +55,7 @@ function computeLayout(members: FamilyMemberNode[], primary: FamilyMemberNode | 
     layer.forEach((m, i) => {
       nodes.push({
         id: m.id,
-        type: 'familyMember',
+        type: 'familyMember' as const,
         position: { x: startX + i * (NODE_WIDTH + NODE_GAP_X), y: depth * (NODE_HEIGHT + LAYER_GAP_Y) },
         data: m,
       });
@@ -72,7 +77,7 @@ function computeLayout(members: FamilyMemberNode[], primary: FamilyMemberNode | 
           labelBgStyle: { fill: '#FFFFFF', fillOpacity: 0.9 },
           labelBgPadding: [4, 2] as [number, number],
           labelBgBorderRadius: 4,
-        });
+        } satisfies FamilyFlowEdge);
       }
     });
   }
@@ -97,7 +102,7 @@ const edgeTypeLabels: Record<string, string> = {
   Other: 'Relative',
 };
 
-function FamilyMemberNode({ data }: NodeProps<FamilyMemberNode>) {
+function FamilyMemberNode({ data }: NodeProps<FamilyFlowNode>) {
   const initial = data.fullName.charAt(0).toUpperCase();
   return (
     <div
@@ -134,11 +139,11 @@ const nodeTypes = { familyMember: FamilyMemberNode };
 
 export function FamilyTreeGraph({ members, primary }: FamilyTreeGraphProps) {
   const layout = useMemo(() => computeLayout(members, primary), [members, primary]);
-  const [nodes, setNodes, onNodesChange] = useNodesState(layout.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(layout.edges);
+  const [nodes, setNodes, onNodesChange] = useNodesState<FamilyFlowNode>(layout.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<FamilyFlowEdge>(layout.edges);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const onNodeClick = useCallback((_: React.MouseEvent, node: any) => {
+  const onNodeClick = useCallback((_: React.MouseEvent, node: FamilyFlowNode) => {
     setSelectedId(prev => prev === node.id ? null : node.id);
   }, []);
 

@@ -44,7 +44,7 @@ describe('Sidebar', () => {
       }
     });
     expect(activeLink).toBeTruthy();
-    expect(activeLink?.getAttribute('href')).toBe('/cases');
+    expect((activeLink as unknown as HTMLElement)?.getAttribute('href')).toBe('/cases');
   });
 
   it('has no axe violations', async () => {

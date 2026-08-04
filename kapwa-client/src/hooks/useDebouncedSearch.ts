@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
-import { queryKeys } from '../lib/query-keys';
 
 export interface SearchResult {
   id: string;
@@ -33,25 +32,23 @@ export function useDebouncedSearch(
   }, [query, delay]);
 
   const trimmed = debouncedQuery.trim();
-  const swrKey: string | readonly unknown[] | null = trimmed
+  const swrKey: [string, string] | [string, { search: string; limit: number }] | null = trimmed
     ? fetcher
       ? ['debounced-search', trimmed]
-      : queryKeys.beneficiaries.list({ search: trimmed, limit })
+      : ['beneficiaries', { search: trimmed, limit }]
     : null;
 
-  const { data, isLoading } = useSWR<SearchResult[] | { data: Record<string, unknown>[] } | Record<string, unknown>[]>(
-    swrKey,
-    fetcher
-      ? (key: readonly unknown[]) => fetcher(String((key as readonly string[])[1]))
-      : undefined,
-    {
-      keepPreviousData: true,
-    },
-  );
+  const { data, isLoading } = useSWR<
+    SearchResult[] | { data: Record<string, unknown>[] } | Record<string, unknown>[]
+  >(swrKey, fetcher != null ? (key: readonly unknown[]) => fetcher(String((key as readonly unknown[])[1])) : null, {
+    keepPreviousData: true,
+  });
 
   const results = useMemo(() => {
     if (fetcher) return (data as SearchResult[]) || [];
-    const list = Array.isArray(data) ? data : (data as { data?: Record<string, unknown>[] })?.data || [];
+    const list = Array.isArray(data)
+      ? (data as Record<string, unknown>[])
+      : (data as { data?: Record<string, unknown>[] } | undefined)?.data || [];
     return list.map(mapToSearchResult);
   }, [data, fetcher]);
 
