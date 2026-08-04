@@ -23,6 +23,14 @@ vi.mock('@/lib/theme-context', () => ({
   useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
 }));
 
+vi.mock('@/hooks/useConnectivity', () => ({
+  useConnectivity: () => true,
+}));
+
+vi.mock('@/hooks/useSyncStatus', () => ({
+  useSyncStatus: () => ({ pending: 0, isOnline: true }),
+}));
+
 function renderWithRouter(ui: React.ReactElement) {
   return render(<MemoryRouter initialEntries={['/dashboard']}>{ui}</MemoryRouter>);
 }

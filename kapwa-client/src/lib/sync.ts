@@ -1,4 +1,4 @@
-import { getPendingChanges, QueuedChange, markSynced, markConflict, markFailed, getAllVersionVectors, queueChange } from './offline-queue';
+import { getPendingChanges, loadQueue, QueuedChange, markSynced, markConflict, markFailed, getAllVersionVectors, queueChange } from './offline-queue';
 import { api } from './api';
 
 const PRIVATE_KEY_STORAGE = 'kapwa_ed25519_private';
@@ -164,6 +164,10 @@ export async function resolveConflictRemotely(conflictId: string, resolution: 's
     await api.post(`/sync/conflicts/${conflictId}/resolve`, { resolution });
     return true;
   } catch (e) { console.error("Sync:", e); return false; }
+}
+
+export function getPendingCount(): number {
+  return loadQueue().filter(c => c.status === 'pending').length;
 }
 
 export function isOnline(): boolean {
