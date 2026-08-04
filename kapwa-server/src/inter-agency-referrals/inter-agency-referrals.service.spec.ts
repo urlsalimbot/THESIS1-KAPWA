@@ -6,6 +6,8 @@ import { Agency } from '../agencies/agency.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { Case } from '../cases/case.entity';
 import { CasesService } from '../cases/cases.service';
+import { User } from '../auth/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 function agencyUser(id: string, agencyId: string) {
   return { id, role: 'social_worker', agencyId } as any;
@@ -18,6 +20,8 @@ describe('InterAgencyReferralsService', () => {
   let benRepoMock: any;
   let caseRepoMock: any;
   let casesServiceMock: any;
+  let userRepoMock: any;
+  let notifServiceMock: any;
 
   beforeEach(async () => {
     repoMock = { create: jest.fn(), save: jest.fn(), findOne: jest.fn(), find: jest.fn(), createQueryBuilder: jest.fn() };
@@ -25,6 +29,8 @@ describe('InterAgencyReferralsService', () => {
     benRepoMock = { findOne: jest.fn() };
     caseRepoMock = { findOne: jest.fn() };
     casesServiceMock = { create: jest.fn() };
+    userRepoMock = { find: jest.fn().mockResolvedValue([]) };
+    notifServiceMock = { create: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -34,6 +40,8 @@ describe('InterAgencyReferralsService', () => {
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
         { provide: getRepositoryToken(Case), useValue: caseRepoMock },
         { provide: CasesService, useValue: casesServiceMock },
+        { provide: getRepositoryToken(User), useValue: userRepoMock },
+        { provide: NotificationsService, useValue: notifServiceMock },
       ],
     }).compile();
     service = module.get<InterAgencyReferralsService>(InterAgencyReferralsService);
@@ -253,6 +261,26 @@ describe('InterAgencyReferralsService', () => {
     it('rejects promote when already linked to a case', async () => {
       repoMock.findOne.mockResolvedValue({ id: 'r1', personId: 'p1', status: 'received', caseId: 'case-9', fromAgencyId: 'ag-1', toAgencyId: 'ag-2' });
       await expect(service.promoteToCase('r1', agencyUser('u2', 'ag-2'))).rejects.toThrow('already linked to a case');
+    });
+  });
+
+  describe('referral notifications', () => {
+    it('notifies receiving agency staff when a referral is created', async () => {
+      const notifyMock = jest.fn().mockResolvedValue(undefined);
+      const staff = [{ id: 'staff-1', agencyId: 'agency-to', role: 'agency_staff' }];
+
+      const service = new InterAgencyReferralsService(
+        repoMock as any, agencyRepoMock as any, benRepoMock as any, caseRepoMock as any, casesServiceMock as any,
+        userRepoMock as any, { create: notifyMock } as any,
+      );
+      (service as any).userRepo = { find: jest.fn().mockResolvedValue(staff) };
+      (agencyRepoMock.findOne as jest.Mock).mockResolvedValue({ id: 'agency-to', isActive: true, name: 'RHU' });
+      repoMock.create.mockImplementation((dto: any) => dto);
+      repoMock.save.mockImplementation(async (dto: any) => ({ id: 'r1', ...dto }));
+
+      await service.create({ toAgencyId: 'agency-to', reason: 'medical', legalBasisCode: 'LB-1' } as any, { id: 'sw-1', agencyId: 'agency-from' } as any);
+
+      expect(notifyMock).toHaveBeenCalled();
     });
   });
 });
