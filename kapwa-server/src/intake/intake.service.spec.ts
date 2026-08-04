@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, FindOperator } from 'typeorm';
+import { DataSource, FindOperator, JsonContains } from 'typeorm';
 import { IntakeService } from './intake.service';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
@@ -159,7 +159,8 @@ describe('IntakeService.submitBatchFamily', () => {
     expect(entity).toBe(Person);
     expect(options.where).toMatchObject({ surname: 'Dela Cruz', firstName: 'Ana' });
     expect(options.where.currentAddress).toBeInstanceOf(FindOperator);
-    expect(options.where.currentAddress.objectLiteralParameters).toEqual({ barangay: 'Bigte' });
+    expect(options.where.currentAddress.type).toBe('jsonContains');
+    expect(options.where.currentAddress.value).toEqual({ barangay: 'Bigte' });
   });
 
   it('falls back to an unscoped dedup lookup when the household has no barangay', async () => {
@@ -169,5 +170,17 @@ describe('IntakeService.submitBatchFamily', () => {
     const [entity, options] = queryRunnerMock.manager.findOne.mock.calls[0];
     expect(entity).toBe(Person);
     expect(options.where.currentAddress).toBeUndefined();
+  });
+
+  it('generates column-safe SQL for the barangay-scoped dedup lookup', async () => {
+    const dataSource = new DataSource({ type: 'postgres', entities: [Person] });
+    await (dataSource as any).buildMetadatas();
+    const repo = dataSource.getRepository(Person);
+    const sql = repo
+      .createQueryBuilder('person')
+      .where({ currentAddress: JsonContains({ barangay: 'Bigte' }) })
+      .getSql();
+    expect(sql).toContain('"person"."current_address" ::jsonb @>');
+    expect(sql).not.toContain('currentAddress');
   });
 });

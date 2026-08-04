@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, MoreThan, Raw, Repository } from 'typeorm';
+import { DataSource, In, JsonContains, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -56,8 +56,9 @@ export class IntakeService {
         const barangay = scope?.currentAddress?.barangay;
         if (barangay) {
           // Scope dedup to the household's barangay so a same-name/same-dob
-          // person in a different barangay is never matched.
-          where.currentAddress = Raw((alias) => `${alias}->>'barangay' = :barangay`, { barangay });
+          // person in a different barangay is never matched. JsonContains maps
+          // the property to the current_address column (Raw() would not).
+          where.currentAddress = JsonContains({ barangay });
         }
         existing = await find(where);
       }
