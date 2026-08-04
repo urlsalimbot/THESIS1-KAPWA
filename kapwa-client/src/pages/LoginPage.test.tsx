@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { LoginPage } from './LoginPage';
+import { ROLE_REDIRECT_MAP, NOTIFICATION_ROLES, CHAT_ROLES } from '@/lib/role-access';
 
 const mockLogin = vi.fn();
 const mockResolveMfa = vi.fn();
@@ -84,5 +85,25 @@ describe('LoginPage', () => {
     const { container } = render(<BrowserRouter><LoginPage /></BrowserRouter>);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+describe('role-access constants', () => {
+  it('redirect map covers every known role', () => {
+    const roles = ['social_worker', 'admin', 'coordinator', 'claimant', 'mayor', 'auditor', 'agency_staff'];
+    for (const r of roles) {
+      expect(ROLE_REDIRECT_MAP[r]).toBeDefined();
+    }
+  });
+
+  it('notification roles are mutually consistent with server @Roles', () => {
+    expect(NOTIFICATION_ROLES).toContain('admin');
+    expect(NOTIFICATION_ROLES).toContain('auditor');
+  });
+
+  it('chat roles exclude mayor, auditor, agency_staff', () => {
+    expect(CHAT_ROLES).not.toContain('mayor');
+    expect(CHAT_ROLES).not.toContain('auditor');
+    expect(CHAT_ROLES).not.toContain('agency_staff');
   });
 });

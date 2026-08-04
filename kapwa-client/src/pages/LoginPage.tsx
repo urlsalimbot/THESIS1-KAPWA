@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '../lib/api';
+import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,16 +20,6 @@ const loginSchema = z.object({
 });
 type LoginValues = z.infer<typeof loginSchema>;
 
-const roleRedirectMap: Record<string, string> = {
-  social_worker: '/dashboard',
-  admin: '/admin',
-  coordinator: '/coordinator',
-  claimant: '/my-dashboard',
-  mayor: '/reports',
-  auditor: '/audit-logs',
-  agency_staff: '/agency/dashboard',
-};
-
 export function LoginPage() {
   const [error, setError] = useState('');
   const [emailNotVerified, setEmailNotVerified] = useState('');
@@ -45,7 +36,7 @@ export function LoginPage() {
   });
 
   function redirectAfterLogin(user: { role: string }) {
-    navigate(roleRedirectMap[user.role] || '/dashboard', { replace: true });
+    navigate(ROLE_REDIRECT_MAP[user.role] || '/dashboard', { replace: true });
   }
 
   async function onSubmit(values: LoginValues) {
