@@ -4,6 +4,9 @@
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 
+/* class-based dark mode: dark: utilities follow the .dark class toggled on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 
 @layer legacy {
   .page-header { @apply mb-4; }
