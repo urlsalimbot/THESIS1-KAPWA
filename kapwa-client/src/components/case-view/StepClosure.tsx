@@ -5,6 +5,10 @@ import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { FileText, CheckCircle, Clock, ExternalLink, Download, Lock } from 'lucide-react';
 import { downloadCsrPdf } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
@@ -246,13 +250,30 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
             </Button>
           )}
           {!readOnly && (
-            <Button
-              onClick={handleFinalClosure}
-              disabled={saving || !closure.closureOutcome || !closure.clientSignature}
-              variant="default"
-            >
-              {saving ? 'Closing...' : 'Close Case'}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  disabled={saving || !closure.closureOutcome || !closure.clientSignature}
+                  variant="default"
+                >
+                  {saving ? 'Closing...' : 'Close Case'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Close Case?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently close this case. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleFinalClosure}>
+                    Close Case
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       )}
