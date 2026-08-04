@@ -93,6 +93,47 @@ export function DashboardPage() {
 
   const cases = useMemo(() => data?.recentCases ?? [], [data]);
 
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function handleExportFundUtilization() {
+    if (exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/export/monthly-funds?month=${currentMonth}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fund-utilization-${currentMonth}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setExportError(err.message || 'Export failed');
+      setTimeout(() => setExportError(null), 4000);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const fundUtilizationButton = (
+    <Button size="sm" variant="outline" onClick={handleExportFundUtilization} disabled={exporting}>
+      <Download size={14} className="mr-1" /> {exporting ? 'Generating...' : 'Export Fund Utilization'}
+    </Button>
+  );
+
   const columns: ColumnDef<CaseRow>[] = [
     { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
     { accessorKey: 'surname', header: 'Surname' },
@@ -138,7 +179,15 @@ export function DashboardPage() {
 
   if (!WORKER_ROLES.includes(role)) {
     return (
-      <PageShell title="Dashboard" description="Overview of social welfare operations and metrics.">
+      <PageShell title="Dashboard" description="Overview of social welfare operations and metrics."
+        actions={
+          ['mayor', 'auditor'].includes(role) ? (
+            <div className="flex gap-2">
+              {fundUtilizationButton}
+              {exportError && <span className="text-xs text-red-600 self-center">{exportError}</span>}
+            </div>
+          ) : undefined
+        }>
         {role === 'claimant' && <ClaimantWidgets />}
         {role === 'mayor' && <MayorWidgets />}
         {role === 'auditor' && <AuditorWidgets />}
@@ -152,6 +201,12 @@ export function DashboardPage() {
     <PageShell title="Dashboard" description="Overview of social welfare operations and metrics." cachedAt={lastSync ?? undefined}
       actions={
         <div className="flex gap-2">
+          {role === 'admin' && (
+            <>
+              {fundUtilizationButton}
+              {exportError && <span className="text-xs text-red-600 self-center">{exportError}</span>}
+            </>
+          )}
           <Button size="sm" variant="outline" onClick={() => navigate('/intake/referrals')}>
             Review Referrals
           </Button>

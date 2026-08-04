@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
@@ -44,9 +44,41 @@ describe('MayorReportsPage', () => {
     await mutate(() => true, undefined, { revalidate: false });
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.removeItem('kapwa_token');
+  });
+
   it('renders PageShell heading', async () => {
     renderWithSWR(<MayorReportsPage />);
     expect(await screen.findByRole('heading', { name: /Reports|Mayor/i })).toBeTruthy();
+  });
+
+  it('renders an Export Fund Utilization button', async () => {
+    renderWithSWR(<MayorReportsPage />);
+    expect(await screen.findByRole('button', { name: /Export Fund Utilization/i })).toBeTruthy();
+  });
+
+  it('triggers a download for /export/monthly-funds with the current month', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(new Blob()),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    localStorage.setItem('kapwa_token', 'test-token');
+
+    renderWithSWR(<MayorReportsPage />);
+    const button = await screen.findByRole('button', { name: /Export Fund Utilization/i });
+    fireEvent.click(button);
+
+    await vi.waitFor(() => {
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining(`/export/monthly-funds?month=${month}`),
+        expect.objectContaining({ headers: { Authorization: 'Bearer test-token' } }),
+      );
+    });
   });
 
   it('has no a11y violations', async () => {

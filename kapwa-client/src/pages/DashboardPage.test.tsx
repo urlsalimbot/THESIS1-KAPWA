@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
@@ -61,12 +61,60 @@ describe('DashboardPage', () => {
     await mutate(() => true, undefined, { revalidate: false });
   });
 
+  afterEach(async () => {
+    vi.unstubAllGlobals();
+    localStorage.removeItem('kapwa_token');
+    // Restore the default worker auth mock (some tests override it persistently).
+    const { useAuth } = await import('../lib/auth-context');
+    (useAuth as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+      user: { id: 'user-1', email: 'worker@test.com', fullName: 'Test Worker', role: 'social_worker' },
+      token: 'mock-token',
+      loading: false,
+    }));
+  });
+
+  it('renders an Export Fund Utilization button for admin and triggers a download', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(new Blob()),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    localStorage.setItem('kapwa_token', 'test-token');
+
+    const { useAuth } = await import('../lib/auth-context');
+    (useAuth as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+      user: { id: 'u1', email: 'admin@test.com', fullName: 'Test Admin', role: 'admin' },
+      token: 'test-token',
+      loading: false,
+    }));
+
+    renderWithSWR(<DashboardPage />);
+    await screen.findByText('Served Today');
+    const button = screen.getByRole('button', { name: /Export Fund Utilization/i });
+    fireEvent.click(button);
+
+    await vi.waitFor(() => {
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining(`/export/monthly-funds?month=${month}`),
+        expect.objectContaining({ headers: { Authorization: 'Bearer test-token' } }),
+      );
+    });
+  });
+
+  it('does not show the fund utilization export button for a social worker', async () => {
+    renderWithSWR(<DashboardPage />);
+    await screen.findByText('Served Today');
+    expect(screen.queryByRole('button', { name: /Export Fund Utilization/i })).toBeNull();
+  });
+
   it('renders PageShell heading, stat cards, and case table with mock data', async () => {
     renderWithSWR(<DashboardPage />);
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
     expect(await screen.findByText('Served Today')).toBeTruthy();
-    expect(await screen.findByText('C-001', {}, { timeout: 3000 })).toBeTruthy();
-    expect(screen.getByText('Juan Dela Cruz')).toBeTruthy();
+    expect(await screen.findByText('Monthly assistance', {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.getByText('Senior')).toBeTruthy();
   });
 
   it('snapshot: DashboardPage rendered DOM with stat cards + recent cases table', async () => {
