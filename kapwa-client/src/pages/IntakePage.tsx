@@ -378,6 +378,7 @@ export function IntakePage() {
     setError('');
     try {
       await api.post('/intake/batch-family', {
+        caseId: submittedCase.caseId,
         primary: personToPayload(beneficiary),
         members: familyMembersPayload(),
       });
