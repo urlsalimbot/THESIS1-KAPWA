@@ -120,7 +120,7 @@ export class ExportController {
     @Res() res?: Response,
   ) {
     if (!res) return;
-    if (!/^\d{4}-\d{2}$/.test(month || '')) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || '')) {
       res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid month. Use YYYY-MM format.' });
       return;
     }
