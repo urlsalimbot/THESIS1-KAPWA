@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
@@ -69,5 +69,49 @@ describe('Topbar', () => {
     const { container } = renderWithRouter(<Topbar />);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+function renderWithTopbar({ role }: { role: string }) {
+  mockUseAuth.mockReturnValue({
+    user: { id: '1', email: 'a@b.com', fullName: 'A B', role },
+    token: 'test-tok',
+    loading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    mfaChallenge: null,
+    resolveMfa: vi.fn(),
+    cancelMfa: vi.fn(),
+  });
+  return render(<MemoryRouter initialEntries={['/dashboard']}><Topbar /></MemoryRouter>);
+}
+
+describe('role-gated shell widgets', () => {
+  afterEach(() => {
+    mockUseAuth.mockReturnValue({
+      user: { id: '1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' },
+      token: 'test-tok',
+      loading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      mfaChallenge: null,
+      resolveMfa: vi.fn(),
+      cancelMfa: vi.fn(),
+    });
+  });
+
+  it('does not render MessagesPopover for agency_staff', async () => {
+    const { queryByLabelText } = renderWithTopbar({ role: 'agency_staff' });
+    expect(queryByLabelText(/messages/i)).toBeNull();
+  });
+
+  it('does not render NotificationsDropdown for mayor', async () => {
+    const { queryByLabelText } = renderWithTopbar({ role: 'mayor' });
+    expect(queryByLabelText(/notifications/i)).toBeNull();
+  });
+
+  it('renders NotificationsDropdown for auditor', async () => {
+    const { queryByLabelText } = renderWithTopbar({ role: 'auditor' });
+    expect(queryByLabelText(/notifications/i)).not.toBeNull();
   });
 });

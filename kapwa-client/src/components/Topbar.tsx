@@ -27,6 +27,7 @@ import {
 import { Sun, Moon, Menu, Plus, CheckSquare, LogOut, Settings, User, HandHeart } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
 import MessagesPopover from './MessagesPopover';
+import { NOTIFICATION_ROLES, CHAT_ROLES } from '@/lib/role-access';
 import PageInfoPopover from './PageInfoPopover';
 import { GlobalSearch } from './search/GlobalSearch';
 import { cn } from '@/lib/utils';
@@ -79,6 +80,8 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
   const isCoordinator = user?.role === 'coordinator';
 
   const isAgencyStaff = user?.role === 'agency_staff';
+  const canNotifications = NOTIFICATION_ROLES.includes(user?.role ?? '');
+  const canChat = CHAT_ROLES.includes(user?.role ?? '');
   const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(
     isAgencyStaff ? queryKeys.agencies.list() : null,
   );
@@ -173,8 +176,8 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           <Separator orientation="vertical" className="h-6 hidden md:block" />
           {/* ^ this separator stays (separates actions from notifications) */}
 
-          <NotificationsDropdown />
-          <MessagesPopover />
+          {canNotifications && <NotificationsDropdown />}
+          {canChat && <MessagesPopover />}
 
           <PageInfoPopover />
 
