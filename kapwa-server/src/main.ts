@@ -33,6 +33,21 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
 
+  app.useLogger({
+    log: (message: unknown, ...optionalParams: unknown[]) =>
+      console.log(JSON.stringify({ level: 'info', ts: new Date().toISOString(), msg: message, meta: optionalParams })),
+    error: (message: unknown, ...optionalParams: unknown[]) =>
+      console.error(JSON.stringify({ level: 'error', ts: new Date().toISOString(), msg: message, meta: optionalParams })),
+    warn: (message: unknown, ...optionalParams: unknown[]) =>
+      console.warn(JSON.stringify({ level: 'warn', ts: new Date().toISOString(), msg: message, meta: optionalParams })),
+    debug: (message: unknown, ...optionalParams: unknown[]) =>
+      console.debug(JSON.stringify({ level: 'debug', ts: new Date().toISOString(), msg: message, meta: optionalParams })),
+    verbose: (message: unknown, ...optionalParams: unknown[]) =>
+      console.log(JSON.stringify({ level: 'verbose', ts: new Date().toISOString(), msg: message, meta: optionalParams })),
+    fatal: (message: unknown, ...optionalParams: unknown[]) =>
+      console.error(JSON.stringify({ level: 'fatal', ts: new Date().toISOString(), msg: message, meta: optionalParams })),
+  });
+
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.use(helmet());
