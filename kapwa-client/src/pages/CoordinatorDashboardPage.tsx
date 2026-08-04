@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Clock, ClipboardList, MessageSquare, ArrowRight, Eye, Send, ExternalLink, Search, Loader2, BadgeCheck } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table';
+import { QuickScanCard } from '@/components/QuickScanCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -119,9 +120,13 @@ export function CoordinatorDashboardPage() {
         })}
       </div>
 
+      <div className="mt-4">
+        <QuickScanCard />
+      </div>
+
       <Card className="mt-4">
         <div className="border-b px-4 py-3">
-          <h3 className="text-sm font-semibold">Quick Case Search</h3>
+          <h2 className="text-sm font-semibold">Quick Case Search</h2>
         </div>
         <CardContent className="p-4">
           <form onSubmit={handleSearch} className="flex gap-2">
@@ -156,7 +161,7 @@ export function CoordinatorDashboardPage() {
 
       <Card className="mt-4">
         <div className="border-b px-4 py-3">
-          <h3 className="text-sm font-semibold">Today's Tracker Entries</h3>
+          <h2 className="text-sm font-semibold">Today's Tracker Entries</h2>
         </div>
         <CardContent className="p-4">
           {recentEntries.length === 0 ? (
