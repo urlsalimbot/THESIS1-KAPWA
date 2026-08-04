@@ -18,6 +18,7 @@ describe('ExportService', () => {
     caseRepo = {
       createQueryBuilder: jest.fn(),
       count: jest.fn(),
+      query: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -82,6 +83,32 @@ describe('ExportService', () => {
       const result = await service.exportCompliancePdf();
       expect(result).toBeInstanceOf(Buffer);
       expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('monthly fund utilization report', () => {
+    it('builds a workbook with a program x fund_source sheet', async () => {
+      const result = await service.monthlyFundUtilization('2026-08');
+      expect(result).toHaveProperty('buffer');
+      expect(result).toHaveProperty('filename');
+    });
+
+    it('queries case_interventions grouped by program and fund source', async () => {
+      caseRepo.query.mockResolvedValue([
+        { program: 'AICS', fundSource: 'Regular', amount: '25000' },
+        { program: 'Senior', fundSource: 'PDAF', amount: '12000' },
+      ]);
+      const result = await service.monthlyFundUtilization('2026-08');
+      expect(caseRepo.query).toHaveBeenCalled();
+      expect(result.filename).toBe('fund-utilization-2026-08.xlsx');
+      expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(result.buffer.length).toBeGreaterThan(0);
+    });
+
+    it('names the export for the requested month', async () => {
+      caseRepo.query.mockResolvedValue([]);
+      const result = await service.monthlyFundUtilization('2026-12');
+      expect(result.filename).toBe('fund-utilization-2026-12.xlsx');
     });
   });
 });

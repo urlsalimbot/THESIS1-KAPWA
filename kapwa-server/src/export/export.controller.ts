@@ -95,6 +95,28 @@ export class ExportController {
     }
   }
 
+  @Get('monthly-funds')
+  @Roles('admin', 'mayor', 'auditor')
+  @ApiOperation({ summary: 'Export monthly fund utilization as an Excel workbook' })
+  @ApiQuery({ name: 'month', required: true, example: '2026-08', description: 'Month in YYYY-MM format' })
+  async exportMonthlyFunds(
+    @Query('month') month: string,
+    @Res() res?: Response,
+  ) {
+    if (!res) return;
+    if (!/^\d{4}-\d{2}$/.test(month || '')) {
+      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid month. Use YYYY-MM format.' });
+      return;
+    }
+    const { buffer, filename } = await this.exportService.monthlyFundUtilization(month);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  }
+
   @Get('compliance')
   @Roles('admin', 'auditor', 'mayor')
   @ApiOperation({ summary: 'Export compliance report as PDF or CSV' })

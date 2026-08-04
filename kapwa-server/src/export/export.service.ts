@@ -4,6 +4,13 @@ import { Repository } from 'typeorm';
 import { Case } from '../cases/case.entity';
 import { AuditService } from '../audit/audit.service';
 
+function nextMonth(month: string): string {
+  const [year, m] = month.split('-').map(Number);
+  const date = new Date(Date.UTC(year, m - 1, 1));
+  date.setUTCMonth(date.getUTCMonth() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 @Injectable()
 export class ExportService {
   private readonly logger = new Logger(ExportService.name);
@@ -163,6 +170,29 @@ export class ExportService {
     return new Promise((resolve) => {
       doc.on('end', () => resolve(Buffer.concat(buffers)));
     });
+  }
+
+  async monthlyFundUtilization(month: string): Promise<{ buffer: Buffer; filename: string }> {
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Fund Utilization');
+    sheet.columns = [
+      { header: 'Program', key: 'program', width: 30 },
+      { header: 'Fund Source', key: 'fundSource', width: 20 },
+      { header: 'Amount', key: 'amount', width: 16 },
+    ];
+    const rows = await this.caseRepo.query(
+      `SELECT p.name AS program, ci.fund_source AS "fundSource", COALESCE(SUM(ci.amount), 0) AS amount
+       FROM case_interventions ci
+       LEFT JOIN programs p ON p.id = ci.program_id
+       WHERE ci.delivery_date >= $1 AND ci.delivery_date < $2
+       GROUP BY p.name, ci.fund_source ORDER BY p.name`,
+      [`${month}-01`, nextMonth(month)],
+    );
+    (rows ?? []).forEach((r: any) => sheet.addRow({ ...r, amount: Number(r.amount) }));
+    const buffer = await workbook.xlsx.writeBuffer();
+    this.logger.warn(`EXPORT: monthly fund utilization ${month}, ${(rows ?? []).length} rows`);
+    return { buffer: Buffer.from(buffer), filename: `fund-utilization-${month}.xlsx` };
   }
 
   async exportComplianceCsv(): Promise<{ buffer: Buffer; filename: string }> {

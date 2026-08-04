@@ -1,10 +1,48 @@
+import { useState } from 'react';
 import useSWR from 'swr';
 import { TrendingUp, Users, DollarSign, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
+import { Button } from '@/components/ui/button';
 import { queryKeys } from '../lib/query-keys';
 
 export function MayorReportsPage() {
   const { data: metrics, isLoading: loading } = useSWR(queryKeys.dashboard.mayorReports());
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  async function handleExportFundUtilization() {
+    if (exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const token = localStorage.getItem('kapwa_token');
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/export/monthly-funds?month=${currentMonth}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fund-utilization-${currentMonth}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setExportError(err.message || 'Export failed');
+      setTimeout(() => setExportError(null), 4000);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading reports...</div>;
 
@@ -34,10 +72,15 @@ export function MayorReportsPage() {
       description="Municipal program and compliance overview"
     >
 
-      <div className="no-print flex gap-2 mb-4">
-        <span className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs text-gray-600">
-          <Download size={14} /> Export Reports
-        </span>
+      <div className="no-print flex items-center gap-2 mb-4">
+        <Button
+          size="sm"
+          onClick={handleExportFundUtilization}
+          disabled={exporting}
+        >
+          <Download size={14} className="mr-1" /> {exporting ? 'Generating...' : 'Export Fund Utilization'}
+        </Button>
+        {exportError && <span className="text-xs text-red-600">{exportError}</span>}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
