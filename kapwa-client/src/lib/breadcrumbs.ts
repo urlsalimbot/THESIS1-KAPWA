@@ -39,5 +39,12 @@ export function createBreadcrumbs(pathname: string): BreadcrumbItem[] {
     crumbs.push({ label, href: accumulated });
   }
 
+  if (pathname.startsWith('/cases/')) {
+    const id = pathname.split('/')[2];
+    if (id && uuidRe.test(id)) {
+      crumbs.push({ label: `Case ${id.slice(0, 8)}`, href: pathname });
+    }
+  }
+
   return crumbs;
 }

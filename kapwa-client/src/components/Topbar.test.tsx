@@ -83,9 +83,10 @@ describe('Topbar', () => {
   });
 });
 
-function renderWithTopbar({ role }: { role: string }) {
+function renderWithTopbar({ role, pathname = '/dashboard' }: { role?: string; pathname?: string } = {}) {
+  const resolvedRole = role ?? 'social_worker';
   mockUseAuth.mockReturnValue({
-    user: { id: '1', email: 'a@b.com', fullName: 'A B', role },
+    user: { id: '1', email: 'a@b.com', fullName: 'A B', role: resolvedRole },
     token: 'test-tok',
     loading: false,
     login: vi.fn(),
@@ -94,7 +95,7 @@ function renderWithTopbar({ role }: { role: string }) {
     resolveMfa: vi.fn(),
     cancelMfa: vi.fn(),
   });
-  return render(<MemoryRouter initialEntries={['/dashboard']}><Topbar /></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={[pathname]}><Topbar /></MemoryRouter>);
 }
 
 describe('role-gated shell widgets', () => {
@@ -124,6 +125,20 @@ describe('role-gated shell widgets', () => {
   it('renders NotificationsDropdown for auditor', async () => {
     const { queryByLabelText } = renderWithTopbar({ role: 'auditor' });
     expect(queryByLabelText(/notifications/i)).not.toBeNull();
+  });
+});
+
+describe('breadcrumbs on deep pages', () => {
+  it('shows breadcrumbs on a deep page like /cases/123', () => {
+    const { container } = renderWithTopbar({ pathname: '/cases/123' });
+    const nav = container.querySelector('nav[aria-label="breadcrumb"]');
+    expect(nav).not.toBeNull();
+  });
+
+  it('shows breadcrumbs on a case detail page with a UUID id', () => {
+    const { container } = renderWithTopbar({ pathname: '/cases/0193e5a1-2b3c-4d5e-8f6a-7b8c9d0e1f2a' });
+    const nav = container.querySelector('nav[aria-label="breadcrumb"]');
+    expect(nav).not.toBeNull();
   });
 });
 

@@ -40,7 +40,7 @@ export interface TopbarProps {
 
 function BreadcrumbNav({ pathname }: { pathname: string }) {
   const crumbs = createBreadcrumbs(pathname);
-  if (crumbs.length <= 1) return null;
+  if (crumbs.length < 1) return null;
   return (
     <Breadcrumb>
       <BreadcrumbList className="flex items-center">
