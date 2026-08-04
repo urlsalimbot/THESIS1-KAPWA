@@ -8,6 +8,7 @@ import { useCaseActions } from '../hooks/useCaseActions';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -193,7 +194,7 @@ export function CasesPage() {
     return p;
   }, [urlPage, urlLimit, urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
 
-  const { data: caseResponse, isLoading } = useSWR<{ data: Record<string, unknown>[]; total: number }>(
+  const { data: caseResponse, isLoading, error, mutate } = useSWR<{ data: Record<string, unknown>[]; total: number }>(
     queryKeys.cases.list(listParams),
     { keepPreviousData: true },
   );
@@ -243,6 +244,14 @@ export function CasesPage() {
     return (
       <PageShell title="Case Tracker" description="Real-time view of processed interventions and logs.">
         <TableSkeleton rows={8} />
+      </PageShell>
+    );
+  }
+
+  if (error && !caseResponse) {
+    return (
+      <PageShell title="Case Tracker" description="Real-time view of processed interventions and logs.">
+        <ErrorState title="Could not load cases" message="Check your internet connection and try again." onRetry={() => mutate()} />
       </PageShell>
     );
   }

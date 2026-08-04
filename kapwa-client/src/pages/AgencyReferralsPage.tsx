@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { ReferralCard } from '@/components/referrals/ReferralCard';
 import { CreateReferralForm } from '@/components/referrals/CreateReferralForm';
 import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
@@ -17,7 +18,7 @@ export function AgencyReferralsPage() {
   const [transitioning, setTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState('');
 
-  const { data: referrals, isLoading } = useSWR<InterAgencyReferral[]>(
+  const { data: referrals, isLoading, error } = useSWR<InterAgencyReferral[]>(
     queryKeys.interAgencyReferrals.inbox(),
   );
   const { data: agencies } = useSWR<Agency[]>(queryKeys.agencies.list());
@@ -47,6 +48,14 @@ export function AgencyReferralsPage() {
     return (
       <PageShell title="Referrals" description="Track referrals between agencies">
         <CardGridSkeleton />
+      </PageShell>
+    );
+  }
+
+  if (error && !referrals) {
+    return (
+      <PageShell title="Referrals" description="Track referrals between agencies">
+        <ErrorState title="Could not load referrals" message="Check your internet connection and try again." onRetry={() => mutate(queryKeys.interAgencyReferrals.inbox())} />
       </PageShell>
     );
   }

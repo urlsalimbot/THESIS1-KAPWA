@@ -98,5 +98,25 @@ describe('BeneficiariesPage', () => {
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
+
+  it('renders ErrorState with a retry button when the list fails to load', async () => {
+    mockApiGet.mockRejectedValue(new Error('network down'));
+    renderWithSWR(<BeneficiariesPage />);
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText('Could not load beneficiaries')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy();
+  });
+
+  it('refetches when Try again is clicked after a load failure', async () => {
+    mockApiGet.mockRejectedValue(new Error('network down'));
+    renderWithSWR(<BeneficiariesPage />);
+    await screen.findByRole('alert');
+    mockApiGet.mockResolvedValue(mockBeneficiaries);
+    const callsBefore = mockApiGet.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    await vi.waitFor(() => {
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+  });
 });
 

@@ -5,6 +5,7 @@ import { Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,7 +67,7 @@ export function CaseTrackerPage() {
   const swrKey = hasRange
     ? queryKeys.tracker.range({ start: dateFrom + 'T00:00:00Z', end: dateTo + 'T23:59:59Z' })
     : queryKeys.tracker.daily({ date: dateFrom + 'T00:00:00Z' });
-  const { data: entries = [], isLoading: loading } = useSWR<TrackerEntry[]>(swrKey, {
+  const { data: entries = [], isLoading: loading, error, mutate } = useSWR<TrackerEntry[]>(swrKey, {
     keepPreviousData: true,
   });
   const { data: stats } = useSWR<TrackerStats>(queryKeys.tracker.stats());
@@ -99,6 +100,14 @@ export function CaseTrackerPage() {
     return (
       <PageShell title="Daily Case Tracker" description="Case Tracker Log — derived from cases">
         <CardGridSkeleton count={2} />
+      </PageShell>
+    );
+  }
+
+  if (error && entries.length === 0) {
+    return (
+      <PageShell title="Daily Case Tracker" description="Case Tracker Log — derived from cases">
+        <ErrorState title="Could not load case tracker" message="Check your internet connection and try again." onRetry={() => mutate()} />
       </PageShell>
     );
   }
