@@ -111,4 +111,22 @@ describe('ExportService', () => {
       expect(result.filename).toBe('fund-utilization-2026-12.xlsx');
     });
   });
+
+  describe('certificate generation', () => {
+    it('produces a PDF for a certificate of indigency', async () => {
+      const result = await service.generateCertificate('indigency', { fullName: 'Juan Dela Cruz', address: 'Poblacion, Norzagaray', date: '2026-08-04' });
+      expect(result.buffer).toBeDefined();
+      expect(result.buffer.toString('ascii', 0, 4)).toBe('%PDF');
+    });
+
+    it('produces PDFs for eligibility and referral certificates with filenames', async () => {
+      const result = await service.generateCertificate('eligibility', { fullName: 'Maria Santos', date: '2026-08-04', details: 'Approved for AICS assistance.' });
+      expect(result.buffer.toString('ascii', 0, 4)).toBe('%PDF');
+      expect(result.filename).toMatch(/^certificate-eligibility-\d+\.pdf$/);
+
+      const referral = await service.generateCertificate('referral', { fullName: 'Pedro Reyes', address: 'Purok 3', date: '2026-08-04' });
+      expect(referral.buffer.toString('ascii', 0, 4)).toBe('%PDF');
+      expect(referral.filename).toMatch(/^certificate-referral-\d+\.pdf$/);
+    });
+  });
 });

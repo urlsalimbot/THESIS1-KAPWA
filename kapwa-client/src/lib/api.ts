@@ -262,3 +262,28 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export type CertificateType = 'indigency' | 'eligibility' | 'referral';
+
+export async function downloadCertificate(
+  type: CertificateType,
+  data: { fullName: string; address?: string; date: string; details?: string },
+) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/export/certificate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ type, ...data }),
+  });
+  if (!res.ok) throw new Error(`Certificate export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = `certificate-${type}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

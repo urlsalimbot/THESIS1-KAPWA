@@ -172,6 +172,52 @@ export class ExportService {
     });
   }
 
+  async generateCertificate(
+    type: 'indigency' | 'eligibility' | 'referral',
+    data: { fullName: string; address?: string; date: string; details?: string },
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 60,
+      info: {
+        Title: `Certificate of ${type}`,
+        Author: 'MSWDO Norzagaray',
+        Subject: 'Certificate Generation',
+      },
+    });
+
+    const chunks: Buffer[] = [];
+    doc.on('data', (c: Buffer) => chunks.push(c));
+    const done = new Promise<void>((resolve) => doc.on('end', resolve));
+
+    doc.fontSize(18).font('Helvetica-Bold').text(`CERTIFICATE OF ${type.toUpperCase()}`, { align: 'center' });
+    doc.fontSize(10).font('Helvetica').text('Municipal Social Welfare and Development Office', { align: 'center' });
+    doc.moveDown();
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke();
+    doc.moveDown();
+
+    const certification =
+      type === 'indigency'
+        ? 'is a resident of this municipality and is hereby certified as INDIGENT, unable to provide for the basic needs of their family in a manner consistent with the minimum standards of living.'
+        : type === 'eligibility'
+          ? 'is hereby certified as ELIGIBLE to receive assistance and social services from this office.'
+          : 'is hereby referred to the appropriate agency for the necessary intervention and assistance.';
+
+    doc.fontSize(12).font('Helvetica').text(`This certifies that ${data.fullName}${data.address ? ` of ${data.address}` : ''} ${certification}`);
+    doc.moveDown();
+    doc.text(`Issued on ${data.date}.`);
+    if (data.details) {
+      doc.moveDown();
+      doc.text(data.details);
+    }
+
+    doc.end();
+    await done;
+    this.logger.warn(`EXPORT: certificate of ${type} for ${data.fullName}`);
+    return { buffer: Buffer.concat(chunks), filename: `certificate-${type}-${Date.now()}.pdf` };
+  }
+
   async monthlyFundUtilization(month: string): Promise<{ buffer: Buffer; filename: string }> {
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();

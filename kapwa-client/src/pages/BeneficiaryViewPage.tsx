@@ -20,7 +20,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, uploadSignature, uploadReceipt, dataURItoBlob } from "../lib/api";
+import { api, uploadSignature, uploadReceipt, dataURItoBlob, downloadCertificate, type CertificateType } from "../lib/api";
 import { queryKeys } from "../lib/query-keys";
 import { FamilyGraph } from "../components/family/FamilyGraph";
 import { ConsentManager } from "../components/consent/ConsentManager";
@@ -159,6 +159,8 @@ export function BeneficiaryViewPage() {
   const [intError, setIntError] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState("");
+  const [certGenerating, setCertGenerating] = useState<CertificateType | null>(null);
+  const [certError, setCertError] = useState("");
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [beneficiary, setBeneficiary] = useState<BeneficiaryDetail | null>(
     null,
@@ -303,6 +305,26 @@ export function BeneficiaryViewPage() {
     );
     if (!confirmed) return;
     navigate(`/beneficiary/${id}/card/print`);
+  }
+
+  async function handleGenerateCertificate(type: CertificateType) {
+    if (!beneficiary) return;
+    setCertGenerating(type);
+    setCertError("");
+    try {
+      await downloadCertificate(type, {
+        fullName: beneficiary.name,
+        address:
+          ((ben as any)?.address as string) ||
+          [beneficiary.purok, beneficiary.barangay].filter(Boolean).join(", ") ||
+          undefined,
+        date: new Date().toISOString().split("T")[0],
+      });
+    } catch (err: any) {
+      setCertError(err.message || "Failed to generate certificate");
+    } finally {
+      setCertGenerating(null);
+    }
   }
 
   if (loading) {
@@ -632,6 +654,28 @@ export function BeneficiaryViewPage() {
                 {assigning ? 'Assigning...' : 'Generate & Assign Card'}
               </Button>
             )}
+          </div>
+
+          {/* Certificates */}
+          <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+            <div className="flex items-center gap-2 text-primary mb-3">
+              <FileText size={16} />
+              <h3 className="text-xs font-semibold uppercase tracking-wider">Certificates</h3>
+            </div>
+            {certError && (
+              <div className="mb-3 rounded bg-destructive/10 p-2 text-xs text-destructive">{certError}</div>
+            )}
+            <div className="space-y-2">
+              <Button size="sm" className="w-full" onClick={() => handleGenerateCertificate("indigency")} disabled={certGenerating !== null}>
+                {certGenerating === "indigency" ? "Generating..." : "Certificate of Indigency"}
+              </Button>
+              <Button size="sm" variant="outline" className="w-full" onClick={() => handleGenerateCertificate("eligibility")} disabled={certGenerating !== null}>
+                {certGenerating === "eligibility" ? "Generating..." : "Certificate of Eligibility"}
+              </Button>
+              <Button size="sm" variant="outline" className="w-full" onClick={() => handleGenerateCertificate("referral")} disabled={certGenerating !== null}>
+                {certGenerating === "referral" ? "Generating..." : "Certificate of Referral"}
+              </Button>
+            </div>
           </div>
 
           {/* Consent & Privacy */}

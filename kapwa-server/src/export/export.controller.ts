@@ -1,10 +1,20 @@
-import { Controller, Get, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
+import { z } from 'zod';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ZodPipe } from '../common/pipes/zod.pipe';
 import { ExportService } from './export.service';
+
+const GenerateCertificateSchema = z.object({
+  type: z.enum(['indigency', 'eligibility', 'referral']),
+  fullName: z.string().min(1, 'Full name is required'),
+  address: z.string().optional(),
+  date: z.string().min(1, 'Issue date is required'),
+  details: z.string().optional(),
+});
 
 @ApiTags('Export')
 @Controller('export')
@@ -145,5 +155,26 @@ export class ExportController {
     } else {
       res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid format. Use pdf or csv.' });
     }
+  }
+
+  @Post('certificate')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @ApiOperation({ summary: 'Generate a certificate of indigency, eligibility, or referral as a PDF' })
+  async generateCertificate(
+    @Body(new ZodPipe(GenerateCertificateSchema)) body: z.infer<typeof GenerateCertificateSchema>,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.exportService.generateCertificate(body.type, {
+      fullName: body.fullName,
+      address: body.address,
+      date: body.date,
+      details: body.details,
+    });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length.toString(),
+    });
+    res.send(buffer);
   }
 }

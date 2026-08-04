@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock } from 'lucide-react';
-import { api, downloadCsrPdf } from '../lib/api';
+import { api, downloadCsrPdf, downloadCertificate, type CertificateType } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
@@ -113,6 +113,8 @@ export function CaseViewPage() {
     clientSignature: caseData?.clientSignature || '',
   });
   const [savingAssessment, setSavingAssessment] = useState(false);
+  const [certGenerating, setCertGenerating] = useState<CertificateType | null>(null);
+  const [certError, setCertError] = useState('');
 
   useEffect(() => {
     if (caseData) {
@@ -153,6 +155,23 @@ export function CaseViewPage() {
       console.error('Failed to save assessment:', e);
     } finally {
       setSavingAssessment(false);
+    }
+  }
+
+  async function handleGenerateCertificate(type: CertificateType) {
+    if (!ben) return;
+    setCertGenerating(type);
+    setCertError('');
+    try {
+      await downloadCertificate(type, {
+        fullName: [ben.firstName, ben.middleName, ben.surname].filter(Boolean).join(' '),
+        address: ben.address || undefined,
+        date: new Date().toISOString().split('T')[0],
+      });
+    } catch (err: any) {
+      setCertError(err.message || 'Failed to generate certificate');
+    } finally {
+      setCertGenerating(null);
     }
   }
 
@@ -336,6 +355,49 @@ export function CaseViewPage() {
                   onClick={() => navigate(`/beneficiaries/${ben.id}`)}
                 >
                   <User size={14} className="mr-1" /> View Profile
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Certificates card */}
+          {ben && (
+            <div className="rounded-lg border bg-card">
+              <div className="px-4 py-3 flex items-center gap-3">
+                <FileText size={20} className="text-primary" />
+                <h3 className="text-sm font-semibold">Certificates</h3>
+              </div>
+              <Separator />
+              <div className="px-5 py-3 space-y-2">
+                {certError && (
+                  <div className="rounded bg-destructive/10 p-2 text-xs text-destructive">{certError}</div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={certGenerating !== null}
+                  onClick={() => handleGenerateCertificate('indigency')}
+                >
+                  {certGenerating === 'indigency' ? 'Generating...' : 'Certificate of Indigency'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={certGenerating !== null}
+                  onClick={() => handleGenerateCertificate('eligibility')}
+                >
+                  {certGenerating === 'eligibility' ? 'Generating...' : 'Certificate of Eligibility'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={certGenerating !== null}
+                  onClick={() => handleGenerateCertificate('referral')}
+                >
+                  {certGenerating === 'referral' ? 'Generating...' : 'Certificate of Referral'}
                 </Button>
               </div>
             </div>
