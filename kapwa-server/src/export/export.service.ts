@@ -230,6 +230,7 @@ export class ExportService {
     const rows = await this.caseRepo.query(
       `SELECT p.name AS program, ci.fund_source AS "fundSource", COALESCE(SUM(ci.amount), 0) AS amount
        FROM case_interventions ci
+       JOIN cases c ON c.id = ci.case_id AND c.status = 'transitioning'
        LEFT JOIN programs p ON p.id = ci.program_id
        WHERE ci.delivery_date >= $1 AND ci.delivery_date < $2
        GROUP BY p.name, ci.fund_source ORDER BY p.name`,
