@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, FindOperator } from 'typeorm';
 import { IntakeService } from './intake.service';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
@@ -24,7 +24,7 @@ describe('IntakeService.submitBatchFamily', () => {
   };
   let caseRepo: { findOne: jest.Mock; create: jest.Mock };
   let benRepo: { findOne: jest.Mock; create: jest.Mock };
-  let hhRepo: { create: jest.Mock };
+  let hhRepo: { create: jest.Mock; findOne: jest.Mock };
   let personRepo: { findOne: jest.Mock; save: jest.Mock; create: jest.Mock };
 
   beforeEach(async () => {
@@ -44,7 +44,7 @@ describe('IntakeService.submitBatchFamily', () => {
     };
     caseRepo = { findOne: jest.fn(), create: jest.fn() };
     benRepo = { findOne: jest.fn(), create: jest.fn() };
-    hhRepo = { create: jest.fn() };
+    hhRepo = { create: jest.fn(), findOne: jest.fn().mockResolvedValue(null) };
     personRepo = {
       findOne: jest.fn(),
       save: jest.fn(),
@@ -149,5 +149,25 @@ describe('IntakeService.submitBatchFamily', () => {
       .mockResolvedValueOnce({ id: 'membership-1', personId: 'person-ana', householdId: 'household-1' });
     await service.submitBatchFamily(validInput);
     expect(membershipSaves()).toHaveLength(0);
+  });
+
+  it('scopes the member dedup lookup to the primary household barangay', async () => {
+    seedExistingRecords();
+    (hhRepo.findOne as jest.Mock).mockResolvedValue({ id: 'household-1', barangay: 'Bigte' });
+    await service.submitBatchFamily(validInput);
+    const [entity, options] = queryRunnerMock.manager.findOne.mock.calls[0];
+    expect(entity).toBe(Person);
+    expect(options.where).toMatchObject({ surname: 'Dela Cruz', firstName: 'Ana' });
+    expect(options.where.currentAddress).toBeInstanceOf(FindOperator);
+    expect(options.where.currentAddress.objectLiteralParameters).toEqual({ barangay: 'Bigte' });
+  });
+
+  it('falls back to an unscoped dedup lookup when the household has no barangay', async () => {
+    seedExistingRecords();
+    (hhRepo.findOne as jest.Mock).mockResolvedValue({ id: 'household-1', barangay: '' });
+    await service.submitBatchFamily(validInput);
+    const [entity, options] = queryRunnerMock.manager.findOne.mock.calls[0];
+    expect(entity).toBe(Person);
+    expect(options.where.currentAddress).toBeUndefined();
   });
 });
