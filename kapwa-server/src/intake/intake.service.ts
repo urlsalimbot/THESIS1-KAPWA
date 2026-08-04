@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
@@ -197,6 +197,16 @@ export class IntakeService {
     controlNo: string;
     status: string;
   }> {
+    const requiredPrimaryFields = ['surname', 'firstName', 'gender', 'dob'] as const;
+    const missing = requiredPrimaryFields.filter((field) => {
+      const value = (input.primary as Record<string, unknown>)[field];
+      return value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
+    });
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Batch family primary is missing required fields: ${missing.join(', ')}`,
+      );
+    }
     const primary = input.primary as unknown as IntakeInput['beneficiary'];
     return this.submitIntake({
       beneficiary: primary,
