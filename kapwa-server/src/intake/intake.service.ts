@@ -228,6 +228,10 @@ export class IntakeService {
     const existingCase = await this.caseRepo.findOne({ where: { id: input.caseId } });
     if (!existingCase) throw new NotFoundException('Case not found');
 
+    if (!existingCase.beneficiaryId) {
+      throw new BadRequestException('Case is not linked to a beneficiary');
+    }
+
     const beneficiary = await this.benRepo.findOne({ where: { id: existingCase.beneficiaryId } });
     if (!beneficiary) throw new NotFoundException('Beneficiary not found');
 
