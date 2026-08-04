@@ -15,6 +15,9 @@ import { Person } from '../beneficiaries/person.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { Case } from '../cases/case.entity';
 import { CasesService } from '../cases/cases.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationType } from '../notifications/notification.entity';
+import { UserRole } from '../auth/user.entity';
 import {
   InterAgencyReferral,
   InterAgencyReferralStatus,
@@ -45,6 +48,9 @@ export class InterAgencyReferralsService {
     @InjectRepository(Case)
     private caseRepo: Repository<Case>,
     private casesService: CasesService,
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
+    private notifService: NotificationsService,
   ) {}
 
   async create(dto: CreateInterAgencyReferralInput, caller: User) {
@@ -69,7 +75,9 @@ export class InterAgencyReferralsService {
       status: 'referred',
       createdBy: caller.id,
     });
-    return this.repo.save(ref);
+    const saved = await this.repo.save(ref);
+    await this.notifyAgency(toAgency.id, 'New Inter-Agency Referral', `New referral from ${fromAgencyId}: ${dto.reason}`);
+    return saved;
   }
 
   async findInbox(caller: User) {
@@ -148,7 +156,9 @@ export class InterAgencyReferralsService {
     this.assertTransition(ref.status, 'received');
     ref.status = 'received';
     ref.receivedAt = new Date();
-    return this.repo.save(ref);
+    const saved = await this.repo.save(ref);
+    await this.notifyCreator(saved);
+    return saved;
   }
 
   async action(id: string, caller: User) {
@@ -157,7 +167,9 @@ export class InterAgencyReferralsService {
     this.assertTransition(ref.status, 'actioned');
     ref.status = 'actioned';
     ref.actionedAt = new Date();
-    return this.repo.save(ref);
+    const saved = await this.repo.save(ref);
+    await this.notifyCreator(saved);
+    return saved;
   }
 
   async close(id: string, caller: User, dto: CloseReferralInput) {
@@ -167,7 +179,9 @@ export class InterAgencyReferralsService {
     ref.status = 'closed';
     ref.outcome = dto.outcome;
     ref.closedAt = new Date();
-    return this.repo.save(ref);
+    const saved = await this.repo.save(ref);
+    await this.notifyCreator(saved);
+    return saved;
   }
 
   async decline(id: string, caller: User, dto: DeclineReferralInput) {
@@ -176,7 +190,9 @@ export class InterAgencyReferralsService {
     this.assertTransition(ref.status, 'declined');
     ref.status = 'declined';
     ref.declinedReason = dto.declinedReason;
-    return this.repo.save(ref);
+    const saved = await this.repo.save(ref);
+    await this.notifyCreator(saved);
+    return saved;
   }
 
   async promoteToCase(id: string, caller: User) {
@@ -197,6 +213,31 @@ export class InterAgencyReferralsService {
     ref.actionedAt = new Date();
     await this.repo.save(ref);
     return created;
+  }
+
+  private async notifyCreator(ref: InterAgencyReferral) {
+    if (ref.createdBy) {
+      await this.notifService.create({
+        recipientId: ref.createdBy,
+        title: 'Inter-Agency Referral Update',
+        message: `Referral #${ref.id.slice(0, 8)} was ${ref.status} by the receiving agency.`,
+        category: NotificationCategory.CASE_UPDATE,
+        channel: NotificationType.IN_APP,
+      });
+    }
+  }
+
+  private async notifyAgency(agencyId: string, title: string, message: string) {
+    const staff = await this.userRepo.find({ where: { agencyId, role: UserRole.AGENCY_STAFF } });
+    for (const s of staff) {
+      await this.notifService.create({
+        recipientId: s.id,
+        title,
+        message,
+        category: NotificationCategory.CASE_UPDATE,
+        channel: NotificationType.IN_APP,
+      });
+    }
   }
 
   private async resolvePersonId(dto: CreateInterAgencyReferralInput): Promise<string> {

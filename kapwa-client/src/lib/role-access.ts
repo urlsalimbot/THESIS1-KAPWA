@@ -10,7 +10,7 @@ export const ROLE_REDIRECT_MAP: Record<string, string> = {
 
 // Must mirror the @Roles decorators on kapwa-server notifications.controller
 export const NOTIFICATION_ROLES = [
-  'admin', 'social_worker', 'coordinator', 'claimant', 'auditor',
+  'admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff',
 ];
 
 // Must mirror the @Roles decorators on kapwa-server chat.controller
