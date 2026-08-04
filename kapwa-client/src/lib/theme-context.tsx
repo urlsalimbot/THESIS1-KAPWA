@@ -29,7 +29,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     catch { return 'system'; }
   });
 
-  const [resolvedTheme, setResolved] = useState<'light' | 'dark'>(() => resolve(theme));
+  const [resolvedTheme, setResolved] = useState<'light' | 'dark'>(() => {
+    const r = resolve(theme);
+    document.documentElement.classList.toggle('dark', r === 'dark');
+    return r;
+  });
 
   useEffect(() => {
     const apply = (t: Theme) => {
