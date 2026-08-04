@@ -118,6 +118,7 @@ describe('IntakeService — Consolidated Intake', () => {
     }).compile();
 
     service = module.get<IntakeService>(IntakeService);
+    (service as unknown as { logger: { error: jest.Mock } }).logger = { error: jest.fn() };
   });
 
   afterEach(() => {
@@ -235,7 +236,7 @@ describe('IntakeService — Consolidated Intake', () => {
     (caseRepo.create as jest.Mock).mockReturnValue({});
     (consentRepo.create as jest.Mock).mockReturnValue({});
 
-    await expect(service.submitIntake(validInput)).rejects.toThrow('Case creation failed');
+    await expect(service.submitIntake(validInput)).rejects.toThrow('Service temporarily unavailable');
 
     expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
     expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, JsonContains, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
@@ -14,6 +14,8 @@ import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, C
 
 @Injectable()
 export class IntakeService {
+  private readonly logger = new Logger(IntakeService.name);
+
   constructor(
     private dataSource: DataSource,
     @InjectRepository(Person)
@@ -196,9 +198,8 @@ export class IntakeService {
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
-        error instanceof Error ? error.message : 'Intake transaction failed',
-      );
+      this.logger.error('submitIntake failed', error instanceof Error ? error.stack : undefined);
+      throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
     } finally {
       await queryRunner.release();
     }
@@ -267,9 +268,8 @@ export class IntakeService {
       await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
-        error instanceof Error ? error.message : 'Batch family transaction failed',
-      );
+      this.logger.error('submitBatchFamily failed', error instanceof Error ? error.stack : undefined);
+      throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
     } finally {
       await queryRunner.release();
     }
@@ -496,9 +496,8 @@ export class IntakeService {
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
-        error instanceof Error ? error.message : 'Confirm match transaction failed',
-      );
+      this.logger.error('confirmMatch failed', error instanceof Error ? error.stack : undefined);
+      throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
     } finally {
       await queryRunner.release();
     }
