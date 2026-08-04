@@ -1,4 +1,4 @@
-import { Logger, Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Logger, Injectable, BadRequestException, ForbiddenException, OnApplicationShutdown } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { SyncQueue } from './sync-queue.entity';
@@ -50,7 +50,7 @@ function sanitizePayload(payload: Record<string, any>): Record<string, any> {
 
 
 @Injectable()
-export class SyncService {
+export class SyncService implements OnApplicationShutdown {
   private readonly logger = new Logger(SyncService.name);
   private readonly idempotencyCache = new Map<string, { result: unknown; timestamp: number }>();
 
@@ -63,6 +63,13 @@ export class SyncService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly intakeService: IntakeService,
   ) {}
+
+  async onApplicationShutdown(signal?: string): Promise<void> {
+    this.logger.log(`Sync service shutting down (signal: ${signal})`);
+    // Idempotency cache is in-memory only; nothing to flush to disk.
+    // In-flight deltas are transactional — a restart leaves them retryable
+    // because queue entries are only marked 'applied' after success.
+  }
 
   async processDelta(batch: SyncRequestInput) {
     const { deviceId, changes, versionVectors, idempotencyKey, signature } = batch;
