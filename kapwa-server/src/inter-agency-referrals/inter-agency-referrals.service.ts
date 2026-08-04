@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -38,6 +39,8 @@ const TRANSITIONS: Record<InterAgencyReferralStatus, InterAgencyReferralStatus[]
 
 @Injectable()
 export class InterAgencyReferralsService {
+  private readonly logger = new Logger(InterAgencyReferralsService.name);
+
   constructor(
     @InjectRepository(InterAgencyReferral)
     private repo: Repository<InterAgencyReferral>,
@@ -76,7 +79,11 @@ export class InterAgencyReferralsService {
       createdBy: caller.id,
     });
     const saved = await this.repo.save(ref);
-    await this.notifyAgency(toAgency.id, 'New Inter-Agency Referral', `New referral from ${fromAgencyId}: ${dto.reason}`);
+    try {
+      await this.notifyAgency(toAgency.id, 'New Inter-Agency Referral', `New referral from ${fromAgencyId}: ${dto.reason}`);
+    } catch (err) {
+      this.logger.warn(`Failed to send referral notification: ${err instanceof Error ? err.message : err}`);
+    }
     return saved;
   }
 
@@ -157,7 +164,11 @@ export class InterAgencyReferralsService {
     ref.status = 'received';
     ref.receivedAt = new Date();
     const saved = await this.repo.save(ref);
-    await this.notifyCreator(saved);
+    try {
+      await this.notifyCreator(saved);
+    } catch (err) {
+      this.logger.warn(`Failed to send referral notification: ${err instanceof Error ? err.message : err}`);
+    }
     return saved;
   }
 
@@ -168,7 +179,11 @@ export class InterAgencyReferralsService {
     ref.status = 'actioned';
     ref.actionedAt = new Date();
     const saved = await this.repo.save(ref);
-    await this.notifyCreator(saved);
+    try {
+      await this.notifyCreator(saved);
+    } catch (err) {
+      this.logger.warn(`Failed to send referral notification: ${err instanceof Error ? err.message : err}`);
+    }
     return saved;
   }
 
@@ -180,7 +195,11 @@ export class InterAgencyReferralsService {
     ref.outcome = dto.outcome;
     ref.closedAt = new Date();
     const saved = await this.repo.save(ref);
-    await this.notifyCreator(saved);
+    try {
+      await this.notifyCreator(saved);
+    } catch (err) {
+      this.logger.warn(`Failed to send referral notification: ${err instanceof Error ? err.message : err}`);
+    }
     return saved;
   }
 
@@ -191,7 +210,11 @@ export class InterAgencyReferralsService {
     ref.status = 'declined';
     ref.declinedReason = dto.declinedReason;
     const saved = await this.repo.save(ref);
-    await this.notifyCreator(saved);
+    try {
+      await this.notifyCreator(saved);
+    } catch (err) {
+      this.logger.warn(`Failed to send referral notification: ${err instanceof Error ? err.message : err}`);
+    }
     return saved;
   }
 

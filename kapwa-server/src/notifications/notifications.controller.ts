@@ -25,7 +25,7 @@ export class NotificationsController {
   }
 
   @Post(':id/send-with-consent')
-  @Roles('admin', 'social_worker')
+  @Roles('admin', 'social_worker', 'agency_staff')
   async sendWithConsent(@Param('id') id: string) {
     return this.notifService.sendWithConsent(id);
   }
