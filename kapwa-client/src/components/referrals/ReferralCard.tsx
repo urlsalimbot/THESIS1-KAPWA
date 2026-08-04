@@ -19,6 +19,8 @@ export function ReferralCard({
   disabled?: boolean;
 }) {
   const [outcome, setOutcome] = useState('');
+  const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const isReceiver = referral.toAgencyId === myAgencyId;
   const canReceive = isReceiver && referral.status === 'referred';
   const canAction = isReceiver && referral.status === 'received';
@@ -59,7 +61,7 @@ export function ReferralCard({
           <Button size="sm" onClick={() => onTransition(referral.id, 'receive')} disabled={disabled}>
             Receive
           </Button>
-          <AlertDialog>
+          <AlertDialog open={declineDialogOpen} onOpenChange={setDeclineDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button size="sm" variant="destructive" disabled={disabled}>
                 Decline
@@ -74,7 +76,10 @@ export function ReferralCard({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Keep Referral</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onTransition(referral.id, 'decline', { declinedReason: 'Unable to accommodate' })}>
+                <AlertDialogAction onClick={async () => {
+                  await onTransition(referral.id, 'decline', { declinedReason: 'Unable to accommodate' });
+                  setDeclineDialogOpen(false);
+                }}>
                   Decline
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -95,7 +100,7 @@ export function ReferralCard({
             placeholder="Outcome"
             className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
           />
-          <AlertDialog>
+          <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button
                 size="sm"
@@ -113,7 +118,10 @@ export function ReferralCard({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Keep Open</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onTransition(referral.id, 'close', { outcome })}>
+                <AlertDialogAction onClick={async () => {
+                  await onTransition(referral.id, 'close', { outcome });
+                  setCloseDialogOpen(false);
+                }}>
                   Close Referral
                 </AlertDialogAction>
               </AlertDialogFooter>

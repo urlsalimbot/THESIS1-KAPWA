@@ -38,6 +38,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
   });
 
   const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
 
   async function handleSave() {
     setSaving(true);
@@ -250,7 +251,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
             </Button>
           )}
           {!readOnly && (
-            <AlertDialog>
+            <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button
                   disabled={saving || !closure.closureOutcome || !closure.clientSignature}
@@ -268,7 +269,10 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleFinalClosure}>
+                  <AlertDialogAction onClick={async () => {
+                    await handleFinalClosure();
+                    setCloseDialogOpen(false);
+                  }}>
                     Close Case
                   </AlertDialogAction>
                 </AlertDialogFooter>
