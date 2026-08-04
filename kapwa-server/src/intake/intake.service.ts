@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, MoreThan, Repository } from 'typeorm';
+import { DataSource, In, MoreThan, Raw, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -33,6 +33,7 @@ export class IntakeService {
     data: Partial<Person> & { surname: string; firstName: string; gender: string; dob: Date },
     queryRunner?: any,
     deduplicate = false,
+    scope?: { currentAddress?: Record<string, string> },
   ): Promise<Person> {
     const find = (where: any) => queryRunner
       ? queryRunner.manager.findOne(Person, { where })
@@ -47,7 +48,18 @@ export class IntakeService {
         existing = await find({ philhealthNumber: data.philhealthNumber });
       }
       if (!existing) {
-        existing = await find({ surname: data.surname, firstName: data.firstName, dob: data.dob });
+        const where: Record<string, unknown> = {
+          surname: data.surname,
+          firstName: data.firstName,
+          dob: data.dob,
+        };
+        const barangay = scope?.currentAddress?.barangay;
+        if (barangay) {
+          // Scope dedup to the household's barangay so a same-name/same-dob
+          // person in a different barangay is never matched.
+          where.currentAddress = Raw((alias) => `${alias}->>'barangay' = :barangay`, { barangay });
+        }
+        existing = await find(where);
       }
       if (existing) {
         const updatable = { ...data } as Partial<Person>;
@@ -220,6 +232,14 @@ export class IntakeService {
     const householdId = beneficiary.householdId;
     if (!householdId) throw new BadRequestException('Beneficiary is not linked to a household');
 
+    // Dedup scope: only match existing persons from the primary household's
+    // barangay so a same-name/same-dob person in another barangay is never
+    // linked to this household.
+    const household = await this.hhRepo.findOne({ where: { id: householdId } });
+    const dedupScope = household?.barangay
+      ? { currentAddress: { barangay: household.barangay } }
+      : undefined;
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction('SERIALIZABLE');
@@ -227,7 +247,7 @@ export class IntakeService {
     try {
       const validMembers = (input.members || []).filter(m => m.surname && m.surname.trim().length > 0);
       for (const fm of validMembers) {
-        const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true);
+        const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true, dedupScope);
         const existingMembership = await queryRunner.manager.findOne(HouseholdMembership, {
           where: { personId: memberPerson.id, householdId },
         });

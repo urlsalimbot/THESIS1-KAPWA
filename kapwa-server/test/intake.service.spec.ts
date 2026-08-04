@@ -94,7 +94,7 @@ describe('IntakeService — Consolidated Intake', () => {
 
     personRepo = { create: jest.fn(), save: jest.fn(), findOne: jest.fn().mockResolvedValue(null) } as any;
     benRepo = { create: jest.fn(), save: jest.fn() } as any;
-    hhRepo = { create: jest.fn(), save: jest.fn() } as any;
+    hhRepo = { create: jest.fn(), save: jest.fn(), findOne: jest.fn().mockResolvedValue({ id: hhUuid, barangay: 'Bigte' } as any) } as any;
     hmRepo = { create: jest.fn(), save: jest.fn() } as any;
     caseRepo = { create: jest.fn(), save: jest.fn() } as any;
     consentRepo = { create: jest.fn(), save: jest.fn() } as any;
