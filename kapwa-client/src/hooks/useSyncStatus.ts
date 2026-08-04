@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
-import { loadQueue } from '../lib/offline-queue';
-import { useConnectivity } from './useConnectivity';
+import { getPendingCount } from '../lib/sync';
 
 export function useSyncStatus() {
   const [pending, setPending] = useState(0);
-  const isOnline = useConnectivity();
 
   useEffect(() => {
     let alive = true;
     const tick = () => {
       try {
-        const q = loadQueue();
-        if (alive) setPending(q.filter(c => c.status === 'pending').length);
+        if (alive) setPending(getPendingCount());
       } catch {
         if (alive) setPending(0);
       }
@@ -23,5 +20,5 @@ export function useSyncStatus() {
       clearInterval(interval);
     };
   }, []);
-  return { pending, isOnline };
+  return { pending };
 }

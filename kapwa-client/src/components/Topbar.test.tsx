@@ -15,6 +15,9 @@ const mockUseAuth = vi.hoisted(() => vi.fn(() => ({
   cancelMfa: vi.fn(),
 })));
 
+const mockOnline = vi.hoisted(() => ({ value: true }));
+const mockPending = vi.hoisted(() => ({ value: 0 }));
+
 vi.mock('../lib/auth-context', () => ({
   useAuth: () => mockUseAuth(),
 }));
@@ -24,11 +27,11 @@ vi.mock('@/lib/theme-context', () => ({
 }));
 
 vi.mock('@/hooks/useConnectivity', () => ({
-  useConnectivity: () => true,
+  useConnectivity: () => mockOnline.value,
 }));
 
 vi.mock('@/hooks/useSyncStatus', () => ({
-  useSyncStatus: () => ({ pending: 0, isOnline: true }),
+  useSyncStatus: () => ({ pending: mockPending.value }),
 }));
 
 function renderWithRouter(ui: React.ReactElement) {
@@ -121,5 +124,60 @@ describe('role-gated shell widgets', () => {
   it('renders NotificationsDropdown for auditor', async () => {
     const { queryByLabelText } = renderWithTopbar({ role: 'auditor' });
     expect(queryByLabelText(/notifications/i)).not.toBeNull();
+  });
+});
+
+describe('offline and pending indicators', () => {
+  afterEach(() => {
+    mockOnline.value = true;
+    mockPending.value = 0;
+  });
+
+  it('shows offline badge when offline', () => {
+    mockOnline.value = false;
+    renderWithRouter(<Topbar />);
+    expect(screen.getByLabelText('Offline indicator')).toBeTruthy();
+  });
+
+  it('hides offline badge when online', () => {
+    renderWithRouter(<Topbar />);
+    expect(screen.queryByLabelText('Offline indicator')).toBeNull();
+  });
+
+  it('shows pending badge when online with pending changes', () => {
+    mockPending.value = 3;
+    renderWithRouter(<Topbar />);
+    expect(screen.getByLabelText('Pending sync count')).toBeTruthy();
+    expect(screen.getByText('3 pending')).toBeTruthy();
+  });
+
+  it('hides pending badge when offline', () => {
+    mockOnline.value = false;
+    mockPending.value = 3;
+    renderWithRouter(<Topbar />);
+    expect(screen.queryByLabelText('Pending sync count')).toBeNull();
+  });
+
+  it('shows persistent banner when offline with pending changes', () => {
+    mockOnline.value = false;
+    mockPending.value = 2;
+    renderWithRouter(<Topbar />);
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByText(/You are offline/)).toBeTruthy();
+    expect(screen.getByText(/2 change\(s\) pending sync/)).toBeTruthy();
+  });
+
+  it('hides persistent banner when online', () => {
+    mockOnline.value = true;
+    mockPending.value = 2;
+    renderWithRouter(<Topbar />);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('hides persistent banner when offline but no pending changes', () => {
+    mockOnline.value = false;
+    mockPending.value = 0;
+    renderWithRouter(<Topbar />);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
