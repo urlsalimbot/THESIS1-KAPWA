@@ -116,6 +116,9 @@ describe('AgencyReferralsPage', () => {
     expect(closeButton).not.toBeDisabled();
     await user.click(closeButton);
 
+    const confirmButton = await screen.findByRole('button', { name: 'Close Referral' });
+    await user.click(confirmButton);
+
     await vi.waitFor(() => {
       expect(mockApiPatch).toHaveBeenCalledWith('/inter-agency-referrals/r2/close', {
         outcome: 'Completed',
