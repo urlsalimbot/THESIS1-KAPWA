@@ -172,6 +172,17 @@ describe('IntakeService.submitBatchFamily', () => {
     expect(options.where.currentAddress).toBeUndefined();
   });
 
+  it('surfaces a generic message on batch failure, not the raw error', async () => {
+    seedExistingRecords();
+    (service as unknown as { logger: { error: jest.Mock } }).logger = { error: jest.fn() };
+    queryRunnerMock.manager.save.mockRejectedValue(
+      new Error('ERROR: column person.currentaddress does not exist'),
+    );
+    await expect(service.submitBatchFamily(validInput)).rejects.toThrow(
+      'Service temporarily unavailable',
+    );
+  });
+
   it('generates column-safe SQL for the barangay-scoped dedup lookup', async () => {
     const dataSource = new DataSource({ type: 'postgres', entities: [Person] });
     await (dataSource as any).buildMetadatas();
