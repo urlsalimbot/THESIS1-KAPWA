@@ -108,9 +108,45 @@ Existing Kapwa codebase capabilities:
 - [ ] **INF-03**: Podman deployment with backup cron
 - [ ] **INF-04**: Notifications (SMS via Twilio? + in-app) respecting consent preferences
 
+#### DSWD KILOS UNLAD Case Management
+- [x] **KILOS-01**: `CaseStatus` enum reflects 6-stage KILOS lifecycle (enrolled/assessed/in_review/active/transitioning/closed)
+- [x] **KILOS-02**: Case entity captures FRVA + SWDI scores
+- [x] **KILOS-03**: Family dialogue notes field on case
+- [x] **KILOS-04**: Self-reliance level + sustainability plan captured
+- [x] **KILOS-05**: Transition date + closure outcome/date captured
+- [x] **KILOS-06**: Follow-up visit tracking on case
+- [x] **KILOS-07**: 5-stage CaseViewPage stepper matching the framework
+- [x] **KILOS-08**: Stage transitions guarded by the updated enum
+
+#### Barangay Coordinator Module
+- [x] **COORD-01**: Coordinator submits referral for any barangay resident
+- [x] **COORD-02**: MSWDO reviews referrals (accept → intake, decline with reason)
+- [x] **COORD-03**: Coordinator tracks referral status + dashboard stats
+- [x] **COORD-04**: Coordinator verifies access card by code (beneficiary + service history)
+- [x] **COORD-05**: Coordinator assigns cards to barangay beneficiaries
+- [x] **COORD-06**: Coordinator logs access card activities (community_service/seminar/distribution/other)
+
+#### Settings & Notifications
+- [x] **SET-01**: Unified SettingsPage (Profile / Security / Notifications tabs)
+- [x] **NOT-01**: NotificationPreference entity with consentSkipped
+- [x] **NOT-02**: Bulk notification preferences endpoint
+
+#### Dashboard
+- [x] **DASH-01**: Role-based dashboard widget sets (Claimant/Mayor/Auditor/Coordinator)
+- [x] **DASH-02**: Dashboard cases table aligned with Cases page columns
+
+#### Public Announcements
+- [x] **ANN-01**: Admin publishes rich-text announcements (TipTap)
+- [x] **ANN-02**: Public AnnouncementPage + LatestAnnouncements on landing
+
+#### Inter-Agency Beneficiary Tracking
+- [ ] **IA-01**: Agencies registry + user.agency_id
+- [ ] **IA-02**: Inter-agency referrals module with status guard
+- [ ] **IA-03**: PSN exact-match dedup + agency-normalized access cards + client pages
+
 ### Out of Scope
 
-- **Integration with PhilSys/DSWD national databases** — Standalone system; CSV/PDF export for external submission
+- **Integration with PhilSys/DSWD national databases** — Standalone system; CSV/PDF export for external submission. Note: inter-agency tracking (agencies registry, PSN-based dedup, cross-agency referrals) is now in scope as Phase 25; PSN is used as an identifier for dedup only, not a national DB integration.
 - **Real-time chat between beneficiaries and staff** — Chat infrastructure exists but not MSWDO-priority
 - **Scheduling/appointment system** — Not in current spec
 - **Full financial management (LGU budgeting)** — Fund tracking only per intervention/program
@@ -161,4 +197,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-05 after milestone v1.2 start
+*Last updated: 2026-08-03 after planning reconciliation (phases 18-26 folded into v1.2)*
