@@ -179,6 +179,16 @@ describe('breadcrumbs on deep pages', () => {
     const nav = container.querySelector('nav[aria-label="breadcrumb"]');
     expect(nav).not.toBeNull();
   });
+
+  it('renders two crumbs with the case label for a UUID case path', () => {
+    const uuid = '0193e5a1-2b3c-4d5e-8f6a-7b8c9d0e1f2a';
+    const { container } = renderWithTopbar({ pathname: `/cases/${uuid}` });
+    const nav = container.querySelector('nav[aria-label="breadcrumb"]');
+    expect(nav).not.toBeNull();
+    const items = nav!.querySelectorAll('li:not([role="presentation"])');
+    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(nav!.textContent).toContain('Case 0193e5a1');
+  });
 });
 
 describe('offline and pending indicators', () => {
