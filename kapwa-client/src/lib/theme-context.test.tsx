@@ -197,3 +197,22 @@ describe('ThemeProvider setTheme', () => {
     expect(htmlHasDark()).toBe(false);
   });
 });
+
+describe('useTheme fallback outside provider', () => {
+  it('returns a default context without crashing when no provider wraps it', () => {
+    installMatchMedia(true);
+    const { getByTestId } = render(<Probe />);
+    expect(getByTestId('theme').textContent).toBe('system');
+    expect(getByTestId('resolved').textContent).toBe('dark');
+    expect(htmlHasDark()).toBe(false);
+  });
+
+  it('setTheme from the fallback context is a safe no-op', () => {
+    installMatchMedia(false);
+    const { getByTestId, getByText } = render(<Probe />);
+    expect(() => act(() => getByText('set dark').click())).not.toThrow();
+    expect(getByTestId('theme').textContent).toBe('system');
+    expect(getByTestId('resolved').textContent).toBe('light');
+    expect(htmlHasDark()).toBe(false);
+  });
+});
