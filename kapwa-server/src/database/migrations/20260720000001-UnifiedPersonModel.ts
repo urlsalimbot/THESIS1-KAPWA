@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class UnifiedPersonModel20260720000001 implements MigrationInterface {
-  name = 'UnifiedPersonModel2026072000001';
+  name = 'UnifiedPersonModel20260720000001';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // ==========================================================================
@@ -77,16 +77,23 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
       `ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`,
     );
 
-    // Migrate existing beneficiary data into persons table
+    // Migrate existing beneficiary data into persons table.
+    // Guarded: on a DB that already ran this migration (or bootstrapped via
+    // migrate.js), beneficiaries has no legacy surname column — skip the copy
+    // instead of failing (persons already populated by the first run).
     await queryRunner.query(`
-      INSERT INTO persons (id, surname, first_name, middle_name, gender, dob, address, phone, philsys_number,
-        place_of_birth, civil_status, current_address, philhealth_number,
-        occupation, estimated_monthly_income, age, email, search_vector)
-      SELECT id, surname, first_name, middle_name, gender, dob, address, phone, philsys_number,
-        place_of_birth, civil_status, current_address, philhealth_number,
-        occupation, estimated_monthly_income, age, NULL, search_vector
-      FROM beneficiaries
-      WHERE id IS NOT NULL
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'beneficiaries' AND column_name = 'surname') THEN
+          INSERT INTO persons (id, surname, first_name, middle_name, gender, dob, address, phone, philsys_number,
+            place_of_birth, civil_status, current_address, philhealth_number,
+            occupation, estimated_monthly_income, age, email, search_vector)
+          SELECT id, surname, first_name, middle_name, gender, dob, address, phone, philsys_number,
+            place_of_birth, civil_status, current_address, philhealth_number,
+            occupation, estimated_monthly_income, age, NULL, search_vector
+          FROM beneficiaries
+          WHERE id IS NOT NULL;
+        END IF;
+      END $$;
     `);
 
     // Link beneficiaries to their person records

@@ -53,7 +53,13 @@ import { AppController } from './app.controller';
         database: config.get('DB_NAME', 'kapwa'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        migrationsRun: true,
+        // The TypeORM migration chain is NOT fresh-boot-safe (legacy timestamp
+        // ordering + non-idempotent statements). The canonical bootstrap is
+        // migrate.ts, run explicitly in main.ts before Nest boots (and via
+        // deploy.sh / run-migrations.js for incremental upgrades of existing
+        // DBs). Never auto-run the chain here — it breaks fresh deployments.
+        migrationsRun: false,
+        synchronize: false,
         namingStrategy: new SnakeNamingStrategy(),
         logging: ['error', 'warn'],
         extra: {

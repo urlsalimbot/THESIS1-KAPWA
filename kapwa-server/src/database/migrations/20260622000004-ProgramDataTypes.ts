@@ -5,7 +5,7 @@ export class ProgramDataTypes2026062200004 implements MigrationInterface {
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Add new JSONB column for approval_workflow
-    await queryRunner.query(`ALTER TABLE programs ADD COLUMN approval_workflow_new jsonb`);
+    await queryRunner.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS approval_workflow_new jsonb`);
 
     // 2. Migrate existing text[] data: convert each text array element to structured JSONB
     await queryRunner.query(`
@@ -30,7 +30,7 @@ export class ProgramDataTypes2026062200004 implements MigrationInterface {
     await queryRunner.query(`ALTER TABLE programs RENAME COLUMN approval_workflow_new TO approval_workflow`);
 
     // 4. Add legal_basis column
-    await queryRunner.query(`ALTER TABLE programs ADD COLUMN legal_basis character varying`);
+    await queryRunner.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS legal_basis character varying`);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {

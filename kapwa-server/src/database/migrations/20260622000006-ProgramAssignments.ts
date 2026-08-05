@@ -52,11 +52,11 @@ export class ProgramAssignments2026062200006 implements MigrationInterface {
     `);
 
     // 4. Add indexes for query performance
-    await queryRunner.query(`CREATE INDEX idx_program_assignments_case_id ON program_assignments(case_id)`);
-    await queryRunner.query(`CREATE INDEX idx_program_assignments_program_id ON program_assignments(program_id)`);
-    await queryRunner.query(`CREATE INDEX idx_program_assignments_status ON program_assignments(status)`);
-    await queryRunner.query(`CREATE INDEX idx_program_assignment_steps_assignment_id ON program_assignment_steps(assignment_id)`);
-    await queryRunner.query(`CREATE INDEX idx_program_assignment_steps_status ON program_assignment_steps(status)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_program_assignments_case_id ON program_assignments(case_id)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_program_assignments_program_id ON program_assignments(program_id)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_program_assignments_status ON program_assignments(status)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_program_assignment_steps_assignment_id ON program_assignment_steps(assignment_id)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_program_assignment_steps_status ON program_assignment_steps(status)`);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {

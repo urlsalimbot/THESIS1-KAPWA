@@ -1,7 +1,15 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AaaInitialSchema1740000000000 implements MigrationInterface {
-  name = 'AaaInitialSchema1740000000000';
+// Legacy-schema guards: on a modernized DB (UnifiedPersonModel dropped
+// beneficiaries.address/surname/first_name/search_vector; DropInterventions /
+// DropCaseTrackerLog dropped their tables) these make the migration idempotent.
+const colExists = (table: string, column: string) =>
+  `EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = '${table}' AND column_name = '${column}')`;
+const tblExists = (table: string) =>
+  `EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '${table}')`;
+
+export class AaaInitialSchema0000000000002 implements MigrationInterface {
+  name = 'AaaInitialSchema0000000000002';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
@@ -30,16 +38,20 @@ export class AaaInitialSchema1740000000000 implements MigrationInterface {
     await queryRunner.query(`CREATE TABLE IF NOT EXISTS document_vault ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), file_name TEXT NOT NULL, original_name TEXT, mime_type TEXT, file_size INTEGER DEFAULT 0, case_id UUID, beneficiary_id UUID, category TEXT, notes TEXT, uploaded_by UUID, created_at TIMESTAMP DEFAULT NOW() )`);
     await queryRunner.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_barangay ON beneficiaries(address)`);
+    // Legacy indexes — only valid on the legacy (pre-UnifiedPersonModel) schema.
+    // Guard each so the migration is idempotent when re-run on a modernized DB
+    // (UnifiedPersonModel drops beneficiaries.address/surname/first_name/search_vector
+    // and DropInterventions/DropCaseTrackerLog drop their tables).
+    await queryRunner.query(`DO $$ BEGIN IF ${colExists('beneficiaries', 'address')} THEN CREATE INDEX IF NOT EXISTS idx_beneficiary_barangay ON beneficiaries(address); END IF; END $$;`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_case_status ON cases(status)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_case_control ON cases(control_no)`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_intervention_case ON interventions(case_id)`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_intervention_date ON interventions(service_date)`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_tracker_date ON case_tracker_log(transaction_date)`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN CREATE INDEX IF NOT EXISTS idx_intervention_case ON interventions(case_id); END IF; END $$;`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN CREATE INDEX IF NOT EXISTS idx_intervention_date ON interventions(service_date); END IF; END $$;`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('case_tracker_log')} THEN CREATE INDEX IF NOT EXISTS idx_tracker_date ON case_tracker_log(transaction_date); END IF; END $$;`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_sync_status ON sync_queue(status)`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_search ON beneficiaries USING gin(search_vector)`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_name_trgm ON beneficiaries USING gin (surname gin_trgm_ops, first_name gin_trgm_ops)`);
+    await queryRunner.query(`DO $$ BEGIN IF ${colExists('beneficiaries', 'search_vector')} THEN CREATE INDEX IF NOT EXISTS idx_beneficiary_search ON beneficiaries USING gin(search_vector); END IF; END $$;`);
+    await queryRunner.query(`DO $$ BEGIN IF ${colExists('beneficiaries', 'surname')} AND ${colExists('beneficiaries', 'first_name')} THEN CREATE INDEX IF NOT EXISTS idx_beneficiary_name_trgm ON beneficiaries USING gin (surname gin_trgm_ops, first_name gin_trgm_ops); END IF; END $$;`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_consent_beneficiary ON consent_ledger(beneficiary_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_consent_status ON consent_ledger(status)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_csr_case ON csr_reports(case_id)`);
@@ -56,7 +68,7 @@ export class AaaInitialSchema1740000000000 implements MigrationInterface {
 
     await queryRunner.query(`ALTER TABLE beneficiaries ENABLE ROW LEVEL SECURITY`);
     await queryRunner.query(`ALTER TABLE cases ENABLE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE interventions ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN ALTER TABLE interventions ENABLE ROW LEVEL SECURITY; END IF; END $$;`);
     await queryRunner.query(`ALTER TABLE consent_ledger ENABLE ROW LEVEL SECURITY`);
     await queryRunner.query(`ALTER TABLE irf_cases ENABLE ROW LEVEL SECURITY`);
 
@@ -69,10 +81,10 @@ export class AaaInitialSchema1740000000000 implements MigrationInterface {
     await queryRunner.query(`DROP POLICY IF EXISTS consent_self ON consent_ledger`);
 
     await queryRunner.query(`CREATE POLICY ben_admin_all ON beneficiaries FOR ALL USING (current_setting('app.current_role') = 'admin')`);
-    await queryRunner.query(`CREATE POLICY ben_barangay_scope ON beneficiaries FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND (current_setting('app.current_barangay') = '' OR address ILIKE '%' || current_setting('app.current_barangay') || '%') )`);
+    await queryRunner.query(`DO $$ BEGIN IF ${colExists('beneficiaries', 'address')} THEN CREATE POLICY ben_barangay_scope ON beneficiaries FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND (current_setting('app.current_barangay') = '' OR address ILIKE '%' || current_setting('app.current_barangay') || '%') ); END IF; END $$;`);
     await queryRunner.query(`CREATE POLICY cases_admin_all ON cases FOR ALL USING (current_setting('app.current_role') = 'admin')`);
-    await queryRunner.query(`CREATE POLICY cases_barangay_scope ON cases FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND EXISTS ( SELECT 1 FROM beneficiaries b WHERE b.id = cases.beneficiary_id AND (current_setting('app.current_barangay') = '' OR b.address ILIKE '%' || current_setting('app.current_barangay') || '%') ) )`);
-    await queryRunner.query(`CREATE POLICY int_admin_all ON interventions FOR ALL USING (current_setting('app.current_role') = 'admin')`);
+    await queryRunner.query(`DO $$ BEGIN IF ${colExists('beneficiaries', 'address')} THEN CREATE POLICY cases_barangay_scope ON cases FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND EXISTS ( SELECT 1 FROM beneficiaries b WHERE b.id = cases.beneficiary_id AND (current_setting('app.current_barangay') = '' OR b.address ILIKE '%' || current_setting('app.current_barangay') || '%') ) ); END IF; END $$;`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN CREATE POLICY int_admin_all ON interventions FOR ALL USING (current_setting('app.current_role') = 'admin'); END IF; END $$;`);
     await queryRunner.query(`CREATE POLICY consent_admin_all ON consent_ledger FOR ALL USING (current_setting('app.current_role') = 'admin')`);
     await queryRunner.query(`CREATE POLICY consent_self ON consent_ledger FOR SELECT USING (current_setting('app.current_role') = 'social_worker' AND beneficiary_id IS NOT NULL)`);
   }
@@ -87,7 +99,7 @@ export class AaaInitialSchema1740000000000 implements MigrationInterface {
     await queryRunner.query(`DROP POLICY IF EXISTS consent_self ON consent_ledger`);
     await queryRunner.query(`ALTER TABLE beneficiaries NOFORCE ROW LEVEL SECURITY`);
     await queryRunner.query(`ALTER TABLE cases NOFORCE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE interventions NOFORCE ROW LEVEL SECURITY`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN ALTER TABLE interventions NOFORCE ROW LEVEL SECURITY; END IF; END $$;`);
     await queryRunner.query(`ALTER TABLE consent_ledger NOFORCE ROW LEVEL SECURITY`);
     await queryRunner.query(`ALTER TABLE irf_cases NOFORCE ROW LEVEL SECURITY`);
 
