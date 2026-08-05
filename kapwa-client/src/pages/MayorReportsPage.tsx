@@ -4,6 +4,7 @@ import { TrendingUp, Users, DollarSign, Clock, CheckCircle, AlertTriangle, Downl
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '../lib/query-keys';
+import { downloadMonthlyFunds } from '../lib/api';
 
 export function MayorReportsPage() {
   const { data: metrics, isLoading: loading } = useSWR(queryKeys.dashboard.mayorReports());
@@ -18,24 +19,7 @@ export function MayorReportsPage() {
     setExporting(true);
     setExportError(null);
     try {
-      const token = localStorage.getItem('kapwa_token');
-      const baseUrl = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${baseUrl}/export/monthly-funds?month=${currentMonth}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Export failed (${res.status})`);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `fund-utilization-${currentMonth}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await downloadMonthlyFunds(currentMonth);
     } catch (err: any) {
       setExportError(err.message || 'Export failed');
       setTimeout(() => setExportError(null), 4000);

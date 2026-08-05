@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
+import { downloadMonthlyFunds } from '@/lib/api';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { ClaimantWidgets } from '@/components/dashboard/widgets/ClaimantWidgets';
 import { MayorWidgets } from '@/components/dashboard/widgets/MayorWidgets';
@@ -102,24 +103,7 @@ export function DashboardPage() {
     setExporting(true);
     setExportError(null);
     try {
-      const token = localStorage.getItem('kapwa_token');
-      const baseUrl = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${baseUrl}/export/monthly-funds?month=${currentMonth}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Export failed (${res.status})`);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `fund-utilization-${currentMonth}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await downloadMonthlyFunds(currentMonth);
     } catch (err: any) {
       setExportError(err.message || 'Export failed');
       setTimeout(() => setExportError(null), 4000);
