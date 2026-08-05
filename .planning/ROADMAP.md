@@ -119,6 +119,27 @@ Plans:
 
 ---
 
+## Phase 18: DSWD KILOS UNLAD Case Management Alignment
+
+**Goal:** Align Kapwa's case management workflow with the official DSWD KILOS UNLAD framework (3 phases, 6 steps).
+
+**Requirements:** KILOS-01, KILOS-02, KILOS-03, KILOS-04, KILOS-05, KILOS-06, KILOS-07, KILOS-08
+
+**Success criteria:**
+
+1. `CaseStatus` enum reflects the 6-stage KILOS lifecycle (enrolled/assessed/in_review/active/transitioning/closed)
+2. Case entity captures KILOS fields (FRVA, SWDI, family dialogue, sustainability, closure outcome)
+3. `CaseViewPage` renders a 5-stage stepper matching the framework
+4. Stage transitions are guarded by the updated CaseStatus enum
+
+**Plans:** 1/1 plans complete
+
+Plans:
+
+- [x] 18-01-PLAN.md — KILOS alignment (enum → entity fields → stepper → transitions)
+
+---
+
 ## Phase 19: Barangay Coordinator Module — Referral System
 
 **Goal:** Barangay coordinator refers any resident to MSWDO intake pipeline. Coordinator tracks status (pending/accepted/declined).
@@ -132,11 +153,12 @@ Plans:
 3. Coordinator dashboard shows referral stats and recent referrals
 4. Coordinator can view status of all their referrals
 
-**Plans:** 6 tasks (referral entity, service+controller, coordinator client pages, MSWDO review page, dashboard updates, router)
+**Plans:** 2/2 plans complete
 
-Plan:
+Plans:
 
-- [ ] 19-01-PLAN.md — Referral system (entity → service → controller → coordinator UI → MSWDO review → dashboard)
+- [x] 19-01-PLAN.md — Referral system (entity → service → controller → coordinator UI → MSWDO review → dashboard)
+- [x] 19-02-PLAN.md — Condensed referral plan variant (same scope)
 
 ---
 
@@ -153,11 +175,139 @@ Plan:
 3. Coordinator can log activities (community_service, seminar, distribution, other)
 4. Coordinator can see their activity log history
 
-**Plans:** 6 tasks (permission updates, migration, barangay-scoped lookup, access card page, activity form, router)
+**Plans:** 2/2 plans complete
 
-Plan:
+Plans:
 
-- [ ] 20-01-PLAN.md — Access card management (permissions → migration → coordinator UI → activity logging)
+- [x] 20-01-PLAN.md — Access card management (permissions → migration → coordinator UI → activity logging)
+- [x] 20-02-PLAN.md — Condensed access card plan variant (same scope)
+
+---
+
+## Phase 21: Settings, Notifications & UI Consistency
+
+**Goal:** Centralize user preferences in a unified Settings page and harden notification consent.
+
+**Requirements:** SET-01, NOT-01, NOT-02
+
+**Success criteria:**
+
+1. `SettingsPage` with Profile, Security, Notifications tabs
+2. `NotificationPreference` entity with `consentSkipped` + migration
+3. Bulk notification preferences endpoint (single round-trip)
+4. Settings route, nav, and topbar link wired; page tested
+
+**Plans:** 1/1 plans complete
+
+Plans:
+
+- [x] 21-01-PLAN.md — Settings page + notification preferences (entity, bulk endpoint, wiring, tests)
+
+---
+
+## Phase 22: Intake Redesign, Match-Check & Form Hardening
+
+**Goal:** Redesign the intake flow with pre-existing matching, hardened validation, and family-member data quality.
+
+**Requirements:** INT-01, INT-02, INT-03, INT-04
+
+**Success criteria:**
+
+1. IntakePage with inline validation + error display + card section headers
+2. Pre-existing matching: `caseExistsWithin30Days` in match-check response; confirm-match endpoint
+3. Match review page with split-pane side-by-side comparison
+4. Family members require gender + dob; age computed; confirmMatch idempotent
+
+**Plans:** 1/1 plans complete
+
+Plans:
+
+- [x] 22-01-PLAN.md — Intake redesign + match-check + form hardening (validation, match review, family member data quality)
+
+---
+
+## Phase 23: Worker/Admin Dashboard Redesign
+
+**Goal:** Replace the monolithic dashboard with role-aware widget sets and align the cases table with the Cases page.
+
+**Requirements:** DASH-01, DASH-02
+
+**Success criteria:**
+
+1. Role-based widget sets (Claimant, Mayor, Auditor, Coordinator)
+2. Shared chart/stat widgets (SLA, case status, trends, needs-attention, barangay breakdown)
+3. Dashboard cases table matches Cases page columns
+4. Deterministic layout (DnD engine switched out for static composition)
+
+**Plans:** 1/1 plans complete
+
+Plans:
+
+- [x] 23-01-PLAN.md — Dashboard engine + role widgets + column parity
+
+---
+
+## Phase 24: Public Announcements
+
+**Goal:** Add a public announcements module so admins publish news visible on the landing page and a public detail page.
+
+**Requirements:** ANN-01, ANN-02
+
+**Success criteria:**
+
+1. `AnnouncementsModule` with authenticated management + unauthenticated public controller
+2. TipTap-rich announcement edit page
+3. Public AnnouncementPage detail + LatestAnnouncements on landing
+4. E2E flow verified (publish → landing → detail)
+
+**Plans:** 1/1 plans complete
+
+Plans:
+
+- [x] 24-01-PLAN.md — Announcements (server module, management UI, public UI, E2E)
+
+---
+
+## Phase 25: Inter-Agency Beneficiary Tracking
+
+**Goal:** Track beneficiaries across external agencies — agencies registry, cross-agency referrals, agency-normalized access cards, and PSN dedup.
+
+**Requirements:** IA-01, IA-02, IA-03
+
+**Success criteria:**
+
+1. Agencies registry with seed data; users optionally bound via `user.agency_id`
+2. Inter-agency referrals module with status guard
+3. Access card services normalized to one agency; card summary endpoint
+4. Beneficiary dedup by exact Philsys Number (PSN); IRF exports resolve agency
+5. Client inter-agency referrals page (inbox + create) and access card three-section view
+
+**Plans:** 1/1 plans (5/6 tasks done)
+
+Plans:
+
+- [ ] 25-01-PLAN.md — Inter-agency tracking (agencies → inter-agency referrals → card normalization → PSN dedup → client pages) — Task 6 (access card 3-section view) in progress
+
+---
+
+## Phase 26: SPEC-GAP Implementation
+
+**Goal:** Close gaps between Master Specification v1.1 and the codebase — hybrid physical-digital filing, remote wipe, LGU ID format, duplicate detection, COA export, config audit, backups.
+
+**Requirements:** SPEC-01, SPEC-02
+
+**Success criteria:**
+
+1. Physical-files module exists and is registered in `app.module.ts` (pending)
+2. COA export module registered and tested
+3. Admin remote-wipe module registered
+4. LCR bulk-import module registered and tested
+
+**Plans:** 1/1 plans (partial)
+
+Plans:
+
+- [ ] 26-01-PLAN.md — SPEC-GAP modules (physical-files pending registration; export/wipe/LCR done)
 
 ---
 
@@ -171,11 +321,17 @@ Plan:
 | 15 | ⊙ | TST-01, TST-02, TST-03, TST-04 | 4/0 |
 | 16 | ⊙ | ERR-01, TST-05, A11Y-01, A11Y-02, TST-06 (folded from 17) | 3/0 |
 | 17 | 3/3 | Complete   | 2026-07-08 |
-| 18 | ⬜ | KILOS-01–KILOS-08 | — |
-| 19 | ⬜ | COORD-01, COORD-02, COORD-03 | — |
-| 20 | ⬜ | COORD-04, COORD-05, COORD-06 | — |
+| 18 | 1/1 | Complete   | 2026-07-23 |
+| 19 | 2/2 | Complete   | 2026-07-25 |
+| 20 | 2/2 | Complete   | 2026-07-26 |
+| 21 | 1/1 | Complete   | 2026-07-09 |
+| 22 | 1/1 | Complete   | 2026-07-31 |
+| 23 | 1/1 | Complete   | 2026-07-20 |
+| 24 | 1/1 | Complete   | 2026-08-02 |
+| 25 | 5/6 | In progress | — |
+| 26 | partial | In progress | — |
 
-**9 phases | 27 requirements | Ready to plan ✓**
+**14 phases | 38 requirements | In progress — Phase 25 (Inter-Agency Beneficiary Tracking)**
 
 ---
 *Roadmap created: 2026-07-05*
