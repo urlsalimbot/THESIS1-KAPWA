@@ -14,7 +14,7 @@ name = 'ZAddFormVersionHistory1742000000000';
       )
     `);
     await queryRunner.query(`
-      CREATE INDEX idx_form_version_history_program_id ON form_version_history(program_id)
+      CREATE INDEX IF NOT EXISTS idx_form_version_history_program_id ON form_version_history(program_id)
     `);
   }
 

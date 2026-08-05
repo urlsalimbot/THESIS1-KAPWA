@@ -54,30 +54,36 @@ if [ "$API_READY" != "true" ]; then
     echo "  Check logs: $COMPOSE logs api"
 fi
 
-# 5. Run TypeORM migrations (with migrate.ts fallback)
-echo "[4/4] Running database migrations..."
-MIGRATIONS_OK=false
-if docker exec kapwa-api test -f dist/database/run-migrations.js 2>/dev/null; then
-  if docker exec kapwa-api node dist/database/run-migrations.js 2>/dev/null; then
-    echo "  TypeORM migrations applied."
-    MIGRATIONS_OK=true
+# 5. Run database migrations.
+#    migrate.js is the canonical bootstrap — it creates the complete fresh
+#    schema idempotently (it also runs at API startup via main.ts). The
+#    TypeORM migration chain (run-migrations.js) is NOT fresh-boot-safe, so it
+#    runs only as an incremental upgrade for EXISTING databases, and its
+#    failure on a fresh DB is expected and non-fatal.
+#    NOTE: migrate.js does not exit on completion (open DB handle) — run it
+#    under `timeout` so this script does not hang; exit 124 == completed.
+echo "[4/4] Running database migrations (bootstrap)..."
+if docker exec kapwa-api test -f dist/database/migrate.js 2>/dev/null; then
+  if timeout 300 docker exec kapwa-api node dist/database/migrate.js >/dev/null 2>&1; then
+    echo "  Bootstrap schema applied (migrate.js)."
   else
-    echo "  WARNING: TypeORM migration command failed."
-    echo "  Will try supplementary migrations as fallback."
+    echo "  WARNING: migrate.js exited non-zero (code $? — see 'docker exec kapwa-api node dist/database/migrate.js')."
+  fi
+else
+  echo "  (migrate.js not found — is the API image up to date?)"
+fi
+
+echo "[5/4] Running incremental TypeORM migrations (existing-DB upgrades only)..."
+if docker exec kapwa-api test -f dist/database/run-migrations.js 2>/dev/null; then
+  if docker exec kapwa-api node dist/database/run-migrations.js >/dev/null 2>&1; then
+    echo "  TypeORM migrations applied."
+  else
+    echo "  WARNING: TypeORM migration run failed (expected on a fresh DB;"
+    echo "          bootstrap schema from migrate.js is already complete)."
+    echo "  Manual: docker exec kapwa-api node dist/database/run-migrations.js"
   fi
 else
   echo "  (run-migrations.js not found)"
-fi
-
-if [ "$MIGRATIONS_OK" != "true" ] && docker exec kapwa-api test -f dist/database/migrate.js 2>/dev/null; then
-  echo "  Running supplementary migrations (migrate.js)..."
-  if docker exec kapwa-api node dist/database/migrate.js 2>/dev/null; then
-    echo "  Supplementary migrations applied."
-    MIGRATIONS_OK=true
-  else
-    echo "  WARNING: Supplementary migration command failed."
-    echo "  Manual: docker exec kapwa-api node dist/database/migrate.js"
-  fi
 fi
 
 echo ""

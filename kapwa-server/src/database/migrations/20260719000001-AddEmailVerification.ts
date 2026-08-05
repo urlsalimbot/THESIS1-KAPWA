@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class ZAddEmailVerification20260719000001 implements MigrationInterface {
-  name = 'ZAddEmailVerification2026071900001';
+  name = 'ZAddEmailVerification20260719000001';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE`);

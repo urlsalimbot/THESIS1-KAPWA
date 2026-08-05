@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class ZAddConsentRevokedReason20260718000001 implements MigrationInterface {
-  name = 'ZAddConsentRevokedReason2026071800001';
+  name = 'ZAddConsentRevokedReason20260718000001';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // Guard: only ALTER if the table exists (handles alphabetical ordering vs InitialSchema)

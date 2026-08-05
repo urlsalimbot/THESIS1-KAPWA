@@ -22,6 +22,32 @@ export async function migrate() {
     console.warn('pgAudit extension not available, skipping:', e.message);
   }
 
+  // Self-contained uuid v7 generator (mirrors AaUuidV7Function migration) so the
+  // bootstrap works on a truly empty DB before any TypeORM migration has run.
+  await q.query(`
+    CREATE OR REPLACE FUNCTION uuid_generate_v7()
+    RETURNS uuid
+    LANGUAGE plpgsql
+    VOLATILE
+    AS $$
+    DECLARE
+      unix_ts_ms bytea;
+      rand bytea;
+      result bytea;
+    BEGIN
+      unix_ts_ms = substring(
+        int8send((EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::bigint)
+        FROM 3
+      );
+      rand = gen_random_bytes(10);
+      rand = set_byte(rand, 0, (0x70 | (get_byte(rand, 0) & 0x0f)));
+      rand = set_byte(rand, 2, (0x80 | (get_byte(rand, 2) & 0x3f)));
+      result = unix_ts_ms || substring(rand FROM 1 FOR 3) || substring(rand FROM 4 FOR 7);
+      RETURN encode(result, 'hex')::uuid;
+    END;
+    $$;
+  `);
+
   await q.query(`CREATE TABLE IF NOT EXISTS beneficiaries ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID, access_card_code TEXT UNIQUE, user_id UUID, consent_status TEXT DEFAULT 'active', household_id UUID, category TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
   // family_members table removed — superseded by household_memberships (see below)
@@ -195,6 +221,142 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_notif_read ON notifications(recipient_id, is_read)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_otp_phone ON otp_codes(phone)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_otp_expires ON otp_codes(expires_at)`);
+
+  // --- Tables created by TypeORM migrations historically; migrate.js is the
+  // --- canonical fresh-boot bootstrap, so these live tables are created here
+  // --- too (idempotently) so a fresh DB has the complete schema.
+  await q.query(`CREATE TABLE IF NOT EXISTS agencies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    code VARCHAR(10) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50),
+    contact_info JSONB,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS announcements (
+    id UUID PRIMARY KEY,
+    title TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    excerpt TEXT NOT NULL DEFAULT '',
+    body_html TEXT NOT NULL DEFAULT '',
+    body_text TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+    pinned BOOLEAN NOT NULL DEFAULT false,
+    published_at TIMESTAMPTZ,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS inter_agency_referrals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID REFERENCES cases(id),
+    person_id UUID NOT NULL REFERENCES persons(id),
+    from_agency_id UUID NOT NULL REFERENCES agencies(id),
+    to_agency_id UUID NOT NULL REFERENCES agencies(id),
+    status TEXT NOT NULL DEFAULT 'referred'
+      CHECK (status IN ('referred','received','actioned','closed','declined')),
+    reason TEXT NOT NULL,
+    notes TEXT,
+    legal_basis_code TEXT NOT NULL,
+    consent_ledger_id UUID REFERENCES consent_ledger(id),
+    outcome TEXT,
+    received_at TIMESTAMP,
+    actioned_at TIMESTAMP,
+    closed_at TIMESTAMP,
+    declined_reason TEXT,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS intervention_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    code VARCHAR(10) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS notification_preferences (
+    id uuid DEFAULT uuid_generate_v7() PRIMARY KEY,
+    user_id varchar NOT NULL,
+    channel varchar NOT NULL,
+    category varchar NOT NULL,
+    opted_in boolean DEFAULT false,
+    created_at timestamp DEFAULT now(),
+    updated_at timestamp DEFAULT now()
+  )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS physical_files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    intervention_id UUID UNIQUE NOT NULL REFERENCES case_interventions(id),
+    cabinet VARCHAR(50) NOT NULL,
+    folder VARCHAR(100) NOT NULL,
+    shelf VARCHAR(100) NOT NULL,
+    qr_hash VARCHAR(64) UNIQUE,
+    qr_data_url TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS form_version_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+    form_template JSONB NOT NULL,
+    version INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS idempotency_keys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    key TEXT UNIQUE NOT NULL,
+    result JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_idempotency_key ON idempotency_keys(key)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS beneficiary_roles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    person_id UUID NOT NULL REFERENCES persons(id),
+    household_id UUID,
+    user_id UUID,
+    consent_status TEXT DEFAULT 'active',
+    access_card_code TEXT UNIQUE,
+    category TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  // case_history uses Postgres enums defined by AddCaseHistory migration
+  await q.query(`
+    DO $$ BEGIN
+      CREATE TYPE "public"."case_history_from_status_enum" AS ENUM('enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+  await q.query(`
+    DO $$ BEGIN
+      CREATE TYPE "public"."case_history_to_status_enum" AS ENUM('enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+  await q.query(`CREATE TABLE IF NOT EXISTS case_history (
+    id uuid NOT NULL DEFAULT uuid_generate_v7(),
+    case_id character varying NOT NULL,
+    from_status "public"."case_history_from_status_enum",
+    to_status "public"."case_history_to_status_enum" NOT NULL,
+    changed_by_role character varying,
+    changed_by_id character varying,
+    remarks character varying,
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    transition_type character varying NOT NULL DEFAULT 'standard',
+    override_reason character varying,
+    CONSTRAINT "PK_case_history" PRIMARY KEY (id)
+  )`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS hash TEXT`);
+  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS hash TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
+  await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS hash TEXT`);
+  await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
 
   await q.query(`ALTER TABLE beneficiaries ENABLE ROW LEVEL SECURITY`);
   await q.query(`ALTER TABLE cases ENABLE ROW LEVEL SECURITY`);
