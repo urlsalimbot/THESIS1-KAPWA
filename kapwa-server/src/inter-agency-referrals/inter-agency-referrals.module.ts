@@ -8,12 +8,15 @@ import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { Case } from '../cases/case.entity';
 import { CasesModule } from '../cases/cases.module';
 import { AuthModule } from '../auth/auth.module';
+import { User } from '../auth/user.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InterAgencyReferral, Agency, Beneficiary, Case]),
+    TypeOrmModule.forFeature([InterAgencyReferral, Agency, Beneficiary, Case, User]),
     CasesModule,
     AuthModule,
+    NotificationsModule,
   ],
   controllers: [InterAgencyReferralsController],
   providers: [InterAgencyReferralsService],
