@@ -290,3 +290,21 @@ export async function downloadCertificate(
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export async function downloadMonthlyFunds(month: string) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/export/monthly-funds?month=${month}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Fund export failed: ${res.status}`);
+  const blob = await res.blob();
+  const disposition = res.headers?.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match?.[1] || `fund-utilization-${month}.xlsx`;
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
