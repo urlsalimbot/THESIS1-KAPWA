@@ -1,0 +1,35 @@
+{
+  "time": {
+    "daysAgo_one": "",
+    "daysAgo_other": "",
+    "hoursAgo_one": "",
+    "hoursAgo_other": "",
+    "justNow": "",
+    "minutesAgo_one": "",
+    "minutesAgo_other": ""
+  },
+  "topbar": {
+    "approvalsQueue": "Approvals Queue",
+    "cancel": "Cancel",
+    "language": "Language",
+    "logout": "Logout",
+    "logoutConfirm": "Log out",
+    "logoutDescription": "You will be signed out of your account and redirected to the login page.",
+    "logoutTitle": "Log out?",
+    "newIntake": "New Intake",
+    "offline": "Offline",
+    "offlineBanner_one": "You are offline — {{count}} change(s) pending sync. Do not clear app data.",
+    "offlineBanner_other": "You are offline — {{count}} change(s) pending sync. Do not clear app data.",
+    "offlineIndicator": "Offline indicator",
+    "openUserMenu": "Open user menu",
+    "pendingSync_one": "{{count}} pending",
+    "pendingSync_other": "{{count}} pending",
+    "pendingSyncCount": "Pending sync count",
+    "settings": "Settings",
+    "theme": "Theme",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "themeSystem": "System",
+    "toggleNavigation": "Toggle navigation menu"
+  }
+}

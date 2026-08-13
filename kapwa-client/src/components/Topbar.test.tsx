@@ -105,7 +105,7 @@ describe('Topbar', () => {
     expect(document.documentElement.lang).toBe('fil-PH');
     expect(localStorage.getItem('kapwa-lang')).toBe('fil');
     // switch back for isolation
-    await user.click(screen.getByRole('button', { name: 'Open user menu' }));
+    await user.click(screen.getByRole('button', { name: /open user menu|buksan ang menu ng user/i }));
     await user.click(screen.getByText('English'));
     expect(document.documentElement.lang).toBe('en');
   });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/lib/theme-context';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/i18n/useLanguage';
@@ -65,6 +66,7 @@ function BreadcrumbNav({ pathname }: { pathname: string }) {
 }
 
 export function Topbar({ onMenuToggle }: TopbarProps) {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { lang, setLang } = useLanguage();
@@ -116,7 +118,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           <button
             className="touch-sm lg:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
             onClick={onMenuToggle}
-            aria-label="Toggle navigation menu"
+            aria-label={t('topbar.toggleNavigation', 'Toggle navigation menu')}
           >
             <Menu size={20} />
           </button>
@@ -156,12 +158,12 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
                 <button
                   className="touch-sm w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
                   onClick={() => navigate('/intake')}
-                  aria-label="New Intake"
+                  aria-label={t('topbar.newIntake', 'New Intake')}
                 >
                   <Plus size={20} />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">New Intake</TooltipContent>
+              <TooltipContent side="bottom">{t('topbar.newIntake', 'New Intake')}</TooltipContent>
             </Tooltip>
           )}
 
@@ -171,12 +173,12 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
                 <button
                   className="touch-sm relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
                   onClick={() => navigate('/approvals')}
-                  aria-label="Approvals Queue"
+                  aria-label={t('topbar.approvalsQueue', 'Approvals Queue')}
                 >
                   <CheckSquare size={20} />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Approvals Queue</TooltipContent>
+              <TooltipContent side="bottom">{t('topbar.approvalsQueue', 'Approvals Queue')}</TooltipContent>
             </Tooltip>
           )}
 
@@ -191,20 +193,20 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           <Separator orientation="vertical" className="h-6" />
 
           {!online && (
-            <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50" aria-label="Offline indicator">
-              <WifiOff size={12} className="mr-1" /> Offline
+            <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50" aria-label={t('topbar.offlineIndicator', 'Offline indicator')}>
+              <WifiOff size={12} className="mr-1" /> {t('topbar.offline', 'Offline')}
             </Badge>
           )}
           {pending > 0 && online && (
-            <Badge variant="outline" className="border-blue-400 text-blue-600 bg-blue-50" aria-label="Pending sync count">
-              {pending} pending
+            <Badge variant="outline" className="border-blue-400 text-blue-600 bg-blue-50" aria-label={t('topbar.pendingSyncCount', 'Pending sync count')}>
+              {t('topbar.pendingSync', '{{count}} pending', { count: pending })}
             </Badge>
           )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                aria-label="Open user menu"
+                aria-label={t('topbar.openUserMenu', 'Open user menu')}
                 className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:shadow-md"
               >
                 <Avatar className="cursor-pointer">
@@ -226,23 +228,23 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
               <DropdownMenuSeparator />
               {mounted && (
                 <>
-                  <DropdownMenuLabel className="font-semibold">Theme</DropdownMenuLabel>
+                  <DropdownMenuLabel className="font-semibold">{t('topbar.theme', 'Theme')}</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => setTheme('light')}>
                     <Sun size={16} className="mr-2" />
-                    Light
+                    {t('topbar.themeLight', 'Light')}
                     {theme === 'light' && <Check size={14} className="ml-auto text-primary" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setTheme('dark')}>
                     <Moon size={16} className="mr-2" />
-                    Dark
+                    {t('topbar.themeDark', 'Dark')}
                     {theme === 'dark' && <Check size={14} className="ml-auto text-primary" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setTheme('system')}>
                     <Monitor size={16} className="mr-2" />
-                    System
+                    {t('topbar.themeSystem', 'System')}
                     {theme === 'system' && <Check size={14} className="ml-auto text-primary" />}
                   </DropdownMenuItem>
-                  <DropdownMenuLabel className="font-semibold">Language</DropdownMenuLabel>
+                  <DropdownMenuLabel className="font-semibold">{t('topbar.language', 'Language')}</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => setLang('en')}>
                     <Languages size={16} className="mr-2" />
                     English
@@ -258,13 +260,13 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
               <DropdownMenuItem asChild>
                 <Link to="/settings" className="flex items-center gap-2 no-underline">
                   <Settings size={16} />
-                  Settings
+                  {t('topbar.settings', 'Settings')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                 <LogOut size={16} className="mr-2" />
-                Logout
+                {t('topbar.logout', 'Logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -273,22 +275,22 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
       {!online && pending > 0 && (
         <div className="fixed top-[4.5rem] left-0 right-0 z-50 bg-amber-500 text-white px-4 py-1.5 text-center text-xs font-medium" role="alert">
-          You are offline — {pending} change(s) pending sync. Do not clear app data.
+          {t('topbar.offlineBanner', 'You are offline — {{count}} change(s) pending sync. Do not clear app data.', { count: pending })}
         </div>
       )}
 
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Log out?</AlertDialogTitle>
+            <AlertDialogTitle>{t('topbar.logoutTitle', 'Log out?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              You will be signed out of your account and redirected to the login page.
+              {t('topbar.logoutDescription', 'You will be signed out of your account and redirected to the login page.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('topbar.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Log out
+              {t('topbar.logoutConfirm', 'Log out')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
