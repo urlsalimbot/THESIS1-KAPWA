@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useCacheStaleness } from '@/hooks/use-cache-staleness';
 import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 import { PageInfoProvider } from '@/lib/page-info-context';
@@ -20,11 +21,12 @@ interface PageShellProps {
 }
 
 export function PageShell({ title, description, actions, backTo, cachedAt, children }: PageShellProps) {
+  const { t } = useTranslation();
   const { isStale, ageDisplay } = useCacheStaleness(cachedAt);
 
   let fullDescription = description || '';
   if (isStale && ageDisplay) {
-    const staleText = `Cached data — last sync ${ageDisplay} ago`;
+    const staleText = t('shell.cachedData', 'Cached data — last sync {{age}} ago', { age: ageDisplay });
     fullDescription = fullDescription ? `${fullDescription} — ${staleText}` : staleText;
   }
 
@@ -55,7 +57,7 @@ export function PageShell({ title, description, actions, backTo, cachedAt, child
         <AriaLiveRegion
           role="status"
           aria-live="polite"
-          message={`Showing cached data — last sync ${ageDisplay} ago`}
+          message={t('shell.showingCachedData', 'Showing cached data — last sync {{age}} ago', { age: ageDisplay })}
         />
       )}
       <PageInfoProvider value={{ title, description: fullDescription }}>

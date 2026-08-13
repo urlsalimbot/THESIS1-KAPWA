@@ -86,6 +86,18 @@ const fil: EnLocale = {
     "syncing": "Nagsi-sync",
     "failed": "Nabigo",
     "conflict": "Salungatan"
+  },
+  "a11y": {
+    "mainNavigation": "Main navigation",
+    "mobileNavigation": "Mobile navigation"
+  },
+  "shell": {
+    "cachedData": "Cached data — last sync {{age}} ago",
+    "offlineMessage": "You are offline. Some features may be unavailable.",
+    "quickAction": "Quick Action",
+    "quickIntake": "New Intake (Quick Action)",
+    "quickReferral": "New Referral (Quick Action)",
+    "showingCachedData": "Showing cached data — last sync {{age}} ago"
   }
 };
 

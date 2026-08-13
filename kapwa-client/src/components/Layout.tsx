@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
 import { loadQueue } from '@/lib/offline-queue';
 import { Sidebar } from './Sidebar';
@@ -21,6 +22,7 @@ function computePendingCount(): number {
 
 export function Layout({ children }: { children?: React.ReactNode }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
   const [offline, setOffline] = useState(!navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
@@ -55,7 +57,7 @@ export function Layout({ children }: { children?: React.ReactNode }) {
       <SkipToContent />
 
       <AriaLiveRegion
-        message={offline ? 'You are offline. Some features may be unavailable.' : ''}
+        message={offline ? t('shell.offlineMessage', 'You are offline. Some features may be unavailable.') : ''}
         role="status"
         aria-live="polite"
       />

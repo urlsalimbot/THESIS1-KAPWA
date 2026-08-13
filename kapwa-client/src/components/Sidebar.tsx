@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
 import { NAV_GROUPS } from '@/lib/nav-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,10 +11,11 @@ export interface SidebarNavContentProps {
 
 export function SidebarNavContent({ onNavClick }: SidebarNavContentProps) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
 
   return (
-    <nav aria-label="Main navigation" className="flex flex-col gap-4 px-3 py-4">
+    <nav aria-label={t('a11y.mainNavigation', 'Main navigation')} className="flex flex-col gap-4 px-3 py-4">
       {NAV_GROUPS.map(group => {
         const visibleItems = group.items.filter(item => item.roles.includes(user?.role ?? ''));
         if (visibleItems.length === 0) return null;
