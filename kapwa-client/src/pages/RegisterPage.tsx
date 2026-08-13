@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { TFunction } from 'i18next';
@@ -109,7 +109,7 @@ export function RegisterPage() {
             </div>
             <CardTitle className="text-2xl tracking-tight">{t('auth.checkYourEmail', 'Check Your Email')}</CardTitle>
             <CardDescription className="text-base">
-              <Trans i18nKey="auth.weSentVerificationLink" defaults="We sent a verification link to <bold>{{email}}</bold>." values={{ email: registeredEmail }} components={{ bold: <strong /> }} />
+              {t('auth.weSentVerificationLink', 'We sent a verification link to')} <strong>{registeredEmail}</strong>{t('auth.period', '.')}
               <br />
               {t('auth.checkInboxToActivate', 'Please check your inbox and click the link to activate your account.')}
             </CardDescription>

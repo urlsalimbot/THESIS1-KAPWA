@@ -208,7 +208,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
           <label
             class="text-xs text-muted-foreground font-medium"
           >
-            Date From
+            Date from
           </label>
           <input
             aria-label="Date from"
@@ -223,7 +223,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
           <label
             class="text-xs text-muted-foreground font-medium"
           >
-            Date To
+            Date to
           </label>
           <input
             aria-label="Date to"
@@ -429,7 +429,8 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                           r="3"
                         />
                       </svg>
-                       View
+                       
+                      View
                     </button>
                   </div>
                 </td>

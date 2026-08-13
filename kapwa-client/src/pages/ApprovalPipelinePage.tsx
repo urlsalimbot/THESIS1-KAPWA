@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
+import { statusLabel } from '@/i18n/display';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { getCurrentUser } from '../lib/auth-context';
@@ -31,6 +33,7 @@ interface ApprovalCase {
 }
 
 export function ApprovalPipelinePage() {
+  const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: rawCases, isLoading: loading } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list());
   const cases = Array.isArray(rawCases) ? rawCases : (rawCases?.data ?? []);
@@ -73,7 +76,7 @@ export function ApprovalPipelinePage() {
   const pipelineStatus = ['in_review', 'active', 'transitioning'];
   const grouped = pipelineStatus.map(status => ({
     status,
-    label: status === 'in_review' ? 'In Review' : status === 'active' ? 'Active' : 'Transitioning',
+    label: statusLabel(t, status),
     items: cases.filter(c => c.status === status),
   }));
 
@@ -131,7 +134,7 @@ export function ApprovalPipelinePage() {
     const ids = Array.from(selectedIds);
     await showBulkProgress(ids, async (id) => {
       await api.patch(`/cases/${id}/approve`, { status: 'active', signature: reason || '' });
-    }, 'Approving');
+    }, t('approvals.approving', 'Approving'));
     globalMutate(queryKeys.cases.all);
     clearSelection();
   }
@@ -147,7 +150,7 @@ export function ApprovalPipelinePage() {
 
   if (loading) {
     return (
-      <PageShell title="Approval Pipeline" description="Certificate of Eligibility review, Petty Cash Voucher management, and sign-off.">
+      <PageShell title={t('approvals.title', 'Approval Pipeline')} description={t('approvals.description', 'Certificate of Eligibility review, Petty Cash Voucher management, and sign-off.')}>
         <TableSkeleton rows={5} />
       </PageShell>
     );
@@ -157,8 +160,8 @@ export function ApprovalPipelinePage() {
 
   return (
     <PageShell
-      title="Approval Pipeline"
-      description="Certificate of Eligibility review, Petty Cash Voucher management, and sign-off."
+      title={t('approvals.title', 'Approval Pipeline')}
+      description={t('approvals.description', 'Certificate of Eligibility review, Petty Cash Voucher management, and sign-off.')}
       cachedAt={lastSync ?? undefined}
       actions={
         <Button
@@ -167,7 +170,7 @@ export function ApprovalPipelinePage() {
           onClick={toggleSelectMode}
         >
           <ListChecks size={16} className="mr-1.5" />
-          {selectMode ? 'Exit Select Mode' : 'Select Mode'}
+          {selectMode ? t('approvals.exitSelectMode', 'Exit Select Mode') : t('approvals.selectMode', 'Select Mode')}
         </Button>
       }
     >
@@ -182,10 +185,10 @@ export function ApprovalPipelinePage() {
                 setSelectedIds(new Set(cases.map(c => c.id)));
               }
             }}
-            aria-label="Select all cases"
+            aria-label={t('approvals.selectAllCases', 'Select all cases')}
           />
           <span className="text-sm text-muted-foreground">
-            Select all cases
+            {t('approvals.selectAllCases', 'Select all cases')}
           </span>
         </div>
       )}
@@ -212,10 +215,10 @@ export function ApprovalPipelinePage() {
                         <Checkbox
                           checked={selectedIds.has(c.id)}
                           onCheckedChange={() => toggleSelectId(c.id)}
-                          aria-label={`Select ${c.controlNo}`}
+                          aria-label={t('approvals.selectCaseAria', 'Select {{controlNo}}', { controlNo: c.controlNo })}
                         />
                         <span className="text-xs font-medium text-muted-foreground">
-                          {selectedIds.has(c.id) ? 'Selected' : 'Select'}
+                          {selectedIds.has(c.id) ? t('approvals.selected', 'Selected') : t('approvals.select', 'Select')}
                         </span>
                       </div>
                     )}
@@ -243,31 +246,31 @@ export function ApprovalPipelinePage() {
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
                         {!c.certificateUrl ? (
                           <label className="flex items-center gap-2 text-xs text-amber-600 cursor-pointer hover:text-amber-700">
-                            <Upload size={14} /> Upload Certificate of Eligibility
+                            <Upload size={14} /> {t('approvals.uploadCertificate', 'Upload Certificate of Eligibility')}
                             <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={e => {
                               const f = e.target.files?.[0]; if (f) handleCertificateUpload(c.id, f);
                             }} />
                           </label>
                         ) : (
                           <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600 hover:text-green-700">
-                            <FileText size={14} /> View Certificate
+                            <FileText size={14} /> {t('approvals.viewCertificate', 'View Certificate')}
                           </a>
                         )}
                         {!c.pettyCashVoucherUrl ? (
                           <label className="flex items-center gap-2 text-xs text-amber-600 cursor-pointer hover:text-amber-700">
-                            <Upload size={14} /> Upload Petty Cash Voucher
+                            <Upload size={14} /> {t('approvals.uploadVoucher', 'Upload Petty Cash Voucher')}
                             <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={e => {
                               const f = e.target.files?.[0]; if (f) handleVoucherUpload(c.id, f);
                             }} />
                           </label>
                         ) : (
                           <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600 hover:text-green-700">
-                            <FileText size={14} /> View Voucher
+                            <FileText size={14} /> {t('approvals.viewVoucher', 'View Voucher')}
                           </a>
                         )}
                         {c.certificateUrl && c.pettyCashVoucherUrl && user?.role === 'admin' && (
                           <Button onClick={() => openApproval(c, 'approve')} size="sm" className="w-full mt-1">
-                            <CheckCircle size={14} /> Approve & Sign
+                            <CheckCircle size={14} /> {t('approvals.approveAndSign', 'Approve & Sign')}
                           </Button>
                         )}
                       </div>
@@ -277,17 +280,17 @@ export function ApprovalPipelinePage() {
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
                         {c.certificateUrl && (
                           <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600">
-                            <FileText size={14} /> View Certificate
+                            <FileText size={14} /> {t('approvals.viewCertificate', 'View Certificate')}
                           </a>
                         )}
                         {c.pettyCashVoucherUrl && (
                           <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600">
-                            <FileText size={14} /> View Voucher
+                            <FileText size={14} /> {t('approvals.viewVoucher', 'View Voucher')}
                           </a>
                         )}
                         {group.status === 'active' && user?.role === 'admin' && (
                           <Button onClick={() => openApproval(c, 'disburse')} size="sm" variant="secondary" className="w-full mt-1">
-                            <ArrowRight size={14} /> Mark Transitioned
+                            <ArrowRight size={14} /> {t('approvals.markTransitioned', 'Mark Transitioned')}
                           </Button>
                         )}
                       </div>
@@ -295,7 +298,7 @@ export function ApprovalPipelinePage() {
                   </div>
                 ))}
                 {group.items.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">No cases</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">{t('approvals.noCases', 'No cases')}</p>
                 )}
               </div>
             </div>
@@ -338,25 +341,25 @@ export function ApprovalPipelinePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-card rounded-xl shadow-xl p-6 w-full max-w-md border border-border">
             <h3 className="font-semibold text-foreground mb-1">
-              {action === 'approve' ? 'Approve Case' : 'Mark as Disbursed'}
+              {action === 'approve' ? t('approvals.approveCase', 'Approve Case') : t('approvals.markDisbursed', 'Mark as Disbursed')}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">{selectedCase.controlNo}</p>
 
-            <SignaturePad onSave={setSignature} label="Authorized Signatory E-Signature" />
+            <SignaturePad onSave={setSignature} label={t('approvals.signatureLabel', 'Authorized Signatory E-Signature')} />
 
             {signature && (
               <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-1">Signature Preview:</p>
-                <img src={signature} alt="Signature" className="h-12 border rounded bg-card" />
+                <p className="text-xs text-muted-foreground mb-1">{t('approvals.signaturePreview', 'Signature Preview:')}</p>
+                <img src={signature} alt={t('approvals.signatureAlt', 'Signature')} className="h-12 border rounded bg-card" />
               </div>
             )}
 
             <div className="flex gap-3 justify-end">
               <Button variant="outline" onClick={() => { setSelectedCase(null); setAction(null); }} disabled={saving}>
-                Cancel
+                {t('approvals.cancel', 'Cancel')}
               </Button>
               <Button onClick={() => handleApprove(selectedCase.id)} disabled={!signature || saving}>
-                {saving ? 'Saving...' : <><CheckCircle size={16} /> {action === 'approve' ? 'Approve' : 'Disburse'}</>}
+                {saving ? t('approvals.saving', 'Saving...') : <><CheckCircle size={16} /> {action === 'approve' ? t('approvals.approve', 'Approve') : t('approvals.disburse', 'Disburse')}</>}
               </Button>
             </div>
           </div>

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { referralStatusLabel } from '@/i18n/display';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,7 @@ const variantMap: Record<string, 'secondary' | 'default' | 'destructive'> = {
 };
 
 export function ReferralReviewPage() {
+  const { t } = useTranslation();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -58,9 +61,9 @@ export function ReferralReviewPage() {
     try {
       await api.patch(`/referrals/${id}/accept`, {});
       setReferrals(prev => prev.filter(r => r.id !== id));
-      toast.success('Referral accepted');
+      toast.success(t('referral.accepted', 'Referral accepted'));
     } catch {
-      toast.error('Failed to accept referral');
+      toast.error(t('referral.acceptFailed', 'Failed to accept referral'));
     }
     setActionId(null);
   }
@@ -73,9 +76,9 @@ export function ReferralReviewPage() {
       setReferrals(prev => prev.filter(r => r.id !== id));
       setDeclineModal(null);
       setDeclineReason('');
-      toast.success('Referral declined');
+      toast.success(t('referral.declined', 'Referral declined'));
     } catch {
-      toast.error('Failed to decline referral');
+      toast.error(t('referral.declineFailed', 'Failed to decline referral'));
     }
     setActionId(null);
   }
@@ -83,35 +86,35 @@ export function ReferralReviewPage() {
   const columns: ColumnDef<Referral>[] = [
     {
       id: 'name',
-      header: 'Name',
+      header: t('referral.name', 'Name'),
       cell: ({ row }) => `${row.original.surname}, ${row.original.firstName}`,
     },
-    { accessorKey: 'barangay', header: 'Barangay' },
+    { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
     {
       id: 'coordinator',
-      header: 'Referred By',
+      header: t('referral.referredBy', 'Referred By'),
       cell: ({ row }) => row.original.coordinator?.fullName || '—',
     },
     {
       accessorKey: 'reason',
-      header: 'Reason',
+      header: t('referral.reason', 'Reason'),
       cell: ({ row }) => <span className="text-xs line-clamp-2 max-w-xs">{row.original.reason}</span>,
     },
     {
       accessorKey: 'createdAt',
-      header: 'Date',
+      header: t('referral.date', 'Date'),
       cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
     },
     {
       id: 'status',
-      header: 'Status',
+      header: t('referral.status', 'Status'),
       cell: ({ row }) => (
-        <Badge variant={variantMap[row.original.status]}>{row.original.status}</Badge>
+        <Badge variant={variantMap[row.original.status]}>{referralStatusLabel(t, row.original.status)}</Badge>
       ),
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: t('referral.actions', 'Actions'),
       cell: ({ row }) => (
         <div className="flex gap-1">
           <Button
@@ -122,7 +125,7 @@ export function ReferralReviewPage() {
             disabled={actionId === row.original.id}
           >
             {actionId === row.original.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Accept
+            {t('referral.accept', 'Accept')}
           </Button>
           <Button
             variant="ghost"
@@ -131,7 +134,7 @@ export function ReferralReviewPage() {
             onClick={() => setDeclineModal(row.original)}
             disabled={actionId === row.original.id}
           >
-            <X size={14} className="mr-1" /> Decline
+            <X size={14} className="mr-1" /> {t('referral.decline', 'Decline')}
           </Button>
         </div>
       ),
@@ -140,10 +143,10 @@ export function ReferralReviewPage() {
 
   if (loading) {
     return (
-      <PageShell title="Referral Review" description="Review and process barangay referrals.">
+      <PageShell title={t('referral.reviewTitle', 'Referral Review')} description={t('referral.reviewDescription', 'Review and process barangay referrals.')}>
         <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5">
-            <h2 className="text-sm font-semibold text-foreground">Pending Referrals</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('referral.pendingReferrals', 'Pending Referrals')}</h2>
           </div>
           <div className="p-4 space-y-3">
             {[1, 2, 3].map(i => (
@@ -162,17 +165,17 @@ export function ReferralReviewPage() {
   }
 
   return (
-    <PageShell title="Referral Review" description="Review and process barangay referrals.">
+    <PageShell title={t('referral.reviewTitle', 'Referral Review')} description={t('referral.reviewDescription', 'Review and process barangay referrals.')}>
       {referrals.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Inbox size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">No pending referrals.</p>
+          <p className="text-sm">{t('referral.noPending', 'No pending referrals.')}</p>
         </div>
       ) : (
         <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Inbox size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Pending Referrals</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('referral.pendingReferrals', 'Pending Referrals')}</h2>
           </div>
           <div className="p-0">
             <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
@@ -183,7 +186,7 @@ export function ReferralReviewPage() {
       <Dialog open={!!declineModal} onOpenChange={(open) => { if (!open) { setDeclineModal(null); setDeclineReason(''); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Decline Referral</DialogTitle>
+            <DialogTitle>{t('referral.declineReferral', 'Decline Referral')}</DialogTitle>
             <DialogDescription>
               {declineModal?.surname}, {declineModal?.firstName} — {declineModal?.barangay}
             </DialogDescription>
@@ -191,13 +194,13 @@ export function ReferralReviewPage() {
           <textarea
             value={declineReason}
             onChange={e => setDeclineReason(e.target.value)}
-            placeholder="Reason for declining..."
+            placeholder={t('referral.declineReasonPlaceholder', 'Reason for declining...')}
             rows={3}
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => { setDeclineModal(null); setDeclineReason(''); }}>
-              Cancel
+              {t('referral.cancel', 'Cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -205,7 +208,7 @@ export function ReferralReviewPage() {
               onClick={() => handleDecline(declineModal!.id)}
               disabled={!declineReason.trim() || actionId === declineModal?.id}
             >
-              {actionId === declineModal?.id ? 'Declining...' : 'Confirm Decline'}
+              {actionId === declineModal?.id ? t('referral.declining', 'Declining...') : t('referral.confirmDecline', 'Confirm Decline')}
             </Button>
           </DialogFooter>
         </DialogContent>

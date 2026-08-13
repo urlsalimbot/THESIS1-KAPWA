@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock } from 'lucide-react';
 import { api, downloadCsrPdf, downloadCertificate, type CertificateType } from '../lib/api';
@@ -51,6 +53,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function CaseViewPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { mutate } = useSWRConfig();
@@ -170,7 +173,7 @@ export function CaseViewPage() {
         date: new Date().toISOString().split('T')[0],
       });
     } catch (err: any) {
-      setCertError(err.message || 'Failed to generate certificate');
+      setCertError(err.message || t('cases.certFailed', 'Failed to generate certificate'));
     } finally {
       setCertGenerating(null);
     }
@@ -178,18 +181,18 @@ export function CaseViewPage() {
 
   if (isLoading) {
     return (
-      <PageShell title="Loading..." description="">
-        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">Loading case...</div>
+      <PageShell title={t('cases.loadingTitle', 'Loading...')} description="">
+        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">{t('cases.loadingCase', 'Loading case...')}</div>
       </PageShell>
     );
   }
 
   if (!caseData) {
     return (
-      <PageShell title="Case Not Found" description="" backTo={{ label: "Back to Cases", onClick: () => navigate('/cases') }}>
+      <PageShell title={t('cases.notFoundTitle', 'Case Not Found')} description="" backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}>
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <FileText size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">Case not found.</p>
+          <p className="text-sm">{t('cases.notFound', 'Case not found.')}</p>
         </div>
       </PageShell>
     );
@@ -207,12 +210,12 @@ export function CaseViewPage() {
 
   return (
     <PageShell
-      title={`Case ${caseData.controlNo}`}
-      description={`Beneficiary: ${ben?.firstName || ''} ${ben?.surname || ''}`}
-      backTo={{ label: 'Back to Cases', onClick: () => navigate('/cases') }}
+      title={t('cases.caseTitle', 'Case {{controlNo}}', { controlNo: caseData.controlNo })}
+      description={t('cases.beneficiaryOf', 'Beneficiary: {{name}}', { name: `${ben?.firstName || ''} ${ben?.surname || ''}` })}
+      backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}
       actions={caseData.slaOverdue ? (
         <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-          <AlertTriangle size={12} /> OVERDUE
+          <AlertTriangle size={12} /> {t('cases.overdueBadge', 'OVERDUE')}
         </span>
       ) : undefined}
     >
@@ -228,13 +231,12 @@ export function CaseViewPage() {
               <div>
                 <h2 className="text-base font-semibold">{caseData.controlNo}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Created {formatDate(caseData.createdAt)} &middot;
-                  Updated {formatDate(caseData.updatedAt)}
+                  {t('cases.createdUpdated', 'Created {{created}} · Updated {{updated}}', { created: formatDate(caseData.createdAt), updated: formatDate(caseData.updatedAt) })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant={STATUS_BADGES[caseData.status] || 'outline'} className="text-sm px-3 py-1">
-                  {STATUS_LABELS[caseData.status] || caseData.status}
+                  {statusLabel(t, caseData.status)}
                 </Badge>
                 {caseData.status === 'closed' && (
                   <Button
@@ -243,7 +245,7 @@ export function CaseViewPage() {
                     className="gap-1.5"
                     onClick={() => downloadCsrPdf(id!)}
                   >
-                    <Download size={14} /> Case Study Report
+                    <Download size={14} /> {t('cases.caseStudyReport', 'Case Study Report')}
                   </Button>
                 )}
               </div>
@@ -251,30 +253,30 @@ export function CaseViewPage() {
             <Separator />
             <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <div>
-                <span className="text-muted-foreground">Service Requested</span>
+                <span className="text-muted-foreground">{t('cases.serviceRequested', 'Service Requested')}</span>
                 <p className="font-medium">{(caseData.serviceRequested || []).join(', ') || '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Assigned Worker</span>
+                <span className="text-muted-foreground">{t('cases.assignedWorker', 'Assigned Worker')}</span>
                 <p className="font-medium">{caseData.assignedWorker?.fullName || '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Certificate URL</span>
+                <span className="text-muted-foreground">{t('cases.certificateUrl', 'Certificate URL')}</span>
                 <p className="font-medium truncate">{caseData.certificateUrl || '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Petty Cash Voucher</span>
+                <span className="text-muted-foreground">{t('cases.pettyCashVoucher', 'Petty Cash Voucher')}</span>
                 <p className="font-medium truncate">{caseData.pettyCashVoucherUrl || '—'}</p>
               </div>
               {caseData.approvedByRole && (
                 <div>
-                  <span className="text-muted-foreground">Approved By</span>
+                  <span className="text-muted-foreground">{t('cases.approvedBy', 'Approved By')}</span>
                   <p className="font-medium">{caseData.approvedByRole}</p>
                 </div>
               )}
               {caseData.remarks && (
                 <div className="col-span-2">
-                  <span className="text-muted-foreground">Remarks</span>
+                  <span className="text-muted-foreground">{t('cases.remarks', 'Remarks')}</span>
                   <p className="font-medium">{caseData.remarks}</p>
                 </div>
               )}
@@ -300,49 +302,49 @@ export function CaseViewPage() {
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-3">
                 <User size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">Beneficiary</h3>
+                <h3 className="text-sm font-semibold">{t('cases.beneficiary', 'Beneficiary')}</h3>
               </div>
               <Separator />
               <div className="px-4 py-3 space-y-2 text-sm">
                 <div>
-                  <span className="text-muted-foreground text-xs">Full Name</span>
+                  <span className="text-muted-foreground text-xs">{t('cases.fullName', 'Full Name')}</span>
                   <p className="font-medium">{ben.firstName} {ben.middleName || ''} {ben.surname}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-muted-foreground text-xs">Gender</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.gender', 'Gender')}</span>
                     <p>{ben.gender || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-xs">Age</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.age', 'Age')}</span>
                     <p>{ageRange || '—'}</p>
                   </div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground text-xs">Date of Birth</span>
+                  <span className="text-muted-foreground text-xs">{t('cases.dateOfBirth', 'Date of Birth')}</span>
                   <p>{dob ? formatDate(dob) : '—'}</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
                   <div>
-                    <span className="text-muted-foreground text-xs">Address</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
                     <p>{ben.address || '—'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone size={14} className="shrink-0 text-muted-foreground" />
                   <div>
-                    <span className="text-muted-foreground text-xs">Phone</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.phone', 'Phone')}</span>
                     <p>{ben.phone || '—'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-muted-foreground text-xs">Philsys #</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.philsysNumber', 'Philsys #')}</span>
                     <p>{ben.philsysNumber || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-xs">Access Card</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.accessCard', 'Access Card')}</span>
                     <p>{ben.accessCardCode || '—'}</p>
                   </div>
                 </div>
@@ -355,7 +357,7 @@ export function CaseViewPage() {
                   className="w-full"
                   onClick={() => navigate(`/beneficiaries/${ben.id}`)}
                 >
-                  <User size={14} className="mr-1" /> View Profile
+                  <User size={14} className="mr-1" /> {t('cases.viewProfile', 'View Profile')}
                 </Button>
               </div>
             </div>
@@ -366,7 +368,7 @@ export function CaseViewPage() {
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-3">
                 <FileText size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">Certificates</h3>
+                <h3 className="text-sm font-semibold">{t('cases.certificates', 'Certificates')}</h3>
               </div>
               <Separator />
               <div className="px-5 py-3 space-y-2">
@@ -380,7 +382,7 @@ export function CaseViewPage() {
                   disabled={certGenerating !== null}
                   onClick={() => handleGenerateCertificate('indigency')}
                 >
-                  {certGenerating === 'indigency' ? 'Generating...' : 'Certificate of Indigency'}
+                  {certGenerating === 'indigency' ? t('cases.generating', 'Generating...') : t('cases.certIndigency', 'Certificate of Indigency')}
                 </Button>
                 <Button
                   variant="outline"
@@ -389,7 +391,7 @@ export function CaseViewPage() {
                   disabled={certGenerating !== null}
                   onClick={() => handleGenerateCertificate('eligibility')}
                 >
-                  {certGenerating === 'eligibility' ? 'Generating...' : 'Certificate of Eligibility'}
+                  {certGenerating === 'eligibility' ? t('cases.generating', 'Generating...') : t('cases.certEligibility', 'Certificate of Eligibility')}
                 </Button>
                 <Button
                   variant="outline"
@@ -398,7 +400,7 @@ export function CaseViewPage() {
                   disabled={certGenerating !== null}
                   onClick={() => handleGenerateCertificate('referral')}
                 >
-                  {certGenerating === 'referral' ? 'Generating...' : 'Certificate of Referral'}
+                  {certGenerating === 'referral' ? t('cases.generating', 'Generating...') : t('cases.certReferral', 'Certificate of Referral')}
                 </Button>
               </div>
             </div>
@@ -409,17 +411,17 @@ export function CaseViewPage() {
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-3">
                 <User size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">Claimant</h3>
+                <h3 className="text-sm font-semibold">{t('cases.claimant', 'Claimant')}</h3>
               </div>
               <Separator />
               <div className="px-4 py-3 space-y-2 text-sm">
                 <div>
-                  <span className="text-muted-foreground text-xs">Full Name</span>
+                  <span className="text-muted-foreground text-xs">{t('cases.fullName', 'Full Name')}</span>
                   <p className="font-medium">{caseData.claimant.fullName}</p>
                 </div>
                 {caseData.claimant.relationship !== 'Self' && (
                   <div>
-                    <span className="text-muted-foreground text-xs">Relationship to Beneficiary</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.relationshipToBeneficiary', 'Relationship to Beneficiary')}</span>
                     <p>{caseData.claimant.relationship}</p>
                   </div>
                 )}
@@ -427,7 +429,7 @@ export function CaseViewPage() {
                   <div className="flex items-center gap-2">
                     <Phone size={14} className="shrink-0 text-muted-foreground" />
                     <div>
-                      <span className="text-muted-foreground text-xs">Phone</span>
+                      <span className="text-muted-foreground text-xs">{t('cases.phone', 'Phone')}</span>
                       <p>{caseData.claimant.phone}</p>
                     </div>
                   </div>
@@ -436,7 +438,7 @@ export function CaseViewPage() {
                   <div className="flex items-start gap-2">
                     <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
                     <div>
-                      <span className="text-muted-foreground text-xs">Address</span>
+                      <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
                       <p>{caseData.claimant.address}</p>
                     </div>
                   </div>
@@ -450,7 +452,7 @@ export function CaseViewPage() {
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-3">
                 <Users size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">Household</h3>
+                <h3 className="text-sm font-semibold">{t('cases.household', 'Household')}</h3>
               </div>
               <Separator />
               <div className="px-4 py-3 space-y-2 text-sm">
@@ -460,14 +462,14 @@ export function CaseViewPage() {
                 </div>
                 {household.estimatedIncome && (
                   <div>
-                    <span className="text-muted-foreground text-xs">Estimated Income</span>
+                    <span className="text-muted-foreground text-xs">{t('cases.estimatedIncome', 'Estimated Income')}</span>
                     <p>₱{Number(household.estimatedIncome).toLocaleString()}/mo</p>
                   </div>
                 )}
                 {(famGraph?.members?.length || 0) > 0 && (
                   <div className="mt-2">
                     <span className="text-muted-foreground text-xs flex items-center gap-1 mb-2">
-                      <Users size={12} /> {famGraph!.members.length} Member{famGraph!.members.length > 1 ? 's' : ''}
+                      <Users size={12} /> {t('cases.memberCount', '{{count}} Member', { count: famGraph!.members.length })}
                     </span>
                     <FamilyGraph
                       loading={famLoading && !famGraph}
@@ -483,15 +485,15 @@ export function CaseViewPage() {
 
           {/* Incident Reports */}
           <div className="rounded-lg border bg-card">
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileWarning size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">Incident Reports</h3>
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileWarning size={20} className="text-primary" />
+                  <h3 className="text-sm font-semibold">{t('cases.incidentReports', 'Incident Reports')}</h3>
+                </div>
+                <Button size="sm" onClick={() => navigate(`/irf/new?caseId=${id}`)}>
+                  <Plus size={14} className="mr-1" /> {t('cases.newIrfFromCase', 'New IRF from Case')}
+                </Button>
               </div>
-              <Button size="sm" onClick={() => navigate(`/irf/new?caseId=${id}`)}>
-                <Plus size={14} className="mr-1" /> New IRF from Case
-              </Button>
-            </div>
             <Separator />
             <IrfCaseList caseId={id!} />
           </div>
@@ -501,8 +503,8 @@ export function CaseViewPage() {
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-3">
                 <Clock size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">Case History</h3>
-                {historyLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
+                <h3 className="text-sm font-semibold">{t('cases.caseHistory', 'Case History')}</h3>
+                {historyLoading && <span className="text-xs text-muted-foreground">{t('cases.loading', 'Loading...')}</span>}
               </div>
               <Separator />
               <div className="px-4 py-3">
@@ -517,8 +519,8 @@ export function CaseViewPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium">
                             {entry.fromStatus
-                              ? `${STATUS_LABELS[entry.fromStatus] || entry.fromStatus} → ${STATUS_LABELS[entry.toStatus] || entry.toStatus}`
-                              : STATUS_LABELS[entry.toStatus] || entry.toStatus}
+                              ? `${statusLabel(t, entry.fromStatus)} → ${statusLabel(t, entry.toStatus)}`
+                              : statusLabel(t, entry.toStatus)}
                           </span>
                           <Badge variant="outline" className="text-[10px] px-1 py-0">
                             {entry.transitionType}
@@ -526,13 +528,13 @@ export function CaseViewPage() {
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {formatDateTime(entry.createdAt)}
-                          {entry.changedByRole && ` · by ${entry.changedByRole.replace(/_/g, ' ')}`}
+                          {entry.changedByRole && t('cases.byRole', ' · by {{role}}', { role: entry.changedByRole.replace(/_/g, ' ') })}
                         </p>
                         {entry.remarks && (
                           <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{entry.remarks}</p>
                         )}
                         {entry.overrideReason && (
-                          <p className="text-xs text-amber-600 mt-0.5">Override: {entry.overrideReason}</p>
+                          <p className="text-xs text-amber-600 mt-0.5">{t('cases.override', 'Override: {{reason}}', { reason: entry.overrideReason })}</p>
                         )}
                       </div>
                     </div>
@@ -549,6 +551,7 @@ export function CaseViewPage() {
 
 function IrfCaseList({ caseId }: { caseId: string }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [irfs, setIrfs] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -556,10 +559,10 @@ function IrfCaseList({ caseId }: { caseId: string }) {
     api.get(`/irf/by-case/${caseId}`).then((d: any) => setIrfs(d)).finally(() => setLoading(false));
   }, [caseId]);
 
-  if (loading) return <div className="px-4 py-6 text-sm text-muted-foreground">Loading IRFs...</div>;
+  if (loading) return <div className="px-4 py-6 text-sm text-muted-foreground">{t('irf.loadingIrfs', 'Loading IRFs...')}</div>;
 
   if (!irfs || irfs.length === 0) {
-    return <div className="px-4 py-6 text-sm text-muted-foreground">No incident reports linked to this case.</div>;
+    return <div className="px-4 py-6 text-sm text-muted-foreground">{t('irf.noLinked', 'No incident reports linked to this case.')}</div>;
   }
 
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
@@ -34,6 +35,7 @@ interface TrackerStats {
 }
 
 export function CaseTrackerPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -77,22 +79,22 @@ export function CaseTrackerPage() {
 
   const columns: ColumnDef<TrackerEntry>[] = [
     { accessorKey: 'dailySeqNum', header: '#', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.dailySeqNum}</span> },
-    { accessorKey: 'transactionDate', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDate(row.original.transactionDate)}</span> },
-    { accessorKey: 'controlNo', header: 'Control No.', cell: ({ row }) => <span className="font-mono text-xs">{row.original.controlNo}</span> },
-    { accessorKey: 'surname', header: 'Surname' },
-    { accessorKey: 'firstName', header: 'First Name' },
-    { accessorKey: 'middleName', header: 'Middle Name' },
-    { accessorKey: 'gender', header: 'Gender' },
-    { accessorKey: 'ageRange', header: 'Age Range' },
-    { accessorKey: 'clientCategory', header: 'Category' },
-    { accessorKey: 'barangay', header: 'Barangay' },
-    { accessorKey: 'interventionRemarks', header: 'Intervention', cell: ({ row }) => <span className="font-mono text-xs max-w-[200px] truncate block" title={row.original.interventionRemarks}>{row.original.interventionRemarks}</span> },
+    { accessorKey: 'transactionDate', header: t('tracker.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDate(row.original.transactionDate)}</span> },
+    { accessorKey: 'controlNo', header: t('tracker.controlNo', 'Control No.'), cell: ({ row }) => <span className="font-mono text-xs">{row.original.controlNo}</span> },
+    { accessorKey: 'surname', header: t('tracker.surname', 'Surname') },
+    { accessorKey: 'firstName', header: t('tracker.firstName', 'First Name') },
+    { accessorKey: 'middleName', header: t('tracker.middleName', 'Middle Name') },
+    { accessorKey: 'gender', header: t('tracker.gender', 'Gender') },
+    { accessorKey: 'ageRange', header: t('tracker.ageRange', 'Age Range') },
+    { accessorKey: 'clientCategory', header: t('tracker.category', 'Category') },
+    { accessorKey: 'barangay', header: t('tracker.barangay', 'Barangay') },
+    { accessorKey: 'interventionRemarks', header: t('tracker.intervention', 'Intervention'), cell: ({ row }) => <span className="font-mono text-xs max-w-[200px] truncate block" title={row.original.interventionRemarks}>{row.original.interventionRemarks}</span> },
     {
       id: 'actions',
-      header: 'Actions',
+      header: t('tracker.actions', 'Actions'),
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View">
-          <Eye size={14} className="mr-1" /> View
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label={t('tracker.view', 'View')}>
+          <Eye size={14} className="mr-1" /> {t('tracker.view', 'View')}
         </Button>
       ),
     },
@@ -100,7 +102,7 @@ export function CaseTrackerPage() {
 
   if (loading) {
     return (
-      <PageShell title="Daily Case Tracker" description="Case Tracker Log — derived from cases">
+      <PageShell title={t('tracker.title', 'Daily Case Tracker')} description={t('tracker.description', 'Case Tracker Log — derived from cases')}>
         <CardGridSkeleton count={2} />
       </PageShell>
     );
@@ -108,29 +110,29 @@ export function CaseTrackerPage() {
 
   if (error && !data) {
     return (
-      <PageShell title="Daily Case Tracker" description="Case Tracker Log — derived from cases">
-        <ErrorState title="Could not load case tracker" message="Check your internet connection and try again." onRetry={() => mutate()} />
+      <PageShell title={t('tracker.title', 'Daily Case Tracker')} description={t('tracker.description', 'Case Tracker Log — derived from cases')}>
+        <ErrorState title={t('tracker.loadFailed', 'Could not load case tracker')} message={t('tracker.loadFailedMessage', 'Check your internet connection and try again.')} onRetry={() => mutate()} />
       </PageShell>
     );
   }
 
   return (
     <PageShell
-      title="Daily Case Tracker"
-      description="Case Tracker Log — derived from cases"
+      title={t('tracker.title', 'Daily Case Tracker')}
+      description={t('tracker.description', 'Case Tracker Log — derived from cases')}
       cachedAt={lastSync ?? undefined}
     >
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Total Cases</p>
+            <p className="text-xs text-muted-foreground">{t('tracker.totalCases', 'Total Cases')}</p>
             <p className="text-2xl font-bold text-primary">{stats?.totalCasesLogged ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Today's Cases</p>
+            <p className="text-xs text-muted-foreground">{t('tracker.todayCases', "Today's Cases")}</p>
             <p className="text-2xl font-bold text-primary">{stats?.todayEntries ?? 0}</p>
           </CardContent>
         </Card>
@@ -138,10 +140,10 @@ export function CaseTrackerPage() {
 
       {/* Date Range Selectors */}
       <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-foreground">From:</label>
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label="Date from" className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
-        <label className="text-sm font-medium text-foreground">To:</label>
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label="Date to" className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+        <label className="text-sm font-medium text-foreground">{t('tracker.from', 'From:')}</label>
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} aria-label={t('tracker.dateFrom', 'Date from')} className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+        <label className="text-sm font-medium text-foreground">{t('tracker.to', 'To:')}</label>
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} aria-label={t('tracker.dateTo', 'Date to')} className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
       </div>
 
       {/* Entries Table */}

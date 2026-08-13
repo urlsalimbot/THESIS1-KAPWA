@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSWRConfig } from "swr";
 import useSWR from "swr";
+import { useTranslation } from "react-i18next";
+import { statusLabel } from "@/i18n/display";
 import {
   ArrowLeft,
   User,
@@ -87,19 +89,11 @@ const statusBadgeVariant: Record<
   closed: "outline",
 };
 
-const statusBadgeLabel: Record<string, string> = {
-  enrolled: "Enrolled",
-  assessed: "Assessed",
-  in_review: "In Review",
-  active: "Active",
-  transitioning: "Transitioning",
-  closed: "Closed",
-};
-
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   return (
     <Badge variant={statusBadgeVariant[status] || "outline"}>
-      {statusBadgeLabel[status] || status}
+      {statusLabel(t, status)}
     </Badge>
   );
 }
@@ -123,6 +117,7 @@ function InfoRow({
 }
 
 export function BeneficiaryViewPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { mutate: globalMutate } = useSWRConfig();
@@ -274,7 +269,7 @@ export function BeneficiaryViewPage() {
       setIntSigDataUrl(null);
       setIntReceiptFile(null);
     } catch (err: any) {
-      setIntError(err.message || "Failed to log intervention");
+      setIntError(err.message || t("beneficiaries.logInterventionFailed", "Failed to log intervention"));
     }
     setIntSubmitting(false);
   }
@@ -289,7 +284,7 @@ export function BeneficiaryViewPage() {
       setBeneficiary((prev) =>
         prev ? { ...prev, accessCardCode: result.accessCardCode } : prev,
       );
-      setAssignSuccess(`Access Card assigned: ${result.accessCardCode}`);
+      setAssignSuccess(t("beneficiaries.cardAssigned", "Access Card assigned: {{code}}", { code: result.accessCardCode }));
     } catch (err: any) {
       setAssignSuccess("");
     }
@@ -299,9 +294,10 @@ export function BeneficiaryViewPage() {
   function handleReprint() {
     if (!beneficiary) return;
     const confirmed = window.confirm(
-      `Reprint Access Card — Reprint card for ${beneficiary.name}? ` +
-        `Current code: ${beneficiary.accessCardCode} will remain valid. ` +
-        `Verify claimant identity before proceeding.`,
+      t("beneficiaries.reprintConfirm", "Reprint Access Card — Reprint card for {{name}}? Current code: {{code}} will remain valid. Verify claimant identity before proceeding.", {
+        name: beneficiary.name,
+        code: beneficiary.accessCardCode,
+      }),
     );
     if (!confirmed) return;
     navigate(`/beneficiary/${id}/card/print`);
@@ -321,7 +317,7 @@ export function BeneficiaryViewPage() {
         date: new Date().toISOString().split("T")[0],
       });
     } catch (err: any) {
-      setCertError(err.message || "Failed to generate certificate");
+      setCertError(err.message || t("beneficiaries.certFailed", "Failed to generate certificate"));
     } finally {
       setCertGenerating(null);
     }
@@ -330,8 +326,8 @@ export function BeneficiaryViewPage() {
   if (loading) {
     return (
       <PageShell
-        title="Beneficiary Details"
-        description="Viewing beneficiary information and case records."
+        title={t("beneficiaries.viewTitle", "Beneficiary Details")}
+        description={t("beneficiaries.viewingInfo", "Viewing beneficiary information and case records.")}
       >
         <CardGridSkeleton />
       </PageShell>
@@ -341,9 +337,9 @@ export function BeneficiaryViewPage() {
   if (!beneficiary) {
     return (
       <PageShell
-        title="Beneficiary Details"
+        title={t("beneficiaries.viewTitle", "Beneficiary Details")}
         description=""
-        backTo={{ label: "Back", onClick: () => navigate(-1) }}
+        backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate(-1) }}
       >
         <EmptyState variant="no-data" />
       </PageShell>
@@ -356,9 +352,9 @@ export function BeneficiaryViewPage() {
 
   return (
     <PageShell
-      title="Beneficiary Details"
-      description={`Viewing information for ${beneficiary.name}`}
-      backTo={{ label: "Back", onClick: () => navigate(-1) }}
+      title={t("beneficiaries.viewTitle", "Beneficiary Details")}
+      description={t("beneficiaries.viewingFor", "Viewing information for {{name}}", { name: beneficiary.name })}
+      backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate(-1) }}
     >
       {assignSuccess && (
         <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm font-medium text-green-700 mb-3">
@@ -387,7 +383,7 @@ export function BeneficiaryViewPage() {
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <User size={13} /> {beneficiary.gender ? `${beneficiary.gender}, ` : ""}{beneficiary.age} yrs
+                    <User size={13} /> {beneficiary.gender ? `${beneficiary.gender}, ` : ""}{beneficiary.age} {t("beneficiaries.yearsShort", "yrs")}
                   </span>
                   <span className="flex items-center gap-1">
                     <MapPin size={13} /> {beneficiary.barangay}
@@ -411,7 +407,7 @@ export function BeneficiaryViewPage() {
             <div className="flex items-center gap-2 text-primary mb-3">
               <UsersIcon size={16} />
               <h3 className="text-xs font-semibold uppercase tracking-wider">
-                Family Composition ({family.length})
+                {t("beneficiaries.familyComposition", "Family Composition ({{count}})", { count: family.length })}
               </h3>
             </div>
             {family.length > 0 && (
@@ -430,10 +426,10 @@ export function BeneficiaryViewPage() {
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <p className="text-xs font-semibold text-foreground truncate">{m.fullName}</p>
-                              {m.isPrimary && <span className="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-medium text-primary leading-none">Primary</span>}
+                              {m.isPrimary && <span className="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-medium text-primary leading-none">{t("beneficiaries.primary", "Primary")}</span>}
                             </div>
                             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                              <span>{m.relationship}</span><span>&middot;</span><span>{m.age} yrs</span>
+                              <span>{m.relationship}</span><span>&middot;</span><span>{m.age} {t("beneficiaries.yearsShort", "yrs")}</span>
                               {m.occupation && <><span>&middot;</span><span className="truncate">{m.occupation}</span></>}
                             </div>
                           </div>
@@ -450,7 +446,7 @@ export function BeneficiaryViewPage() {
             )}
             <FamilyGraph
               loading={famLoading && !famGraph}
-              error={famError ? (famError as any)?.message || "Failed to load family graph" : null}
+              error={famError ? (famError as any)?.message || t("beneficiaries.familyGraphFailed", "Failed to load family graph") : null}
               members={(famGraph?.members || []) as any}
               primary={(famGraph?.primary || null) as any}
             />
@@ -462,9 +458,9 @@ export function BeneficiaryViewPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 text-primary">
                   <FileText size={16} />
-                  <h3 className="text-xs font-semibold uppercase tracking-wider">Cases</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.cases", "Cases")}</h3>
                 </div>
-                <Button variant="ghost" size="icon" className="rounded-full h-7 w-7" aria-label="Add case" onClick={() => {
+                <Button variant="ghost" size="icon" className="rounded-full h-7 w-7" aria-label={t("beneficiaries.addCase", "Add case")} onClick={() => {
                   if (!ben) return;
                   navigate("/intake", { state: { prefill: {
                     surname: (ben.surname as string) || "", firstName: (ben.firstName as string) || "",
@@ -479,7 +475,7 @@ export function BeneficiaryViewPage() {
                 </Button>
               </div>
               {beneficiary.cases.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No active cases</p>
+                <p className="text-sm text-muted-foreground">{t("beneficiaries.noActiveCases", "No active cases")}</p>
               ) : (
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {beneficiary.cases.map((c) => (
@@ -493,7 +489,7 @@ export function BeneficiaryViewPage() {
                         <StatusBadge status={c.status} />
                         {c.status === "transitioning" && (
                           <Button variant="default" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setInterventionCaseId(c.id === interventionCaseId ? null : c.id)}>
-                            <ClipboardList size={10} className="mr-1" /> Log
+                            <ClipboardList size={10} className="mr-1" /> {t("beneficiaries.log", "Log")}
                           </Button>
                         )}
                       </div>
@@ -506,17 +502,17 @@ export function BeneficiaryViewPage() {
             <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
               <div className="flex items-center gap-2 text-primary mb-3">
                 <Gift size={16} />
-                <h3 className="text-xs font-semibold uppercase tracking-wider">Interventions</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.interventions", "Interventions")}</h3>
               </div>
               {beneficiary.interventions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No interventions recorded</p>
+                <p className="text-sm text-muted-foreground">{t("beneficiaries.noInterventions", "No interventions recorded")}</p>
               ) : (
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {beneficiary.interventions.map((intv) => (
                     <div key={intv.id} className="rounded bg-muted/50 px-2.5 py-2 text-sm">
                       <p className="font-medium text-foreground">{intv.type}</p>
                       <p className="text-xs text-muted-foreground">{intv.description}</p>
-                      {intv.fundSource && <p className="text-xs font-medium text-primary">Fund: {intv.fundSource}</p>}
+                      {intv.fundSource && <p className="text-xs font-medium text-primary">{t("beneficiaries.fundLabel", "Fund: {{source}}", { source: intv.fundSource })}</p>}
                       <p className="text-xs text-muted-foreground">{intv.date}</p>
                     </div>
                   ))}
@@ -533,45 +529,45 @@ export function BeneficiaryViewPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 text-primary">
                   <ClipboardList size={16} />
-                  <h3 className="text-xs font-semibold uppercase tracking-wider">Log Intervention</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.logIntervention", "Log Intervention")}</h3>
                 </div>
-                <span className="text-xs text-muted-foreground">Case: {interventionCaseId}</span>
+                <span className="text-xs text-muted-foreground">{t("beneficiaries.caseLabel", "Case: {{id}}", { id: interventionCaseId })}</span>
               </div>
               {intError && <div className="mb-3 rounded bg-destructive/10 p-2 text-xs text-destructive">{intError}</div>}
               <form onSubmit={handleLogIntervention} className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Type</label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.type} onChange={e => setIntForm({ ...intForm, type: e.target.value })} aria-label="Intervention Type">
-                      <option value="FA">Financial Assistance</option>
-                      <option value="C">Counseling</option>
+                    <label className="text-xs font-medium">{t("beneficiaries.type", "Type")}</label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.type} onChange={e => setIntForm({ ...intForm, type: e.target.value })} aria-label={t("beneficiaries.interventionType", "Intervention Type")}>
+                      <option value="FA">{t("beneficiaries.intFinancial", "Financial Assistance")}</option>
+                      <option value="C">{t("beneficiaries.intCounseling", "Counseling")}</option>
                       <option value="CSR">CSR</option>
-                      <option value="R">Referral</option>
-                      <option value="H">Healthcare</option>
-                      <option value="HV">Home Visit</option>
+                      <option value="R">{t("beneficiaries.intReferral", "Referral")}</option>
+                      <option value="H">{t("beneficiaries.intHealthcare", "Healthcare")}</option>
+                      <option value="HV">{t("beneficiaries.intHomeVisit", "Home Visit")}</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Amount (₱)</label>
-                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" type="number" min="0" step="0.01" value={intForm.amount} onChange={e => setIntForm({ ...intForm, amount: e.target.value })} aria-label="Amount" />
+                    <label className="text-xs font-medium">{t("beneficiaries.amount", "Amount (₱)")}</label>
+                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" type="number" min="0" step="0.01" value={intForm.amount} onChange={e => setIntForm({ ...intForm, amount: e.target.value })} aria-label={t("beneficiaries.amount", "Amount")} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Fund Source</label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.fundSource} onChange={e => setIntForm({ ...intForm, fundSource: e.target.value })} aria-label="Fund Source">
-                      <option value="Regular">Regular</option><option value="PDAF">PDAF</option><option value="Legislative">Legislative</option><option value="Donation">Donation</option>
+                    <label className="text-xs font-medium">{t("beneficiaries.fundSource", "Fund Source")}</label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.fundSource} onChange={e => setIntForm({ ...intForm, fundSource: e.target.value })} aria-label={t("beneficiaries.fundSource", "Fund Source")}>
+                      <option value="Regular">{t("beneficiaries.fundRegular", "Regular")}</option><option value="PDAF">PDAF</option><option value="Legislative">{t("beneficiaries.fundLegislative", "Legislative")}</option><option value="Donation">{t("beneficiaries.fundDonation", "Donation")}</option>
                     </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <SignaturePad onSave={(dataUrl: string) => setIntSigDataUrl(dataUrl)} label="Worker Signature" />
+                  <SignaturePad onSave={(dataUrl: string) => setIntSigDataUrl(dataUrl)} label={t("beneficiaries.workerSignature", "Worker Signature")} />
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Receipt (optional)</label>
-                    <input type="file" accept="image/*" className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground" onChange={e => setIntReceiptFile(e.target.files?.[0] || null)} aria-label="Client Receipt" />
+                    <label className="text-xs font-medium">{t("beneficiaries.receiptOptional", "Receipt (optional)")}</label>
+                    <input type="file" accept="image/*" className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground" onChange={e => setIntReceiptFile(e.target.files?.[0] || null)} aria-label={t("beneficiaries.clientReceipt", "Client Receipt")} />
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" size="sm" disabled={intSubmitting}>{intSubmitting ? "Saving..." : "Submit Intervention"}</Button>
-                  <Button variant="outline" size="sm" type="button" onClick={() => { setInterventionCaseId(null); setIntError(""); setIntSigDataUrl(null); setIntReceiptFile(null); }}>Cancel</Button>
+                  <Button type="submit" size="sm" disabled={intSubmitting}>{intSubmitting ? t("beneficiaries.saving", "Saving...") : t("beneficiaries.submitIntervention", "Submit Intervention")}</Button>
+                  <Button variant="outline" size="sm" type="button" onClick={() => { setInterventionCaseId(null); setIntError(""); setIntSigDataUrl(null); setIntReceiptFile(null); }}>{t("beneficiaries.cancel", "Cancel")}</Button>
                 </div>
               </form>
             </div>
@@ -584,15 +580,15 @@ export function BeneficiaryViewPage() {
           <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
             <div className="flex items-center gap-2 text-primary mb-3">
               <User size={16} />
-              <h3 className="text-xs font-semibold uppercase tracking-wider">Personal Info</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.personalInfo", "Personal Info")}</h3>
             </div>
             <div className="space-y-2">
-              <InfoRow icon={Calendar} label="Birth Date" value={beneficiary.birthDate || "N/A"} />
-              <InfoRow icon={MapPin} label="Place of Birth" value={beneficiary.placeOfBirth || "N/A"} />
-              <InfoRow icon={Tag} label="Civil Status" value={beneficiary.civilStatus || "N/A"} />
-              <InfoRow icon={Phone} label="Contact" value={beneficiary.contact || "N/A"} />
-              <InfoRow icon={Tag} label="Category" value={beneficiary.category || "N/A"} />
-              <InfoRow icon={Home} label="Household" value={`${beneficiary.householdSize} members`} />
+              <InfoRow icon={Calendar} label={t("beneficiaries.birthDate", "Birth Date")} value={beneficiary.birthDate || "N/A"} />
+              <InfoRow icon={MapPin} label={t("beneficiaries.placeOfBirth", "Place of Birth")} value={beneficiary.placeOfBirth || "N/A"} />
+              <InfoRow icon={Tag} label={t("beneficiaries.civilStatus", "Civil Status")} value={beneficiary.civilStatus || "N/A"} />
+              <InfoRow icon={Phone} label={t("beneficiaries.contact", "Contact")} value={beneficiary.contact || "N/A"} />
+              <InfoRow icon={Tag} label={t("beneficiaries.category", "Category")} value={beneficiary.category || "N/A"} />
+              <InfoRow icon={Home} label={t("beneficiaries.household", "Household")} value={t("beneficiaries.membersCount", "{{count}} members", { count: beneficiary.householdSize })} />
             </div>
           </div>
 
@@ -601,17 +597,17 @@ export function BeneficiaryViewPage() {
             <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
               <div className="flex items-center gap-2 text-primary mb-3">
                 <UsersIcon size={16} />
-                <h3 className="text-xs font-semibold uppercase tracking-wider">Claimant Representative</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.claimantRepresentative", "Claimant Representative")}</h3>
               </div>
               <div className="space-y-1.5">
                 <p className="text-sm font-medium text-foreground">
                   {((ben as any)?.claimant?.person?.firstName || '')} {((ben as any)?.claimant?.person?.surname || '')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Relationship: {((ben as any)?.claimant?.relationship || '—')}
+                  {t("beneficiaries.relationship", "Relationship: {{value}}", { value: ((ben as any)?.claimant?.relationship || '—') })}
                 </p>
                 {(ben as any)?.claimant?.person?.phone && (
-                  <p className="text-xs text-muted-foreground">Contact: {(ben as any)?.claimant?.person?.phone}</p>
+                  <p className="text-xs text-muted-foreground">{t("beneficiaries.contactLabel", "Contact: {{value}}", { value: (ben as any)?.claimant?.person?.phone })}</p>
                 )}
               </div>
             </div>
@@ -621,11 +617,11 @@ export function BeneficiaryViewPage() {
           <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
             <div className="flex items-center gap-2 text-primary mb-3">
               <CreditCard size={16} />
-              <h3 className="text-xs font-semibold uppercase tracking-wider">Access Card</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.accessCard", "Access Card")}</h3>
             </div>
             {beneficiary.accessCardCode ? (
               <div>
-                <p className="text-xs text-muted-foreground">Card Code</p>
+                <p className="text-xs text-muted-foreground">{t("beneficiaries.cardCode", "Card Code")}</p>
                 <p className="font-mono text-sm font-medium text-primary">{beneficiary.accessCardCode}</p>
                 {cardSummary && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
@@ -633,7 +629,7 @@ export function BeneficiaryViewPage() {
                       <Badge key={cat} variant="secondary" className="text-[10px]">
                         {count}
                         <span className="ml-0.5 font-normal">
-                          {cat === 'case_service' ? 'Case' : cat === 'referral' ? 'Referrals' : cat === 'community_service' ? 'Community' : 'Seminars'}
+                          {cat === 'case_service' ? t("beneficiaries.cardCase", "Case") : cat === 'referral' ? t("beneficiaries.cardReferrals", "Referrals") : cat === 'community_service' ? t("beneficiaries.cardCommunity", "Community") : t("beneficiaries.cardSeminars", "Seminars")}
                         </span>
                       </Badge>
                     ))}
@@ -641,17 +637,17 @@ export function BeneficiaryViewPage() {
                 )}
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" className="flex-1" onClick={() => navigate(`/beneficiary/${id}/access-card`)}>
-                    <ClipboardList size={14} className="mr-1" /> View Record
+                    <ClipboardList size={14} className="mr-1" /> {t("beneficiaries.viewRecord", "View Record")}
                   </Button>
                 </div>
                 <div className="flex gap-2 mt-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/beneficiary/${id}/card/print`)}>Print</Button>
-                  <Button variant="outline" size="sm" className="flex-1" onClick={handleReprint}>Reprint</Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/beneficiary/${id}/card/print`)}>{t("beneficiaries.print", "Print")}</Button>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={handleReprint}>{t("beneficiaries.reprint", "Reprint")}</Button>
                 </div>
               </div>
             ) : (
               <Button onClick={handleAssignCard} disabled={assigning} className="w-full" size="sm">
-                {assigning ? 'Assigning...' : 'Generate & Assign Card'}
+                {assigning ? t("beneficiaries.assigning", "Assigning...") : t("beneficiaries.generateAndAssign", "Generate & Assign Card")}
               </Button>
             )}
           </div>
@@ -660,20 +656,20 @@ export function BeneficiaryViewPage() {
           <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
             <div className="flex items-center gap-2 text-primary mb-3">
               <FileText size={16} />
-              <h3 className="text-xs font-semibold uppercase tracking-wider">Certificates</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.certificates", "Certificates")}</h3>
             </div>
             {certError && (
               <div className="mb-3 rounded bg-destructive/10 p-2 text-xs text-destructive">{certError}</div>
             )}
             <div className="space-y-2">
               <Button size="sm" className="w-full" onClick={() => handleGenerateCertificate("indigency")} disabled={certGenerating !== null}>
-                {certGenerating === "indigency" ? "Generating..." : "Certificate of Indigency"}
+                {certGenerating === "indigency" ? t("beneficiaries.generating", "Generating...") : t("beneficiaries.certIndigency", "Certificate of Indigency")}
               </Button>
               <Button size="sm" variant="outline" className="w-full" onClick={() => handleGenerateCertificate("eligibility")} disabled={certGenerating !== null}>
-                {certGenerating === "eligibility" ? "Generating..." : "Certificate of Eligibility"}
+                {certGenerating === "eligibility" ? t("beneficiaries.generating", "Generating...") : t("beneficiaries.certEligibility", "Certificate of Eligibility")}
               </Button>
               <Button size="sm" variant="outline" className="w-full" onClick={() => handleGenerateCertificate("referral")} disabled={certGenerating !== null}>
-                {certGenerating === "referral" ? "Generating..." : "Certificate of Referral"}
+                {certGenerating === "referral" ? t("beneficiaries.generating", "Generating...") : t("beneficiaries.certReferral", "Certificate of Referral")}
               </Button>
             </div>
           </div>
@@ -682,7 +678,7 @@ export function BeneficiaryViewPage() {
           <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
             <div className="flex items-center gap-2 text-primary mb-3">
               <Shield size={16} />
-              <h3 className="text-xs font-semibold uppercase tracking-wider">Consent & Privacy</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.consentPrivacy", "Consent & Privacy")}</h3>
             </div>
             {id && beneficiary && (
               <ConsentManager beneficiaryId={id} currentConsentStatus={beneficiary.status} onConsentChange={handleConsentChange} />

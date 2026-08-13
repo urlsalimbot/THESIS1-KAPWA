@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIntakeAutosave, loadDraft, clearDraft } from '@/hooks/useIntakeAutosave';
 import { useAuth } from '@/lib/auth-context';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -65,6 +66,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
   onAddressChange: (type: 'currentAddress', field: string, value: string) => void;
   errors: ValidationErrors; showAge?: boolean;
 }) {
+  const { t } = useTranslation();
   function getError(field: string): string {
     return errors[`${prefix}.${field}`] || errors[field] || '';
   }
@@ -83,26 +85,26 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs text-muted-foreground mb-2">Name of the Client</p>
+        <p className="text-xs text-muted-foreground mb-2">{t('intake.clientName', 'Name of the Client')}</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <InputWithError field="surname">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Surname *</label>
+              <label className="text-sm font-medium">{t('intake.surname', 'Surname *')}</label>
               <Input required value={form.surname} onChange={e => onChange('surname', e.target.value)} aria-label={`${prefix}-surname`} className={getError('surname') ? 'border-destructive' : ''} />
             </div>
           </InputWithError>
           <InputWithError field="firstName">
             <div className="space-y-2">
-              <label className="text-sm font-medium">First Name *</label>
+              <label className="text-sm font-medium">{t('intake.firstName', 'First Name *')}</label>
               <Input required value={form.firstName} onChange={e => onChange('firstName', e.target.value)} aria-label={`${prefix}-firstName`} className={getError('firstName') ? 'border-destructive' : ''} />
             </div>
           </InputWithError>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Middle Name</label>
+            <label className="text-sm font-medium">{t('intake.middleName', 'Middle Name')}</label>
             <Input value={form.middleName} onChange={e => onChange('middleName', e.target.value)} aria-label={`${prefix}-middleName`} />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Extension</label>
+            <label className="text-sm font-medium">{t('intake.extension', 'Extension')}</label>
             <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={form.extension} onChange={e => onChange('extension', e.target.value)} aria-label={`${prefix}-extension`}>
               {NAME_EXTENSIONS.map(e => <option key={e} value={e === 'N/A' ? '' : e}>{e}</option>)}
             </select>
@@ -113,12 +115,12 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <InputWithError field="gender">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Sex *</label>
+            <label className="text-sm font-medium">{t('intake.sex', 'Sex *')}</label>
             <div className="flex h-10 items-center gap-4">
               {['Male', 'Female'].map(s => (
                 <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="radio" name={`${prefix}-gender`} value={s} checked={form.gender === s} onChange={e => onChange('gender', e.target.value)} className="text-primary" required />
-                  {s}
+                  {t(`intake.${s.toLowerCase()}`, s)}
                 </label>
               ))}
             </div>
@@ -126,19 +128,19 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
         </InputWithError>
         {showAge && (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Age</label>
+            <label className="text-sm font-medium">{t('intake.age', 'Age')}</label>
             <Input type="number" value={age || ''} disabled aria-label={`${prefix}-age`} className="bg-muted" />
           </div>
         )}
         <InputWithError field="dob">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Date of Birth *</label>
+            <label className="text-sm font-medium">{t('intake.dateOfBirth', 'Date of Birth *')}</label>
             <Input type="date" required value={form.dob} onChange={e => onChange('dob', e.target.value)} aria-label={`${prefix}-dob`} className={`[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:opacity-60${getError('dob') ? ' border-destructive' : ''}`} />
           </div>
         </InputWithError>
         <InputWithError field="placeOfBirth">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Place of Birth *</label>
+            <label className="text-sm font-medium">{t('intake.placeOfBirth', 'Place of Birth *')}</label>
             <Input required value={form.placeOfBirth} onChange={e => onChange('placeOfBirth', e.target.value)} aria-label={`${prefix}-placeOfBirth`} className={getError('placeOfBirth') ? 'border-destructive' : ''} />
           </div>
         </InputWithError>
@@ -147,45 +149,45 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <InputWithError field="civilStatus">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Civil Status *</label>
+            <label className="text-sm font-medium">{t('intake.civilStatus', 'Civil Status *')}</label>
             <select className={`flex h-10 w-full rounded-md border ${getError('civilStatus') ? 'border-destructive' : 'border-input'} bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`} required value={form.civilStatus} onChange={e => onChange('civilStatus', e.target.value)} aria-label={`${prefix}-civilStatus`}>
-              <option value="">Select...</option>
+              <option value="">{t('intake.select', 'Select...')}</option>
               {CIVIL_STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
         </InputWithError>
         <InputWithError field="cellularNumber">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Cellular Number *</label>
+            <label className="text-sm font-medium">{t('intake.cellularNumber', 'Cellular Number *')}</label>
             <Input type="tel" required value={form.cellularNumber} onChange={e => onChange('cellularNumber', e.target.value.replace(/\D/g, ''))} aria-label={`${prefix}-cellularNumber`} className={getError('cellularNumber') ? 'border-destructive' : ''} />
           </div>
         </InputWithError>
         <InputWithError field="email">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Email *</label>
+            <label className="text-sm font-medium">{t('intake.email', 'Email *')}</label>
             <Input type="email" value={form.email} onChange={e => onChange('email', e.target.value)} aria-label={`${prefix}-email`} placeholder="email@example.com" className={getError('email') ? 'border-destructive' : ''} />
           </div>
         </InputWithError>
       </div>
 
       <Separator />
-      <IntakeAddressBlock value={form.currentAddress} onChange={(f, v) => onAddressChange('currentAddress', f, v)} label="Address" errors={errors} fieldPrefix={prefix} />
+      <IntakeAddressBlock value={form.currentAddress} onChange={(f, v) => onAddressChange('currentAddress', f, v)} label={t('intake.address', 'Address')} errors={errors} fieldPrefix={prefix} />
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">PhilHealth Number</label>
-        <Input value={form.philhealthNumber} onChange={e => onChange('philhealthNumber', e.target.value)} aria-label={`${prefix}-philhealthNumber`} placeholder="Optional" />
+        <label className="text-sm font-medium">{t('intake.philhealthNumber', 'PhilHealth Number')}</label>
+        <Input value={form.philhealthNumber} onChange={e => onChange('philhealthNumber', e.target.value)} aria-label={`${prefix}-philhealthNumber`} placeholder={t('intake.optional', 'Optional')} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <InputWithError field="occupation">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Occupation *</label>
+            <label className="text-sm font-medium">{t('intake.occupation', 'Occupation *')}</label>
             <Input required value={form.occupation} onChange={e => onChange('occupation', e.target.value)} aria-label={`${prefix}-occupation`} className={getError('occupation') ? 'border-destructive' : ''} />
           </div>
         </InputWithError>
         <InputWithError field="estimatedMonthlyIncome">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Estimated Monthly Income *</label>
+            <label className="text-sm font-medium">{t('intake.estimatedIncome', 'Estimated Monthly Income *')}</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₱</span>
               <Input type="text" inputMode="numeric" required value={form.estimatedMonthlyIncome} onChange={e => onChange('estimatedMonthlyIncome', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) onChange('estimatedMonthlyIncome', formatMoney(v)); }} aria-label={`${prefix}-income`} className={`pl-7${getError('estimatedMonthlyIncome') ? ' border-destructive' : ''}`} />
@@ -198,6 +200,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
 }
 
 export function IntakePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -388,7 +391,7 @@ export function IntakePage() {
       });
       navigate(`/cases/${submittedCase.caseId}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to submit batch family intake');
+      setError(err instanceof Error ? err.message : t('intake.batchSubmitFailed', 'Failed to submit batch family intake'));
     } finally {
       setBatchSubmitting(false);
     }
@@ -424,17 +427,17 @@ export function IntakePage() {
 
     const allErrors = { ...benErrs, ...claimErrs };
     if (Object.keys(allErrors).length > 0) {
-      setError('Please fix the highlighted fields below.');
+      setError(t('intake.fixHighlighted', 'Please fix the highlighted fields below.'));
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (!beneficiaryIsClaimant && !relationshipToBeneficiary) {
-      setError('Please specify claimant relationship to beneficiary');
+      setError(t('intake.claimantRelationshipRequired', 'Please specify claimant relationship to beneficiary'));
       return;
     }
     if (!hasConsent) {
-      setError('Consent required per Data Privacy Act (RA 10173)');
+      setError(t('intake.consentRequired', 'Consent required per Data Privacy Act (RA 10173)'));
       return;
     }
 
@@ -474,7 +477,7 @@ export function IntakePage() {
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);
       } catch (fallbackErr: unknown) {
-        setError(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to submit intake');
+        setError(fallbackErr instanceof Error ? fallbackErr.message : t('intake.submitFailed', 'Failed to submit intake'));
       }
     } finally {
       setSubmitting(false);
@@ -482,7 +485,7 @@ export function IntakePage() {
   }
 
   return (
-    <PageShell title="General Intake Form" description="Client Registration — Beneficiary + Claimant + Family Composition">
+    <PageShell title={t('intake.title', 'General Intake Form')} description={t('intake.description', 'Client Registration — Beneficiary + Claimant + Family Composition')}>
       {error && (
         <div className="mb-4 rounded border border-destructive bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
@@ -491,7 +494,7 @@ export function IntakePage() {
       )}
       {(location.state as { prefill?: Record<string, string> })?.prefill && (
         <div className="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-          Adding a case for <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>. Review and modify details before submitting.
+          {t('intake.addingCaseFor', 'Adding a case for')} <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>{t('intake.addingCaseForSuffix', '. Review and modify details before submitting.')}
         </div>
       )}
       <form onSubmit={handleSubmit} noValidate className="max-w-4xl mx-auto space-y-6">
@@ -499,7 +502,7 @@ export function IntakePage() {
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <User size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold">I. Beneficiary Information</h2>
+            <h2 className="text-sm font-semibold">{t('intake.sectionBeneficiary', 'I. Beneficiary Information')}</h2>
           </div>
           <div className="p-6">
             <PersonFields prefix="ben" form={beneficiary} onChange={updateBeneficiary} onAddressChange={updateBenAddress} errors={benErrors} />
@@ -510,7 +513,7 @@ export function IntakePage() {
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <UserCheck size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold">II. Claimant Information</h2>
+            <h2 className="text-sm font-semibold">{t('intake.sectionClaimant', 'II. Claimant Information')}</h2>
             <div className="ml-auto">
               <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                 <input
@@ -528,21 +531,21 @@ export function IntakePage() {
                   className="rounded border-input text-primary"
                 />
                 <UserCheck size={14} className="text-muted-foreground" />
-                <span className="text-muted-foreground">Beneficiary is claimant</span>
+                <span className="text-muted-foreground">{t('intake.beneficiaryIsClaimant', 'Beneficiary is claimant')}</span>
               </label>
             </div>
           </div>
           <div className="p-6">
             {beneficiaryIsClaimant ? (
-              <p className="text-sm text-muted-foreground italic">Claimant details will mirror the beneficiary.</p>
+              <p className="text-sm text-muted-foreground italic">{t('intake.claimantMirror', 'Claimant details will mirror the beneficiary.')}</p>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground mb-4">The person authorized to claim on behalf of the beneficiary.</p>
+                <p className="text-xs text-muted-foreground mb-4">{t('intake.authorizedToClaim', 'The person authorized to claim on behalf of the beneficiary.')}</p>
                 <PersonFields prefix="claim" form={claimant} onChange={updateClaimant} onAddressChange={updateClaimAddress} errors={claimErrors} />
                 <div className="mt-4 space-y-2">
-                  <label className="text-sm font-medium">Relationship to Beneficiary *</label>
-                  <select className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" required value={relationshipToBeneficiary} onChange={e => setRelationshipToBeneficiary(e.target.value)} aria-label="Relationship to beneficiary">
-                    <option value="">Select...</option>
+                  <label className="text-sm font-medium">{t('intake.relationshipToBeneficiary', 'Relationship to Beneficiary *')}</label>
+                  <select className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" required value={relationshipToBeneficiary} onChange={e => setRelationshipToBeneficiary(e.target.value)} aria-label={t('intake.relationshipToBeneficiary', 'Relationship to beneficiary')}>
+                    <option value="">{t('intake.select', 'Select...')}</option>
                     {['Spouse', 'Child', 'Parent', 'Sibling', 'Legal Guardian', 'Relative', 'Unrelated Caretaker'].map(r => <option key={r}>{r}</option>)}
                   </select>
                 </div>
@@ -555,43 +558,43 @@ export function IntakePage() {
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Users size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold">III. Family Composition</h2>
+            <h2 className="text-sm font-semibold">{t('intake.sectionFamily', 'III. Family Composition')}</h2>
             <div className="ml-auto">
-              <Button type="button" variant="outline" size="sm" onClick={addFamilyMember}>+ Add Member</Button>
+              <Button type="button" variant="outline" size="sm" onClick={addFamilyMember}>{t('intake.addMember', '+ Add Member')}</Button>
             </div>
           </div>
           <div className="p-6">
-            {family.length === 0 && <p className="text-sm text-muted-foreground italic">No family members added</p>}
+            {family.length === 0 && <p className="text-sm text-muted-foreground italic">{t('intake.noFamilyMembers', 'No family members added')}</p>}
             {family.map(m => {
-              const dobError = m.dob && (!/^\d{4}-\d{2}-\d{2}$/.test(m.dob) || computeAge(m.dob) < 0 || computeAge(m.dob) > 120) ? 'Invalid date of birth' : '';
+              const dobError = m.dob && (!/^\d{4}-\d{2}-\d{2}$/.test(m.dob) || computeAge(m.dob) < 0 || computeAge(m.dob) > 120) ? t('intake.invalidDob', 'Invalid date of birth') : '';
               return (
                 <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bg-green-50 border-green-300' : 'bg-muted/30'}`}>
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Surname *</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.surname', 'Surname *')}</label>
                       <Input className="h-8 text-sm" required value={m.surname} onChange={e => updateFamilyMember(m.id, 'surname', e.target.value)} aria-label="FM surname" disabled={m.done} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">First Name *</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.firstName', 'First Name *')}</label>
                       <Input className="h-8 text-sm" required value={m.firstName} onChange={e => updateFamilyMember(m.id, 'firstName', e.target.value)} aria-label="FM first name" disabled={m.done} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Middle Name</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.middleName', 'Middle Name')}</label>
                       <Input className="h-8 text-sm" value={m.middleName} onChange={e => updateFamilyMember(m.id, 'middleName', e.target.value)} aria-label="FM middle name" disabled={m.done} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Ext</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.ext', 'Ext')}</label>
                       <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.extension} onChange={e => updateFamilyMember(m.id, 'extension', e.target.value)} aria-label="FM extension" disabled={m.done}>
                         {NAME_EXTENSIONS.map(e => <option key={e} value={e === 'N/A' ? '' : e}>{e}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Sex *</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.sex', 'Sex *')}</label>
                       <div className="flex gap-3 h-8 items-center">
                         {(['Male', 'Female'] as const).map(s => (
                           <label key={s} className="flex items-center gap-1 text-sm cursor-pointer">
                             <input type="radio" name={`fm-${m.id}-gender`} value={s} checked={m.gender === s} onChange={() => updateFamilyMember(m.id, 'gender', s)} aria-label="FM gender" disabled={m.done} />
-                            {s}
+                            {t(`intake.${s.toLowerCase()}`, s)}
                           </label>
                         ))}
                       </div>
@@ -599,29 +602,29 @@ export function IntakePage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Date of Birth *</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.dateOfBirth', 'Date of Birth *')}</label>
                       <Input type="date" className="h-8 text-sm" required value={m.dob} onChange={e => updateFamilyMember(m.id, 'dob', e.target.value)} aria-label="FM dob" disabled={m.done} />
                       {dobError && <p className="text-xs text-destructive mt-1">{dobError}</p>}
-                      {!dobError && m.dob && <p className="text-xs text-muted-foreground mt-1">Age: {computeAge(m.dob)}</p>}
+                      {!dobError && m.dob && <p className="text-xs text-muted-foreground mt-1">{t('intake.ageLabel', 'Age: {{age}}', { age: computeAge(m.dob) })}</p>}
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Relationship *</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.relationship', 'Relationship *')}</label>
                       <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.relationship} onChange={e => updateFamilyMember(m.id, 'relationship', e.target.value)} aria-label="FM relationship" disabled={m.done}>
                         {['Spouse','Child','Parent','Sibling','Grandparent','Other'].map(r => <option key={r}>{r}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Occupation</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.occupation', 'Occupation')}</label>
                       <Input className="h-8 text-sm" value={m.occupation} onChange={e => updateFamilyMember(m.id, 'occupation', e.target.value)} aria-label="FM occupation" disabled={m.done} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Status *</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.status', 'Status *')}</label>
                       <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={m.status} onChange={e => updateFamilyMember(m.id, 'status', e.target.value)} aria-label="FM status" disabled={m.done}>
                         {FAMILY_MEMBER_STATUSES.map(s => <option key={s}>{s}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Monthly Income</label>
+                      <label className="text-xs text-muted-foreground">{t('intake.monthlyIncome', 'Monthly Income')}</label>
                       <div className="relative">
                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₱</span>
                         <Input type="text" inputMode="numeric" className="h-8 text-sm pl-5" value={m.income} onChange={e => updateFamilyMember(m.id, 'income', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) updateFamilyMember(m.id, 'income', formatMoney(v)); }} aria-label="FM income" disabled={m.done} />
@@ -631,10 +634,10 @@ export function IntakePage() {
                   <div className="flex gap-2">
                     <Button type="button" variant={m.done ? 'secondary' : 'default'} size="sm" onClick={() => toggleDone(m.id)} disabled={!m.done && (!m.surname || !m.firstName || !m.gender || !m.dob || !!dobError || !m.relationship || !m.status)} className="h-8 gap-1">
                       <Check size={14} />
-                      {m.done ? 'Edit' : 'Done'}
+                      {m.done ? t('intake.edit', 'Edit') : t('intake.done', 'Done')}
                     </Button>
                     {!m.done && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFamilyMember(m.id)} className="text-destructive h-8">Remove</Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFamilyMember(m.id)} className="text-destructive h-8">{t('intake.remove', 'Remove')}</Button>
                     )}
                   </div>
                 </div>
@@ -647,19 +650,19 @@ export function IntakePage() {
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <ShieldCheck size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Data Privacy Consent</h2>
+            <h2 className="text-sm font-semibold">{t('intake.dataPrivacyConsent', 'Data Privacy Consent')}</h2>
           </div>
           <div className="p-6">
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={hasConsent} onChange={e => { setHasConsent(e.target.checked); setError(''); }} className="mt-0.5 rounded border-input text-primary" />
-              <span>I confirm the beneficiary has given consent per Data Privacy Act (RA 10173) and this data will be logged in the consent ledger</span>
+              <span>{t('intake.consentText', 'I confirm the beneficiary has given consent per Data Privacy Act (RA 10173) and this data will be logged in the consent ledger')}</span>
             </label>
           </div>
         </div>
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={submitting} aria-label="Submit Intake">
-            {submitting ? 'Checking records...' : 'Submit & Check for Prior Records'}
+          <Button type="submit" disabled={submitting} aria-label={t('intake.submitIntake', 'Submit Intake')}>
+            {submitting ? t('intake.checkingRecords', 'Checking records...') : t('intake.submitCheck', 'Submit & Check for Prior Records')}
           </Button>
         </div>
       </form>
@@ -668,17 +671,17 @@ export function IntakePage() {
         <div className="mt-6 max-w-4xl mx-auto rounded-lg border bg-card p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <Users size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Add another family member as a batch?</h2>
+            <h2 className="text-sm font-semibold">{t('intake.addAnotherBatch', 'Add another family member as a batch?')}</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Submit {family.filter(m => m.surname.trim()).length} member(s) together with this household in one flow.
+            {t('intake.batchMembers', 'Submit {{count}} member(s) together with this household in one flow.', { count: family.filter(m => m.surname.trim()).length })}
           </p>
           <div className="mt-4 flex gap-3">
-            <Button type="button" onClick={handleBatchSubmit} disabled={batchSubmitting} aria-label="Yes, add as batch">
-              {batchSubmitting ? 'Adding members...' : 'Yes, add as batch'}
+            <Button type="button" onClick={handleBatchSubmit} disabled={batchSubmitting} aria-label={t('intake.yesAddBatch', 'Yes, add as batch')}>
+              {batchSubmitting ? t('intake.addingMembers', 'Adding members...') : t('intake.yesAddBatch', 'Yes, add as batch')}
             </Button>
             <Button type="button" variant="outline" onClick={() => navigate(`/cases/${submittedCase.caseId}`)}>
-              No, view case
+              {t('intake.noViewCase', 'No, view case')}
             </Button>
           </div>
         </div>
