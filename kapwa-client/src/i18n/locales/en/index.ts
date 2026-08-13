@@ -1,14 +1,66 @@
 const en = {
-  time: {
-    "daysAgo_one": "{{count}} days ago",
-    "daysAgo_other": "{{count}} days ago",
-    "hoursAgo_one": "{{count}} hr {{minutes}} min ago",
-    "hoursAgo_other": "{{count}} hr {{minutes}} min ago",
+  "nav": {
+    "language": "Language",
+    "english": "English",
+    "filipino": "Filipino",
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "loading": "Loading...",
+  },
+  "status": {
+    "enrolled": "Enrolled",
+    "assessed": "Assessed",
+    "in_review": "In Review",
+    "active": "Active",
+    "transitioning": "Transitioning",
+    "closed": "Closed",
+  },
+  "category": {
+    "Children": "Children",
+    "Youth": "Youth",
+    "Women": "Women",
+    "PWD": "PWD",
+    "Senior": "Senior",
+    "Indigent": "Indigent",
+    "4Ps": "4Ps",
+    "IP": "IP",
+    "Family": "Family",
+  },
+  "interventionType": {
+    "FA": "Financial Assistance",
+    "C": "Counseling",
+    "CSR": "Case Study Report",
+    "R": "Referral",
+    "H": "Home Visit",
+    "HV": "Home Visit",
+    "Other": "Other",
+  },
+  "referralStatus": {
+    "referred": "Referred",
+    "received": "Received",
+    "actioned": "Actioned",
+    "closed": "Closed",
+    "declined": "Declined",
+  },
+  "syncStatus": {
+    "pending": "Pending",
+    "syncing": "Syncing",
+    "failed": "Failed",
+    "conflict": "Conflict",
+  },
+  "time": {
     "justNow": "just now",
     "minutesAgo_one": "{{count}} min ago",
     "minutesAgo_other": "{{count}} min ago",
+    "hoursAgo_one": "{{count}} hr {{minutes}} min ago",
+    "hoursAgo_other": "{{count}} hr {{minutes}} min ago",
+    "daysAgo_one": "{{count}} days ago",
+    "daysAgo_other": "{{count}} days ago",
   },
-  topbar: {
+  "topbar": {
     "approvalsQueue": "Approvals Queue",
     "cancel": "Cancel",
     "language": "Language",
@@ -32,61 +84,11 @@ const en = {
     "themeSystem": "System",
     "toggleNavigation": "Toggle navigation menu",
   },
-  nav: {
-    language: 'Language',
-    english: 'English',
-    filipino: 'Filipino',
-  },
-  common: {
-    cancel: 'Cancel',
-    save: 'Save',
-    delete: 'Delete',
-    loading: 'Loading...',
-  },
-  status: {
-    enrolled: 'Enrolled',
-    assessed: 'Assessed',
-    in_review: 'In Review',
-    active: 'Active',
-    transitioning: 'Transitioning',
-    closed: 'Closed',
-  },
-  category: {
-    Children: 'Children',
-    Youth: 'Youth',
-    Women: 'Women',
-    PWD: 'PWD',
-    Senior: 'Senior',
-    Indigent: 'Indigent',
-    '4Ps': '4Ps',
-    IP: 'IP',
-    Family: 'Family',
-  },
-  interventionType: {
-    FA: 'Financial Assistance',
-    C: 'Counseling',
-    CSR: 'Case Study Report',
-    R: 'Referral',
-    H: 'Home Visit',
-    HV: 'Home Visit',
-    Other: 'Other',
-  },
-  referralStatus: {
-    referred: 'Referred',
-    received: 'Received',
-    actioned: 'Actioned',
-    closed: 'Closed',
-    declined: 'Declined',
-  },
-  syncStatus: {
-    pending: 'Pending',
-    syncing: 'Syncing',
-    failed: 'Failed',
-    conflict: 'Conflict',
-  },
 } as const;
 
 export default en;
-export type EnLocale = {
-  [NS in keyof typeof en]: { [K in keyof (typeof en)[NS]]: string };
-};
+
+// Value-widened recursive map: keys must match the en tree exactly, values
+// are plain strings (so fil can hold different translations).
+type DeepString<T> = { [K in keyof T]: T[K] extends Record<string, unknown> ? DeepString<T[K]> : string };
+export type EnLocale = DeepString<typeof en>;
