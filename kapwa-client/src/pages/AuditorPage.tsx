@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { Shield, CheckCircle, XCircle, Download, Search, RefreshCw, Eye } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
@@ -9,6 +10,7 @@ import { queryKeys } from '../lib/query-keys';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 export function AuditorPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -45,12 +47,12 @@ export function AuditorPage() {
   );
 
   const consentColumns: ColumnDef<any>[] = [
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span>{new Date(row.original.grantedAt || row.original.createdAt).toLocaleDateString()}</span> },
-    { accessorKey: 'channel', header: 'Channel' },
-    { accessorKey: 'purpose', header: 'Purpose' },
+    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span>{new Date(row.original.grantedAt || row.original.createdAt).toLocaleDateString()}</span> },
+    { accessorKey: 'channel', header: t('dashboard.channel', 'Channel') },
+    { accessorKey: 'purpose', header: t('dashboard.purpose', 'Purpose') },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: t('dashboard.statusLabel', 'Status'),
       cell: ({ row }) => (
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${row.original.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
           {row.original.status}
@@ -59,10 +61,10 @@ export function AuditorPage() {
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: t('dashboard.actions', 'Actions'),
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.caseId || row.original.id}`)} aria-label="View">
-          <Eye size={14} className="mr-1" /> View
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${row.original.caseId || row.original.id}`)} aria-label={t('dashboard.view', 'View')}>
+          <Eye size={14} className="mr-1" /> {t('dashboard.view', 'View')}
         </Button>
       ),
     },
@@ -76,19 +78,19 @@ export function AuditorPage() {
     await revalidateLedger();
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading audit data...</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500">{t('dashboard.loadingAudit', 'Loading audit data...')}</div>;
 
   const allValid = hashChain && Object.values(hashChain).every((v: any) => v.valid);
 
   return (
     <PageShell
-      title="Audit Logs"
-      description="Hash-chain verified records and consent ledger"
+      title={t('dashboard.auditLogs', 'Audit Logs')}
+      description={t('dashboard.auditDescription', 'Hash-chain verified records and consent ledger')}
     >
 
       <div className="flex gap-2 mb-4">
-        <button onClick={() => setActiveTab('hash')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'hash' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}>Audit Logs</button>
-        <button onClick={() => setActiveTab('consent')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'consent' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}>Consent Ledger</button>
+        <button onClick={() => setActiveTab('hash')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'hash' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}>{t('dashboard.auditLogs', 'Audit Logs')}</button>
+        <button onClick={() => setActiveTab('consent')} className={`px-3 py-1.5 text-xs rounded ${activeTab === 'consent' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}>{t('dashboard.consentLedger', 'Consent Ledger')}</button>
       </div>
 
       {activeTab === 'hash' && (
@@ -97,18 +99,18 @@ export function AuditorPage() {
             {allValid ? <CheckCircle className="text-green-600" size={24} /> : <XCircle className="text-red-600" size={24} />}
             <div>
               <p className={`font-semibold ${allValid ? 'text-green-800' : 'text-red-800'}`}>
-                {allValid ? 'All chains verified — integrity confirmed' : 'Chain integrity check failed — see details below'}
+                {allValid ? t('dashboard.chainsVerified', 'All chains verified — integrity confirmed') : t('dashboard.chainsFailed', 'Chain integrity check failed — see details below')}
               </p>
-              <p className="text-xs text-gray-500">Tables checked: interventions, cases, beneficiaries, consent_ledger</p>
+              <p className="text-xs text-gray-500">{t('dashboard.tablesChecked', 'Tables checked: interventions, cases, beneficiaries, consent_ledger')}</p>
             </div>
           </div>
 
           <div className="no-print flex gap-2 mb-4">
             <button onClick={reVerify} className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark">
-              <RefreshCw size={14} /> Verify All Chains
+              <RefreshCw size={14} /> {t('dashboard.verifyAllChains', 'Verify All Chains')}
             </button>
             <span className="flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs text-gray-600">
-              <Download size={14} /> Export
+              <Download size={14} /> {t('dashboard.export', 'Export')}
             </span>
           </div>
 
@@ -122,7 +124,7 @@ export function AuditorPage() {
                       <span className="text-sm font-medium capitalize">{table.replace(/([A-Z])/g, ' $1')}</span>
                     </div>
                     <span className={`text-xs ${status.valid ? 'text-green-600' : 'text-red-600'}`}>
-                      {status.valid ? 'Valid' : `Broken at: ${status.brokenAt || 'unknown'}`}
+                      {status.valid ? t('dashboard.valid', 'Valid') : t('dashboard.brokenAt', 'Broken at: {{where}}', { where: status.brokenAt || 'unknown' })}
                     </span>
                   </div>
                 ))}
@@ -141,19 +143,19 @@ export function AuditorPage() {
                 type="text"
                 value={beneficiaryFilter}
                 onChange={e => setBeneficiaryFilter(e.target.value)}
-                placeholder="Filter by Beneficiary ID"
+                placeholder={t('dashboard.filterByBeneficiaryId', 'Filter by Beneficiary ID')}
                 className="w-full pl-8 pr-3 py-1.5 border rounded text-xs"
               />
             </div>
             <button onClick={loadLedger} disabled={ledgerLoading} className="px-3 py-1.5 bg-primary text-white rounded text-xs hover:bg-primary-dark disabled:opacity-50">
-              {ledgerLoading ? 'Loading...' : 'Filter'}
+              {ledgerLoading ? t('dashboard.loading', 'Loading...') : t('dashboard.filter', 'Filter')}
             </button>
           </div>
 
           {consentLedger.length === 0 && !ledgerLoading ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">No consent records found</div>
+            <div className="text-center py-8 text-sm text-muted-foreground">{t('dashboard.noConsentRecords', 'No consent records found')}</div>
           ) : ledgerLoading ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-sm text-muted-foreground">{t('dashboard.loading', 'Loading...')}</div>
           ) : (
             <DataTable
               columns={consentColumns}

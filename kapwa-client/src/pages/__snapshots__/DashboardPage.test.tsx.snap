@@ -60,7 +60,8 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                 d="M12 5v14"
               />
             </svg>
-             New Intake
+             
+            New Intake
           </button>
         </div>
       </div>
@@ -1009,7 +1010,8 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                           r="3"
                         />
                       </svg>
-                       View
+                       
+                      View
                     </button>
                   </td>
                 </tr>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, CheckCircle, XCircle, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const [password, setPassword] = useState('');
@@ -19,11 +21,11 @@ export function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
-      setMessage('Passwords do not match.');
+      setMessage(t('auth.passwordsDontMatch', 'Passwords do not match.'));
       return;
     }
     if (password.length < 8) {
-      setMessage('Password must be at least 8 characters.');
+      setMessage(t('auth.passwordMinLength', 'Password must be at least 8 characters.'));
       return;
     }
     setSubmitting(true);
@@ -31,10 +33,10 @@ export function ResetPasswordPage() {
     try {
       const res: any = await api.post('/auth/reset-password', { token, password });
       setStatus('success');
-      setMessage(res?.message || 'Password reset successfully!');
+      setMessage(res?.message || t('auth.passwordResetSuccess', 'Password reset successfully!'));
     } catch (err: any) {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Reset failed. The link may be expired.');
+      setMessage(err instanceof Error ? err.message : t('auth.resetFailed', 'Reset failed. The link may be expired.'));
     } finally {
       setSubmitting(false);
     }
@@ -46,7 +48,7 @@ export function ResetPasswordPage() {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
       </div>
       <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
-        <ArrowLeft size={16} /> Back to Home
+        <ArrowLeft size={16} /> {t('auth.backToHome', 'Back to Home')}
       </Link>
       <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
         <CardHeader className="text-center pb-6">
@@ -58,10 +60,10 @@ export function ResetPasswordPage() {
             </div>
           )}
           <CardTitle className="text-2xl tracking-tight">
-            {status === 'success' ? 'Password Reset' : 'Set New Password'}
+            {status === 'success' ? t('auth.passwordReset', 'Password Reset') : t('auth.setNewPassword', 'Set New Password')}
           </CardTitle>
           <CardDescription className="text-base">
-            {status === 'success' ? message : 'Enter your new password below.'}
+            {status === 'success' ? message : t('auth.enterNewPassword', 'Enter your new password below.')}
           </CardDescription>
         </CardHeader>
         {status === 'idle' && (
@@ -75,7 +77,7 @@ export function ResetPasswordPage() {
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="New password"
+                  placeholder={t('auth.newPasswordPlaceholder', 'New password')}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
@@ -87,14 +89,14 @@ export function ResetPasswordPage() {
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               <Input
                 type="password"
-                placeholder="Confirm new password"
+                placeholder={t('auth.confirmPasswordPlaceholder', 'Confirm new password')}
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
                 required
@@ -103,7 +105,7 @@ export function ResetPasswordPage() {
               />
               <Button type="submit" className="w-full h-11" disabled={submitting || !password || !confirm}>
                 {submitting && <Loader2 size={16} className="mr-2 animate-spin" />}
-                Reset Password
+                {t('auth.resetPassword', 'Reset Password')}
               </Button>
             </form>
           </CardContent>
@@ -116,7 +118,7 @@ export function ResetPasswordPage() {
         )}
         <CardFooter className="justify-center pt-2 pb-6">
           <Button variant="link" asChild>
-            <Link to="/login">Back to Sign In</Link>
+            <Link to="/login">{t('auth.backToSignIn', 'Back to Sign In')}</Link>
           </Button>
         </CardFooter>
       </Card>
