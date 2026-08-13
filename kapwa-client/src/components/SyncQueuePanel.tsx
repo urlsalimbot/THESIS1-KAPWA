@@ -3,11 +3,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { loadQueue, type QueuedChange } from '@/lib/offline-queue';
 import { Clock, CheckCircle2, XCircle, RefreshCw, AlertTriangle, Trash2, Eye, Upload } from 'lucide-react';
 import { ConflictResolutionDialog } from './ConflictResolutionDialog';
 import { syncOnReconnect } from '@/lib/sync';
 import { formatTimestamp } from '@/lib/format';
+import { syncStatusLabel } from '@/i18n/display';
 
 const QUEUE_KEY = 'kapwa_sync_queue';
 const POLL_INTERVAL = 2000;
@@ -48,7 +51,7 @@ function operationLabel(op: string): string {
 
 type ItemLabel = { primary: string; secondary: string };
 
-function itemLabel(item: QueuedChange): ItemLabel {
+function itemLabel(t: TFunction, item: QueuedChange): ItemLabel {
   const p = item.payload ?? {};
   const table = item.tableName;
 
@@ -58,20 +61,20 @@ function itemLabel(item: QueuedChange): ItemLabel {
       const cn = p.control_no as string | undefined;
       const name = (p.surname && p.first_name) ? `${p.surname}, ${p.first_name}` : undefined;
       const control = cn ?? item.recordId.slice(0, 8);
-      return { primary: `Case ${control}`, secondary: name ?? '' };
+      return { primary: t('sync.itemCase', 'Case {{id}}', { id: control }), secondary: name ?? '' };
     }
     case 'beneficiaries': {
       const name = (p.surname && p.first_name) ? `${p.surname}, ${p.first_name}` : undefined;
       const philsys = p.philsys_number as string | undefined;
-      return { primary: name ?? `Beneficiary ${item.recordId.slice(0, 8)}`, secondary: philsys ?? '' };
+      return { primary: name ?? t('sync.itemBeneficiary', 'Beneficiary {{id}}', { id: item.recordId.slice(0, 8) }), secondary: philsys ?? '' };
     }
     case 'interventions': {
       const type = p.intervention_type as string | undefined;
-      return { primary: type ?? 'Intervention', secondary: item.recordId.slice(0, 8) };
+      return { primary: type ?? t('sync.itemIntervention', 'Intervention'), secondary: item.recordId.slice(0, 8) };
     }
     case 'irf_cases': {
       const blotter = p.blotter_entry_number as string | undefined;
-      return { primary: blotter ?? 'IRF Case', secondary: item.recordId.slice(0, 8) };
+      return { primary: blotter ?? t('sync.itemIrfCase', 'IRF Case'), secondary: item.recordId.slice(0, 8) };
     }
     default:
       return { primary: table, secondary: item.recordId.slice(0, 8) };
@@ -93,6 +96,7 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<QueuedChange[]>([]);
   const [conflictItem, setConflictItem] = useState<QueuedChange | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
@@ -132,8 +136,8 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
     refreshItems();
   };
 
-  const handleRemove = (id: string, label: string) => {
-    if (window.confirm(`Remove sync item: This will discard this operation. You may lose data. Continue?`)) {
+  const handleRemove = (id: string) => {
+    if (window.confirm(t('sync.removeConfirm', 'Remove sync item: This will discard this operation. You may lose data. Continue?'))) {
       removeQueueItem(id);
       refreshItems();
     }
@@ -167,9 +171,9 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
       <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
         <SheetContent side="right" className="w-[380px] sm:w-[480px] flex flex-col overflow-hidden">
           <SheetHeader className="shrink-0">
-            <SheetTitle>Sync Queue</SheetTitle>
+            <SheetTitle>{t('sync.title', 'Sync Queue')}</SheetTitle>
             <SheetDescription>
-              {hasItems ? `${items.length} pending change(s)` : 'No pending sync operations'}
+              {hasItems ? t('sync.pendingCount', '{{count}} pending change(s)', { count: items.length }) : t('sync.noPendingOperations', 'No pending sync operations')}
             </SheetDescription>
           </SheetHeader>
           {hasItems && (
@@ -182,7 +186,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                 className="gap-2"
               >
                 <Upload size={14} className={syncingAll ? 'animate-spin' : ''} />
-                {syncingAll ? 'Syncing...' : `Sync ${items.length} change(s)`}
+                {syncingAll ? t('sync.syncing', 'Syncing...') : t('sync.syncChanges', 'Sync {{count}} change(s)', { count: items.length })}
               </Button>
             </div>
           )}
@@ -190,8 +194,8 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
             {!hasItems ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
                 <CheckCircle2 size={40} className="text-muted-foreground" />
-                <p className="text-base font-medium">All caught up</p>
-                <p className="text-sm text-muted-foreground">No pending sync operations.</p>
+                <p className="text-base font-medium">{t('sync.emptyAllCaughtUp', 'All caught up')}</p>
+                <p className="text-sm text-muted-foreground">{t('sync.emptyNoPending', 'No pending sync operations.')}</p>
               </div>
             ) : (
               <div className="space-y-4 pr-1">
@@ -199,7 +203,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                 {pending.length > 0 && (
                   <div>
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                      Pending ({pending.length})
+                      {t('sync.groupPending', 'Pending ({{count}})', { count: pending.length })}
                     </h4>
                     {pending.map(item => (
                       <QueueItemCard
@@ -218,7 +222,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                 {syncing.length > 0 && (
                   <div>
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                      Syncing ({syncing.length})
+                      {t('sync.groupSyncing', 'Syncing ({{count}})', { count: syncing.length })}
                     </h4>
                     {syncing.map(item => (
                       <QueueItemCard
@@ -237,7 +241,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                 {failed.length > 0 && (
                   <div>
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                      Failed ({failed.length})
+                      {t('sync.groupFailed', 'Failed ({{count}})', { count: failed.length })}
                     </h4>
                     {failed.map(item => (
                       <QueueItemCard
@@ -256,7 +260,7 @@ export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
                 {conflicts.length > 0 && (
                   <div>
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                      Conflicts ({conflicts.length})
+                      {t('sync.groupConflicts', 'Conflicts ({{count}})', { count: conflicts.length })}
                     </h4>
                     {conflicts.map(item => (
                       <QueueItemCard
@@ -296,6 +300,7 @@ interface QueueItemCardProps {
 }
 
 function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: QueueItemCardProps) {
+  const { t } = useTranslation();
   const isSyncing = item.status === 'syncing';
   const isConflict = item.status === 'conflict';
   const isFailed = item.status === 'failed';
@@ -311,7 +316,7 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: Q
     <Clock size={16} className="text-muted-foreground shrink-0" />
   );
 
-  const statusLabel = isSyncing ? 'Syncing…' : item.status === 'failed' ? 'Sync failed' : item.status === 'conflict' ? 'Conflict' : 'Pending';
+  const statusLabel = syncStatusLabel(t, item.status);
 
   return (
     <div className="flex items-start gap-2 p-3 rounded-lg border border-border bg-card mb-2">
@@ -327,10 +332,10 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: Q
           </Badge>
         </div>
         <p className="text-sm font-medium text-foreground truncate">
-          {itemLabel(item).primary}
+          {itemLabel(t, item).primary}
         </p>
-        {itemLabel(item).secondary && (
-          <p className="text-xs text-muted-foreground truncate">{itemLabel(item).secondary}</p>
+        {itemLabel(t, item).secondary && (
+          <p className="text-xs text-muted-foreground truncate">{itemLabel(t, item).secondary}</p>
         )}
         <p className="text-xs text-muted-foreground mt-0.5">
           {formatTimestamp(item.clientUpdatedAt)}
@@ -346,8 +351,8 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: Q
             size="icon"
             className="h-8 w-8"
             onClick={onSyncNow}
-            title="Sync Now"
-            aria-label="Sync Now"
+            title={t('sync.syncNow', 'Sync Now')}
+            aria-label={t('sync.syncNow', 'Sync Now')}
           >
             <Upload size={16} />
           </Button>
@@ -358,8 +363,8 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: Q
             size="icon"
             className="h-8 w-8"
             onClick={() => onRetry(item.id)}
-            title="Retry Sync"
-            aria-label="Retry Sync"
+            title={t('sync.retrySync', 'Retry Sync')}
+            aria-label={t('sync.retrySync', 'Retry Sync')}
           >
             <RefreshCw size={16} />
           </Button>
@@ -370,8 +375,8 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: Q
             size="icon"
             className="h-8 w-8"
             onClick={onViewConflict}
-            title="View Diff"
-            aria-label="View Diff"
+            title={t('sync.viewDiff', 'View Diff')}
+            aria-label={t('sync.viewDiff', 'View Diff')}
           >
             <Eye size={16} />
           </Button>
@@ -380,9 +385,9 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: Q
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          onClick={() => onRemove(item.id, itemLabel(item).primary)}
-          title="Remove Item"
-          aria-label="Remove Item"
+          onClick={() => onRemove(item.id, itemLabel(t, item).primary)}
+          title={t('sync.removeItem', 'Remove Item')}
+          aria-label={t('sync.removeItem', 'Remove Item')}
         >
           <Trash2 size={16} />
         </Button>

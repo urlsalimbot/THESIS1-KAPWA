@@ -99,7 +99,11 @@ const fil: EnLocale = {
     "quickIntake": "New Intake (Quick Action)",
     "quickReferral": "New Referral (Quick Action)",
     "showingCachedData": "Showing cached data — last sync {{age}} ago",
-    "verifyingAccess": "Verifying access..."
+    "verifyingAccess": "Verifying access...",
+    "help": "Help",
+    "helpFaqs": "FAQs",
+    "helpTips": "Tips",
+    "noHelpContent": "No help content available for this page."
   },
   "error": {
     "boundaryBody": "An unexpected error occurred. Our team has been notified.",
@@ -119,6 +123,46 @@ const fil: EnLocale = {
     "retry": "Retry",
     "tryAgain": "Try again",
     "boundaryTryAgain": "Try Again"
+  },
+  "search": {
+    "ariaLabel": "Search beneficiaries",
+    "noResults": "No results found.",
+    "placeholder": "Search records...",
+    "searching": "Searching...",
+    "viewAll": "View all results"
+  },
+  "sync": {
+    "emptyAllCaughtUp": "All caught up",
+    "emptyNoPending": "No pending sync operations.",
+    "groupConflicts_one": "Conflicts ({{count}})",
+    "groupConflicts_other": "Conflicts ({{count}})",
+    "groupFailed_one": "Failed ({{count}})",
+    "groupFailed_other": "Failed ({{count}})",
+    "groupPending_one": "Pending ({{count}})",
+    "groupPending_other": "Pending ({{count}})",
+    "groupSyncing_one": "Syncing ({{count}})",
+    "groupSyncing_other": "Syncing ({{count}})",
+    "itemBeneficiary": "Beneficiary {{id}}",
+    "itemCase": "Case {{id}}",
+    "itemIntervention": "Intervention",
+    "itemIrfCase": "IRF Case",
+    "noPendingOperations": "No pending sync operations",
+    "offlinePendingChanges_one": "You are offline — {{count}} change(s) pending sync",
+    "offlinePendingChanges_other": "You are offline — {{count}} change(s) pending sync",
+    "openQueue": "Open sync queue",
+    "pendingChanges_one": "{{count}} change(s) pending sync",
+    "pendingChanges_other": "{{count}} change(s) pending sync",
+    "pendingCount_one": "{{count}} pending change(s)",
+    "pendingCount_other": "{{count}} pending change(s)",
+    "removeConfirm": "Remove sync item: This will discard this operation. You may lose data. Continue?",
+    "removeItem": "Remove Item",
+    "retrySync": "Retry Sync",
+    "syncChanges_one": "Sync {{count}} change(s)",
+    "syncChanges_other": "Sync {{count}} change(s)",
+    "syncing": "Syncing...",
+    "syncNow": "Sync Now",
+    "title": "Sync Queue",
+    "viewDiff": "View Diff"
   }
 };
 
