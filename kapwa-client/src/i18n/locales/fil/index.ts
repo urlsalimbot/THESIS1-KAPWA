@@ -12,6 +12,47 @@ const fil: EnLocale = {
     delete: 'Tanggalin',
     loading: 'Naglo-load...',
   },
+  status: {
+    enrolled: 'Nakarehistro',
+    assessed: 'Na-assess',
+    in_review: 'Sinusuri',
+    active: 'Aktibo',
+    transitioning: 'Naglilipat',
+    closed: 'Sarado',
+  },
+  category: {
+    Children: 'Mga Bata',
+    Youth: 'Kabataan',
+    Women: 'Kababaihan',
+    PWD: 'PWD',
+    Senior: 'Senior',
+    Indigent: 'Maralita',
+    '4Ps': '4Ps',
+    IP: 'IP',
+    Family: 'Pamilya',
+  },
+  interventionType: {
+    FA: 'Tulong Pinansyal',
+    C: 'Pagpapayo',
+    CSR: 'Case Study Report',
+    R: 'Referral',
+    H: 'Home Visit',
+    HV: 'Home Visit',
+    Other: 'Iba Pa',
+  },
+  referralStatus: {
+    referred: 'Ipinadala',
+    received: 'Natanggap',
+    actioned: 'Inaksyunan',
+    closed: 'Sarado',
+    declined: 'Tinanggihan',
+  },
+  syncStatus: {
+    pending: 'Nakapila',
+    syncing: 'Nagsi-sync',
+    failed: 'Nabigo',
+    conflict: 'Salungatan',
+  },
 };
 
 export default fil;
