@@ -24,7 +24,7 @@ export class CaseHistory extends BaseEntity {
   remarks?: string;
 
   @Column({ name: 'transition_type', default: 'standard' })
-  transitionType: 'standard' | 'override';
+  transitionType: 'standard' | 'override' | 'bulk_export_unmasked';
 
   @Column({ name: 'override_reason', nullable: true })
   overrideReason?: string;

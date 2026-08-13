@@ -127,10 +127,10 @@ export function ApprovalPipelinePage() {
     setSaving(false);
   }
 
-  async function handleBulkApprove() {
+  async function handleBulkApprove(reason?: string) {
     const ids = Array.from(selectedIds);
     await showBulkProgress(ids, async (id) => {
-      await api.post('/cases/bulk-approve', { ids: [id] });
+      await api.patch(`/cases/${id}/approve`, { status: 'active', signature: reason || '' });
     }, 'Approving');
     globalMutate(queryKeys.cases.all);
     clearSelection();

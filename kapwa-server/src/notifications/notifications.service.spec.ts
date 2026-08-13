@@ -4,6 +4,8 @@ import { NotificationsService } from './notifications.service';
 import { Notification, NotificationCategory } from './notification.entity';
 import { NotificationPreference } from './notification-preference.entity';
 import { SmsGatewayService } from '../otp/sms-gateway.service';
+import { NotificationsGateway } from './notifications.gateway';
+import { EmailService } from '../email/email.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -33,12 +35,23 @@ describe('NotificationsService', () => {
       save: jest.fn().mockResolvedValue({}),
     };
 
+    const gatewayMock = {
+      emitToUser: jest.fn(),
+      emitToAgencyStaff: jest.fn(),
+      emitToRole: jest.fn(),
+    };
+    const emailMock = {
+      sendNotificationEmail: jest.fn().mockResolvedValue({ success: true }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: getRepositoryToken(Notification), useValue: repoMock },
         { provide: getRepositoryToken(NotificationPreference), useValue: prefRepoMock },
         { provide: SmsGatewayService, useValue: smsMock },
+        { provide: NotificationsGateway, useValue: gatewayMock },
+        { provide: EmailService, useValue: emailMock },
       ],
     }).compile();
 

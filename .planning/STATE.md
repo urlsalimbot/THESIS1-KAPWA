@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Quality & Resilience Hardening
-current_phase: 25
+current_phase: 26
 status: in_progress
-stopped_at: Phase 25 in progress — Task 6 (access card 3-section view) uncommitted on branch feat/inter-agency-tracking
-last_updated: "2026-08-03T00:00:00.000Z"
-last_activity: 2026-08-03
-last_activity_desc: Reconciliation — phases 18-24 marked complete from actual code; 25 in progress; 26 partial
+stopped_at: Phase 26 — 1 task remaining (register PhysicalFilesModule in app.module.ts); baseline test-fix session uncommitted
+last_updated: "2026-08-12T00:00:00.000Z"
+last_activity: 2026-08-12
+last_activity_desc: Phase 25 completed; Phase 26 spec-gap work landed (Aug 4-5); baseline test debugging session fixed all failing suites (client 27 → 0, server 49 → 0)
 progress:
   total_phases: 14
-  completed_phases: 11
+  completed_phases: 13
   total_plans: 18
-  completed_plans: 15
-  percent: 79
-current_phase_name: inter-agency-beneficiary-tracking
+  completed_plans: 17
+  percent: 93
+current_phase_name: spec-gap-implementation
 ---
 
 # Project State
@@ -25,14 +25,13 @@ See: .planning/PROJECT.md (updated 2026-06-27)
 
 **Core value:** Social workers can register any claimant, conduct a full social case study (GIS), manage the complete approval workflow, log interventions post-disbursement, and track every service rendered — reliably offline in the field with automatic sync when connected.
 
-**Current focus:** Phase 25 — inter-agency-beneficiary-tracking
+**Current focus:** Phase 26 — spec-gap-implementation (final task: register PhysicalFilesModule)
 
 ## Current Position
 
-Phase: 25 — IN PROGRESS
-Plan: 1 of 1 (5/6 tasks)
-Status: Task 6 (access card three-section view) uncommitted on branch `feat/inter-agency-tracking`
-Last activity: 2026-08-03 — reconciliation of planning vs. work
+Phase: 26 — IN PROGRESS (1 task remaining)
+Status: PhysicalFilesModule built but unregistered in `kapwa-server/src/app.module.ts`; ExportModule and LcrModule already registered
+Last activity: 2026-08-12 — baseline test debugging session (see below)
 
 **Reconciled phases (18-26) from actual code:**
 
@@ -43,10 +42,38 @@ Last activity: 2026-08-03 — reconciliation of planning vs. work
 - Phase 22: Intake Redesign, Match-Check & Form Hardening — COMPLETE (2026-07-31)
 - Phase 23: Worker/Admin Dashboard Redesign — COMPLETE (2026-07-20)
 - Phase 24: Public Announcements — COMPLETE (2026-08-02)
-- Phase 25: Inter-Agency Beneficiary Tracking — IN PROGRESS (5/6 tasks)
-- Phase 26: SPEC-GAP Implementation — PARTIAL (physical-files unregistered)
+- Phase 25: Inter-Agency Beneficiary Tracking — COMPLETE (2026-08-05) — incl. Task 6 access card 3-section view (claimant access card page, commit 59c0d70)
+- Phase 26: SPEC-GAP Implementation — IN PROGRESS (physical-files unregistered)
 
-**Velocity:**
+## Latest Work (2026-08-04 → 2026-08-12)
+
+All work landed on `main` and pushed (no unpushed commits; `feat/inter-agency-tracking` branch merged/deleted).
+
+**Phase 25 completion (inter-agency):**
+- Claimant access card page — fixes dead `/my-access-card` nav link (Task 6)
+- Coordinator quick-scan access card service log panel
+- Wire User repo + NotificationsModule into inter-agency-referrals module
+- Breadcrumbs on deep pages + case detail mapping
+- Offline + pending-sync indicators in app shell; role-gated notifications/chat widgets (stops 403 spam); mobile bottom nav from role-filtered config; shared role redirect map
+
+**Phase 26 spec-gap delivery:**
+- Batch family intake (address-scoped dedup, links members to existing households, 400s on missing required fields)
+- Certificate of Indigency/Eligibility PDF generation; monthly fund utilization export for COA reporting (month-range validation, scoped to transitioning cases, PII removed from export logs)
+- System theme option + default-to-system for field workers (theme applied before first paint)
+- Accessible error recovery with retry across top data pages; generic error surfacing from intake transaction failures
+- Security: reject unknown underscore meta fields in sync payloads; intake draft scoped to user + purged on logout; unique index on household memberships (structural idempotency); Content-Disposition exposed in CORS
+- Resilience: graceful SIGTERM shutdown hooks; deep health probes + JSON structured logging; client build gated on tsc
+- Fresh-DB bootstrapping fix for new deployments; system evaluation + findings + implementation plans docs; planning restructured into per-phase directories
+
+**Baseline test debugging (2026-08-12, uncommitted):**
+
+Baseline run before fixes: client 27 failed / 425 passed (12 files), server 49 failed / 279 passed (6 suites). After fixes: client 451/451, server 328/328. All typechecks clean.
+
+- Server (6 specs): chat/dashboard/filing/auth/notifications specs were missing repo/service mocks added to service constructors (UserRepository, VersionVectorRepository, CaseRepository, PersonRepository, NotificationsGateway, EmailService); cases spec fixtures updated for selfRelianceLevel/sustainabilityPlan transition requirements and new error message; auth register/login fixtures updated for emailVerified + verification-email flow
+- Client: added matchMedia/canvas/scrollTo mocks to tests/setup.ts (theme-context crash); updated stale tests for redesigned ErrorBoundary copy, PageShell gap classes, SyncQueuePanel labels, CaseTracker labels, SWR `{data,total}` response shape (CasesPage/BeneficiariesPage/ApprovalPipeline), `api.patch` for request-review, removed CSV-export test (feature removed in 6c4c368), pinned DashboardPage date for stable snapshot
+- Real a11y fixes: SettingsPage tabs now proper role=tab/tabpanel semantics; UsersPanel selects got aria-labels + Actions column header
+
+## Velocity
 
 - Milestone v1.1: 2 plans completed
   - 07-01: Design Token System & Theme Mapping

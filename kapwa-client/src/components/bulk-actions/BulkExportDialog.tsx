@@ -10,9 +10,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { api } from '@/lib/api';
 
-export type ExportFormat = 'csv' | 'pdf';
+export type ExportFormat = 'csv';
 
 export interface BulkExportDialogProps {
   open: boolean;
@@ -43,13 +42,43 @@ export function BulkExportDialog({
 
     setLoading(true);
     try {
-      await api.post('/cases/bulk-export', { ids: selectedIds, format, masked, unmaskReason: masked ? null : unmaskReason.trim() });
+      const token = localStorage.getItem('kapwa_token');
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/cases/bulk-export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids: selectedIds,
+          format,
+          masked,
+          unmaskReason: masked ? null : unmaskReason.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Export failed (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = 'cases-bulk-export.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+
       onOpenChange(false);
       setUnmaskReason('');
       setMasked(true);
       onComplete?.();
-    } catch {
-      setError('Export failed. Please try again.');
+    } catch (err: any) {
+      setError(err?.message || 'Export failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -80,17 +109,6 @@ export function BulkExportDialog({
                   className="accent-primary"
                 />
                 CSV
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="format"
-                  value="pdf"
-                  checked={format === 'pdf'}
-                  onChange={() => setFormat('pdf')}
-                  className="accent-primary"
-                />
-                PDF
               </label>
             </div>
           </div>

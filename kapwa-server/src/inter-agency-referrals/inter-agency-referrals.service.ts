@@ -57,10 +57,16 @@ export class InterAgencyReferralsService {
   ) {}
 
   async create(dto: CreateInterAgencyReferralInput, caller: User) {
-    if (!caller.agencyId) {
+    let fromAgencyId = caller.agencyId as string | undefined;
+    if (!fromAgencyId && (caller.role === UserRole.ADMIN || caller.role === UserRole.SW)) {
+      // MSWDO staff are not linked to an agency on production accounts;
+      // fall back to the designated MSWDO agency so case-flow referrals work.
+      const mswdo = await this.agencyRepo.findOne({ where: { code: 'MSWDO', isActive: true } });
+      if (mswdo) fromAgencyId = mswdo.id;
+    }
+    if (!fromAgencyId) {
       throw new ForbiddenException('Your account is not linked to an agency');
     }
-    const fromAgencyId = caller.agencyId as string;
     const toAgency = await this.agencyRepo.findOne({ where: { id: dto.toAgencyId, isActive: true } });
     if (!toAgency) throw new UnprocessableEntityException('Unknown target agency');
     if (toAgency.id === fromAgencyId) throw new BadRequestException('Cannot refer to your own agency');
@@ -108,6 +114,31 @@ export class InterAgencyReferralsService {
   async findByPerson(personId: string, caller: User) {
     const scoped = await this.findInbox(caller);
     return scoped.filter(r => r.personId === personId);
+  }
+
+  async findForCase(caseId: string, caller: User) {
+    if (caller.role === 'admin') {
+      return this.repo.find({
+        where: { caseId },
+        order: { createdAt: 'DESC' },
+        relations: ['fromAgency', 'toAgency', 'person', 'case'],
+      });
+    }
+    const where: { caseId: string; fromAgencyId?: string; toAgencyId?: string; createdBy?: string }[] = [];
+    if (caller.agencyId) {
+      where.push({ caseId, fromAgencyId: caller.agencyId });
+      where.push({ caseId, toAgencyId: caller.agencyId });
+    }
+    if (caller.role === UserRole.SW) {
+      // Unlinked MSWDO staff see referrals they created from the case workflow.
+      where.push({ caseId, createdBy: caller.id });
+    }
+    if (where.length === 0) return [];
+    return this.repo.find({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['fromAgency', 'toAgency', 'person', 'case'],
+    });
   }
 
   async searchBeneficiaries(q: string, caller: User) {

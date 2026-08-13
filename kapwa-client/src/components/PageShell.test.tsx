@@ -43,11 +43,11 @@ describe('PageShell', () => {
     expect(screen.getByText('child content')).toBeTruthy();
   });
 
-  it('uses responsive gap classes gap-4 lg:gap-8', () => {
+  it('uses responsive gap classes gap-3 lg:gap-4', () => {
     const { container } = render(<PageShell title="Title">content</PageShell>);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.className).toContain('gap-4');
-    expect(wrapper.className).toContain('lg:gap-8');
+    expect(wrapper.className).toContain('gap-3');
+    expect(wrapper.className).toContain('lg:gap-4');
   });
 
   // --- cachedAt prop tests (OFF-03) ---

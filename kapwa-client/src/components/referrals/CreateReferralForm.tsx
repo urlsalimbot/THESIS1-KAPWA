@@ -9,17 +9,23 @@ export function CreateReferralForm({
   agencies,
   onCreated,
   searchFetcher,
+  caseId,
+  initialBeneficiary,
 }: {
   agencies: Agency[];
   onCreated: () => void;
   searchFetcher?: (q: string) => Promise<SearchResult[]>;
+  caseId?: string;
+  initialBeneficiary?: { beneficiaryId: string; label: string };
 }) {
   const [toAgencyId, setToAgencyId] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [legalBasisCode, setLegalBasisCode] = useState(LEGAL_BASIS_OPTIONS[0]);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<{ beneficiaryId: string; label: string } | null>(null);
+  const [selected, setSelected] = useState<{ beneficiaryId: string; label: string } | null>(
+    initialBeneficiary ?? null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const { results, loading } = useDebouncedSearch(query, 300, 8, searchFetcher);
@@ -32,6 +38,7 @@ export function CreateReferralForm({
     try {
       await api.post('/inter-agency-referrals', {
         beneficiaryId: selected.beneficiaryId,
+        caseId,
         toAgencyId,
         reason,
         notes: notes || undefined,
@@ -101,9 +108,11 @@ export function CreateReferralForm({
         {selected ? (
           <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
             <span>{selected.label}</span>
-            <button type="button" onClick={() => setSelected(null)} className="text-xs text-muted-foreground">
-              Clear
-            </button>
+            {!initialBeneficiary && (
+              <button type="button" onClick={() => setSelected(null)} className="text-xs text-muted-foreground">
+                Clear
+              </button>
+            )}
           </div>
         ) : (
           <>

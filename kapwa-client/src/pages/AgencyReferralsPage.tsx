@@ -46,7 +46,7 @@ export function AgencyReferralsPage() {
 
   if (isLoading) {
     return (
-      <PageShell title="Referrals" description="Track referrals between agencies">
+      <PageShell title="Inter-Agency Referrals" description="Track referrals between agencies">
         <CardGridSkeleton />
       </PageShell>
     );
@@ -54,7 +54,7 @@ export function AgencyReferralsPage() {
 
   if (error && !referrals) {
     return (
-      <PageShell title="Referrals" description="Track referrals between agencies">
+      <PageShell title="Inter-Agency Referrals" description="Track referrals between agencies">
         <ErrorState title="Could not load referrals" message="Check your internet connection and try again." onRetry={() => mutate(queryKeys.interAgencyReferrals.inbox())} />
       </PageShell>
     );
@@ -62,7 +62,7 @@ export function AgencyReferralsPage() {
 
   return (
     <PageShell
-      title="Referrals"
+      title="Inter-Agency Referrals"
       description="Track referrals between agencies"
     >
       <CreateReferralForm

@@ -85,6 +85,8 @@ export const queryKeys = {
   interAgencyReferrals: {
     all: ['inter-agency-referrals'] as const,
     inbox: () => memo('iar.inbox', () => ['inter-agency-referrals', 'inbox'] as const),
+    byCase: (caseId: string) =>
+      memo(`iar.case.${caseId}`, () => ['inter-agency-referrals', 'case', caseId] as const),
   },
   agencyPortal: {
     dashboard: () => memo('agencyPortal.dashboard', () => ['agency-portal', 'dashboard'] as const),

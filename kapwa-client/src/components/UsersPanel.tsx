@@ -57,7 +57,7 @@ const STATUS_OPTIONS = [
 function EditableRoleCell({ user, onRoleChange }: { user: AppUser; onRoleChange: (user: AppUser, role: string) => void }) {
   return (
     <Select defaultValue={user.role} onValueChange={(v) => onRoleChange(user, v)}>
-      <SelectTrigger className="h-7 w-36 text-xs">
+      <SelectTrigger aria-label={`Role for ${user.email}`} className="h-7 w-36 text-xs">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -281,7 +281,7 @@ export default function UsersPanel() {
     },
     {
       id: 'actions',
-      header: '',
+      header: 'Actions',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
           <button
@@ -323,7 +323,7 @@ export default function UsersPanel() {
                 value={roleFilter}
                 onValueChange={(v) => { setRoleFilter(v); setPagination(p => ({ ...p, pageIndex: 0 })); }}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger aria-label="Filter by role" className="h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,7 +339,7 @@ export default function UsersPanel() {
                 value={statusFilter}
                 onValueChange={(v) => { setStatusFilter(v); setPagination(p => ({ ...p, pageIndex: 0 })); }}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger aria-label="Filter by status" className="h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
