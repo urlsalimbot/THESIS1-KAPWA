@@ -1,13 +1,6 @@
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
-
-const STEPS = [
-  { label: 'Assessment', description: 'FRVA & SWDI analysis', phase: 'Phase-In' },
-  { label: 'Implement HIP', description: 'Intervention delivery', phase: 'Implementation' },
-  { label: 'Service Delivery', description: 'Referrals & resources', phase: 'Implementation' },
-  { label: 'Transition', description: 'Graduation readiness', phase: 'Phase-Out' },
-  { label: 'Closure', description: 'Formal exit', phase: 'Phase-Out' },
-];
+import { useTranslation } from 'react-i18next';
 
 function isStepDone(i: number, caseData: any, interventionCount: number): boolean {
   switch (i) {
@@ -28,6 +21,14 @@ interface CaseStepperProps {
 }
 
 export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount }: CaseStepperProps) {
+  const { t } = useTranslation();
+  const STEPS = [
+    { label: t('caseView.stepper.assessment', 'Assessment'), description: t('caseView.stepper.assessmentDesc', 'FRVA & SWDI analysis'), phase: t('caseView.stepper.phaseIn', 'Phase-In') },
+    { label: t('caseView.stepper.implementHip', 'Implement HIP'), description: t('caseView.stepper.implementHipDesc', 'Intervention delivery'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
+    { label: t('caseView.stepper.serviceDelivery', 'Service Delivery'), description: t('caseView.stepper.serviceDeliveryDesc', 'Referrals & resources'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
+    { label: t('caseView.stepper.transition', 'Transition'), description: t('caseView.stepper.transitionDesc', 'Graduation readiness'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
+    { label: t('caseView.stepper.closure', 'Closure'), description: t('caseView.stepper.closureDesc', 'Formal exit'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
+  ];
   const highestReachable = (() => {
     for (let i = STEPS.length - 1; i >= 0; i--) {
       if (isStepDone(i, caseData, interventionCount)) return i;
@@ -40,15 +41,15 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
     if (done || i <= highestReachable + 1) {
       onStepClick(i);
     } else {
-      toast.error('Step not available', { description: 'Accomplish current step first.' });
+      toast.error(t('caseView.stepper.stepNotAvailable', 'Step not available'), { description: t('caseView.stepper.accomplishStepFirst', 'Accomplish current step first.') });
     }
   }
 
   // Group steps by phase
   const phases = [
-    { name: 'Phase-In', steps: [0] },
-    { name: 'Implementation', steps: [1, 2] },
-    { name: 'Phase-Out', steps: [3, 4] },
+    { name: t('caseView.stepper.phaseIn', 'Phase-In'), steps: [0] },
+    { name: t('caseView.stepper.phaseImplementation', 'Implementation'), steps: [1, 2] },
+    { name: t('caseView.stepper.phaseOut', 'Phase-Out'), steps: [3, 4] },
   ];
 
   return (

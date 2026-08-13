@@ -27,14 +27,6 @@ export interface InterAgencyReferral {
   createdAt: string;
 }
 
-export const STATUS_LABELS: Record<ReferralStatus, string> = {
-  referred: 'Referred',
-  received: 'Received',
-  actioned: 'Actioned',
-  closed: 'Closed',
-  declined: 'Declined',
-};
-
 export const LEGAL_BASIS_OPTIONS = ['public_authority_sec13', 'consent_verified', 'emergency_situation'];
 
 export function StatusTimeline({ status }: { status: ReferralStatus }): ReactElement {

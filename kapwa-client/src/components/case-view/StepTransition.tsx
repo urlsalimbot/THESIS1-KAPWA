@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Calendar, FileText, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface FollowUpVisit {
   date: string;
@@ -22,6 +23,7 @@ interface StepTransitionProps {
 }
 
 export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTransitionProps) {
+  const { t } = useTranslation();
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
 
@@ -80,19 +82,19 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">Self-Reliance Assessment</h3>
+            <h3 className="text-sm font-semibold">{t('caseView.transition.selfRelianceAssessment', 'Self-Reliance Assessment')}</h3>
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Self-Reliance Level *</label>
+            <label className="text-sm font-medium">{t('caseView.transition.selfRelianceLevel', 'Self-Reliance Level *')}</label>
             <div className="space-y-2">
               {[
-                { value: 1, label: 'Level 1 - Dependent', description: 'Needs full support and assistance' },
-                { value: 2, label: 'Level 2 - Partially Self-Reliant', description: 'Some support needed, making progress' },
-                { value: 3, label: 'Level 3 - Self-Sufficient', description: 'Ready for graduation, can sustain independently' },
+                { value: 1, label: t('caseView.transition.level1', 'Level 1 - Dependent'), description: t('caseView.transition.level1Desc', 'Needs full support and assistance') },
+                { value: 2, label: t('caseView.transition.level2', 'Level 2 - Partially Self-Reliant'), description: t('caseView.transition.level2Desc', 'Some support needed, making progress') },
+                { value: 3, label: t('caseView.transition.level3', 'Level 3 - Self-Sufficient'), description: t('caseView.transition.level3Desc', 'Ready for graduation, can sustain independently') },
               ].map(option => (
                 <label key={option.value} className="flex items-start gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
                   <input
@@ -118,33 +120,33 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">Sustainability Plan</h3>
+            <h3 className="text-sm font-semibold">{t('caseView.transition.sustainabilityPlan', 'Sustainability Plan')}</h3>
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">How will the client maintain progress after case closure?</label>
+            <label className="text-sm font-medium">{t('caseView.transition.maintainProgress', 'How will the client maintain progress after case closure?')}</label>
             <textarea
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
               value={plan.sustainabilityPlan}
               onChange={e => setPlan(p => ({ ...p, sustainabilityPlan: e.target.value }))}
-              placeholder="Describe the client's plan for sustaining improvements independently..."
+              placeholder={t('caseView.transition.sustainabilityPlaceholder', "Describe the client's plan for sustaining improvements independently...")}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Self-Reliance Steps</label>
+              <label className="text-sm font-medium">{t('caseView.transition.selfRelianceSteps', 'Self-Reliance Steps')}</label>
               <textarea
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
                 value={plan.selfReliancePlan}
                 onChange={e => setPlan(p => ({ ...p, selfReliancePlan: e.target.value }))}
-                placeholder="Recommendations for skills training, livelihood programs..."
+                placeholder={t('caseView.transition.selfRelianceStepsPlaceholder', 'Recommendations for skills training, livelihood programs...')}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Target Transition Date</label>
+              <label className="text-sm font-medium">{t('caseView.transition.targetTransitionDate', 'Target Transition Date')}</label>
               <Input
                 type="date"
                 value={plan.transitionDate}
@@ -158,9 +160,9 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
       {/* Follow-up Visits */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Follow-up Visits</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.transition.followUpVisits', 'Follow-up Visits')}</h3>
           <Button variant="outline" size="sm" onClick={() => setAddingFollowUp(!addingFollowUp)}>
-            <Plus size={14} className="mr-1" /> Add Visit
+            <Plus size={14} className="mr-1" /> {t('caseView.transition.addVisit', 'Add Visit')}
           </Button>
         </div>
         <Separator />
@@ -169,7 +171,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
           {addingFollowUp && (
             <div className="grid grid-cols-2 gap-2 text-sm p-2 border rounded-md bg-muted/30">
               <div className="space-y-1">
-                <label className="text-xs font-medium">Date *</label>
+                <label className="text-xs font-medium">{t('caseView.transition.date', 'Date *')}</label>
                 <Input
                   type="date"
                   value={newFollowUp.date}
@@ -177,7 +179,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">Type *</label>
+                <label className="text-xs font-medium">{t('caseView.transition.type', 'Type *')}</label>
                 <select
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={newFollowUp.type}
@@ -191,28 +193,28 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
                 </select>
               </div>
               <div className="space-y-1 col-span-2">
-                <label className="text-xs font-medium">Notes</label>
+                <label className="text-xs font-medium">{t('caseView.transition.notes', 'Notes')}</label>
                 <textarea
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
                   value={newFollowUp.notes}
                   onChange={e => setNewFollowUp(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="Visit notes..."
+                  placeholder={t('caseView.transition.notesPlaceholder', 'Visit notes...')}
                 />
               </div>
               <div className="space-y-1 col-span-2">
-                <label className="text-xs font-medium">Outcome</label>
+                <label className="text-xs font-medium">{t('caseView.transition.outcome', 'Outcome')}</label>
                 <Input
                   value={newFollowUp.outcome}
                   onChange={e => setNewFollowUp(f => ({ ...f, outcome: e.target.value }))}
-                  placeholder="e.g., On track, Needs additional support"
+                  placeholder={t('caseView.transition.outcomePlaceholder', 'e.g., On track, Needs additional support')}
                 />
               </div>
               <div className="col-span-2 flex gap-2">
                 <Button size="sm" onClick={addFollowUp} disabled={!newFollowUp.date || !newFollowUp.type}>
-                  Add
+                  {t('caseView.transition.add', 'Add')}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setAddingFollowUp(false)}>
-                  Cancel
+                  {t('caseView.cancel', 'Cancel')}
                 </Button>
               </div>
             </div>
@@ -221,7 +223,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
           {/* Visit List */}
           {followUps.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-3">
-              No follow-up visits recorded yet.
+              {t('caseView.transition.noFollowUps', 'No follow-up visits recorded yet.')}
             </p>
           ) : (
             followUps.map((visit, i) => (
@@ -239,7 +241,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
                     <p className="text-xs text-muted-foreground">{visit.notes}</p>
                   )}
                   {visit.outcome && (
-                    <p className="text-xs text-primary">Outcome: {visit.outcome}</p>
+                    <p className="text-xs text-primary">{t('caseView.transition.outcomeLabel', 'Outcome: {{outcome}}', { outcome: visit.outcome })}</p>
                   )}
                 </div>
                 <Button
@@ -260,7 +262,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
       {!readOnly && (
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Transition Plan'}
+            {saving ? t('caseView.saving', 'Saving...') : t('caseView.transition.saveTransitionPlan', 'Save Transition Plan')}
           </Button>
         </div>
       )}
@@ -270,8 +272,8 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary">Transition plan ready</p>
-              <p className="text-xs text-muted-foreground">Mark case as transitioning to begin graduation process.</p>
+              <p className="text-sm font-medium text-primary">{t('caseView.transition.planReady', 'Transition plan ready')}</p>
+              <p className="text-xs text-muted-foreground">{t('caseView.transition.planReadyHint', 'Mark case as transitioning to begin graduation process.')}</p>
             </div>
             <TransitionButton caseId={caseId} mutate={mutate} />
           </div>
@@ -282,6 +284,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
 }
 
 function TransitionButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   async function handleTransition() {
     setLoading(true);
@@ -296,7 +299,7 @@ function TransitionButton({ caseId, mutate }: { caseId: string; mutate: any }) {
   }
   return (
     <Button onClick={handleTransition} disabled={loading} size="sm">
-      {loading ? 'Processing...' : '→ Mark Ready for Graduation'}
+      {loading ? t('caseView.processing', 'Processing...') : t('caseView.transition.markReady', '→ Mark Ready for Graduation')}
     </Button>
   );
 }

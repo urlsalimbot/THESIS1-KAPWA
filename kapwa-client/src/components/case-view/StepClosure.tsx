@@ -12,6 +12,7 @@ import {
 import { FileText, CheckCircle, Clock, ExternalLink, Download, Lock } from 'lucide-react';
 import { downloadCsrPdf } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
+import { useTranslation } from 'react-i18next';
 
 interface StepClosureProps {
   caseId: string;
@@ -19,15 +20,15 @@ interface StepClosureProps {
   readOnly?: boolean;
 }
 
-const CLOSURE_OUTCOMES = [
-  { value: 'graduated', label: 'Graduated', description: 'Achieved Level 3 self-sufficiency' },
-  { value: 'self_sufficient', label: 'Self-Sufficient', description: 'No longer needs assistance' },
-  { value: 'referred', label: 'Referred', description: 'Transferred to another program' },
-  { value: 'incomplete', label: 'Incomplete', description: 'Client stopped engaging' },
-  { value: 'deceased', label: 'Deceased', description: 'Client has passed away' },
-];
-
 export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
+  const { t } = useTranslation();
+  const CLOSURE_OUTCOMES = [
+    { value: 'graduated', label: t('caseView.closure.outcomeGraduated', 'Graduated'), description: t('caseView.closure.outcomeGraduatedDesc', 'Achieved Level 3 self-sufficiency') },
+    { value: 'self_sufficient', label: t('caseView.closure.outcomeSelfSufficient', 'Self-Sufficient'), description: t('caseView.closure.outcomeSelfSufficientDesc', 'No longer needs assistance') },
+    { value: 'referred', label: t('caseView.closure.outcomeReferred', 'Referred'), description: t('caseView.closure.outcomeReferredDesc', 'Transferred to another program') },
+    { value: 'incomplete', label: t('caseView.closure.outcomeIncomplete', 'Incomplete'), description: t('caseView.closure.outcomeIncompleteDesc', 'Client stopped engaging') },
+    { value: 'deceased', label: t('caseView.closure.outcomeDeceased', 'Deceased'), description: t('caseView.closure.outcomeDeceasedDesc', 'Client has passed away') },
+  ];
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
 
@@ -58,11 +59,11 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
 
   async function handleFinalClosure() {
     if (!closure.closureOutcome) {
-      alert('Please select a closure outcome');
+      alert(t('caseView.closure.selectOutcome', 'Please select a closure outcome'));
       return;
     }
     if (!closure.clientSignature) {
-      alert('Please capture client signature');
+      alert(t('caseView.closure.captureSignature', 'Please capture client signature'));
       return;
     }
     setSaving(true);
@@ -89,12 +90,12 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
       <div className="rounded-lg border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">Case Closure</h3>
+            <h3 className="text-sm font-semibold">{t('caseView.closure.caseClosure', 'Case Closure')}</h3>
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
           <Badge variant={isClosed ? 'default' : 'outline'} className="text-sm">
             {isClosed ? <CheckCircle size={12} className="mr-1" /> : <Clock size={12} className="mr-1" />}
-            {isClosed ? 'Closed' : 'Open'}
+            {isClosed ? t('caseView.closure.closed', 'Closed') : t('caseView.closure.open', 'Open')}
           </Badge>
         </div>
       </div>
@@ -102,7 +103,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
       {/* Closure Outcome */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Closure Outcome *</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.closure.closureOutcome', 'Closure Outcome *')}</h3>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-2">
@@ -136,7 +137,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
       {/* Exit Notes */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Exit Notes</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.closure.exitNotes', 'Exit Notes')}</h3>
         </div>
         <Separator />
         <div className="px-4 py-3">
@@ -144,7 +145,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
             value={closure.exitNotes}
             onChange={e => setClosure(c => ({ ...c, exitNotes: e.target.value }))}
-            placeholder="Final notes before case closure..."
+            placeholder={t('caseView.closure.exitNotesPlaceholder', 'Final notes before case closure...')}
             disabled={isClosed || readOnly}
           />
         </div>
@@ -153,7 +154,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
       {/* Client Signature */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Client Signature *</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.closure.clientSignature', 'Client Signature *')}</h3>
         </div>
         <Separator />
         <div className="px-4 py-3">
@@ -161,30 +162,30 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
             <div className="space-y-2">
               <img
                 src={closure.clientSignature}
-                alt="Client signature"
+                alt={t('caseView.closure.clientSignatureAlt', 'Client signature')}
                 className="max-h-20 border rounded bg-white"
               />
-              <p className="text-xs text-muted-foreground">Signed</p>
+              <p className="text-xs text-muted-foreground">{t('caseView.closure.signed', 'Signed')}</p>
               {!isClosed && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setClosure(c => ({ ...c, clientSignature: '' }))}
                 >
-                  Clear Signature
+                  {t('caseView.closure.clearSignature', 'Clear Signature')}
                 </Button>
               )}
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">No signature captured yet.</p>
+              <p className="text-sm text-muted-foreground">{t('caseView.closure.noSignature', 'No signature captured yet.')}</p>
               {!isClosed && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowSignaturePad(!showSignaturePad)}
                 >
-                  {showSignaturePad ? 'Cancel' : 'Capture Signature'}
+                  {showSignaturePad ? t('caseView.cancel', 'Cancel') : t('caseView.closure.captureSignature', 'Capture Signature')}
                 </Button>
               )}
             </div>
@@ -205,12 +206,12 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
       {/* Documents */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Documents</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.closure.documents', 'Documents')}</h3>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Certificate</span>
+            <span className="text-muted-foreground">{t('caseView.closure.certificate', 'Certificate')}</span>
             {caseData?.certificateUrl ? (
               <a
                 href={caseData.certificateUrl}
@@ -218,14 +219,14 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
                 rel="noopener noreferrer"
                 className="text-primary hover:underline flex items-center gap-1"
               >
-                <FileText size={14} /> View <ExternalLink size={10} />
+                <FileText size={14} /> {t('caseView.closure.view', 'View')} <ExternalLink size={10} />
               </a>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Petty Cash Voucher</span>
+            <span className="text-muted-foreground">{t('caseView.closure.pettyCashVoucher', 'Petty Cash Voucher')}</span>
             {caseData?.pettyCashVoucherUrl ? (
               <a
                 href={caseData.pettyCashVoucherUrl}
@@ -233,7 +234,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
                 rel="noopener noreferrer"
                 className="text-primary hover:underline flex items-center gap-1"
               >
-                <FileText size={14} /> View <ExternalLink size={10} />
+                <FileText size={14} /> {t('caseView.closure.view', 'View')} <ExternalLink size={10} />
               </a>
             ) : (
               <span className="text-muted-foreground">—</span>
@@ -247,7 +248,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
         <div className="flex gap-2">
           {!readOnly && (
             <Button onClick={handleSave} disabled={saving} variant="outline">
-              {saving ? 'Saving...' : 'Save Progress'}
+              {saving ? t('caseView.saving', 'Saving...') : t('caseView.closure.saveProgress', 'Save Progress')}
             </Button>
           )}
           {!readOnly && (
@@ -257,23 +258,23 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
                   disabled={saving || !closure.closureOutcome || !closure.clientSignature}
                   variant="default"
                 >
-                  {saving ? 'Closing...' : 'Close Case'}
+                  {saving ? t('caseView.closing', 'Closing...') : t('caseView.closure.closeCase', 'Close Case')}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Close Case?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('caseView.closure.closeCaseTitle', 'Close Case?')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently close this case. This action cannot be undone.
+                    {t('caseView.closure.closeCaseDesc', 'This will permanently close this case. This action cannot be undone.')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('caseView.cancel', 'Cancel')}</AlertDialogCancel>
                   <AlertDialogAction onClick={async () => {
                     await handleFinalClosure();
                     setCloseDialogOpen(false);
                   }}>
-                    Close Case
+                    {t('caseView.closure.closeCase', 'Close Case')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -289,7 +290,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
           className="w-full gap-2"
           onClick={() => downloadCsrPdf(caseId)}
         >
-          <Download size={14} /> Download Case Study Report (CSR)
+          <Download size={14} /> {t('caseView.closure.downloadCsr', 'Download Case Study Report (CSR)')}
         </Button>
       </div>
     </div>
