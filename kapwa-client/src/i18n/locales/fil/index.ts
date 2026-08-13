@@ -1,91 +1,92 @@
 import type { EnLocale } from '../en';
 
+// TEMP: some values are English placeholders until Task 7 translation.
 const fil: EnLocale = {
-  time: {
-    daysAgo_one: '{{count}} araw ang nakalipas',
-    daysAgo_other: '{{count}} araw ang nakalipas',
-    hoursAgo_one: '{{count}} oras {{minutes}} minuto ang nakalipas',
-    hoursAgo_other: '{{count}} oras {{minutes}} minuto ang nakalipas',
-    justNow: 'kakailangan pa lang',
-    minutesAgo_one: '{{count}} minuto ang nakalipas',
-    minutesAgo_other: '{{count}} minuto ang nakalipas',
+  "time": {
+    "daysAgo_one": "{{count}} araw ang nakalipas",
+    "daysAgo_other": "{{count}} araw ang nakalipas",
+    "hoursAgo_one": "{{count}} oras {{minutes}} minuto ang nakalipas",
+    "hoursAgo_other": "{{count}} oras {{minutes}} minuto ang nakalipas",
+    "justNow": "kakailangan pa lang",
+    "minutesAgo_one": "{{count}} minuto ang nakalipas",
+    "minutesAgo_other": "{{count}} minuto ang nakalipas"
   },
-  topbar: {
-    approvalsQueue: 'Pila ng Pag-apruba',
-    cancel: 'Kanselahin',
-    language: 'Wika',
-    logout: 'Mag-log out',
-    logoutConfirm: 'Mag-log out',
-    logoutDescription: 'Ma-sign out ka sa iyong account at ililipat ka sa login page.',
-    logoutTitle: 'Mag-log out?',
-    newIntake: 'Bagong Intake',
-    offline: 'Offline',
-    offlineBanner_one: 'Ikaw ay offline — {{count}} pagbabago ang naka-pending na i-sync. Huwag i-clear ang app data.',
-    offlineBanner_other: 'Ikaw ay offline — {{count}} pagbabago ang naka-pending na i-sync. Huwag i-clear ang app data.',
-    offlineIndicator: 'Indikator ng offline',
-    openUserMenu: 'Buksan ang menu ng user',
-    pendingSync_one: '{{count}} ang naka-pending',
-    pendingSync_other: '{{count}} ang naka-pending',
-    pendingSyncCount: 'Bilang ng naka-pending na sync',
-    settings: 'Mga Setting',
-    theme: 'Tema',
-    themeDark: 'Madilim',
-    themeLight: 'Maliwanag',
-    themeSystem: 'System',
-    toggleNavigation: 'I-toggle ang navigation menu',
+  "topbar": {
+    "approvalsQueue": "Pila ng Pag-apruba",
+    "cancel": "Kanselahin",
+    "language": "Wika",
+    "logout": "Mag-log out",
+    "logoutConfirm": "Mag-log out",
+    "logoutDescription": "Ma-sign out ka sa iyong account at ililipat ka sa login page.",
+    "logoutTitle": "Mag-log out?",
+    "newIntake": "Bagong Intake",
+    "offline": "Offline",
+    "offlineBanner_one": "Ikaw ay offline — {{count}} pagbabago ang naka-pending na i-sync. Huwag i-clear ang app data.",
+    "offlineBanner_other": "Ikaw ay offline — {{count}} pagbabago ang naka-pending na i-sync. Huwag i-clear ang app data.",
+    "offlineIndicator": "Indikator ng offline",
+    "openUserMenu": "Buksan ang menu ng user",
+    "pendingSync_one": "{{count}} ang naka-pending",
+    "pendingSync_other": "{{count}} ang naka-pending",
+    "pendingSyncCount": "Bilang ng naka-pending na sync",
+    "settings": "Mga Setting",
+    "theme": "Tema",
+    "themeDark": "Madilim",
+    "themeLight": "Maliwanag",
+    "themeSystem": "System",
+    "toggleNavigation": "I-toggle ang navigation menu"
   },
-  nav: {
-    language: 'Wika',
-    english: 'English',
-    filipino: 'Filipino',
+  "nav": {
+    "language": "Wika",
+    "english": "English",
+    "filipino": "Filipino"
   },
-  common: {
-    cancel: 'Kanselahin',
-    save: 'I-save',
-    delete: 'Tanggalin',
-    loading: 'Naglo-load...',
+  "common": {
+    "cancel": "Kanselahin",
+    "save": "I-save",
+    "delete": "Tanggalin",
+    "loading": "Naglo-load..."
   },
-  status: {
-    enrolled: 'Nakarehistro',
-    assessed: 'Na-assess',
-    in_review: 'Sinusuri',
-    active: 'Aktibo',
-    transitioning: 'Naglilipat',
-    closed: 'Sarado',
+  "status": {
+    "enrolled": "Nakarehistro",
+    "assessed": "Na-assess",
+    "in_review": "Sinusuri",
+    "active": "Aktibo",
+    "transitioning": "Naglilipat",
+    "closed": "Sarado"
   },
-  category: {
-    Children: 'Mga Bata',
-    Youth: 'Kabataan',
-    Women: 'Kababaihan',
-    PWD: 'PWD',
-    Senior: 'Senior',
-    Indigent: 'Maralita',
-    '4Ps': '4Ps',
-    IP: 'IP',
-    Family: 'Pamilya',
+  "category": {
+    "Children": "Mga Bata",
+    "Youth": "Kabataan",
+    "Women": "Kababaihan",
+    "PWD": "PWD",
+    "Senior": "Senior",
+    "Indigent": "Maralita",
+    "4Ps": "4Ps",
+    "IP": "IP",
+    "Family": "Pamilya"
   },
-  interventionType: {
-    FA: 'Tulong Pinansyal',
-    C: 'Pagpapayo',
-    CSR: 'Case Study Report',
-    R: 'Referral',
-    H: 'Home Visit',
-    HV: 'Home Visit',
-    Other: 'Iba Pa',
+  "interventionType": {
+    "FA": "Tulong Pinansyal",
+    "C": "Pagpapayo",
+    "CSR": "Case Study Report",
+    "R": "Referral",
+    "H": "Home Visit",
+    "HV": "Home Visit",
+    "Other": "Iba Pa"
   },
-  referralStatus: {
-    referred: 'Ipinadala',
-    received: 'Natanggap',
-    actioned: 'Inaksyunan',
-    closed: 'Sarado',
-    declined: 'Tinanggihan',
+  "referralStatus": {
+    "referred": "Ipinadala",
+    "received": "Natanggap",
+    "actioned": "Inaksyunan",
+    "closed": "Sarado",
+    "declined": "Tinanggihan"
   },
-  syncStatus: {
-    pending: 'Nakapila',
-    syncing: 'Nagsi-sync',
-    failed: 'Nabigo',
-    conflict: 'Salungatan',
-  },
+  "syncStatus": {
+    "pending": "Nakapila",
+    "syncing": "Nagsi-sync",
+    "failed": "Nabigo",
+    "conflict": "Salungatan"
+  }
 };
 
 export default fil;
