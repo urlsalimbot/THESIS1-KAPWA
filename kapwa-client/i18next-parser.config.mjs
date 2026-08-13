@@ -1,0 +1,21 @@
+export default {
+  contextSeparator: '_',
+  createOldCatalogs: false,
+  defaultNamespace: 'translation',
+  defaultValue: '',
+  indentation: 2,
+  keepRemoved: false,
+  keySeparator: '.',
+  locales: ['en'],
+  output: 'scripts/i18n-extract/en.json',
+  sort: true,
+  useKeysAsDefaultValue: true,
+  lexers: {
+    js: ['JavascriptLexer'],
+    ts: ['JavascriptLexer'],
+    jsx: ['JsxLexer'],
+    tsx: ['JsxLexer'],
+    default: ['JavascriptLexer'],
+  },
+  input: ['src/**/*.{ts,tsx}', '!src/**/*.test.{ts,tsx}', '!src/i18n/**'],
+};
