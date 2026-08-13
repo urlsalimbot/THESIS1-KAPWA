@@ -10,6 +10,47 @@ const en = {
     delete: 'Delete',
     loading: 'Loading...',
   },
+  status: {
+    enrolled: 'Enrolled',
+    assessed: 'Assessed',
+    in_review: 'In Review',
+    active: 'Active',
+    transitioning: 'Transitioning',
+    closed: 'Closed',
+  },
+  category: {
+    Children: 'Children',
+    Youth: 'Youth',
+    Women: 'Women',
+    PWD: 'PWD',
+    Senior: 'Senior',
+    Indigent: 'Indigent',
+    '4Ps': '4Ps',
+    IP: 'IP',
+    Family: 'Family',
+  },
+  interventionType: {
+    FA: 'Financial Assistance',
+    C: 'Counseling',
+    CSR: 'Case Study Report',
+    R: 'Referral',
+    H: 'Home Visit',
+    HV: 'Home Visit',
+    Other: 'Other',
+  },
+  referralStatus: {
+    referred: 'Referred',
+    received: 'Received',
+    actioned: 'Actioned',
+    closed: 'Closed',
+    declined: 'Declined',
+  },
+  syncStatus: {
+    pending: 'Pending',
+    syncing: 'Syncing',
+    failed: 'Failed',
+    conflict: 'Conflict',
+  },
 } as const;
 
 export default en;
