@@ -222,25 +222,33 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.implement.modeOfDelivery', 'Mode of Delivery')}</label>
+              <label className="text-sm font-medium">{t('caseView.implement.modeOfDeliveryLabel', 'Mode of Delivery')}</label>
               <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.modeOfDelivery} onChange={e => setForm(f => ({ ...f, modeOfDelivery: e.target.value }))}>
                 <option value="">—</option>
-                <option value="Cash">Cash</option>
-                <option value="Cheque">Cheque</option>
-                <option value="Guarantee Letter">Guarantee Letter</option>
-                <option value="In-kind">In-kind</option>
-                <option value="Service">Service</option>
+                {[
+                  { value: 'Cash', label: t('caseView.implement.modeOfDelivery.cash', 'Cash') },
+                  { value: 'Cheque', label: t('caseView.implement.modeOfDelivery.cheque', 'Cheque') },
+                  { value: 'Guarantee Letter', label: t('caseView.implement.modeOfDelivery.guaranteeLetter', 'Guarantee Letter') },
+                  { value: 'In-kind', label: t('caseView.implement.modeOfDelivery.inKind', 'In-kind') },
+                  { value: 'Service', label: t('caseView.implement.modeOfDelivery.service', 'Service') },
+                ].map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.implement.fundSource', 'Fund Source')}</label>
+              <label className="text-sm font-medium">{t('caseView.implement.fundSourceLabel', 'Fund Source')}</label>
               <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.fundSource} onChange={e => setForm(f => ({ ...f, fundSource: e.target.value }))}>
                 <option value="">—</option>
-                <option value="DSWD">DSWD</option>
-                <option value="LGU">LGU</option>
-                <option value="PDAF">PDAF</option>
-                <option value="Donation">Donation</option>
-                <option value="Other">Other</option>
+                {[
+                  { value: 'DSWD', label: t('caseView.implement.fundSource.dswd', 'DSWD') },
+                  { value: 'LGU', label: t('caseView.implement.fundSource.lgu', 'LGU') },
+                  { value: 'PDAF', label: t('caseView.implement.fundSource.pdaf', 'PDAF') },
+                  { value: 'Donation', label: t('caseView.implement.fundSource.donation', 'Donation') },
+                  { value: 'Other', label: t('caseView.implement.fundSource.other', 'Other') },
+                ].map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </div>
           </div>

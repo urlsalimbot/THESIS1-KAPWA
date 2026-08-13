@@ -4,12 +4,6 @@
     "english": "English",
     "filipino": "Filipino"
   },
-  "common": {
-    "cancel": "Cancel",
-    "save": "Save",
-    "delete": "Delete",
-    "loading": "Loading..."
-  },
   "status": {
     "enrolled": "Enrolled",
     "assessed": "Assessed",

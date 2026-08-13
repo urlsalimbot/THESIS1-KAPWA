@@ -247,12 +247,12 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
                   <DropdownMenuLabel className="font-semibold">{t('topbar.language', 'Language')}</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => setLang('en')}>
                     <Languages size={16} className="mr-2" />
-                    English
+                    {t('nav.english', 'English')}
                     {lang === 'en' && <Check size={14} className="ml-auto text-primary" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setLang('fil')}>
                     <Languages size={16} className="mr-2" />
-                    Filipino
+                    {t('nav.filipino', 'Filipino')}
                     {lang === 'fil' && <Check size={14} className="ml-auto text-primary" />}
                   </DropdownMenuItem>
                 </>
