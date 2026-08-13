@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ReportsExportButtonProps {
   endpoint: string;
@@ -15,6 +16,7 @@ export default function ReportsExportButton({
   disabled = false,
   className = '',
 }: ReportsExportButtonProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +38,7 @@ export default function ReportsExportButton({
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || `Export failed (${res.status})`);
+        throw new Error(text || t('reports.exportFailedStatus', 'Export failed ({{status}})', { status: res.status }));
       }
 
       const blob = await res.blob();
@@ -49,12 +51,12 @@ export default function ReportsExportButton({
       document.body.removeChild(a);
       URL.revokeObjectURL(objectUrl);
     } catch (err: any) {
-      setError(err.message || 'Export failed');
+      setError(err.message || t('reports.exportFailed', 'Export failed'));
       setTimeout(() => setError(null), 3000);
     } finally {
       setLoading(false);
     }
-  }, [endpoint, format, loading, disabled]);
+  }, [endpoint, format, loading, disabled, t]);
 
   return (
     <div>
@@ -63,7 +65,7 @@ export default function ReportsExportButton({
         disabled={loading || disabled}
         className={`rounded bg-primary px-3 py-1.5 text-xs text-white hover:bg-primary-dark disabled:opacity-50 ${className}`}
       >
-        {loading ? 'Generating...' : label}
+        {loading ? t('reports.generating', 'Generating...') : label}
       </button>
       {error && (
         <p className="mt-1 text-xs text-red-600">{error}</p>

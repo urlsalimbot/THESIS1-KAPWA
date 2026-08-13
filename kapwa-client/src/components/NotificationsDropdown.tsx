@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { connectNotificationSocket, disconnectNotificationSocket } from '../lib/notification-socket';
+import { useTranslation } from 'react-i18next';
 
 interface Notification {
   id: string; title: string; message: string; category: string;
@@ -59,6 +60,7 @@ function markAllRead() {
 }
 
 export default function NotificationsDropdown() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const authed = hasToken();
@@ -84,7 +86,7 @@ export default function NotificationsDropdown() {
       toast(notif.title, {
         description: notif.message,
         action: {
-          label: 'View',
+          label: t('notifications.view', 'View'),
           onClick: () => navigate(navTarget(notif)),
         },
         duration: 5000,
@@ -117,12 +119,12 @@ export default function NotificationsDropdown() {
       sock.off('notifications:read-all', onReadAll);
       sock.off('unread:count', onUnreadCount);
     };
-  }, []);
+  }, [t]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Notifications">
+        <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label={t('notifications.aria', 'Notifications')}>
           {unreadCount > 0 ? <BellRing size={20} /> : <Bell size={20} />}
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
@@ -133,7 +135,7 @@ export default function NotificationsDropdown() {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
         <div className="flex items-center justify-between px-4 py-3 min-h-[48px]">
-          <span className="text-sm font-semibold">Notifications</span>
+          <span className="text-sm font-semibold">{t('notifications.title', 'Notifications')}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -142,7 +144,7 @@ export default function NotificationsDropdown() {
             disabled={unreadCount === 0}
           >
             <CheckCheck size={14} className="mr-1" />
-            Mark all read
+            {t('notifications.markAllRead', 'Mark all read')}
           </Button>
         </div>
         <Separator />
@@ -150,7 +152,7 @@ export default function NotificationsDropdown() {
           {!loading && (notifications?.length ?? 0) === 0 && (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <Bell size={32} className="mb-2 opacity-40" />
-              <span className="text-sm">No notifications</span>
+              <span className="text-sm">{t('notifications.empty', 'No notifications')}</span>
             </div>
           )}
           {(notifications || []).slice(0, 10).map(n => (
@@ -180,7 +182,7 @@ export default function NotificationsDropdown() {
                 <button
                   onClick={(e) => { e.stopPropagation(); markOneRead(n.id); }}
                   className="mt-1.5 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-                  aria-label="Mark as read"
+                  aria-label={t('notifications.markAsRead', 'Mark as read')}
                 >
                   <CheckCheck size={14} />
                 </button>
@@ -193,7 +195,7 @@ export default function NotificationsDropdown() {
             <Separator />
             <div className="p-2">
               <Button variant="ghost" size="sm" className="w-full justify-between" onClick={() => { setOpen(false); navigate('/notifications'); }}>
-                View all notifications
+                {t('notifications.viewAll', 'View all notifications')}
                 <ExternalLink size={14} />
               </Button>
             </div>

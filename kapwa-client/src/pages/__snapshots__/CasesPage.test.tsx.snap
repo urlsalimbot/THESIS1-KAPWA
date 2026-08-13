@@ -445,13 +445,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
         <p
           class="text-sm text-muted-foreground"
         >
-          Page 
-          1
-           of 
-          1
-           (
-          1
-           total)
+          Page 1 of 1 (1 total)
         </p>
         <div
           class="flex items-center gap-1"

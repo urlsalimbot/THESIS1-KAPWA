@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
 interface SingleImportResult {
   matched: boolean;
@@ -53,6 +54,7 @@ function parseJSON(text: string): Record<string, string>[] {
 }
 
 export function LcrImportTab() {
+  const { t } = useTranslation();
   const [showManual, setShowManual] = useState(false);
   const [importing, setImporting] = useState(false);
   const [batchResult, setBatchResult] = useState<BatchImportResult | null>(null);
@@ -80,7 +82,7 @@ export function LcrImportTab() {
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.surname || !form.firstName || !form.dob) {
-      toast.error('Missing required fields', { description: 'Surname, First Name, and Date of Birth are required.' });
+      toast.error(t('lcr.missingFields', 'Missing required fields'), { description: t('lcr.missingFieldsDesc', 'Surname, First Name, and Date of Birth are required.') });
       return;
     }
     setImporting(true);
@@ -93,9 +95,9 @@ export function LcrImportTab() {
       if (!body.gender) delete body.gender;
       const result = await api.post<SingleImportResult>('/lcr/import', body);
       setSingleResult(result);
-      toast.success(`Record ${result.action}`, { description: 'Import completed successfully.' });
+      toast.success(t('lcr.recordAction', 'Record {{action}}', { action: result.action }), { description: t('lcr.importComplete', 'Import completed successfully.') });
     } catch (err: any) {
-      toast.error('Import failed', { description: err?.message || 'Please try again.' });
+      toast.error(t('lcr.importFailed', 'Import failed'), { description: err?.message || t('lcr.tryAgain', 'Please try again.') });
     } finally {
       setImporting(false);
     }
@@ -110,15 +112,15 @@ export function LcrImportTab() {
       try {
         const records = ext === 'json' ? parseJSON(text) : parseCSV(text);
         if (records.length === 0) {
-          toast.error('No records found', { description: 'The file appears to be empty.' });
+          toast.error(t('lcr.noRecords', 'No records found'), { description: t('lcr.fileEmpty', 'The file appears to be empty.') });
           return;
         }
         setParsedRecords(records);
         setParsedFileName(file.name);
         setBatchResult(null);
-        toast.success(`Parsed ${records.length} record(s)`, { description: `From ${file.name}` });
+        toast.success(t('lcr.parsedCount', 'Parsed {{count}} record(s)', { count: records.length }), { description: t('lcr.fromFile', 'From {{name}}', { name: file.name }) });
       } catch {
-        toast.error('Failed to parse file', { description: 'Please check the format.' });
+        toast.error(t('lcr.parseFailed', 'Failed to parse file'), { description: t('lcr.checkFormat', 'Please check the format.') });
       }
     };
     reader.readAsText(file);
@@ -130,9 +132,9 @@ export function LcrImportTab() {
     try {
       const result = await api.post<BatchImportResult>('/lcr/import-batch', { records: parsedRecords });
       setBatchResult(result);
-      toast.success('Import complete', { description: `${result.created} created, ${result.updated} updated, ${result.skipped} skipped.` });
+      toast.success(t('lcr.importComplete', 'Import complete'), { description: t('lcr.batchSummary', '{{created}} created, {{updated}} updated, {{skipped}} skipped.', { created: result.created, updated: result.updated, skipped: result.skipped }) });
     } catch (err: any) {
-      toast.error('Batch import failed', { description: err?.message || 'Please try again.' });
+      toast.error(t('lcr.batchImportFailed', 'Batch import failed'), { description: err?.message || t('lcr.tryAgain', 'Please try again.') });
     } finally {
       setImporting(false);
     }
@@ -165,10 +167,10 @@ export function LcrImportTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Batch Import from File
+            {t('lcr.batchImport', 'Batch Import from File')}
           </CardTitle>
           <CardDescription>
-            Upload a CSV or JSON file containing LCR records. CSV must have headers matching the field names.
+            {t('lcr.batchImportDesc', 'Upload a CSV or JSON file containing LCR records. CSV must have headers matching the field names.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -184,9 +186,9 @@ export function LcrImportTab() {
             >
               <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground mb-1">
-                Drag & drop a file here, or click to browse
+                {t('lcr.dragDrop', 'Drag & drop a file here, or click to browse')}
               </p>
-              <p className="text-xs text-muted-foreground">Supports .csv and .json files</p>
+              <p className="text-xs text-muted-foreground">{t('lcr.supports', 'Supports .csv and .json files')}</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -202,16 +204,16 @@ export function LcrImportTab() {
                   <FileText className="h-8 w-8 text-primary" />
                   <div>
                     <p className="font-medium">{parsedFileName}</p>
-                    <p className="text-sm text-muted-foreground">{parsedRecords.length} record(s) parsed</p>
+                    <p className="text-sm text-muted-foreground">{t('lcr.recordsParsed', '{{count}} record(s) parsed', { count: parsedRecords.length })}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={clearFile} disabled={importing}>
-                    Clear
+                    {t('lcr.clear', 'Clear')}
                   </Button>
                   <Button size="sm" onClick={handleBatchImport} disabled={importing}>
                     {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                    Import {parsedRecords.length} Record{parsedRecords.length > 1 ? 's' : ''}
+                    {t('lcr.importCount', 'Import {{count}} record(s)', { count: parsedRecords.length })}
                   </Button>
                 </div>
               </div>
@@ -241,7 +243,7 @@ export function LcrImportTab() {
                 </table>
                 {parsedRecords.length > 50 && (
                   <p className="p-2 text-xs text-muted-foreground text-center border-t">
-                    Showing 50 of {parsedRecords.length} records
+                    {t('lcr.showingRecords', 'Showing 50 of {{count}} records', { count: parsedRecords.length })}
                   </p>
                 )}
               </div>
@@ -255,26 +257,26 @@ export function LcrImportTab() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
-              Batch Import Results
+              {t('lcr.batchResults', 'Batch Import Results')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-4">
               <div className="p-4 bg-muted/50 rounded-lg text-center">
                 <p className="text-2xl font-bold">{batchResult.total}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-xs text-muted-foreground">{t('lcr.total', 'Total')}</p>
               </div>
               <div className="p-4 bg-alert-success-bg rounded-lg text-center">
                 <p className="text-2xl font-bold text-alert-success-fg">{batchResult.created}</p>
-                <p className="text-xs text-muted-foreground">Created</p>
+                <p className="text-xs text-muted-foreground">{t('lcr.created', 'Created')}</p>
               </div>
               <div className="p-4 bg-blue-100 text-blue-700 rounded-lg text-center">
                 <p className="text-2xl font-bold">{batchResult.updated}</p>
-                <p className="text-xs text-muted-foreground">Updated</p>
+                <p className="text-xs text-muted-foreground">{t('lcr.updated', 'Updated')}</p>
               </div>
               <div className="p-4 bg-alert-error-bg rounded-lg text-center">
                 <p className="text-2xl font-bold text-alert-error-fg">{batchResult.skipped}</p>
-                <p className="text-xs text-muted-foreground">Skipped</p>
+                <p className="text-xs text-muted-foreground">{t('lcr.skipped', 'Skipped')}</p>
               </div>
             </div>
           </CardContent>
@@ -286,7 +288,7 @@ export function LcrImportTab() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Manual Single Record Import
+              {t('lcr.manualImport', 'Manual Single Record Import')}
             </CardTitle>
             <Button variant="ghost" size="sm">
               {showManual ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -298,7 +300,7 @@ export function LcrImportTab() {
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="philsysNumber">Philsys Number</Label>
+                  <Label htmlFor="philsysNumber">{t('lcr.philsysNumber', 'Philsys Number')}</Label>
                   <Input
                     id="philsysNumber"
                     placeholder="e.g. 1234-5678901-2"
@@ -307,20 +309,20 @@ export function LcrImportTab() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="recordType">Record Type</Label>
+                  <Label htmlFor="recordType">{t('lcr.recordType', 'Record Type')}</Label>
                   <Select value={form.recordType} onValueChange={v => handleFormChange('recordType', v)}>
                     <SelectTrigger id="recordType">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="birth">Birth</SelectItem>
-                      <SelectItem value="marriage">Marriage</SelectItem>
-                      <SelectItem value="death">Death</SelectItem>
+                      <SelectItem value="birth">{t('lcr.birth', 'Birth')}</SelectItem>
+                      <SelectItem value="marriage">{t('lcr.marriage', 'Marriage')}</SelectItem>
+                      <SelectItem value="death">{t('lcr.death', 'Death')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="surname">Surname *</Label>
+                  <Label htmlFor="surname">{t('lcr.surname', 'Surname *')}</Label>
                   <Input
                     id="surname"
                     required
@@ -329,7 +331,7 @@ export function LcrImportTab() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
+                  <Label htmlFor="firstName">{t('lcr.firstName', 'First Name *')}</Label>
                   <Input
                     id="firstName"
                     required
@@ -338,7 +340,7 @@ export function LcrImportTab() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="middleName">Middle Name</Label>
+                  <Label htmlFor="middleName">{t('lcr.middleName', 'Middle Name')}</Label>
                   <Input
                     id="middleName"
                     value={form.middleName}
@@ -346,7 +348,7 @@ export function LcrImportTab() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dob">Date of Birth *</Label>
+                  <Label htmlFor="dob">{t('lcr.dob', 'Date of Birth *')}</Label>
                   <Input
                     id="dob"
                     type="date"
@@ -356,19 +358,19 @@ export function LcrImportTab() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gender">Gender</Label>
+                  <Label htmlFor="gender">{t('lcr.gender', 'Gender')}</Label>
                   <Select value={form.gender} onValueChange={v => handleFormChange('gender', v)}>
                     <SelectTrigger id="gender">
-                      <SelectValue placeholder="Select gender" />
+                      <SelectValue placeholder={t('lcr.selectGender', 'Select gender')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="male">{t('lcr.male', 'Male')}</SelectItem>
+                      <SelectItem value="female">{t('lcr.female', 'Female')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="address">{t('lcr.address', 'Address')}</Label>
                   <Textarea
                     id="address"
                     value={form.address}
@@ -380,7 +382,7 @@ export function LcrImportTab() {
               <div className="flex justify-end">
                 <Button type="submit" disabled={importing}>
                   {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                  Import Record
+                  {t('lcr.importRecord', 'Import Record')}
                 </Button>
               </div>
             </form>
@@ -397,12 +399,12 @@ export function LcrImportTab() {
                   )}
                   <span className="font-medium capitalize">{singleResult.action}</span>
                   <Badge variant={singleResult.matched ? 'default' : 'secondary'}>
-                    {singleResult.matched ? 'Matched' : 'New'}
+                    {singleResult.matched ? t('lcr.matched', 'Matched') : t('lcr.new', 'New')}
                   </Badge>
                 </div>
                 {singleResult.beneficiaryId && (
                   <p className="text-sm text-muted-foreground">
-                    Beneficiary ID: {singleResult.beneficiaryId}
+                    {t('lcr.beneficiaryId', 'Beneficiary ID: {{id}}', { id: singleResult.beneficiaryId })}
                   </p>
                 )}
               </div>

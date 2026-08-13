@@ -11,12 +11,14 @@ import { queryKeys } from '../lib/query-keys';
 import { mutate as globalMutateFn } from 'swr';
 import { connectSocket } from '../lib/chat-socket';
 import i18n from '../i18n';
+import { useTranslation } from 'react-i18next';
 
 interface Conversation {
   userId: string; name: string; lastMessage: string; lastTime: string; unread: number;
 }
 
 export default function MessagesPopover() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -50,10 +52,10 @@ export default function MessagesPopover() {
     if (dateStrFormatted === todayStr) {
       const diffMs = now.getTime() - d.getTime();
       const diffMins = Math.floor(diffMs / 60000);
-      if (diffMins < 1) return 'now';
-      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffMins < 1) return t('messages.now', 'now');
+      if (diffMins < 60) return t('messages.minutesAgo', '{{count}}m ago', { count: diffMins });
       const diffHours = Math.floor(diffMins / 60);
-      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffHours < 24) return t('messages.hoursAgo', '{{count}}h ago', { count: diffHours });
       return popTimeFmt.format(d);
     }
     return popDateFmt.format(d);
@@ -64,7 +66,7 @@ export default function MessagesPopover() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Messages">
+        <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label={t('messages.aria', 'Messages')}>
           <MessageSquare size={20} />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
@@ -75,10 +77,10 @@ export default function MessagesPopover() {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
         <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-sm font-semibold">Messages</span>
+          <span className="text-sm font-semibold">{t('messages.title', 'Messages')}</span>
           {unreadCount > 0 && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-              {unreadCount} unread
+              {t('messages.unread', '{{count}} unread', { count: unreadCount })}
             </Badge>
           )}
         </div>
@@ -87,7 +89,7 @@ export default function MessagesPopover() {
           {recent.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <MailOpen size={32} className="mb-2 opacity-40" />
-              <span className="text-sm">No conversations yet</span>
+              <span className="text-sm">{t('messages.empty', 'No conversations yet')}</span>
             </div>
           ) : (
             recent.map((conv) => (
@@ -104,7 +106,7 @@ export default function MessagesPopover() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium truncate">{conv.name || 'Unknown'}</span>
+                    <span className="text-sm font-medium truncate">{conv.name || t('messages.unknown', 'Unknown')}</span>
                     <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(conv.lastTime)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{conv.lastMessage}</p>
@@ -116,7 +118,7 @@ export default function MessagesPopover() {
         <Separator />
         <div className="p-2">
           <Button variant="ghost" size="sm" className="w-full justify-between" onClick={() => { setOpen(false); navigate('/messages'); }}>
-            View all messages
+            {t('messages.viewAll', 'View all messages')}
             <ExternalLink size={14} />
           </Button>
         </div>

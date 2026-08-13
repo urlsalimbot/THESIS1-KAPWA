@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useTranslation } from 'react-i18next';
 
 export interface DataTableToolbarProps {
   searchValue: string;
@@ -12,6 +13,7 @@ export function DataTableToolbar({
   onSearchChange,
   placeholder,
 }: DataTableToolbarProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center py-4">
       <div className="relative">
@@ -20,7 +22,7 @@ export function DataTableToolbar({
           className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
         />
         <Input
-          placeholder={placeholder ?? 'Search records...'}
+          placeholder={placeholder ?? t('dataTable.searchPlaceholder', 'Search records...')}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           className="h-9 w-56 pl-9 text-sm"

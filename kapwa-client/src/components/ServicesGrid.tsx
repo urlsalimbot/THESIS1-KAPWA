@@ -1,33 +1,35 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Heart, Briefcase, Baby, Users, Shield, Home } from 'lucide-react';
-
-const services = [
-  { title: 'Social Welfare Counseling', description: 'Professional counseling and psychosocial support for individuals, families, and communities in need.', icon: Heart },
-  { title: 'Livelihood Assistance', description: 'Skills training, livelihood programs, and financial assistance for sustainable community development.', icon: Briefcase },
-  { title: 'Child and Youth Welfare', description: 'Protection and development programs for children and youth, including educational support and intervention services.', icon: Baby },
-  { title: 'Senior Citizen Services', description: 'Comprehensive support for senior citizens including social pensions, health services, and community engagement.', icon: Users },
-  { title: 'Disaster Response', description: 'Emergency relief, rehabilitation, and recovery assistance for families affected by natural disasters and crises.', icon: Shield },
-  { title: 'Family and Community Welfare', description: 'Family counseling, community organizing, and welfare programs to strengthen family units and communities.', icon: Home },
-];
+import { useTranslation } from 'react-i18next';
 
 interface ServicesGridProps {
   className?: string;
 }
 
 export function ServicesGrid({ className }: ServicesGridProps) {
+  const { t } = useTranslation();
+  const services = [
+    { title: t('services.counseling', 'Social Welfare Counseling'), description: t('services.counselingDesc', 'Professional counseling and psychosocial support for individuals, families, and communities in need.'), icon: Heart },
+    { title: t('services.livelihood', 'Livelihood Assistance'), description: t('services.livelihoodDesc', 'Skills training, livelihood programs, and financial assistance for sustainable community development.'), icon: Briefcase },
+    { title: t('services.childYouth', 'Child and Youth Welfare'), description: t('services.childYouthDesc', 'Protection and development programs for children and youth, including educational support and intervention services.'), icon: Baby },
+    { title: t('services.seniorCitizen', 'Senior Citizen Services'), description: t('services.seniorCitizenDesc', 'Comprehensive support for senior citizens including social pensions, health services, and community engagement.'), icon: Users },
+    { title: t('services.disaster', 'Disaster Response'), description: t('services.disasterDesc', 'Emergency relief, rehabilitation, and recovery assistance for families affected by natural disasters and crises.'), icon: Shield },
+    { title: t('services.familyCommunity', 'Family and Community Welfare'), description: t('services.familyCommunityDesc', 'Family counseling, community organizing, and welfare programs to strengthen family units and communities.'), icon: Home },
+  ];
+
   return (
     <section className={cn('py-16 md:py-24', className)}>
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
-            <span className="text-xs font-medium text-accent tracking-wide">What We Offer</span>
+            <span className="text-xs font-medium text-accent tracking-wide">{t('services.whatWeOffer', 'What We Offer')}</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight text-balance">
-            Our Services
+            {t('services.title', 'Our Services')}
           </h2>
           <p className="text-muted-foreground text-center max-w-2xl mx-auto text-pretty">
-            Comprehensive social welfare programs designed to support every member of the Norzagaray community.
+            {t('services.subtitle', 'Comprehensive social welfare programs designed to support every member of the Norzagaray community.')}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

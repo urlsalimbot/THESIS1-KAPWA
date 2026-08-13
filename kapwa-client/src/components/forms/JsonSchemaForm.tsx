@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface JsonSchema {
   title?: string;
@@ -41,9 +42,10 @@ export default function JsonSchemaForm({
   initialData = {},
   onSubmit,
   onCancel,
-  submitLabel = 'Submit',
+  submitLabel,
   readOnly = false,
 }: JsonSchemaFormProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<Record<string, any>>(() => {
     const defaults: Record<string, any> = {};
     if (schema.properties) {
@@ -73,7 +75,7 @@ export default function JsonSchemaForm({
       const value = formData[key];
 
       if (schema.required?.includes(key) && (value === undefined || value === '' || value === null)) {
-        newErrors[key] = `${field.title || key} is required`;
+        newErrors[key] = t('forms.requiredError', '{{field}} is required', { field: field.title || key });
         continue;
       }
 
@@ -81,18 +83,18 @@ export default function JsonSchemaForm({
         if (field.type === 'number' || field.type === 'integer') {
           const num = Number(value);
           if (isNaN(num)) {
-            newErrors[key] = `${field.title || key} must be a number`;
+            newErrors[key] = t('forms.numberError', '{{field}} must be a number', { field: field.title || key });
           } else if (field.minimum !== undefined && num < field.minimum) {
-            newErrors[key] = `${field.title || key} must be >= ${field.minimum}`;
+            newErrors[key] = t('forms.minError', '{{field}} must be >= {{min}}', { field: field.title || key, min: field.minimum });
           } else if (field.maximum !== undefined && num > field.maximum) {
-            newErrors[key] = `${field.title || key} must be <= ${field.maximum}`;
+            newErrors[key] = t('forms.maxError', '{{field}} must be <= {{max}}', { field: field.title || key, max: field.maximum });
           }
         }
 
         if (field.type === 'string' && field.pattern) {
           const regex = new RegExp(field.pattern);
           if (!regex.test(String(value))) {
-            newErrors[key] = `${field.title || key} format is invalid`;
+            newErrors[key] = t('forms.formatError', '{{field}} format is invalid', { field: field.title || key });
           }
         }
       }
@@ -100,7 +102,7 @@ export default function JsonSchemaForm({
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, schema]);
+  }, [formData, schema, t]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -130,7 +132,7 @@ export default function JsonSchemaForm({
             onChange={e => handleChange(key, e.target.value)}
             disabled={readOnly}
           >
-            <option value="">Select...</option>
+            <option value="">{t('forms.select', 'Select...')}</option>
             {field.enum.map((opt, i) => (
               <option key={opt} value={opt}>
                 {field.enumNames?.[i] || opt}
@@ -275,7 +277,7 @@ export default function JsonSchemaForm({
               type="submit"
               className="rounded bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors"
             >
-              {submitLabel}
+              {submitLabel || t('forms.submit', 'Submit')}
             </button>
           )}
           {onCancel && (
@@ -284,7 +286,7 @@ export default function JsonSchemaForm({
               onClick={onCancel}
               className="rounded border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('forms.cancel', 'Cancel')}
             </button>
           )}
         </div>
