@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { referralStatusLabel } from '@/i18n/display';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
@@ -33,6 +35,7 @@ const variantMap: Record<string, 'secondary' | 'default' | 'destructive'> = {
 };
 
 export function CoordinatorReferralListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,34 +59,34 @@ export function CoordinatorReferralListPage() {
   const columns: ColumnDef<Referral>[] = [
     {
       id: 'name',
-      header: 'Name',
+      header: t('coordinator.name', 'Name'),
       cell: ({ row }) => `${row.original.surname}, ${row.original.firstName}`,
     },
-    { accessorKey: 'barangay', header: 'Barangay' },
+    { accessorKey: 'barangay', header: t('coordinator.barangay', 'Barangay') },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: t('coordinator.status', 'Status'),
       cell: ({ row }) => (
-        <Badge variant={variantMap[row.original.status] || 'secondary'}>{row.original.status}</Badge>
+        <Badge variant={variantMap[row.original.status] || 'secondary'}>{referralStatusLabel(t, row.original.status)}</Badge>
       ),
     },
     {
       accessorKey: 'reason',
-      header: 'Reason',
+      header: t('coordinator.reason', 'Reason'),
       cell: ({ row }) => (
         <span className="text-xs line-clamp-2 max-w-xs">{row.original.reason}</span>
       ),
     },
     {
       accessorKey: 'createdAt',
-      header: 'Date',
+      header: t('coordinator.date', 'Date'),
       cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
     },
     {
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)}>
+        <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)} aria-label={t('coordinator.view', 'View')}>
           <Eye size={14} />
         </Button>
       ),
@@ -92,15 +95,15 @@ export function CoordinatorReferralListPage() {
 
   if (loading) {
     return (
-      <PageShell title="My Referrals" description="View the status of your referrals to MSWDO.">
+      <PageShell title={t('coordinator.myReferrals', 'My Referrals')} description={t('coordinator.listDescription', 'View the status of your referrals to MSWDO.')}>
         <div className="mb-4">
           <Button onClick={() => navigate('/coordinator/referrals/new')}>
-            <Plus size={14} className="mr-1" /> New Referral
+            <Plus size={14} className="mr-1" /> {t('coordinator.newReferral', 'New Referral')}
           </Button>
         </div>
         <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5">
-            <h2 className="text-sm font-semibold text-foreground">My Referrals</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('coordinator.myReferrals', 'My Referrals')}</h2>
           </div>
           <div className="p-4 space-y-3">
             {[1,2,3].map(i => (
@@ -119,23 +122,23 @@ export function CoordinatorReferralListPage() {
   }
 
   return (
-    <PageShell title="My Referrals" description="View the status of your referrals to MSWDO.">
+    <PageShell title={t('coordinator.myReferrals', 'My Referrals')} description={t('coordinator.listDescription', 'View the status of your referrals to MSWDO.')}>
       <div className="mb-4">
         <Button onClick={() => navigate('/coordinator/referrals/new')}>
-          <Plus size={14} className="mr-1" /> New Referral
+          <Plus size={14} className="mr-1" /> {t('coordinator.newReferral', 'New Referral')}
         </Button>
       </div>
 
       {referrals.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Send size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">No referrals yet.</p>
+          <p className="text-sm">{t('coordinator.noReferrals', 'No referrals yet.')}</p>
         </div>
       ) : (
         <Card>
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Send size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">My Referrals</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('coordinator.myReferrals', 'My Referrals')}</h2>
           </div>
           <div className="p-0">
             <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
@@ -146,41 +149,41 @@ export function CoordinatorReferralListPage() {
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Referral Details</DialogTitle>
-            <DialogDescription>Referral information for {selected?.surname}, {selected?.firstName}</DialogDescription>
+            <DialogTitle>{t('coordinator.referralDetails', 'Referral Details')}</DialogTitle>
+            <DialogDescription>{t('coordinator.detailsFor', 'Referral information for {{name}}', { name: `${selected?.surname}, ${selected?.firstName}` })}</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
-              <span className="text-xs text-muted-foreground font-medium">Name</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.name', 'Name')}</span>
               <p className="font-medium">{selected?.surname}, {selected?.firstName}</p>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground font-medium">Barangay</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</span>
               <p className="font-medium">{selected?.barangay}</p>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground font-medium">Status</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.status', 'Status')}</span>
               <p className="font-medium">
-                {selected && <Badge variant={variantMap[selected.status] || 'secondary'}>{selected.status}</Badge>}
+                {selected && <Badge variant={variantMap[selected.status] || 'secondary'}>{referralStatusLabel(t, selected.status)}</Badge>}
               </p>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground font-medium">Date</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.date', 'Date')}</span>
               <p className="font-medium">{selected && new Date(selected.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="col-span-2">
-              <span className="text-xs text-muted-foreground font-medium">Reason</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.reason', 'Reason')}</span>
               <p className="font-medium">{selected?.reason}</p>
             </div>
             {selected?.declineReason && (
               <div className="col-span-2">
-                <span className="text-xs text-destructive">Decline Reason</span>
+                <span className="text-xs text-destructive">{t('coordinator.declineReason', 'Decline Reason')}</span>
                 <p className="font-medium">{selected.declineReason}</p>
               </div>
             )}
             {selected?.case?.controlNo && (
               <div>
-                <span className="text-xs text-muted-foreground font-medium">Case No.</span>
+                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.caseNo', 'Case No.')}</span>
                 <p className="font-medium">{selected.case.controlNo}</p>
               </div>
             )}

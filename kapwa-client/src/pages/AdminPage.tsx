@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -16,11 +17,11 @@ interface SyncEntry {
   status: string; conflictReason: string; createdAt: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle2; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  applied: { label: 'Applied', icon: CheckCircle2, variant: 'default' },
-  pending: { label: 'Pending', icon: Clock, variant: 'secondary' },
-  conflict: { label: 'Conflict', icon: AlertCircle, variant: 'destructive' },
-  failed: { label: 'Failed', icon: XCircle, variant: 'destructive' },
+const STATUS_MAP: Record<string, { labelKey: string; label: string; icon: typeof CheckCircle2; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  applied: { labelKey: 'admin.syncApplied', label: 'Applied', icon: CheckCircle2, variant: 'default' },
+  pending: { labelKey: 'admin.syncPending', label: 'Pending', icon: Clock, variant: 'secondary' },
+  conflict: { labelKey: 'admin.syncConflict', label: 'Conflict', icon: AlertCircle, variant: 'destructive' },
+  failed: { labelKey: 'admin.syncFailed', label: 'Failed', icon: XCircle, variant: 'destructive' },
 };
 
 function TabIcon({ icon: Icon, active }: { icon: typeof Database; active: boolean }) {
@@ -28,6 +29,7 @@ function TabIcon({ icon: Icon, active }: { icon: typeof Database; active: boolea
 }
 
 export function AdminPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'users';
   const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
@@ -49,23 +51,23 @@ export function AdminPage() {
 
   return (
     <PageShell
-      title="Admin Panel"
-      description="System configuration, users, and monitoring"
+      title={t('admin.title', 'Admin Panel')}
+      description={t('admin.description', 'System configuration, users, and monitoring')}
       cachedAt={lastSync ?? undefined}
     >
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="users" className="flex items-center gap-2">
-            <TabIcon icon={Users} active={activeTab === 'users'} /> Users
+            <TabIcon icon={Users} active={activeTab === 'users'} /> {t('admin.users', 'Users')}
           </TabsTrigger>
           <TabsTrigger value="sync" className="flex items-center gap-2">
-            <TabIcon icon={Activity} active={activeTab === 'sync'} /> Sync Queue
+            <TabIcon icon={Activity} active={activeTab === 'sync'} /> {t('admin.syncQueue', 'Sync Queue')}
           </TabsTrigger>
           <TabsTrigger value="audit" className="flex items-center gap-2">
-            <TabIcon icon={Database} active={activeTab === 'audit'} /> Audit Log
+            <TabIcon icon={Database} active={activeTab === 'audit'} /> {t('admin.auditLog', 'Audit Log')}
           </TabsTrigger>
           <TabsTrigger value="lcr" className="flex items-center gap-2">
-            <TabIcon icon={Database} active={activeTab === 'lcr'} /> LCR Import
+            <TabIcon icon={Database} active={activeTab === 'lcr'} /> {t('admin.lcrImport', 'LCR Import')}
           </TabsTrigger>
         </TabsList>
 
@@ -76,7 +78,7 @@ export function AdminPage() {
                 <div className="rounded-full bg-blue-500/10 p-2">
                   <Users size={18} className="text-blue-600" />
                 </div>
-                <CardTitle className="text-sm">User Management</CardTitle>
+                <CardTitle className="text-sm">{t('admin.userManagement', 'User Management')}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -93,9 +95,9 @@ export function AdminPage() {
                   <div className="rounded-full bg-amber-500/10 p-2">
                     <Activity size={18} className="text-amber-600" />
                   </div>
-                  <CardTitle className="text-sm">Sync Queue Monitor</CardTitle>
+                  <CardTitle className="text-sm">{t('admin.syncQueueMonitor', 'Sync Queue Monitor')}</CardTitle>
                 </div>
-                <Badge variant="outline" className="text-xs">{syncEntries.length} entr{syncEntries.length !== 1 ? 'ies' : 'y'}</Badge>
+                <Badge variant="outline" className="text-xs">{t('admin.entryCount', '{{count}} entr{{suffix}}', { count: syncEntries.length, suffix: syncEntries.length !== 1 ? 'ies' : 'y' })}</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -108,7 +110,7 @@ export function AdminPage() {
               ) : (
                 <div className="divide-y divide-border/60">
                   {syncEntries.map(e => {
-                    const statusConfig = STATUS_MAP[e.status] || { label: e.status, icon: AlertCircle, variant: 'secondary' as const };
+                    const statusConfig = STATUS_MAP[e.status] || { labelKey: 'admin.syncPending', label: e.status, icon: AlertCircle, variant: 'secondary' as const };
                     const StatusIcon = statusConfig.icon;
                     return (
                       <div key={e.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
@@ -118,7 +120,7 @@ export function AdminPage() {
                             <span className="text-xs text-muted-foreground">·</span>
                             <span className="text-xs font-mono text-muted-foreground">{e.operation}</span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">Device: {e.deviceId.slice(0, 8)}…</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{t('admin.device', 'Device: {{id}}…', { id: e.deviceId.slice(0, 8) })}</p>
                           {e.conflictReason && (
                             <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
                               <AlertCircle size={12} />
@@ -128,7 +130,7 @@ export function AdminPage() {
                         </div>
                         <Badge variant={statusConfig.variant} className="shrink-0 ml-3 gap-1">
                           <StatusIcon size={12} />
-                          {statusConfig.label}
+                          {t(statusConfig.labelKey, statusConfig.label)}
                         </Badge>
                       </div>
                     );
@@ -147,14 +149,14 @@ export function AdminPage() {
                   <div className="rounded-full bg-slate-500/10 p-2">
                     <Database size={18} className="text-slate-600" />
                   </div>
-                  <CardTitle className="text-sm">Audit Log (RA 10173 / COA)</CardTitle>
+                  <CardTitle className="text-sm">{t('admin.auditLogTitle', 'Audit Log (RA 10173 / COA)')}</CardTitle>
                 </div>
-                <Badge variant="outline" className="text-xs">{auditLogsArr.length} entr{auditLogsArr.length !== 1 ? 'ies' : 'y'}</Badge>
+                <Badge variant="outline" className="text-xs">{t('admin.entryCount', '{{count}} entr{{suffix}}', { count: auditLogsArr.length, suffix: auditLogsArr.length !== 1 ? 'ies' : 'y' })}</Badge>
               </div>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="py-8 text-center text-sm text-muted-foreground">Loading audit data...</div>
+                <div className="py-8 text-center text-sm text-muted-foreground">{t('admin.loadingAudit', 'Loading audit data...')}</div>
               ) : auditLogsArr.length === 0 ? (
                 <div className="py-8">
                   <EmptyState variant="no-data" />
@@ -166,7 +168,7 @@ export function AdminPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-foreground">{log.action}</span>
-                          <span className="text-xs text-muted-foreground">on</span>
+                          <span className="text-xs text-muted-foreground">{t('admin.on', 'on')}</span>
                           <span className="text-xs font-mono text-muted-foreground">{log.recordId?.slice(0, 8)}…</span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">

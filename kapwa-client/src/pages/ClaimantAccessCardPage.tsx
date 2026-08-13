@@ -1,4 +1,5 @@
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +12,13 @@ interface MyAccessCard {
 }
 
 export function ClaimantAccessCardPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useSWR<MyAccessCard>(queryKeys.beneficiaries.myAccessCard());
 
   return (
-    <PageShell title="My Access Card" description="Your service history on record with MSWDO">
-      {isLoading && <p className="text-sm text-muted-foreground">Loading your access card…</p>}
-      {error && <p className="text-sm text-destructive">Could not load your access card.</p>}
+    <PageShell title={t('claims.myAccessCard', 'My Access Card')} description={t('claims.cardDescription', 'Your service history on record with MSWDO')}>
+      {isLoading && <p className="text-sm text-muted-foreground">{t('claims.loadingCard', 'Loading your access card…')}</p>}
+      {error && <p className="text-sm text-destructive">{t('claims.cardLoadFailed', 'Could not load your access card.')}</p>}
       {data && (
         <Card>
           <CardHeader>
@@ -24,7 +26,7 @@ export function ClaimantAccessCardPage() {
           </CardHeader>
           <CardContent>
             {(data.services?.length ?? 0) === 0 && (
-              <p className="text-sm text-muted-foreground">No services recorded yet.</p>
+              <p className="text-sm text-muted-foreground">{t('claims.noServices', 'No services recorded yet.')}</p>
             )}
             <ul className="space-y-2">
               {(data.services ?? []).map((s, i) => (

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import useSWRMutation from 'swr/mutation';
 import QRCode from 'qrcode';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '@/lib/auth-context';
@@ -24,22 +25,23 @@ interface NotificationPref {
 const CHANNELS = ['in_app', 'sms', 'email'] as const;
 const CATEGORIES = ['case_update', 'approval', 'disbursement', 'chat', 'sync_conflict', 'system'] as const;
 
-const categoryLabels: Record<string, string> = {
-  case_update: 'Case Updates',
-  approval: 'Approvals',
-  disbursement: 'Disbursements',
-  chat: 'Chat Messages',
-  sync_conflict: 'Sync Conflicts',
-  system: 'System Notifications',
+const categoryLabels: Record<string, { key: string; label: string }> = {
+  case_update: { key: 'settings.catCaseUpdate', label: 'Case Updates' },
+  approval: { key: 'settings.catApproval', label: 'Approvals' },
+  disbursement: { key: 'settings.catDisbursement', label: 'Disbursements' },
+  chat: { key: 'settings.catChat', label: 'Chat Messages' },
+  sync_conflict: { key: 'settings.catSyncConflict', label: 'Sync Conflicts' },
+  system: { key: 'settings.catSystem', label: 'System Notifications' },
 };
 
-const channelLabels: Record<string, string> = {
-  in_app: 'In-App',
-  sms: 'SMS',
-  email: 'Email',
+const channelLabels: Record<string, { key: string; label: string }> = {
+  in_app: { key: 'settings.channelInApp', label: 'In-App' },
+  sms: { key: 'settings.channelSms', label: 'SMS' },
+  email: { key: 'settings.channelEmail', label: 'Email' },
 };
 
 function ProfileTab() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { lang, setLang } = useLanguage();
 
@@ -54,10 +56,10 @@ function ProfileTab() {
       onSuccess: () => {
         setNewEmail('');
         setEmailPw('');
-        toast.success('Verification sent', { description: 'Check your new email inbox.' });
+        toast.success(t('settings.verificationSent', 'Verification sent'), { description: t('settings.checkNewEmail', 'Check your new email inbox.') });
       },
       onError: (err) => {
-        toast.error('Failed to update email', { description: err.message || 'Please try again.' });
+        toast.error(t('settings.emailUpdateFailed', 'Failed to update email'), { description: err.message || t('settings.tryAgain', 'Please try again.') });
       },
     },
   );
@@ -75,14 +77,14 @@ function ProfileTab() {
     },
     {
       onSuccess: () => {
-        toast.success('Password changed', { description: 'Your password has been updated.' });
+        toast.success(t('settings.passwordChanged', 'Password changed'), { description: t('settings.passwordUpdated', 'Your password has been updated.') });
         setCurrentPw('');
         setNewPw('');
         setConfirmPw('');
         setPwError('');
       },
       onError: (err) => {
-        toast.error('Failed to change password', { description: err.message || 'Please try again.' });
+        toast.error(t('settings.passwordChangeFailed', 'Failed to change password'), { description: err.message || t('settings.tryAgain', 'Please try again.') });
       },
     },
   );
@@ -92,16 +94,16 @@ function ProfileTab() {
 
   async function handleSavePhone() {
     if (!phone || phone.length < 10) {
-      toast.error('Invalid phone number', { description: 'Please enter a valid phone number.' });
+      toast.error(t('settings.invalidPhone', 'Invalid phone number'), { description: t('settings.validPhoneHint', 'Please enter a valid phone number.') });
       return;
     }
     setPhoneSaving(true);
     try {
       await api.post('/auth/update-phone', { phone });
-      toast.success('Phone number updated', { description: 'Your contact info has been saved.' });
+      toast.success(t('settings.phoneUpdated', 'Phone number updated'), { description: t('settings.contactSaved', 'Your contact info has been saved.') });
       globalMutate(queryKeys.auth.me());
     } catch (err: any) {
-      toast.error('Failed to update phone', { description: err.message || 'Please try again.' });
+      toast.error(t('settings.phoneUpdateFailed', 'Failed to update phone'), { description: err.message || t('settings.tryAgain', 'Please try again.') });
     } finally {
       setPhoneSaving(false);
     }
@@ -110,11 +112,11 @@ function ProfileTab() {
   function handleChangePassword() {
     setPwError('');
     if (newPw !== confirmPw) {
-      setPwError('Passwords do not match');
+      setPwError(t('settings.passwordsDontMatch', 'Passwords do not match'));
       return;
     }
     if (newPw.length < 8) {
-      setPwError('New password must be at least 8 characters');
+      setPwError(t('settings.passwordMin', 'New password must be at least 8 characters'));
       return;
     }
     changePassword.trigger({ currentPassword: currentPw, newPassword: newPw });
@@ -125,10 +127,10 @@ function ProfileTab() {
       <div className="rounded-lg border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Languages size={18} className="text-primary" />
-          <h3 className="text-sm font-semibold">Language Preference</h3>
+          <h3 className="text-sm font-semibold">{t('settings.languagePreference', 'Language Preference')}</h3>
         </div>
         <p className="text-xs text-muted-foreground">
-          Choose the language used across the app.
+          {t('settings.languageHint', 'Choose the language used across the app.')}
         </p>
         <div className="flex gap-6">
           <label className="flex items-center gap-2 text-sm">
@@ -139,9 +141,9 @@ function ProfileTab() {
               checked={lang === 'en'}
               onChange={() => setLang('en')}
               className="accent-primary"
-              aria-label="English"
+              aria-label={t('settings.english', 'English')}
             />
-            English
+            {t('settings.english', 'English')}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -151,9 +153,9 @@ function ProfileTab() {
               checked={lang === 'fil'}
               onChange={() => setLang('fil')}
               className="accent-primary"
-              aria-label="Filipino"
+              aria-label={t('settings.filipino', 'Filipino')}
             />
-            Filipino
+            {t('settings.filipino', 'Filipino')}
           </label>
         </div>
       </div>
@@ -161,20 +163,20 @@ function ProfileTab() {
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <User size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Profile Information</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t('settings.profileInfo', 'Profile Information')}</h2>
         </div>
         <div className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <span className="text-xs text-muted-foreground font-medium">Email</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('settings.email', 'Email')}</span>
               <p className="text-sm font-medium text-foreground">{user?.email}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs text-muted-foreground font-medium">Full Name</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('settings.fullName', 'Full Name')}</span>
               <p className="text-sm font-medium text-foreground">{user?.fullName}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs text-muted-foreground font-medium">Role</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('settings.role', 'Role')}</span>
               <p className="text-sm font-medium text-foreground capitalize">{user?.role?.replace(/_/g, ' ')}</p>
             </div>
           </div>
@@ -184,12 +186,12 @@ function ProfileTab() {
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <Smartphone size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">SMS / Phone Number</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t('settings.smsPhone', 'SMS / Phone Number')}</h2>
         </div>
         <div className="p-4">
           <div className="flex items-end gap-3">
             <div className="space-y-1.5 flex-1">
-              <label className="text-xs text-muted-foreground font-medium">Phone Number</label>
+              <label className="text-xs text-muted-foreground font-medium">{t('settings.phoneNumber', 'Phone Number')}</label>
               <div className="relative">
                 <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -201,18 +203,18 @@ function ProfileTab() {
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Used for SMS notifications and login OTP verification
+                {t('settings.phoneHint', 'Used for SMS notifications and login OTP verification')}
               </p>
             </div>
             <Button onClick={handleSavePhone} disabled={phoneSaving || !phone || phone === (user?.phone || '')} className="gap-1.5 shrink-0">
               <Save size={14} />
-              {phoneSaving ? 'Saving...' : 'Save'}
+              {phoneSaving ? t('settings.saving', 'Saving...') : t('settings.save', 'Save')}
             </Button>
           </div>
           {user?.phone && (
             <div className="mt-3 rounded-lg bg-muted/30 border border-border/60 px-3 py-2 text-sm text-muted-foreground flex items-center gap-2">
               <CheckCircle size={14} className="text-emerald-500 shrink-0" />
-              Current: <span className="font-medium text-foreground">{user.phone}</span>
+              {t('settings.current', 'Current:')} <span className="font-medium text-foreground">{user.phone}</span>
             </div>
           )}
         </div>
@@ -221,24 +223,24 @@ function ProfileTab() {
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <Mail size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Change Email</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t('settings.changeEmail', 'Change Email')}</h2>
         </div>
         <div className="p-4 space-y-4">
-          <p className="text-xs text-muted-foreground">A verification link will be sent to your new address.</p>
+          <p className="text-xs text-muted-foreground">{t('settings.changeEmailHint', 'A verification link will be sent to your new address.')}</p>
           <div className="space-y-1.5">
-            <label htmlFor="new-email" className="text-xs text-muted-foreground font-medium">New Email</label>
+            <label htmlFor="new-email" className="text-xs text-muted-foreground font-medium">{t('settings.newEmail', 'New Email')}</label>
             <Input id="new-email" type="email" placeholder="your@newemail.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="h-9" />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="email-pw" className="text-xs text-muted-foreground font-medium">Confirm Password</label>
-            <Input id="email-pw" type="password" placeholder="Enter your current password" value={emailPw} onChange={e => setEmailPw(e.target.value)} className="h-9" />
+            <label htmlFor="email-pw" className="text-xs text-muted-foreground font-medium">{t('settings.confirmPassword', 'Confirm Password')}</label>
+            <Input id="email-pw" type="password" placeholder={t('settings.currentPasswordPlaceholder', 'Enter your current password')} value={emailPw} onChange={e => setEmailPw(e.target.value)} className="h-9" />
           </div>
           <Button
             onClick={() => changeEmail.trigger({ newEmail, currentPassword: emailPw })}
             disabled={changeEmail.isMutating || !newEmail || !emailPw}
             className="gap-2"
           >
-            {changeEmail.isMutating ? 'Sending verification...' : 'Update Email'}
+            {changeEmail.isMutating ? t('settings.sendingVerification', 'Sending verification...') : t('settings.updateEmail', 'Update Email')}
           </Button>
         </div>
       </div>
@@ -246,22 +248,22 @@ function ProfileTab() {
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <Lock size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Change Password</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t('settings.changePassword', 'Change Password')}</h2>
         </div>
         <div className="p-4 space-y-4">
-          <p className="text-xs text-muted-foreground">Password must be at least 8 characters.</p>
+          <p className="text-xs text-muted-foreground">{t('settings.passwordMinHint', 'Password must be at least 8 characters.')}</p>
           <div className="space-y-1.5">
-            <label htmlFor="current-pw" className="text-xs text-muted-foreground font-medium">Current Password</label>
-            <Input id="current-pw" type="password" placeholder="Enter current password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} className="h-9" />
+            <label htmlFor="current-pw" className="text-xs text-muted-foreground font-medium">{t('settings.currentPassword', 'Current Password')}</label>
+            <Input id="current-pw" type="password" placeholder={t('settings.currentPasswordPlaceholder', 'Enter current password')} value={currentPw} onChange={e => setCurrentPw(e.target.value)} className="h-9" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label htmlFor="new-pw" className="text-xs text-muted-foreground font-medium">New Password</label>
+              <label htmlFor="new-pw" className="text-xs text-muted-foreground font-medium">{t('settings.newPassword', 'New Password')}</label>
               <div className="relative">
                 <Input
                   id="new-pw"
                   type={showPw ? 'text' : 'password'}
-                  placeholder="Min. 8 characters"
+                  placeholder={t('settings.minChars', 'Min. 8 characters')}
                   value={newPw}
                   onChange={e => setNewPw(e.target.value)}
                   className="pr-10 h-9"
@@ -277,8 +279,8 @@ function ProfileTab() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="confirm-pw" className="text-xs text-muted-foreground font-medium">Confirm New Password</label>
-              <Input id="confirm-pw" type="password" placeholder="Repeat new password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className="h-9" />
+              <label htmlFor="confirm-pw" className="text-xs text-muted-foreground font-medium">{t('settings.confirmNewPassword', 'Confirm New Password')}</label>
+              <Input id="confirm-pw" type="password" placeholder={t('settings.repeatPassword', 'Repeat new password')} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className="h-9" />
             </div>
           </div>
           {pwError && (
@@ -292,7 +294,7 @@ function ProfileTab() {
             className="gap-2"
           >
             <KeyRound size={16} />
-            {changePassword.isMutating ? 'Changing...' : 'Change Password'}
+            {changePassword.isMutating ? t('settings.changing', 'Changing...') : t('settings.changePassword', 'Change Password')}
           </Button>
         </div>
       </div>
@@ -301,6 +303,7 @@ function ProfileTab() {
 }
 
 function SecurityTab() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { data: userData, isLoading } = useSWR<{ mfaEnabled?: boolean; role?: string }>(queryKeys.auth.me());
   const [step, setStep] = useState<'idle' | 'setup' | 'verify' | 'done'>('idle');
@@ -327,7 +330,7 @@ function SecurityTab() {
       setQrDataUrl(url);
       setStep('setup');
     } catch (e: any) {
-      setError(e.message || 'Setup failed');
+      setError(e.message || t('settings.mfaSetupFailed', 'Setup failed'));
     }
   }
 
@@ -339,7 +342,7 @@ function SecurityTab() {
       setStep('done');
       globalMutate(queryKeys.auth.me());
     } catch (e: any) {
-      setError(e.message || 'Verification failed');
+      setError(e.message || t('settings.mfaVerificationFailed', 'Verification failed'));
     }
   }
 
@@ -354,7 +357,7 @@ function SecurityTab() {
       setDisablePw('');
       globalMutate(queryKeys.auth.me());
     } catch (e: any) {
-      setError(e.message || 'Disable failed');
+      setError(e.message || t('settings.mfaDisableFailed', 'Disable failed'));
     }
   }
 
@@ -381,7 +384,7 @@ function SecurityTab() {
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <Shield size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Multi-Factor Authentication</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t('settings.mfa', 'Multi-Factor Authentication')}</h2>
         </div>
         <div className="p-4">
           {canSetup && step === 'idle' && !mfaEnabled && (
@@ -390,43 +393,43 @@ function SecurityTab() {
                 <Shield className="text-purple-600" size={36} />
               </div>
               <div className="text-center">
-                <p className="font-medium text-foreground">MFA not enabled</p>
-                <p className="text-sm text-muted-foreground mt-1">Protect your account with an authenticator app</p>
+                <p className="font-medium text-foreground">{t('settings.mfaNotEnabled', 'MFA not enabled')}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t('settings.mfaProtect', 'Protect your account with an authenticator app')}</p>
               </div>
               <Button onClick={handleSetup} className="gap-2">
                 <Shield size={16} />
-                Set Up MFA
+                {t('settings.setUpMfa', 'Set Up MFA')}
               </Button>
             </div>
           )}
 
           {step === 'setup' && (
             <div className="space-y-4">
-              <p className="text-xs text-muted-foreground font-medium">Step 1: Scan QR code with your authenticator app</p>
+              <p className="text-xs text-muted-foreground font-medium">{t('settings.mfaStep1', 'Step 1: Scan QR code with your authenticator app')}</p>
 
               {qrDataUrl && (
                 <div className="flex justify-center">
                   <div className="rounded-xl border bg-white p-3 shadow-sm">
-                    <img src={qrDataUrl} alt="MFA QR Code" className="w-48 h-48" />
+                    <img src={qrDataUrl} alt={t('settings.mfaQrAlt', 'MFA QR Code')} className="w-48 h-48" />
                   </div>
                 </div>
               )}
 
               <div className="space-y-2">
-                <span className="text-xs text-muted-foreground font-medium">Or enter this key manually</span>
+                <span className="text-xs text-muted-foreground font-medium">{t('settings.manualKey', 'Or enter this key manually')}</span>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 rounded-lg border bg-muted px-4 py-3 text-sm font-mono tracking-wider break-all select-all">{secret}</code>
                   <Button variant="outline" size="sm" onClick={copySecret} className="gap-1.5 shrink-0">
                     <Copy size={14} />
-                    {copied ? 'Copied!' : 'Copy'}
+                    {copied ? t('settings.copied', 'Copied!') : t('settings.copy', 'Copy')}
                   </Button>
                 </div>
               </div>
 
               {otpauth && (
                 <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 space-y-1">
-                  <p className="font-medium">Step 2: Verify setup</p>
-                  <p className="text-green-600">Enter the 6-digit code from your authenticator app below.</p>
+                  <p className="font-medium">{t('settings.mfaStep2', 'Step 2: Verify setup')}</p>
+                  <p className="text-green-600">{t('settings.mfaEnterCode', 'Enter the 6-digit code from your authenticator app below.')}</p>
                 </div>
               )}
 
@@ -446,7 +449,7 @@ function SecurityTab() {
                   onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
                 />
                 <Button onClick={handleEnable} disabled={code.length !== 6} className="px-6">
-                  Verify & Enable
+                  {t('settings.verifyAndEnable', 'Verify & Enable')}
                 </Button>
               </div>
             </div>
@@ -458,11 +461,11 @@ function SecurityTab() {
                 <CheckCircle className="text-green-600" size={36} />
               </div>
               <div className="text-center">
-                <p className="font-medium text-green-800">MFA is enabled</p>
-                <p className="text-sm text-green-600 mt-1">Your account is now protected with TOTP.</p>
+                <p className="font-medium text-green-800">{t('settings.mfaEnabled', 'MFA is enabled')}</p>
+                <p className="text-sm text-green-600 mt-1">{t('settings.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
               </div>
               <Button variant="outline" onClick={() => { setStep('idle'); setCode(''); }}>
-                Done
+                {t('settings.done', 'Done')}
               </Button>
             </div>
           )}
@@ -470,13 +473,13 @@ function SecurityTab() {
           {mfaEnabled && (
             <div className="mt-4 pt-4 border-t border-border space-y-4">
               <div>
-                <h4 className="text-sm font-medium text-foreground">Disable MFA</h4>
-                <p className="text-xs text-muted-foreground mt-0.5">Enter your password to confirm disabling MFA</p>
+                <h4 className="text-sm font-medium text-foreground">{t('settings.disableMfa', 'Disable MFA')}</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">{t('settings.disableMfaHint', 'Enter your password to confirm disabling MFA')}</p>
               </div>
               <div className="flex gap-3">
-                <Input type="password" placeholder="Current password" value={disablePw} onChange={e => setDisablePw(e.target.value)} className="max-w-xs h-9" />
+                <Input type="password" placeholder={t('settings.currentPassword', 'Current password')} value={disablePw} onChange={e => setDisablePw(e.target.value)} className="max-w-xs h-9" />
                 <Button variant="destructive" onClick={handleDisable} disabled={!disablePw}>
-                  Disable
+                  {t('settings.disable', 'Disable')}
                 </Button>
               </div>
               {error && (
@@ -495,6 +498,7 @@ function SecurityTab() {
 }
 
 function NotificationsTab() {
+  const { t } = useTranslation();
   const { data: prefs, isLoading, mutate: revalidatePrefs } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
   const [toggling, setToggling] = useState<string | null>(null);
 
@@ -510,7 +514,7 @@ function NotificationsTab() {
       });
       await revalidatePrefs();
     } catch {
-      toast.error('Failed to update preference', { description: 'Please try again.' });
+      toast.error(t('settings.prefUpdateFailed', 'Failed to update preference'), { description: t('settings.tryAgain', 'Please try again.') });
     } finally {
       setToggling(null);
     }
@@ -536,7 +540,7 @@ function NotificationsTab() {
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <Bell size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Notification Preferences</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t('settings.notificationPrefs', 'Notification Preferences')}</h2>
         </div>
         <div className="p-4 space-y-3">
           {[1, 2, 3].map(i => (
@@ -555,15 +559,15 @@ function NotificationsTab() {
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <Bell size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Notification Preferences</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t('settings.notificationPrefs', 'Notification Preferences')}</h2>
         </div>
         <div className="p-0">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/60">
-                <th className="text-left px-4 py-2.5 text-xs text-muted-foreground font-medium">Category</th>
+                <th className="text-left px-4 py-2.5 text-xs text-muted-foreground font-medium">{t('settings.category', 'Category')}</th>
                 {CHANNELS.map(ch => (
-                  <th key={ch} className="text-center px-4 py-2.5 text-xs text-muted-foreground font-medium">{channelLabels[ch] || ch}</th>
+                  <th key={ch} className="text-center px-4 py-2.5 text-xs text-muted-foreground font-medium">{channelLabels[ch] ? t(channelLabels[ch].key, channelLabels[ch].label) : ch}</th>
                 ))}
               </tr>
             </thead>
@@ -573,7 +577,7 @@ function NotificationsTab() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span className="text-lg shrink-0">{categoryIcons[cat]}</span>
-                      <span className="text-sm font-medium text-foreground">{categoryLabels[cat] || cat}</span>
+                      <span className="text-sm font-medium text-foreground">{categoryLabels[cat] ? t(categoryLabels[cat].key, categoryLabels[cat].label) : cat}</span>
                     </div>
                   </td>
                   {CHANNELS.map(channel => (
@@ -586,7 +590,7 @@ function NotificationsTab() {
                         }`}
                         role="switch"
                         aria-checked={isOptedIn(channel, cat)}
-                        aria-label={`${categoryLabels[cat] || cat} ${channelLabels[channel] || channel}`}
+                        aria-label={t('settings.toggleAria', '{{category}} {{channel}}', { category: categoryLabels[cat] ? t(categoryLabels[cat].key, categoryLabels[cat].label) : cat, channel: channelLabels[channel] ? t(channelLabels[channel].key, channelLabels[channel].label) : channel })}
                       >
                         <span
                           className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform ${
@@ -607,11 +611,12 @@ function NotificationsTab() {
 }
 
 export function SettingsPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications'>('profile');
 
   return (
-    <PageShell title="Settings" description="Manage your account settings and preferences.">
-      <div role="tablist" aria-label="Settings sections" className="flex gap-1 rounded-lg bg-muted p-1 w-fit mb-4">
+    <PageShell title={t('settings.title', 'Settings')} description={t('settings.description', 'Manage your account settings and preferences.')}>
+      <div role="tablist" aria-label={t('settings.tabsAria', 'Settings sections')} className="flex gap-1 rounded-lg bg-muted p-1 w-fit mb-4">
         <button
           role="tab"
           aria-selected={activeTab === 'profile'}
@@ -623,7 +628,7 @@ export function SettingsPage() {
           }`}
         >
           <User size={16} className="inline mr-1.5" />
-          Profile
+          {t('settings.profile', 'Profile')}
         </button>
         <button
           role="tab"
@@ -636,7 +641,7 @@ export function SettingsPage() {
           }`}
         >
           <Shield size={16} className="inline mr-1.5" />
-          Security
+          {t('settings.security', 'Security')}
         </button>
         <button
           role="tab"
@@ -649,7 +654,7 @@ export function SettingsPage() {
           }`}
         >
           <Bell size={16} className="inline mr-1.5" />
-          Notifications
+          {t('settings.notifications', 'Notifications')}
         </button>
       </div>
 

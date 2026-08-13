@@ -59,5 +59,14 @@
     "hoursAgo_other": "{{count}} hr {{minutes}} min ago",
     "daysAgo_one": "{{count}} days ago",
     "daysAgo_other": "{{count}} days ago"
+  },
+  "messages": {
+    "daySun": "Sun",
+    "dayMon": "Mon",
+    "dayTue": "Tue",
+    "dayWed": "Wed",
+    "dayThu": "Thu",
+    "dayFri": "Fri",
+    "daySat": "Sat"
   }
 }

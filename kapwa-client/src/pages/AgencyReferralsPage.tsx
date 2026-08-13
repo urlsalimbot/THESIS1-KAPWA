@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '../lib/auth-context';
@@ -12,6 +13,7 @@ import { CreateReferralForm } from '@/components/referrals/CreateReferralForm';
 import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
 
 export function AgencyReferralsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
   const [filter, setFilter] = useState<'all' | 'received' | 'sent'>('all');
@@ -38,7 +40,7 @@ export function AgencyReferralsPage() {
       await api.patch(`/inter-agency-referrals/${id}/${action}`, body);
       await mutate(queryKeys.interAgencyReferrals.inbox());
     } catch (err: any) {
-      setTransitionError(err?.message || 'Transition failed');
+      setTransitionError(err?.message || t('agency.transitionFailed', 'Transition failed'));
     } finally {
       setTransitioning(false);
     }
@@ -46,7 +48,7 @@ export function AgencyReferralsPage() {
 
   if (isLoading) {
     return (
-      <PageShell title="Inter-Agency Referrals" description="Track referrals between agencies">
+      <PageShell title={t('agency.referralsTitle', 'Inter-Agency Referrals')} description={t('agency.referralsDescription', 'Track referrals between agencies')}>
         <CardGridSkeleton />
       </PageShell>
     );
@@ -54,16 +56,16 @@ export function AgencyReferralsPage() {
 
   if (error && !referrals) {
     return (
-      <PageShell title="Inter-Agency Referrals" description="Track referrals between agencies">
-        <ErrorState title="Could not load referrals" message="Check your internet connection and try again." onRetry={() => mutate(queryKeys.interAgencyReferrals.inbox())} />
+      <PageShell title={t('agency.referralsTitle', 'Inter-Agency Referrals')} description={t('agency.referralsDescription', 'Track referrals between agencies')}>
+        <ErrorState title={t('agency.loadReferralsFailed', 'Could not load referrals')} message={t('agency.checkConnection', 'Check your internet connection and try again.')} onRetry={() => mutate(queryKeys.interAgencyReferrals.inbox())} />
       </PageShell>
     );
   }
 
   return (
     <PageShell
-      title="Inter-Agency Referrals"
-      description="Track referrals between agencies"
+      title={t('agency.referralsTitle', 'Inter-Agency Referrals')}
+      description={t('agency.referralsDescription', 'Track referrals between agencies')}
     >
       <CreateReferralForm
         agencies={agencies || []}
@@ -80,7 +82,7 @@ export function AgencyReferralsPage() {
               filter === f ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
             }`}
           >
-            {f === 'all' ? 'All' : f === 'received' ? 'Received' : 'Sent'}
+            {f === 'all' ? t('agency.all', 'All') : f === 'received' ? t('agency.received', 'Received') : t('agency.sent', 'Sent')}
           </button>
         ))}
       </div>

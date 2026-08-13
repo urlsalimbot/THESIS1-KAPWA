@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { mutate } from 'swr';
@@ -29,14 +31,14 @@ const navTarget = (n: Notification): string => {
   return map[n.category] || '/notifications';
 };
 
-const categoryLabels: Record<string, string> = {
-  case_update: 'Case Update',
-  approval: 'Approval',
-  disbursement: 'Disbursement',
-  chat: 'Chat',
-  sync_conflict: 'Sync Conflict',
-  system: 'System',
-  sla_escalation: 'SLA Escalation',
+const categoryLabels: Record<string, { key: string; label: string }> = {
+  case_update: { key: 'notifications.catCaseUpdate', label: 'Case Update' },
+  approval: { key: 'notifications.catApproval', label: 'Approval' },
+  disbursement: { key: 'notifications.catDisbursement', label: 'Disbursement' },
+  chat: { key: 'notifications.catChat', label: 'Chat' },
+  sync_conflict: { key: 'notifications.catSyncConflict', label: 'Sync Conflict' },
+  system: { key: 'notifications.catSystem', label: 'System' },
+  sla_escalation: { key: 'notifications.catSlaEscalation', label: 'SLA Escalation' },
 };
 
 const categoryColors: Record<string, string> = {
@@ -50,6 +52,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export function NotificationsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const markReadIdRef = useRef<string | null>(null);
@@ -146,14 +149,14 @@ export function NotificationsPage() {
     : notifications;
 
   return (
-    <PageShell title="Notifications" description="View and manage your notifications">
+    <PageShell title={t('notifications.title', 'Notifications')} description={t('notifications.description', 'View and manage your notifications')}>
       <div className="rounded-lg border bg-card">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('notifications.title', 'Notifications')}</h2>
             {unreadCount > 0 && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                {unreadCount} unread
+                {t('notifications.unreadCount', '{{count}} unread', { count: unreadCount })}
               </Badge>
             )}
           </div>
@@ -163,13 +166,13 @@ export function NotificationsPage() {
                 onClick={() => setFilter('all')}
                 className={cn('px-3 py-1 rounded-l-md transition-colors', filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
               >
-                All
+                {t('notifications.all', 'All')}
               </button>
               <button
                 onClick={() => setFilter('unread')}
                 className={cn('px-3 py-1 rounded-r-md transition-colors', filter === 'unread' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
               >
-                Unread
+                {t('notifications.unread', 'Unread')}
               </button>
             </div>
             {unreadCount > 0 && (
@@ -181,7 +184,7 @@ export function NotificationsPage() {
                 disabled={markAllRead.isMutating}
               >
                 <CheckCheck size={14} className="mr-1" />
-                Mark all read
+                {t('notifications.markAllRead', 'Mark all read')}
               </Button>
             )}
           </div>
@@ -189,13 +192,13 @@ export function NotificationsPage() {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-            Loading...
+            {t('notifications.loading', 'Loading...')}
           </div>
         ) : displayed.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Bell size={40} className="mb-3 opacity-30" />
             <p className="text-sm">
-              {filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+              {filter === 'unread' ? t('notifications.noUnread', 'No unread notifications') : t('notifications.none', 'No notifications yet')}
             </p>
           </div>
         ) : (
@@ -227,13 +230,13 @@ export function NotificationsPage() {
                         <ExternalLink size={12} className="text-muted-foreground/40 shrink-0" />
                       </span>
                       <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatDate(n.createdAt)}
+                        {formatDate(n.createdAt, t)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground/80 mt-0.5">{n.message}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={cn('text-[10px] px-1.5 py-0.5 rounded', categoryColors[n.category] || 'bg-slate-100 text-slate-700')}>
-                        {categoryLabels[n.category] || n.category}
+                        {categoryLabels[n.category] ? t(categoryLabels[n.category].key, categoryLabels[n.category].label) : n.category}
                       </span>
                       {!n.isRead && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
                     </div>
@@ -248,14 +251,14 @@ export function NotificationsPage() {
   );
 }
 
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string, t: TFunction) {
   const d = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 1) return t('notifications.justNow', 'now');
+  if (diffMins < 60) return t('notifications.minutesAgo', '{{count}}m ago', { count: diffMins });
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return t('notifications.hoursAgo', '{{count}}h ago', { count: diffHours });
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
