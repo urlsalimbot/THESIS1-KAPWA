@@ -186,10 +186,14 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
                   onChange={e => setNewFollowUp(f => ({ ...f, type: e.target.value }))}
                 >
                   <option value="">—</option>
-                  <option value="Home Visit">Home Visit</option>
-                  <option value="Phone Call">Phone Call</option>
-                  <option value="Office Visit">Office Visit</option>
-                  <option value="Community Visit">Community Visit</option>
+                  {[
+                    { value: 'Home Visit', label: t('caseView.transition.visitType.home', 'Home Visit') },
+                    { value: 'Phone Call', label: t('caseView.transition.visitType.phone', 'Phone Call') },
+                    { value: 'Office Visit', label: t('caseView.transition.visitType.office', 'Office Visit') },
+                    { value: 'Community Visit', label: t('caseView.transition.visitType.community', 'Community Visit') },
+                  ].map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1 col-span-2">

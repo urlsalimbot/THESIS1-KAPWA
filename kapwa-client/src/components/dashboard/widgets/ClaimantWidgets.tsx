@@ -29,7 +29,7 @@ export function ClaimantWidgets() {
 
   const mapped: ClaimantData | null = data
     ? {
-        caseStatus: data.caseStatus || t('dashboard.noActiveCase', 'No active case'),
+        caseStatus: data.caseStatus || '',
         services: data.services || [],
       }
     : null;
@@ -44,9 +44,13 @@ export function ClaimantWidgets() {
     );
   }
 
-  const statusVariant = mapped?.caseStatus === 'Disbursed' ? 'default'
-    : mapped?.caseStatus === 'Approved' ? 'secondary'
-    : 'outline';
+  const rawStatus = mapped?.caseStatus;
+  const normalized = (rawStatus || '').toLowerCase().replace(/\s+/g, '_');
+  const statusDisplay =
+    rawStatus && rawStatus !== 'No active case'
+      ? statusLabel(t, normalized)
+      : t('dashboard.noActiveCase', 'No active case');
+  const statusVariant = normalized === 'transitioning' ? 'default' : 'outline';
 
   return (
     <div className="space-y-4">
@@ -68,10 +72,10 @@ export function ClaimantWidgets() {
             <div>
               <p className="text-xs text-muted-foreground">{t('dashboard.caseStatus', 'Case Status')}</p>
               <p className="text-lg font-semibold text-primary">
-                {mapped?.caseStatus || t('dashboard.noActiveCase', 'No active case')}
+                {statusDisplay}
               </p>
             </div>
-            <Badge variant={statusVariant}>{mapped?.caseStatus || t('dashboard.na', 'N/A')}</Badge>
+            <Badge variant={statusVariant}>{statusDisplay}</Badge>
           </div>
         </CardContent>
       </Card>

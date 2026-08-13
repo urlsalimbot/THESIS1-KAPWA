@@ -40,12 +40,6 @@ const fil: EnLocale = {
     "english": "English",
     "filipino": "Filipino"
   },
-  "common": {
-    "cancel": "Kanselahin",
-    "save": "I-save",
-    "delete": "Tanggalin",
-    "loading": "Naglo-load..."
-  },
   "status": {
     "enrolled": "Nakarehistro",
     "assessed": "Na-assess",
@@ -407,7 +401,6 @@ const fil: EnLocale = {
     "householdsServed": "Households Served",
     "last7Days": "in last 7 days",
     "monthlyTrends": "Monthly Trends (6mo)",
-    "na": "N/A",
     "needsAttention": "Needs Attention",
     "newBeneficiary": "New Beneficiary",
     "newBeneficiaryDesc": "Register a new beneficiary",
@@ -1474,11 +1467,23 @@ const fil: EnLocale = {
       "complete": "complete",
       "delivered": "delivered",
       "deliveryDate": "Delivery Date",
-      "fundSource": "Fund Source",
+      "fundSource": {
+        "donation": "Donation",
+        "dswd": "DSWD",
+        "lgu": "LGU",
+        "other": "Other",
+        "pdaf": "PDAF"
+      },
       "interventionRecord": "Intervention Record",
       "interventionUnit_one": "",
       "interventionUnit_other": "",
-      "modeOfDelivery": "Mode of Delivery",
+      "modeOfDelivery": {
+        "cash": "Cash",
+        "cheque": "Cheque",
+        "guaranteeLetter": "Guarantee Letter",
+        "inKind": "In-kind",
+        "service": "Service"
+      },
       "newIntervention": "New Intervention",
       "noInterventions": "No interventions recorded yet. Click \"Add Intervention\" to document delivered services.",
       "notes": "Notes",
@@ -1494,7 +1499,9 @@ const fil: EnLocale = {
       "serviceNamePlaceholder": "e.g., Counseling Session, Home Visit",
       "submitForReview": "Submit for Review →",
       "submitForReviewHint": "Submit for admin review to activate the case.",
-      "total": "total"
+      "total": "total",
+      "fundSourceLabel": "Fund Source",
+      "modeOfDeliveryLabel": "Mode of Delivery"
     },
     "integrated": {
       "approveCase": "✓ Approve Case",
@@ -1576,7 +1583,13 @@ const fil: EnLocale = {
       "sustainabilityPlaceholder": "Describe the client's plan for sustaining improvements independently...",
       "sustainabilityPlan": "Sustainability Plan",
       "targetTransitionDate": "Target Transition Date",
-      "type": "Type *"
+      "type": "Type *",
+      "visitType": {
+        "community": "Community Visit",
+        "home": "Home Visit",
+        "office": "Office Visit",
+        "phone": "Phone Call"
+      }
     }
   },
   "conflict": {
