@@ -10,6 +10,7 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { queryKeys } from '../lib/query-keys';
+import { formatDate } from '../lib/format';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 interface TrackerEntry {
@@ -76,7 +77,7 @@ export function CaseTrackerPage() {
 
   const columns: ColumnDef<TrackerEntry>[] = [
     { accessorKey: 'dailySeqNum', header: '#', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.dailySeqNum}</span> },
-    { accessorKey: 'transactionDate', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{new Date(row.original.transactionDate).toLocaleDateString()}</span> },
+    { accessorKey: 'transactionDate', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDate(row.original.transactionDate)}</span> },
     { accessorKey: 'controlNo', header: 'Control No.', cell: ({ row }) => <span className="font-mono text-xs">{row.original.controlNo}</span> },
     { accessorKey: 'surname', header: 'Surname' },
     { accessorKey: 'firstName', header: 'First Name' },

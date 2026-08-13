@@ -4,6 +4,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock } from 'lucide-react';
 import { api, downloadCsrPdf, downloadCertificate, type CertificateType } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
+import { formatDate, formatDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/badge';
@@ -227,8 +228,8 @@ export function CaseViewPage() {
               <div>
                 <h2 className="text-base font-semibold">{caseData.controlNo}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Created {new Date(caseData.createdAt).toLocaleDateString()} &middot;
-                  Updated {new Date(caseData.updatedAt).toLocaleDateString()}
+                  Created {formatDate(caseData.createdAt)} &middot;
+                  Updated {formatDate(caseData.updatedAt)}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -319,7 +320,7 @@ export function CaseViewPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground text-xs">Date of Birth</span>
-                  <p>{dob ? new Date(dob).toLocaleDateString() : '—'}</p>
+                  <p>{dob ? formatDate(dob) : '—'}</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
@@ -524,7 +525,7 @@ export function CaseViewPage() {
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(entry.createdAt).toLocaleString()}
+                          {formatDateTime(entry.createdAt)}
                           {entry.changedByRole && ` · by ${entry.changedByRole.replace(/_/g, ' ')}`}
                         </p>
                         {entry.remarks && (
@@ -567,7 +568,7 @@ function IrfCaseList({ caseId }: { caseId: string }) {
         <div key={irf.id} className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/irf/${irf.id}`)}>
           <div>
             <p className="text-sm font-medium">{irf.blotterEntryNumber}</p>
-            <p className="text-xs text-muted-foreground">{irf.caseCategory} &middot; {new Date(irf.createdAt).toLocaleDateString()}</p>
+            <p className="text-xs text-muted-foreground">{irf.caseCategory} &middot; {formatDate(irf.createdAt)}</p>
           </div>
           <Badge variant={irf.caseDisposition === 'Closed' ? 'default' : 'secondary'} className="text-xs">
             {irf.caseDisposition}

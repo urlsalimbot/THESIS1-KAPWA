@@ -51,6 +51,12 @@ const en = {
     failed: 'Failed',
     conflict: 'Conflict',
   },
+  time: {
+    justNow: 'just now',
+    minutesAgo: '{{count}} min ago',
+    hoursAgo: '{{count}} hr {{minutes}} min ago',
+    daysAgo: '{{count}} days ago',
+  },
 } as const;
 
 export default en;
