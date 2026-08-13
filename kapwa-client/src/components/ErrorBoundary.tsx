@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { ErrorBoundary as ReactErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { AlertTriangle, WifiOff, RefreshCw, LayoutDashboard, ChevronDown, ChevronRight, Bug } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -14,6 +15,7 @@ function isOfflineError(error: unknown): boolean {
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const { t } = useTranslation();
   const [showDetails, setShowDetails] = useState(false);
 
   if (isOfflineError(error)) {
@@ -25,16 +27,16 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
               <WifiOff size={40} className="text-amber-600" />
             </div>
             <div className="text-center space-y-1">
-              <h2 className="text-xl font-semibold text-foreground">You're Offline</h2>
+              <h2 className="text-xl font-semibold text-foreground">{t('error.boundaryOfflineTitle', "You're Offline")}</h2>
               <p className="text-sm text-muted-foreground px-4">
-                Your device lost connection. Some features may be unavailable until you reconnect.
+                {t('error.boundaryOfflineBody', 'Your device lost connection. Some features may be unavailable until you reconnect.')}
               </p>
             </div>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button onClick={resetErrorBoundary} className="gap-2">
               <RefreshCw size={16} />
-              Try Again
+              {t('error.boundaryTryAgain', 'Try Again')}
             </Button>
           </CardContent>
         </Card>
@@ -50,21 +52,21 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
             <AlertTriangle size={40} className="text-destructive" />
           </div>
           <div className="text-center space-y-1">
-            <h2 className="text-xl font-semibold text-foreground">Something went wrong</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t('error.boundaryTitle', 'Something went wrong')}</h2>
             <p className="text-sm text-muted-foreground px-4">
-              An unexpected error occurred. Our team has been notified.
+              {t('error.boundaryBody', 'An unexpected error occurred. Our team has been notified.')}
             </p>
           </div>
         </CardHeader>
         <CardContent className="flex justify-center gap-3">
           <Button onClick={resetErrorBoundary} className="gap-2">
             <RefreshCw size={16} />
-            Try Again
+            {t('error.boundaryTryAgain', 'Try Again')}
           </Button>
           <Button variant="outline" asChild>
             <Link to="/dashboard" className="gap-2">
               <LayoutDashboard size={16} />
-              Dashboard
+              {t('error.dashboard', 'Dashboard')}
             </Link>
           </Button>
         </CardContent>
@@ -76,7 +78,7 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
             >
               {showDetails ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               <Bug size={14} />
-              Error Details
+              {t('error.boundaryDetails', 'Error Details')}
             </button>
             {showDetails && (() => {
               const err = error instanceof Error ? error : new Error(String(error));

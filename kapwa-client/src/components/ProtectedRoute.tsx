@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import * as auth from '../lib/auth-context';
 import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 
 export function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
+  const { t } = useTranslation();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const checkingRef = useRef(false);
@@ -49,7 +51,7 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
   }
 
   if (authorized === null) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-400">Verifying access...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-gray-400">{t('shell.verifyingAccess', 'Verifying access...')}</div>;
   }
 
   return <>{children}</>;

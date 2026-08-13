@@ -1,6 +1,7 @@
 import { Inbox, SearchX, WifiOff, ShieldOff, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 type EmptyVariant = 'no-data' | 'no-results' | 'offline' | 'no-access';
 
@@ -16,34 +17,35 @@ interface EmptyConfig {
   hint?: string;
 }
 
-const CONFIG: Record<EmptyVariant, EmptyConfig> = {
-  'no-data': {
-    icon: Inbox,
-    message: 'No data found',
-    cta: 'Add first record',
-  },
-  'no-results': {
-    icon: SearchX,
-    message: 'No results match your search',
-    cta: 'Clear filters',
-  },
-  'offline': {
-    icon: WifiOff,
-    message: 'You appear to be offline',
-    cta: 'Retry',
-    hint: 'Please check your connection and try again',
-  },
-  'no-access': {
-    icon: ShieldOff,
-    message: "You don't have access to this section",
-    cta: 'Go to Dashboard',
-  },
-};
-
 export function EmptyState({ variant, onAction }: EmptyStateProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const config = CONFIG[variant];
-  const Icon = config.icon;
+
+  const config: Record<EmptyVariant, EmptyConfig> = {
+    'no-data': {
+      icon: Inbox,
+      message: t('error.emptyNoData', 'No data found'),
+      cta: t('error.emptyAddFirst', 'Add first record'),
+    },
+    'no-results': {
+      icon: SearchX,
+      message: t('error.emptyNoResults', 'No results match your search'),
+      cta: t('error.emptyClearFilters', 'Clear filters'),
+    },
+    'offline': {
+      icon: WifiOff,
+      message: t('error.emptyOffline', 'You appear to be offline'),
+      cta: t('error.retry', 'Retry'),
+      hint: t('error.emptyOfflineHint', 'Please check your connection and try again'),
+    },
+    'no-access': {
+      icon: ShieldOff,
+      message: t('error.emptyNoAccess', "You don't have access to this section"),
+      cta: t('error.goToDashboard', 'Go to Dashboard'),
+    },
+  };
+  const activeConfig = config[variant];
+  const Icon = activeConfig.icon;
 
   const handleAction = () => {
     if (variant === 'no-results' || variant === 'offline') {
@@ -57,12 +59,12 @@ export function EmptyState({ variant, onAction }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
       <Icon size={48} className="text-muted-foreground" aria-hidden="true" />
-      <p className="text-base font-medium text-foreground">{config.message}</p>
-      {config.hint && (
-        <p className="text-sm text-muted-foreground">{config.hint}</p>
+      <p className="text-base font-medium text-foreground">{activeConfig.message}</p>
+      {activeConfig.hint && (
+        <p className="text-sm text-muted-foreground">{activeConfig.hint}</p>
       )}
       <Button variant="outline" onClick={handleAction}>
-        {config.cta}
+        {activeConfig.cta}
       </Button>
     </div>
   );
