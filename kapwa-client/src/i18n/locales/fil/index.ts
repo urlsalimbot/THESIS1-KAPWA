@@ -271,7 +271,7 @@ const fil: EnLocale = {
     "verifyAndEnable": "I-verify at Paganahin",
     "verifyingEmail": "Sinisigurado ang iyong email...",
     "welcomeToKapwa": "Maligayang pagdating sa KAPWA",
-    "weSentVerificationLink": "Nagpadala kami ng verification link sa <bold>{{email}}</bold>.",
+    "weSentVerificationLink": "Nagpadala kami ng verification link sa",
     "period": "."
   },
   "claims": {
@@ -664,7 +664,7 @@ const fil: EnLocale = {
   },
   "intake": {
     "addAnotherBatch": "Magdagdag ng isa pang miyembro ng pamilya bilang isang batch?",
-    "addingCaseFor": "Nagdaragdag ng kaso para kay <name>{{name}}</name>. Suriin at baguhin ang mga detalye bago isumite.",
+    "addingCaseFor": "Nagdaragdag ng kaso para kay",
     "addingMembers": "Nagdaragdag ng mga miyembro...",
     "addMember": "+ Magdagdag ng Miyembro",
     "address": "Tirahan",
@@ -713,7 +713,7 @@ const fil: EnLocale = {
     "foundRecords": "Nakahanap kami ng mga rekord na maaaring para sa kliyenteng ito.",
     "infoUpdated": "Na-update ang impormasyon",
     "invalidDob": "Hindi wastong petsa ng kapanganakan",
-    "isThis": "Ito ba si <name>{{name}}</name>?",
+    "isThis": "Ito ba si",
     "markedDifferent": "Minarkahan bilang ibang tao. Maaari kang pumili ng ibang tugma o gumawa ng bagong rekord sa ibaba.",
     "matchReview": "Pagsusuri ng Tugma",
     "middleName": "Gitnang Pangalan",
@@ -1474,8 +1474,8 @@ const fil: EnLocale = {
         "pdaf": "PDAF"
       },
       "interventionRecord": "Rekord ng Interbensyon",
-      "interventionUnit_one": "",
-      "interventionUnit_other": "",
+      "interventionUnit_one": "interbensyon",
+      "interventionUnit_other": "interbensyon",
       "modeOfDelivery": {
         "cash": "Cash",
         "cheque": "Cheke",

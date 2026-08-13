@@ -63,8 +63,6 @@ const ALLOWED_IDENTICAL = new Set([
   'caseView.implement.fundSource.dswd',
   'caseView.implement.fundSource.lgu',
   'caseView.implement.fundSource.pdaf',
-  'caseView.implement.interventionUnit_one',
-  'caseView.implement.interventionUnit_other',
   'caseView.implement.modeOfDelivery.cash',
   'caseView.implement.modeOfDelivery.inKind',
   'caseView.implement.req',
@@ -161,5 +159,25 @@ describe('locale parity', () => {
       k => !ALLOWED_IDENTICAL.has(k) && filFlat[k] === enFlat[k],
     );
     expect(leftovers).toEqual([]);
+  });
+
+  it('no en or fil value contains literal HTML tags or is empty', () => {
+    const enFlat = flat(en);
+    const filFlat = flat(fil);
+    const bad = Object.keys(enFlat).filter(
+      k => /<[a-zA-Z]/.test(enFlat[k]) || /<[a-zA-Z]/.test(filFlat[k]) || enFlat[k] === '' || filFlat[k] === '',
+    );
+    expect(bad).toEqual([]);
+  });
+
+  it('fil placeholders match en placeholders key-for-key', () => {
+    const enFlat = flat(en);
+    const filFlat = flat(fil);
+    const placeholders = (v: string) =>
+      [...new Set([...v.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]))].sort();
+    const mismatched = Object.keys(enFlat).filter(
+      k => placeholders(enFlat[k]).join(',') !== placeholders(filFlat[k]).join(','),
+    );
+    expect(mismatched).toEqual([]);
   });
 });
