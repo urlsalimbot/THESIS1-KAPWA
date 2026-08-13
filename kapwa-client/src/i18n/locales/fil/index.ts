@@ -53,6 +53,12 @@ const fil: EnLocale = {
     failed: 'Nabigo',
     conflict: 'Salungatan',
   },
+  time: {
+    justNow: 'kakailangan pa lang',
+    minutesAgo: '{{count}} minuto ang nakalipas',
+    hoursAgo: '{{count}} oras {{minutes}} minuto ang nakalipas',
+    daysAgo: '{{count}} araw ang nakalipas',
+  },
 };
 
 export default fil;

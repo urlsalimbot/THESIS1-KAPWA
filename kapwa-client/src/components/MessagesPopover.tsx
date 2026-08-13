@@ -10,6 +10,7 @@ import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 import { mutate as globalMutateFn } from 'swr';
 import { connectSocket } from '../lib/chat-socket';
+import i18n from '../i18n';
 
 interface Conversation {
   userId: string; name: string; lastMessage: string; lastTime: string; unread: number;
@@ -36,9 +37,10 @@ export default function MessagesPopover() {
   }, [globalMutateFn]);
 
   const popTZ = 'Asia/Manila';
-  const popTimeFmt = new Intl.DateTimeFormat('en-PH', { timeZone: popTZ, hour: '2-digit', minute: '2-digit', hour12: false });
-  const popDateFmt = new Intl.DateTimeFormat('en-PH', { timeZone: popTZ, month: 'short', day: 'numeric' });
-  const popDateOnlyFmt = new Intl.DateTimeFormat('en-PH', { timeZone: popTZ, month: 'short', day: 'numeric', year: 'numeric' });
+  const popLocale = i18n.language === 'fil' ? 'fil-PH' : 'en-PH';
+  const popTimeFmt = new Intl.DateTimeFormat(popLocale, { timeZone: popTZ, hour: '2-digit', minute: '2-digit', hour12: false });
+  const popDateFmt = new Intl.DateTimeFormat(popLocale, { timeZone: popTZ, month: 'short', day: 'numeric' });
+  const popDateOnlyFmt = new Intl.DateTimeFormat(popLocale, { timeZone: popTZ, month: 'short', day: 'numeric', year: 'numeric' });
 
   function formatTime(dateStr: string) {
     const d = new Date(dateStr);

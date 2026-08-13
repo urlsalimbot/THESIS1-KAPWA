@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import useSWR, { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
+import { formatDateTime } from '../lib/format';
 import { Search, Download, AlertTriangle, Eye } from 'lucide-react';
 import { useCaseActions } from '../hooks/useCaseActions';
 import { PageShell } from '@/components/PageShell';
@@ -66,7 +67,7 @@ function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
     category: ((c.serviceRequested as string[]) || []).join(', '),
     barangay: ((ben.currentAddress as Record<string, string> | undefined)?.barangay || '').trim() || ((ben.address as string) || '').split(',').pop()?.trim() || '',
     remarks: (c.remarks as string) || '',
-    date: c.updatedAt ? new Date(c.updatedAt as string).toLocaleString() : '',
+    date: c.updatedAt ? formatDateTime(c.updatedAt as string) : '',
     createdAt: (c.createdAt as string) || '',
     status: (c.status as string) || 'enrolled',
     controlNo: (c.controlNo as string) || '',

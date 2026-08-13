@@ -7,6 +7,7 @@ import { loadQueue, type QueuedChange } from '@/lib/offline-queue';
 import { Clock, CheckCircle2, XCircle, RefreshCw, AlertTriangle, Trash2, Eye, Upload } from 'lucide-react';
 import { ConflictResolutionDialog } from './ConflictResolutionDialog';
 import { syncOnReconnect } from '@/lib/sync';
+import { formatTimestamp } from '@/lib/format';
 
 const QUEUE_KEY = 'kapwa_sync_queue';
 const POLL_INTERVAL = 2000;
@@ -34,16 +35,6 @@ function removeQueueItem(id: string): void {
   const items: QueuedChange[] = JSON.parse(raw);
   const filtered = items.filter(i => i.id !== id);
   localStorage.setItem(QUEUE_KEY, JSON.stringify(filtered));
-}
-
-function formatTimestamp(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hr ${mins % 60} min ago`;
-  return `${Math.floor(hrs / 24)} days ago`;
 }
 
 function operationLabel(op: string): string {
