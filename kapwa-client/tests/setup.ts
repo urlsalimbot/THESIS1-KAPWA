@@ -133,9 +133,13 @@ beforeAll(async () => {
   // Initialize the app i18n singleton (en) so t()/statusLabel resolve real strings.
   const { default: i18n } = await import('@/i18n');
   await i18n.changeLanguage('en');
+  // Mirror main.tsx boot-time lang sync (jsdom does not run main.tsx)
+  document.documentElement.lang = 'en';
 });
 
 afterEach(() => {
   localStorage.clear();
+  localStorage.removeItem('kapwa-lang');
+  document.documentElement.lang = 'en';
   vi.restoreAllMocks();
 });
