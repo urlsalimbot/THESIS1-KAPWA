@@ -47,6 +47,16 @@ export class InterAgencyReferralsController {
     return this.svc.findByPerson(personId, req.user);
   }
 
+  @Get('case/:caseId')
+  @Roles('admin', 'social_worker', 'agency_staff')
+  @ApiOperation({ summary: 'List referrals for a case (case workflow)' })
+  async byCase(
+    @Param('caseId', new ParseUUIDPipe()) caseId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.svc.findForCase(caseId, req.user);
+  }
+
   @Get('beneficiary-search')
   @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Search referral-derived beneficiaries by name for the caller agency' })

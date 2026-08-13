@@ -207,7 +207,7 @@ describe('FSM — requestReview', () => {
 
 describe('FSM — disburse', () => {
   it('should move case from active to transitioning when role is admin', async () => {
-    const existing = { id: '1', status: CaseStatus.ACTIVE, assignedWorkerId: 'w1', controlNo: 'KAPWA-001', beneficiaryId: 'b1', updatedAt: new Date() } as Case;
+    const existing = { id: '1', status: CaseStatus.ACTIVE, assignedWorkerId: 'w1', controlNo: 'KAPWA-001', beneficiaryId: 'b1', selfRelianceLevel: 3, sustainabilityPlan: 'livelihood', updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
     repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.TRANSITIONING });
     const result = await service.disburse('1', CaseStatus.TRANSITIONING, 'admin');
@@ -215,9 +215,9 @@ describe('FSM — disburse', () => {
   });
 
   it('should throw when disburse called by social_worker', async () => {
-    const existing = { id: '1', status: CaseStatus.ACTIVE, updatedAt: new Date() } as Case;
+    const existing = { id: '1', status: CaseStatus.ACTIVE, selfRelianceLevel: 3, sustainabilityPlan: 'livelihood', updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
-    await expect(service.disburse('1', CaseStatus.TRANSITIONING, 'social_worker')).rejects.toThrow('Role social_worker cannot transition case');
+    await expect(service.disburse('1', CaseStatus.TRANSITIONING, 'social_worker')).rejects.toThrow('cannot transition from active to transitioning');
   });
 });
 

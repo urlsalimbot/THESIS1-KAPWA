@@ -1,20 +1,16 @@
 import { useState } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { useSWRConfig } from 'swr';
+import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, ExternalLink, Lock } from 'lucide-react';
-
-interface Referral {
-  agencyName: string;
-  contactInfo?: string;
-  reason: string;
-  status: 'pending' | 'completed' | 'declined';
-  notes?: string;
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Send, Plus, Lock } from 'lucide-react';
+import { CreateReferralForm } from '@/components/referrals/CreateReferralForm';
+import { ReferralCard } from '@/components/referrals/ReferralCard';
+import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
+import { EmptyState } from '@/components/EmptyState';
 
 interface StepIntegratedDeliveryProps {
   caseId: string;
@@ -24,158 +20,68 @@ interface StepIntegratedDeliveryProps {
 }
 
 export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }: StepIntegratedDeliveryProps) {
+  const { user } = useAuth();
   const { mutate } = useSWRConfig();
-  const [saving, setSaving] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
 
-  const [referrals, setReferrals] = useState<Referral[]>(
-    (caseData?.referrals || []) as Referral[]
+  const { data: referrals, isLoading, mutate: revalidate } = useSWR<InterAgencyReferral[]>(
+    queryKeys.interAgencyReferrals.byCase(caseId),
   );
+  const { data: agencies } = useSWR<Agency[]>(queryKeys.agencies.list());
 
-  const [newReferral, setNewReferral] = useState({
-    agencyName: '',
-    contactInfo: '',
-    reason: '',
-    notes: '',
-  });
+  const ben = caseData?.beneficiary as Record<string, unknown> | undefined;
+  const initialBeneficiary = ben?.id
+    ? { beneficiaryId: ben.id as string, label: `${ben.firstName || ''} ${ben.surname || ''}`.trim() }
+    : undefined;
 
-  function addReferral() {
-    if (!newReferral.agencyName) return;
-    setReferrals(prev => [
-      ...prev,
-      { ...newReferral, status: 'pending' as const },
-    ]);
-    setNewReferral({ agencyName: '', contactInfo: '', reason: '', notes: '' });
-  }
-
-  function removeReferral(index: number) {
-    setReferrals(prev => prev.filter((_, i) => i !== index));
-  }
-
-  function updateReferralStatus(index: number, status: 'pending' | 'completed' | 'declined') {
-    setReferrals(prev =>
-      prev.map((r, i) => (i === index ? { ...r, status } : r))
-    );
-  }
-
-  async function handleSave() {
-    setSaving(true);
+  async function transition(id: string, action: string, body?: Record<string, string>) {
+    setTransitioning(true);
     try {
-      await api.patch(`/cases/${caseId}/transition-plan`, {
-        referrals: referrals.length > 0 ? referrals : null,
-      });
+      await api.patch(`/inter-agency-referrals/${id}/${action}`, body);
+      await revalidate();
       await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to save referrals:', e);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to update referral');
     } finally {
-      setSaving(false);
+      setTransitioning(false);
     }
   }
 
   return (
     <div className="space-y-4">
-      {/* Referrals */}
+      {/* Inter-Agency Referrals */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">Referrals to Other Agencies (Optional)</h3>
+            <h3 className="text-sm font-semibold">Inter-Agency Referrals</h3>
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
           {!readOnly && (
-            <Button variant="outline" size="sm" onClick={addReferral} disabled={!newReferral.agencyName}>
-              <Plus size={14} className="mr-1" /> Add Referral (Optional)
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus size={14} className="mr-1" /> Create Referral
             </Button>
           )}
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
-          {/* Add Referral Form */}
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <Input
-              placeholder="Agency name *"
-              value={newReferral.agencyName}
-              onChange={e => setNewReferral(r => ({ ...r, agencyName: e.target.value }))}
-            />
-            <Input
-              placeholder="Contact info"
-              value={newReferral.contactInfo}
-              onChange={e => setNewReferral(r => ({ ...r, contactInfo: e.target.value }))}
-            />
-            <Input
-              placeholder="Reason for referral"
-              value={newReferral.reason}
-              onChange={e => setNewReferral(r => ({ ...r, reason: e.target.value }))}
-              className="col-span-2"
-            />
-          </div>
-
-          {/* Referral List */}
-          {referrals.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-3">
-              No referrals recorded. Referrals are optional — cases can proceed with direct services provided by the MSWDO.
-            </p>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-3">Loading referrals...</p>
+          ) : !referrals || referrals.length === 0 ? (
+            <EmptyState variant="no-data" />
           ) : (
-            referrals.map((ref, i) => (
-              <div key={i} className="flex items-start justify-between p-2 rounded border bg-muted/30">
-                <div className="space-y-1 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{ref.agencyName}</span>
-                    <Badge
-                      variant={
-                        ref.status === 'completed'
-                          ? 'default'
-                          : ref.status === 'declined'
-                          ? 'destructive'
-                          : 'outline'
-                      }
-                      className="text-[10px]"
-                    >
-                      {ref.status}
-                    </Badge>
-                  </div>
-                  {ref.contactInfo && (
-                    <p className="text-xs text-muted-foreground">{ref.contactInfo}</p>
-                  )}
-                  {ref.reason && (
-                    <p className="text-xs text-muted-foreground">{ref.reason}</p>
-                  )}
-                  {ref.notes && (
-                    <p className="text-xs text-muted-foreground/70 italic">{ref.notes}</p>
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  {ref.status === 'pending' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => updateReferralStatus(i, 'completed')}
-                    >
-                      ✓ Complete
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => removeReferral(i)}
-                  >
-                    <Trash2 size={12} />
-                  </Button>
-                </div>
-              </div>
+            referrals.map(r => (
+              <ReferralCard
+                key={r.id}
+                referral={r}
+                myAgencyId={user?.agencyId}
+                onTransition={transition}
+                disabled={transitioning}
+              />
             ))
           )}
         </div>
       </div>
-
-      {/* Save Button */}
-      {!readOnly && (
-        <div className="flex items-center gap-2">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Service Delivery'}
-          </Button>
-        </div>
-      )}
 
       {/* Status transitions */}
       {caseData?.status === 'in_review' && userRole === 'admin' && (
@@ -200,6 +106,28 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
           </div>
         </div>
       )}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send size={16} className="text-primary" /> Create Inter-Agency Referral
+            </DialogTitle>
+            <DialogDescription>
+              Refer this case's beneficiary to a partner agency for coordinated services.
+            </DialogDescription>
+          </DialogHeader>
+          <CreateReferralForm
+            agencies={agencies || []}
+            caseId={caseId}
+            initialBeneficiary={initialBeneficiary}
+            onCreated={() => {
+              setCreateOpen(false);
+              revalidate();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

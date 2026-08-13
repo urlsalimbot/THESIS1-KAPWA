@@ -53,6 +53,9 @@ function renderWithSWR(ui: React.ReactNode) {
 
 describe('DashboardPage', () => {
   beforeEach(async () => {
+    // Pin the date so the "today" highlight ring in the snapshot stays stable.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-03T12:00:00Z'));
     mockApiGet.mockReset();
     mockApiPost.mockReset();
     mockApiPut.mockReset();
@@ -63,6 +66,7 @@ describe('DashboardPage', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     localStorage.removeItem('kapwa_token');
     // Restore the default worker auth mock (some tests override it persistently).

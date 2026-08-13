@@ -3,11 +3,13 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DashboardService } from './dashboard.service';
 import { Case } from '../cases/case.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { VersionVector } from '../sync/version-vector.entity';
 
 describe('DashboardService', () => {
   let service: DashboardService;
   let caseRepoMock: any;
   let benRepoMock: any;
+  let versionVectorRepoMock: any;
 
   beforeEach(async () => {
     caseRepoMock = {
@@ -41,11 +43,21 @@ describe('DashboardService', () => {
       })),
     };
 
+    versionVectorRepoMock = {
+      findOne: jest.fn().mockResolvedValue(null),
+      find: jest.fn().mockResolvedValue([]),
+      createQueryBuilder: jest.fn(() => ({
+        select: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue(null),
+      })),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DashboardService,
         { provide: getRepositoryToken(Case), useValue: caseRepoMock },
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
+        { provide: getRepositoryToken(VersionVector), useValue: versionVectorRepoMock },
       ],
     }).compile();
 

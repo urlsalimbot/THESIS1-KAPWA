@@ -2,10 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FilingService } from './filing.service';
 import { DocumentVault } from './filing.entity';
+import { Case } from '../cases/case.entity';
 
 describe('FilingService', () => {
   let service: FilingService;
   let docRepoMock: any;
+  let caseRepoMock: any;
 
   beforeEach(async () => {
     docRepoMock = {
@@ -15,11 +17,16 @@ describe('FilingService', () => {
       findOne: jest.fn().mockResolvedValue(null),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
     };
+    caseRepoMock = {
+      findOne: jest.fn().mockResolvedValue({ id: '1', controlNo: 'KAPWA-001' }),
+      find: jest.fn().mockResolvedValue([]),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FilingService,
         { provide: getRepositoryToken(DocumentVault), useValue: docRepoMock },
+        { provide: getRepositoryToken(Case), useValue: caseRepoMock },
       ],
     }).compile();
 

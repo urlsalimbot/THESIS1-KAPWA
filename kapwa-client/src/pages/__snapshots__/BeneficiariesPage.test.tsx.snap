@@ -39,12 +39,6 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
         >
           + New Beneficiary
         </button>
-        <button
-          aria-label="Import CSV"
-          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
-        >
-          Import CSV
-        </button>
       </div>
       <div
         class="flex items-center gap-2 flex-wrap"
@@ -82,6 +76,11 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
             value=""
           />
         </div>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
+        >
+          Search
+        </button>
         <div
           class="flex flex-col gap-0.5"
         >
@@ -206,9 +205,14 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
         </div>
       </div>
     </div>
+    <div
+      class="text-sm text-muted-foreground flex items-center gap-1"
+    >
+      Showing 2 results
+    </div>
     <div>
       <div
-        class="rounded-md border overflow-x-auto"
+        class="rounded-md border bg-card shadow-sm overflow-x-auto"
       >
         <div
           class="relative w-full overflow-auto"
@@ -217,7 +221,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
             class="w-full caption-bottom text-sm"
           >
             <thead
-              class="[&_tr]:border-b"
+              class="[&_tr]:border-b bg-muted/40"
             >
               <tr
                 class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
@@ -264,12 +268,162 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
             >
               <tr
                 class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                data-state="false"
               >
                 <td
-                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0 h-24 text-center text-muted-foreground"
-                  colspan="7"
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
-                  No results.
+                  Juan Dela Cruz
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground"
+                  >
+                    0
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                />
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <span>
+                    1
+                     members
+                  </span>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs"
+                  >
+                    Senior
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+                  >
+                    active
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <button
+                    aria-label="View Beneficiary"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm h-9 rounded-md px-3"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-eye mr-1"
+                      fill="none"
+                      height="14"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="14"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                      />
+                    </svg>
+                     View
+                  </button>
+                </td>
+              </tr>
+              <tr
+                class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                data-state="false"
+              >
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  Maria Santos
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground"
+                  >
+                    0
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                />
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <span>
+                    1
+                     members
+                  </span>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs"
+                  >
+                    PWD
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+                  >
+                    active
+                  </div>
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <button
+                    aria-label="View Beneficiary"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm h-9 rounded-md px-3"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-eye mr-1"
+                      fill="none"
+                      height="14"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="14"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                      />
+                    </svg>
+                     View
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -285,9 +439,9 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
           Page 
           1
            of 
-          0
+          1
            (
-          0
+          2
            total)
         </p>
         <div
@@ -328,6 +482,16 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
                   <span>
                     Previous
                   </span>
+                </a>
+              </li>
+              <li
+                class=""
+              >
+                <a
+                  aria-current="page"
+                  class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-10 w-10 cursor-pointer"
+                >
+                  1
                 </a>
               </li>
               <li

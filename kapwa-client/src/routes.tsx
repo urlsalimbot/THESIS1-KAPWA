@@ -5,6 +5,7 @@ import { SWRConfig } from 'swr';
 import { api } from './lib/api';
 import { ApiError } from './lib/api-error';
 import { AuthProvider, useAuth } from './lib/auth-context';
+import { ROLE_REDIRECT_MAP } from './lib/role-access';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { IntakePage } from './pages/IntakePage';
@@ -27,7 +28,6 @@ import { CoordinatorReferralFormPage } from './pages/CoordinatorReferralFormPage
 import { CoordinatorReferralListPage } from './pages/CoordinatorReferralListPage';
 import { ReferralReviewPage } from './pages/ReferralReviewPage';
 import { ReferralsPage } from './pages/ReferralsPage';
-import { InterAgencyReferralsPage } from './pages/InterAgencyReferralsPage';
 import { AgencyDashboardPage } from './pages/AgencyDashboardPage';
 import { AgencyReferralsPage } from './pages/AgencyReferralsPage';
 import { AgencyCardActivitiesPage } from './pages/AgencyCardActivitiesPage';
@@ -69,7 +69,7 @@ function Private({ children, roles }: { children: React.ReactNode; roles?: strin
 function LandingPageRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+  return user ? <Navigate to={ROLE_REDIRECT_MAP[user.role] ?? '/dashboard'} replace /> : <LandingPage />;
 }
 
 const router = createBrowserRouter([
@@ -89,7 +89,7 @@ const router = createBrowserRouter([
   { path: 'forgot-password', element: <ForgotPasswordPage /> },
   { path: 'reset-password', element: <ResetPasswordPage /> },
   // === PROTECTED ROUTES ===
-  { path: 'dashboard', element: <Private><DashboardPage /></Private> },
+  { path: 'dashboard', element: <Private roles={['admin','social_worker','mayor','auditor']}><DashboardPage /></Private> },
   { path: '/intake', element: <Private roles={['admin','social_worker']}><IntakePage /></Private> },
   { path: '/intake/review', element: <Private roles={['admin','social_worker']}><IntakeReviewPage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker','coordinator']}><CasesPage /></Private> },
@@ -117,12 +117,11 @@ const router = createBrowserRouter([
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },
-  { path: '/intake/inter-agency-referrals', element: <Private roles={['admin','social_worker']}><InterAgencyReferralsPage /></Private> },
   { path: '/agency', element: <Navigate to="/agency/dashboard" replace /> },
-  { path: '/agency/dashboard', element: <Private roles={['agency_staff','admin']}><AgencyDashboardPage /></Private> },
-  { path: '/agency/referrals', element: <Private roles={['agency_staff','admin']}><AgencyReferralsPage /></Private> },
-  { path: '/agency/card-activities', element: <Private roles={['agency_staff','admin']}><AgencyCardActivitiesPage /></Private> },
-  { path: '/agency/profile', element: <Private roles={['agency_staff','admin']}><AgencyProfilePage /></Private> },
+  { path: '/agency/dashboard', element: <Private roles={['agency_staff']}><AgencyDashboardPage /></Private> },
+  { path: '/agency/referrals', element: <Private roles={['agency_staff']}><AgencyReferralsPage /></Private> },
+  { path: '/agency/card-activities', element: <Private roles={['agency_staff']}><AgencyCardActivitiesPage /></Private> },
+  { path: '/agency/profile', element: <Private roles={['agency_staff']}><AgencyProfilePage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },

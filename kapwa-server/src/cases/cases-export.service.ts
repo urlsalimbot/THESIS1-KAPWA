@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Case } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
@@ -319,5 +319,84 @@ export class CasesExportService {
         resolve(pdf);
       });
     });
+  }
+
+  /**
+   * Bulk CSV export of selected cases. PII (phone, PhilSys, DOB, address)
+   * is masked by default; unmasked exports require a justification which is
+   * written to each case's history trail (hash-chained audit).
+   */
+  async buildBulkCsv(
+    ids: string[],
+    masked: boolean,
+    unmaskReason: string | undefined,
+    callerId: string,
+    callerRole: string,
+  ): Promise<Buffer> {
+    const cases = await this.caseRepo.find({
+      where: { id: In(ids) },
+      relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household'],
+    });
+    if (cases.length === 0) throw new NotFoundException('No cases found for the selected ids');
+
+    if (!masked) {
+      const reason = unmaskReason?.trim();
+      if (!reason) {
+        throw new BadRequestException('A justification is required for an unmasked export');
+      }
+      await this.historyRepo.save(
+        cases.map(c =>
+          this.historyRepo.create({
+            caseId: c.id,
+            fromStatus: c.status,
+            toStatus: c.status,
+            transitionType: 'bulk_export_unmasked',
+            changedByRole: callerRole,
+            changedById: callerId,
+            remarks: `Unmasked bulk export — ${reason}`,
+          }),
+        ),
+      );
+    }
+
+    const esc = (v: unknown): string => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const MASK = { phone: '***-***-****', philsys: '****-***-****', dob: '**/**/****', address: '*******' };
+    const mask = (field: keyof typeof MASK, v: unknown): string =>
+      masked ? MASK[field] : String(v ?? '');
+
+    const headers = [
+      'Control No', 'Surname', 'First Name', 'Middle Name', 'Gender', 'Age', 'Barangay',
+      'Category', 'Status', 'Amount Assistance',
+      'Phone', 'PhilSys No', 'DOB', 'Address', 'Updated At',
+    ];
+    const statusLabels: Record<string, string> = {
+      enrolled: 'Enrolled', assessed: 'Assessed', in_review: 'In Review',
+      active: 'Active', transitioning: 'Transitioning', closed: 'Closed',
+    };
+
+    const lines: string[] = [headers.map(h => `"${h}"`).join(',')];
+    for (const c of cases) {
+      const p = c.beneficiary?.person;
+      const h = c.beneficiary?.household;
+      const age = p?.dob
+        ? Math.max(0, Math.floor((Date.now() - new Date(p.dob).getTime()) / (365.25 * 24 * 3600 * 1000)))
+        : '';
+      const values = [
+        c.controlNo,
+        p?.surname, p?.firstName, p?.middleName, p?.gender, age,
+        (h as { barangay?: string } | null)?.barangay,
+        c.clientCategory || ((c.serviceRequested as string[]) || []).join(', '),
+        statusLabels[c.status] || c.status,
+        c.amountAssistance != null ? `₱${Number(c.amountAssistance).toLocaleString()}` : '',
+        mask('phone', p?.phone),
+        mask('philsys', p?.philsysNumber),
+        mask('dob', p?.dob),
+        mask('address', p?.currentAddress ? JSON.stringify(p.currentAddress) : p?.address),
+        c.updatedAt ? new Date(c.updatedAt).toISOString() : '',
+      ];
+      lines.push(values.map(esc).join(','));
+    }
+
+    return Buffer.from('\uFEFF' + lines.join('\n'), 'utf8');
   }
 }

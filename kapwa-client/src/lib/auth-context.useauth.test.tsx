@@ -132,7 +132,7 @@ describe('cancelMfa', () => {
 
     await act(async () => { await captured!.login('a@b.com', 'pass'); });
     await waitFor(() => {
-      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1' });
+      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-1', type: 'totp' });
     });
     expect(fetchMock.mock.calls.length).toBe(1);
 

@@ -2,10 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ChatService } from './chat.service';
 import { ChatMessage } from './chat.entity';
+import { User } from '../auth/user.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { Case } from '../cases/case.entity';
 
 describe('ChatService', () => {
   let service: ChatService;
   let repoMock: any;
+  let userRepoMock: any;
+  let beneficiaryRepoMock: any;
+  let caseRepoMock: any;
 
   beforeEach(async () => {
     repoMock = {
@@ -16,11 +22,17 @@ describe('ChatService', () => {
       update: jest.fn().mockResolvedValue({ affected: 1 }),
       count: jest.fn().mockResolvedValue(0),
     };
+    userRepoMock = { findOne: jest.fn().mockResolvedValue(null), find: jest.fn().mockResolvedValue([]) };
+    beneficiaryRepoMock = { findOne: jest.fn().mockResolvedValue(null), find: jest.fn().mockResolvedValue([]) };
+    caseRepoMock = { findOne: jest.fn().mockResolvedValue(null), find: jest.fn().mockResolvedValue([]) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ChatService,
         { provide: getRepositoryToken(ChatMessage), useValue: repoMock },
+        { provide: getRepositoryToken(User), useValue: userRepoMock },
+        { provide: getRepositoryToken(Beneficiary), useValue: beneficiaryRepoMock },
+        { provide: getRepositoryToken(Case), useValue: caseRepoMock },
       ],
     }).compile();
 

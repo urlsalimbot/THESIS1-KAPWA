@@ -40,7 +40,7 @@ describe('ErrorBoundary', () => {
     );
     expect(screen.getByText('Something went wrong')).toBeTruthy();
     expect(screen.getByText('Try Again')).toBeTruthy();
-    expect(screen.getByText('Go to Dashboard')).toBeTruthy();
+    expect(screen.getByText('Dashboard')).toBeTruthy();
   });
 
   it('Try Again button resets error state', () => {
@@ -69,7 +69,7 @@ describe('ErrorBoundary', () => {
       </MemoryRouter>
     );
 
-    const link = screen.getByText('Go to Dashboard');
+    const link = screen.getByText('Dashboard');
     expect(link.closest('a')?.getAttribute('href')).toBe('/dashboard');
   });
 });
@@ -98,8 +98,8 @@ describe('ErrorBoundary — offline branch', () => {
         </ErrorBoundary>
       </MemoryRouter>
     );
-    expect(screen.getByText('You appear to be offline')).toBeTruthy();
-    expect(screen.getByText('Please check your connection and try again')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy();
+    expect(screen.getByText("You're Offline")).toBeTruthy();
+    expect(screen.getByText(/Your device lost connection/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy();
   });
 });

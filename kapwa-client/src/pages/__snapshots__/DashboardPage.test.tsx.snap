@@ -497,13 +497,13 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                 2
               </div>
               <div
-                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted ring-1 ring-primary text-muted-foreground"
                 title="August 2026 3: 0 activities"
               >
                 3
               </div>
               <div
-                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted ring-1 ring-primary text-muted-foreground"
+                class="rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors bg-muted  text-muted-foreground"
                 title="August 2026 4: 0 activities"
               >
                 4

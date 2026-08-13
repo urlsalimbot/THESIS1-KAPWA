@@ -33,7 +33,7 @@ function renderWithSWR(ui: React.ReactNode) {
 describe('BeneficiariesPage', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();
-    mockApiGet.mockResolvedValue(mockBeneficiaries);
+    mockApiGet.mockResolvedValue({ data: mockBeneficiaries, total: 2 });
     // Clear SWR cache so the list refetch fires per test
     await mutate(() => true, undefined, { revalidate: false });
   });
@@ -66,27 +66,24 @@ describe('BeneficiariesPage', () => {
     expect(mockApiGet).toHaveBeenCalled();
     const lastCallArg = mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][0];
     expect(JSON.stringify(lastCallArg)).toContain('beneficiaries');
-    expect(JSON.stringify(lastCallArg)).toContain('list');
   });
 
-  it('typing in the search input triggers a second api.get with a search param after the 300ms debounce', async () => {
+  it('typing in the search input then clicking Search triggers a second api.get with a search param', async () => {
     renderWithSWR(<BeneficiariesPage />);
     // Wait for the initial mount fetch to complete
     await screen.findByText('Juan Dela Cruz');
     const initialCallCount = mockApiGet.mock.calls.length;
     expect(initialCallCount).toBeGreaterThan(0);
 
-    // Type in the search input — this schedules the 300ms debounce
+    // Type in the search input and submit via the Search button
     const input = screen.getByPlaceholderText('Search by name...');
     fireEvent.change(input, { target: { value: 'Maria' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
-    // Wait > 300ms for the debounced key to update and the SWR fetch to fire.
-    // The fetcher is a synchronous mockApiGet (resolves immediately), so the
-    // data swap happens as soon as SWR sees the new key.
-    await new Promise((r) => setTimeout(r, 400));
-    // After the debounce + key update, api.get should have been called again
-    // (with a key containing 'Maria' from the search param).
-    expect(mockApiGet.mock.calls.length).toBeGreaterThan(initialCallCount);
+    // Wait for the URL param update + SWR fetch with the search key
+    await vi.waitFor(() => {
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(initialCallCount);
+    });
     const lastCallArg = mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][0];
     const argJson = JSON.stringify(lastCallArg);
     expect(argJson).toContain('Maria');

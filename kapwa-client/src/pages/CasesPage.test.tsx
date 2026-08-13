@@ -5,7 +5,7 @@ import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
 import { CasesPage } from './CasesPage';
 
-const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiDel, mockQueueFsm, mockIsOnline } = vi.hoisted(() => ({
+const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiPatch, mockApiDel, mockQueueFsm, mockIsOnline } = vi.hoisted(() => ({
   mockCases: [
     {
       id: 'C-001',
@@ -27,6 +27,7 @@ const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiDel, mockQueueFsm
   mockApiGet: vi.fn(),
   mockApiPost: vi.fn(),
   mockApiPut: vi.fn(),
+  mockApiPatch: vi.fn(),
   mockApiDel: vi.fn(),
   mockQueueFsm: vi.fn(),
   mockIsOnline: vi.fn(() => true),
@@ -37,6 +38,7 @@ vi.mock('../lib/api', () => ({
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
     put: (...args: unknown[]) => mockApiPut(...args),
+    patch: (...args: unknown[]) => mockApiPatch(...args),
     del: (...args: unknown[]) => mockApiDel(...args),
   },
 }));
@@ -66,12 +68,14 @@ describe('CasesPage', () => {
     mockApiGet.mockReset();
     mockApiPost.mockReset();
     mockApiPut.mockReset();
+    mockApiPatch.mockReset();
     mockApiDel.mockReset();
     mockQueueFsm.mockReset();
     mockIsOnline.mockReset();
     mockIsOnline.mockReturnValue(true);
-    mockApiGet.mockResolvedValue(mockCases);
+    mockApiGet.mockResolvedValue({ data: mockCases, total: 1 });
     mockApiPut.mockResolvedValue({ ok: true });
+    mockApiPatch.mockResolvedValue({ ok: true });
     mockApiPost.mockResolvedValue({ ok: true });
     mockApiDel.mockResolvedValue({ ok: true });
     // Clear the global SWR cache so each test gets a fresh useSWR fetch.
@@ -93,11 +97,6 @@ describe('CasesPage', () => {
     expect(await screen.findByPlaceholderText('Search records...')).toBeTruthy();
   });
 
-  it('renders export CSV button', async () => {
-    renderWithSWR(<CasesPage />);
-    expect(await screen.findByRole('button', { name: /export csv/i })).toBeTruthy();
-  });
-
   it('snapshot: CasesPage rendered DOM with table layout + status badges + filter controls', async () => {
     const { container } = renderWithSWR(<CasesPage />);
     expect(await screen.findByRole('heading', { name: 'Case Tracker' })).toBeTruthy();
@@ -113,11 +112,9 @@ describe('CasesPage', () => {
     expect(JSON.stringify(lastCallArg)).toContain('cases');
   });
 
-  it('a successful requestReview trigger calls api.put with /request-review', async () => {
-    // Set role to social_worker + status to pending_assessment so the Request Review button shows
-    mockApiGet.mockResolvedValue([
-      { ...mockCases[0], status: 'enrolled' },
-    ]);
+  it('a successful requestReview trigger calls api.patch with /request-review', async () => {
+    // Set role to social_worker + status to enrolled so the Request Review button shows
+    mockApiGet.mockResolvedValue({ data: [{ ...mockCases[0], status: 'enrolled' }], total: 1 });
 
     renderWithSWR(<CasesPage />);
     // Wait for the button to appear
@@ -126,11 +123,11 @@ describe('CasesPage', () => {
 
     // Wait for the mutation to fire
     await vi.waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalled();
+      expect(mockApiPatch).toHaveBeenCalled();
     });
-    // The first call to api.put should be to /request-review
-    const putCall = mockApiPut.mock.calls[0];
-    expect(String(putCall[0])).toContain('/request-review');
+    // The first call to api.patch should be to /request-review
+    const patchCall = mockApiPatch.mock.calls[0];
+    expect(String(patchCall[0])).toContain('/request-review');
   });
 
   it('has no a11y violations', async () => {

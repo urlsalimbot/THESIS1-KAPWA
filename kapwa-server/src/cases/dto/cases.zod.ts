@@ -129,3 +129,10 @@ export type TransitionPlanInput = z.infer<typeof TransitionPlanSchema>;
 export type RequirementsInput = z.infer<typeof RequirementsSchema>;
 export type AssessmentV2Input = z.infer<typeof AssessmentV2Schema>;
 export type ClosureInput = z.infer<typeof ClosureSchema>;
+
+export const BulkExportSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, 'Select at least one case').max(500, 'Too many cases selected'),
+  masked: z.boolean().default(true),
+  unmaskReason: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().trim().optional()),
+});
+export type BulkExportInput = z.infer<typeof BulkExportSchema>;

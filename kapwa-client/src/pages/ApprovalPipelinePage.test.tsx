@@ -61,7 +61,7 @@ describe('ApprovalPipelinePage', () => {
     mockApiPut.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
-      if (k.includes('cases') && k.includes('list')) return Promise.resolve(mockCases);
+      if (k.includes('cases')) return Promise.resolve({ data: mockCases, total: 2 });
       return Promise.resolve(null);
     });
     await mutate(() => true, undefined, { revalidate: false });
@@ -82,7 +82,9 @@ describe('ApprovalPipelinePage', () => {
     renderWithSWR(<ApprovalPipelinePage />);
     const inReviewElements = await screen.findAllByText('In Review');
     expect(inReviewElements.length).toBeGreaterThan(0);
-    expect(await screen.findByText('Disbursed')).toBeTruthy();
+    const activeElements = await screen.findAllByText('Active');
+    expect(activeElements.length).toBeGreaterThan(0);
+    expect(await screen.findByText('Transitioning')).toBeTruthy();
   });
 
   it('has no a11y violations', async () => {

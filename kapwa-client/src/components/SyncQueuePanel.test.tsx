@@ -34,7 +34,7 @@ describe('SyncQueuePanel', () => {
       },
     ]);
     render(<SyncQueuePanel open={true} onClose={() => {}} />);
-    expect(screen.getByText(/cases #C-001/)).toBeTruthy();
+    expect(screen.getByText(/Case C-001/)).toBeTruthy();
   });
 
   it('renders failed items with Retry Sync button', () => {
@@ -103,6 +103,6 @@ describe('SyncQueuePanel', () => {
       },
     ]);
     render(<SyncQueuePanel open={true} onClose={() => {}} />);
-    expect(screen.getByText(/cases #C-003/)).toBeTruthy();
+    expect(screen.getByText(/Case C-003/)).toBeTruthy();
   });
 });
