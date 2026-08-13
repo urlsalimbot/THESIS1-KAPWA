@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/lib/theme-context';
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/i18n/useLanguage';
 import useSWR from 'swr';
 import { queryKeys } from '@/lib/query-keys';
 import { createBreadcrumbs } from '@/lib/breadcrumbs';
@@ -24,7 +25,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Sun, Moon, Menu, Plus, Check, CheckSquare, LogOut, Settings, User, HandHeart, WifiOff, Monitor } from 'lucide-react';
+import { Sun, Moon, Menu, Plus, Check, CheckSquare, LogOut, Settings, User, HandHeart, WifiOff, Monitor, Languages } from 'lucide-react';
 import { useConnectivity } from '@/hooks/useConnectivity';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -66,6 +67,7 @@ function BreadcrumbNav({ pathname }: { pathname: string }) {
 export function Topbar({ onMenuToggle }: TopbarProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [mounted, setMounted] = useState(false);
@@ -239,6 +241,17 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
                     <Monitor size={16} className="mr-2" />
                     System
                     {theme === 'system' && <Check size={14} className="ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuLabel className="font-semibold">Language</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setLang('en')}>
+                    <Languages size={16} className="mr-2" />
+                    English
+                    {lang === 'en' && <Check size={14} className="ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLang('fil')}>
+                    <Languages size={16} className="mr-2" />
+                    Filipino
+                    {lang === 'fil' && <Check size={14} className="ml-auto text-primary" />}
                   </DropdownMenuItem>
                 </>
               )}

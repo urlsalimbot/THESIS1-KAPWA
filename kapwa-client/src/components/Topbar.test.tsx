@@ -46,6 +46,11 @@ function renderWithRouter(ui: React.ReactElement) {
 }
 
 describe('Topbar', () => {
+  afterEach(() => {
+    localStorage.removeItem('kapwa-lang');
+    document.documentElement.lang = 'en';
+  });
+
   it('renders without crashing', () => {
     const { container } = renderWithRouter(<Topbar />);
     expect(container.querySelector('header')).toBeTruthy();
@@ -87,6 +92,22 @@ describe('Topbar', () => {
     const { container } = renderWithRouter(<Topbar />);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  it('renders Language menu items and switches locale', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<Topbar />);
+    await user.click(screen.getByRole('button', { name: 'Open user menu' }));
+    expect(screen.getByText('Language')).toBeTruthy();
+    expect(screen.getByText('English')).toBeTruthy();
+    expect(screen.getByText('Filipino')).toBeTruthy();
+    await user.click(screen.getByText('Filipino'));
+    expect(document.documentElement.lang).toBe('fil-PH');
+    expect(localStorage.getItem('kapwa-lang')).toBe('fil');
+    // switch back for isolation
+    await user.click(screen.getByRole('button', { name: 'Open user menu' }));
+    await user.click(screen.getByText('English'));
+    expect(document.documentElement.lang).toBe('en');
   });
 });
 
