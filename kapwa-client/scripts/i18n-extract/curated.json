@@ -27,6 +27,12 @@
     "community_service": "Community Service",
     "seminar": "Seminar"
   },
+  "caseView": {
+    "implement": {
+      "interventionUnit_one": "intervention",
+      "interventionUnit_other": "interventions"
+    }
+  },
   "interventionType": {
     "FA": "Financial Assistance",
     "C": "Counseling",
