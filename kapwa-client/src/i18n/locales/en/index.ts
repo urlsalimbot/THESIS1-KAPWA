@@ -966,7 +966,6 @@ const en = {
     "manageConsent": "Manage Consent",
     "myAccessCard": "My Access Card",
     "myDashboard": "My Dashboard",
-    "noActiveCase": "No active case",
     "noServices": "No services recorded yet.",
     "serviceHistory": "Service History",
     "viaChannel": "Via {{channel}}",
