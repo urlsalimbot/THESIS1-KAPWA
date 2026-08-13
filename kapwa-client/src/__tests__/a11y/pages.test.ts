@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, it, test, expect } from 'vitest';
 
 /*
  * Playwright-based page-level axe-core audits.
@@ -36,6 +36,10 @@ const pages = [
 const runTest = chromium ? test : test.skip;
 
 describe('Page-level axe-core audits', () => {
+  it('document.documentElement has a valid lang attribute', () => {
+    expect(['en', 'fil-PH']).toContain(document.documentElement.lang);
+  });
+
   pages.forEach(({ name, path }) => {
     runTest(`${name} page has no a11y violations`, async () => {
       const browser = await chromium.launch({ headless: true });
