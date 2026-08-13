@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import useSWR, { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDateTime } from '../lib/format';
+import { statusLabel, categoryLabel } from '@/i18n/display';
 import { Search, Download, AlertTriangle, Eye } from 'lucide-react';
 import { useCaseActions } from '../hooks/useCaseActions';
 import { PageShell } from '@/components/PageShell';
@@ -52,6 +54,7 @@ const STATUS_LABELS: Record<string, string> = {
   transitioning: 'Transitioning',
   closed: 'Closed',
 };
+const STATUS_KEYS = Object.keys(STATUS_LABELS);
 
 function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
   const ben = (c.beneficiary as Record<string, unknown>) || {};
@@ -94,24 +97,25 @@ function ActionsCell({ c, actionLoading, onAction }: {
   c: CaseRow; actionLoading: string | null; onAction: (action: string, id: string) => void;
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const role = user?.role || '';
   const buttons: { action: string; label: string }[] = [];
 
   if (c.status === 'enrolled' && role === 'social_worker') {
-    buttons.push({ action: 'request-review', label: 'Request Review' });
+    buttons.push({ action: 'request-review', label: t('cases.requestReview', 'Request Review') });
   }
   if (c.status === 'active' && role === 'admin') {
-    buttons.push({ action: 'transition', label: 'Transition' });
+    buttons.push({ action: 'transition', label: t('cases.transition', 'Transition') });
   }
   if (c.status === 'transitioning' && (role === 'admin' || role === 'social_worker')) {
-    buttons.push({ action: 'close', label: 'Close' });
+    buttons.push({ action: 'close', label: t('cases.close', 'Close') });
   }
 
   return (
     <div className="flex gap-1">
       <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${c.id}`)}>
-        <Eye size={14} className="mr-1" /> View
+        <Eye size={14} className="mr-1" /> {t('cases.view', 'View')}
       </Button>
       {buttons.map(b => (
         <Button key={b.action} variant="outline" size="sm"
@@ -136,6 +140,7 @@ function ActionsCell({ c, actionLoading, onAction }: {
 // }
 
 export function CasesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { actionLoading, handleAction } = useCaseActions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -220,16 +225,16 @@ export function CasesPage() {
   }, [updateURL]);
 
   const columns = useMemo<ColumnDef<CaseRow>[]>(() => [
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
-    { accessorKey: 'surname', header: 'Surname' },
-    { accessorKey: 'first', header: 'First' },
-    { accessorKey: 'middle', header: 'Middle' },
-    { accessorKey: 'gender', header: 'Gender' },
-    { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
-    { accessorKey: 'barangay', header: 'Barangay' },
-    { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-    { id: 'actions', header: 'Actions', cell: ({ row }) => <ActionsCell c={row.original} actionLoading={actionLoading} onAction={handleAction} /> },
-  ], [actionLoading, handleAction]);
+    { accessorKey: 'date', header: t('cases.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
+    { accessorKey: 'surname', header: t('cases.surname', 'Surname') },
+    { accessorKey: 'first', header: t('cases.firstName', 'First') },
+    { accessorKey: 'middle', header: t('cases.middleName', 'Middle') },
+    { accessorKey: 'gender', header: t('cases.gender', 'Gender') },
+    { accessorKey: 'category', header: t('cases.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{row.original.category.split(', ').map(c => categoryLabel(t, c)).join(', ')}</Badge> },
+    { accessorKey: 'barangay', header: t('cases.barangay', 'Barangay') },
+    { accessorKey: 'remarks', header: t('cases.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
+    { id: 'actions', header: t('cases.actions', 'Actions'), cell: ({ row }) => <ActionsCell c={row.original} actionLoading={actionLoading} onAction={handleAction} /> },
+  ], [actionLoading, handleAction, t]);
 
   const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
 
@@ -243,7 +248,7 @@ export function CasesPage() {
 
   if (isLoading) {
     return (
-      <PageShell title="Case Tracker" description="Real-time view of processed interventions and logs.">
+      <PageShell title={t('cases.title', 'Case Tracker')} description={t('cases.description', 'Real-time view of processed interventions and logs.')}>
         <TableSkeleton rows={8} />
       </PageShell>
     );
@@ -251,47 +256,47 @@ export function CasesPage() {
 
   if (error && !caseResponse) {
     return (
-      <PageShell title="Case Tracker" description="Real-time view of processed interventions and logs.">
-        <ErrorState title="Could not load cases" message="Check your internet connection and try again." onRetry={() => mutate()} />
+      <PageShell title={t('cases.title', 'Case Tracker')} description={t('cases.description', 'Real-time view of processed interventions and logs.')}>
+        <ErrorState title={t('cases.loadFailed', 'Could not load cases')} message={t('cases.loadFailedMessage', 'Check your internet connection and try again.')} onRetry={() => mutate()} />
       </PageShell>
     );
   }
 
   return (
-    <PageShell title="Case Tracker" description="Real-time view of processed interventions and logs." cachedAt={lastSync ?? undefined}>
+    <PageShell title={t('cases.title', 'Case Tracker')} description={t('cases.description', 'Real-time view of processed interventions and logs.')} cachedAt={lastSync ?? undefined}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <FilterSelect label="Barangay" value={urlBarangay} onChange={(v) => updateURL({ barangay: v || undefined, page: '1' })}
-            options={[{ value: '', label: 'All Barangays' }, ...uniqueBarangays.map(b => ({ value: b, label: b }))]} className="w-40" />
-          <FilterSelect label="Category" value={urlCategory} onChange={(v) => updateURL({ category: v || undefined, page: '1' })}
-            options={[{ value: '', label: 'All Categories' }, ...uniqueCategories.map(c => ({ value: c, label: c }))]} className="w-44" />
-          <FilterSelect label="Status" value={urlStatus} onChange={(v) => updateURL({ status: v || undefined, page: '1' })}
-            options={[{ value: '', label: 'All Statuses' }, ...Object.entries(STATUS_LABELS).map(([k, v]) => ({ value: k, label: v }))]} className="w-36" />
-          <FilterSelect label="Gender" value={urlGender} onChange={(v) => updateURL({ gender: v || undefined, page: '1' })}
-            options={[{ value: '', label: 'All Genders' }, ...uniqueGenders.map(g => ({ value: g, label: g }))]} className="w-32" />
-          <FilterSelect label="Age Range" value={urlAgeRange} onChange={(v) => updateURL({ ageRange: v || undefined, page: '1' })}
-            options={[{ value: '', label: 'All Ages' }, ...uniqueAgeRanges.map(a => ({ value: a, label: a }))]} className="w-32" />
+          <FilterSelect label={t('cases.barangay', 'Barangay')} value={urlBarangay} onChange={(v) => updateURL({ barangay: v || undefined, page: '1' })}
+            options={[{ value: '', label: t('cases.allBarangays', 'All Barangays') }, ...uniqueBarangays.map(b => ({ value: b, label: b }))]} className="w-40" />
+          <FilterSelect label={t('cases.category', 'Category')} value={urlCategory} onChange={(v) => updateURL({ category: v || undefined, page: '1' })}
+            options={[{ value: '', label: t('cases.allCategories', 'All Categories') }, ...uniqueCategories.map(c => ({ value: c, label: c }))]} className="w-44" />
+          <FilterSelect label={t('cases.status', 'Status')} value={urlStatus} onChange={(v) => updateURL({ status: v || undefined, page: '1' })}
+            options={[{ value: '', label: t('cases.allStatuses', 'All Statuses') }, ...STATUS_KEYS.map(k => ({ value: k, label: statusLabel(t, k) }))]} className="w-36" />
+          <FilterSelect label={t('cases.gender', 'Gender')} value={urlGender} onChange={(v) => updateURL({ gender: v || undefined, page: '1' })}
+            options={[{ value: '', label: t('cases.allGenders', 'All Genders') }, ...uniqueGenders.map(g => ({ value: g, label: g }))]} className="w-32" />
+          <FilterSelect label={t('cases.ageRange', 'Age Range')} value={urlAgeRange} onChange={(v) => updateURL({ ageRange: v || undefined, page: '1' })}
+            options={[{ value: '', label: t('cases.allAges', 'All Ages') }, ...uniqueAgeRanges.map(a => ({ value: a, label: a }))]} className="w-32" />
           <FilterSelect label="SLA" value={urlSla} onChange={(v) => updateURL({ sla: v || undefined, page: '1' })}
-            options={[{ value: '', label: 'All SLA' }, { value: 'overdue', label: 'Overdue' }, { value: 'on_track', label: 'On Track' }]} className="w-32" />
+            options={[{ value: '', label: t('cases.allSla', 'All SLA') }, { value: 'overdue', label: t('cases.overdue', 'Overdue') }, { value: 'on_track', label: t('cases.onTrack', 'On Track') }]} className="w-32" />
           <div className="flex flex-col gap-0.5">
-            <label className="text-xs text-muted-foreground font-medium">Date From</label>
-            <Input type="date" aria-label="Date from" className="w-36" value={urlDateFrom} onChange={e => updateURL({ dateFrom: e.target.value || undefined, page: '1' })} />
+            <label className="text-xs text-muted-foreground font-medium">{t('cases.dateFrom', 'Date From')}</label>
+            <Input type="date" aria-label={t('cases.dateFrom', 'Date from')} className="w-36" value={urlDateFrom} onChange={e => updateURL({ dateFrom: e.target.value || undefined, page: '1' })} />
           </div>
           <div className="flex flex-col gap-0.5">
-            <label className="text-xs text-muted-foreground font-medium">Date To</label>
-            <Input type="date" aria-label="Date to" className="w-36" value={urlDateTo} onChange={e => updateURL({ dateTo: e.target.value || undefined, page: '1' })} />
+            <label className="text-xs text-muted-foreground font-medium">{t('cases.dateTo', 'Date To')}</label>
+            <Input type="date" aria-label={t('cases.dateTo', 'Date to')} className="w-36" value={urlDateTo} onChange={e => updateURL({ dateTo: e.target.value || undefined, page: '1' })} />
           </div>
           {hasAnyFilter && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} aria-label="Clear filters">Clear</Button>
+            <Button variant="ghost" size="sm" onClick={clearFilters} aria-label={t('cases.clearFilters', 'Clear filters')}>{t('cases.clear', 'Clear')}</Button>
           )}
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input type="text" aria-label="Search cases" placeholder="Search records..." className="w-48 pl-8"
+            <Input type="text" aria-label={t('cases.searchCases', 'Search cases')} placeholder={t('cases.searchPlaceholder', 'Search records...')} className="w-48 pl-8"
               value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }} />
           </div>
-          <Button size="sm" onClick={handleSearch}>Search</Button>
+          <Button size="sm" onClick={handleSearch}>{t('cases.search', 'Search')}</Button>
         </div>
       </div>
 

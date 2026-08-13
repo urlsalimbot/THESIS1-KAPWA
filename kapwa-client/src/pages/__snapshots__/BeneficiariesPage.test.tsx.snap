@@ -291,8 +291,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
                   <span>
-                    1
-                     members
+                    1 members
                   </span>
                 </td>
                 <td
@@ -342,7 +341,8 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
                         r="3"
                       />
                     </svg>
-                     View
+                     
+                    View
                   </button>
                 </td>
               </tr>
@@ -371,8 +371,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
                   <span>
-                    1
-                     members
+                    1 members
                   </span>
                 </td>
                 <td
@@ -422,7 +421,8 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
                         r="3"
                       />
                     </svg>
-                     View
+                     
+                    View
                   </button>
                 </td>
               </tr>

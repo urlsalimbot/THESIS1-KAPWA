@@ -124,12 +124,15 @@ if (typeof crypto === 'undefined' || !crypto.randomUUID) {
   });
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   // Navigator stub
   vi.stubGlobal('navigator', {
     onLine: true,
     geolocation: { getCurrentPosition: vi.fn() },
   });
+  // Initialize the app i18n singleton (en) so t()/statusLabel resolve real strings.
+  const { default: i18n } = await import('@/i18n');
+  await i18n.changeLanguage('en');
 });
 
 afterEach(() => {

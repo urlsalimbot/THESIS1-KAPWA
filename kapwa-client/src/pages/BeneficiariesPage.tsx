@@ -1,6 +1,9 @@
 import { BARANGAYS, CLIENT_CATEGORIES } from '../lib/constants';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { categoryLabel } from '@/i18n/display';
 import { Eye, Search, Loader2 } from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
@@ -14,8 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
-const CATEGORIES = ['All Categories', ...CLIENT_CATEGORIES];
-
 interface Beneficiary { id: string; name: string; age: number; barangay: string; householdSize: number; category: string; status: string; }
 
 const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -26,9 +27,10 @@ const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | '
 
 function BeneficiaryActions({ id }: { id: string }) {
   const nav = useNavigate();
+  const { t } = useTranslation();
   return (
-    <Button variant="secondary" size="sm" onClick={() => nav(`/beneficiaries/${id}`)} aria-label="View Beneficiary">
-      <Eye size={14} className="mr-1" /> View
+    <Button variant="secondary" size="sm" onClick={() => nav(`/beneficiaries/${id}`)} aria-label={t('beneficiaries.viewBeneficiary', 'View Beneficiary')}>
+      <Eye size={14} className="mr-1" /> {t('beneficiaries.view', 'View')}
     </Button>
   );
 }
@@ -45,24 +47,24 @@ function mapBeneficiary(b: Record<string, unknown>): Beneficiary {
   };
 }
 
-const beneficiaryColumns: ColumnDef<Beneficiary>[] = [
-  { accessorKey: 'name', header: 'Name' },
-  { accessorKey: 'age', header: 'Age', cell: ({ row }) => <Badge variant="outline">{row.original.age}</Badge> },
-  { accessorKey: 'barangay', header: 'Barangay' },
-  { accessorKey: 'householdSize', header: 'Household', cell: ({ row }) => <span>{row.original.householdSize} members</span> },
+const makeBeneficiaryColumns = (t: TFunction): ColumnDef<Beneficiary>[] => [
+  { accessorKey: 'name', header: t('beneficiaries.name', 'Name') },
+  { accessorKey: 'age', header: t('beneficiaries.age', 'Age'), cell: ({ row }) => <Badge variant="outline">{row.original.age}</Badge> },
+  { accessorKey: 'barangay', header: t('beneficiaries.barangay', 'Barangay') },
+  { accessorKey: 'householdSize', header: t('beneficiaries.household', 'Household'), cell: ({ row }) => <span>{t('beneficiaries.membersCount', '{{count}} members', { count: row.original.householdSize })}</span> },
   {
     accessorKey: 'category',
-    header: 'Client Category',
-    cell: ({ row }) => <Badge variant="secondary" className="text-xs">{row.original.category || '—'}</Badge>,
+    header: t('beneficiaries.clientCategory', 'Client Category'),
+    cell: ({ row }) => <Badge variant="secondary" className="text-xs">{row.original.category ? categoryLabel(t, row.original.category) : '—'}</Badge>,
   },
   {
     accessorKey: 'status',
-    header: 'Status',
+    header: t('beneficiaries.status', 'Status'),
     cell: ({ row }) => <Badge variant={statusBadgeVariant[row.original.status] || 'outline'}>{row.original.status}</Badge>,
   },
   {
     id: 'actions',
-    header: 'Actions',
+    header: t('beneficiaries.actions', 'Actions'),
     cell: ({ row }) => <BeneficiaryActions id={row.original.id} />,
   },
 ];
@@ -77,47 +79,49 @@ function FilterBar({ searchInput, onSearchChange, onSearch, categoryFilter, onCa
   onBarangayChange: (v: string) => void;
 }) {
   const nav = useNavigate();
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
-        <Button variant="default" size="sm" onClick={() => nav('/intake')} aria-label="+ New Beneficiary">+ New Beneficiary</Button>
+        <Button variant="default" size="sm" onClick={() => nav('/intake')} aria-label={t('beneficiaries.newBeneficiaryAria', '+ New Beneficiary')}>{t('beneficiaries.newBeneficiary', '+ New Beneficiary')}</Button>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative">
           <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
-            aria-label="Search beneficiaries"
-            placeholder="Search by name..."
+            aria-label={t('beneficiaries.searchAria', 'Search beneficiaries')}
+            placeholder={t('beneficiaries.searchPlaceholder', 'Search by name...')}
             className="w-48 pl-8"
             value={searchInput}
             onChange={e => onSearchChange(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') onSearch(); }}
           />
         </div>
-        <Button size="sm" onClick={onSearch}>Search</Button>
+        <Button size="sm" onClick={onSearch}>{t('beneficiaries.search', 'Search')}</Button>
         <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground font-medium">Category</label>
+          <label className="text-xs text-muted-foreground font-medium">{t('beneficiaries.category', 'Category')}</label>
           <select
-            aria-label="Filter by category"
+            aria-label={t('beneficiaries.filterByCategory', 'Filter by category')}
             className="flex h-10 w-36 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             value={categoryFilter}
             onChange={e => onCategoryChange(e.target.value)}
           >
-            {CATEGORIES.map(c => (
-              <option key={c} value={c === 'All Categories' ? '' : c}>{c}</option>
+            <option value="">{t('beneficiaries.allCategories', 'All Categories')}</option>
+            {CLIENT_CATEGORIES.map(c => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
         <div className="flex flex-col gap-0.5">
-          <label className="text-xs text-muted-foreground font-medium">Barangay</label>
+          <label className="text-xs text-muted-foreground font-medium">{t('beneficiaries.barangay', 'Barangay')}</label>
           <select
-            aria-label="Filter by barangay"
+            aria-label={t('beneficiaries.filterByBarangay', 'Filter by barangay')}
             className="flex h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             value={barangayFilter}
             onChange={e => onBarangayChange(e.target.value)}
           >
-            <option value="all">All Barangays</option>
+            <option value="all">{t('beneficiaries.allBarangays', 'All Barangays')}</option>
             {BARANGAYS.map(b => <option key={b}>{b}</option>)}
           </select>
         </div>
@@ -127,6 +131,7 @@ function FilterBar({ searchInput, onSearchChange, onSearch, categoryFilter, onCa
 }
 
 export function BeneficiariesPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -190,6 +195,7 @@ export function BeneficiariesPage() {
   });
 
   const beneficiaries = useMemo(() => (data?.data || []).map(mapBeneficiary), [data]);
+  const beneficiaryColumns = useMemo(() => makeBeneficiaryColumns(t), [t]);
   const total = data?.total ?? 0;
   const lastSync = data ? Date.now() : null;
 
@@ -199,7 +205,7 @@ export function BeneficiariesPage() {
 
   if (loading) {
     return (
-      <PageShell title="Beneficiaries" description="Manage beneficiary records and household data">
+      <PageShell title={t('beneficiaries.title', 'Beneficiaries')} description={t('beneficiaries.description', 'Manage beneficiary records and household data')}>
         <TableSkeleton rows={8} />
       </PageShell>
     );
@@ -207,16 +213,16 @@ export function BeneficiariesPage() {
 
   if (error && !data) {
     return (
-      <PageShell title="Beneficiaries" description="Manage beneficiary records and household data">
-        <ErrorState title="Could not load beneficiaries" message="Check your internet connection and try again." onRetry={() => mutate()} />
+      <PageShell title={t('beneficiaries.title', 'Beneficiaries')} description={t('beneficiaries.description', 'Manage beneficiary records and household data')}>
+        <ErrorState title={t('beneficiaries.loadFailed', 'Could not load beneficiaries')} message={t('beneficiaries.loadFailedMessage', 'Check your internet connection and try again.')} onRetry={() => mutate()} />
       </PageShell>
     );
   }
 
   return (
     <PageShell
-      title="Beneficiaries"
-      description="Manage beneficiary records and household data"
+      title={t('beneficiaries.title', 'Beneficiaries')}
+      description={t('beneficiaries.description', 'Manage beneficiary records and household data')}
       cachedAt={lastSync ?? undefined}
     >
       <FilterBar
@@ -232,8 +238,8 @@ export function BeneficiariesPage() {
       {canShowResults && (
         <div className="text-sm text-muted-foreground flex items-center gap-1">
           {fetching && <Loader2 size={14} className="animate-spin" />}
-          {!fetching && `Showing ${beneficiaries.length} result${beneficiaries.length !== 1 ? 's' : ''}`}
-          {!fetching && urlSearch && ` for "${urlSearch}"`}
+          {!fetching && t('beneficiaries.showingResults', 'Showing {{count}} results', { count: beneficiaries.length })}
+          {!fetching && urlSearch && t('beneficiaries.forSearch', ' for "{{search}}"', { search: urlSearch })}
         </div>
       )}
 
