@@ -1,30 +1,32 @@
 import { cn } from '@/lib/utils';
 import { FileText, ClipboardCheck, Search, Award } from 'lucide-react';
-
-const steps = [
-  { step: 1, title: 'Submit Application', description: 'Visit our office or apply online through the KAPWA portal. Provide your personal information and the type of assistance you need.', icon: FileText },
-  { step: 2, title: 'Initial Assessment', description: 'Your application is reviewed by our social workers to determine eligibility and the appropriate program for your situation.', icon: ClipboardCheck },
-  { step: 3, title: 'Document Verification', description: 'Submit the required documents for validation. Our team will guide you through the requirements specific to your application.', icon: Search },
-  { step: 4, title: 'Approval & Payout', description: 'Once approved, you will receive the assistance through your chosen mode of disbursement. We will notify you of the schedule.', icon: Award },
-];
+import { useTranslation } from 'react-i18next';
 
 interface ApplicationStepsProps {
   className?: string;
 }
 
 export function ApplicationSteps({ className }: ApplicationStepsProps) {
+  const { t } = useTranslation();
+  const steps = [
+    { step: 1, title: t('steps.submitApplication', 'Submit Application'), description: t('steps.submitApplicationDesc', 'Visit our office or apply online through the KAPWA portal. Provide your personal information and the type of assistance you need.'), icon: FileText },
+    { step: 2, title: t('steps.initialAssessment', 'Initial Assessment'), description: t('steps.initialAssessmentDesc', 'Your application is reviewed by our social workers to determine eligibility and the appropriate program for your situation.'), icon: ClipboardCheck },
+    { step: 3, title: t('steps.documentVerification', 'Document Verification'), description: t('steps.documentVerificationDesc', 'Submit the required documents for validation. Our team will guide you through the requirements specific to your application.'), icon: Search },
+    { step: 4, title: t('steps.approvalPayout', 'Approval & Payout'), description: t('steps.approvalPayoutDesc', 'Once approved, you will receive the assistance through your chosen mode of disbursement. We will notify you of the schedule.'), icon: Award },
+  ];
+
   return (
     <section className={cn('py-16 md:py-24', className)}>
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
-            <span className="text-xs font-medium text-accent tracking-wide">Getting Started</span>
+            <span className="text-xs font-medium text-accent tracking-wide">{t('steps.gettingStarted', 'Getting Started')}</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight text-balance">
-            How to Avail Services
+            {t('steps.title', 'How to Avail Services')}
           </h2>
           <p className="text-muted-foreground text-center max-w-2xl mx-auto text-pretty">
-            A simple four-step process to access the social welfare services you need.
+            {t('steps.subtitle', 'A simple four-step process to access the social welfare services you need.')}
           </p>
         </div>
         <div className="max-w-3xl mx-auto">
@@ -41,7 +43,7 @@ export function ApplicationSteps({ className }: ApplicationStepsProps) {
                 </div>
                 <div className={cn('pt-2', !isLast && 'pb-2')}>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-accent">Step {item.step}</span>
+                    <span className="text-xs font-medium text-accent">{t('steps.step', 'Step {{count}}', { count: item.step })}</span>
                   </div>
                   <h3 className="font-heading text-lg font-semibold mb-2 tracking-tight">{item.title}</h3>
                   <p className="text-muted-foreground leading-relaxed text-pretty">{item.description}</p>

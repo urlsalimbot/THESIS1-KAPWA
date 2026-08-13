@@ -1,18 +1,19 @@
 import { cn } from '@/lib/utils';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ContactInfoProps {
   className?: string;
 }
 
-const contactDetails = [
-  { label: 'Address', value: 'Municipal Social Welfare and Development Office, Norzagaray, Bulacan', icon: MapPin },
-  { label: 'Phone', value: '(044) 123-4567', icon: Phone },
-  { label: 'Email', value: 'mswdo@norzagaray.gov.ph', icon: Mail },
-  { label: 'Office Hours', value: 'Monday to Friday, 8:00 AM - 5:00 PM', icon: Clock },
-];
-
 export function ContactInfo({ className }: ContactInfoProps) {
+  const { t } = useTranslation();
+  const contactDetails = [
+    { label: t('contact.address', 'Address'), value: t('contact.mswdoAddress', 'Municipal Social Welfare and Development Office, Norzagaray, Bulacan'), icon: MapPin },
+    { label: t('contact.phone', 'Phone'), value: '(044) 123-4567', icon: Phone },
+    { label: t('contact.email', 'Email'), value: 'mswdo@norzagaray.gov.ph', icon: Mail },
+    { label: t('contact.officeHours', 'Office Hours'), value: t('contact.officeHoursValue', 'Monday to Friday, 8:00 AM - 5:00 PM'), icon: Clock },
+  ];
   return (
     <div className={cn('space-y-4', className)}>
       {contactDetails.map((detail) => {

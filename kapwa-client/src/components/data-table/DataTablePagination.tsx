@@ -7,6 +7,7 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from '@/components/ui/pagination';
+import { useTranslation } from 'react-i18next';
 
 export interface DataTablePaginationProps<TData> {
   table: Table<TData>;
@@ -17,13 +18,18 @@ export function DataTablePagination<TData>({
   table,
   total,
 }: DataTablePaginationProps<TData>) {
+  const { t } = useTranslation();
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
 
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <p className="text-sm text-muted-foreground">
-        Page {pageIndex + 1} of {pageCount} ({total ?? table.getFilteredRowModel().rows.length} total)
+        {t('dataTable.pageInfo', 'Page {{current}} of {{total}} ({{count}} total)', {
+          current: pageIndex + 1,
+          total: pageCount,
+          count: total ?? table.getFilteredRowModel().rows.length,
+        })}
       </p>
       <div className="flex items-center gap-1">
         <Pagination>

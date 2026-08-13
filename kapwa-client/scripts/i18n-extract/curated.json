@@ -72,5 +72,21 @@
     "dayThu": "Thu",
     "dayFri": "Fri",
     "daySat": "Sat"
+  },
+  "usersPanel": {
+    "role": {
+      "admin": "MSWDO Admin",
+      "social_worker": "MSWDO Social Worker",
+      "coordinator": "Barangay Coordinator",
+      "claimant": "Claimant",
+      "mayor": "Mayor's Office",
+      "auditor": "Auditor",
+      "agency_staff": "Agency Staff"
+    },
+    "statusFilter": {
+      "all": "All Statuses",
+      "active": "Active",
+      "inactive": "Inactive"
+    }
   }
 }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { HandHeart, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface User {
   id: string;
@@ -27,16 +28,17 @@ const roleRedirectMap: Record<string, string> = {
   auditor: '/dashboard',
 };
 
-const navLinks = [
-  { to: '/', label: 'Home' },
-  { to: '/about', label: 'About' },
-  { to: '/contact', label: 'Contact' },
-];
-
 export function PublicHeader({ user, loading }: PublicHeaderProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const currentPath = location.pathname;
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navLinks = [
+    { to: '/', label: t('public.home', 'Home') },
+    { to: '/about', label: t('public.about', 'About') },
+    { to: '/contact', label: t('public.contact', 'Contact') },
+  ];
 
   return (
     <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur-sm border-b border-border">
@@ -50,7 +52,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
         </Link>
 
         {/* Desktop nav */}
-        <nav aria-label="Main navigation" className="hidden sm:flex items-center justify-center gap-2 flex-1 min-w-0">
+        <nav aria-label={t('public.mainNavigation', 'Main navigation')} className="hidden sm:flex items-center justify-center gap-2 flex-1 min-w-0">
           {navLinks.map((link) => {
             const isActive = currentPath === link.to || (link.to !== '/' && currentPath.startsWith(link.to));
             return (
@@ -77,12 +79,12 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
             user ? (
               <Button variant="outline" size="sm" asChild>
                 <Link to={roleRedirectMap[user.role] || '/dashboard'}>
-                  Go to Dashboard
+                  {t('public.goToDashboard', 'Go to Dashboard')}
                 </Link>
               </Button>
             ) : (
               <Button size="sm" className="touch-sm" asChild>
-                <Link to="/login">Login</Link>
+                <Link to="/login">{t('public.login', 'Login')}</Link>
               </Button>
             )
           )}
@@ -92,7 +94,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
             <SheetTrigger asChild>
               <button
                 className="touch-sm sm:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
-                aria-label="Open menu"
+                aria-label={t('public.openMenu', 'Open menu')}
               >
                 <Menu size={20} />
               </button>
@@ -108,7 +110,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                 <button
                   className="touch-sm w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
                   onClick={() => setMobileOpen(false)}
-                  aria-label="Close menu"
+                  aria-label={t('public.closeMenu', 'Close menu')}
                 >
                   <X size={18} />
                 </button>

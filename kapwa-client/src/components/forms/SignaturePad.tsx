@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SignaturePadProps {
   onSave: (dataUrl: string) => void;
@@ -8,7 +9,9 @@ interface SignaturePadProps {
   label?: string;
 }
 
-export default function SignaturePad({ onSave, onClear, width = 400, height = 150, label = 'Signature' }: SignaturePadProps) {
+export default function SignaturePad({ onSave, onClear, width = 400, height = 150, label }: SignaturePadProps) {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t('forms.signatureLabel', 'Signature');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasContent, setHasContent] = useState(false);
@@ -100,7 +103,7 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
 
   return (
     <div className="mb-4">
-      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{resolvedLabel}</label>
       <div className="rounded border border-gray-300 bg-white overflow-hidden">
         <canvas
           ref={canvasRef}
@@ -123,14 +126,14 @@ export default function SignaturePad({ onSave, onClear, width = 400, height = 15
           disabled={!hasContent}
           className="rounded bg-primary px-3 py-1 text-xs text-white hover:bg-primary-dark disabled:opacity-40"
         >
-          Save Signature
+          {t('forms.saveSignature', 'Save Signature')}
         </button>
         <button
           type="button"
           onClick={clearCanvas}
           className="rounded border border-gray-300 bg-white px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
         >
-          Clear
+          {t('forms.clear', 'Clear')}
         </button>
       </div>
     </div>

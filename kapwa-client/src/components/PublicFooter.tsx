@@ -1,21 +1,22 @@
 import { Link } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
 import { HandHeart, MapPin, Phone, Mail } from 'lucide-react';
-
-const quickLinks = [
-  { to: '/', label: 'Home' },
-  { to: '/about', label: 'About' },
-  { to: '/#services', label: 'Services' },
-  { to: '/contact', label: 'Contact' },
-];
-
-const contactDetails = [
-  { icon: MapPin, text: 'Municipal Social Welfare and Development Office, Norzagaray, Bulacan' },
-  { icon: Phone, text: '(044) 123-4567' },
-  { icon: Mail, text: 'mswdo@norzagaray.gov.ph' },
-];
+import { useTranslation } from 'react-i18next';
 
 export function PublicFooter() {
+  const { t } = useTranslation();
+  const quickLinks = [
+    { to: '/', label: t('public.home', 'Home') },
+    { to: '/about', label: t('public.about', 'About') },
+    { to: '/#services', label: t('public.services', 'Services') },
+    { to: '/contact', label: t('public.contact', 'Contact') },
+  ];
+
+  const contactDetails = [
+    { icon: MapPin, text: t('public.mswdoAddress', 'Municipal Social Welfare and Development Office, Norzagaray, Bulacan') },
+    { icon: Phone, text: '(044) 123-4567' },
+    { icon: Mail, text: 'mswdo@norzagaray.gov.ph' },
+  ];
   return (
     <footer className="bg-card border-t border-border mt-auto">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12">
@@ -29,13 +30,13 @@ export function PublicFooter() {
               <span className="font-heading text-xl font-bold text-foreground tracking-tight">KAPWA</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
-              MSWDO Norzagaray — Empowering communities through compassionate social welfare services.
+              {t('public.footerTagline', 'MSWDO Norzagaray — Empowering communities through compassionate social welfare services.')}
             </p>
           </div>
 
           {/* Column 2: Quick Links */}
           <div>
-            <h4 className="font-heading text-sm font-semibold text-foreground mb-4 tracking-wide">Quick Links</h4>
+            <h4 className="font-heading text-sm font-semibold text-foreground mb-4 tracking-wide">{t('public.quickLinks', 'Quick Links')}</h4>
             <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.to}>
@@ -52,7 +53,7 @@ export function PublicFooter() {
 
           {/* Column 3: Contact */}
           <div>
-            <h4 className="font-heading text-sm font-semibold text-foreground mb-4 tracking-wide">Contact Us</h4>
+            <h4 className="font-heading text-sm font-semibold text-foreground mb-4 tracking-wide">{t('public.contactUs', 'Contact Us')}</h4>
             <ul className="space-y-3">
               {contactDetails.map((detail) => {
                 const Icon = detail.icon;
@@ -71,14 +72,14 @@ export function PublicFooter() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} MSWDO Norzagaray. All rights reserved.
+            &copy; {new Date().getFullYear()} {t('public.copyright', 'MSWDO Norzagaray. All rights reserved.')}
           </p>
           <div className="flex gap-6">
             <Link to="/about" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Privacy Policy
+              {t('public.privacyPolicy', 'Privacy Policy')}
             </Link>
             <Link to="/contact" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Accessibility
+              {t('public.accessibility', 'Accessibility')}
             </Link>
           </div>
         </div>

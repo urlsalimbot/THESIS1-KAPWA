@@ -436,13 +436,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
         <p
           class="text-sm text-muted-foreground"
         >
-          Page 
-          1
-           of 
-          1
-           (
-          2
-           total)
+          Page 1 of 1 (2 total)
         </p>
         <div
           class="flex items-center gap-1"
