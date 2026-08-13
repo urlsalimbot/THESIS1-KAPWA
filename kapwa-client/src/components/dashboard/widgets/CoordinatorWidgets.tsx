@@ -6,8 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+import { useTranslation } from 'react-i18next';
+import { statusLabel } from '@/i18n/display';
 
 export function CoordinatorWidgets() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, isLoading: loading } = useSWR<{
     pendingReview?: number;
@@ -43,7 +46,7 @@ export function CoordinatorWidgets() {
       const result = await api.get(`/cases/${searchId.trim()}`);
       setSearchResult(result);
     } catch {
-      setSearchError('Case not found');
+      setSearchError(t('dashboard.caseNotFound', 'Case not found'));
     }
     setSearching(false);
   }
@@ -64,7 +67,7 @@ export function CoordinatorWidgets() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Barangay Cases</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.barangayCases', 'Barangay Cases')}</span>
               <TrendingUp className="ml-auto text-blue-600" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{caseCount}</div>
@@ -73,7 +76,7 @@ export function CoordinatorWidgets() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Served Today</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.servedToday', 'Served Today')}</span>
               <Clock className="ml-auto text-yellow-600" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{servedToday}</div>
@@ -82,7 +85,7 @@ export function CoordinatorWidgets() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pending Review</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.pendingReview', 'Pending Review')}</span>
               <ClipboardList className="ml-auto text-green-600" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{pendingReview}</div>
@@ -91,32 +94,32 @@ export function CoordinatorWidgets() {
         <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/coordinator/referrals')}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">My Referrals</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.myReferrals', 'My Referrals')}</span>
               <Send className="ml-auto text-purple-600" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{referralTotal}</div>
-            <div className="text-xs mt-1 text-muted-foreground">{referralPending} pending</div>
+            <div className="text-xs mt-1 text-muted-foreground">{t('dashboard.pending', '{{count}} pending', { count: referralPending })}</div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <div className="border-b px-4 py-3 flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-primary">Quick Actions</h3>
+          <h3 className="font-semibold text-sm text-primary">{t('dashboard.quickActions', 'Quick Actions')}</h3>
         </div>
         <CardContent className="p-4 flex gap-2">
           <Button size="sm" onClick={() => navigate('/coordinator/referrals/new')}>
-            <Send size={14} className="mr-1" /> New Referral
+            <Send size={14} className="mr-1" /> {t('dashboard.newReferral', 'New Referral')}
           </Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/referrals')}>
-            View Referrals
+            {t('dashboard.viewReferrals', 'View Referrals')}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <div className="border-b px-4 py-3">
-          <h3 className="font-semibold text-sm text-primary">Quick Case Search</h3>
+          <h3 className="font-semibold text-sm text-primary">{t('dashboard.quickCaseSearch', 'Quick Case Search')}</h3>
         </div>
         <CardContent className="p-4">
           <form onSubmit={handleSearch} className="flex gap-2">
@@ -126,24 +129,24 @@ export function CoordinatorWidgets() {
                 type="text"
                 value={searchId}
                 onChange={e => setSearchId(e.target.value)}
-                placeholder="Enter Case ID..."
+                placeholder={t('dashboard.enterCaseId', 'Enter Case ID...')}
                 className="w-full pl-8 pr-3 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <Button type="submit" disabled={searching} size="sm">
-              {searching ? 'Searching...' : 'Search'}
+              {searching ? t('dashboard.searching', 'Searching...') : t('dashboard.search', 'Search')}
             </Button>
           </form>
           {searchError && <p className="text-destructive text-sm mt-2">{searchError}</p>}
           {searchResult && (
             <div className="mt-3 p-3 border rounded bg-muted/50">
-              <p className="text-sm"><strong>Case:</strong> {searchResult.id}</p>
-              <p className="text-sm"><strong>Status:</strong> {searchResult.status}</p>
+              <p className="text-sm"><strong>{t('dashboard.case', 'Case:')}</strong> {searchResult.id}</p>
+              <p className="text-sm"><strong>{t('dashboard.status', 'Status:')}</strong> {statusLabel(t, searchResult.status)}</p>
               <button
                 onClick={() => navigate(`/cases/${searchResult.id}`)}
                 className="text-primary text-xs mt-1 flex items-center gap-1 hover:underline"
               >
-                View details <ArrowRight size={14} />
+                {t('dashboard.viewDetails', 'View details')} <ArrowRight size={14} />
               </button>
             </div>
           )}
@@ -152,10 +155,10 @@ export function CoordinatorWidgets() {
 
       <Card>
         <div className="border-b px-4 py-3">
-          <h3 className="font-semibold text-sm text-primary">Recent Entries</h3>
+          <h3 className="font-semibold text-sm text-primary">{t('dashboard.recentEntries', 'Recent Entries')}</h3>
         </div>
         {recentEntries.length === 0 ? (
-          <CardContent><p className="text-sm text-muted-foreground py-4 text-center">No recent entries</p></CardContent>
+          <CardContent><p className="text-sm text-muted-foreground py-4 text-center">{t('dashboard.noRecentEntries', 'No recent entries')}</p></CardContent>
         ) : (
           <div className="divide-y">
             {recentEntries.slice(0, 5).map((c: any) => (
@@ -164,7 +167,7 @@ export function CoordinatorWidgets() {
                   <p className="text-sm font-medium">{c.name || c.id}</p>
                   <p className="text-xs text-muted-foreground">{c.category} &middot; {c.barangay}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">{c.status}</span>
+                <span className="text-xs text-muted-foreground">{statusLabel(t, c.status)}</span>
               </div>
             ))}
           </div>

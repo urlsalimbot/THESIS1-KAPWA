@@ -15,6 +15,7 @@ import {
 import { PageShell } from '@/components/PageShell';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Pin, PinOff, Eye, Megaphone, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Announcement {
   id: string;
@@ -28,6 +29,7 @@ interface Announcement {
 }
 
 export function AnnouncementsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, mutate, isLoading, error } = useSWR(
     queryKeys.announcements.list(),
@@ -37,13 +39,13 @@ export function AnnouncementsPage() {
   const announcements = data || [];
 
   const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`Delete "${title}"?`)) return;
+    if (!window.confirm(t('announcements.deleteConfirm', 'Delete "{{title}}"?', { title }))) return;
     try {
       await api.del(['announcements', id]);
-      toast.success('Deleted');
+      toast.success(t('announcements.deleted', 'Deleted'));
       mutate();
     } catch {
-      toast.error('Failed to delete announcement');
+      toast.error(t('announcements.deleteFailed', 'Failed to delete announcement'));
     }
   };
 
@@ -51,17 +53,17 @@ export function AnnouncementsPage() {
     try {
       if (a.status === 'published') {
         await api.patch(['announcements', a.id], { status: 'draft' });
-        toast.success('Unpublished');
+        toast.success(t('announcements.unpublished', 'Unpublished'));
       } else {
         await api.patch(['announcements', a.id], { status: 'published' });
-        toast.success('Published');
+        toast.success(t('announcements.publishSuccess', 'Published!'));
       }
       mutate();
     } catch {
       toast.error(
         a.status === 'published'
-          ? 'Failed to unpublish announcement'
-          : 'Failed to publish announcement',
+          ? t('announcements.unpublishFailed', 'Failed to unpublish announcement')
+          : t('announcements.publishFailed', 'Failed to publish announcement'),
       );
     }
   };
@@ -69,24 +71,24 @@ export function AnnouncementsPage() {
   const handlePinToggle = async (a: Announcement) => {
     try {
       await api.patch(['announcements', a.id, 'pin']);
-      toast.success(a.pinned ? 'Unpinned' : 'Pinned');
+      toast.success(a.pinned ? t('announcements.unpinned', 'Unpinned') : t('announcements.pinnedToast', 'Pinned'));
       mutate();
     } catch {
-      toast.error(a.pinned ? 'Failed to unpin announcement' : 'Failed to pin announcement');
+      toast.error(a.pinned ? t('announcements.unpinFailed', 'Failed to unpin announcement') : t('announcements.pinFailed', 'Failed to pin announcement'));
     }
   };
 
   const actions = (
     <Button onClick={() => navigate('/announcements/manage/new')}>
       <Plus size={16} className="mr-1" />
-      New Announcement
+      {t('announcements.new', 'New Announcement')}
     </Button>
   );
 
   return (
     <PageShell
-      title="Announcements"
-      description="Create, edit, and manage public announcements."
+      title={t('announcements.manage', 'Announcements')}
+      description={t('announcements.manageDesc', 'Create, edit, and manage public announcements.')}
       actions={actions}
     >
       {isLoading ? (
@@ -111,7 +113,7 @@ export function AnnouncementsPage() {
       ) : error ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-destructive">Failed to load announcements.</p>
+            <p className="text-destructive">{t('announcements.loadFailed', 'Failed to load announcements.')}</p>
           </CardContent>
         </Card>
       ) : announcements.length === 0 ? (
@@ -120,13 +122,12 @@ export function AnnouncementsPage() {
             <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
               <Megaphone size={20} className="text-muted-foreground" />
             </div>
-            <h3 className="font-semibold font-heading">No announcements yet</h3>
+            <h3 className="font-semibold font-heading">{t('announcements.empty', 'No announcements yet')}</h3>
             <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
-              Publish program updates, advisories, and announcements that appear on the public
-              website.
+              {t('announcements.emptyHint', 'Publish program updates, advisories, and announcements that appear on the public website.')}
             </p>
             <Button onClick={() => navigate('/announcements/manage/new')}>
-              <Plus size={16} className="mr-1" /> Create your first announcement
+              <Plus size={16} className="mr-1" /> {t('announcements.createFirst', 'Create your first announcement')}
             </Button>
           </CardContent>
         </Card>
@@ -144,11 +145,11 @@ export function AnnouncementsPage() {
                     {a.pinned && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent shrink-0">
                         <Pin size={12} />
-                        Pinned
+                        {t('announcements.pinned', 'Pinned')}
                       </span>
                     )}
                     <Badge variant={a.status === 'published' ? 'default' : 'secondary'} className="shrink-0">
-                      {a.status === 'published' ? 'Published' : 'Draft'}
+                      {a.status === 'published' ? t('announcements.published', 'Published') : t('announcements.draft', 'Draft')}
                     </Badge>
                   </div>
                   {a.excerpt && (
@@ -156,12 +157,12 @@ export function AnnouncementsPage() {
                   )}
                   <p className="text-xs text-muted-foreground/80 mt-1">
                     {a.publishedAt
-                      ? `Published ${new Date(a.publishedAt).toLocaleDateString(undefined, {
+                      ? `${t('announcements.publishedOn', 'Published')} ${new Date(a.publishedAt).toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
                         })}`
-                      : `Updated ${new Date(a.updatedAt).toLocaleDateString(undefined, {
+                      : `${t('announcements.updatedOn', 'Updated')} ${new Date(a.updatedAt).toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
@@ -175,13 +176,13 @@ export function AnnouncementsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={`Edit ${a.title}`}
+                          aria-label={t('announcements.editAria', 'Edit {{title}}', { title: a.title })}
                           onClick={() => navigate(`/announcements/manage/${a.id}`)}
                         >
                           <Pencil size={16} />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Edit</TooltipContent>
+                      <TooltipContent>{t('announcements.edit', 'Edit')}</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -189,14 +190,14 @@ export function AnnouncementsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={a.status === 'published' ? `Unpublish ${a.title}` : `Publish ${a.title}`}
+                          aria-label={a.status === 'published' ? t('announcements.unpublishAria', 'Unpublish {{title}}', { title: a.title }) : t('announcements.publishAria', 'Publish {{title}}', { title: a.title })}
                           onClick={() => handlePublishToggle(a)}
                         >
                           <Eye size={16} />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {a.status === 'published' ? 'Unpublish' : 'Publish'}
+                        {a.status === 'published' ? t('announcements.unpublish', 'Unpublish') : t('announcements.publish', 'Publish')}
                       </TooltipContent>
                     </Tooltip>
 
@@ -205,13 +206,13 @@ export function AnnouncementsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={a.pinned ? `Unpin ${a.title}` : `Pin ${a.title}`}
+                          aria-label={a.pinned ? t('announcements.unpinAria', 'Unpin {{title}}', { title: a.title }) : t('announcements.pinAria', 'Pin {{title}}', { title: a.title })}
                           onClick={() => handlePinToggle(a)}
                         >
                           {a.pinned ? <PinOff size={16} /> : <Pin size={16} />}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>{a.pinned ? 'Unpin' : 'Pin'}</TooltipContent>
+                      <TooltipContent>{a.pinned ? t('announcements.unpin', 'Unpin') : t('announcements.pin', 'Pin')}</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -219,13 +220,13 @@ export function AnnouncementsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={`Delete ${a.title}`}
+                          aria-label={t('announcements.deleteAria', 'Delete {{title}}', { title: a.title })}
                           onClick={() => handleDelete(a.id, a.title)}
                         >
                           <Trash2 size={16} className="text-destructive" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Delete</TooltipContent>
+                      <TooltipContent>{t('announcements.delete', 'Delete')}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
@@ -235,7 +236,7 @@ export function AnnouncementsPage() {
 
           <div className="pt-2 text-center">
             <Button variant="link" size="sm" onClick={() => navigate('/announcements/manage/new')}>
-              New Announcement
+              {t('announcements.new', 'New Announcement')}
               <ArrowRight size={14} className="ml-1" />
             </Button>
           </div>

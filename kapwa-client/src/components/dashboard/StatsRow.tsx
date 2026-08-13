@@ -1,5 +1,6 @@
 import { TrendingUp, Clock, DollarSign, Users, AlertTriangle, Activity } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 
 interface StatCardData {
   label: string;
@@ -37,13 +38,14 @@ interface StatsRowProps {
 }
 
 export function StatsRow(data: StatsRowProps) {
+  const { t } = useTranslation();
   const stats: StatCardData[] = [
-    { label: 'Served Today', value: String(data.servedToday), change: 'from yesterday', icon: TrendingUp },
-    { label: 'Pending Review', value: String(data.pendingReview), change: 'cases pending assessment', icon: Clock },
-    { label: 'Overdue SLA', value: String(data.urgentCount), change: 'exceeded 72h window', icon: AlertTriangle, urgent: data.urgentCount > 0 },
-    { label: 'Disbursed Month', value: `₱${data.disbursedMonth.toLocaleString()}`, change: `${data.beneficiaryCount} households`, icon: DollarSign },
-    { label: 'Households Served', value: String(data.beneficiaryCount), change: 'unique households', icon: Users },
-    { label: 'Recent Interventions', value: String(data.recentInterventions), change: 'in last 7 days', icon: Activity },
+    { label: t('dashboard.servedToday', 'Served Today'), value: String(data.servedToday), change: t('dashboard.fromYesterday', 'from yesterday'), icon: TrendingUp },
+    { label: t('dashboard.pendingReview', 'Pending Review'), value: String(data.pendingReview), change: t('dashboard.casesPendingAssessment', 'cases pending assessment'), icon: Clock },
+    { label: t('dashboard.overdueSla', 'Overdue SLA'), value: String(data.urgentCount), change: t('dashboard.exceeded72h', 'exceeded 72h window'), icon: AlertTriangle, urgent: data.urgentCount > 0 },
+    { label: t('dashboard.disbursedMonth', 'Disbursed Month'), value: `₱${data.disbursedMonth.toLocaleString()}`, change: t('dashboard.households', '{{count}} households', { count: data.beneficiaryCount }), icon: DollarSign },
+    { label: t('dashboard.householdsServed', 'Households Served'), value: String(data.beneficiaryCount), change: t('dashboard.uniqueHouseholdsChange', 'unique households'), icon: Users },
+    { label: t('dashboard.recentInterventions', 'Recent Interventions'), value: String(data.recentInterventions), change: t('dashboard.last7Days', 'in last 7 days'), icon: Activity },
   ];
 
   return (

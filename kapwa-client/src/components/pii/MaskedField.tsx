@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { usePiiMasking } from '@/hooks/usePiiMasking';
 import type { MaskableField } from '@/lib/pii-utils';
 import { maskValue } from '@/lib/pii-utils';
+import { useTranslation } from 'react-i18next';
 
 interface MaskedFieldProps {
   label: string;
@@ -20,6 +21,7 @@ export function MaskedField({
   consentStatus = 'unknown',
   beneficiaryId,
 }: MaskedFieldProps) {
+  const { t } = useTranslation();
   const { shouldMask, getDisplayValue, revealField } = usePiiMasking({ consentStatus });
   const [revealed, setRevealed] = useState(false);
   const [revealing, setRevealing] = useState(false);
@@ -35,7 +37,7 @@ export function MaskedField({
       setRevealed(false);
       return;
     }
-    const reason = window.prompt(`Reason for viewing ${label}:`);
+    const reason = window.prompt(t('pii.reasonPrompt', 'Reason for viewing {{label}}:', { label }));
     if (!reason || !reason.trim()) return;
     setRevealing(true);
     try {
@@ -46,7 +48,7 @@ export function MaskedField({
     } finally {
       setRevealing(false);
     }
-  }, [revealed, label, beneficiaryId, type, revealField]);
+  }, [revealed, label, beneficiaryId, type, revealField, t]);
 
   const displayValue = !shouldMask && revealed ? value : getDisplayValue(type, value);
   const isCurrentlyMasked = !(!shouldMask && revealed);
@@ -56,7 +58,7 @@ export function MaskedField({
       <span className="text-sm font-medium text-muted-foreground">{label}:</span>
       <span
         className="text-sm font-mono tabular-nums"
-        aria-label={`${label}: ${isCurrentlyMasked ? 'masked' : value}`}
+        aria-label={t('pii.fieldAria', '{{label}}: {{state}}', { label, state: isCurrentlyMasked ? t('pii.masked', 'masked') : value })}
         aria-hidden={isCurrentlyMasked ? true : undefined}
       >
         {displayValue === maskValue(type, value) ? maskValue(type, value) : displayValue}
@@ -68,7 +70,7 @@ export function MaskedField({
           className="h-6 w-6"
           onClick={handleReveal}
           disabled={revealing}
-          aria-label={revealed ? `Hide ${label}` : `Reveal ${label}`}
+          aria-label={revealed ? t('pii.hideLabel', 'Hide {{label}}', { label }) : t('pii.revealLabel', 'Reveal {{label}}', { label })}
         >
           {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
         </Button>

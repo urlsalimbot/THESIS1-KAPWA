@@ -5,6 +5,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { Card, CardContent } from '@/components/ui/card';
 import { Pin, ArrowRight, Megaphone, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface PublicAnnouncement {
   id: string;
@@ -24,6 +25,7 @@ function formatDate(iso: string) {
 }
 
 export function LatestAnnouncements() {
+  const { t } = useTranslation();
   const { data, isLoading } = useSWR(
     queryKeys.announcements.public.list(),
     (key) => api.get<PublicAnnouncement[]>(key),
@@ -40,14 +42,13 @@ export function LatestAnnouncements() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
             <Megaphone size={14} className="text-accent" />
-            <span className="text-xs font-medium text-accent tracking-wide">What's New</span>
+            <span className="text-xs font-medium text-accent tracking-wide">{t('announcements.whatsNew', "What's New")}</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-semibold font-heading mb-4 tracking-tight text-balance">
-            Latest News &amp; Announcements
+            {t('announcements.latestTitle', 'Latest News & Announcements')}
           </h2>
           <p className="text-muted-foreground text-center max-w-2xl mx-auto text-pretty">
-            Updates, advisories, and information from the MSWDO of Norzagaray — stay informed
-            about programs and services that may affect you.
+            {t('announcements.latestDesc', 'Updates, advisories, and information from the MSWDO of Norzagaray — stay informed about programs and services that may affect you.')}
           </p>
         </div>
 
@@ -57,7 +58,7 @@ export function LatestAnnouncements() {
               to={`/announcements/${a.slug}`}
               key={a.id}
               className="group h-full"
-              aria-label={`Read: ${a.title}`}
+              aria-label={t('announcements.readAria', 'Read: {{title}}', { title: a.title })}
             >
               <Card
                 className={cn(
@@ -70,10 +71,10 @@ export function LatestAnnouncements() {
                     {a.pinned ? (
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
                         <Pin size={12} />
-                        Pinned
+                        {t('announcements.pinned', 'Pinned')}
                       </span>
                     ) : (
-                      <span className="text-[11px] font-medium text-primary/70">Announcement</span>
+                      <span className="text-[11px] font-medium text-primary/70">{t('announcements.item', 'Announcement')}</span>
                     )}
                     {a.publishedAt && (
                       <time className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -92,7 +93,7 @@ export function LatestAnnouncements() {
                   )}
 
                   <span className="mt-auto pt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    Read more
+                    {t('announcements.readMore', 'Read more')}
                     <ArrowRight size={12} />
                   </span>
                 </CardContent>

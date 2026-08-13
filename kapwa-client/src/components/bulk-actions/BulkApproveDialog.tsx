@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslation } from 'react-i18next';
 
 export interface BulkApproveDialogProps {
   open: boolean;
@@ -26,9 +27,10 @@ export function BulkApproveDialog({
   selectedCount,
   selectedIds,
   onConfirm,
-  title = 'Approve Cases',
+  title,
   description,
 }: BulkApproveDialogProps) {
+  const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -47,27 +49,27 @@ export function BulkApproveDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{title || t('bulkActions.approveCases', 'Approve Cases')}</DialogTitle>
           <DialogDescription>
-            {description || `You are about to approve ${selectedCount} case${selectedCount === 1 ? '' : 's'}.`}
+            {description || t('bulkActions.approveCount', 'You are about to approve {{count}} case(s).', { count: selectedCount })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
           <p className="text-sm text-muted-foreground">
-            Selected IDs: {selectedIds.slice(0, 5).join(', ')}
-            {selectedIds.length > 5 && ` and ${selectedIds.length - 5} more`}
+            {t('bulkActions.selectedIds', 'Selected IDs: {{ids}}', { ids: selectedIds.slice(0, 5).join(', ') })}
+            {selectedIds.length > 5 && t('bulkActions.andMore', ' and {{count}} more', { count: selectedIds.length - 5 })}
           </p>
 
           <div className="mt-4">
             <label htmlFor="reason" className="text-sm font-medium text-foreground">
-              Reason / Notes (optional)
+              {t('bulkActions.reasonNotes', 'Reason / Notes (optional)')}
             </label>
             <Textarea
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Add a reason for this bulk action..."
+              placeholder={t('bulkActions.reasonPlaceholder', 'Add a reason for this bulk action...')}
               className="mt-1"
               rows={3}
             />
@@ -76,10 +78,10 @@ export function BulkApproveDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
+            {t('bulkActions.cancel', 'Cancel')}
           </Button>
           <Button onClick={handleConfirm} disabled={loading}>
-            {loading ? 'Approving...' : 'Confirm'}
+            {loading ? t('bulkActions.approving', 'Approving...') : t('bulkActions.confirm', 'Confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 interface SlaWidgetProps {
   overdueCount: number;
 }
 
 export function SlaWidget({ overdueCount }: SlaWidgetProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const compliant = overdueCount === 0;
 
@@ -16,7 +18,7 @@ export function SlaWidget({ overdueCount }: SlaWidgetProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Clock size={14} />
-          SLA Status
+          {t('dashboard.slaStatus', 'SLA Status')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -26,14 +28,14 @@ export function SlaWidget({ overdueCount }: SlaWidgetProps) {
             : <AlertTriangle size={20} className="text-destructive" />
           }
           <span className={`font-semibold ${compliant ? 'text-green-700' : 'text-destructive'}`}>
-            {compliant ? 'Compliant' : `${overdueCount} Overdue`}
+            {compliant ? t('dashboard.compliant', 'Compliant') : t('dashboard.overdue', '{{count}} Overdue', { count: overdueCount })}
           </span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Cases exceeding 72-hour SLA window
+          {t('dashboard.exceedSlaWindow', 'Cases exceeding 72-hour SLA window')}
         </p>
         <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/cases')}>
-          View Cases
+          {t('dashboard.viewCases', 'View Cases')}
         </Button>
       </CardContent>
     </Card>

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   Bold, Italic, List, ListOrdered, Heading2, Heading3, Link as LinkIcon,
 } from 'lucide-react';
+import i18n from '../../i18n';
 
 interface RichTextEditorProps {
   value: string;
@@ -58,7 +59,7 @@ export function RichTextEditor({ value, onChange, className }: RichTextEditorPro
 
   const setLink = () => {
     const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('URL', previousUrl);
+    const url = window.prompt(i18n.t('announcements.urlPrompt', 'URL'), previousUrl);
     if (url === null) return;
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -73,49 +74,49 @@ export function RichTextEditor({ value, onChange, className }: RichTextEditorPro
         <ToolbarButton
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
-          title="Bold"
+          title={i18n.t('announcements.bold', 'Bold')}
         >
           <Bold size={16} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('italic')}
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          title="Italic"
+          title={i18n.t('announcements.italic', 'Italic')}
         >
           <Italic size={16} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('heading', { level: 2 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          title="Heading 2"
+          title={i18n.t('announcements.heading2', 'Heading 2')}
         >
           <Heading2 size={16} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('heading', { level: 3 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          title="Heading 3"
+          title={i18n.t('announcements.heading3', 'Heading 3')}
         >
           <Heading3 size={16} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          title="Bullet list"
+          title={i18n.t('announcements.bulletList', 'Bullet list')}
         >
           <List size={16} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('orderedList')}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          title="Numbered list"
+          title={i18n.t('announcements.numberedList', 'Numbered list')}
         >
           <ListOrdered size={16} />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('link')}
           onClick={setLink}
-          title="Link"
+          title={i18n.t('announcements.link', 'Link')}
         >
           <LinkIcon size={16} />
         </ToolbarButton>

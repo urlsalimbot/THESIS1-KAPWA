@@ -13,6 +13,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface FamilyMemberNode extends Record<string, unknown> {
   id: string;
@@ -103,6 +104,7 @@ const edgeTypeLabels: Record<string, string> = {
 };
 
 function FamilyMemberNode({ data }: NodeProps<FamilyFlowNode>) {
+  const { t } = useTranslation();
   const initial = data.fullName.charAt(0).toUpperCase();
   return (
     <div
@@ -123,7 +125,7 @@ function FamilyMemberNode({ data }: NodeProps<FamilyFlowNode>) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-foreground">{data.fullName}</p>
         <p className="truncate text-[10px] text-muted-foreground">
-          {data.relationship} &middot; {data.age} yrs
+          {data.relationship} &middot; {data.age} {t('family.yrs', 'yrs')}
         </p>
         {data.statusIncome && (
           <p className="truncate text-[9px] text-muted-foreground">{data.statusIncome}</p>
@@ -138,6 +140,7 @@ function FamilyMemberNode({ data }: NodeProps<FamilyFlowNode>) {
 const nodeTypes = { familyMember: FamilyMemberNode };
 
 export function FamilyTreeGraph({ members, primary }: FamilyTreeGraphProps) {
+  const { t } = useTranslation();
   const layout = useMemo(() => computeLayout(members, primary), [members, primary]);
   const [nodes, setNodes, onNodesChange] = useNodesState<FamilyFlowNode>(layout.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<FamilyFlowEdge>(layout.edges);
@@ -193,10 +196,10 @@ export function FamilyTreeGraph({ members, primary }: FamilyTreeGraphProps) {
               <div>
                 <p className="text-xs font-semibold text-foreground">
                   {selectedMember.fullName}
-                  {selectedMember.isPrimary && <span className="ml-1.5 text-[10px] text-primary font-medium">(Primary)</span>}
+                  {selectedMember.isPrimary && <span className="ml-1.5 text-[10px] text-primary font-medium">({t('family.primary', 'Primary')})</span>}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {selectedMember.relationship} &middot; {selectedMember.age} yrs
+                  {selectedMember.relationship} &middot; {selectedMember.age} {t('family.yrs', 'yrs')}
                 </p>
               </div>
             </div>
