@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 
 function useOs() {
@@ -14,6 +15,7 @@ function useOs() {
 }
 
 export function GlobalSearch() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
@@ -86,8 +88,8 @@ export function GlobalSearch() {
           type="text"
           role="combobox"
           aria-expanded={showDropdown}
-          aria-label="Search beneficiaries"
-          placeholder="Search records..."
+          aria-label={t('search.ariaLabel', 'Search beneficiaries')}
+          placeholder={t('search.placeholder', 'Search records...')}
           className={`h-9 w-56 lg:w-72 rounded-full border pl-9 pr-10 text-sm bg-muted/50 text-foreground placeholder:text-muted-foreground outline-none transition-colors ${focused ? 'border-ring bg-background' : 'border-transparent hover:bg-muted'}`}
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -103,10 +105,10 @@ export function GlobalSearch() {
       {showDropdown && (
         <div ref={listRef} className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
           {loading && (
-            <div className="px-3 py-4 text-xs text-center text-muted-foreground">Searching...</div>
+            <div className="px-3 py-4 text-xs text-center text-muted-foreground">{t('search.searching', 'Searching...')}</div>
           )}
           {!loading && results.length === 0 && (
-            <div className="px-3 py-4 text-xs text-center text-muted-foreground">No results found.</div>
+            <div className="px-3 py-4 text-xs text-center text-muted-foreground">{t('search.noResults', 'No results found.')}</div>
           )}
           {results.map((item, i) => (
             <button
@@ -127,7 +129,7 @@ export function GlobalSearch() {
               className="w-full text-center px-3 py-2 text-xs font-medium text-accent border-t hover:bg-muted transition-colors"
               onMouseDown={() => navigateToSearch()}
             >
-              View all results
+              {t('search.viewAll', 'View all results')}
             </button>
           )}
         </div>

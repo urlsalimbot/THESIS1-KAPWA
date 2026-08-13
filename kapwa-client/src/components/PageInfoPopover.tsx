@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { HelpCircle, Lightbulb, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { usePageInfo } from '@/lib/page-info-context';
@@ -245,6 +246,7 @@ function resolveHelp(pathname: string): RouteHelp | null {
 }
 
 export default function PageInfoPopover() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const { title } = usePageInfo();
   const help = resolveHelp(pathname);
@@ -252,7 +254,7 @@ export default function PageInfoPopover() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label="Help">
+        <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" aria-label={t('shell.help', 'Help')}>
           <HelpCircle size={20} />
         </button>
       </PopoverTrigger>
@@ -260,7 +262,7 @@ export default function PageInfoPopover() {
         <div className="px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <HelpCircle size={16} className="text-muted-foreground shrink-0" />
-            <span className="text-sm font-semibold">{help?.title || title || 'Help'}</span>
+            <span className="text-sm font-semibold">{help?.title || title || t('shell.help', 'Help')}</span>
           </div>
         </div>
 
@@ -270,7 +272,7 @@ export default function PageInfoPopover() {
               <div className="px-4 py-3 space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Lightbulb size={12} />
-                  Tips
+                  {t('shell.helpTips', 'Tips')}
                 </p>
                 <ul className="space-y-1.5">
                   {help.tips.map((tip, i) => (
@@ -289,7 +291,7 @@ export default function PageInfoPopover() {
                 <div className="px-4 py-3 space-y-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <RotateCcw size={12} />
-                    FAQs
+                    {t('shell.helpFaqs', 'FAQs')}
                   </p>
                   {help.faqs.map((faq, i) => (
                     <div key={i}>
@@ -303,7 +305,7 @@ export default function PageInfoPopover() {
           </div>
         ) : (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No help content available for this page.
+            {t('shell.noHelpContent', 'No help content available for this page.')}
           </div>
         )}
       </PopoverContent>
