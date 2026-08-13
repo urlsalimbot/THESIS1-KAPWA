@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { loadQueue, type QueuedChange } from '@/lib/offline-queue';
+import { useTranslation } from 'react-i18next';
 
 const QUEUE_KEY = 'kapwa_sync_queue';
 
@@ -31,6 +32,7 @@ function updateQueueItem(id: string, updates: Partial<QueuedChange>): void {
 }
 
 export function ConflictResolutionDialog({ item, open, onOpenChange }: ConflictResolutionDialogProps) {
+  const { t } = useTranslation();
   if (!item) return null;
 
   const handleKeepLocal = () => {
@@ -65,15 +67,15 @@ export function ConflictResolutionDialog({ item, open, onOpenChange }: ConflictR
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            Sync Conflict — {item.tableName} #{item.recordId}
+            {t('conflict.title', 'Sync Conflict — {{table}} #{{id}}', { table: item.tableName, id: item.recordId })}
           </DialogTitle>
           <DialogDescription>
-            This item was modified by another user while you were offline. Choose how to resolve.
+            {t('conflict.description', 'This item was modified by another user while you were offline. Choose how to resolve.')}
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 py-4">
           <div>
-            <h4 className="text-sm font-semibold mb-2 text-foreground">Local (Your Changes)</h4>
+            <h4 className="text-sm font-semibold mb-2 text-foreground">{t('conflict.local', 'Local (Your Changes)')}</h4>
             <ScrollArea className="h-40">
               <pre className="text-xs bg-muted p-2 rounded overflow-auto whitespace-pre-wrap break-all">
                 {JSON.stringify(localPayload, null, 2)}
@@ -81,7 +83,7 @@ export function ConflictResolutionDialog({ item, open, onOpenChange }: ConflictR
             </ScrollArea>
           </div>
           <div>
-            <h4 className="text-sm font-semibold mb-2 text-foreground">Server</h4>
+            <h4 className="text-sm font-semibold mb-2 text-foreground">{t('conflict.server', 'Server')}</h4>
             <ScrollArea className="h-40">
               <pre className="text-xs bg-muted p-2 rounded overflow-auto whitespace-pre-wrap break-all">
                 {JSON.stringify(serverPayload, null, 2)}
@@ -92,13 +94,13 @@ export function ConflictResolutionDialog({ item, open, onOpenChange }: ConflictR
         <Separator />
         <DialogFooter className="flex gap-2 sm:justify-start">
           <Button variant="outline" onClick={handleKeepServer}>
-            Keep Server
+            {t('conflict.keepServer', 'Keep Server')}
           </Button>
           <Button variant="default" onClick={handleKeepLocal}>
-            Keep Local
+            {t('conflict.keepLocal', 'Keep Local')}
           </Button>
           <Button variant="outline" onClick={handleKeepBoth}>
-            Keep Both
+            {t('conflict.keepBoth', 'Keep Both')}
           </Button>
         </DialogFooter>
       </DialogContent>

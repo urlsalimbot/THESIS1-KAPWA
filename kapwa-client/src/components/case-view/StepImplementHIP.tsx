@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Upload, Download, X, Lock } from 'lucide-react';
 import { SERVICE_TYPES, NATURE_OF_SERVICE } from '@/lib/constants';
+import { useTranslation } from 'react-i18next';
 
 interface Intervention {
   id: string;
@@ -38,6 +39,7 @@ interface StepImplementHIPProps {
 }
 
 export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepImplementHIPProps) {
+  const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
     queryKeys.cases.interventions(caseId),
@@ -154,38 +156,38 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
       <div className="rounded-lg border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">Intervention Record</h3>
+            <h3 className="text-sm font-semibold">{t('caseView.implement.interventionRecord', 'Intervention Record')}</h3>
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
           {!readOnly && (
             <Button size="sm" onClick={() => setAdding(!adding)}>
-              <Plus size={14} className="mr-1" /> Add Intervention
+              <Plus size={14} className="mr-1" /> {t('caseView.implement.addIntervention', 'Add Intervention')}
             </Button>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {interventions.length} intervention{interventions.length !== 1 ? 's' : ''} delivered
-          {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} total`}
+          {interventions.length} {t('caseView.implement.interventionUnit', { count: interventions.length, defaultValue: interventions.length !== 1 ? 'interventions' : 'intervention' })} {t('caseView.implement.delivered', 'delivered')}
+          {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} ${t('caseView.implement.total', 'total')}`}
         </p>
       </div>
 
       {/* Add Form */}
       {adding && (
         <div className="rounded-lg border bg-card px-4 py-3 space-y-3">
-          <h4 className="text-sm font-medium">New Intervention</h4>
+          <h4 className="text-sm font-medium">{t('caseView.implement.newIntervention', 'New Intervention')}</h4>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Program / Service *</label>
+            <label className="text-sm font-medium">{t('caseView.implement.programService', 'Program / Service *')}</label>
             <select
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={form.programId}
               onChange={e => setForm(f => ({ ...f, programId: e.target.value }))}
             >
-              <option value="">— Select a program —</option>
+              <option value="">{t('caseView.implement.selectProgram', '— Select a program —')}</option>
               {programs.map(p => (
-                <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} req.)` : ''}</option>
+                <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} ${t('caseView.implement.req', 'req.')})` : ''}</option>
               ))}
-              <optgroup label="Other Services">
+              <optgroup label={t('caseView.implement.otherServices', 'Other Services')}>
                 {SERVICE_TYPES.map(s => (
                   <option key={s} value={`adhoc:${s}`}>{s}</option>
                 ))}
@@ -198,29 +200,29 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
 
           {form.programId.startsWith('adhoc:') && (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Service Name *</label>
+              <label className="text-sm font-medium">{t('caseView.implement.serviceName', 'Service Name *')}</label>
               <Input
                 value={form.serviceName}
                 onChange={e => setForm(f => ({ ...f, serviceName: e.target.value }))}
-                placeholder="e.g., Counseling Session, Home Visit"
+                placeholder={t('caseView.implement.serviceNamePlaceholder', 'e.g., Counseling Session, Home Visit')}
               />
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Delivery Date</label>
+              <label className="text-sm font-medium">{t('caseView.implement.deliveryDate', 'Delivery Date')}</label>
               <Input type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Amount (₱)</label>
+              <label className="text-sm font-medium">{t('caseView.implement.amount', 'Amount (₱)')}</label>
               <Input type="text" inputMode="numeric" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value.replace(/,/g, '') }))} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Mode of Delivery</label>
+              <label className="text-sm font-medium">{t('caseView.implement.modeOfDelivery', 'Mode of Delivery')}</label>
               <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.modeOfDelivery} onChange={e => setForm(f => ({ ...f, modeOfDelivery: e.target.value }))}>
                 <option value="">—</option>
                 <option value="Cash">Cash</option>
@@ -231,7 +233,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Fund Source</label>
+              <label className="text-sm font-medium">{t('caseView.implement.fundSource', 'Fund Source')}</label>
               <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.fundSource} onChange={e => setForm(f => ({ ...f, fundSource: e.target.value }))}>
                 <option value="">—</option>
                 <option value="DSWD">DSWD</option>
@@ -244,20 +246,20 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Notes</label>
+            <label className="text-sm font-medium">{t('caseView.implement.notes', 'Notes')}</label>
             <textarea
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder="Additional details about this intervention..."
+              placeholder={t('caseView.implement.notesPlaceholder', 'Additional details about this intervention...')}
             />
           </div>
 
           <div className="flex gap-2">
             <Button onClick={handleAdd} disabled={saving || (!form.programId && !form.serviceName)}>
-              {saving ? 'Saving...' : 'Save Intervention'}
+              {saving ? t('caseView.saving', 'Saving...') : t('caseView.implement.saveIntervention', 'Save Intervention')}
             </Button>
-            <Button variant="outline" onClick={() => setAdding(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAdding(false)}>{t('caseView.cancel', 'Cancel')}</Button>
           </div>
         </div>
       )}
@@ -265,7 +267,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
       {/* Intervention List */}
       {interventions.length === 0 ? (
         <div className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-          No interventions recorded yet. Click "Add Intervention" to document delivered services.
+          {t('caseView.implement.noInterventions', 'No interventions recorded yet. Click "Add Intervention" to document delivered services.')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -309,8 +311,8 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
         <div className="rounded-lg border bg-card">
           <div className="px-4 py-3 flex items-center gap-2">
             <FileCheck size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold">Requirements</h3>
-            <span className="text-xs text-muted-foreground ml-auto">{completedCount}/{allRequirements.length} complete</span>
+            <h3 className="text-sm font-semibold">{t('caseView.implement.requirements', 'Requirements')}</h3>
+            <span className="text-xs text-muted-foreground ml-auto">{completedCount}/{allRequirements.length} {t('caseView.implement.complete', 'complete')}</span>
           </div>
           <Separator />
           <div className="px-4 py-3 space-y-2">
@@ -395,8 +397,8 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary">Interventions recorded</p>
-              <p className="text-xs text-muted-foreground">Submit for admin review to activate the case.</p>
+              <p className="text-sm font-medium text-primary">{t('caseView.implement.recorded', 'Interventions recorded')}</p>
+              <p className="text-xs text-muted-foreground">{t('caseView.implement.submitForReviewHint', 'Submit for admin review to activate the case.')}</p>
             </div>
             <ReviewButton caseId={caseId} mutate={mutate} />
           </div>
@@ -407,6 +409,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
 }
 
 function ReviewButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   async function handleReview() {
     setLoading(true);
@@ -421,7 +424,7 @@ function ReviewButton({ caseId, mutate }: { caseId: string; mutate: any }) {
   }
   return (
     <Button onClick={handleReview} disabled={loading} size="sm">
-      {loading ? 'Submitting...' : 'Submit for Review →'}
+      {loading ? t('caseView.submitting', 'Submitting...') : t('caseView.implement.submitForReview', 'Submit for Review →')}
     </Button>
   );
 }

@@ -5,7 +5,9 @@ import {
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { InterAgencyReferral, STATUS_LABELS, StatusTimeline } from './referral-utils';
+import { InterAgencyReferral, StatusTimeline } from './referral-utils';
+import { useTranslation } from 'react-i18next';
+import { referralStatusLabel } from '@/i18n/display';
 
 export function ReferralCard({
   referral,
@@ -18,6 +20,7 @@ export function ReferralCard({
   onTransition: (id: string, action: string, body?: Record<string, string>) => Promise<void>;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const [outcome, setOutcome] = useState('');
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
@@ -28,7 +31,7 @@ export function ReferralCard({
   const canDecline = isReceiver && referral.status === 'referred';
   const personName = referral.person
     ? `${referral.person.firstName} ${referral.person.surname}`.trim()
-    : 'Person';
+    : t('referrals.person', 'Person');
 
   return (
     <div className="rounded-lg bg-card p-4 shadow-sm border border-border space-y-2">
@@ -43,44 +46,44 @@ export function ReferralCard({
         <div className="flex items-center gap-2 shrink-0">
           {referral.status !== 'declined' && <StatusTimeline status={referral.status} />}
           <Badge variant={referral.status === 'declined' ? 'destructive' : 'default'}>
-            {STATUS_LABELS[referral.status]}
+            {referralStatusLabel(t, referral.status)}
           </Badge>
         </div>
       </div>
       <p className="text-sm">{referral.reason}</p>
       <p className="text-xs text-muted-foreground">
-        Basis: {referral.legalBasisCode} · {new Date(referral.createdAt).toLocaleDateString()}
+        {t('referrals.basis', 'Basis: {{code}}', { code: referral.legalBasisCode })} · {new Date(referral.createdAt).toLocaleDateString()}
       </p>
-      {referral.notes && <p className="text-xs text-muted-foreground">Notes: {referral.notes}</p>}
-      {referral.outcome && <p className="text-xs text-muted-foreground">Outcome: {referral.outcome}</p>}
+      {referral.notes && <p className="text-xs text-muted-foreground">{t('referrals.notesLabel', 'Notes: {{notes}}', { notes: referral.notes })}</p>}
+      {referral.outcome && <p className="text-xs text-muted-foreground">{t('referrals.outcomeLabel', 'Outcome: {{outcome}}', { outcome: referral.outcome })}</p>}
       {referral.declinedReason && (
-        <p className="text-xs text-destructive">Declined: {referral.declinedReason}</p>
+        <p className="text-xs text-destructive">{t('referrals.declinedLabel', 'Declined: {{reason}}', { reason: referral.declinedReason })}</p>
       )}
       {canReceive && (
         <div className="flex gap-2">
           <Button size="sm" onClick={() => onTransition(referral.id, 'receive')} disabled={disabled}>
-            Receive
+            {t('referrals.receive', 'Receive')}
           </Button>
           <AlertDialog open={declineDialogOpen} onOpenChange={setDeclineDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button size="sm" variant="destructive" disabled={disabled}>
-                Decline
+                {t('referrals.decline', 'Decline')}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Decline Referral?</AlertDialogTitle>
+                <AlertDialogTitle>{t('referrals.declineTitle', 'Decline Referral?')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will decline the referral for this beneficiary. This action cannot be undone.
+                  {t('referrals.declineDesc', 'This will decline the referral for this beneficiary. This action cannot be undone.')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Keep Referral</AlertDialogCancel>
+                <AlertDialogCancel>{t('referrals.keepReferral', 'Keep Referral')}</AlertDialogCancel>
                 <AlertDialogAction onClick={async () => {
                   await onTransition(referral.id, 'decline', { declinedReason: 'Unable to accommodate' });
                   setDeclineDialogOpen(false);
                 }}>
-                  Decline
+                  {t('referrals.decline', 'Decline')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -89,7 +92,7 @@ export function ReferralCard({
       )}
       {canAction && (
         <Button size="sm" onClick={() => onTransition(referral.id, 'action')} disabled={disabled}>
-          Mark Actioned
+          {t('referrals.markActioned', 'Mark Actioned')}
         </Button>
       )}
       {canClose && (
@@ -97,7 +100,7 @@ export function ReferralCard({
           <input
             value={outcome}
             onChange={e => setOutcome(e.target.value)}
-            placeholder="Outcome"
+            placeholder={t('referrals.outcome', 'Outcome')}
             className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
           />
           <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
@@ -106,23 +109,23 @@ export function ReferralCard({
                 size="sm"
                 disabled={disabled || !outcome.trim()}
               >
-                Close
+                {t('referrals.close', 'Close')}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Close Referral?</AlertDialogTitle>
+                <AlertDialogTitle>{t('referrals.closeTitle', 'Close Referral?')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently close the referral for this beneficiary. This action cannot be undone.
+                  {t('referrals.closeDesc', 'This will permanently close the referral for this beneficiary. This action cannot be undone.')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Keep Open</AlertDialogCancel>
+                <AlertDialogCancel>{t('referrals.keepOpen', 'Keep Open')}</AlertDialogCancel>
                 <AlertDialogAction onClick={async () => {
                   await onTransition(referral.id, 'close', { outcome });
                   setCloseDialogOpen(false);
                 }}>
-                  Close Referral
+                  {t('referrals.closeReferral', 'Close Referral')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

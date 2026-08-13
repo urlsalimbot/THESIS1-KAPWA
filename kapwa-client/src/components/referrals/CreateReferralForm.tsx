@@ -4,6 +4,7 @@ import { useDebouncedSearch, SearchResult } from '@/hooks/useDebouncedSearch';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { Agency, LEGAL_BASIS_OPTIONS } from './referral-utils';
+import { useTranslation } from 'react-i18next';
 
 export function CreateReferralForm({
   agencies,
@@ -18,6 +19,7 @@ export function CreateReferralForm({
   caseId?: string;
   initialBeneficiary?: { beneficiaryId: string; label: string };
 }) {
+  const { t } = useTranslation();
   const [toAgencyId, setToAgencyId] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -51,7 +53,7 @@ export function CreateReferralForm({
       setToAgencyId('');
       onCreated();
     } catch (err: any) {
-      setError(err?.message || 'Failed to create referral');
+      setError(err?.message || t('referrals.createFailed', 'Failed to create referral'));
     } finally {
       setSubmitting(false);
     }
@@ -63,12 +65,12 @@ export function CreateReferralForm({
       className="rounded-lg bg-card p-4 shadow-sm border border-border space-y-3"
     >
       <h3 className="text-sm font-semibold flex items-center gap-2">
-        <Send size={16} className="text-primary" /> Create Referral
+        <Send size={16} className="text-primary" /> {t('referrals.createTitle', 'Create Referral')}
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium" htmlFor="iar-to-agency">
-            To Agency *
+            {t('referrals.toAgency', 'To Agency *')}
           </label>
           <select
             id="iar-to-agency"
@@ -77,7 +79,7 @@ export function CreateReferralForm({
             className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
             required
           >
-            <option value="">Select agency...</option>
+            <option value="">{t('referrals.selectAgency', 'Select agency...')}</option>
             {agencies.map(a => (
               <option key={a.id} value={a.id}>
                 {a.code} — {a.name}
@@ -87,7 +89,7 @@ export function CreateReferralForm({
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium" htmlFor="iar-legal-basis">
-            Legal Basis *
+            {t('referrals.legalBasis', 'Legal Basis *')}
           </label>
           <select
             id="iar-legal-basis"
@@ -104,13 +106,13 @@ export function CreateReferralForm({
         </div>
       </div>
       <div className="space-y-1">
-        <label className="text-xs font-medium">Beneficiary *</label>
+        <label className="text-xs font-medium">{t('referrals.beneficiary', 'Beneficiary *')}</label>
         {selected ? (
           <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
             <span>{selected.label}</span>
             {!initialBeneficiary && (
               <button type="button" onClick={() => setSelected(null)} className="text-xs text-muted-foreground">
-                Clear
+                {t('referrals.clear', 'Clear')}
               </button>
             )}
           </div>
@@ -119,10 +121,10 @@ export function CreateReferralForm({
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search beneficiary by name..."
+              placeholder={t('referrals.searchBeneficiary', 'Search beneficiary by name...')}
               className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
             />
-            {loading && <p className="text-xs text-muted-foreground">Searching...</p>}
+            {loading && <p className="text-xs text-muted-foreground">{t('referrals.searching', 'Searching...')}</p>}
             {results.length > 0 && (
               <ul className="rounded-md border divide-y max-h-40 overflow-y-auto">
                 {results.map(r => (
@@ -146,7 +148,7 @@ export function CreateReferralForm({
       </div>
       <div className="space-y-1">
         <label className="text-xs font-medium" htmlFor="iar-reason">
-          Reason *
+          {t('referrals.reason', 'Reason *')}
         </label>
         <textarea
           id="iar-reason"
@@ -159,7 +161,7 @@ export function CreateReferralForm({
       </div>
       <div className="space-y-1">
         <label className="text-xs font-medium" htmlFor="iar-notes">
-          Notes
+          {t('referrals.notes', 'Notes')}
         </label>
         <textarea
           id="iar-notes"
@@ -175,7 +177,7 @@ export function CreateReferralForm({
         size="sm"
         disabled={submitting || !selected || !toAgencyId || !reason.trim()}
       >
-        {submitting ? 'Saving...' : 'Create Referral'}
+        {submitting ? t('referrals.saving', 'Saving...') : t('referrals.createTitle', 'Create Referral')}
       </Button>
     </form>
   );

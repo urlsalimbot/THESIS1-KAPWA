@@ -11,6 +11,7 @@ import { CreateReferralForm } from '@/components/referrals/CreateReferralForm';
 import { ReferralCard } from '@/components/referrals/ReferralCard';
 import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
 import { EmptyState } from '@/components/EmptyState';
+import { useTranslation } from 'react-i18next';
 
 interface StepIntegratedDeliveryProps {
   caseId: string;
@@ -20,6 +21,7 @@ interface StepIntegratedDeliveryProps {
 }
 
 export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }: StepIntegratedDeliveryProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
   const [createOpen, setCreateOpen] = useState(false);
@@ -42,7 +44,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
       await revalidate();
       await mutate(queryKeys.cases.detail(caseId));
     } catch (err: any) {
-      alert(err?.message || 'Failed to update referral');
+      alert(err?.message || t('caseView.integrated.failedUpdateReferral', 'Failed to update referral'));
     } finally {
       setTransitioning(false);
     }
@@ -54,19 +56,19 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">Inter-Agency Referrals</h3>
+            <h3 className="text-sm font-semibold">{t('caseView.integrated.interAgencyReferrals', 'Inter-Agency Referrals')}</h3>
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
           {!readOnly && (
             <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus size={14} className="mr-1" /> Create Referral
+              <Plus size={14} className="mr-1" /> {t('caseView.integrated.createReferral', 'Create Referral')}
             </Button>
           )}
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
           {isLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-3">Loading referrals...</p>
+            <p className="text-sm text-muted-foreground text-center py-3">{t('caseView.integrated.loadingReferrals', 'Loading referrals...')}</p>
           ) : !referrals || referrals.length === 0 ? (
             <EmptyState variant="no-data" />
           ) : (
@@ -88,8 +90,8 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary">Ready for approval</p>
-              <p className="text-xs text-muted-foreground">Case is in review. Approve to activate services.</p>
+              <p className="text-sm font-medium text-primary">{t('caseView.integrated.readyForApproval', 'Ready for approval')}</p>
+              <p className="text-xs text-muted-foreground">{t('caseView.integrated.readyForApprovalHint', 'Case is in review. Approve to activate services.')}</p>
             </div>
             <ApproveButton caseId={caseId} mutate={mutate} />
           </div>
@@ -99,8 +101,8 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary">Services delivered</p>
-              <p className="text-xs text-muted-foreground">Mark case as transitioning to begin graduation process.</p>
+              <p className="text-sm font-medium text-primary">{t('caseView.integrated.servicesDelivered', 'Services delivered')}</p>
+              <p className="text-xs text-muted-foreground">{t('caseView.integrated.servicesDeliveredHint', 'Mark case as transitioning to begin graduation process.')}</p>
             </div>
             <DisburseButton caseId={caseId} mutate={mutate} />
           </div>
@@ -111,10 +113,10 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Send size={16} className="text-primary" /> Create Inter-Agency Referral
+              <Send size={16} className="text-primary" /> {t('caseView.integrated.createIarTitle', 'Create Inter-Agency Referral')}
             </DialogTitle>
             <DialogDescription>
-              Refer this case's beneficiary to a partner agency for coordinated services.
+              {t('caseView.integrated.createIarDesc', "Refer this case's beneficiary to a partner agency for coordinated services.")}
             </DialogDescription>
           </DialogHeader>
           <CreateReferralForm
@@ -133,6 +135,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
 }
 
 function ApproveButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   async function handleApprove() {
     setLoading(true);
@@ -147,12 +150,13 @@ function ApproveButton({ caseId, mutate }: { caseId: string; mutate: any }) {
   }
   return (
     <Button onClick={handleApprove} disabled={loading} size="sm">
-      {loading ? 'Approving...' : '✓ Approve Case'}
+      {loading ? t('caseView.approving', 'Approving...') : t('caseView.integrated.approveCase', '✓ Approve Case')}
     </Button>
   );
 }
 
 function DisburseButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   async function handleDisburse() {
     setLoading(true);
@@ -167,7 +171,7 @@ function DisburseButton({ caseId, mutate }: { caseId: string; mutate: any }) {
   }
   return (
     <Button onClick={handleDisburse} disabled={loading} size="sm">
-      {loading ? 'Processing...' : '→ Mark for Graduation'}
+      {loading ? t('caseView.processing', 'Processing...') : t('caseView.integrated.markForGraduation', '→ Mark for Graduation')}
     </Button>
   );
 }

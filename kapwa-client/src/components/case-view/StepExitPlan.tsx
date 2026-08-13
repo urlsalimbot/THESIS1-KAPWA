@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { referralStatusLabel } from '@/i18n/display';
 
 interface Referral {
   agencyName: string;
@@ -22,6 +24,7 @@ interface StepExitPlanProps {
 }
 
 export function StepExitPlan({ caseId, caseData }: StepExitPlanProps) {
+  const { t } = useTranslation();
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
 
@@ -79,7 +82,7 @@ export function StepExitPlan({ caseId, caseData }: StepExitPlanProps) {
       {/* Self-Reliance Plan */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Self-Reliance Plan</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.exitPlan.selfReliancePlan', 'Self-Reliance Plan')}</h3>
         </div>
         <Separator />
         <div className="px-4 py-3">
@@ -87,7 +90,7 @@ export function StepExitPlan({ caseId, caseData }: StepExitPlanProps) {
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
             value={plan.selfReliancePlan}
             onChange={e => setPlan(p => ({ ...p, selfReliancePlan: e.target.value }))}
-            placeholder="Recommendations for self-reliance steps, skills training, livelihood programs..."
+            placeholder={t('caseView.exitPlan.selfReliancePlaceholder', 'Recommendations for self-reliance steps, skills training, livelihood programs...')}
           />
         </div>
       </div>
@@ -95,21 +98,21 @@ export function StepExitPlan({ caseId, caseData }: StepExitPlanProps) {
       {/* Referrals */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Referrals to Other Agencies</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.exitPlan.referralsTitle', 'Referrals to Other Agencies')}</h3>
           <Button variant="outline" size="sm" onClick={addReferral} disabled={!newReferral.agencyName}>
-            <Plus size={14} className="mr-1" /> Add Referral
+            <Plus size={14} className="mr-1" /> {t('caseView.exitPlan.addReferral', 'Add Referral')}
           </Button>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <Input placeholder="Agency name *" value={newReferral.agencyName} onChange={e => setNewReferral(r => ({ ...r, agencyName: e.target.value }))} />
-            <Input placeholder="Contact info" value={newReferral.contactInfo} onChange={e => setNewReferral(r => ({ ...r, contactInfo: e.target.value }))} />
-            <Input placeholder="Reason for referral" value={newReferral.reason} onChange={e => setNewReferral(r => ({ ...r, reason: e.target.value }))} className="col-span-2" />
+            <Input placeholder={t('caseView.exitPlan.agencyNamePlaceholder', 'Agency name *')} value={newReferral.agencyName} onChange={e => setNewReferral(r => ({ ...r, agencyName: e.target.value }))} />
+            <Input placeholder={t('caseView.exitPlan.contactInfoPlaceholder', 'Contact info')} value={newReferral.contactInfo} onChange={e => setNewReferral(r => ({ ...r, contactInfo: e.target.value }))} />
+            <Input placeholder={t('caseView.exitPlan.reasonPlaceholder', 'Reason for referral')} value={newReferral.reason} onChange={e => setNewReferral(r => ({ ...r, reason: e.target.value }))} className="col-span-2" />
           </div>
 
           {plan.referrals.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-3">No referrals recorded.</p>
+            <p className="text-sm text-muted-foreground text-center py-3">{t('caseView.exitPlan.noReferrals', 'No referrals recorded.')}</p>
           ) : (
             plan.referrals.map((ref, i) => (
               <div key={i} className="flex items-start justify-between p-2 rounded border bg-muted/30">
@@ -117,7 +120,7 @@ export function StepExitPlan({ caseId, caseData }: StepExitPlanProps) {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{ref.agencyName}</span>
                     <Badge variant={ref.status === 'completed' ? 'default' : ref.status === 'declined' ? 'destructive' : 'outline'} className="text-[10px]">
-                      {ref.status}
+                      {referralStatusLabel(t, ref.status)}
                     </Badge>
                   </div>
                   {ref.contactInfo && <p className="text-xs text-muted-foreground">{ref.contactInfo}</p>}
@@ -138,25 +141,25 @@ export function StepExitPlan({ caseId, caseData }: StepExitPlanProps) {
       {/* Follow-up & Exit Notes */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">Follow-up & Closing Notes</h3>
+          <h3 className="text-sm font-semibold">{t('caseView.exitPlan.followUpTitle', 'Follow-up & Closing Notes')}</h3>
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Follow-up Date</label>
+            <label className="text-sm font-medium">{t('caseView.exitPlan.followUpDate', 'Follow-up Date')}</label>
             <Input type="date" value={plan.followUpDate} onChange={e => setPlan(p => ({ ...p, followUpDate: e.target.value }))} />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Exit Notes</label>
+            <label className="text-sm font-medium">{t('caseView.exitPlan.exitNotes', 'Exit Notes')}</label>
             <textarea
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
               value={plan.exitNotes}
               onChange={e => setPlan(p => ({ ...p, exitNotes: e.target.value }))}
-              placeholder="Final notes before case closure..."
+              placeholder={t('caseView.exitPlan.exitNotesPlaceholder', 'Final notes before case closure...')}
             />
           </div>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Exit Plan'}
+            {saving ? t('caseView.saving', 'Saving...') : t('caseView.exitPlan.saveExitPlan', 'Save Exit Plan')}
           </Button>
         </div>
       </div>
