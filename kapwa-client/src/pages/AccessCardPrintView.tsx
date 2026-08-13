@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { AccessCard } from '../components/cards/AccessCard';
 import { Printer } from 'lucide-react';
 
 export function AccessCardPrintView() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [card, setCard] = useState<{ code: string; beneficiary: any; services: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -13,7 +15,7 @@ export function AccessCardPrintView() {
   useEffect(() => {
     if (!id) {
       setLoading(false);
-      setError('No beneficiary ID provided');
+      setError(t('accessCard.noBeneficiaryId', 'No beneficiary ID provided'));
       return;
     }
     api.get<{ code: string; beneficiary: any; services: any[] }>(`/access-cards/beneficiary/${id}/card`)
@@ -23,7 +25,7 @@ export function AccessCardPrintView() {
       })
       .catch(() => {
         setCard(null);
-        setError('No Access Card');
+        setError(t('accessCard.noCard', 'No Access Card'));
         setLoading(false);
       });
   }, [id]);
@@ -31,7 +33,7 @@ export function AccessCardPrintView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <p className="text-gray-400">Loading card data...</p>
+        <p className="text-gray-400">{t('accessCard.loadingCardData', 'Loading card data...')}</p>
       </div>
     );
   }
@@ -39,9 +41,9 @@ export function AccessCardPrintView() {
   if (error || !card || !card.beneficiary) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
-        <h2 className="text-lg font-semibold text-gray-700">No Access Card</h2>
+        <h2 className="text-lg font-semibold text-gray-700">{t('accessCard.noCard', 'No Access Card')}</h2>
         <p className="mt-2 text-sm text-gray-500">
-          This beneficiary has no Access Card. Generate and assign one to enable card-based tracking.
+          {t('accessCard.noCardBody', 'This beneficiary has no Access Card. Generate and assign one to enable card-based tracking.')}
         </p>
       </div>
     );
@@ -63,7 +65,7 @@ export function AccessCardPrintView() {
           className="flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm text-white hover:bg-primary-dark"
         >
           <Printer size={16} />
-          Print Card
+          {t('accessCard.printCard', 'Print Card')}
         </button>
       </div>
       <div className="rounded-lg border border-gray-200 bg-white p-6">

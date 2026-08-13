@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { FileText, Calendar, Clock, CheckCircle, XCircle, Shield } from 'lucide-react';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -31,6 +32,7 @@ interface ProgramDetail {
 }
 
 export function ProgramDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: program, isLoading } = useSWR<ProgramDetail>(
@@ -39,18 +41,18 @@ export function ProgramDetailPage() {
 
   if (isLoading) {
     return (
-      <PageShell title="Loading..." description="">
-        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">Loading program...</div>
+      <PageShell title={t('programs.loadingTitle', 'Loading...')} description="">
+        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">{t('programs.loadingProgram', 'Loading program...')}</div>
       </PageShell>
     );
   }
 
   if (!program) {
     return (
-      <PageShell title="Program Not Found" description="" backTo={{ label: 'Back to Programs', onClick: () => navigate('/programs') }}>
+      <PageShell title={t('programs.notFoundTitle', 'Program Not Found')} description="" backTo={{ label: t('programs.backToPrograms', 'Back to Programs'), onClick: () => navigate('/programs') }}>
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <FileText size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">Program not found.</p>
+          <p className="text-sm">{t('programs.notFound', 'Program not found.')}</p>
         </div>
       </PageShell>
     );
@@ -59,11 +61,11 @@ export function ProgramDetailPage() {
   return (
     <PageShell
       title={program.name}
-      description={program.category || 'Intervention Program'}
-      backTo={{ label: 'Back to Programs', onClick: () => navigate('/programs') }}
+      description={program.category || t('programs.interventionProgram', 'Intervention Program')}
+      backTo={{ label: t('programs.backToPrograms', 'Back to Programs'), onClick: () => navigate('/programs') }}
       actions={
         <Badge variant={program.isActive ? 'default' : 'secondary'} className={`${program.isActive ? 'bg-emerald-500' : ''}`}>
-          {program.isActive ? 'Active' : 'Inactive'}
+          {program.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}
         </Badge>
       }
     >
@@ -76,27 +78,26 @@ export function ProgramDetailPage() {
               <div>
                 <h2 className="text-base font-semibold">{program.name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Created {new Date(program.createdAt).toLocaleDateString()} &middot;
-                  Updated {new Date(program.updatedAt).toLocaleDateString()}
+                  {t('programs.createdUpdated', 'Created {{created}} · Updated {{updated}}', { created: new Date(program.createdAt).toLocaleDateString(), updated: new Date(program.updatedAt).toLocaleDateString() })}
                 </p>
               </div>
             </div>
             <Separator />
             <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <div>
-                <span className="text-muted-foreground text-xs">Category</span>
+                <span className="text-muted-foreground text-xs">{t('programs.category', 'Category')}</span>
                 <p className="font-medium">{program.category || '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Legal Basis</span>
+                <span className="text-muted-foreground text-xs">{t('programs.legalBasis', 'Legal Basis')}</span>
                 <p className="font-medium">{program.legalBasis || '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Waiting Period</span>
-                <p className="font-medium">{program.waitingPeriodDays != null ? `${program.waitingPeriodDays} days` : '—'}</p>
+                <span className="text-muted-foreground text-xs">{t('programs.waitingPeriod', 'Waiting Period')}</span>
+                <p className="font-medium">{program.waitingPeriodDays != null ? t('programs.days', '{{count}} days', { count: program.waitingPeriodDays }) : '—'}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Form Version</span>
+                <span className="text-muted-foreground text-xs">{t('programs.formVersion', 'Form Version')}</span>
                 <p className="font-medium">{program.formVersion}</p>
               </div>
             </div>
@@ -107,8 +108,8 @@ export function ProgramDetailPage() {
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-2">
                 <Shield size={16} className="text-muted-foreground" />
-                <h2 className="text-sm font-semibold">Approval Workflow</h2>
-                <span className="text-xs text-muted-foreground ml-auto">{program.approvalWorkflow.length} step{program.approvalWorkflow.length > 1 ? 's' : ''}</span>
+                <h2 className="text-sm font-semibold">{t('programs.approvalWorkflow', 'Approval Workflow')}</h2>
+                <span className="text-xs text-muted-foreground ml-auto">{t('programs.stepCount', '{{count}} step', { count: program.approvalWorkflow.length })}</span>
               </div>
               <Separator />
               <div className="px-4 py-3 space-y-2">
@@ -121,7 +122,7 @@ export function ProgramDetailPage() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground">{s.stepName}</p>
-                        <p className="text-xs text-muted-foreground">Approver: {s.approverRole} &middot; SLA: {s.slaDays}d</p>
+                        <p className="text-xs text-muted-foreground">{t('programs.approver', 'Approver: {{role}} · SLA: {{days}}d', { role: s.approverRole, days: s.slaDays })}</p>
                       </div>
                     </div>
                   ))}
@@ -134,8 +135,8 @@ export function ProgramDetailPage() {
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-2">
                 <FileText size={16} className="text-muted-foreground" />
-                <h2 className="text-sm font-semibold">Required Documents</h2>
-                <span className="text-xs text-muted-foreground ml-auto">{program.requiredDocuments.length} item{program.requiredDocuments.length > 1 ? 's' : ''}</span>
+                <h2 className="text-sm font-semibold">{t('programs.requiredDocuments', 'Required Documents')}</h2>
+                <span className="text-xs text-muted-foreground ml-auto">{t('programs.itemCount', '{{count}} item', { count: program.requiredDocuments.length })}</span>
               </div>
               <Separator />
               <div className="px-4 py-3">
@@ -155,7 +156,7 @@ export function ProgramDetailPage() {
           <div className="rounded-lg border bg-card">
             <div className="px-4 py-3 flex items-center gap-2">
               <Clock size={16} className="text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Fund Sources</h2>
+              <h2 className="text-sm font-semibold">{t('programs.fundSources', 'Fund Sources')}</h2>
             </div>
             <Separator />
             <div className="px-4 py-3">
@@ -166,7 +167,7 @@ export function ProgramDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">None configured</p>
+                <p className="text-sm text-muted-foreground">{t('programs.noneConfigured', 'None configured')}</p>
               )}
             </div>
           </div>
@@ -175,16 +176,16 @@ export function ProgramDetailPage() {
           <div className="rounded-lg border bg-card">
             <div className="px-4 py-3 flex items-center gap-2">
               <FileText size={16} className="text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Form Template</h2>
+              <h2 className="text-sm font-semibold">{t('programs.formTemplate', 'Form Template')}</h2>
             </div>
             <Separator />
             <div className="px-4 py-3">
               <p className="text-sm text-foreground">
-                {program.formTemplate ? 'Configured' : 'None'}
+                {program.formTemplate ? t('programs.configured', 'Configured') : t('programs.none', 'None')}
               </p>
               {program.formTemplate && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {Object.keys(program.formTemplate).length} field{Object.keys(program.formTemplate).length > 1 ? 's' : ''} defined
+                  {t('programs.fieldCount', '{{count}} field defined', { count: Object.keys(program.formTemplate).length })}
                 </p>
               )}
             </div>
@@ -194,23 +195,23 @@ export function ProgramDetailPage() {
           <div className="rounded-lg border bg-card">
             <div className="px-4 py-3 flex items-center gap-2">
               <Calendar size={16} className="text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Metadata</h2>
+              <h2 className="text-sm font-semibold">{t('programs.metadata', 'Metadata')}</h2>
             </div>
             <Separator />
             <div className="px-4 py-3 space-y-2 text-sm">
               <div>
-                <span className="text-muted-foreground text-xs">Created</span>
+                <span className="text-muted-foreground text-xs">{t('programs.created', 'Created')}</span>
                 <p className="font-medium">{new Date(program.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Updated</span>
+                <span className="text-muted-foreground text-xs">{t('programs.updated', 'Updated')}</span>
                 <p className="font-medium">{new Date(program.updatedAt).toLocaleDateString()}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Status</span>
+                <span className="text-muted-foreground text-xs">{t('programs.status', 'Status')}</span>
                 <p className="font-medium flex items-center gap-1 mt-0.5">
                   {program.isActive ? <CheckCircle size={14} className="text-emerald-500" /> : <XCircle size={14} className="text-muted-foreground" />}
-                  {program.isActive ? 'Active' : 'Inactive'}
+                  {program.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}
                 </p>
               </div>
             </div>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { referralStatusLabel } from '@/i18n/display';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -23,20 +25,20 @@ interface AccessCardService {
   category?: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  case_service: 'Case Service',
-  referral: 'Referral',
-  community_service: 'Community Service',
-  seminar: 'Seminar',
+const CATEGORY_LABELS: Record<string, { key: string; label: string }> = {
+  case_service: { key: 'accessCard.catCaseService', label: 'Case Service' },
+  referral: { key: 'accessCard.catReferral', label: 'Referral' },
+  community_service: { key: 'accessCard.catCommunity', label: 'Community Service' },
+  seminar: { key: 'accessCard.catSeminar', label: 'Seminar' },
 };
 
 const CATEGORY_TABS = ['', 'case_service', 'referral', 'community_service', 'seminar'];
-const CATEGORY_TAB_LABELS: Record<string, string> = {
-  '': 'All',
-  case_service: 'Case Services',
-  referral: 'Referrals',
-  community_service: 'Community',
-  seminar: 'Seminars',
+const CATEGORY_TAB_LABELS: Record<string, { key: string; label: string }> = {
+  '': { key: 'accessCard.tabAll', label: 'All' },
+  case_service: { key: 'accessCard.tabCaseServices', label: 'Case Services' },
+  referral: { key: 'accessCard.tabReferrals', label: 'Referrals' },
+  community_service: { key: 'accessCard.tabCommunity', label: 'Community' },
+  seminar: { key: 'accessCard.tabSeminars', label: 'Seminars' },
 };
 
 interface ReferralSummary {
@@ -66,29 +68,24 @@ interface Agency {
   name: string;
 }
 
-const REFERRAL_STATUS_LABELS: Record<string, string> = {
-  referred: 'Referred',
-  received: 'Received',
-  actioned: 'Actioned',
-  closed: 'Closed',
-  declined: 'Declined',
-};
-
 function CategoryBadge({ category }: { category?: string }) {
+  const { t } = useTranslation();
   const variants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
     case_service: 'default',
     referral: 'secondary',
     community_service: 'outline',
     seminar: 'secondary',
   };
+  const cat = CATEGORY_LABELS[category || ''];
   return (
     <Badge variant={variants[category || ''] || 'outline'} className="text-[10px]">
-      {CATEGORY_LABELS[category || ''] || category || 'Unknown'}
+      {cat ? t(cat.key, cat.label) : category || t('accessCard.unknown', 'Unknown')}
     </Badge>
   );
 }
 
 export function AccessCardViewPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('');
@@ -143,7 +140,7 @@ export function AccessCardViewPage() {
 
   if (loading) {
     return (
-      <PageShell title="Access Card" description="Loading..." backTo={{ label: 'Back', onClick: () => navigate(-1) }}>
+      <PageShell title={t('accessCard.title', 'Access Card')} description={t('accessCard.loading', 'Loading...')} backTo={{ label: t('accessCard.back', 'Back'), onClick: () => navigate(-1) }}>
         <CardGridSkeleton />
       </PageShell>
     );
@@ -151,7 +148,7 @@ export function AccessCardViewPage() {
 
   if (!cardData) {
     return (
-      <PageShell title="Access Card" description="" backTo={{ label: 'Back', onClick: () => navigate(-1) }}>
+      <PageShell title={t('accessCard.title', 'Access Card')} description="" backTo={{ label: t('accessCard.back', 'Back'), onClick: () => navigate(-1) }}>
         <EmptyState variant="no-data" />
       </PageShell>
     );
@@ -164,9 +161,9 @@ export function AccessCardViewPage() {
 
   return (
     <PageShell
-      title="Access Card"
-      description={`Service record for ${fullName}`}
-      backTo={{ label: 'Back', onClick: () => navigate(-1) }}
+      title={t('accessCard.title', 'Access Card')}
+      description={t('accessCard.serviceRecordFor', 'Service record for {{name}}', { name: fullName })}
+      backTo={{ label: t('accessCard.back', 'Back'), onClick: () => navigate(-1) }}
     >
       <div className="rounded-lg bg-card p-4 shadow-sm border border-border mb-4">
         <div className="flex items-start gap-4">
@@ -179,7 +176,7 @@ export function AccessCardViewPage() {
                 <h2 className="text-lg font-bold text-foreground truncate">{fullName}</h2>
                 <p className="font-mono text-sm text-primary">{cardData.code}</p>
               </div>
-              <Badge variant="default" className="text-[10px]">{cardData.services.length} total</Badge>
+              <Badge variant="default" className="text-[10px]">{t('accessCard.totalCount', '{{count}} total', { count: cardData.services.length })}</Badge>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><User size={13} /> {benInfo.gender || ben?.gender || '—'}</span>
@@ -194,7 +191,7 @@ export function AccessCardViewPage() {
         <div className="rounded-lg bg-card p-4 shadow-sm border border-border mb-4">
           <div className="flex items-center gap-2 text-primary mb-3">
             <Users size={16} />
-            <h3 className="text-xs font-semibold uppercase tracking-wider">Family Members ({famGraph.members.length})</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider">{t('accessCard.familyMembers', 'Family Members ({{count}})', { count: famGraph.members.length })}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {famGraph.members.map((m, i) => (
@@ -211,10 +208,10 @@ export function AccessCardViewPage() {
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CreditCard size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold">Services Rendered</h3>
+            <h3 className="text-sm font-semibold">{t('accessCard.servicesRendered', 'Services Rendered')}</h3>
           </div>
           <Button size="sm" onClick={() => setShowAddForm(true)}>
-            <Plus size={14} className="mr-1" /> Add Entry
+            <Plus size={14} className="mr-1" /> {t('accessCard.addEntry', 'Add Entry')}
           </Button>
         </div>
 
@@ -229,7 +226,7 @@ export function AccessCardViewPage() {
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
-              {CATEGORY_TAB_LABELS[tab]}
+              {CATEGORY_TAB_LABELS[tab] ? t(CATEGORY_TAB_LABELS[tab].key, CATEGORY_TAB_LABELS[tab].label) : tab}
             </button>
           ))}
         </div>
@@ -238,19 +235,19 @@ export function AccessCardViewPage() {
           <form onSubmit={handleAddEntry} className="mx-4 mb-3 p-3 rounded-lg border bg-muted/30 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium">Category *</label>
+                <label className="text-xs font-medium">{t('accessCard.category', 'Category *')}</label>
                 <select
                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                   value={addForm.category}
                   onChange={e => setAddForm(f => ({ ...f, category: e.target.value }))}
                 >
-                  <option value="referral">Referral</option>
-                  <option value="community_service">Community Service</option>
-                  <option value="seminar">Seminar</option>
+                  <option value="referral">{t('accessCard.catReferral', 'Referral')}</option>
+                  <option value="community_service">{t('accessCard.catCommunity', 'Community Service')}</option>
+                  <option value="seminar">{t('accessCard.catSeminar', 'Seminar')}</option>
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">Service Date *</label>
+                <label className="text-xs font-medium">{t('accessCard.serviceDate', 'Service Date *')}</label>
                 <input
                   type="date"
                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
@@ -261,22 +258,22 @@ export function AccessCardViewPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">Service Rendered *</label>
+              <label className="text-xs font-medium">{t('accessCard.serviceRendered', 'Service Rendered *')}</label>
               <input
                 className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 value={addForm.serviceRendered}
                 onChange={e => setAddForm(f => ({ ...f, serviceRendered: e.target.value }))}
-                placeholder="e.g., Medical Referral to Norzagaray RHU"
+                placeholder={t('accessCard.servicePlaceholder', 'e.g., Medical Referral to Norzagaray RHU')}
                 required
               />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium">Cost (₱)</label>
+                <label className="text-xs font-medium">{t('accessCard.cost', 'Cost (₱)')}</label>
                 <input type="number" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium" htmlFor="access-card-agency">Agency *</label>
+                <label className="text-xs font-medium" htmlFor="access-card-agency">{t('accessCard.agency', 'Agency *')}</label>
                 <select
                   id="access-card-agency"
                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
@@ -284,27 +281,27 @@ export function AccessCardViewPage() {
                   onChange={e => setAddForm(f => ({ ...f, agencyId: e.target.value }))}
                   required
                 >
-                  <option value="">Select agency...</option>
+                  <option value="">{t('accessCard.selectAgency', 'Select agency...')}</option>
                   {(agencies || []).map(a => (
                     <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">Worker Name</label>
+                <label className="text-xs font-medium">{t('accessCard.workerName', 'Worker Name')}</label>
                 <input className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.workerNameSign} onChange={e => setAddForm(f => ({ ...f, workerNameSign: e.target.value }))} />
               </div>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={adding}>{adding ? 'Saving...' : 'Save Entry'}</Button>
-              <Button variant="outline" size="sm" type="button" onClick={() => setShowAddForm(false)}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={adding}>{adding ? t('accessCard.saving', 'Saving...') : t('accessCard.saveEntry', 'Save Entry')}</Button>
+              <Button variant="outline" size="sm" type="button" onClick={() => setShowAddForm(false)}>{t('accessCard.cancel', 'Cancel')}</Button>
             </div>
           </form>
         )}
 
         <div className="px-4 pb-4">
           {filteredServices.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No records found</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">{t('accessCard.noRecords', 'No records found')}</p>
           ) : (
             <div className="space-y-1">
               {filteredServices.map(s => (
@@ -315,7 +312,7 @@ export function AccessCardViewPage() {
                     <p className="text-xs text-muted-foreground">
                       {new Date(s.serviceDate).toLocaleDateString()}
                       {s.agencyRef?.name || s.agency}
-                      {s.workerNameSign && ` · ${s.workerNameSign}`}
+                      {s.workerNameSign && t('accessCard.byWorker', ' · {{name}}', { name: s.workerNameSign })}
                     </p>
                   </div>
                   {s.cost != null && Number(s.cost) > 0 && (
@@ -332,11 +329,11 @@ export function AccessCardViewPage() {
         <div className="rounded-lg bg-card p-4 shadow-sm border border-border mt-4">
           <div className="flex items-center gap-2 text-primary mb-3">
             <Building2 size={16} />
-            <h3 className="text-xs font-semibold uppercase tracking-wider">Services From Other Agencies</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider">{t('accessCard.otherAgencies', 'Services From Other Agencies')}</h3>
           </div>
           {!summary.sharingConsentActive && (
             <p className="text-xs text-muted-foreground mb-2">
-              Inter-agency sharing consent is not active — shown to MSWDO only.
+              {t('accessCard.consentNote', 'Inter-agency sharing consent is not active — shown to MSWDO only.')}
             </p>
           )}
           <div className="space-y-1">
@@ -362,13 +359,13 @@ export function AccessCardViewPage() {
         <div className="rounded-lg bg-card p-4 shadow-sm border border-border mt-4">
           <div className="flex items-center gap-2 text-primary mb-3">
             <ArrowLeftRight size={16} />
-            <h3 className="text-xs font-semibold uppercase tracking-wider">Referrals History</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider">{t('accessCard.referralHistory', 'Referrals History')}</h3>
           </div>
           <div className="space-y-1">
             {summary.referralHistory.map(r => (
               <div key={r.id} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
                 <Badge variant={r.status === 'declined' ? 'destructive' : 'secondary'} className="text-[10px]">
-                  {REFERRAL_STATUS_LABELS[r.status] || r.status}
+                  {referralStatusLabel(t, r.status)}
                 </Badge>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{r.reason}</p>

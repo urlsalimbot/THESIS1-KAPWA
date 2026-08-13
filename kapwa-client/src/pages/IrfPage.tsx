@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { Shield } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, exportIrfPdf } from '../lib/api';
@@ -25,6 +26,7 @@ interface IrfCase {
 }
 
 export function IrfPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -71,7 +73,7 @@ export function IrfPage() {
       setExportIrfId(null);
       setLegalBasis('');
       setPdfPassword('');
-    } catch (e) { console.error('PDF export:', e); alert('PDF export failed'); }
+    } catch (e) { console.error('PDF export:', e); alert(t('irf.pdfExportFailed', 'PDF export failed')); }
     setExporting(false);
   }
 
@@ -90,42 +92,42 @@ export function IrfPage() {
       setExportIrfId(null);
       setLegalBasis('');
       setPdfPassword('');
-    } catch (e) { console.error('JSON export:', e); alert('JSON export failed'); }
+    } catch (e) { console.error('JSON export:', e); alert(t('irf.jsonExportFailed', 'JSON export failed')); }
     setExporting(false);
   }
 
   const columns: ColumnDef<IrfCase>[] = [
-    { accessorKey: 'blotterEntryNumber', header: 'Blotter #', cell: ({ row }) => <span className="font-mono font-semibold text-primary">{row.original.blotterEntryNumber}</span> },
+    { accessorKey: 'blotterEntryNumber', header: t('irf.blotterNo', 'Blotter #'), cell: ({ row }) => <span className="font-mono font-semibold text-primary">{row.original.blotterEntryNumber}</span> },
     {
-      accessorKey: 'caseCategory', header: 'Category',
+      accessorKey: 'caseCategory', header: t('irf.category', 'Category'),
       cell: ({ row }) => <Badge variant="outline">{row.original.caseCategory}</Badge>,
     },
     {
-      accessorKey: 'itemAReportingPerson', header: 'Reporter',
+      accessorKey: 'itemAReportingPerson', header: t('irf.reporter', 'Reporter'),
       cell: ({ row }) => {
         const name = (row.original.itemAReportingPerson as Record<string, unknown>)?.name as string | undefined;
-        return <span className="text-muted-foreground">{name || '[CONFIDENTIAL]'}</span>;
+        return <span className="text-muted-foreground">{name || t('irf.confidential', '[CONFIDENTIAL]')}</span>;
       },
     },
-    { accessorKey: 'caseDisposition', header: 'Disposition' },
+    { accessorKey: 'caseDisposition', header: t('irf.disposition', 'Disposition') },
     {
-      accessorKey: 'datetimeReported', header: 'Reported',
+      accessorKey: 'datetimeReported', header: t('irf.reported', 'Reported'),
       cell: ({ row }) => <span className="text-muted-foreground">{new Date(row.original.datetimeReported).toLocaleDateString()}</span>,
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: t('irf.actions', 'Actions'),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/irf/' + row.original.id)} aria-label="View Details">
-            View Details
+          <Button variant="ghost" size="sm" onClick={() => navigate('/irf/' + row.original.id)} aria-label={t('irf.viewDetails', 'View Details')}>
+            {t('irf.viewDetails', 'View Details')}
           </Button>
           <Button
             variant="ghost" size="sm"
             onClick={() => setExportIrfId(row.original.id)}
-            aria-label="Export IRF"
+            aria-label={t('irf.exportIrf', 'Export IRF')}
           >
-            <Shield size={14} className="mr-1" /> Export
+            <Shield size={14} className="mr-1" /> {t('irf.export', 'Export')}
           </Button>
         </div>
       ),
@@ -134,7 +136,7 @@ export function IrfPage() {
 
   if (loading) {
     return (
-      <PageShell title="Incident Report Forms (IRF)" description="VAWC/RA 9262 cases — MSWDO Norzagaray">
+      <PageShell title={t('irf.title', 'Incident Report Forms (IRF)')} description={t('irf.description', 'VAWC/RA 9262 cases — MSWDO Norzagaray')}>
         <TableSkeleton rows={5} />
       </PageShell>
     );
@@ -142,14 +144,14 @@ export function IrfPage() {
 
   return (
     <PageShell
-      title="Incident Report Forms (IRF)"
-      description="VAWC/RA 9262 cases — MSWDO Norzagaray"
+      title={t('irf.title', 'Incident Report Forms (IRF)')}
+      description={t('irf.description', 'VAWC/RA 9262 cases — MSWDO Norzagaray')}
       cachedAt={lastSync ?? undefined}
     >
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <Button variant="default" onClick={() => navigate('/irf/new')} aria-label="+ New IRF">
-          + New IRF
+        <Button variant="default" onClick={() => navigate('/irf/new')} aria-label={t('irf.newIrf', '+ New IRF')}>
+          {t('irf.newIrf', '+ New IRF')}
         </Button>
       </div>
 
@@ -174,56 +176,56 @@ export function IrfPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Shield className="text-primary" size={20} />
-                <CardTitle className="text-base">Export IRF</CardTitle>
+                <CardTitle className="text-base">{t('irf.exportIrfTitle', 'Export IRF')}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Legal basis code is required per DSWD AO 2020-002. This export is logged.
+                {t('irf.legalBasisNote', 'Legal basis code is required per DSWD AO 2020-002. This export is logged.')}
               </p>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Legal Basis Code</label>
+                <label className="text-sm font-medium">{t('irf.legalBasisCode', 'Legal Basis Code')}</label>
                 <Input
                   value={legalBasis}
                   onChange={e => setLegalBasis(e.target.value)}
-                  aria-label="Legal Basis Code"
-                  placeholder="e.g. AO-2020-002"
+                  aria-label={t('irf.legalBasisCode', 'Legal Basis Code')}
+                  placeholder={t('irf.legalBasisPlaceholder', 'e.g. AO-2020-002')}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">PDF Password</label>
+                <label className="text-sm font-medium">{t('irf.pdfPassword', 'PDF Password')}</label>
                 <Input
                   value={pdfPassword}
                   onChange={e => setPdfPassword(e.target.value)}
                   type="password"
-                  aria-label="PDF password"
-                  placeholder="PDF password (optional)"
+                  aria-label={t('irf.pdfPasswordAria', 'PDF password')}
+                  placeholder={t('irf.pdfPasswordPlaceholder', 'PDF password (optional)')}
                 />
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">
                 <Button
                   variant="outline"
                   onClick={() => { setExportIrfId(null); setLegalBasis(''); setPdfPassword(''); }}
-                  aria-label="Cancel"
+                  aria-label={t('irf.cancel', 'Cancel')}
                 >
-                  Cancel
+                  {t('irf.cancel', 'Cancel')}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleExportJson}
                   disabled={!legalBasis || exporting}
-                  aria-label="Export JSON"
+                  aria-label={t('irf.exportJson', 'Export JSON')}
                 >
-                  Export JSON
+                  {t('irf.exportJson', 'Export JSON')}
                 </Button>
                 <Button
                   variant="default"
                   onClick={handleExportPdf}
                   disabled={!legalBasis || exporting}
-                  aria-label="Export PDF"
+                  aria-label={t('irf.exportPdf', 'Export PDF')}
                 >
-                  {exporting ? 'Exporting...' : 'Export PDF'}
+                  {exporting ? t('irf.exporting', 'Exporting...') : t('irf.exportPdf', 'Export PDF')}
                 </Button>
               </div>
             </CardContent>

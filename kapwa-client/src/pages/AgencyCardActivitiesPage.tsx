@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '../lib/auth-context';
@@ -20,6 +21,7 @@ interface ServiceEntry {
 }
 
 export function AgencyCardActivitiesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [code, setCode] = useState('');
   const [services, setServices] = useState<ServiceEntry[] | null>(null);
@@ -49,7 +51,7 @@ export function AgencyCardActivitiesPage() {
         if (summary?.person) setPersonName(`${summary.person.firstName} ${summary.person.surname}`);
       } catch {}
     } catch {
-      setError('Access card not found');
+      setError(t('agency.cardNotFound', 'Access card not found'));
     }
     setLoading(false);
   }
@@ -70,23 +72,23 @@ export function AgencyCardActivitiesPage() {
       const result: any = await api.get(`/access-cards/${code.trim()}`);
       setServices(result);
     } catch (err: any) {
-      setError(err?.message || 'Failed to log activity');
+      setError(err?.message || t('agency.logFailed', 'Failed to log activity'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <PageShell title="Card Activities" description="Verify cards and log activities">
+    <PageShell title={t('agency.cardActivities', 'Card Activities')} description={t('agency.verifyAndLog', 'Verify cards and log activities')}>
       <form onSubmit={handleVerify} className="flex gap-2 mb-4">
         <input
           value={code}
           onChange={e => setCode(e.target.value)}
-          placeholder="Enter card code (e.g. NORZ-AC-2026-0001)"
+          placeholder={t('agency.enterCardCode', 'Enter card code (e.g. NORZ-AC-2026-0001)')}
           className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
         <Button type="submit" disabled={loading || !code.trim()}>
-          <Search size={14} className="mr-1" /> {loading ? 'Checking...' : 'Verify'}
+          <Search size={14} className="mr-1" /> {loading ? t('agency.checking', 'Checking...') : t('agency.verify', 'Verify')}
         </Button>
       </form>
 
@@ -96,9 +98,9 @@ export function AgencyCardActivitiesPage() {
         <>
           {personName && <p className="text-sm font-semibold mb-2">{personName}</p>}
           <div className="rounded-lg bg-card p-4 shadow-sm border border-border mb-4">
-            <h3 className="text-sm font-semibold mb-2">Service History ({services.length})</h3>
+            <h3 className="text-sm font-semibold mb-2">{t('agency.serviceHistory', 'Service History ({{count}})', { count: services.length })}</h3>
             {services.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No services logged yet.</p>
+              <p className="text-sm text-muted-foreground">{t('agency.noServices', 'No services logged yet.')}</p>
             ) : (
               <div className="divide-y">
                 {services.map((s: ServiceEntry) => (
@@ -120,25 +122,25 @@ export function AgencyCardActivitiesPage() {
           </div>
 
           <form onSubmit={handleLog} className="rounded-lg bg-card p-4 shadow-sm border border-border space-y-3">
-            <h3 className="text-sm font-semibold">Log Activity</h3>
+            <h3 className="text-sm font-semibold">{t('agency.logActivity', 'Log Activity')}</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium">Category *</label>
+                <label className="text-xs font-medium">{t('agency.category', 'Category *')}</label>
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 >
-                  <option value="community_service">Community Service</option>
-                  <option value="seminar">Seminar</option>
-                  <option value="distribution">Distribution</option>
-                  <option value="referral">Referral</option>
-                  <option value="case_service">Case Service</option>
-                  <option value="other">Other</option>
+                  <option value="community_service">{t('agency.catCommunity', 'Community Service')}</option>
+                  <option value="seminar">{t('agency.catSeminar', 'Seminar')}</option>
+                  <option value="distribution">{t('agency.catDistribution', 'Distribution')}</option>
+                  <option value="referral">{t('agency.catReferral', 'Referral')}</option>
+                  <option value="case_service">{t('agency.catCaseService', 'Case Service')}</option>
+                  <option value="other">{t('agency.catOther', 'Other')}</option>
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">Date *</label>
+                <label className="text-xs font-medium">{t('agency.date', 'Date *')}</label>
                 <input
                   type="date"
                   value={serviceDate}
@@ -148,32 +150,32 @@ export function AgencyCardActivitiesPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">Agency *</label>
+              <label className="text-xs font-medium">{t('agency.agency', 'Agency *')}</label>
               <select
                 value={agencyId}
                 onChange={e => setAgencyId(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 required
               >
-                <option value="">Select agency...</option>
+                <option value="">{t('agency.selectAgency', 'Select agency...')}</option>
                 {(agencies || []).map(a => (
                   <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">Remarks *</label>
+              <label className="text-xs font-medium">{t('agency.remarks', 'Remarks *')}</label>
               <textarea
                 value={remarks}
                 onChange={e => setRemarks(e.target.value)}
                 rows={2}
                 required
                 className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                placeholder="Describe the activity..."
+                placeholder={t('agency.remarksPlaceholder', 'Describe the activity...')}
               />
             </div>
             <Button type="submit" size="sm" disabled={submitting || !remarks.trim() || !agencyId}>
-              <Check size={14} className="mr-1" /> {submitting ? 'Logging...' : 'Log Activity'}
+              <Check size={14} className="mr-1" /> {submitting ? t('agency.logging', 'Logging...') : t('agency.logActivity', 'Log Activity')}
             </Button>
           </form>
         </>

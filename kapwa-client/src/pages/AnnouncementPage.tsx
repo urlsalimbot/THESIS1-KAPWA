@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Pin, ArrowLeft, Megaphone, CalendarDays } from 'lucide-react';
@@ -24,6 +25,7 @@ function formatDate(iso: string) {
 }
 
 export function AnnouncementPage() {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const { data, isLoading, error } = useSWR(
     slug ? queryKeys.announcements.public.detail(slug) : null,
@@ -47,10 +49,10 @@ export function AnnouncementPage() {
   if (error || !data) {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4 text-center">
-        <h1 className="text-2xl font-bold font-heading">Article not found</h1>
-        <p className="text-muted-foreground mt-2">This announcement may have been removed or is no longer published.</p>
+        <h1 className="text-2xl font-bold font-heading">{t('announcements.notFound', 'Article not found')}</h1>
+        <p className="text-muted-foreground mt-2">{t('announcements.notFoundBody', 'This announcement may have been removed or is no longer published.')}</p>
         <Button asChild variant="outline" className="mt-4">
-          <Link to="/">Back to home</Link>
+          <Link to="/">{t('announcements.backToHome', 'Back to home')}</Link>
         </Button>
       </div>
     );
@@ -63,13 +65,13 @@ export function AnnouncementPage() {
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
       >
         <ArrowLeft size={16} />
-        Back to home
+        {t('announcements.backToHome', 'Back to home')}
       </Link>
 
       <article>
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-5">
           <Megaphone size={14} className="text-accent" />
-          <span className="text-xs font-medium text-accent tracking-wide">Announcement</span>
+          <span className="text-xs font-medium text-accent tracking-wide">{t('announcements.announcement', 'Announcement')}</span>
         </div>
 
         <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance leading-tight mb-5">
@@ -80,7 +82,7 @@ export function AnnouncementPage() {
           {data.pinned && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent">
               <Pin size={13} />
-              Pinned
+              {t('announcements.pinned', 'Pinned')}
             </span>
           )}
           {data.publishedAt && (
@@ -104,10 +106,10 @@ export function AnnouncementPage() {
 
         <div className="mt-12 pt-8 border-t flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            MSWDO Norzagaray — Municipal Social Welfare &amp; Development Office
+            {t('announcements.footer', 'MSWDO Norzagaray — Municipal Social Welfare & Development Office')}
           </p>
           <Button asChild variant="outline" size="sm">
-            <Link to="/">Back to home</Link>
+            <Link to="/">{t('announcements.backToHome', 'Back to home')}</Link>
           </Button>
         </div>
       </article>

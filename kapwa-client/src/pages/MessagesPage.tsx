@@ -3,6 +3,8 @@ import { mutate as globalMutate } from 'swr';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { connectSocket, disconnectSocket, emitTyping } from '../lib/chat-socket';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -43,17 +45,19 @@ const ROLE_COLORS: Record<string, string> = {
   claimant: 'bg-amber-500', mayor: 'bg-rose-500', auditor: 'bg-slate-500',
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin', social_worker: 'Social Worker', coordinator: 'Coordinator',
-  claimant: 'Claimant', mayor: 'Mayor', auditor: 'Auditor',
+const ROLE_LABELS: Record<string, { key: string; label: string }> = {
+  admin: { key: 'messages.roleAdmin', label: 'Admin' }, social_worker: { key: 'messages.roleSocialWorker', label: 'Social Worker' }, coordinator: { key: 'messages.roleCoordinator', label: 'Coordinator' },
+  claimant: { key: 'messages.roleClaimant', label: 'Claimant' }, mayor: { key: 'messages.roleMayor', label: 'Mayor' }, auditor: { key: 'messages.roleAuditor', label: 'Auditor' },
 };
 
 function roleColor(role?: string): string {
   return ROLE_COLORS[role || ''] || 'bg-gray-400';
 }
 
-function roleLabel(role?: string): string {
-  return ROLE_LABELS[role || ''] || role?.replace(/_/g, ' ') || '';
+function roleLabel(role?: string, t?: TFunction): string {
+  const cfg = role ? ROLE_LABELS[role] : undefined;
+  if (cfg && t) return t(cfg.key, cfg.label);
+  return cfg?.label || role?.replace(/_/g, ' ') || '';
 }
 
 const TZ = 'Asia/Manila';
@@ -62,40 +66,41 @@ const dateFmt = new Intl.DateTimeFormat('en-PH', { timeZone: TZ, weekday: 'long'
 const shortDateFmt = new Intl.DateTimeFormat('en-PH', { timeZone: TZ, month: 'short', day: 'numeric' });
 const dayLabelFmt = new Intl.DateTimeFormat('en-PH', { timeZone: TZ, weekday: 'long', month: 'long', day: 'numeric' });
 
-function formatMessageTime(dateStr: string) {
+function formatMessageTime(dateStr: string, t: TFunction) {
   const d = new Date(dateStr);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   if (msgDate.getTime() === today.getTime()) return timeFmt.format(d);
-  if (diffDays < 7) return `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]} ${timeFmt.format(d)}`;
+  if (diffDays < 7) return `${t(`messages.day${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]}`, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()])} ${timeFmt.format(d)}`;
   return shortDateFmt.format(d);
 }
 
-function formatConversationTime(dateStr: string) {
+function formatConversationTime(dateStr: string, t: TFunction) {
   const d = new Date(dateStr);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   if (msgDate.getTime() === today.getTime()) return timeFmt.format(d);
-  if (msgDate.getTime() === today.getTime() - 86400000) return 'Yesterday';
+  if (msgDate.getTime() === today.getTime() - 86400000) return t('messages.yesterday', 'Yesterday');
   return shortDateFmt.format(d);
 }
 
-function getDateSeparator(dateStr: string): string {
+function getDateSeparator(dateStr: string, t: TFunction): string {
   const d = new Date(dateStr);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.floor((today.getTime() - msgDate.getTime()) / 86400000);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 0) return t('messages.today', 'Today');
+  if (diffDays === 1) return t('messages.yesterday', 'Yesterday');
   if (diffDays < 7) return dayLabelFmt.format(d);
   return dateFmt.format(d);
 }
 
 export function MessagesPage() {
+  const { t } = useTranslation();
   const { userId: urlUserId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -273,7 +278,7 @@ export function MessagesPage() {
   const isTyping = activeConv ? typingUsers.has(activeConv) : false;
 
   return (
-    <PageShell title="Messages" description="Chat with your team">
+    <PageShell title={t('messages.title', 'Messages')} description={t('messages.description', 'Chat with your team')}>
       <div className="flex h-[calc(100vh-12rem)] gap-0 rounded-xl border bg-card overflow-hidden shadow-sm">
         {/* Sidebar */}
         <div className={cn(
@@ -283,24 +288,24 @@ export function MessagesPage() {
           {/* Sidebar Header */}
           <div className="flex items-center justify-between border-b px-4 py-3.5">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Messages</h2>
-              <p className="text-[11px] text-muted-foreground">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+              <h2 className="text-sm font-semibold text-foreground">{t('messages.title', 'Messages')}</h2>
+              <p className="text-[11px] text-muted-foreground">{t('messages.conversationCount', '{{count}} conversations', { count: conversations.length })}</p>
             </div>
             <Dialog open={showNewChat} onOpenChange={setShowNewChat}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="default" className="h-8 gap-1.5">
-                  <Plus size={14} /> New
+                  <Plus size={14} /> {t('messages.new', 'New')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>New Conversation</DialogTitle>
+                  <DialogTitle>{t('messages.newConversation', 'New Conversation')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      type="text" placeholder="Search contacts..." value={contactSearch}
+                      type="text" placeholder={t('messages.searchContacts', 'Search contacts...')} value={contactSearch}
                       onChange={e => setContactSearch(e.target.value)}
                       className="h-9 pl-9 pr-8 text-sm" autoFocus
                     />
@@ -314,7 +319,7 @@ export function MessagesPage() {
                   </div>
                   <div className="max-h-72 overflow-y-auto space-y-1 -mx-2">
                     {filteredUsers.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-8 text-center">No contacts found</p>
+                      <p className="text-xs text-muted-foreground py-8 text-center">{t('messages.noContacts', 'No contacts found')}</p>
                     ) : (
                       filteredUsers.map(u => (
                         <button key={u.id} onClick={() => selectConversation(u.id)}
@@ -327,10 +332,10 @@ export function MessagesPage() {
                           </Avatar>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{u.fullName}</p>
-                            <p className="text-[11px] text-muted-foreground capitalize">{roleLabel(u.role)}</p>
+                            <p className="text-[11px] text-muted-foreground capitalize">{roleLabel(u.role, t)}</p>
                           </div>
                           {existingConvIds.has(u.id) && (
-                            <span className="text-[11px] text-muted-foreground/60 italic shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">Existing</span>
+                            <span className="text-[11px] text-muted-foreground/60 italic shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{t('messages.existing', 'Existing')}</span>
                           )}
                         </button>
                       ))
@@ -360,8 +365,8 @@ export function MessagesPage() {
                 <div className="rounded-full bg-muted p-3 mb-3">
                   <MessageSquare size={24} className="opacity-40" />
                 </div>
-                <p className="text-sm font-medium">No conversations yet</p>
-                <p className="text-xs mt-1 text-center">Click <strong>New</strong> to start messaging a team member.</p>
+                <p className="text-sm font-medium">{t('messages.noConversations', 'No conversations yet')}</p>
+                <p className="text-xs mt-1 text-center">{t('messages.clickNewPrefix', 'Click')} <strong>{t('messages.new', 'New')}</strong> {t('messages.clickNewSuffix', 'to start messaging a team member.')}</p>
               </div>
             ) : (
               <div className="py-1">
@@ -381,7 +386,7 @@ export function MessagesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-medium text-foreground truncate">{conv.name}</p>
-                          <span className="text-[11px] text-muted-foreground shrink-0">{formatConversationTime(conv.lastTime.toString())}</span>
+                          <span className="text-[11px] text-muted-foreground shrink-0">{formatConversationTime(conv.lastTime.toString(), t)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-0.5">
                           <p className="text-xs text-muted-foreground truncate">{conv.lastMessage}</p>
@@ -411,9 +416,9 @@ export function MessagesPage() {
                 <div className="rounded-full bg-muted p-4 mx-auto mb-4 w-fit">
                   <MessageSquare size={32} className="opacity-30" />
                 </div>
-                <p className="text-sm font-medium text-foreground">Your Messages</p>
+                <p className="text-sm font-medium text-foreground">{t('messages.yourMessages', 'Your Messages')}</p>
                 <p className="text-xs mt-1 max-w-xs">
-                  Select a conversation from the sidebar or start a new one.
+                  {t('messages.selectConversation', 'Select a conversation from the sidebar or start a new one.')}
                 </p>
               </div>
             </div>
@@ -423,7 +428,7 @@ export function MessagesPage() {
               <div className="flex items-center gap-3 border-b px-4 py-3.5 bg-card">
                 <button onClick={() => setShowMobileConv(false)}
                   className="lg:hidden p-1 -ml-1 text-muted-foreground hover:text-foreground"
-                  aria-label="Back to conversations"
+                  aria-label={t('messages.backToConversations', 'Back to conversations')}
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -438,7 +443,7 @@ export function MessagesPage() {
                     'text-[11px]',
                     isTyping ? 'text-primary' : 'text-muted-foreground',
                   )}>
-                    {isTyping ? 'Typing...' : roleLabel(getOtherRole(activeConv))}
+                    {isTyping ? t('messages.typing', 'Typing...') : roleLabel(getOtherRole(activeConv), t)}
                   </p>
                 </div>
               </div>
@@ -449,7 +454,7 @@ export function MessagesPage() {
               >
                 {displayMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p className="text-xs">No messages yet. Say hello!</p>
+                    <p className="text-xs">{t('messages.noMessages', 'No messages yet. Say hello!')}</p>
                   </div>
                 ) : (
                   <>
@@ -458,14 +463,14 @@ export function MessagesPage() {
                       const decoded = token ? safeDecodeJWT(token) : {};
                       const myId = decoded.sub || '';
                       const isMine = msg.senderId === myId;
-                      const showDateSep = idx === 0 || getDateSeparator(msg.createdAt) !== getDateSeparator(displayMessages[idx - 1].createdAt);
+                      const showDateSep = idx === 0 || getDateSeparator(msg.createdAt, t) !== getDateSeparator(displayMessages[idx - 1].createdAt, t);
 
                       return (
                         <div key={msg.id}>
                           {showDateSep && (
                             <div className="flex justify-center my-4">
                               <span className="text-[11px] text-muted-foreground bg-muted/60 px-3 py-1 rounded-full">
-                                {getDateSeparator(msg.createdAt)}
+                                {getDateSeparator(msg.createdAt, t)}
                               </span>
                             </div>
                           )}
@@ -486,11 +491,11 @@ export function MessagesPage() {
                                   'text-[10px] leading-none',
                                   isMine ? 'text-primary-foreground/60' : 'text-muted-foreground',
                                 )}>
-                                  {formatMessageTime(msg.createdAt)}
+                                  {formatMessageTime(msg.createdAt, t)}
                                 </span>
                                 {isMine && (
                                   msg.id.startsWith('pending-')
-                                    ? <span className="text-[10px] text-primary-foreground/50">Sending</span>
+                                    ? <span className="text-[10px] text-primary-foreground/50">{t('messages.sending', 'Sending')}</span>
                                     : msg.isRead
                                       ? <CheckCheck size={12} className="text-primary-foreground/60 shrink-0" />
                                       : <Check size={12} className="text-primary-foreground/60 shrink-0" />
@@ -528,7 +533,7 @@ export function MessagesPage() {
                         setText(e.target.value);
                         emitTyping(activeConv);
                       }}
-                      placeholder="Type a message..."
+                      placeholder={t('messages.typeMessage', 'Type a message...')}
                       className="h-11 pr-12 rounded-xl bg-background border-border/60 focus-visible:ring-primary/30 text-sm"
                     />
                     {text.length > 0 && (
@@ -539,7 +544,7 @@ export function MessagesPage() {
                   </div>
                   <Button type="submit" disabled={!text.trim()}
                     className="h-11 w-11 rounded-xl shrink-0"
-                    size="icon" aria-label="Send"
+                    size="icon" aria-label={t('messages.send', 'Send')}
                   >
                     <Send size={16} />
                   </Button>
