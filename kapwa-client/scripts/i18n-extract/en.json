@@ -88,6 +88,20 @@
     "userManagement": "User Management",
     "users": "Users"
   },
+  "adminWipe": {
+    "cancel": "Cancel",
+    "confirmDescription": "This will invalidate all sessions and unlink the device for {{email}}. The user will be forced to re-authenticate. This action cannot be undone. Type WIPE to confirm.",
+    "confirmTitle": "Confirm Remote Wipe",
+    "confirmWipe": "Confirm Wipe",
+    "description": "FR-26 — Invalidate sessions and unlink devices",
+    "empty": "No bound devices found.",
+    "loading": "Loading devices...",
+    "title": "Remote Device Wipe",
+    "wipeConfirmPlaceholder": "Type \"WIPE\" to confirm",
+    "wipeDevice": "Wipe Device",
+    "wipeFailed": "Wipe failed",
+    "wipeSuccess": "Remote wipe initiated for {{label}}"
+  },
   "agency": {
     "agency": "Agency *",
     "all": "All",
@@ -239,6 +253,21 @@
     "uploadVoucher": "Upload Petty Cash Voucher",
     "viewCertificate": "View Certificate",
     "viewVoucher": "View Voucher"
+  },
+  "audit": {
+    "byFundSource": "By Fund Source",
+    "description": "FR-22 — COA-ready fund utilization reports",
+    "downloadJson": "Download JSON",
+    "endDate": "End Date",
+    "export": "Export",
+    "exporting": "Exporting...",
+    "exportTitle": "COA Fund Utilization Export",
+    "interventionsCount_one": "{{count}} interventions",
+    "interventionsCount_other": "{{count}} interventions",
+    "startDate": "Start Date",
+    "title": "Audit & Compliance",
+    "totalAmount": "Total Amount:",
+    "totalInterventions": "Total Interventions:"
   },
   "auth": {
     "alreadyHaveAccount": "Already have an account? Sign in",
@@ -848,10 +877,25 @@
   "contact": {
     "address": "Address",
     "email": "Email",
+    "emailError": "Please enter a valid email address.",
+    "message": "Message",
+    "messageError": "Message must be at least 10 characters.",
+    "messagePlaceholder": "How can we help you?",
     "mswdoAddress": "Municipal Social Welfare and Development Office, Norzagaray, Bulacan",
+    "name": "Name",
+    "nameError": "Name must be at least 2 characters.",
+    "namePlaceholder": "Your full name",
     "officeHours": "Office Hours",
     "officeHoursValue": "Monday to Friday, 8:00 AM - 5:00 PM",
-    "phone": "Phone"
+    "phone": "Phone",
+    "sendFailed": "Message failed",
+    "sendFailedDesc": "Please try again or call us directly.",
+    "sending": "Sending...",
+    "sendMessage": "Send Message",
+    "sendSuccess": "Message sent",
+    "sendSuccessDesc": "We will respond within 1-2 business days.",
+    "subtitle": "We are here to help. Reach out to us through any of the channels below.",
+    "title": "Get in Touch"
   },
   "coordinator": {
     "address": "Address",
@@ -1404,6 +1448,17 @@
     "unreadCount_other": "{{count}} unread",
     "view": "View",
     "viewAll": "View all notifications"
+  },
+  "physicalFiles": {
+    "case": "Case: {{caseId}}",
+    "description": "Browse Cabinet / Folder / Shelf locations",
+    "empty": "No physical files. Filing locations appear when an intervention requires documents.",
+    "filed": "Filed: {{date}}",
+    "loading": "Loading...",
+    "search": "Search",
+    "searchPlaceholder": "Search cabinet/folder/shelf...",
+    "title": "Physical Filing",
+    "unknownIntervention": "Unknown intervention"
   },
   "pii": {
     "fieldAria": "{{label}}: {{state}}",

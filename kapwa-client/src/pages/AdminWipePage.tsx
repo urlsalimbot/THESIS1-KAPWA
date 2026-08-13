@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Smartphone, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ interface Device {
 }
 
 export function AdminWipePage() {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
@@ -38,10 +40,10 @@ export function AdminWipePage() {
       } else {
         await api.post(`/admin/wipe/user/${id}`);
       }
-      setMsg(`Remote wipe initiated for ${label}`);
+      setMsg(t('adminWipe.wipeSuccess', 'Remote wipe initiated for {{label}}', { label }));
       load();
     } catch (err: unknown) {
-      setMsg(err instanceof Error ? err.message : 'Wipe failed');
+      setMsg(err instanceof Error ? err.message : t('adminWipe.wipeFailed', 'Wipe failed'));
     }
   }
 
@@ -49,17 +51,17 @@ export function AdminWipePage() {
   const [wipeDialogOpen, setWipeDialogOpen] = useState<Record<string, boolean>>({});
 
   return (
-    <PageShell title="Remote Device Wipe" description="FR-26 — Invalidate sessions and unlink devices">
+    <PageShell title={t('adminWipe.title', 'Remote Device Wipe')} description={t('adminWipe.description', 'FR-26 — Invalidate sessions and unlink devices')}>
       {msg && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive mb-4">{msg}</div>
       )}
 
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading devices...</div>
+        <div className="text-center py-8 text-muted-foreground">{t('adminWipe.loading', 'Loading devices...')}</div>
       ) : devices.length === 0 ? (
         <div className="rounded-lg border bg-card shadow-sm text-center py-12 text-muted-foreground">
           <Smartphone className="mx-auto mb-2" size={32} />
-          <p>No bound devices found.</p>
+          <p>{t('adminWipe.empty', 'No bound devices found.')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -75,25 +77,23 @@ export function AdminWipePage() {
               }}>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm">
-                    <AlertTriangle size={14} className="mr-1" /> Wipe Device
+                    <AlertTriangle size={14} className="mr-1" /> {t('adminWipe.wipeDevice', 'Wipe Device')}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Remote Wipe</AlertDialogTitle>
+                    <AlertDialogTitle>{t('adminWipe.confirmTitle', 'Confirm Remote Wipe')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will invalidate all sessions and unlink the device for <strong>{d.email}</strong>.
-                      The user will be forced to re-authenticate. This action cannot be undone.
-                      Type <strong>WIPE</strong> to confirm.
+                      {t('adminWipe.confirmDescription', 'This will invalidate all sessions and unlink the device for {{email}}. The user will be forced to re-authenticate. This action cannot be undone. Type WIPE to confirm.', { email: d.email })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <Input
-                    placeholder='Type "WIPE" to confirm'
+                    placeholder={t('adminWipe.wipeConfirmPlaceholder', 'Type "WIPE" to confirm')}
                     value={wipeInputs[d.id] ?? ''}
                     onChange={e => setWipeInputs(prev => ({ ...prev, [d.id]: e.target.value }))}
                   />
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t('adminWipe.cancel', 'Cancel')}</AlertDialogCancel>
                     <AlertDialogAction
                       disabled={(wipeInputs[d.id] ?? '') !== 'WIPE'}
                       onClick={async () => {
@@ -102,7 +102,7 @@ export function AdminWipePage() {
                         setWipeInputs(prev => ({ ...prev, [d.id]: '' }));
                       }}
                     >
-                      Confirm Wipe
+                      {t('adminWipe.confirmWipe', 'Confirm Wipe')}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

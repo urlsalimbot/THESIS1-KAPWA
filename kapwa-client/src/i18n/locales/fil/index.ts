@@ -1801,7 +1801,22 @@ const fil: EnLocale = {
     "mswdoAddress": "Municipal Social Welfare and Development Office, Norzagaray, Bulacan",
     "officeHours": "Oras ng Opisina",
     "officeHoursValue": "Lunes hanggang Biyernes, 8:00 AM - 5:00 PM",
-    "phone": "Telepono"
+    "phone": "Telepono",
+    "emailError": "Pakilagay ang wastong email address.",
+    "message": "Mensahe",
+    "messageError": "Ang mensahe ay dapat na hindi bababa sa 10 karakter.",
+    "messagePlaceholder": "Paano ka namin matutulungan?",
+    "name": "Pangalan",
+    "nameError": "Ang pangalan ay dapat na hindi bababa sa 2 karakter.",
+    "namePlaceholder": "Ang iyong buong pangalan",
+    "sendFailed": "Nabigo ang pagpapadala ng mensahe",
+    "sendFailedDesc": "Mangyaring subukan muli o tawagan kami nang direkta.",
+    "sending": "Nagpapadala...",
+    "sendMessage": "Ipadala ang Mensahe",
+    "sendSuccess": "Naipadala ang mensahe",
+    "sendSuccessDesc": "Tutugon kami sa loob ng 1-2 araw ng negosyo.",
+    "subtitle": "Narito kami upang tumulong. Makipag-ugnayan sa amin sa pamamagitan ng alinman sa mga channel sa ibaba.",
+    "title": "Makipag-ugnayan sa Amin"
   },
   "dataTable": {
     "pageInfo_one": "Pahina {{current}} ng {{total}} ({{count}} sa kabuuan)",
@@ -1946,6 +1961,46 @@ const fil: EnLocale = {
     "socialWelfareOfficer": "Social Welfare Officer",
     "subtitle": "Mga dedikadong lingkod-bayan na nakatuon sa paghahatid ng mga serbisyong panlipunang kapakanan sa komunidad ng Norzagaray, Bulacan.",
     "title": "Aming Team"
+  },
+  "adminWipe": {
+    "cancel": "Kanselahin",
+    "confirmDescription": "Ito ay mag-i-invalidate sa lahat ng session at mag-i-unlink sa device para sa {{email}}. Ang user ay mapipilitang mag-re-authenticate. Ang aksyon na ito ay hindi maaaring i-undo. I-type ang WIPE upang kumpirmahin.",
+    "confirmTitle": "Kumpirmahin ang Remote Wipe",
+    "confirmWipe": "Kumpirmahin ang Wipe",
+    "description": "FR-26 — I-invalidate ang mga session at i-unlink ang mga device",
+    "empty": "Walang nakitang naka-bound na device.",
+    "loading": "Naglo-load ng mga device...",
+    "title": "Remote na Pagbura ng Device",
+    "wipeConfirmPlaceholder": "I-type ang \"WIPE\" upang kumpirmahin",
+    "wipeDevice": "Burahin ang Device",
+    "wipeFailed": "Nabigo ang wipe",
+    "wipeSuccess": "Sinimulan ang remote wipe para sa {{label}}"
+  },
+  "audit": {
+    "byFundSource": "Ayon sa Pinagmulan ng Pondo",
+    "description": "FR-22 — Mga ulat ng paggamit ng pondo na handa para sa COA",
+    "downloadJson": "I-download ang JSON",
+    "endDate": "Petsa ng Pagtatapos",
+    "export": "I-export",
+    "exporting": "Nag-e-export...",
+    "exportTitle": "COA Export ng Paggamit ng Pondo",
+    "interventionsCount_one": "{{count}} na interbensyon",
+    "interventionsCount_other": "{{count}} na mga interbensyon",
+    "startDate": "Petsa ng Pagsisimula",
+    "title": "Audit at Pagsunod",
+    "totalAmount": "Kabuuang Halaga:",
+    "totalInterventions": "Kabuuang mga Interbensyon:"
+  },
+  "physicalFiles": {
+    "case": "Kaso: {{caseId}}",
+    "description": "Tingnan ang mga lokasyon ng Cabinet / Folder / Shelf",
+    "empty": "Walang mga pisikal na file. Lumalabas ang mga lokasyon ng pag-file kapag ang isang interbensyon ay nangangailangan ng mga dokumento.",
+    "filed": "Nai-file: {{date}}",
+    "loading": "Naglo-load...",
+    "search": "Maghanap",
+    "searchPlaceholder": "Maghanap ng cabinet/folder/shelf...",
+    "title": "Pisikal na Pag-file",
+    "unknownIntervention": "Hindi kilalang interbensyon"
   }
 };
 
