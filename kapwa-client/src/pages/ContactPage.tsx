@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContactInfo } from '@/components/ContactInfo';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +16,7 @@ interface FormErrors {
 }
 
 export function ContactPage() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -24,13 +26,13 @@ export function ContactPage() {
   function validate(): boolean {
     const newErrors: FormErrors = {};
     if (!name || name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters.';
+      newErrors.name = t('contact.nameError', 'Name must be at least 2 characters.');
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Please enter a valid email address.';
+      newErrors.email = t('contact.emailError', 'Please enter a valid email address.');
     }
     if (!message || message.trim().length < 10) {
-      newErrors.message = 'Message must be at least 10 characters.';
+      newErrors.message = t('contact.messageError', 'Message must be at least 10 characters.');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -44,13 +46,13 @@ export function ContactPage() {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success('Message sent', { description: 'We will respond within 1-2 business days.' });
+      toast.success(t('contact.sendSuccess', 'Message sent'), { description: t('contact.sendSuccessDesc', 'We will respond within 1-2 business days.') });
       setName('');
       setEmail('');
       setMessage('');
       setErrors({});
     } catch {
-      toast.error('Message failed', { description: 'Please try again or call us directly.' });
+      toast.error(t('contact.sendFailed', 'Message failed'), { description: t('contact.sendFailedDesc', 'Please try again or call us directly.') });
     } finally {
       setSubmitting(false);
     }
@@ -62,13 +64,13 @@ export function ContactPage() {
       <div className="mb-12">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
           <Mail size={16} className="text-accent" />
-          <span className="text-xs font-medium text-accent tracking-wide">Contact Us</span>
+          <span className="text-xs font-medium text-accent tracking-wide">{t('public.contactUs', 'Contact Us')}</span>
         </div>
         <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-balance mb-4">
-          Get in Touch
+          {t('contact.title', 'Get in Touch')}
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl text-pretty">
-          We are here to help. Reach out to us through any of the channels below.
+          {t('contact.subtitle', 'We are here to help. Reach out to us through any of the channels below.')}
         </p>
       </div>
 
@@ -79,7 +81,7 @@ export function ContactPage() {
             <ContactInfo />
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground">
-                Office Hours: Monday to Friday, 8:00 AM — 5:00 PM
+                {t('contact.officeHours', 'Office Hours')}: {t('contact.officeHoursValue', 'Monday to Friday, 8:00 AM - 5:00 PM')}
               </p>
             </div>
           </Card>
@@ -90,11 +92,11 @@ export function ContactPage() {
           <Card className="p-6 border-border/50 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t('contact.name', 'Name')}</Label>
                 <Input
                   id="name"
                   type="text"
-                  placeholder="Your full name"
+                  placeholder={t('contact.namePlaceholder', 'Your full name')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   aria-invalid={!!errors.name}
@@ -106,7 +108,7 @@ export function ContactPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('contact.email', 'Email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -122,10 +124,10 @@ export function ContactPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message">Message</Label>
+                <Label htmlFor="message">{t('contact.message', 'Message')}</Label>
                 <Textarea
                   id="message"
-                  placeholder="How can we help you?"
+                  placeholder={t('contact.messagePlaceholder', 'How can we help you?')}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   aria-invalid={!!errors.message}
@@ -142,7 +144,7 @@ export function ContactPage() {
                 disabled={submitting}
               >
                 {submitting && <Loader2 size={16} className="mr-2 animate-spin" />}
-                {submitting ? 'Sending...' : 'Send Message'}
+                {submitting ? t('contact.sending', 'Sending...') : t('contact.sendMessage', 'Send Message')}
               </Button>
             </form>
           </Card>
