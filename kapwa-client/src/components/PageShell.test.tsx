@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PageShell } from './PageShell';
+import '@/i18n';
 
 // Mock useCacheStaleness (implemented in Task 2)
 vi.mock('@/hooks/use-cache-staleness', () => ({

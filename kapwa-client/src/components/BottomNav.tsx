@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuth } from '@/lib/auth-context';
 import { NAV_GROUPS } from '@/lib/nav-config';
@@ -22,14 +23,15 @@ const QUICK_ACTIONS: Record<string, string | null> = {
   agency_staff: '/agency/referrals',
 };
 
-const QUICK_ACTION_LABELS: Record<string, string> = {
-  '/intake': 'New Intake (Quick Action)',
-  '/coordinator/referrals/new': 'New Referral (Quick Action)',
-  '/agency/referrals': 'New Referral (Quick Action)',
-};
+function quickActionLabel(t: (key: string, defaultValue: string) => string, path: string): string {
+  if (path === '/intake') return t('shell.quickIntake', 'New Intake (Quick Action)');
+  if (path === '/coordinator/referrals/new' || path === '/agency/referrals') return t('shell.quickReferral', 'New Referral (Quick Action)');
+  return t('shell.quickAction', 'Quick Action');
+}
 
 export function BottomNav() {
   const isMobile = useMediaQuery('(max-width: 767px)');
+  const { t } = useTranslation();
   const location = useLocation();
   const { user } = useAuth();
   if (!isMobile) return null;
@@ -42,10 +44,10 @@ export function BottomNav() {
     .map(item => ({ path: item.path, label: item.label, icon: item.icon }));
 
   const quickPath = QUICK_ACTIONS[role] ?? null;
-  const quickLabel = quickPath ? QUICK_ACTION_LABELS[quickPath] ?? 'Quick Action' : null;
+  const quickLabel = quickPath ? quickActionLabel(t, quickPath) : null;
 
   return (
-    <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border h-16 lg:hidden">
+    <nav aria-label={t('a11y.mobileNavigation', 'Mobile navigation')} className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border h-16 lg:hidden">
       <div className="flex items-center justify-around h-full px-2">
         {quickPath && quickLabel && (
           <Link
