@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { statusLabel } from '@/i18n/display';
 
 interface ServiceRecord {
   id: string; type: string; date: string; amount: number; status: string;
@@ -52,7 +53,13 @@ export function ClaimantDashboardPage() {
   const loading = !servicesData && !consents.length;
 
   const services = servicesData?.services || [];
-  const caseStatus = servicesData?.caseStatus || t('claims.noActiveCase', 'No active case');
+  const rawStatus = servicesData?.caseStatus;
+  const normalized = (rawStatus || '').toLowerCase().replace(/\s+/g, '_');
+  const caseStatus =
+    rawStatus && rawStatus !== 'No active case'
+      ? statusLabel(t, normalized)
+      : t('dashboard.noActiveCase', 'No active case');
+  const statusVariant = normalized === 'transitioning' ? 'default' : 'outline';
   const lastSync = servicesData ? Date.now() : null;
 
   const [preferences, setPreferences] = useState<Record<string, Record<string, boolean>>>(() => {
@@ -132,11 +139,7 @@ export function ClaimantDashboardPage() {
               <p className="text-xs text-muted-foreground">{t('claims.caseStatus', 'Case Status')}</p>
               <p className="text-lg font-semibold text-primary">{caseStatus}</p>
             </div>
-            <Badge variant={
-              caseStatus === 'Disbursed' ? 'default' :
-              caseStatus === 'Approved' ? 'secondary' :
-              'outline'
-            }>{caseStatus}</Badge>
+            <Badge variant={statusVariant}>{caseStatus}</Badge>
           </div>
         </CardContent>
       </Card>

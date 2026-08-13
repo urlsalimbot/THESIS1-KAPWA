@@ -283,7 +283,6 @@ const fil: EnLocale = {
     "dataPrivacyNotice": "Your data is processed per RA 10173 (Data Privacy Act). You may revoke consent at any time.",
     "manageConsent": "Manage Consent",
     "myDashboard": "My Dashboard",
-    "noActiveCase": "No active case",
     "serviceHistory": "Service History",
     "viaChannel": "Via {{channel}}",
     "viewAccessCard": "View your KAPWA Access Card",
