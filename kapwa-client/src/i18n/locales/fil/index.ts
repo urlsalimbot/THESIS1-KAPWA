@@ -89,7 +89,8 @@ const fil: EnLocale = {
   },
   "a11y": {
     "mainNavigation": "Main navigation",
-    "mobileNavigation": "Mobile navigation"
+    "mobileNavigation": "Mobile navigation",
+    "skipToContent": "Skip to content"
   },
   "shell": {
     "cachedData": "Cached data — last sync {{age}} ago",
@@ -97,7 +98,27 @@ const fil: EnLocale = {
     "quickAction": "Quick Action",
     "quickIntake": "New Intake (Quick Action)",
     "quickReferral": "New Referral (Quick Action)",
-    "showingCachedData": "Showing cached data — last sync {{age}} ago"
+    "showingCachedData": "Showing cached data — last sync {{age}} ago",
+    "verifyingAccess": "Verifying access..."
+  },
+  "error": {
+    "boundaryBody": "An unexpected error occurred. Our team has been notified.",
+    "boundaryDetails": "Error Details",
+    "boundaryOfflineBody": "Your device lost connection. Some features may be unavailable until you reconnect.",
+    "boundaryOfflineTitle": "You're Offline",
+    "boundaryTitle": "Something went wrong",
+    "dashboard": "Dashboard",
+    "emptyAddFirst": "Add first record",
+    "emptyClearFilters": "Clear filters",
+    "emptyNoAccess": "You don't have access to this section",
+    "emptyNoData": "No data found",
+    "emptyNoResults": "No results match your search",
+    "emptyOffline": "You appear to be offline",
+    "emptyOfflineHint": "Please check your connection and try again",
+    "goToDashboard": "Go to Dashboard",
+    "retry": "Retry",
+    "tryAgain": "Try again",
+    "boundaryTryAgain": "Try Again"
   }
 };
 

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface SkipToContentProps {
   href?: string;
@@ -6,6 +7,7 @@ interface SkipToContentProps {
 }
 
 export function SkipToContent({ href = '#main-content', children }: SkipToContentProps) {
+  const { t } = useTranslation();
   return (
     <a
       href={href}
@@ -17,7 +19,7 @@ export function SkipToContent({ href = '#main-content', children }: SkipToConten
         'focus:rounded-md focus:outline-none focus:ring-2 focus:ring-ring',
       )}
     >
-      {children || 'Skip to content'}
+      {children || t('a11y.skipToContent', 'Skip to content')}
     </a>
   );
 }
