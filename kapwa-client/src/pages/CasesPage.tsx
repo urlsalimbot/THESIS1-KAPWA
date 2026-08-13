@@ -280,11 +280,11 @@ export function CasesPage() {
             options={[{ value: '', label: t('cases.allSla', 'All SLA') }, { value: 'overdue', label: t('cases.overdue', 'Overdue') }, { value: 'on_track', label: t('cases.onTrack', 'On Track') }]} className="w-32" />
           <div className="flex flex-col gap-0.5">
             <label className="text-xs text-muted-foreground font-medium">{t('cases.dateFrom', 'Date From')}</label>
-            <Input type="date" aria-label={t('cases.dateFrom', 'Date from')} className="w-36" value={urlDateFrom} onChange={e => updateURL({ dateFrom: e.target.value || undefined, page: '1' })} />
+            <Input type="date" aria-label={t('cases.dateFrom', 'Date From')} className="w-36" value={urlDateFrom} onChange={e => updateURL({ dateFrom: e.target.value || undefined, page: '1' })} />
           </div>
           <div className="flex flex-col gap-0.5">
             <label className="text-xs text-muted-foreground font-medium">{t('cases.dateTo', 'Date To')}</label>
-            <Input type="date" aria-label={t('cases.dateTo', 'Date to')} className="w-36" value={urlDateTo} onChange={e => updateURL({ dateTo: e.target.value || undefined, page: '1' })} />
+            <Input type="date" aria-label={t('cases.dateTo', 'Date To')} className="w-36" value={urlDateTo} onChange={e => updateURL({ dateTo: e.target.value || undefined, page: '1' })} />
           </div>
           {hasAnyFilter && (
             <Button variant="ghost" size="sm" onClick={clearFilters} aria-label={t('cases.clearFilters', 'Clear filters')}>{t('cases.clear', 'Clear')}</Button>

@@ -45,8 +45,8 @@ export function AgencyDashboardPage() {
     { label: t('agency.total', 'Total'), value: data?.counts.total ?? 0, icon: <ArrowLeftRight size={16} /> },
     { label: t('agency.sent', 'Sent'), value: data?.counts.sent ?? 0, icon: <Inbox size={16} /> },
     { label: t('agency.received', 'Received'), value: data?.counts.received ?? 0, icon: <ClipboardCheck size={16} /> },
-    { label: t('agency.closed', 'Closed'), value: data?.counts.byStatus.closed ?? 0, icon: <IdCard size={16} /> },
-    { label: t('agency.declined', 'Declined'), value: data?.counts.byStatus.declined ?? 0, icon: <IdCard size={16} /> },
+    { label: referralStatusLabel(t, 'closed'), value: data?.counts.byStatus.closed ?? 0, icon: <IdCard size={16} /> },
+    { label: referralStatusLabel(t, 'declined'), value: data?.counts.byStatus.declined ?? 0, icon: <IdCard size={16} /> },
   ];
 
   return (

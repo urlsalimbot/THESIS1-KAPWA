@@ -2,7 +2,7 @@ import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { referralStatusLabel } from '@/i18n/display';
+import { categoryLabel, referralStatusLabel } from '@/i18n/display';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
@@ -24,13 +24,6 @@ interface AccessCardService {
   workerNameSign?: string;
   category?: string;
 }
-
-const CATEGORY_LABELS: Record<string, { key: string; label: string }> = {
-  case_service: { key: 'accessCard.catCaseService', label: 'Case Service' },
-  referral: { key: 'accessCard.catReferral', label: 'Referral' },
-  community_service: { key: 'accessCard.catCommunity', label: 'Community Service' },
-  seminar: { key: 'accessCard.catSeminar', label: 'Seminar' },
-};
 
 const CATEGORY_TABS = ['', 'case_service', 'referral', 'community_service', 'seminar'];
 const CATEGORY_TAB_LABELS: Record<string, { key: string; label: string }> = {
@@ -76,10 +69,9 @@ function CategoryBadge({ category }: { category?: string }) {
     community_service: 'outline',
     seminar: 'secondary',
   };
-  const cat = CATEGORY_LABELS[category || ''];
   return (
     <Badge variant={variants[category || ''] || 'outline'} className="text-[10px]">
-      {cat ? t(cat.key, cat.label) : category || t('accessCard.unknown', 'Unknown')}
+      {category ? categoryLabel(t, category) : t('accessCard.unknown', 'Unknown')}
     </Badge>
   );
 }

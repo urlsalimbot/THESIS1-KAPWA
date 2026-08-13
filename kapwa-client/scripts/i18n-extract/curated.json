@@ -27,7 +27,11 @@
     "Indigent": "Indigent",
     "4Ps": "4Ps",
     "IP": "IP",
-    "Family": "Family"
+    "Family": "Family",
+    "case_service": "Case Service",
+    "referral": "Referral",
+    "community_service": "Community Service",
+    "seminar": "Seminar"
   },
   "interventionType": {
     "FA": "Financial Assistance",
