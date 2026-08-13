@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Shield, Smartphone, CheckCircle, Mail, Lock, Bell, User, Copy, Eye, EyeOff, KeyRound, Phone, Save } from 'lucide-react';
+import { Shield, Smartphone, CheckCircle, Mail, Lock, Bell, User, Copy, Eye, EyeOff, KeyRound, Languages, Phone, Save } from 'lucide-react';
+import { useLanguage } from '@/i18n/useLanguage';
 
 interface NotificationPref {
   id: string;
@@ -40,6 +41,7 @@ const channelLabels: Record<string, string> = {
 
 function ProfileTab() {
   const { user } = useAuth();
+  const { lang, setLang } = useLanguage();
 
   const [newEmail, setNewEmail] = useState('');
   const [emailPw, setEmailPw] = useState('');
@@ -120,6 +122,42 @@ function ProfileTab() {
 
   return (
     <div className="max-w-2xl space-y-4">
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Languages size={18} className="text-primary" />
+          <h3 className="text-sm font-semibold">Language Preference</h3>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Choose the language used across the app.
+        </p>
+        <div className="flex gap-6">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="language"
+              value="en"
+              checked={lang === 'en'}
+              onChange={() => setLang('en')}
+              className="accent-primary"
+              aria-label="English"
+            />
+            English
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="language"
+              value="fil"
+              checked={lang === 'fil'}
+              onChange={() => setLang('fil')}
+              className="accent-primary"
+              aria-label="Filipino"
+            />
+            Filipino
+          </label>
+        </div>
+      </div>
+
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
         <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
           <User size={16} className="text-muted-foreground" />
@@ -573,8 +611,12 @@ export function SettingsPage() {
 
   return (
     <PageShell title="Settings" description="Manage your account settings and preferences.">
-      <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit mb-4">
+      <div role="tablist" aria-label="Settings sections" className="flex gap-1 rounded-lg bg-muted p-1 w-fit mb-4">
         <button
+          role="tab"
+          aria-selected={activeTab === 'profile'}
+          aria-controls="settings-profile"
+          id="settings-tab-profile"
           onClick={() => setActiveTab('profile')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'profile' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
@@ -584,6 +626,10 @@ export function SettingsPage() {
           Profile
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'security'}
+          aria-controls="settings-security"
+          id="settings-tab-security"
           onClick={() => setActiveTab('security')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'security' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
@@ -593,6 +639,10 @@ export function SettingsPage() {
           Security
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'notifications'}
+          aria-controls="settings-notifications"
+          id="settings-tab-notifications"
           onClick={() => setActiveTab('notifications')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'notifications' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
@@ -603,9 +653,30 @@ export function SettingsPage() {
         </button>
       </div>
 
-      {activeTab === 'profile' && <ProfileTab />}
-      {activeTab === 'security' && <SecurityTab />}
-      {activeTab === 'notifications' && <NotificationsTab />}
+      <div
+        role="tabpanel"
+        id="settings-profile"
+        aria-labelledby="settings-tab-profile"
+        hidden={activeTab !== 'profile'}
+      >
+        {activeTab === 'profile' && <ProfileTab />}
+      </div>
+      <div
+        role="tabpanel"
+        id="settings-security"
+        aria-labelledby="settings-tab-security"
+        hidden={activeTab !== 'security'}
+      >
+        {activeTab === 'security' && <SecurityTab />}
+      </div>
+      <div
+        role="tabpanel"
+        id="settings-notifications"
+        aria-labelledby="settings-tab-notifications"
+        hidden={activeTab !== 'notifications'}
+      >
+        {activeTab === 'notifications' && <NotificationsTab />}
+      </div>
     </PageShell>
   );
 }
