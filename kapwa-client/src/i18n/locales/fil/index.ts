@@ -63,7 +63,11 @@ const fil: EnLocale = {
     "Indigent": "Maralita",
     "4Ps": "4Ps",
     "IP": "IP",
-    "Family": "Pamilya"
+    "Family": "Pamilya",
+    "case_service": "Case Service",
+    "referral": "Referral",
+    "community_service": "Community Service",
+    "seminar": "Seminar"
   },
   "interventionType": {
     "FA": "Tulong Pinansyal",
@@ -1000,10 +1004,8 @@ const fil: EnLocale = {
     "catSeminar": "Seminar",
     "checkConnection": "Check your internet connection and try again.",
     "checking": "Checking...",
-    "closed": "Closed",
     "contact": "Contact",
     "date": "Date *",
-    "declined": "Declined",
     "description": "Overview of your agency's referrals",
     "enterCardCode": "Enter card code (e.g. NORZ-AC-2026-0001)",
     "loadFailed": "Failed to load dashboard",
