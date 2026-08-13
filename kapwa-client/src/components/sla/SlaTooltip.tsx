@@ -1,6 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SlaTimer } from './SlaTimer';
 import { formatElapsed } from '@/lib/sla-utils';
+import { useTranslation } from 'react-i18next';
 
 interface SlaTooltipProps {
   stageStartedAt: string;
@@ -10,6 +11,7 @@ interface SlaTooltipProps {
 }
 
 export function SlaTooltip({ stageStartedAt, slaHours, size, showIcon }: SlaTooltipProps) {
+  const { t } = useTranslation();
   const startDate = new Date(stageStartedAt);
   const elapsedMs = Date.now() - startDate.getTime();
   const elapsedHours = elapsedMs / (1000 * 60 * 60);
@@ -23,10 +25,10 @@ export function SlaTooltip({ stageStartedAt, slaHours, size, showIcon }: SlaTool
         </span>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs space-y-1">
-        <p>Started: {startDate.toLocaleString()}</p>
-        <p>SLA: {slaHours}h total</p>
-        <p>Elapsed: {formatElapsed(elapsedHours)}</p>
-        <p>Remaining: {formatElapsed(remainingHours)}</p>
+        <p>{t('sla.started', 'Started: {{date}}', { date: startDate.toLocaleString() })}</p>
+        <p>{t('sla.total', 'SLA: {{hours}}h total', { hours: slaHours })}</p>
+        <p>{t('sla.elapsed', 'Elapsed: {{elapsed}}', { elapsed: formatElapsed(elapsedHours) })}</p>
+        <p>{t('sla.remaining', 'Remaining: {{remaining}}', { remaining: formatElapsed(remainingHours) })}</p>
       </TooltipContent>
     </Tooltip>
   );

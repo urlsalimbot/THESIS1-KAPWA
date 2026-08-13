@@ -1,6 +1,7 @@
 import { Clock } from 'lucide-react';
 import { useSlaTimer } from '@/hooks/useSlaTimer';
 import { getThresholdColor, getThresholdBgColor } from '@/lib/sla-utils';
+import { useTranslation } from 'react-i18next';
 
 interface SlaTimerProps {
   stageStartedAt: string;
@@ -10,6 +11,7 @@ interface SlaTimerProps {
 }
 
 export function SlaTimer({ stageStartedAt, slaHours, size = 'md', showIcon = true }: SlaTimerProps) {
+  const { t } = useTranslation();
   const { elapsedDisplay, status } = useSlaTimer(stageStartedAt, slaHours);
 
   const iconSize = size === 'sm' ? 14 : size === 'lg' ? 20 : 16;
@@ -19,7 +21,7 @@ export function SlaTimer({ stageStartedAt, slaHours, size = 'md', showIcon = tru
   return (
     <span
       role="status"
-      aria-label={`Elapsed: ${elapsedDisplay}, status: ${status}`}
+      aria-label={t('sla.elapsedAria', 'Elapsed: {{elapsed}}, status: {{status}}', { elapsed: elapsedDisplay, status })}
       className={`inline-flex items-center gap-1.5 ${textSize} ${getThresholdColor(status)} ${getThresholdBgColor(status)} rounded-md px-2 py-0.5`}
     >
       {showIcon && <Clock size={iconSize} className="shrink-0" />}

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { FilePlus, CheckSquare, UserPlus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
+import { useTranslation } from 'react-i18next';
 
 const WORKER_ROLES = ['admin', 'social_worker'];
 const COORDINATOR_ROLES = ['admin', 'social_worker', 'coordinator'];
@@ -14,34 +15,35 @@ interface ActionDef {
   roles: string[];
 }
 
-const ACTIONS: ActionDef[] = [
-  {
-    icon: FilePlus,
-    title: 'New Intake',
-    description: 'Create a new case intake record',
-    path: '/intake',
-    roles: COORDINATOR_ROLES,
-  },
-  {
-    icon: CheckSquare,
-    title: 'Approvals Queue',
-    description: 'Review and approve pending cases',
-    path: '/approvals',
-    roles: WORKER_ROLES,
-  },
-  {
-    icon: UserPlus,
-    title: 'New Beneficiary',
-    description: 'Register a new beneficiary',
-    path: '/beneficiaries',
-    roles: WORKER_ROLES,
-  },
-];
-
 export function QuickActionPanel() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const role = user?.role || '';
+
+  const ACTIONS: ActionDef[] = [
+    {
+      icon: FilePlus,
+      title: t('dashboard.newIntake', 'New Intake'),
+      description: t('dashboard.newIntakeDesc', 'Create a new case intake record'),
+      path: '/intake',
+      roles: COORDINATOR_ROLES,
+    },
+    {
+      icon: CheckSquare,
+      title: t('dashboard.approvalsQueue', 'Approvals Queue'),
+      description: t('dashboard.approvalsQueueDesc', 'Review and approve pending cases'),
+      path: '/approvals',
+      roles: WORKER_ROLES,
+    },
+    {
+      icon: UserPlus,
+      title: t('dashboard.newBeneficiary', 'New Beneficiary'),
+      description: t('dashboard.newBeneficiaryDesc', 'Register a new beneficiary'),
+      path: '/beneficiaries',
+      roles: WORKER_ROLES,
+    },
+  ];
 
   const visible = ACTIONS.filter(a => a.roles.includes(role));
   if (visible.length === 0) return null;

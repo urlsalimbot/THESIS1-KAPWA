@@ -1,15 +1,9 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useTranslation } from 'react-i18next';
+import { statusLabel } from '@/i18n/display';
 
 const CHART_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#6b7280'];
-
-const STATUS_LABELS: Record<string, string> = {
-  enrolled: 'Enrolled',
-  in_review: 'In Review',
-  approved: 'Approved',
-  disbursed: 'Disbursed',
-  closed: 'Closed',
-};
 
 interface CaseStatus {
   status: string;
@@ -21,23 +15,24 @@ interface CaseStatusChartProps {
 }
 
 export function CaseStatusChart({ data }: CaseStatusChartProps) {
+  const { t } = useTranslation();
   const chartData = data.map(d => ({
-    name: STATUS_LABELS[d.status] || d.status,
+    name: statusLabel(t, d.status),
     count: d.count,
   }));
 
   if (chartData.length === 0) {
     return (
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Case Status</CardTitle></CardHeader>
-        <CardContent><p className="text-xs text-muted-foreground py-8 text-center">No case data</p></CardContent>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">{t('dashboard.caseStatus', 'Case Status')}</CardTitle></CardHeader>
+        <CardContent><p className="text-xs text-muted-foreground py-8 text-center">{t('dashboard.noCaseData', 'No case data')}</p></CardContent>
       </Card>
     );
   }
 
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Case Status</CardTitle></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">{t('dashboard.caseStatus', 'Case Status')}</CardTitle></CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData}>

@@ -3,8 +3,10 @@ import { Shield, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/lib/query-keys';
+import { useTranslation } from 'react-i18next';
 
 export function AuditorWidgets() {
+  const { t } = useTranslation();
   const { data: hashChain, isLoading: loading, isValidating: verifying, mutate: revalidateHash } = useSWR<
     Record<string, { valid: boolean; brokenAt?: string }>
   >(queryKeys.audit.hashChains());
@@ -40,10 +42,10 @@ export function AuditorWidgets() {
             )}
             <div className="flex-1">
               <p className={`font-semibold text-sm ${allValid ? 'text-green-800' : 'text-red-800'}`}>
-                {allValid ? 'All chains verified — integrity confirmed' : 'Chain integrity check failed'}
+                {allValid ? t('dashboard.chainsVerified', 'All chains verified — integrity confirmed') : t('dashboard.chainCheckFailed', 'Chain integrity check failed')}
               </p>
               <p className="text-xs text-muted-foreground">
-                Tables: interventions, cases, beneficiaries, consent_ledger
+                {t('dashboard.chainsTables', 'Tables: interventions, cases, beneficiaries, consent_ledger')}
               </p>
             </div>
           </div>
@@ -53,7 +55,7 @@ export function AuditorWidgets() {
       {hashChain && (
         <Card>
           <div className="border-b px-4 py-3">
-            <h3 className="font-semibold text-sm text-primary">Hash-Chain Status</h3>
+            <h3 className="font-semibold text-sm text-primary">{t('dashboard.hashChainStatus', 'Hash-Chain Status')}</h3>
           </div>
           <div className="divide-y">
             {Object.entries(hashChain).map(([table, status]) => (
@@ -69,7 +71,7 @@ export function AuditorWidgets() {
                   </span>
                 </div>
                 <span className={`text-xs ${status.valid ? 'text-green-600' : 'text-red-600'}`}>
-                  {status.valid ? 'Valid' : `Broken at: ${status.brokenAt || 'unknown'}`}
+                  {status.valid ? t('dashboard.valid', 'Valid') : t('dashboard.brokenAt', 'Broken at: {{date}}', { date: status.brokenAt || t('dashboard.unknown', 'unknown') })}
                 </span>
               </div>
             ))}
@@ -81,8 +83,8 @@ export function AuditorWidgets() {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">Consent Ledger</p>
-              <p className="text-lg font-semibold">{consentCount} records</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.consentLedger', 'Consent Ledger')}</p>
+              <p className="text-lg font-semibold">{t('dashboard.records', '{{count}} records', { count: consentCount })}</p>
             </div>
             <Shield className="text-muted-foreground" size={20} />
           </div>
@@ -91,7 +93,7 @@ export function AuditorWidgets() {
 
       <Button onClick={handleReVerify} disabled={verifying} variant="outline" size="sm">
         <RefreshCw size={14} className={`mr-1.5 ${verifying ? 'animate-spin' : ''}`} />
-        {verifying ? 'Verifying...' : 'Re-verify All Chains'}
+        {verifying ? t('dashboard.verifying', 'Verifying...') : t('dashboard.reverifyChains', 'Re-verify All Chains')}
       </Button>
     </div>
   );

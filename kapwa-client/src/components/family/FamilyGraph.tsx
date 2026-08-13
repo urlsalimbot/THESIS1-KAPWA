@@ -1,6 +1,7 @@
 import { Loader2, Users } from 'lucide-react';
 import { FamilyTreeGraph } from './FamilyTreeGraph';
 import type { FamilyMemberNode } from './FamilyTreeGraph';
+import { useTranslation } from 'react-i18next';
 
 interface FamilyGraphProps {
   loading: boolean;
@@ -10,11 +11,12 @@ interface FamilyGraphProps {
 }
 
 export function FamilyGraph({ loading, error, members, primary }: FamilyGraphProps) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8 text-muted-foreground">
         <Loader2 size={20} className="mr-2 animate-spin" />
-        <span className="text-sm">Loading family data...</span>
+        <span className="text-sm">{t('family.loadingData', 'Loading family data...')}</span>
       </div>
     );
   }
@@ -31,7 +33,7 @@ export function FamilyGraph({ loading, error, members, primary }: FamilyGraphPro
     return (
       <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
         <Users size={20} className="mr-2" />
-        No family members found
+        {t('family.noMembers', 'No family members found')}
       </div>
     );
   }

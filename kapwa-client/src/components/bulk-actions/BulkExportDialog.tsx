@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from 'react-i18next';
 
 export type ExportFormat = 'csv';
 
@@ -26,6 +27,7 @@ export function BulkExportDialog({
   selectedIds,
   onComplete,
 }: BulkExportDialogProps) {
+  const { t } = useTranslation();
   const [masked, setMasked] = useState(true);
   const [unmaskReason, setUnmaskReason] = useState('');
   const [format, setFormat] = useState<ExportFormat>('csv');
@@ -36,7 +38,7 @@ export function BulkExportDialog({
     setError('');
 
     if (!masked && !unmaskReason.trim()) {
-      setError('You must provide a reason for requesting unmasked data.');
+      setError(t('bulkActions.unmaskReasonRequired', 'You must provide a reason for requesting unmasked data.'));
       return;
     }
 
@@ -78,7 +80,7 @@ export function BulkExportDialog({
       setMasked(true);
       onComplete?.();
     } catch (err: any) {
-      setError(err?.message || 'Export failed. Please try again.');
+      setError(err?.message || t('bulkActions.exportFailed', 'Export failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -88,16 +90,17 @@ export function BulkExportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Export Cases</DialogTitle>
+          <DialogTitle>{t('bulkActions.exportCases', 'Export Cases')}</DialogTitle>
           <DialogDescription>
-            Export {selectedIds.length} case{selectedIds.length === 1 ? '' : 's'}.
-            PII is masked by default per data protection policy.
+            {t('bulkActions.exportCount', 'Export {{count}} case(s).', { count: selectedIds.length })}
+            {' '}
+            {t('bulkActions.maskPolicy', 'PII is masked by default per data protection policy.')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4 space-y-4">
           <div>
-            <Label>Format</Label>
+            <Label>{t('bulkActions.format', 'Format')}</Label>
             <div className="flex gap-4 mt-1">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -114,7 +117,7 @@ export function BulkExportDialog({
           </div>
 
           <div>
-            <Label>PII Masking</Label>
+            <Label>{t('bulkActions.piiMasking', 'PII Masking')}</Label>
             <div className="flex flex-col gap-2 mt-1">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -124,7 +127,7 @@ export function BulkExportDialog({
                   onChange={() => setMasked(true)}
                   className="accent-primary"
                 />
-                Masked (default)
+                {t('bulkActions.masked', 'Masked (default)')}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -134,7 +137,7 @@ export function BulkExportDialog({
                   onChange={() => setMasked(false)}
                   className="accent-primary"
                 />
-                Unmasked
+                {t('bulkActions.unmasked', 'Unmasked')}
               </label>
             </div>
           </div>
@@ -142,16 +145,16 @@ export function BulkExportDialog({
           {!masked && (
             <div>
               <Label htmlFor="unmaskReason">
-                Justification for Unmasked Export
+                {t('bulkActions.unmaskJustification', 'Justification for Unmasked Export')}
               </Label>
               <p className="text-xs text-muted-foreground mb-1">
-                State your justification for requesting unmasked data (logged to audit trail).
+                {t('bulkActions.unmaskHint', 'State your justification for requesting unmasked data (logged to audit trail).')}
               </p>
               <Textarea
                 id="unmaskReason"
                 value={unmaskReason}
                 onChange={(e) => setUnmaskReason(e.target.value)}
-                placeholder="e.g., Court order #12345 requires full beneficiary details..."
+                placeholder={t('bulkActions.unmaskPlaceholder', 'e.g., Court order #12345 requires full beneficiary details...')}
                 className="mt-1"
                 rows={3}
               />
@@ -165,10 +168,10 @@ export function BulkExportDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
+            {t('bulkActions.cancel', 'Cancel')}
           </Button>
           <Button onClick={handleExport} disabled={loading}>
-            {loading ? 'Exporting...' : 'Export'}
+            {loading ? t('bulkActions.exporting', 'Exporting...') : t('bulkActions.export', 'Export')}
           </Button>
         </DialogFooter>
       </DialogContent>

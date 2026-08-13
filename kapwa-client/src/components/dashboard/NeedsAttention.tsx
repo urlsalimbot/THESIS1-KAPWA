@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Clock, Eye } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { statusLabel } from '@/i18n/display';
 
 interface NeedsAttentionCase {
   id: string;
@@ -13,20 +15,16 @@ interface NeedsAttentionProps {
   cases: NeedsAttentionCase[];
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  enrolled: 'Assess',
-  in_review: 'Review',
-};
-
 export function NeedsAttention({ cases }: NeedsAttentionProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const needsAttention = cases.filter(c => c.status === 'enrolled' || c.status === 'in_review').slice(0, 5);
 
   if (needsAttention.length === 0) {
     return (
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Needs Attention</CardTitle></CardHeader>
-        <CardContent><p className="text-xs text-muted-foreground py-4 text-center">No pending actions</p></CardContent>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">{t('dashboard.needsAttention', 'Needs Attention')}</CardTitle></CardHeader>
+        <CardContent><p className="text-xs text-muted-foreground py-4 text-center">{t('dashboard.noPendingActions', 'No pending actions')}</p></CardContent>
       </Card>
     );
   }
@@ -36,7 +34,7 @@ export function NeedsAttention({ cases }: NeedsAttentionProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <AlertTriangle size={14} className="text-amber-500" />
-          Needs Attention ({needsAttention.length})
+          {t('dashboard.needsAttention', 'Needs Attention')} ({needsAttention.length})
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 overflow-y-auto max-h-[260px]">
@@ -45,19 +43,19 @@ export function NeedsAttention({ cases }: NeedsAttentionProps) {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate">{c.name}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock size={10} /> {c.status.replace('_', ' ')}
+                <Clock size={10} /> {statusLabel(t, c.status)}
               </p>
             </div>
             <div className="flex gap-1 shrink-0">
               <Button variant="ghost" size="sm" onClick={() => navigate(`/cases/${c.id}`)}>
-                <Eye size={12} className="mr-1" /> {ACTION_LABELS[c.status] || 'View'}
+                <Eye size={12} className="mr-1" /> {t('dashboard.view', 'View')}
               </Button>
             </div>
           </div>
         ))}
         {needsAttention.length >= 5 && (
           <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => navigate('/cases')}>
-            View All
+            {t('dashboard.viewAll', 'View All')}
           </Button>
         )}
       </CardContent>

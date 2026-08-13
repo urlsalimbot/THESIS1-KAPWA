@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Shield, ShieldOff, AlertTriangle, X, Check, Loader2, History, Info } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 interface ConsentLedgerEntry {
   id: string;
@@ -17,22 +19,23 @@ interface ConsentManagerProps {
   onConsentChange?: (newStatus: string) => void;
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: TFunction }) {
   if (status === 'active') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-        <Check size={14} /> Active
+        <Check size={14} /> {t('consent.active', 'Active')}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
-      <ShieldOff size={14} /> Revoked
+      <ShieldOff size={14} /> {t('consent.revoked', 'Revoked')}
     </span>
   );
 }
 
 export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentChange }: ConsentManagerProps) {
+  const { t } = useTranslation();
   const [showRevokeDialog, setShowRevokeDialog] = useState(false);
   const [revokeReason, setRevokeReason] = useState('');
   const [revoking, setRevoking] = useState(false);
@@ -61,7 +64,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
       const data = await api.get(`/beneficiaries/${beneficiaryId}/consent`);
       setLedger(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError('Failed to revoke consent. Please try again.');
+      setError(t('consent.revokeFailed', 'Failed to revoke consent. Please try again.'));
     } finally {
       setRevoking(false);
     }
@@ -78,8 +81,8 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
             <ShieldOff size={32} className="text-red-500" />
           )}
           <div>
-            <p className="text-sm font-medium text-gray-800">Consent Status</p>
-            <StatusBadge status={status} />
+            <p className="text-sm font-medium text-gray-800">{t('consent.status', 'Consent Status')}</p>
+            <StatusBadge status={status} t={t} />
           </div>
         </div>
         {status === 'active' && (
@@ -87,7 +90,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
             onClick={() => setShowRevokeDialog(true)}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
           >
-            Revoke Consent
+            {t('consent.revoke', 'Revoke Consent')}
           </button>
         )}
         {status !== 'active' && (
@@ -96,11 +99,11 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
               disabled
               className="cursor-not-allowed rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
             >
-              Reinstate Consent
+              {t('consent.reinstate', 'Reinstate Consent')}
             </button>
             <div className="absolute bottom-full right-0 mb-2 hidden w-48 rounded-lg bg-gray-800 p-2 text-xs text-white shadow-lg group-hover:block">
               <Info size={12} className="mr-1 inline" />
-              Contact Admin to reinstate consent
+              {t('consent.contactAdmin', 'Contact Admin to reinstate consent')}
             </div>
           </div>
         )}
@@ -113,7 +116,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-red-600">
                 <AlertTriangle size={20} />
-                <h3 className="text-lg font-semibold">Revoke Consent</h3>
+                <h3 className="text-lg font-semibold">{t('consent.revokeTitle', 'Revoke Consent')}</h3>
               </div>
               <button
                 onClick={() => setShowRevokeDialog(false)}
@@ -124,19 +127,17 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
             </div>
 
             <p className="mb-4 text-sm text-gray-600">
-              Are you sure you want to revoke consent for this beneficiary? This will immediately
-              mask all personal information (name, address, phone, date of birth, PhilSys number)
-              in the system.
+              {t('consent.revokeDesc', 'Are you sure you want to revoke consent for this beneficiary? This will immediately mask all personal information (name, address, phone, date of birth, PhilSys number) in the system.')}
             </p>
 
             <div className="mb-4">
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Reason for revocation (optional)
+                {t('consent.revokeReason', 'Reason for revocation (optional)')}
               </label>
               <textarea
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
-                placeholder="e.g., No longer receiving services, Withdrawn request..."
+                placeholder={t('consent.revokeReasonPlaceholder', 'e.g., No longer receiving services, Withdrawn request...')}
                 className="w-full rounded-lg border border-gray-300 p-3 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"
                 rows={3}
               />
@@ -151,7 +152,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                 onClick={() => setShowRevokeDialog(false)}
                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                Cancel
+                {t('consent.cancel', 'Cancel')}
               </button>
               <button
                 onClick={handleRevoke}
@@ -159,7 +160,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                 className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {revoking && <Loader2 className="h-4 w-4 animate-spin" />}
-                Confirm Revoke
+                {t('consent.confirmRevoke', 'Confirm Revoke')}
               </button>
             </div>
           </div>
@@ -170,24 +171,24 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <div className="mb-3 flex items-center gap-2 text-gray-700">
           <History size={16} />
-          <h4 className="text-sm font-semibold">Consent History</h4>
+          <h4 className="text-sm font-semibold">{t('consent.history', 'Consent History')}</h4>
         </div>
         {loadingLedger ? (
           <div className="flex items-center justify-center py-4 text-sm text-gray-400">
             <Loader2 size={16} className="mr-2 animate-spin" />
-            Loading history...
+            {t('consent.loadingHistory', 'Loading history...')}
           </div>
         ) : ledger.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-400">No consent history available</p>
+          <p className="py-4 text-center text-sm text-gray-400">{t('consent.noHistory', 'No consent history available')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-xs text-gray-500">
-                  <th className="pb-2 pr-4 font-medium">Date</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 pr-4 font-medium">Purpose</th>
-                  <th className="pb-2 font-medium">Revoked Reason</th>
+                  <th className="pb-2 pr-4 font-medium">{t('consent.date', 'Date')}</th>
+                  <th className="pb-2 pr-4 font-medium">{t('consent.statusCol', 'Status')}</th>
+                  <th className="pb-2 pr-4 font-medium">{t('consent.purpose', 'Purpose')}</th>
+                  <th className="pb-2 font-medium">{t('consent.revokedReason', 'Revoked Reason')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,12 +205,12 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                             : 'bg-red-100 text-red-700'
                         }`}
                       >
-                        {entry.status}
+                        {entry.status === 'active' ? t('consent.active', 'Active') : t('consent.revoked', 'Revoked')}
                       </span>
                     </td>
                     <td className="py-2 pr-4 text-gray-600">{entry.purpose || '—'}</td>
                     <td className="py-2 text-gray-600">
-                      {entry.revokedReason || (entry.status === 'revoked' ? 'No reason provided' : '—')}
+                      {entry.revokedReason || (entry.status === 'revoked' ? t('consent.noReason', 'No reason provided') : '—')}
                     </td>
                   </tr>
                 ))}

@@ -1,4 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 
 interface DailyCounts {
   [day: string]: { interventions: number; cases: number };
@@ -11,11 +12,12 @@ interface ActivityCalendarProps {
 }
 
 export function ActivityCalendar({ data, year, month }: ActivityCalendarProps) {
+  const { t } = useTranslation();
   if (!data) {
     return (
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Activity Calendar</CardTitle></CardHeader>
-        <CardContent><p className="text-xs text-muted-foreground py-8 text-center">Loading...</p></CardContent>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">{t('dashboard.activityCalendar', 'Activity Calendar')}</CardTitle></CardHeader>
+        <CardContent><p className="text-xs text-muted-foreground py-8 text-center">{t('dashboard.loading', 'Loading...')}</p></CardContent>
       </Card>
     );
   }
@@ -42,11 +44,11 @@ export function ActivityCalendar({ data, year, month }: ActivityCalendarProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Activity Calendar</CardTitle></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">{t('dashboard.activityCalendar', 'Activity Calendar')}</CardTitle></CardHeader>
       <CardContent>
         <p className="text-xs text-muted-foreground mb-2">{monthName}</p>
         <div className="grid grid-cols-7 gap-0.5 text-[9px] leading-none">
-          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+          {t('dashboard.weekdayInitials', 'Su,Mo,Tu,We,Th,Fr,Sa').split(',').map(d => (
             <div key={d} className="text-center text-[8px] text-muted-foreground py-0.5 font-medium">{d}</div>
           ))}
           {weeks.flat().map((cell, i) => {
@@ -56,7 +58,7 @@ export function ActivityCalendar({ data, year, month }: ActivityCalendarProps) {
             return (
               <div
                 key={i}
-                title={`${monthName} ${cell.day}: ${cell.count} activities`}
+                title={t('dashboard.dayActivities', '{{month}} {{day}}: {{count}} activities', { month: monthName, day: cell.day, count: cell.count })}
                 className={`rounded-sm h-5 flex items-center justify-center text-[8px] font-medium transition-colors ${colors[intensity]} ${isToday ? 'ring-1 ring-primary' : ''} ${cell.count > 0 ? 'text-white' : 'text-muted-foreground'}`}
               >
                 {cell.day}
