@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -28,33 +30,35 @@ const barangays = [
   'Tigbe',
 ];
 
-const registerSchema = z.object({
+const makeRegisterSchema = (t: TFunction) => z.object({
   fullName: z
     .string()
-    .min(2, 'Please enter your full name.')
-    .regex(/^[A-Za-z\s]+$/, 'Letters and spaces only.'),
-  email: z.string().email('Please enter a valid email address.'),
+    .min(2, t('auth.fullNameRequired', 'Please enter your full name.'))
+    .regex(/^[A-Za-z\s]+$/, t('auth.lettersOnly', 'Letters and spaces only.')),
+  email: z.string().email(t('auth.emailInvalid', 'Please enter a valid email address.')),
   phone: z
     .string()
-    .regex(/^09\d{2}\s?\d{3}\s?\d{4}$/, 'Please enter a valid phone number.'),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
+    .regex(/^09\d{2}\s?\d{3}\s?\d{4}$/, t('auth.phoneInvalid', 'Please enter a valid phone number.')),
+  password: z.string().min(8, t('auth.passwordMinLength', 'Password must be at least 8 characters.')),
   confirmPassword: z.string(),
-  barangay: z.string().min(1, 'Please select your barangay.'),
+  barangay: z.string().min(1, t('auth.selectBarangay', 'Please select your barangay.')),
   dateOfBirth: z.string().refine(
     (val) => {
       const age = Math.floor((Date.now() - new Date(val).getTime()) / 31557600000);
       return age >= 18;
     },
-    'You must be at least 18 years old.'
+    t('auth.mustBe18', 'You must be at least 18 years old.')
   ),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match.',
+  message: t('auth.passwordsDontMatch', 'Passwords do not match.'),
   path: ['confirmPassword'],
 });
 
-type RegisterValues = z.infer<typeof registerSchema>;
+type RegisterValues = z.infer<ReturnType<typeof makeRegisterSchema>>;
 
 export function RegisterPage() {
+  const { t } = useTranslation();
+  const registerSchema = useMemo(() => makeRegisterSchema(t), [t]);
   const [serverError, setServerError] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -86,7 +90,7 @@ export function RegisterPage() {
       });
       setRegisteredEmail(values.email);
     } catch {
-      toast.error('Registration failed', { description: 'Please check your information and try again.' });
+      toast.error(t('auth.registrationFailed', 'Registration failed'), { description: t('auth.registrationFailedDesc', 'Please check your information and try again.') });
     } finally {
       setSubmitting(false);
     }
@@ -103,34 +107,35 @@ export function RegisterPage() {
             <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
               <HandHeart size={28} className="text-accent" />
             </div>
-            <CardTitle className="text-2xl tracking-tight">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl tracking-tight">{t('auth.checkYourEmail', 'Check Your Email')}</CardTitle>
             <CardDescription className="text-base">
-              We sent a verification link to <strong>{registeredEmail}</strong>.<br />
-              Please check your inbox and click the link to activate your account.
+              <Trans i18nKey="auth.weSentVerificationLink" defaults="We sent a verification link to <bold>{{email}}</bold>." values={{ email: registeredEmail }} components={{ bold: <strong /> }} />
+              <br />
+              {t('auth.checkInboxToActivate', 'Please check your inbox and click the link to activate your account.')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Didn't receive the email? Check your spam folder or{' '}
+              {t('auth.didntReceiveEmail', "Didn't receive the email? Check your spam folder or")}{' '}
               <button
                 type="button"
                 className="text-primary underline underline-offset-2 hover:no-underline"
                 onClick={async () => {
                   try {
                     await api.post('/auth/resend-verification', { email: registeredEmail });
-                    toast.success('Verification email resent', { description: 'Check your inbox.' });
+                    toast.success(t('auth.verificationEmailResent', 'Verification email resent'), { description: t('auth.checkYourInbox', 'Check your inbox.') });
                   } catch {
-                    toast.error('Failed to resend', { description: 'Try again later.' });
+                    toast.error(t('auth.failedToResend', 'Failed to resend'), { description: t('auth.tryAgainLater', 'Try again later.') });
                   }
                 }}
               >
-                resend
+                {t('auth.resend', 'resend')}
               </button>
             </p>
           </CardContent>
           <CardFooter className="justify-center pt-2 pb-6">
             <Button variant="link" asChild>
-              <Link to="/login">Back to Sign In</Link>
+              <Link to="/login">{t('auth.backToSignIn', 'Back to Sign In')}</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -148,7 +153,7 @@ export function RegisterPage() {
       </div>
 
       <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
-        <ArrowLeft size={16} /> Back to Home
+        <ArrowLeft size={16} /> {t('auth.backToHome', 'Back to Home')}
       </Link>
 
       <Card className="w-full max-w-lg mx-auto relative shadow-lg border-border/50">
@@ -156,9 +161,9 @@ export function RegisterPage() {
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
             <HandHeart size={24} className="text-accent" />
           </div>
-          <CardTitle className="text-2xl tracking-tight">Claimant Registration</CardTitle>
+          <CardTitle className="text-2xl tracking-tight">{t('auth.claimantRegistration', 'Claimant Registration')}</CardTitle>
           <CardDescription className="text-base">
-            Create an account to track your services and applications.
+            {t('auth.registerDescription', 'Create an account to track your services and applications.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,9 +180,9 @@ export function RegisterPage() {
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel>{t('auth.fullName', 'Full Name')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Full Name" className="h-11 md:h-10" {...field} />
+                        <Input placeholder={t('auth.fullName', 'Full Name')} className="h-11 md:h-10" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -188,9 +193,9 @@ export function RegisterPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t('auth.emailLabel', 'Email')}</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Email" className="h-11 md:h-10" {...field} />
+                        <Input type="email" placeholder={t('auth.emailLabel', 'Email')} className="h-11 md:h-10" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -201,7 +206,7 @@ export function RegisterPage() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone</FormLabel>
+                      <FormLabel>{t('auth.phoneLabel', 'Phone')}</FormLabel>
                       <FormControl>
                         <Input type="tel" placeholder="09XX XXX XXXX" className="h-11 md:h-10" {...field} />
                       </FormControl>
@@ -214,9 +219,9 @@ export function RegisterPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t('auth.passwordLabel', 'Password')}</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Password" className="h-11 md:h-10" {...field} />
+                        <Input type="password" placeholder={t('auth.passwordLabel', 'Password')} className="h-11 md:h-10" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -227,9 +232,9 @@ export function RegisterPage() {
                   name="confirmPassword"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
+                      <FormLabel>{t('auth.confirmPassword', 'Confirm Password')}</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Confirm Password" className="h-11 md:h-10" {...field} />
+                        <Input type="password" placeholder={t('auth.confirmPassword', 'Confirm Password')} className="h-11 md:h-10" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -240,11 +245,11 @@ export function RegisterPage() {
                   name="barangay"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Barangay</FormLabel>
+                      <FormLabel>{t('auth.barangay', 'Barangay')}</FormLabel>
                       <FormControl>
                         <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger className="h-11 md:h-10" aria-label="Select barangay">
-                            <SelectValue placeholder="Select barangay" />
+                          <SelectTrigger className="h-11 md:h-10" aria-label={t('auth.selectBarangay', 'Select barangay')}>
+                            <SelectValue placeholder={t('auth.selectBarangay', 'Select barangay')} />
                           </SelectTrigger>
                           <SelectContent>
                             {barangays.map((b) => (
@@ -266,9 +271,9 @@ export function RegisterPage() {
                 name="dateOfBirth"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date of Birth</FormLabel>
+                    <FormLabel>{t('auth.dateOfBirth', 'Date of Birth')}</FormLabel>
                     <FormControl>
-                      <Input type="date" className="h-11 md:h-10" aria-label="Date of Birth" {...field} />
+                      <Input type="date" className="h-11 md:h-10" aria-label={t('auth.dateOfBirth', 'Date of Birth')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -281,14 +286,14 @@ export function RegisterPage() {
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}
-                Create Account
+                {t('auth.createAccount', 'Create Account')}
               </Button>
             </form>
           </Form>
         </CardContent>
         <CardFooter className="justify-center pt-2 pb-6">
           <Button variant="link" asChild>
-            <Link to="/login">Already have an account? Sign in</Link>
+            <Link to="/login">{t('auth.alreadyHaveAccount', 'Already have an account? Sign in')}</Link>
           </Button>
         </CardFooter>
       </Card>

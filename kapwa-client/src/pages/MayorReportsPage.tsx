@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, Users, DollarSign, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { queryKeys } from '../lib/query-keys';
 import { downloadMonthlyFunds } from '../lib/api';
 
 export function MayorReportsPage() {
+  const { t } = useTranslation();
   const { data: metrics, isLoading: loading } = useSWR(queryKeys.dashboard.mayorReports());
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -21,39 +23,39 @@ export function MayorReportsPage() {
     try {
       await downloadMonthlyFunds(currentMonth);
     } catch (err: any) {
-      setExportError(err.message || 'Export failed');
+      setExportError(err.message || t('dashboard.exportFailed', 'Export failed'));
       setTimeout(() => setExportError(null), 4000);
     } finally {
       setExporting(false);
     }
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading reports...</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500">{t('dashboard.loadingReports', 'Loading reports...')}</div>;
 
   const stats = metrics ? [
-    { label: 'Total Cases', value: String(metrics.totalCases || 0), icon: TrendingUp, color: 'bg-blue-50 text-blue-700' },
-    { label: 'Unique Households', value: String(metrics.uniqueHouseholds || 0), icon: Users, color: 'bg-green-100 text-green-800' },
-    { label: 'Fund Utilization', value: `₱${(metrics.fundUtilization || 0).toLocaleString()}`, icon: DollarSign, color: 'bg-blue-50 text-cyan-600' },
-    { label: 'Served Today', value: String(metrics.servedToday || 0), icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
-    { label: 'Cases by Status', value: metrics.caseStatusDistribution?.length > 0 ? `${metrics.caseStatusDistribution.length} statuses` : 'N/A', icon: CheckCircle, color: 'bg-purple-50 text-purple-700' },
-    { label: 'SLA Compliance', value: metrics.slaCompliance?.slaStatus === 'compliant' ? 'Compliant' : 'Violated', icon: metrics.slaCompliance?.slaStatus === 'compliant' ? CheckCircle : AlertTriangle, color: metrics.slaCompliance?.slaStatus === 'compliant' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' },
+    { label: t('dashboard.totalCases', 'Total Cases'), value: String(metrics.totalCases || 0), icon: TrendingUp, color: 'bg-blue-50 text-blue-700' },
+    { label: t('dashboard.uniqueHouseholds', 'Unique Households'), value: String(metrics.uniqueHouseholds || 0), icon: Users, color: 'bg-green-100 text-green-800' },
+    { label: t('dashboard.fundUtilization', 'Fund Utilization'), value: `₱${(metrics.fundUtilization || 0).toLocaleString()}`, icon: DollarSign, color: 'bg-blue-50 text-cyan-600' },
+    { label: t('dashboard.servedToday', 'Served Today'), value: String(metrics.servedToday || 0), icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
+    { label: t('dashboard.casesByStatus', 'Cases by Status'), value: metrics.caseStatusDistribution?.length > 0 ? t('dashboard.statusCount', '{{count}} statuses', { count: metrics.caseStatusDistribution.length }) : 'N/A', icon: CheckCircle, color: 'bg-purple-50 text-purple-700' },
+    { label: t('dashboard.slaCompliance', 'SLA Compliance'), value: metrics.slaCompliance?.slaStatus === 'compliant' ? t('dashboard.compliant', 'Compliant') : t('dashboard.violated', 'Violated'), icon: metrics.slaCompliance?.slaStatus === 'compliant' ? CheckCircle : AlertTriangle, color: metrics.slaCompliance?.slaStatus === 'compliant' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' },
   ] : [];
 
   if (!metrics) {
     return (
       <PageShell
-        title="Reports"
-        description="Municipal program and compliance overview"
+        title={t('dashboard.reportsTitle', 'Reports')}
+        description={t('dashboard.reportsDescription', 'Municipal program and compliance overview')}
       >
-        <div className="p-8 text-center text-gray-400">No data available for the selected period.</div>
+        <div className="p-8 text-center text-gray-400">{t('dashboard.noDataPeriod', 'No data available for the selected period.')}</div>
       </PageShell>
     );
   }
 
   return (
     <PageShell
-      title="Reports"
-      description="Municipal program and compliance overview"
+      title={t('dashboard.reportsTitle', 'Reports')}
+      description={t('dashboard.reportsDescription', 'Municipal program and compliance overview')}
     >
 
       <div className="no-print flex items-center gap-2 mb-4">
@@ -62,7 +64,7 @@ export function MayorReportsPage() {
           onClick={handleExportFundUtilization}
           disabled={exporting}
         >
-          <Download size={14} className="mr-1" /> {exporting ? 'Generating...' : 'Export Fund Utilization'}
+          <Download size={14} className="mr-1" /> {exporting ? t('dashboard.generating', 'Generating...') : t('dashboard.exportFundUtilization', 'Export Fund Utilization')}
         </Button>
         {exportError && <span className="text-xs text-red-600">{exportError}</span>}
       </div>
@@ -86,7 +88,7 @@ export function MayorReportsPage() {
 
       {metrics.caseStatusDistribution?.length > 0 && (
         <div className="rounded-lg border bg-white p-4">
-          <h3 className="font-semibold text-sm text-gray-700 mb-3">Case Status Distribution</h3>
+          <h3 className="font-semibold text-sm text-gray-700 mb-3">{t('dashboard.caseStatusDistribution', 'Case Status Distribution')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {metrics.caseStatusDistribution.map((s: any, i: number) => (
               <div key={i} className="flex justify-between border-b py-1 text-sm">

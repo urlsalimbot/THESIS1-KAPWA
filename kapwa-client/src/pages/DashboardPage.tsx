@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, Clock, DollarSign, Plus, Eye, AlertTriangle, Search, Download } from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
+import { categoryLabel } from '@/i18n/display';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -61,28 +63,20 @@ const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destr
   closed: 'outline',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  enrolled: 'Enrolled',
-  assessed: 'Assessed',
-  in_review: 'In Review',
-  active: 'Active',
-  transitioning: 'Transitioning',
-  closed: 'Closed',
-};
-
 const WORKER_ROLES = ['social_worker', 'admin'];
 
-const offlineStats: Stat[] = [
-  { label: 'Served Today', value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
-  { label: 'Pending Review', value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-  { label: 'Disbursed This Month', value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
-];
-
 export function DashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const { user } = useAuth();
   const role = user?.role || '';
+
+  const offlineStats: Stat[] = [
+    { label: t('dashboard.servedToday', 'Served Today'), value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
+    { label: t('dashboard.pendingReview', 'Pending Review'), value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
+    { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
+  ];
 
   const swrKey = WORKER_ROLES.includes(role) ? queryKeys.dashboard.stats() : null;
   const { data, isLoading } = useSWR<DashboardData>(swrKey);
@@ -105,7 +99,7 @@ export function DashboardPage() {
     try {
       await downloadMonthlyFunds(currentMonth);
     } catch (err: any) {
-      setExportError(err.message || 'Export failed');
+      setExportError(err.message || t('dashboard.exportFailed', 'Export failed'));
       setTimeout(() => setExportError(null), 4000);
     } finally {
       setExporting(false);
@@ -114,22 +108,22 @@ export function DashboardPage() {
 
   const fundUtilizationButton = (
     <Button size="sm" variant="outline" onClick={handleExportFundUtilization} disabled={exporting}>
-      <Download size={14} className="mr-1" /> {exporting ? 'Generating...' : 'Export Fund Utilization'}
+      <Download size={14} className="mr-1" /> {exporting ? t('dashboard.generating', 'Generating...') : t('dashboard.exportFundUtilization', 'Export Fund Utilization')}
     </Button>
   );
 
   const columns: ColumnDef<CaseRow>[] = [
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
-    { accessorKey: 'surname', header: 'Surname' },
-    { accessorKey: 'first', header: 'First' },
-    { accessorKey: 'middle', header: 'Middle' },
-    { accessorKey: 'gender', header: 'Gender' },
-    { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
-    { accessorKey: 'barangay', header: 'Barangay' },
-    { accessorKey: 'remarks', header: 'Remarks', cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
-    { id: 'actions', header: 'Actions', cell: ({ row }) => (
-      <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label="View Case">
-        <Eye size={14} className="mr-1" /> View
+    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
+    { accessorKey: 'surname', header: t('dashboard.surname', 'Surname') },
+    { accessorKey: 'first', header: t('dashboard.firstName', 'First') },
+    { accessorKey: 'middle', header: t('dashboard.middleName', 'Middle') },
+    { accessorKey: 'gender', header: t('dashboard.gender', 'Gender') },
+    { accessorKey: 'category', header: t('dashboard.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{categoryLabel(t, row.original.category)}</Badge> },
+    { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
+    { accessorKey: 'remarks', header: t('dashboard.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
+    { id: 'actions', header: t('dashboard.actions', 'Actions'), cell: ({ row }) => (
+      <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label={t('dashboard.viewCase', 'View Case')}>
+        <Eye size={14} className="mr-1" /> {t('dashboard.view', 'View')}
       </Button>
     )},
   ];
@@ -150,7 +144,7 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <PageShell title="Dashboard" description="Overview of social welfare operations and metrics.">
+      <PageShell title={t('dashboard.title', 'Dashboard')} description={t('dashboard.description', 'Overview of social welfare operations and metrics.')}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}><CardContent className="p-4"><CardGridSkeleton /></CardContent></Card>
@@ -163,7 +157,7 @@ export function DashboardPage() {
 
   if (!WORKER_ROLES.includes(role)) {
     return (
-      <PageShell title="Dashboard" description="Overview of social welfare operations and metrics."
+      <PageShell title={t('dashboard.title', 'Dashboard')} description={t('dashboard.description', 'Overview of social welfare operations and metrics.')}
         actions={
           ['mayor', 'auditor'].includes(role) ? (
             <div className="flex gap-2">
@@ -182,7 +176,7 @@ export function DashboardPage() {
   }
 
   return (
-    <PageShell title="Dashboard" description="Overview of social welfare operations and metrics." cachedAt={lastSync ?? undefined}
+    <PageShell title={t('dashboard.title', 'Dashboard')} description={t('dashboard.description', 'Overview of social welfare operations and metrics.')} cachedAt={lastSync ?? undefined}
       actions={
         <div className="flex gap-2">
           {role === 'admin' && (
@@ -192,10 +186,10 @@ export function DashboardPage() {
             </>
           )}
           <Button size="sm" variant="outline" onClick={() => navigate('/intake/referrals')}>
-            Review Referrals
+            {t('dashboard.reviewReferrals', 'Review Referrals')}
           </Button>
           <Button size="sm" onClick={() => navigate('/intake')}>
-            <Plus size={14} className="mr-1" /> New Intake
+            <Plus size={14} className="mr-1" /> {t('dashboard.newIntake', 'New Intake')}
           </Button>
         </div>
       }>
@@ -221,7 +215,7 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-4">
-        <h2 className="text-lg font-semibold tracking-tight mb-3">Recent Cases</h2>
+        <h2 className="text-lg font-semibold tracking-tight mb-3">{t('dashboard.recentCases', 'Recent Cases')}</h2>
         <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
       </div>
     </PageShell>

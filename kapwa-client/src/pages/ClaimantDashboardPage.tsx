@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { Link } from 'react-router-dom';
@@ -27,21 +28,22 @@ interface NotificationPreference {
 }
 
 const NOTIF_CATEGORIES = [
-  { key: 'case_update', label: 'Case Updates' },
-  { key: 'approval', label: 'Approvals' },
-  { key: 'disbursement', label: 'Disbursements' },
-  { key: 'sync_conflict', label: 'Sync Conflicts' },
-  { key: 'system', label: 'System Alerts', locked: true },
+  { key: 'case_update', labelKey: 'notifications.catCaseUpdate', label: 'Case Updates' },
+  { key: 'approval', labelKey: 'notifications.catApproval', label: 'Approvals' },
+  { key: 'disbursement', labelKey: 'notifications.catDisbursement', label: 'Disbursements' },
+  { key: 'sync_conflict', labelKey: 'notifications.catSyncConflict', label: 'Sync Conflicts' },
+  { key: 'system', labelKey: 'notifications.catSystem', label: 'System Alerts', locked: true },
 ];
 
 const NOTIF_CHANNELS = [
-  { key: 'sms', label: 'SMS' },
-  { key: 'in_app', label: 'In-App' },
+  { key: 'sms', labelKey: 'notifications.channelSms', label: 'SMS' },
+  { key: 'in_app', labelKey: 'notifications.channelInApp', label: 'In-App' },
 ];
 
 const DEFAULT_CATEGORIES = ['case_update', 'approval', 'disbursement', 'sync_conflict', 'system'];
 
 export function ClaimantDashboardPage() {
+  const { t } = useTranslation();
   const { data: servicesData } = useSWR<{ services?: ServiceRecord[]; caseStatus?: string }>(
     queryKeys.beneficiaries.myServices(),
   );
@@ -50,7 +52,7 @@ export function ClaimantDashboardPage() {
   const loading = !servicesData && !consents.length;
 
   const services = servicesData?.services || [];
-  const caseStatus = servicesData?.caseStatus || 'No active case';
+  const caseStatus = servicesData?.caseStatus || t('claims.noActiveCase', 'No active case');
   const lastSync = servicesData ? Date.now() : null;
 
   const [preferences, setPreferences] = useState<Record<string, Record<string, boolean>>>(() => {
@@ -97,7 +99,7 @@ export function ClaimantDashboardPage() {
 
   if (loading) {
     return (
-      <PageShell title="My Dashboard" description="Your case and assistance overview">
+      <PageShell title={t('claims.myDashboard', 'My Dashboard')} description={t('claims.dashboardDescription', 'Your case and assistance overview')}>
         <CardGridSkeleton count={4} />
       </PageShell>
     );
@@ -105,19 +107,19 @@ export function ClaimantDashboardPage() {
 
   return (
     <PageShell
-      title="My Dashboard"
-      description="Service history, case status, and consent management"
+      title={t('claims.myDashboard', 'My Dashboard')}
+      description={t('claims.dashboardDescription2', 'Service history, case status, and consent management')}
       cachedAt={lastSync ?? undefined}
     >
       {/* Access Card Link */}
       <Card>
         <CardContent className="p-4 flex items-center justify-between">
           <div>
-            <p className="text-xs text-muted-foreground">Access Card</p>
-            <p className="text-sm font-medium text-primary">View your KAPWA Access Card</p>
+            <p className="text-xs text-muted-foreground">{t('claims.accessCard', 'Access Card')}</p>
+            <p className="text-sm font-medium text-primary">{t('claims.viewAccessCard', 'View your KAPWA Access Card')}</p>
           </div>
           <Link to="/my-access-card">
-            <Button variant="default" size="sm">View Card</Button>
+            <Button variant="default" size="sm">{t('claims.viewCard', 'View Card')}</Button>
           </Link>
         </CardContent>
       </Card>
@@ -127,7 +129,7 @@ export function ClaimantDashboardPage() {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">Case Status</p>
+              <p className="text-xs text-muted-foreground">{t('claims.caseStatus', 'Case Status')}</p>
               <p className="text-lg font-semibold text-primary">{caseStatus}</p>
             </div>
             <Badge variant={
@@ -142,7 +144,7 @@ export function ClaimantDashboardPage() {
       {/* Service History */}
       <Card>
         <div className="border-b px-4 py-3">
-          <h2 className="font-semibold text-sm text-primary">Service History</h2>
+          <h2 className="font-semibold text-sm text-primary">{t('claims.serviceHistory', 'Service History')}</h2>
         </div>
         {services.length === 0 ? (
           <CardContent>
@@ -169,8 +171,8 @@ export function ClaimantDashboardPage() {
       {/* Consent Hub */}
       <Card>
         <div className="border-b px-4 py-3 flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-primary">Consent Management</h3>
-          <Button variant="default" size="sm">Manage Consent</Button>
+          <h3 className="font-semibold text-sm text-primary">{t('claims.consentManagement', 'Consent Management')}</h3>
+          <Button variant="default" size="sm">{t('claims.manageConsent', 'Manage Consent')}</Button>
         </div>
         {consents.length === 0 ? (
           <CardContent>
@@ -182,7 +184,7 @@ export function ClaimantDashboardPage() {
               <div key={c.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{c.purpose}</p>
-                  <p className="text-xs text-muted-foreground">Via {c.channel} · {new Date(c.grantedAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">{t('claims.viaChannel', 'Via {{channel}}', { channel: c.channel })} · {new Date(c.grantedAt).toLocaleDateString()}</p>
                 </div>
                 <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>{c.status}</Badge>
               </div>
@@ -190,40 +192,40 @@ export function ClaimantDashboardPage() {
           </div>
         )}
         <div className="border-t px-4 py-3">
-          <p className="text-xs text-muted-foreground">Your data is processed per RA 10173 (Data Privacy Act). You may revoke consent at any time.</p>
+          <p className="text-xs text-muted-foreground">{t('claims.dataPrivacyNotice', 'Your data is processed per RA 10173 (Data Privacy Act). You may revoke consent at any time.')}</p>
         </div>
       </Card>
 
       {/* Notification Preferences */}
       <Card>
         <div className="border-b px-4 py-3 flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-primary">Notification Preferences</h3>
+          <h3 className="font-semibold text-sm text-primary">{t('notifications.preferences', 'Notification Preferences')}</h3>
           <Button
             onClick={handleSave}
             disabled={!prefDirty || prefSaving}
             variant={prefDirty ? 'default' : 'outline'}
             size="sm"
           >
-            {prefSaving ? 'Saving...' : 'Save Preferences'}
+            {prefSaving ? t('notifications.saving', 'Saving...') : t('notifications.savePreferences', 'Save Preferences')}
           </Button>
         </div>
         {prefSaved && (
           <div className="mx-4 mt-2 rounded bg-green-50 px-3 py-2 text-xs text-green-700">
-            Preferences saved
+            {t('notifications.preferencesSaved', 'Preferences saved')}
           </div>
         )}
         <div className="p-4">
           <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-xs">
-            <div className="font-medium text-muted-foreground">Category</div>
+            <div className="font-medium text-muted-foreground">{t('notifications.category', 'Category')}</div>
             {NOTIF_CHANNELS.map(ch => (
-              <div key={ch.key} className="text-center font-medium text-muted-foreground">{ch.label}</div>
+              <div key={ch.key} className="text-center font-medium text-muted-foreground">{t(ch.labelKey, ch.label)}</div>
             ))}
             {NOTIF_CATEGORIES.map(cat => (
               <div key={cat.key} className={`contents ${cat.locked ? 'opacity-50' : ''}`}>
                 <div className="flex items-center gap-2 py-1">
                   {cat.locked && <span className="text-muted-foreground">🔒</span>}
-                  <span className="text-sm">{cat.label}</span>
-                  {cat.locked && <span className="text-xs text-muted-foreground">(always active)</span>}
+                  <span className="text-sm">{t(cat.labelKey, cat.label)}</span>
+                  {cat.locked && <span className="text-xs text-muted-foreground">{t('notifications.alwaysActive', '(always active)')}</span>}
                 </div>
                 {NOTIF_CHANNELS.map(ch => (
                   <div key={ch.key} className="flex justify-center py-1">
@@ -234,7 +236,7 @@ export function ClaimantDashboardPage() {
                         disabled={cat.locked}
                         onChange={() => togglePref(cat.key, ch.key)}
                         className="peer sr-only"
-                        aria-label={`${cat.label} ${ch.label}`}
+                        aria-label={t('notifications.toggleAria', '{{category}} {{channel}}', { category: t(cat.labelKey, cat.label), channel: t(ch.labelKey, ch.label) })}
                       />
                       <div className={`h-5 w-9 rounded-full transition-colors ${
                         cat.locked
