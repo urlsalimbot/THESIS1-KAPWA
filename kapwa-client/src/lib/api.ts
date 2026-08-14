@@ -247,6 +247,24 @@ export async function downloadCsrPdf(caseId: string) {
   URL.revokeObjectURL(url);
 }
 
+export async function downloadFilingDoc(id: string, fallbackName = 'document'): Promise<void> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/filing/${id}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Document download failed: ${res.status}`);
+  const blob = await res.blob();
+  const disposition = res.headers?.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match?.[1] || fallbackName;
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(

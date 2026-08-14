@@ -125,6 +125,9 @@ const en = {
       "view": "View",
     },
     "completing": "Completing...",
+    "documents": {
+      "downloadFailed": "Download failed",
+    },
     "enrollment": {
       "address": "Address",
       "assignedWorker": "Assigned Worker",
@@ -933,6 +936,9 @@ const en = {
     "dateOfBirth": "Date of Birth",
     "dateTo": "Date To",
     "description": "Real-time view of processed interventions and logs.",
+    "documents": "Documents",
+    "download": "Download",
+    "downloadFailed": "Download failed",
     "estimatedIncome": "Estimated Income",
     "firstName": "First",
     "fullName": "Full Name",
@@ -949,6 +955,7 @@ const en = {
     "memberCount_other": "{{count}} Member",
     "middleName": "Middle",
     "newIrfFromCase": "New IRF from Case",
+    "noDocuments": "No documents attached to this case.",
     "notFound": "Case not found.",
     "notFoundTitle": "Case Not Found",
     "onTrack": "On Track",

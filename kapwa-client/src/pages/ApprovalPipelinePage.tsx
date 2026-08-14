@@ -94,7 +94,7 @@ export function ApprovalPipelinePage() {
     });
     if (res.ok) {
       const doc = await res.json();
-      await api.patch(`/cases/${caseId}/documents`, { certificateUrl: `/api/filing/file/${doc.id}` });
+      await api.patch(`/cases/${caseId}/documents`, { certificateUrl: `/filing/${doc.id}/download` });
       globalMutate(queryKeys.cases.all);
     }
   }
@@ -112,7 +112,7 @@ export function ApprovalPipelinePage() {
     });
     if (res.ok) {
       const doc = await res.json();
-      await api.patch(`/cases/${caseId}/documents`, { pettyCashVoucherUrl: `/api/filing/file/${doc.id}` });
+      await api.patch(`/cases/${caseId}/documents`, { pettyCashVoucherUrl: `/filing/${doc.id}/download` });
       globalMutate(queryKeys.cases.all);
     }
   }

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock } from 'lucide-react';
-import { api, downloadCsrPdf, downloadCertificate, type CertificateType } from '../lib/api';
+import { api, downloadCsrPdf, downloadCertificate, downloadFilingDoc, type CertificateType } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDate, formatDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth-context';
@@ -67,6 +67,9 @@ export function CaseViewPage() {
   );
   const { data: interventions = [] } = useSWR<any[]>(
     id ? queryKeys.cases.interventions(id) : null,
+  );
+  const { data: documents = [] } = useSWR<any[]>(
+    id ? queryKeys.filing.byCase(id) : null,
   );
 
   useEffect(() => {
@@ -402,6 +405,40 @@ export function CaseViewPage() {
                 >
                   {certGenerating === 'referral' ? t('cases.generating', 'Generating...') : t('cases.certReferral', 'Certificate of Referral')}
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Documents card */}
+          {ben && (
+            <div className="rounded-lg border bg-card">
+              <div className="px-4 py-3 flex items-center gap-3">
+                <FileText size={20} className="text-primary" />
+                <h3 className="text-sm font-semibold">{t('cases.documents', 'Documents')}</h3>
+              </div>
+              <Separator />
+              <div className="px-4 py-3 space-y-2">
+                {documents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t('cases.noDocuments', 'No documents attached to this case.')}</p>
+                ) : (
+                  documents.map((doc: any) => (
+                    <div key={doc.id} className="flex items-center justify-between gap-2 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{doc.originalName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {doc.category || ''}{doc.fileSize ? `${doc.category ? ' · ' : ''}${(doc.fileSize / 1024).toFixed(0)} KB` : ''}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() => alert(t('cases.downloadFailed', 'Download failed')))}
+                      >
+                        <Download size={14} className="mr-1" /> {t('cases.download', 'Download')}
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}

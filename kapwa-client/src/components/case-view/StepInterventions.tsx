@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { api } from '@/lib/api';
+import { api, downloadFilingDoc } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,9 +35,10 @@ interface StepInterventionsProps {
   caseId: string;
   caseData: any;
   userRole?: string;
+  readOnly?: boolean;
 }
 
-export function StepInterventions({ caseId, caseData, userRole }: StepInterventionsProps) {
+export function StepInterventions({ caseId, caseData, userRole, readOnly = false }: StepInterventionsProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
@@ -79,7 +80,7 @@ export function StepInterventions({ caseId, caseData, userRole }: StepInterventi
 
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const canUpload = userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole);
+  const canUpload = userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole) && !readOnly;
 
   async function handleAdd() {
     setSaving(true);
@@ -161,7 +162,7 @@ export function StepInterventions({ caseId, caseData, userRole }: StepInterventi
               {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} ${t('caseView.implement.total', 'total')}`}
             </p>
           </div>
-          <Button size="sm" onClick={() => setAdding(!adding)}>
+          <Button size="sm" onClick={() => setAdding(!adding)} disabled={readOnly}>
             <Plus size={14} className="mr-1" /> {t('caseView.implement.addIntervention', 'Add Intervention')}
           </Button>
         </div>
@@ -299,9 +300,11 @@ export function StepInterventions({ caseId, caseData, userRole }: StepInterventi
                   </div>
                   {intv.notes && <p className="text-xs text-muted-foreground/70 mt-1">{intv.notes}</p>}
                 </div>
-                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)}>
-                  <Trash2 size={14} />
-                </Button>
+                {!readOnly && (
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)}>
+                    <Trash2 size={14} />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -374,14 +377,12 @@ export function StepInterventions({ caseId, caseData, userRole }: StepInterventi
                       {uploadedDocs.map((doc: any) => (
                         <div key={doc.id} className="flex items-center gap-2 text-xs text-muted-foreground pl-9">
                           <FileText size={10} />
-                          <a
-                            href={api.url(`/filing/${doc.id}/download`)}
-                            className="hover:underline truncate"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() => alert(t('caseView.documents.downloadFailed', 'Download failed')))}
+                            className="hover:underline truncate text-left"
                           >
                             {doc.originalName}
-                          </a>
+                          </button>
                           <span className="text-[10px]">({(doc.fileSize / 1024).toFixed(0)} KB)</span>
                         </div>
                       ))}
