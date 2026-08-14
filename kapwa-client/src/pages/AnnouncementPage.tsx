@@ -34,7 +34,7 @@ export function AnnouncementPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-3xl mx-auto py-16 px-4">
+      <div className="max-w-5xl mx-auto py-16 px-4">
         <div className="animate-pulse space-y-4">
           <div className="h-4 w-40 bg-muted rounded" />
           <div className="h-10 w-3/4 bg-muted rounded" />
@@ -48,7 +48,7 @@ export function AnnouncementPage() {
 
   if (error || !data) {
     return (
-      <div className="max-w-3xl mx-auto py-16 px-4 text-center">
+      <div className="max-w-5xl mx-auto py-16 px-4 text-center">
         <h1 className="text-2xl font-bold font-heading">{t('announcements.notFound', 'Article not found')}</h1>
         <p className="text-muted-foreground mt-2">{t('announcements.notFoundBody', 'This announcement may have been removed or is no longer published.')}</p>
         <Button asChild variant="outline" className="mt-4">
@@ -59,7 +59,7 @@ export function AnnouncementPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-10 md:py-16 px-4">
+    <div className="max-w-5xl mx-auto py-10 md:py-16 px-4">
       <Link
         to="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
