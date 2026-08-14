@@ -238,6 +238,15 @@ export async function migrate() {
   )`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_user_agency ON users(agency_id)`);
+  await q.query(`INSERT INTO agencies (code, name, type, is_active) VALUES
+    ('MSWDO', 'Municipal Social Welfare and Development Office', 'social_services', true),
+    ('RHU', 'Rural Health Unit - Norzagaray', 'health', true),
+    ('WCPD', 'Women and Children Protection Desk (PNP)', 'police', true),
+    ('PESO', 'Public Employment Service Office', 'labor', true),
+    ('DILG', 'Department of the Interior and Local Government', 'government', true),
+    ('DSWD', 'Department of Social Welfare and Development', 'social_services', true),
+    ('DepEd', 'Department of Education', 'education', true)
+    ON CONFLICT (code) DO NOTHING`);
   await q.query(`CREATE TABLE IF NOT EXISTS announcements (
     id UUID PRIMARY KEY,
     title TEXT NOT NULL,
