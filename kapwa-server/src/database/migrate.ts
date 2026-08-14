@@ -68,7 +68,7 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS client_signature TEXT`);
   // interventions table removed — dead table, no application code reads it; replaced by case_interventions (CaseIntervention entity)
   // case_tracker_log table removed — dropped by DropCaseTrackerLog migration
-  await q.query(`CREATE TABLE IF NOT EXISTS access_card_services ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), access_card_code TEXT REFERENCES beneficiaries(access_card_code), service_date DATE NOT NULL, service_rendered TEXT NOT NULL, cost DECIMAL(12,2), agency TEXT, worker_name_sign TEXT, intervention_id UUID )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS access_card_services ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), access_card_code TEXT REFERENCES beneficiaries(access_card_code), service_date DATE NOT NULL, service_rendered TEXT NOT NULL, cost DECIMAL(12,2), agency TEXT, agency_id UUID, worker_name_sign TEXT, intervention_id UUID )`);
   await q.query(`CREATE TABLE IF NOT EXISTS irf_blotter_seq ( id SERIAL PRIMARY KEY, year INTEGER NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS access_card_seq ( id SERIAL PRIMARY KEY, year INTEGER NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS otp_codes ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), phone TEXT NOT NULL, code TEXT NOT NULL, verified BOOLEAN DEFAULT FALSE, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
@@ -128,7 +128,7 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_chat_conversation ON chat_messages(conversation_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_chat_participants ON chat_messages(sender_id, recipient_id)`);
   // -- Person Schema Redesign (2026-07-21)
-  await q.query(`CREATE TABLE IF NOT EXISTS persons ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), surname TEXT NOT NULL, first_name TEXT NOT NULL, middle_name TEXT, gender TEXT CHECK (gender IN ('Male','Female')), dob DATE NOT NULL, address TEXT, phone TEXT, philsys_number TEXT UNIQUE, place_of_birth TEXT, civil_status TEXT, current_address JSONB, philhealth_number TEXT, occupation TEXT, estimated_monthly_income DECIMAL(12,2), age INTEGER, search_vector TSVECTOR, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS persons ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), surname TEXT NOT NULL, first_name TEXT NOT NULL, middle_name TEXT, gender TEXT CHECK (gender IN ('Male','Female')), dob DATE NOT NULL, address TEXT, phone TEXT, email TEXT, philsys_number TEXT UNIQUE, place_of_birth TEXT, civil_status TEXT, current_address JSONB, philhealth_number TEXT, occupation TEXT, estimated_monthly_income DECIMAL(12,2), age INTEGER, search_vector TSVECTOR, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_name_trgm ON persons USING gin (surname gin_trgm_ops, first_name gin_trgm_ops)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_search ON persons USING gin(search_vector)`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`);
@@ -423,7 +423,7 @@ export async function migrate() {
     for (const m of AppDataSource.migrations) {
       await q.query(
         `INSERT INTO migrations ("timestamp", name)
-         SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE name = $2)`,
+         SELECT $1::bigint, $2::varchar WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE name = $2)`,
         [Date.now(), m.name],
       );
     }
