@@ -11,6 +11,7 @@ import { CreateReferralForm } from '@/components/referrals/CreateReferralForm';
 import { ReferralCard } from '@/components/referrals/ReferralCard';
 import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
 import { EmptyState } from '@/components/EmptyState';
+import { StepInterventions } from './StepInterventions';
 import { useTranslation } from 'react-i18next';
 
 interface StepIntegratedDeliveryProps {
@@ -84,6 +85,9 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
           )}
         </div>
       </div>
+
+      {/* Interventions Record */}
+      <StepInterventions caseId={caseId} caseData={caseData} userRole={userRole} readOnly={readOnly} />
 
       {/* Status transitions */}
       {caseData?.status === 'in_review' && userRole === 'admin' && (

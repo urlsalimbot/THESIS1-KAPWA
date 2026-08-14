@@ -660,7 +660,11 @@ const fil: EnLocale = {
     "title": "Tracker ng Kaso",
     "transition": "Transisyon",
     "view": "Tingnan",
-    "viewProfile": "Tingnan ang Profile"
+    "viewProfile": "Tingnan ang Profile",
+    "documents": "Mga Dokumento",
+    "download": "I-download",
+    "downloadFailed": "Nabigo ang pag-download",
+    "noDocuments": "Walang kalakip na dokumento sa kasong ito."
   },
   "intake": {
     "addAnotherBatch": "Magdagdag ng isa pang miyembro ng pamilya bilang isang batch?",
@@ -1589,6 +1593,9 @@ const fil: EnLocale = {
         "office": "Pagbisita sa Opisina",
         "phone": "Tawag sa Telepono"
       }
+    },
+    "documents": {
+      "downloadFailed": "Nabigo ang pag-download"
     }
   },
   "conflict": {

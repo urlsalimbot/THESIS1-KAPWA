@@ -147,6 +147,11 @@ export const queryKeys = {
     all: ['intake'] as const,
     recent: () => memo('intake.recent', () => ['intake', 'recent'] as const),
   },
+  filing: {
+    all: ['filing'] as const,
+    byCase: (caseId: string) =>
+      memo(`filing.case.${caseId}`, () => ['filing', { caseId }] as const),
+  },
   auth: {
     me: () => memo('auth.me', () => ['auth', 'me'] as const),
   },
