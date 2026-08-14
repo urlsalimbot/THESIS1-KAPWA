@@ -497,7 +497,7 @@ export function IntakePage() {
           {t('intake.addingCaseFor', 'Adding a case for')} <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>{t('intake.addingCaseForSuffix', '. Review and modify details before submitting.')}
         </div>
       )}
-      <form onSubmit={handleSubmit} noValidate className="max-w-6xl mx-auto space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="w-full space-y-6">
         {/* Section I: Beneficiary */}
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
@@ -668,7 +668,7 @@ export function IntakePage() {
       </form>
 
       {submittedCase && (
-        <div className="mt-6 max-w-6xl mx-auto rounded-lg border bg-card p-6 shadow-sm">
+        <div className="mt-6 w-full rounded-lg border bg-card p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <Users size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold">{t('intake.addAnotherBatch', 'Add another family member as a batch?')}</h2>
