@@ -61,7 +61,7 @@
     "minutesAgo_other": "{{count}} min ago",
     "hoursAgo_one": "{{count}} hr {{minutes}} min ago",
     "hoursAgo_other": "{{count}} hr {{minutes}} min ago",
-    "daysAgo_one": "{{count}} days ago",
+    "daysAgo_one": "{{count}} day ago",
     "daysAgo_other": "{{count}} days ago"
   },
   "messages": {
@@ -88,5 +88,9 @@
       "active": "Active",
       "inactive": "Inactive"
     }
+  },
+  "beneficiaries": {
+    "membersCount_one": "{{count}} member",
+    "membersCount_other": "{{count}} members"
   }
 }
