@@ -114,7 +114,7 @@
     min-width: 44px;
   }
   /* undo the 44px rule for small-form-factor inputs */
-  input[type="checkbox"], input[type="radio"], [role="switch"] {
+  input[type="checkbox"], input[type="radio"], [role="switch"], [role="checkbox"] {
     min-height: unset !important;
     min-width: unset !important;
   }
