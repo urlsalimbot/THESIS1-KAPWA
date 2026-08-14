@@ -11,6 +11,7 @@
 - [ ] Open **http://localhost:8080** — you should see the KAPWA welcome page
 - [ ] If the page says "connection is not secure" or won't open: type the address with **http://** (not https) and press Enter
 - [ ] Use the sample accounts below to sign in. Each role sees only what that role is allowed to see.
+- [ ] **Full screen:** press **F11** so the app fills the whole screen; if text looks too big/small, press **Ctrl + 0** to reset the browser zoom
 
 ## Sample accounts
 
@@ -93,6 +94,8 @@ Sign in as admin → **Settings** → **Language Preference** → choose **Filip
 | "Something went wrong" screen | Click **Try Again**; if it persists, ask the technical person to check the service |
 | Wrong screen / not signed in | Click avatar (top-right) → **Logout** → sign in with the correct account |
 | Browser shows warnings | Chrome may warn about the test server — click **Advanced → Proceed** |
+| App does not fill the whole screen | Press **F11** (fullscreen). If it still looks zoomed, press **Ctrl + 0** (reset zoom). A narrow window switches the app to its phone layout — widen the window to bring back the side menu |
+| You see an old version of the app | Press **Ctrl + Shift + R** (hard refresh) |
 
 ## Screenshots
 
