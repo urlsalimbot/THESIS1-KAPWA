@@ -51,7 +51,7 @@ const makeBeneficiaryColumns = (t: TFunction): ColumnDef<Beneficiary>[] => [
   { accessorKey: 'name', header: t('beneficiaries.name', 'Name') },
   { accessorKey: 'age', header: t('beneficiaries.age', 'Age'), cell: ({ row }) => <Badge variant="outline">{row.original.age}</Badge> },
   { accessorKey: 'barangay', header: t('beneficiaries.barangay', 'Barangay') },
-  { accessorKey: 'householdSize', header: t('beneficiaries.household', 'Household'), cell: ({ row }) => <span>{t('beneficiaries.membersCount', '{{count}} members', { count: row.original.householdSize })}</span> },
+  { accessorKey: 'householdSize', header: t('beneficiaries.household', 'Household'), cell: ({ row }) => <span>{t('beneficiaries.membersCount', '{{count}} member', { count: row.original.householdSize })}</span> },
   {
     accessorKey: 'category',
     header: t('beneficiaries.clientCategory', 'Client Category'),

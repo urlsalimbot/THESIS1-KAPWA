@@ -588,7 +588,7 @@ export function BeneficiaryViewPage() {
               <InfoRow icon={Tag} label={t("beneficiaries.civilStatus", "Civil Status")} value={beneficiary.civilStatus || "N/A"} />
               <InfoRow icon={Phone} label={t("beneficiaries.contact", "Contact")} value={beneficiary.contact || "N/A"} />
               <InfoRow icon={Tag} label={t("beneficiaries.category", "Category")} value={beneficiary.category || "N/A"} />
-              <InfoRow icon={Home} label={t("beneficiaries.household", "Household")} value={t("beneficiaries.membersCount", "{{count}} members", { count: beneficiary.householdSize })} />
+              <InfoRow icon={Home} label={t("beneficiaries.household", "Household")} value={t("beneficiaries.membersCount", "{{count}} member", { count: beneficiary.householdSize })} />
             </div>
           </div>
 
