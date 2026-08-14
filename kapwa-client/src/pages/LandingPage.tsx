@@ -8,7 +8,7 @@ import { LatestAnnouncements } from '@/components/announcements/LatestAnnounceme
 
 export function LandingPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <div className="w-full px-4">
       {/* 1. Hero Section - Asymmetric layout with visual depth */}
       <section className="relative py-24 md:py-32 overflow-hidden">
         {/* Background imagery and gradients */}
@@ -18,7 +18,7 @@ export function LandingPage() {
           <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-accent/3 rounded-full blur-3xl opacity-40" />
         </div>
         
-        <div className="relative grid md:grid-cols-12 gap-8 items-center">
+        <div className="relative grid md:grid-cols-12 gap-8 items-center max-w-7xl mx-auto">
           {/* Left content - spans 7 columns */}
           <div className="md:col-span-7 text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-6">
@@ -84,7 +84,7 @@ export function LandingPage() {
 
       {/* 4. About Summary Section - Asymmetric layout */}
       <section id="about" className="py-16 md:py-24 bg-muted/30 rounded-2xl -mx-4 px-4">
-        <div className="grid md:grid-cols-12 gap-8 items-center">
+        <div className="grid md:grid-cols-12 gap-8 items-center max-w-7xl mx-auto">
           <div className="md:col-span-5 hidden md:block">
             <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-accent/5 to-muted/20 border border-border/50 overflow-hidden">
               <img 
@@ -118,7 +118,7 @@ export function LandingPage() {
 
       {/* 5. Contact Section */}
       <section id="contact" className="py-16 md:py-24">
-        <div className="grid md:grid-cols-12 gap-8">
+        <div className="grid md:grid-cols-12 gap-8 max-w-7xl mx-auto">
           <div className="md:col-span-5">
             <h2 className="font-heading text-3xl font-semibold mb-4 tracking-tight text-balance">
               Get in Touch
