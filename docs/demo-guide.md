@@ -40,6 +40,8 @@ Sign in as **admin@mswdo.test / admin123**.
 - **Dashboard** — "Served Today", totals, and the recent-cases table. This is the office's morning view.
 - **Cases** (sidebar) — the case list: notice each case shows surname, first name, gender, age group, barangay, status. Click **View** on *Juan Dela Cruz*.
   - **Case detail** — the heart of the system: the case goes through a guided 5-step workflow: *Assessment → Implement HIP → Service Delivery → Transition → Closure*.
+  - On the right: the **Documents** card lists every uploaded file (certificates, vouchers) with a working **Download** button.
+  - In **Service Delivery**: the **Intervention Record** shows every service delivered (date, amount, mode, fund source) — fully reviewable.
   - Click **Service Delivery** — show the *Inter-Agency Referrals* section: MSWDO can refer a beneficiary to a partner agency right from the case file.
 - **Beneficiaries** — the master list of residents served (7 sample records with age and household).
 - **Approvals** — the pipeline: cases waiting for review, active cases, transitioning cases. Click **Select Mode** to show bulk tools.
