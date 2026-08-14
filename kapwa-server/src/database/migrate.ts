@@ -49,7 +49,8 @@ export async function migrate() {
   `);
 
   await q.query(`CREATE TABLE IF NOT EXISTS beneficiaries ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID, access_card_code TEXT UNIQUE, user_id UUID, consent_status TEXT DEFAULT 'active', household_id UUID, category TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, access_card_code TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`ALTER TABLE households ADD COLUMN IF NOT EXISTS access_card_code TEXT`);
   // family_members table removed — superseded by household_memberships (see below)
   await q.query(`CREATE TABLE IF NOT EXISTS cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), control_no TEXT UNIQUE NOT NULL, beneficiary_id UUID REFERENCES beneficiaries(id), service_requested TEXT[], requirements_checklist JSONB, status TEXT CHECK (status IN ('enrolled','assessed','in_review','active','transitioning','closed')) DEFAULT 'enrolled', certificate_url TEXT, petty_cash_voucher_url TEXT, assigned_worker_id UUID, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS problems_presented TEXT`);
@@ -235,6 +236,8 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_user_agency ON users(agency_id)`);
   await q.query(`CREATE TABLE IF NOT EXISTS announcements (
     id UUID PRIMARY KEY,
     title TEXT NOT NULL,
@@ -279,6 +282,15 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  await q.query(`INSERT INTO intervention_types (code, name, description) VALUES
+    ('FA',   'Financial Assistance', 'Direct financial aid disbursement to beneficiaries'),
+    ('C',    'Cash Assistance',      'Cash-based assistance distribution'),
+    ('CSR',  'Case Study Report',    'Comprehensive Social Report – assessment documentation'),
+    ('R',    'Referral',             'Referral to external agency or service provider'),
+    ('H',    'Home Visit',           'Home visit for wellness check or monitoring'),
+    ('HV',   'Home Visit Variation', 'Home visit with additional services or distribution'),
+    ('Other','Other Intervention',   'Custom intervention type defined by admin')
+    ON CONFLICT (code) DO NOTHING`);
   await q.query(`CREATE TABLE IF NOT EXISTS notification_preferences (
     id uuid DEFAULT uuid_generate_v7() PRIMARY KEY,
     user_id varchar NOT NULL,
@@ -394,6 +406,30 @@ export async function migrate() {
   try { await q.query(`UPDATE case_history SET to_status = 'enrolled' WHERE to_status = 'pending_assessment'`); } catch {}
   try { await q.query(`DROP TYPE IF EXISTS case_history_from_status_enum`); } catch {}
   try { await q.query(`DROP TYPE IF EXISTS case_history_to_status_enum`); } catch {}
+
+  // -- Fresh-boot contract: migrate.js is the canonical bootstrap (the
+  //    TypeORM chain is NOT fresh-boot-safe). Mark the chain as applied so
+  //    run-migrations.js is a clean no-op on fresh deployments and only ever
+  //    runs on existing DBs as an upgrade path.
+  await q.query(`CREATE TABLE IF NOT EXISTS migrations (
+    id SERIAL PRIMARY KEY,
+    "timestamp" BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL
+  )`);
+  const appliedRow = await q.query(`SELECT COUNT(*) AS c FROM migrations`);
+  if (Number(appliedRow[0]?.c) === 0) {
+    const { AppDataSource } = await import('./data-source');
+    await AppDataSource.initialize();
+    for (const m of AppDataSource.migrations) {
+      await q.query(
+        `INSERT INTO migrations ("timestamp", name)
+         SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE name = $2)`,
+        [Date.now(), m.name],
+      );
+    }
+    await AppDataSource.destroy();
+    console.log(`Marked ${AppDataSource.migrations.length} TypeORM migrations as applied (fresh bootstrap)`);
+  }
 
   console.log('Migrations + RLS policies applied');
   await q.release();
