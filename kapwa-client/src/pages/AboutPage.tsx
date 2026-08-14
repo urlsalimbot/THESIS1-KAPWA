@@ -14,7 +14,7 @@ const programs = [
 
 export function AboutPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <div className="w-full px-4">
       {/* Hero Header - Asymmetric layout */}
       <section className="relative py-20 md:py-28 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
@@ -22,7 +22,7 @@ export function AboutPage() {
           <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
         </div>
         
-        <div className="relative grid md:grid-cols-12 gap-8 items-center">
+        <div className="relative grid md:grid-cols-12 gap-8 items-center max-w-7xl mx-auto">
           <div className="md:col-span-7">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-6">
               <span className="text-xs font-medium text-accent tracking-wide">About Us</span>
@@ -50,7 +50,7 @@ export function AboutPage() {
 
       {/* Mission Section */}
       <section className="py-16 md:py-24">
-        <div className="grid md:grid-cols-12 gap-8">
+        <div className="grid md:grid-cols-12 gap-8 max-w-7xl mx-auto">
           <div className="md:col-span-4">
             <h2 className="font-heading text-3xl font-semibold mb-4 tracking-tight">Our Mission</h2>
             <div className="w-12 h-1 bg-accent/30 rounded-full mb-6" />
@@ -71,14 +71,14 @@ export function AboutPage() {
 
       {/* Programs Section - Asymmetric grid */}
       <section className="py-16 md:py-24">
-        <div className="mb-12">
+        <div className="mb-12 max-w-7xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
             <span className="text-xs font-medium text-accent tracking-wide">What We Offer</span>
           </div>
           <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance">Our Programs</h2>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {programs.map((program, index) => {
             const Icon = program.icon;
             return (

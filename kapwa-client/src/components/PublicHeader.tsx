@@ -42,7 +42,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur-sm border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 h-full flex items-center gap-6">
+      <div className="w-full px-4 lg:px-8 h-full flex items-center gap-6">
         {/* Logo/brand */}
         <Link to="/" className="shrink-0 flex items-center gap-2.5 no-underline group">
           <div className="rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-200 group-hover:shadow-md">

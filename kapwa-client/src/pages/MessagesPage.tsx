@@ -524,7 +524,7 @@ export function MessagesPage() {
 
               {/* Input */}
               <form onSubmit={handleSend} className="border-t bg-card p-4">
-                <div className="flex items-end gap-2 max-w-4xl mx-auto">
+                <div className="flex items-end gap-2 w-full">
                   <div className="flex-1 relative">
                     <Input
                       type="text"

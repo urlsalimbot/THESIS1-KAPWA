@@ -59,9 +59,9 @@ export function ContactPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
+    <div className="w-full px-4 py-16 md:py-24">
       {/* Header */}
-      <div className="mb-12">
+      <div className="mb-12 max-w-7xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
           <Mail size={16} className="text-accent" />
           <span className="text-xs font-medium text-accent tracking-wide">{t('public.contactUs', 'Contact Us')}</span>
@@ -74,7 +74,7 @@ export function ContactPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-7xl mx-auto">
         {/* Left column: Contact info */}
         <div className="md:col-span-5">
           <Card className="p-6 border-border/50 shadow-sm">
