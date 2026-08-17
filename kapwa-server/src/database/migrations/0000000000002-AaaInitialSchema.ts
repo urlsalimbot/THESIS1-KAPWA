@@ -43,7 +43,13 @@ export class AaaInitialSchema0000000000002 implements MigrationInterface {
     // (UnifiedPersonModel drops beneficiaries.address/surname/first_name/search_vector
     // and DropInterventions/DropCaseTrackerLog drop their tables).
     await queryRunner.query(`DO $$ BEGIN IF ${colExists('beneficiaries', 'address')} THEN CREATE INDEX IF NOT EXISTS idx_beneficiary_barangay ON beneficiaries(address); END IF; END $$;`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code)`);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'beneficiaries' AND column_name = 'access_card_code') THEN
+          CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code);
+        END IF;
+      END $$;
+    `);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_case_status ON cases(status)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_case_control ON cases(control_no)`);
     await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN CREATE INDEX IF NOT EXISTS idx_intervention_case ON interventions(case_id); END IF; END $$;`);
