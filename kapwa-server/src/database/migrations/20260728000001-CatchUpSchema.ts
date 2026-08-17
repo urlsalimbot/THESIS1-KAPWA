@@ -24,7 +24,13 @@ export class CatchUpSchema2026072800001 implements MigrationInterface {
     `);
 
     // -- Indexes (idempotent) --
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code)`);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'beneficiaries' AND column_name = 'access_card_code') THEN
+          CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code);
+        END IF;
+      END $$;
+    `);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_person ON beneficiaries(person_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_user ON beneficiaries(user_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_category_trgm ON beneficiaries USING gin (category gin_trgm_ops)`);
