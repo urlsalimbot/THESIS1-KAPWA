@@ -13,7 +13,19 @@ export async function migrate() {
   await dataSource.initialize();
   const q = dataSource.createQueryRunner();
 
+  // Detect a fresh boot BEFORE the transaction: on a truly empty DB the
+  // migrations table does not exist yet, so no prior bootstrap can have run.
   let wasFresh = false;
+  try {
+    const mTable = await q.query(`SELECT to_regclass('public.migrations') AS t`);
+    if (mTable[0]?.t == null) {
+      wasFresh = true;
+    } else {
+      const c = await q.query(`SELECT COUNT(*) AS c FROM migrations`);
+      wasFresh = Number(c[0]?.c) === 0;
+    }
+  } catch { wasFresh = true; }
+
   let appDataSource: DataSource | null = null;
 
   try {
@@ -22,10 +34,14 @@ export async function migrate() {
   await q.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
   await q.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
   await q.query(`CREATE EXTENSION IF NOT EXISTS "pg_trgm"`);
+  // pgAudit may be unavailable in some images — a failed statement would
+  // poison the whole transaction, so guard it with a savepoint.
+  await q.query(`SAVEPOINT sp_pgaudit`);
   try {
     await q.query(`CREATE EXTENSION IF NOT EXISTS pgaudit`);
   } catch (e) {
-    console.warn('pgAudit extension not available, skipping:', e.message);
+    await q.query(`ROLLBACK TO SAVEPOINT sp_pgaudit`);
+    console.warn('pgAudit extension not available, skipping:', (e as Error).message);
   }
 
   // Self-contained uuid v7 generator (mirrors AaUuidV7Function migration) so the
@@ -415,12 +431,19 @@ export async function migrate() {
   )`);
 
   // -- case_history: drop enums, use TEXT (simpler than enum migration)
-  try { await q.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN from_status TYPE TEXT`); } catch {}
-  try { await q.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN to_status TYPE TEXT`); } catch {}
-  try { await q.query(`UPDATE case_history SET from_status = 'enrolled' WHERE from_status = 'pending_assessment'`); } catch {}
-  try { await q.query(`UPDATE case_history SET to_status = 'enrolled' WHERE to_status = 'pending_assessment'`); } catch {}
-  try { await q.query(`DROP TYPE IF EXISTS case_history_from_status_enum`); } catch {}
-  try { await q.query(`DROP TYPE IF EXISTS case_history_to_status_enum`); } catch {}
+  //    (savepoint-guarded: each of these is best-effort and must not poison the txn)
+  await q.query(`SAVEPOINT sp_case_history`);
+  try {
+    await q.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN from_status TYPE TEXT`);
+    await q.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN to_status TYPE TEXT`);
+    await q.query(`UPDATE case_history SET from_status = 'enrolled' WHERE from_status = 'pending_assessment'`);
+    await q.query(`UPDATE case_history SET to_status = 'enrolled' WHERE to_status = 'pending_assessment'`);
+    await q.query(`DROP TYPE IF EXISTS case_history_from_status_enum`);
+    await q.query(`DROP TYPE IF EXISTS case_history_to_status_enum`);
+  } catch (e) {
+    await q.query(`ROLLBACK TO SAVEPOINT sp_case_history`);
+    console.warn('case_history enum normalization skipped:', (e as Error).message);
+  }
 
   // -- Fresh-boot contract: migrate.js is the canonical bootstrap (the
   //    TypeORM chain is NOT fresh-boot-safe). Mark the chain as applied so
@@ -431,8 +454,6 @@ export async function migrate() {
     "timestamp" BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL
   )`);
-  const appliedRow = await q.query(`SELECT COUNT(*) AS c FROM migrations`);
-  wasFresh = Number(appliedRow[0]?.c) === 0;
   if (wasFresh) {
     const { AppDataSource } = await import('./data-source');
     await AppDataSource.initialize();
