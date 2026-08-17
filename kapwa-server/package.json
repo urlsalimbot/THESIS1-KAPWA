@@ -20,7 +20,8 @@
     "typeorm": "typeorm-ts-node-commonjs",
     "seed": "npx ts-node src/database/seed-accounts.ts",
     "seed:programs": "npx ts-node src/database/seed-programs.ts",
-    "test:unit": "jest --testPathPattern=unit"
+    "test:unit": "jest --testPathPattern=unit",
+    "seed:demo": "npx ts-node src/database/seed-demo.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
