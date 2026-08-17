@@ -5,13 +5,13 @@ export class AccessCardCategory1740000000003 implements MigrationInterface {
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS category TEXT`
+      `ALTER TABLE IF EXISTS access_card_services ADD COLUMN IF NOT EXISTS category TEXT`
     );
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE access_card_services DROP COLUMN category`
+      `ALTER TABLE IF EXISTS access_card_services DROP COLUMN IF EXISTS category`
     );
   }
 }

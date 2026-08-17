@@ -45,25 +45,25 @@ export class CatchUpSchema2026072800001 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_otp_expires ON otp_codes(expires_at)`);
 
     // -- Supplementary columns (not yet in any TypeORM migration) --
-    await queryRunner.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_signature TEXT`);
-    await queryRunner.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_role VARCHAR`);
-    await queryRunner.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS self_reliance_plan TEXT`);
-    await queryRunner.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS referrals JSONB`);
-    await queryRunner.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS follow_up_date DATE`);
-    await queryRunner.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS exit_notes TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ADD COLUMN IF NOT EXISTS approved_by_signature TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ADD COLUMN IF NOT EXISTS approved_by_role VARCHAR`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ADD COLUMN IF NOT EXISTS self_reliance_plan TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ADD COLUMN IF NOT EXISTS referrals JSONB`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ADD COLUMN IF NOT EXISTS follow_up_date DATE`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ADD COLUMN IF NOT EXISTS exit_notes TEXT`);
 
-    await queryRunner.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS legal_basis TEXT`);
-    await queryRunner.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS form_version INT DEFAULT 1`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs ADD COLUMN IF NOT EXISTS legal_basis TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs ADD COLUMN IF NOT EXISTS form_version INT DEFAULT 1`);
 
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_wraps JSONB`);
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_version INT DEFAULT 1`);
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS dismissal_reason TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS key_wraps JSONB`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS key_version INT DEFAULT 1`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS dismissal_reason TEXT`);
 
-    await queryRunner.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS consent_skipped BOOLEAN DEFAULT FALSE`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS consent_skipped BOOLEAN DEFAULT FALSE`);
 
-    await queryRunner.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS requirement_key VARCHAR`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS document_vault ADD COLUMN IF NOT EXISTS requirement_key VARCHAR`);
 
-    await queryRunner.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS category VARCHAR`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services ADD COLUMN IF NOT EXISTS category VARCHAR`);
 
     // -- Missing tables (entities with no TypeORM migration) --
     await queryRunner.query(`CREATE TABLE IF NOT EXISTS case_interventions (
@@ -96,18 +96,18 @@ export class CatchUpSchema2026072800001 implements MigrationInterface {
     )`);
 
     // -- case_history: drop enums, keep TEXT (avoids enum migration pain) --
-    try { await queryRunner.query(`ALTER TABLE case_history ALTER COLUMN from_status TYPE TEXT`); } catch {}
-    try { await queryRunner.query(`ALTER TABLE case_history ALTER COLUMN to_status TYPE TEXT`); } catch {}
+    try { await queryRunner.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN from_status TYPE TEXT`); } catch {}
+    try { await queryRunner.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN to_status TYPE TEXT`); } catch {}
     try { await queryRunner.query(`UPDATE case_history SET from_status = 'enrolled' WHERE from_status = 'pending_assessment'`); } catch {}
     try { await queryRunner.query(`UPDATE case_history SET to_status = 'enrolled' WHERE to_status = 'pending_assessment'`); } catch {}
     try { await queryRunner.query(`DROP TYPE IF EXISTS case_history_from_status_enum`); } catch {}
     try { await queryRunner.query(`DROP TYPE IF EXISTS case_history_to_status_enum`); } catch {}
 
     // -- RLS Policies --
-    await queryRunner.query(`ALTER TABLE beneficiaries ENABLE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE cases ENABLE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE consent_ledger ENABLE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE irf_cases ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS consent_ledger ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ENABLE ROW LEVEL SECURITY`);
 
     await queryRunner.query(`DROP POLICY IF EXISTS ben_admin_all ON beneficiaries`);
     await queryRunner.query(`DROP POLICY IF EXISTS ben_barangay_scope ON beneficiaries`);
@@ -138,20 +138,20 @@ export class CatchUpSchema2026072800001 implements MigrationInterface {
     await queryRunner.query(`DROP POLICY IF EXISTS ben_barangay_scope ON beneficiaries`);
     await queryRunner.query(`DROP POLICY IF EXISTS ben_admin_all ON beneficiaries`);
 
-    await queryRunner.query(`ALTER TABLE access_card_services DROP COLUMN IF EXISTS category`);
-    await queryRunner.query(`ALTER TABLE document_vault DROP COLUMN IF EXISTS requirement_key`);
-    await queryRunner.query(`ALTER TABLE notifications DROP COLUMN IF EXISTS consent_skipped`);
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS dismissal_reason`);
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS key_version`);
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS key_wraps`);
-    await queryRunner.query(`ALTER TABLE programs DROP COLUMN IF EXISTS form_version`);
-    await queryRunner.query(`ALTER TABLE programs DROP COLUMN IF EXISTS legal_basis`);
-    await queryRunner.query(`ALTER TABLE cases DROP COLUMN IF EXISTS exit_notes`);
-    await queryRunner.query(`ALTER TABLE cases DROP COLUMN IF EXISTS follow_up_date`);
-    await queryRunner.query(`ALTER TABLE cases DROP COLUMN IF EXISTS referrals`);
-    await queryRunner.query(`ALTER TABLE cases DROP COLUMN IF EXISTS self_reliance_plan`);
-    await queryRunner.query(`ALTER TABLE cases DROP COLUMN IF EXISTS approved_by_role`);
-    await queryRunner.query(`ALTER TABLE cases DROP COLUMN IF EXISTS approved_by_signature`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services DROP COLUMN IF EXISTS category`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS document_vault DROP COLUMN IF EXISTS requirement_key`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS notifications DROP COLUMN IF EXISTS consent_skipped`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS dismissal_reason`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS key_version`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS key_wraps`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs DROP COLUMN IF EXISTS form_version`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs DROP COLUMN IF EXISTS legal_basis`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases DROP COLUMN IF EXISTS exit_notes`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases DROP COLUMN IF EXISTS follow_up_date`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases DROP COLUMN IF EXISTS referrals`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases DROP COLUMN IF EXISTS self_reliance_plan`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases DROP COLUMN IF EXISTS approved_by_role`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases DROP COLUMN IF EXISTS approved_by_signature`);
 
     await queryRunner.query(`DROP TABLE IF EXISTS beneficiary_roles CASCADE`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_case_interventions_case`);

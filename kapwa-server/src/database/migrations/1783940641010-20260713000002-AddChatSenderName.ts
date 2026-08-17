@@ -4,10 +4,10 @@ export class ZAddChatSenderName1783940641010 implements MigrationInterface {
     name = 'ZAddChatSenderName1783940641010'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS sender_name text`);
+        await queryRunner.query(`ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS sender_name text`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE chat_messages DROP COLUMN IF EXISTS sender_name`);
+        await queryRunner.query(`ALTER TABLE IF EXISTS chat_messages DROP COLUMN IF EXISTS sender_name`);
     }
 }

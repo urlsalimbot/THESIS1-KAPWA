@@ -27,13 +27,13 @@ export class IrfDispositionEncryption2026062200005 implements MigrationInterface
     `);
 
     // 3. Add new columns to irf_cases
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_wraps jsonb`);
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_version integer DEFAULT 1`);
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS dismissal_reason text`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS key_wraps jsonb`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS key_version integer DEFAULT 1`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS dismissal_reason text`);
 
     // 4. Add new disposition column and migrate existing data
     await queryRunner.query(
-      `ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS case_disposition_new irf_disposition DEFAULT 'Under Investigation'`
+      `ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS case_disposition_new irf_disposition DEFAULT 'Under Investigation'`
     );
     await queryRunner.query(`
       UPDATE irf_cases SET case_disposition_new = 
@@ -47,22 +47,22 @@ export class IrfDispositionEncryption2026062200005 implements MigrationInterface
     `);
 
     // 5. Drop old column, rename new
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS case_disposition`);
-    await queryRunner.query(`ALTER TABLE irf_cases RENAME COLUMN case_disposition_new TO case_disposition`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS case_disposition`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases RENAME COLUMN case_disposition_new TO case_disposition`);
 
     // 6. Set NOT NULL and default
-    await queryRunner.query(`ALTER TABLE irf_cases ALTER COLUMN case_disposition SET NOT NULL`);
-    await queryRunner.query(`ALTER TABLE irf_cases ALTER COLUMN case_disposition SET DEFAULT 'Under Investigation'`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ALTER COLUMN case_disposition SET NOT NULL`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ALTER COLUMN case_disposition SET DEFAULT 'Under Investigation'`);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS case_disposition_old text`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS case_disposition_old text`);
     await queryRunner.query(`UPDATE irf_cases SET case_disposition_old = case_disposition::text`);
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS key_wraps`);
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS key_version`);
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS dismissal_reason`);
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS case_disposition`);
-    await queryRunner.query(`ALTER TABLE irf_cases RENAME COLUMN IF EXISTS case_disposition_old TO case_disposition`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS key_wraps`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS key_version`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS dismissal_reason`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS case_disposition`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases RENAME COLUMN IF EXISTS case_disposition_old TO case_disposition`);
     await queryRunner.query(`DROP TABLE IF EXISTS audit_log`);
     await queryRunner.query(`DROP TYPE IF EXISTS irf_disposition`);
   }

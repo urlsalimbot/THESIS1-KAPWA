@@ -27,7 +27,7 @@ export class CreateAgenciesTable20260803000001 implements MigrationInterface {
         ('DepEd', 'Department of Education', 'education', true)
       ON CONFLICT (code) DO NOTHING
     `);
-    await queryRunner.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_users_agency ON users(agency_id)`);
     await queryRunner.query(`
       UPDATE users u SET agency_id = a.id
@@ -38,7 +38,7 @@ export class CreateAgenciesTable20260803000001 implements MigrationInterface {
 
   async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS idx_users_agency`);
-    await queryRunner.query(`ALTER TABLE users DROP COLUMN IF EXISTS agency_id`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS users DROP COLUMN IF EXISTS agency_id`);
     await queryRunner.query(`DROP TABLE IF EXISTS agencies`);
   }
 }

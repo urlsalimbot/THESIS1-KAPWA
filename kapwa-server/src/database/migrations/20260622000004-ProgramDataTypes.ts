@@ -5,7 +5,7 @@ export class ProgramDataTypes2026062200004 implements MigrationInterface {
 
   async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Add new JSONB column for approval_workflow
-    await queryRunner.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS approval_workflow_new jsonb`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs ADD COLUMN IF NOT EXISTS approval_workflow_new jsonb`);
 
     // 2. Migrate existing text[] data: convert each text array element to structured JSONB
     await queryRunner.query(`
@@ -26,18 +26,18 @@ export class ProgramDataTypes2026062200004 implements MigrationInterface {
     `);
 
     // 3. Drop old column, rename new column
-    await queryRunner.query(`ALTER TABLE programs DROP COLUMN approval_workflow`);
-    await queryRunner.query(`ALTER TABLE programs RENAME COLUMN approval_workflow_new TO approval_workflow`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs DROP COLUMN IF EXISTS approval_workflow`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs RENAME COLUMN approval_workflow_new TO approval_workflow`);
 
     // 4. Add legal_basis column
-    await queryRunner.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS legal_basis character varying`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs ADD COLUMN IF NOT EXISTS legal_basis character varying`);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE programs DROP COLUMN legal_basis`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs DROP COLUMN IF EXISTS legal_basis`);
 
     // Reverse: convert JSONB back to text[]
-    await queryRunner.query(`ALTER TABLE programs ADD COLUMN approval_workflow_old text[]`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs ADD COLUMN approval_workflow_old text[]`);
     await queryRunner.query(`
       UPDATE programs SET approval_workflow_old = (
         SELECT array_agg(approver_role ORDER BY "order")
@@ -45,7 +45,7 @@ export class ProgramDataTypes2026062200004 implements MigrationInterface {
           AS x("order" int, "approver_role" text)
       )
     `);
-    await queryRunner.query(`ALTER TABLE programs DROP COLUMN approval_workflow`);
-    await queryRunner.query(`ALTER TABLE programs RENAME COLUMN approval_workflow_old TO approval_workflow`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs DROP COLUMN IF EXISTS approval_workflow`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS programs RENAME COLUMN approval_workflow_old TO approval_workflow`);
   }
 }

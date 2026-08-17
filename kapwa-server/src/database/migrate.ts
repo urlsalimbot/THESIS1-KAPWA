@@ -13,6 +13,12 @@ export async function migrate() {
   await dataSource.initialize();
   const q = dataSource.createQueryRunner();
 
+  let wasFresh = false;
+  let appDataSource: DataSource | null = null;
+
+  try {
+    await q.startTransaction();
+
   await q.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
   await q.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
   await q.query(`CREATE EXTENSION IF NOT EXISTS "pg_trgm"`);
@@ -426,9 +432,11 @@ export async function migrate() {
     name VARCHAR(255) NOT NULL
   )`);
   const appliedRow = await q.query(`SELECT COUNT(*) AS c FROM migrations`);
-  if (Number(appliedRow[0]?.c) === 0) {
+  wasFresh = Number(appliedRow[0]?.c) === 0;
+  if (wasFresh) {
     const { AppDataSource } = await import('./data-source');
     await AppDataSource.initialize();
+    appDataSource = AppDataSource;
     for (const m of AppDataSource.migrations) {
       await q.query(
         `INSERT INTO migrations ("timestamp", name)
@@ -436,13 +444,22 @@ export async function migrate() {
         [Date.now(), m.name],
       );
     }
-    await AppDataSource.destroy();
     console.log(`Marked ${AppDataSource.migrations.length} TypeORM migrations as applied (fresh bootstrap)`);
   }
 
+  await q.commitTransaction();
   console.log('Migrations + RLS policies applied');
-  await q.release();
-  await dataSource.destroy();
+  } catch (err) {
+    try { await q.rollbackTransaction(); } catch { /* already rolled back */ }
+    const error = err instanceof Error ? err : new Error(String(err));
+    // Mark so main.ts can fail loudly on fresh boots instead of half-starting.
+    (error as Error & { freshBoot?: boolean }).freshBoot = wasFresh;
+    throw error;
+  } finally {
+    if (appDataSource) { try { await appDataSource.destroy(); } catch { /* ignore */ } }
+    await q.release();
+    await dataSource.destroy();
+  }
 }
 
 // Run when executed directly: `node dist/database/migrate.js`

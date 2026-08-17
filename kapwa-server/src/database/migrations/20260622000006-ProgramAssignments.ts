@@ -36,17 +36,17 @@ export class ProgramAssignments2026062200006 implements MigrationInterface {
 
     // 3. Add foreign keys
     await queryRunner.query(`
-      ALTER TABLE program_assignments
+      ALTER TABLE IF EXISTS program_assignments
         ADD CONSTRAINT fk_program_assignments_case
         FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
     `);
     await queryRunner.query(`
-      ALTER TABLE program_assignments
+      ALTER TABLE IF EXISTS program_assignments
         ADD CONSTRAINT fk_program_assignments_program
         FOREIGN KEY (program_id) REFERENCES programs(id) ON DELETE CASCADE
     `);
     await queryRunner.query(`
-      ALTER TABLE program_assignment_steps
+      ALTER TABLE IF EXISTS program_assignment_steps
         ADD CONSTRAINT fk_program_assignment_steps_assignment
         FOREIGN KEY (assignment_id) REFERENCES program_assignments(id) ON DELETE CASCADE
     `);
@@ -65,9 +65,9 @@ export class ProgramAssignments2026062200006 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX IF EXISTS idx_program_assignments_status`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_program_assignments_program_id`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_program_assignments_case_id`);
-    await queryRunner.query(`ALTER TABLE program_assignment_steps DROP CONSTRAINT IF EXISTS fk_program_assignment_steps_assignment`);
-    await queryRunner.query(`ALTER TABLE program_assignments DROP CONSTRAINT IF EXISTS fk_program_assignments_program`);
-    await queryRunner.query(`ALTER TABLE program_assignments DROP CONSTRAINT IF EXISTS fk_program_assignments_case`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS program_assignment_steps DROP CONSTRAINT IF EXISTS fk_program_assignment_steps_assignment`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS program_assignments DROP CONSTRAINT IF EXISTS fk_program_assignments_program`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS program_assignments DROP CONSTRAINT IF EXISTS fk_program_assignments_case`);
     await queryRunner.query(`DROP TABLE IF EXISTS program_assignment_steps`);
     await queryRunner.query(`DROP TABLE IF EXISTS program_assignments`);
   }

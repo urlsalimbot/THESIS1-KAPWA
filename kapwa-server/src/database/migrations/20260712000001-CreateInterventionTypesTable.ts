@@ -28,15 +28,21 @@ export class CreateInterventionTypesTable2026071200001 implements MigrationInter
       ON CONFLICT (code) DO NOTHING
     `);
 
-    await queryRunner.query(`ALTER TABLE interventions DROP CONSTRAINT IF EXISTS interventions_intervention_type_check`);
-    await queryRunner.query(`ALTER TABLE interventions DROP CONSTRAINT IF EXISTS ck_intervention_type`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS interventions DROP CONSTRAINT IF EXISTS interventions_intervention_type_check`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS interventions DROP CONSTRAINT IF EXISTS ck_intervention_type`);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      ALTER TABLE interventions ADD CONSTRAINT interventions_intervention_type_check
-      CHECK (intervention_type IN ('FA','C','CSR','R','H','HV','Other'))
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'interventions_intervention_type_check') THEN
+          ALTER TABLE IF EXISTS interventions ADD CONSTRAINT interventions_intervention_type_check
+            CHECK (intervention_type IN ('FA','C','CSR','R','H','HV','Other'));
+        END IF;
+      END $$;
     `);
+
     await queryRunner.query(`DROP TABLE IF EXISTS intervention_types`);
   }
 }

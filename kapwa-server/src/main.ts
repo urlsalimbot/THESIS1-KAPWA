@@ -11,7 +11,16 @@ async function runMigrations() {
     const { migrate } = await import('./database/migrate');
     await migrate();
   } catch (err) {
-    console.error('Migration startup failed, continuing:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    const freshBoot = (err as Error & { freshBoot?: boolean })?.freshBoot === true;
+    console.error(`Migration startup failed: ${message}`);
+    if (freshBoot) {
+      // A fresh database must boot completely or not at all — half-schemas
+      // surface as confusing runtime 500s. Exit so the deployment restarts
+      // with a clean retry instead of serving a broken schema.
+      console.error('Fresh database bootstrap FAILED — exiting for a clean retry.');
+      process.exit(1);
+    }
   }
 }
 

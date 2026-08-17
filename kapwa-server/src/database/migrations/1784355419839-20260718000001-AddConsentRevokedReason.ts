@@ -8,7 +8,7 @@ export class ZAddConsentRevokedReason20260718000001 implements MigrationInterfac
     await queryRunner.query(`
       DO $$ BEGIN
         IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'consent_ledger') THEN
-          ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS revoked_reason TEXT;
+          ALTER TABLE IF EXISTS consent_ledger ADD COLUMN IF NOT EXISTS revoked_reason TEXT;
         END IF;
       END $$;
     `);
@@ -18,7 +18,7 @@ export class ZAddConsentRevokedReason20260718000001 implements MigrationInterfac
     await queryRunner.query(`
       DO $$ BEGIN
         IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'consent_ledger') THEN
-          ALTER TABLE consent_ledger DROP COLUMN IF EXISTS revoked_reason;
+          ALTER TABLE IF EXISTS consent_ledger DROP COLUMN IF EXISTS revoked_reason;
         END IF;
       END $$;
     `);

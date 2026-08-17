@@ -66,11 +66,11 @@ export class AaaInitialSchema0000000000002 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_otp_phone ON otp_codes(phone)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_otp_expires ON otp_codes(expires_at)`);
 
-    await queryRunner.query(`ALTER TABLE beneficiaries ENABLE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE cases ENABLE ROW LEVEL SECURITY`);
-    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN ALTER TABLE interventions ENABLE ROW LEVEL SECURITY; END IF; END $$;`);
-    await queryRunner.query(`ALTER TABLE consent_ledger ENABLE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE irf_cases ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN ALTER TABLE IF EXISTS interventions ENABLE ROW LEVEL SECURITY; END IF; END $$;`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS consent_ledger ENABLE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ENABLE ROW LEVEL SECURITY`);
 
     await queryRunner.query(`DROP POLICY IF EXISTS ben_admin_all ON beneficiaries`);
     await queryRunner.query(`DROP POLICY IF EXISTS ben_barangay_scope ON beneficiaries`);
@@ -97,11 +97,11 @@ export class AaaInitialSchema0000000000002 implements MigrationInterface {
     await queryRunner.query(`DROP POLICY IF EXISTS int_admin_all ON interventions`);
     await queryRunner.query(`DROP POLICY IF EXISTS consent_admin_all ON consent_ledger`);
     await queryRunner.query(`DROP POLICY IF EXISTS consent_self ON consent_ledger`);
-    await queryRunner.query(`ALTER TABLE beneficiaries NOFORCE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE cases NOFORCE ROW LEVEL SECURITY`);
-    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN ALTER TABLE interventions NOFORCE ROW LEVEL SECURITY; END IF; END $$;`);
-    await queryRunner.query(`ALTER TABLE consent_ledger NOFORCE ROW LEVEL SECURITY`);
-    await queryRunner.query(`ALTER TABLE irf_cases NOFORCE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries NOFORCE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS cases NOFORCE ROW LEVEL SECURITY`);
+    await queryRunner.query(`DO $$ BEGIN IF ${tblExists('interventions')} THEN ALTER TABLE IF EXISTS interventions NOFORCE ROW LEVEL SECURITY; END IF; END $$;`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS consent_ledger NOFORCE ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases NOFORCE ROW LEVEL SECURITY`);
 
     const tables = ['chat_messages','document_vault','csr_reports','notifications','version_vectors','sync_queue','users','consent_ledger','programs','irf_cases','otp_codes','access_card_seq','irf_blotter_seq','access_card_services','case_tracker_log','interventions','cases','family_members','households','beneficiaries'];
     for (const t of tables) {
