@@ -48,6 +48,7 @@ services:
     #   - "3000:3000"
     environment:
       TZ: Asia/Manila
+      NODE_ENV: production
       DB_HOST: db
       DB_PORT: 5432
     env_file:

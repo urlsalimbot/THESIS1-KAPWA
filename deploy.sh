@@ -56,12 +56,10 @@ fi
 
 # 5. Run database migrations.
 #    migrate.js is the canonical bootstrap — it creates the complete fresh
-#    schema idempotently (it also runs at API startup via main.ts). The
-#    TypeORM migration chain (run-migrations.js) is NOT fresh-boot-safe, so it
-#    runs only as an incremental upgrade for EXISTING databases, and its
-#    failure on a fresh DB is expected and non-fatal.
-#    NOTE: migrate.js does not exit on completion (open DB handle) — run it
-#    under `timeout` so this script does not hang; exit 124 == completed.
+#    schema idempotently and marks the TypeORM chain as applied (it also runs
+#    at API startup via main.ts). run-migrations.js is therefore a no-op on
+#    fresh deployments and only applies pending upgrades on existing DBs.
+#    NOTE: migrate.js exits cleanly on completion (connections are closed).
 echo "[4/4] Running database migrations (bootstrap)..."
 if docker exec kapwa-api test -f dist/database/migrate.js 2>/dev/null; then
   if timeout 300 docker exec kapwa-api node dist/database/migrate.js >/dev/null 2>&1; then
@@ -78,12 +76,28 @@ if docker exec kapwa-api test -f dist/database/run-migrations.js 2>/dev/null; th
   if docker exec kapwa-api node dist/database/run-migrations.js >/dev/null 2>&1; then
     echo "  TypeORM migrations applied."
   else
-    echo "  WARNING: TypeORM migration run failed (expected on a fresh DB;"
-    echo "          bootstrap schema from migrate.js is already complete)."
+    echo "  WARNING: TypeORM migration run failed."
     echo "  Manual: docker exec kapwa-api node dist/database/run-migrations.js"
   fi
 else
   echo "  (run-migrations.js not found)"
+fi
+
+echo "[6/4] Seeding initial accounts (empty DB only)..."
+USERS=$(docker exec kapwa-api node -e "const{AppDataSource}=require('./dist/database/data-source.js');(async()=>{await AppDataSource.initialize();const c=await AppDataSource.query('SELECT COUNT(*)::int AS c FROM users');console.log(c[0].c);await AppDataSource.destroy()})().catch(e=>{console.error(e.message);process.exit(1)})" 2>/dev/null || echo "ERR")
+if [ "$USERS" = "0" ]; then
+  if docker exec kapwa-api node dist/database/seed-accounts.js >/dev/null 2>&1 \
+     && docker exec kapwa-api node dist/database/seed-programs.js >/dev/null 2>&1; then
+    echo "  Seed accounts + programs applied (test credentials - change before going live)."
+  else
+    echo "  WARNING: seeding failed - run manually:"
+    echo "    docker exec kapwa-api node dist/database/seed-accounts.js"
+    echo "    docker exec kapwa-api node dist/database/seed-programs.js"
+  fi
+elif [ "$USERS" = "ERR" ]; then
+  echo "  WARNING: could not read user count - skipping seeds (run manually if needed)."
+else
+  echo "  Users already exist ($USERS) - seeds skipped."
 fi
 
 echo ""
