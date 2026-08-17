@@ -13,7 +13,15 @@ export class CatchUpSchema2026072800001 implements MigrationInterface {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "pg_trgm"`);
-    try { await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS pgaudit`); } catch {}
+    // PL/pgSQL DO block: swallows the failure internally (subtransaction) —
+    // a bare try/catch cannot un-poison a Postgres transaction.
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE EXTENSION IF NOT EXISTS pgaudit;
+      EXCEPTION WHEN OTHERS THEN
+        RAISE NOTICE 'pgaudit extension unavailable, skipping';
+      END $$;
+    `);
 
     // -- Indexes (idempotent) --
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code)`);
@@ -96,12 +104,19 @@ export class CatchUpSchema2026072800001 implements MigrationInterface {
     )`);
 
     // -- case_history: drop enums, keep TEXT (avoids enum migration pain) --
-    try { await queryRunner.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN from_status TYPE TEXT`); } catch {}
-    try { await queryRunner.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN to_status TYPE TEXT`); } catch {}
-    try { await queryRunner.query(`UPDATE case_history SET from_status = 'enrolled' WHERE from_status = 'pending_assessment'`); } catch {}
-    try { await queryRunner.query(`UPDATE case_history SET to_status = 'enrolled' WHERE to_status = 'pending_assessment'`); } catch {}
-    try { await queryRunner.query(`DROP TYPE IF EXISTS case_history_from_status_enum`); } catch {}
-    try { await queryRunner.query(`DROP TYPE IF EXISTS case_history_to_status_enum`); } catch {}
+    // Savepoint-guarded: a failed statement inside a PG transaction poisons
+    // it — the JS catch cannot undo that, but ROLLBACK TO SAVEPOINT can.
+    await queryRunner.query(`SAVEPOINT sp_case_history`);
+    try {
+      await queryRunner.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN from_status TYPE TEXT`);
+      await queryRunner.query(`ALTER TABLE IF EXISTS case_history ALTER COLUMN to_status TYPE TEXT`);
+      await queryRunner.query(`UPDATE case_history SET from_status = 'enrolled' WHERE from_status = 'pending_assessment'`);
+      await queryRunner.query(`UPDATE case_history SET to_status = 'enrolled' WHERE to_status = 'pending_assessment'`);
+      await queryRunner.query(`DROP TYPE IF EXISTS case_history_from_status_enum`);
+      await queryRunner.query(`DROP TYPE IF EXISTS case_history_to_status_enum`);
+    } catch {
+      await queryRunner.query(`ROLLBACK TO SAVEPOINT sp_case_history`);
+    }
 
     // -- RLS Policies --
     await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ENABLE ROW LEVEL SECURITY`);
