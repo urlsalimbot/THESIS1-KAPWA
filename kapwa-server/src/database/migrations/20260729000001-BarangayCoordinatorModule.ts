@@ -27,10 +27,10 @@ export class BarangayCoordinatorModule2026072900001 implements MigrationInterfac
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_referral_status ON referrals(status)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_referral_barangay ON referrals(barangay)`);
 
-    await queryRunner.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS logged_by UUID REFERENCES users(id)`);
-    await queryRunner.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS source_barangay TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services ADD COLUMN IF NOT EXISTS logged_by UUID REFERENCES users(id)`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services ADD COLUMN IF NOT EXISTS source_barangay TEXT`);
 
-    await queryRunner.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS case_id UUID REFERENCES cases(id)`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases ADD COLUMN IF NOT EXISTS case_id UUID REFERENCES cases(id)`);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
@@ -39,9 +39,9 @@ export class BarangayCoordinatorModule2026072900001 implements MigrationInterfac
     await queryRunner.query(`DROP INDEX IF EXISTS idx_referral_coordinator`);
     await queryRunner.query(`DROP TABLE IF EXISTS referrals`);
 
-    await queryRunner.query(`ALTER TABLE access_card_services DROP COLUMN IF EXISTS source_barangay`);
-    await queryRunner.query(`ALTER TABLE access_card_services DROP COLUMN IF EXISTS logged_by`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services DROP COLUMN IF EXISTS source_barangay`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services DROP COLUMN IF EXISTS logged_by`);
 
-    await queryRunner.query(`ALTER TABLE irf_cases DROP COLUMN IF EXISTS case_id`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS irf_cases DROP COLUMN IF EXISTS case_id`);
   }
 }

@@ -4,7 +4,7 @@ export class AddAgencyIdToAccessCardServices20260803000003 implements MigrationI
   name = 'AddAgencyIdToAccessCardServices20260803000003';
 
   async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
     await queryRunner.query(`
       UPDATE access_card_services s
       SET agency_id = a.id
@@ -18,6 +18,6 @@ export class AddAgencyIdToAccessCardServices20260803000003 implements MigrationI
 
   async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS idx_acs_agency`);
-    await queryRunner.query(`ALTER TABLE access_card_services DROP COLUMN IF EXISTS agency_id`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services DROP COLUMN IF EXISTS agency_id`);
   }
 }

@@ -22,12 +22,12 @@ export class NotificationPreferences2026062400000 implements MigrationInterface 
     `);
 
     await queryRunner.query(`
-      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS consent_skipped boolean DEFAULT false
+      ALTER TABLE IF EXISTS notifications ADD COLUMN IF NOT EXISTS consent_skipped boolean DEFAULT false
     `);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE notifications DROP COLUMN IF EXISTS consent_skipped`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS notifications DROP COLUMN IF EXISTS consent_skipped`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_notif_prefs_user_channel_category`);
     await queryRunner.query(`DROP TABLE IF EXISTS notification_preferences`);
   }

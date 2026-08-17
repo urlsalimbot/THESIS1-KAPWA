@@ -35,26 +35,26 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
 
     // Ensure columns exist (migrate.ts may have created persons table without these)
     await queryRunner.query(
-      `ALTER TABLE persons ADD COLUMN IF NOT EXISTS email TEXT`,
+      `ALTER TABLE IF EXISTS persons ADD COLUMN IF NOT EXISTS email TEXT`,
     );
     await queryRunner.query(
-      `ALTER TABLE persons ADD COLUMN IF NOT EXISTS extension TEXT`,
+      `ALTER TABLE IF EXISTS persons ADD COLUMN IF NOT EXISTS extension TEXT`,
     );
     // Add email index + self-link columns to users table
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS idx_persons_email ON persons(email)`,
     );
     await queryRunner.query(
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`,
+      `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`,
     );
     await queryRunner.query(
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_person_id UUID`,
+      `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS pending_person_id UUID`,
     );
     await queryRunner.query(
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS person_link_code TEXT`,
+      `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS person_link_code TEXT`,
     );
     await queryRunner.query(
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS person_link_code_expires_at TIMESTAMP`,
+      `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS person_link_code_expires_at TIMESTAMP`,
     );
 
     await queryRunner.query(
@@ -74,7 +74,7 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
     // 2. ADD person_id TO beneficiaries + MIGRATE DATA
     // ==========================================================================
     await queryRunner.query(
-      `ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`,
+      `ALTER TABLE IF EXISTS beneficiaries ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`,
     );
 
     // Migrate existing beneficiary data into persons table.
@@ -114,27 +114,27 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
     await queryRunner.query(`DROP POLICY IF EXISTS cases_barangay_scope ON cases`);
 
     // Drop redundant person columns
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS surname`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS first_name`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS middle_name`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS gender`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS dob`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS address`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS phone`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS philsys_number`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS place_of_birth`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS civil_status`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS current_address`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS philhealth_number`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS occupation`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS estimated_monthly_income`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS age`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS search_vector`);
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS provincial_address`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS surname`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS first_name`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS middle_name`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS gender`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS dob`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS address`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS phone`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS philsys_number`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS place_of_birth`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS civil_status`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS current_address`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS philhealth_number`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS occupation`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS estimated_monthly_income`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS age`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS search_vector`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS provincial_address`);
 
     // Make person_id NOT NULL after data migration
     await queryRunner.query(
-      `ALTER TABLE beneficiaries ALTER COLUMN person_id SET NOT NULL`,
+      `ALTER TABLE IF EXISTS beneficiaries ALTER COLUMN person_id SET NOT NULL`,
     );
 
     // ==========================================================================
@@ -217,23 +217,23 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
     await queryRunner.query(`DROP POLICY IF EXISTS cases_barangay_scope ON cases`);
 
     // Restore legacy columns
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN surname TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN first_name TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN middle_name TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN gender TEXT CHECK (gender IN ('Male','Female'))`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN dob DATE`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN address TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN phone TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN philsys_number TEXT UNIQUE`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN place_of_birth TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN civil_status TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN current_address JSONB`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN provincial_address JSONB`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN philhealth_number TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN occupation TEXT`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN estimated_monthly_income DECIMAL(12,2)`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN age INTEGER`);
-    await queryRunner.query(`ALTER TABLE beneficiaries ADD COLUMN search_vector TSVECTOR`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN surname TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN first_name TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN middle_name TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN gender TEXT CHECK (gender IN ('Male','Female'))`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN dob DATE`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN address TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN phone TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN philsys_number TEXT UNIQUE`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN place_of_birth TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN civil_status TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN current_address JSONB`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN provincial_address JSONB`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN philhealth_number TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN occupation TEXT`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN estimated_monthly_income DECIMAL(12,2)`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN age INTEGER`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN search_vector TSVECTOR`);
 
     // Restore data from persons
     await queryRunner.query(`
@@ -252,7 +252,7 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
     `);
 
     // Drop person_id from beneficiaries
-    await queryRunner.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS person_id`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS person_id`);
 
     // Recreate original indexes
     await queryRunner.query(
@@ -286,10 +286,10 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`DROP INDEX IF EXISTS idx_persons_email`);
-    await queryRunner.query(`ALTER TABLE users DROP COLUMN IF EXISTS person_id`);
-    await queryRunner.query(`ALTER TABLE users DROP COLUMN IF EXISTS pending_person_id`);
-    await queryRunner.query(`ALTER TABLE users DROP COLUMN IF EXISTS person_link_code`);
-    await queryRunner.query(`ALTER TABLE users DROP COLUMN IF EXISTS person_link_code_expires_at`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS users DROP COLUMN IF EXISTS person_id`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS users DROP COLUMN IF EXISTS pending_person_id`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS users DROP COLUMN IF EXISTS person_link_code`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS users DROP COLUMN IF EXISTS person_link_code_expires_at`);
 
     await queryRunner.query(`DROP TABLE IF EXISTS persons CASCADE`);
   }
