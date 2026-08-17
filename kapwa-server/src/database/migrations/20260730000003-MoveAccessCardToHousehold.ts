@@ -5,11 +5,18 @@ export class MoveAccessCardToHousehold2026073000003 implements MigrationInterfac
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE IF EXISTS households ADD COLUMN IF NOT EXISTS access_card_code VARCHAR(20)`);
+    // Backfill is a no-op when the legacy column is absent (e.g. on a
+    // migrate.js bootstrap that already matches the post-migration schema).
     await queryRunner.query(`
-      UPDATE households h
-      SET access_card_code = b.access_card_code
-      FROM beneficiaries b
-      WHERE b.household_id = h.id AND b.access_card_code IS NOT NULL
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'beneficiaries' AND column_name = 'access_card_code') THEN
+          UPDATE households h
+          SET access_card_code = b.access_card_code
+          FROM beneficiaries b
+          WHERE b.household_id = h.id AND b.access_card_code IS NOT NULL;
+        END IF;
+      END $$;
     `);
     await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services DROP CONSTRAINT IF EXISTS access_card_services_access_card_code_fkey`);
     await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP CONSTRAINT IF EXISTS beneficiaries_access_card_code_key`);
