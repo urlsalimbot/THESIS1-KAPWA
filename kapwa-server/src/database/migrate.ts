@@ -70,7 +70,7 @@ export async function migrate() {
     $$;
   `);
 
-  await q.query(`CREATE TABLE IF NOT EXISTS beneficiaries ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID, access_card_code TEXT UNIQUE, user_id UUID, consent_status TEXT DEFAULT 'active', household_id UUID, category TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS beneficiaries ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID, user_id UUID, consent_status TEXT DEFAULT 'active', household_id UUID, category TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, access_card_code TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`ALTER TABLE households ADD COLUMN IF NOT EXISTS access_card_code TEXT`);
   // family_members table removed — superseded by household_memberships (see below)
@@ -90,7 +90,7 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS client_signature TEXT`);
   // interventions table removed — dead table, no application code reads it; replaced by case_interventions (CaseIntervention entity)
   // case_tracker_log table removed — dropped by DropCaseTrackerLog migration
-  await q.query(`CREATE TABLE IF NOT EXISTS access_card_services ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), access_card_code TEXT REFERENCES beneficiaries(access_card_code), service_date DATE NOT NULL, service_rendered TEXT NOT NULL, cost DECIMAL(12,2), agency TEXT, agency_id UUID, worker_name_sign TEXT, intervention_id UUID )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS access_card_services ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), access_card_code TEXT, service_date DATE NOT NULL, service_rendered TEXT NOT NULL, cost DECIMAL(12,2), agency TEXT, agency_id UUID, worker_name_sign TEXT, intervention_id UUID )`);
   await q.query(`CREATE TABLE IF NOT EXISTS irf_blotter_seq ( id SERIAL PRIMARY KEY, year INTEGER NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS access_card_seq ( id SERIAL PRIMARY KEY, year INTEGER NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS otp_codes ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), phone TEXT NOT NULL, code TEXT NOT NULL, verified BOOLEAN DEFAULT FALSE, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
@@ -125,7 +125,6 @@ export async function migrate() {
 
   await q.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 
-  await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_person ON beneficiaries(person_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_status ON cases(status)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_control ON cases(control_no)`);
@@ -136,7 +135,6 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_csr_case ON csr_reports(case_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_csr_control ON csr_reports(control_no)`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS user_id UUID`);
-  await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS access_card_code TEXT`);
 
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS category TEXT`);
   await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS revoked_reason TEXT`);
