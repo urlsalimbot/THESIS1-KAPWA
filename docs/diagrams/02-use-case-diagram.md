@@ -14,11 +14,11 @@ Maps every actor — guest, claimant, social_worker, coordinator, admin, mayor, 
 | FR-02 | Guest registers, verifies email (`POST /auth/verify-email`), logs in, and completes MFA challenge when MFA is enabled on the account. |
 | FR-03 | Claimant views their own access card and service history via `GET /beneficiaries/me/access-card`, `GET /beneficiaries/me/services`, `GET /beneficiaries/me/consent` (all `@Roles('claimant')`). |
 | FR-04 | Social worker creates intakes, assesses cases, logs interventions, manages beneficiary records, generates certificates/CSR/IRF, chats, and views notifications. |
-| FR-05 | Coordinator files referrals (`POST /referrals`, `@Roles('coordinator')`), reviews intake requests (`GET /intake` list includes coordinator), and manages access cards for their barangay (`POST /access-cards/assign/:beneficiaryId` includes coordinator). |
+| FR-05 | Coordinator files referrals (`POST /referrals`, `@Roles('coordinator')`), participates in intake match-check and confirmation (`POST /intake/match-check` and `POST /intake/confirm/:householdId` include coordinator), and manages access cards for their barangay (`POST /access-cards/assign/:beneficiaryId` includes coordinator). |
 | FR-06 | Admin manages users (`users.controller`), programs (`/programs` routes admin-only), agencies (`agencies.controller`), announcements (`announcements.controller`), and wipe/reset (`admin/wipe` controller). |
 | FR-07 | Mayor views reports/dashboard (`/reports`, dashboard `@Roles('mayor')` endpoint) and exports fund utilization (`GET /export/monthly-funds`, `@Roles('admin','mayor','auditor')`). |
 | FR-08 | Auditor views audit logs (`audit.controller` `@Roles('admin','auditor')`) and exports data (`GET /export/audit-logs`, `@Roles('admin','auditor')`). |
-| FR-09 | Agency staff views the agency dashboard, agency referrals, and access-card activities (all `@Roles('agency_staff')` routes under `/agency/*`). |
+| FR-09 | Agency staff views the agency dashboard and profile (`agency-portal.controller` is `@Roles('agency_staff','admin')`), inter-agency referrals (`inter-agency-referrals.controller` is `@Roles('admin','social_worker','agency_staff')`), and access-card activities (`access-cards.controller` includes agency_staff). |
 | FR-10 | Role-appropriate notifications for admin, social_worker, coordinator, claimant, auditor, agency_staff (`NOTIFICATION_ROLES`); chat restricted to admin, social_worker, coordinator, claimant (`CHAT_ROLES`). |
 | FR-11 | Offline sync for field workers: `sync.controller` `@Roles('admin','coordinator','social_worker')` endpoints queue and flush deltas when connectivity is lost. |
 | FR-12 | Claimant dashboard (`/my-dashboard`, `@Roles('claimant')`) shows the claimant's card, service history, and notifications. |
@@ -26,7 +26,7 @@ Maps every actor — guest, claimant, social_worker, coordinator, admin, mayor, 
 | FR-14 | Referral review and approval: MSWDO staff accept/decline referrals (`PATCH /referrals/:id/accept|decline`, `@Roles('admin','social_worker')`); coordinators file and track them (`GET /referrals/mine`). |
 | FR-15 | Physical files management for admin, social_worker, and coordinator (`physical-files.controller`). |
 | FR-16 | Program management for admin only (`/programs/new`, `/programs/:id`, `/programs` routes; `programs` module). |
-| FR-17 | IRF/CSR/certificate generation and management (`irf.controller`, `csr.controller`, `POST /export/certificate`; admin + social_worker). |
+| FR-17 | IRF/CSR/certificate generation and management (`irf.controller`, `csr.controller`, `POST /export/certificate`; admin + social_worker, plus coordinator on certificate export and CSR detail/PDF, and auditor on IRF `:id` detail). |
 | FR-18 | Settings and MFA setup/enable/disable/verify (`/settings`, `POST /auth/mfa/*`); available to every authenticated role. |
 | FR-19 | Notification preferences: read and update per-role preferences (`GET|PUT /notifications/preferences`, `PUT /notifications/preferences/bulk`). |
 | FR-20 | Admin wipe/reset: remote wipe a device or user session and list registered devices (`admin/wipe` controller, `@Roles('admin')`). |
@@ -112,7 +112,7 @@ flowchart LR
         UC-AD2["Wipe or reset device sessions"]
     end
 
-    subgraph Messaging[ MESSAGING AND NOTIFICATIONS]
+    subgraph Messaging[MESSAGING AND NOTIFICATIONS]
         direction TB
         UC-M1["Chat"]
         UC-M2["View and manage notifications"]
@@ -131,12 +131,14 @@ flowchart LR
     A3 --> UC-A4
     A4 --> UC-A4
     A5 --> UC-A4
+    A6 --> UC-A4
+    A7 --> UC-A4
     A8 --> UC-A4
 
     A3 --> UC-I1
     A5 --> UC-I1
     A3 --> UC-I2
-    A4 --> UC-I2
+    A4 -->|match-check & confirm| UC-I2
     A5 --> UC-I2
     A4 --> UC-I3
 
@@ -215,7 +217,7 @@ flowchart LR
 
 **social_worker (A3).** The primary caseworker role: creates intakes, reviews intakes, assesses cases, logs interventions, manages beneficiary records and physical files, and generates certificates/CSR/IRF (FR-04, FR-15, FR-17). They review and accept/decline coordinator referrals (FR-14), assign access cards and log card activity (FR-05), use offline sync in the field (FR-11), and participate in chat/notifications (FR-10).
 
-**coordinator (A4).** Barangay coordinators are redirected to `/coordinator/dashboard`. They file referrals (`POST /referrals` is `@Roles('coordinator')` only), track their referral status via `/referrals/mine`, review intake requests (the intake list endpoint includes coordinator), and manage access cards for their barangay (FR-05, FR-14). They manage physical files and sync offline data (FR-11, FR-15). Referral *approval* (accept/decline) is deliberately role-restricted to `admin` and `social_worker` — coordinators see status but cannot approve their own referrals.
+**coordinator (A4).** Barangay coordinators are redirected to `/coordinator/dashboard`. They file referrals (`POST /referrals` is `@Roles('coordinator')` only), track their referral status via `/referrals/mine`, participate in intake match-check and confirmation (`POST /intake/match-check`, `POST /intake/confirm/:householdId` include coordinator), and manage access cards for their barangay (FR-05, FR-14). They manage physical files and sync offline data (FR-11, FR-15). Referral *approval* (accept/decline) is deliberately role-restricted to `admin` and `social_worker` — coordinators see status but cannot approve their own referrals.
 
 **admin (A5).** Redirected to `/admin`. Admin is the only role on the user, agency (write), program, and wipe controllers: manages users, programs, agencies, announcements (FR-06), and remote wipes/resets (FR-20). Admin also has broad read/write access across intake, cases, referrals, access cards, and exports, plus audit-log access (`@Roles('admin','auditor')`), certificates/CSR/IRF, and notifications broadcast (`POST /notifications` is `@Roles('admin','social_worker')`).
 
@@ -223,9 +225,9 @@ flowchart LR
 
 **auditor (A7).** Redirected to `/audit-logs`. Reads audit logs and exports them as PDF/CSV (`export.controller` `GET /export/audit-logs`) (FR-08); also read-only access to CSR compliance, IRF details, and case tracker. Receives notifications and manages preferences (FR-10, FR-19).
 
-**agency_staff (A8).** Redirected to `/agency/dashboard`. Views the agency dashboard, agency referrals, and access-card activities (`/agency/*` routes are `@Roles('agency_staff')`); logs access-card activity and reads card summaries (`access-cards.controller` includes agency_staff); participates in inter-agency referrals (`inter-agency-referrals.controller` is `@Roles('admin','social_worker','agency_staff')`) (FR-09).
+**agency_staff (A8).** Redirected to `/agency/dashboard`. Views the agency dashboard and profile (`agency-portal.controller` is `@Roles('agency_staff','admin')`), logs access-card activity and reads card summaries (`access-cards.controller` includes agency_staff), and participates in inter-agency referrals (`inter-agency-referrals.controller` is `@Roles('admin','social_worker','agency_staff')`) (FR-09).
 
-**Role restriction enforcement.** The client redirect map `ROLE_REDIRECT_MAP` (social_worker→`/dashboard`, admin→`/admin`, coordinator→`/coordinator`, claimant→`/my-dashboard`, mayor→`/reports`, auditor→`/audit-logs`, agency_staff→`/agency/dashboard`) mirrors the server-side `@Roles` decorators, which are the authoritative gate: every controller endpoint above is protected by `JwtAuthGuard` + `RolesGuard` (plus `AbacGuard` on referrals). `NOTIFICATION_ROLES` and `CHAT_ROLES` in `role-access.ts` are documented to mirror the `notifications.controller` and `chat.controller` decorators. Settings/MFA (FR-18) is the only use case open to every authenticated role (no role restriction on `/settings`).
+**Role restriction enforcement.** The client redirect map `ROLE_REDIRECT_MAP` (social_worker→`/dashboard`, admin→`/admin`, coordinator→`/coordinator`, claimant→`/my-dashboard`, mayor→`/reports`, auditor→`/audit-logs`, agency_staff→`/agency/dashboard`) mirrors the server-side `@Roles` decorators, which are the authoritative gate: role-scoped endpoints are protected by `JwtAuthGuard` + `RolesGuard` (plus `AbacGuard` on referrals), some endpoints are `JwtAuthGuard`-only (e.g. profile and MFA routes in `auth.controller.ts`), and the public landing/announcements routes (`announcements-public.controller.ts`) are completely unguarded. `NOTIFICATION_ROLES` and `CHAT_ROLES` in `role-access.ts` are documented to mirror the `notifications.controller` and `chat.controller` decorators. Settings/MFA (FR-18) is the only use case open to every authenticated role (no role restriction on `/settings`).
 
 ## 5. Cross-References
 
