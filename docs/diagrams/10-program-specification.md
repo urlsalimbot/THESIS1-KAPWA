@@ -24,7 +24,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 - **Inputs:** LoginDto (email, password), RegisterDto (name, email, phone, password), MfaVerifyDto (code), refresh token, forgot/reset DTOs.
 - **Processing:** bcrypt password hashing; JWT access + refresh issuance; MFA challenge (temp token 5 min); email verification token; refresh token rotation with `token_version` check/bump; single-flight 401 refresh on the client.
 - **Outputs:** accessToken, user profile, MFA challenge object, verification emails.
-- **Endpoints:** `POST /auth/login`, `POST /auth/register`, `POST /auth/refresh`, `POST /auth/logout`, `POST /auth/verify-email`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/mfa/setup`, `POST /auth/mfa/verify`, `POST /auth/mfa/enable`, `POST /auth/mfa/disable`, `GET /auth/me` (19 routes).
+- **Endpoints:** `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/refresh`, `POST /auth/login/otp-verify`, `POST /auth/mfa/setup`, `POST /auth/mfa/enable`, `POST /auth/mfa/disable`, `POST /auth/mfa/verify`, `POST /auth/change-password`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/change-email`, `POST /auth/confirm-email-change`, `POST /auth/update-phone`, `POST /auth/request-person-link`, `POST /auth/verify-person-link` (19 routes).
 - **Client surfaces:** LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, MfaSetupPage, SettingsPage (MFA).
 - **Dependencies:** UsersModule (UserRepository), OtpModule, EmailModule, JwtModule.
 
@@ -44,7 +44,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 - **Inputs:** SyncPushDto (deviceId, changes, versionVectors, idempotencyKey, signature), pull query params.
 - **Processing:** pre-flight meta-field rejection → Ed25519 signature verify → idempotency lookup → apply changes (transactional, SERIALIZABLE where needed) → conflict resolution (server-wins for financial tables, notes appended) → FSM re-validation → version vector update.
 - **Outputs:** applied changes, resolved conflicts, fresh version vectors, queued/pending statuses.
-- **Endpoints:** `POST /sync/push`, `POST /sync/pull`, `GET /sync/status`, `POST /sync/ack` (4 routes).
+- **Endpoints:** `POST /sync/v1` (delta push), `POST /sync/pull`, `GET /sync/conflicts/:deviceId`, `POST /sync/conflicts/:id/resolve` (4 routes).
 - **Client surfaces:** `lib/offline-queue.ts`, `hooks/useConnectivity.ts`, `hooks/useSyncStatus.ts`, Topbar offline/pending badges.
 - **Dependencies:** SyncQueueEntity, VersionVectorEntity, IdempotencyKeys, CasesModule (case-fsm).
 
@@ -78,6 +78,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-PROG-01 | Admin SHALL create/update programs with name, category, waiting period, required documents, fund sources, approval workflow, and form template. |
 | FR-PROG-02 | Program form templates SHALL be versioned via `form_version_history` (ON DELETE CASCADE on program). |
 
+| FR-PROG-03 | Only admin SHALL modify the program catalog; program data SHALL drive intake and intervention options. |
 - **Inputs:** CreateProgramDto / UpdateProgramDto.
 - **Processing:** CRUD with validation; version capture on template change.
 - **Outputs:** program records, form version history.
@@ -134,6 +135,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-IRF-01 | Staff SHALL create IRF cases with blotter entry numbers (yearly sequence) and encrypted narration. |
 | FR-IRF-02 | IRF detail SHALL be viewable by admin, social_worker, and auditor. |
 
+| FR-IRF-03 | IRF records SHALL carry the yearly blotter sequence (BLT-{year}-{seq}) and SHALL be readable by the authorized roles. |
 - **Inputs:** IRF DTOs (person data, narration, disposition, signatures).
 - **Processing:** blotter sequence allocation, encryption of narration, case linkage.
 - **Outputs:** IRF records, blotter numbers, encrypted narration blobs.
@@ -151,12 +153,13 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-DASH-01 | Staff dashboards SHALL show case counts, pending items, and recent activity. |
 | FR-DASH-02 | The mayor endpoint SHALL be restricted to the mayor role and include fund/operational summaries. |
 
+| FR-DASH-03 | Dashboard metrics SHALL be scoped by the requesting user's role (staff, coordinator, mayor). |
 - **Inputs:** none (role-derived).
 - **Processing:** aggregate counts by status/barangay/agency.
 - **Outputs:** metrics JSON.
 - **Endpoints:** `/dashboard/*` (7 routes incl. mayor report).
 - **Client surfaces:** DashboardPage, MayorReportsPage, CoordinatorDashboardPage, AgencyDashboardPage.
-- **Dependencies:** Cases, Beneficiaries, Referrals modules.
+- **Dependencies:** Cases, Beneficiaries.
 
 ### P-09: Chat (ChatModule)
 
@@ -168,6 +171,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-CHAT-01 | Users in the chat roles (admin, social_worker, coordinator, claimant) SHALL send and receive messages. |
 | FR-CHAT-02 | Conversations SHALL be scoped per conversation id with read tracking. |
 
+| FR-CHAT-03 | Unread message counts SHALL be tracked per conversation and surfaced to the recipient. |
 - **Inputs:** message DTOs (content, conversationId, recipientId).
 - **Processing:** persist message, mark read, realtime emit.
 - **Outputs:** chat messages, conversation lists.
@@ -185,6 +189,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-CSR-01 | Staff SHALL create CSR reports with structured sections (family background, assessment, recommendation, intervention plan). |
 | FR-CSR-02 | CSR SHALL export to PDF (admin, social_worker, coordinator). |
 
+| FR-CSR-03 | CSR records SHALL be finalizable; finalized reports SHALL be immutable. |
 - **Inputs:** CSR DTOs (caseId, sections, signatures).
 - **Processing:** create/update, finalize, PDF generation.
 - **Outputs:** CSR records, PDFs.
@@ -202,6 +207,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-AUDIT-01 | Audit log entries SHALL be recorded for sensitive operations (admin, mayor, auditor, social_worker, coordinator). |
 | FR-AUDIT-02 | Audit log access SHALL be admin/auditor only. |
 
+| FR-AUDIT-03 | Audit log entries SHALL NOT be editable or deletable by any role. |
 - **Inputs:** audit event data.
 - **Processing:** append-only audit_log writes, query with filters.
 - **Outputs:** audit log entries.
@@ -229,20 +235,21 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 
 ### P-13: Filing (FilingModule)
 
-- **Purpose:** Document vault storage and retrieval for case/beneficiary files.
+- **Purpose:** Stores and retrieves case/beneficiary files in the local uploads directory.
 - **Functional Requirements:**
 
 | ID | Requirement |
 |----|-------------|
-| FR-FIL-01 | Files SHALL be uploaded and stored in the document vault, linked to a case and/or beneficiary. |
-| FR-FIL-02 | Files SHALL be downloadable by authorized roles. |
+| FR-FIL-01 | Files SHALL be uploaded and stored on the server's uploads directory, linked to a case and/or beneficiary. |
+| FR-FIL-02 | Files SHALL be downloadable by authorized roles; stale files SHALL be cleanable. |
 
+| FR-FIL-03 | Stale uploads SHALL be cleanable via the cleanup endpoint. |
 - **Inputs:** multipart uploads, file metadata.
-- **Processing:** store file (Minio), persist document_vault record.
-- **Outputs:** file URLs, vault records.
-- **Endpoints:** `/filing/*` (6 routes).
+- **Processing:** store file in `uploads/`, persist document_vault record, download + cleanup operations.
+- **Outputs:** file records, download streams.
+- **Endpoints:** `POST /filing/upload`, `GET /filing`, `GET /filing/:id`, `GET /filing/:id/download`, `DELETE /filing/:id`, `DELETE /filing/cleanup` (6 routes).
 - **Client surfaces:** PhysicalFilesPage (implemented, unrouted), CaseViewPage file section.
-- **Dependencies:** MinioModule, document_vault entity.
+- **Dependencies:** document_vault entity.
 
 ### P-14: Users (UsersModule)
 
@@ -254,6 +261,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-USER-01 | Admin SHALL create, update, activate/deactivate, and assign roles to users. |
 | FR-USER-02 | Agency staff SHALL be linked to their agency via `agency_id`. |
 
+| FR-USER-03 | User changes SHALL be audit-logged for accountability. |
 - **Inputs:** user admin DTOs (email, role, agency, active).
 - **Processing:** CRUD with role/agency validation.
 - **Outputs:** user records.
@@ -288,28 +296,32 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 |----|-------------|
 | FR-CI-01 | Interventions SHALL attach to a case and optionally a program, with service name, delivery date, amount, mode, and fund source. |
 
+| FR-CI-02 | Intervention records SHALL be editable and deletable by authorized staff; deletions SHALL be audit-logged. |
+| FR-CI-03 | Intervention aggregates SHALL feed the monthly fund utilization report. |
 - **Inputs:** intervention DTOs.
 - **Processing:** CRUD; aggregation for fund utilization reports.
 - **Outputs:** intervention records.
-- **Endpoints:** `/case-interventions/*` (4 routes).
+- **Endpoints:** `GET /cases/:caseId/interventions`, `POST /cases/:caseId/interventions`, `PATCH /cases/:caseId/interventions/:id`, `DELETE /cases/:caseId/interventions/:id` (4 routes).
 - **Client surfaces:** CaseViewPage intervention section.
 - **Dependencies:** case_interventions entity, Programs.
 
 ### P-17: Civil Registry Lookup (LcrModule)
 
-- **Purpose:** Looks up civil registry records for identity verification.
+- **Purpose:** Imports civil registry (LCR) records into the person/beneficiary tables for identity verification.
 - **Functional Requirements:**
 
 | ID | Requirement |
 |----|-------------|
-| FR-LCR-01 | Staff SHALL query civil registry records by person identifiers. |
+| FR-LCR-01 | Admin SHALL import LCR records (single or batch) into the person/beneficiary data. |
 
-- **Inputs:** search params.
-- **Processing:** lookup, limited fields returned.
-- **Outputs:** civil registry matches.
-- **Endpoints:** `/lcr/*` (2 routes).
-- **Client surfaces:** BeneficiaryViewPage lookup, IntakePage.
-- **Dependencies:** external/registry data source.
+| FR-LCR-02 | Imports SHALL be idempotent (re-importing the same record SHALL NOT duplicate it). |
+| FR-LCR-03 | Imports SHALL be restricted to the admin role. |
+- **Inputs:** import DTOs (record payloads).
+- **Processing:** validate and upsert into person/beneficiary tables.
+- **Outputs:** imported records, import results.
+- **Endpoints:** `POST /lcr/import`, `POST /lcr/import-batch` (2 routes).
+- **Client surfaces:** admin import tooling.
+- **Dependencies:** Beneficiaries (person/beneficiary entities).
 
 ### P-18: Service Level Agreements (SlaModule)
 
@@ -320,6 +332,8 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 |----|-------------|
 | FR-SLA-01 | SLA thresholds SHALL be defined and overdue cases surfaced. |
 
+| FR-SLA-02 | SLA status SHALL be exposed to staff dashboards. |
+| FR-SLA-03 | SLA definitions SHALL be configurable by admin. |
 - **Inputs:** SLA config, case data.
 - **Processing:** compute overdue status.
 - **Outputs:** SLA status summaries.
@@ -336,6 +350,8 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 |----|-------------|
 | FR-OTP-01 | OTP codes SHALL be generated with expiry and verified once. |
 
+| FR-OTP-02 | OTP codes SHALL be usable once and SHALL expire after the configured window. |
+| FR-OTP-03 | OTP delivery SHALL support email and SMS channels. |
 - **Inputs:** phone/email, code.
 - **Processing:** generate, store with expiry, verify, consume.
 - **Outputs:** sent codes (via SMS/email), verification results.
@@ -353,10 +369,11 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-MINIO-01 | The API SHALL upload files to Minio (server-side multipart) and issue presigned GET URLs. |
 | FR-MINIO-02 | Buckets SHALL be initialized on boot (documents, backups). |
 
+| FR-MINIO-03 | Presigned GET URLs SHALL be short-lived and scoped to a single object. |
 - **Inputs:** file buffers, bucket names.
 - **Processing:** bucket init, put object, presign GET.
 - **Outputs:** object keys, presigned URLs.
-- **Endpoints:** `POST /minio/upload`, `GET /minio/presign` (2 routes).
+- **Endpoints:** `POST /minio/upload`, `GET /minio/signed-url/:bucket/:fileName` (2 routes).
 - **Client surfaces:** FilingModule pages.
 - **Dependencies:** Minio client.
 
@@ -389,10 +406,11 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-REF-01 | Coordinators SHALL file referrals (status `pending`); admin/social_worker SHALL accept (`accepted`) or decline (`declined`). |
 | FR-REF-02 | Referrals SHALL carry person data and optionally link to a created case. |
 
+| FR-REF-03 | Referral counts and pending counts SHALL be available to coordinators and staff. |
 - **Inputs:** referral DTOs (person fields, reason).
 - **Processing:** create, accept/decline transitions, optional case linkage.
 - **Outputs:** referral records.
-- **Endpoints:** `/referrals/*` (5 routes).
+- **Endpoints:** `POST /referrals`, `GET /referrals`, `GET /referrals/mine`, `GET /referrals/counts`, `GET /referrals/pending-count`, `GET /referrals/:id`, `PATCH /referrals/:id/accept`, `PATCH /referrals/:id/decline` (8 routes).
 - **Client surfaces:** CoordinatorReferralFormPage, CoordinatorReferralListPage, ReferralReviewPage, ReferralsPage.
 - **Dependencies:** Cases, Beneficiaries.
 
@@ -406,10 +424,11 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-ANN-01 | Public announcements SHALL be listable/detail-able without auth (published only). |
 | FR-ANN-02 | Admin SHALL create/update/delete/pin announcements (draft or published); body HTML SHALL be sanitized server-side. |
 
+| FR-ANN-03 | Pinned announcements SHALL be surfaced first in public listings. |
 - **Inputs:** announcement DTOs (title, bodyHtml, status, pinned).
 - **Processing:** slug generation, sanitize-html, publish/pin toggles, excerpt auto-generation.
 - **Outputs:** announcement records, public JSON.
-- **Endpoints:** `/announcements/public` (unguarded), `/announcements/manage/*` (admin) (4 routes).
+- **Endpoints:** `GET /announcements/public` + `GET /announcements/public/:slug` (unguarded); `GET /announcements`, `GET /announcements/:id`, `POST /announcements`, `PATCH /announcements/:id`, `PATCH /announcements/:id/pin`, `DELETE /announcements/:id` (admin, social_worker, coordinator) (8 routes).
 - **Client surfaces:** LandingPage, AnnouncementPage, AnnouncementsPage (manage).
 - **Dependencies:** announcements entity.
 
@@ -420,12 +439,14 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 
 | ID | Requirement |
 |----|-------------|
-| FR-AGY-01 | Admin SHALL create/update/deactivate agencies with code, name, type, and contact info. |
+| FR-AGY-01 | Admin SHALL create agencies with code, name, type, and contact info, and list/read them. |
 
+| FR-AGY-02 | Agency list SHALL be readable by agency staff for referral targeting. |
+| FR-AGY-03 | Agency creation SHALL validate unique codes. |
 - **Inputs:** agency DTOs.
 - **Processing:** CRUD.
 - **Outputs:** agency records.
-- **Endpoints:** `/agencies/*` (5 routes).
+- **Endpoints:** `GET /agencies`, `GET /agencies/:id`, `POST /agencies` (3 routes).
 - **Client surfaces:** AdminPage (agencies panel), AgencyProfilePage.
 - **Dependencies:** agencies entity.
 
@@ -443,7 +464,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 - **Inputs:** referral DTOs (toAgencyId, personId, caseId, reason, legalBasisCode).
 - **Processing:** agency resolution (MSWDO fallback), person resolution, create → notifyAgency loop; receive/action/close/decline → notifyCreator (try/catch); status CHECK-constrained.
 - **Outputs:** referral records, notifications.
-- **Endpoints:** `/inter-agency-referrals/*` (10 routes: create, inbox, mine, receive, action, close, decline, summary).
+- **Endpoints:** `POST /inter-agency-referrals` (create), `GET /inter-agency-referrals/inbox`, `GET /person/:personId`, `GET /case/:caseId`, `GET /beneficiary-search`, `PATCH /:id/receive`, `PATCH /:id/action`, `PATCH /:id/close`, `PATCH /:id/decline`, `POST /:id/promote-to-case` (10 routes).
 - **Client surfaces:** AgencyReferralsPage, AgencyDashboardPage, AgencyCardActivitiesPage, InterAgencyReferralsPage (staff).
 - **Dependencies:** Agencies, Beneficiaries, Cases, Notifications, Users (agency staff lookup).
 
@@ -457,10 +478,11 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-AP-01 | Agency staff SHALL see their agency dashboard with scoped referral totals and recent activity. |
 | FR-AP-02 | Access SHALL be restricted to agency_staff + admin. |
 
+| FR-AP-03 | Agency portal data SHALL be scoped to the caller's agency. |
 - **Inputs:** none (agency derived from user.agencyId).
 - **Processing:** agency-scoped aggregation of referrals and card activities.
 - **Outputs:** dashboard JSON, referral lists, card activities.
-- **Endpoints:** `/agency-portal/*` (dashboard, referrals, card-activities).
+- **Endpoints:** `GET /agency-portal/dashboard`, `GET /agency-portal/profile` (2 routes).
 - **Client surfaces:** AgencyDashboardPage, AgencyReferralsPage, AgencyCardActivitiesPage, AgencyProfilePage.
 - **Dependencies:** Agencies, InterAgencyReferrals, AccessCards.
 
@@ -527,6 +549,8 @@ flowchart LR
 
     AUTH --> USERS
     AUTH --> OTP
+    CASES --> NOTIF
+    CASES --> AUTH
     CASES --> BEN
     CASES --> PROG
     CASES --> CI
@@ -548,25 +572,24 @@ flowchart LR
     EXP --> CI
     EXP --> CASES
     EXP --> AGY
-    FIL --> MINIO
-    NOTIF --> SYNC
+    FIL --> CASES
+    NOTIF --> OTP
     CHAT --> USERS
     DASH --> CASES
     DASH --> BEN
-    DASH --> REF
     SLA --> CASES
-    SYNCMOD --> CASES
-    SYNCMOD --> BEN
+    SYNCMOD --> INTK
+    SYNCMOD --> AUTH
     ANN --> USERS
 ```
 
 ## 4. Diagram Narrative
 
-The dependency graph shows three hub modules — **CasesModule**, **BeneficiariesModule**, and **NotificationsModule** — that most other modules depend on. Cases and Beneficiaries are the welfare core: Intake, Referrals, Inter-Agency Referrals, CSR, IRF, Case Interventions, Dashboard, SLA, and Sync all build on them. Notifications is the communication hub: Inter-Agency Referrals and Sync push events through it, and the gateway delivers them in realtime.
+The dependency graph shows **CasesModule** as the central hub: it depends on Beneficiaries, Programs, Case Interventions, and Notifications, and is itself the foundation for Intake, Referrals, Inter-Agency Referrals, CSR, IRF, Dashboard, SLA, Filing, and Export. **BeneficiariesModule** is the identity hub — Intake, Cases, Inter-Agency Referrals, Access Cards, and Referrals all build on persons/beneficiaries. **NotificationsModule** is the communication service: Cases (worker notifications on transitions) and Inter-Agency Referrals (agency/creator notifications) depend on it, and its gateway delivers pushes in realtime.
 
-**Leaf modules** (no outgoing edges) are LcrModule (registry lookup), SlaModule (threshold computation), OtpModule (standalone code generation), and MinioModule (object storage) — they serve other modules without depending on them. **AgenciesModule** and **AccessCardsModule** are secondary hubs for the agency-facing side: the Agency Portal depends on Inter-Agency Referrals and Access Cards.
+**Leaf modules** (no outgoing edges) are LcrModule (LCR record import), SlaModule (threshold computation), OtpModule (standalone code generation), and MinioModule (object storage) — they serve other modules without depending on them. **AgenciesModule** and **AccessCardsModule** are secondary hubs for the agency-facing side: the Agency Portal depends on Inter-Agency Referrals and Access Cards.
 
-The **SynchronizationModule** has a two-way relationship with the welfare core: it reads case state (FSM re-validation) and writes beneficiary/case changes from offline devices, while the client shell's offline queue feeds it. This makes Sync the fourth structural hub at the edges of the graph.
+The **SynchronizationModule** depends on Intake and Auth: it delegates intake-style writes for offline submissions and validates FSM transitions against the shared case state, while the client shell's offline queue feeds it. It is the field-work channel rather than a structural hub in the module graph.
 
 The **client shell** is not drawn as a node but conceptually wraps everything: it consumes all 26 modules' endpoints through the API layer, and its role-filtered navigation (Topbar/Sidebar/BottomNav) determines which page groups each of the seven roles can reach.
 
