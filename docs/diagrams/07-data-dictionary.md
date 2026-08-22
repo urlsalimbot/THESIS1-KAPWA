@@ -711,7 +711,7 @@ Maps a physical cabinet/folder/shelf location one-to-one to an intervention.
 | `idempotency_keys` | `kapwa-server/src/database/migrations/20260619000001-audit-hash-chain.ts` |
 | `audit_log` | `kapwa-server/src/database/migrations/20260622000005-IRFDispositionEncryption.ts` |
 | `intervention_types` | `kapwa-server/src/database/migrations/20260712000001-CreateInterventionTypesTable.ts` |
-| `access_card_seq`, `irf_blotter_seq` | `kapwa-server/src/database/migrations/1740000000000-AaaInitialSchema.ts` |
+| `access_card_seq`, `irf_blotter_seq` | `kapwa-server/src/database/migrations/0000000000002-AaaInitialSchema.ts` |
 | `agencies` (DDL + seed data) | `kapwa-server/src/database/migrations/20260803000001-CreateAgenciesTable.ts` |
 | `inter_agency_referrals` (DDL) | `kapwa-server/src/database/migrations/20260803000002-CreateInterAgencyReferralsTable.ts` |
 | `physical_files` (DDL) | `kapwa-server/src/database/migrations/20260730000001-CreatePhysicalFilesTable.ts` |

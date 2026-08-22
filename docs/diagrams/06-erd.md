@@ -192,12 +192,15 @@ case_history {
         timestamp datetime_incident
         jsonb item_a_reporting_person
         jsonb item_b_person_reported
+        uuid case_id FK
         bytea encrypted_narration
         text case_disposition
+        jsonb key_wraps
+        int key_version
+        text dismissal_reason
         text msdw_signature_url
         text reporting_signature_url
         timestamp created_at
-        timestamp updated_at
     }
     document_vault {
         uuid id PK
@@ -457,8 +460,7 @@ case_history {
     agencies ||--o{ inter_agency_referrals : "from agency"
     agencies ||--o{ inter_agency_referrals : "to agency"
     agencies o|--o{ access_card_services : "service agency"
-    irf_cases o|--o{ access_card_services : "documents"
-```
+    ```
 
 > **Note on scope**: the diagram covers all 29 active tables documented in `DB-SCHEMA.md` and adds `inter_agency_referrals`, `physical_files`, and `agencies` — active tables defined only in their TypeORM entities (`inter-agency-referral.entity.ts`, `physical-file.entity.ts`, `agency.entity.ts`), required by FR-06 and FR-11 and by the FK columns `access_card_services.agency_id`, `inter_agency_referrals.from_agency_id` / `.to_agency_id`.
 
@@ -509,4 +511,4 @@ case_history {
 | `idempotency_keys` | `kapwa-server/src/database/migrations/20260619000001-audit-hash-chain.ts` |
 | `audit_log` | `kapwa-server/src/database/migrations/20260622000005-IRFDispositionEncryption.ts` |
 | `intervention_types` | `kapwa-server/src/database/migrations/20260712000001-CreateInterventionTypesTable.ts` |
-| `access_card_seq`, `irf_blotter_seq` | `kapwa-server/src/database/migrations/1740000000000-AaaInitialSchema.ts` |
+| `access_card_seq`, `irf_blotter_seq` | `kapwa-server/src/database/migrations/0000000000002-AaaInitialSchema.ts` |
