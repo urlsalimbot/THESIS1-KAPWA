@@ -18,7 +18,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 | FR-AUTH-01 | A user SHALL log in with email + password; on success the API SHALL return an access token and the user profile. |
 | FR-AUTH-02 | When MFA is enabled for the account, login SHALL return an MFA challenge with a short-lived temporary token; the user SHALL verify with an OTP. |
 | FR-AUTH-03 | The refresh flow SHALL rotate tokens; a revoked/invalid refresh token SHALL force re-login. |
-| FR-AUTH-04 | Registration SHALL create a claimant account and require email verification before first login. |
+| FR-AUTH-04 | Registration SHALL create an account (schema default role `social_worker`; service fallback intends `claimant`) and SHALL require email verification before first login. |
 | FR-AUTH-05 | Forgot/reset password SHALL be email-based with expiry; reset SHALL invalidate prior tokens (token version bump). |
 
 - **Inputs:** LoginDto (email, password), RegisterDto (name, email, phone, password), MfaVerifyDto (code), refresh token, forgot/reset DTOs.
@@ -283,7 +283,7 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 - **Inputs:** card assignment DTOs, service log DTOs, card code.
 - **Processing:** sequence allocation, service log persistence, summary aggregation (incl. other-agency services when consent active).
 - **Outputs:** card records, service logs, summaries, print views.
-- **Endpoints:** `/access-cards/*` (7 routes incl. assign, services, summary, print).
+- **Endpoints:** `/access-cards/*` (7 routes incl. assign, services, summary).
 - **Client surfaces:** AccessCardViewPage, AccessCardPrintView, CoordinatorAccessCardsPage, QuickScanCard (CoordinatorDashboard), AgencyCardActivitiesPage.
 - **Dependencies:** access_card_seq, access_card_services, Beneficiaries.
 
@@ -508,6 +508,8 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 
 ## 3. Module Dependency Overview (Mermaid)
 
+Edges represent module imports (solid) and data/FK relationships (where noted).
+
 ```mermaid
 flowchart LR
     subgraph CORE["Core"]
@@ -547,12 +549,12 @@ flowchart LR
         SYNCMOD[SynchronizationModule]
     end
 
+    %% Data/FK-level edges (entity/FK access, not module imports): AUTH->USERS, CASES->BEN, CASES->CI, INTK->BEN, IAR->AGY, IAR->BEN, IAR->USERS, REF->CASES, CSR->CASES, IRF->CASES, EXP->CI, EXP->CASES, FIL->CASES, CHAT->USERS, DASH->CASES, DASH->BEN, SLA->CASES, ANN->USERS
     AUTH --> USERS
     AUTH --> OTP
     CASES --> NOTIF
     CASES --> AUTH
     CASES --> BEN
-    CASES --> PROG
     CASES --> CI
     INTK --> BEN
     INTK --> CASES
@@ -562,16 +564,11 @@ flowchart LR
     IAR --> NOTIF
     IAR --> USERS
     AP --> IAR
-    AP --> AC
-    AC --> BEN
     REF --> CASES
-    REF --> BEN
     CSR --> CASES
-    CSR --> EXP
     IRF --> CASES
     EXP --> CI
     EXP --> CASES
-    EXP --> AGY
     FIL --> CASES
     NOTIF --> OTP
     CHAT --> USERS
@@ -585,9 +582,9 @@ flowchart LR
 
 ## 4. Diagram Narrative
 
-The dependency graph shows **CasesModule** as the central hub: it depends on Beneficiaries, Programs, Case Interventions, and Notifications, and is itself the foundation for Intake, Referrals, Inter-Agency Referrals, CSR, IRF, Dashboard, SLA, Filing, and Export. **BeneficiariesModule** is the identity hub — Intake, Cases, Inter-Agency Referrals, Access Cards, and Referrals all build on persons/beneficiaries. **NotificationsModule** is the communication service: Cases (worker notifications on transitions) and Inter-Agency Referrals (agency/creator notifications) depend on it, and its gateway delivers pushes in realtime.
+The dependency graph shows **CasesModule** as the central hub: it depends on Beneficiaries, Case Interventions, and Notifications, and is itself the foundation for Intake, Referrals, Inter-Agency Referrals, CSR, IRF, Dashboard, SLA, Filing, and Export. **BeneficiariesModule** is the identity hub — Intake, Cases, and Inter-Agency Referrals all build on persons/beneficiaries. **NotificationsModule** is the communication service: Cases (worker notifications on transitions) and Inter-Agency Referrals (agency/creator notifications) depend on it, and its gateway delivers pushes in realtime.
 
-**Leaf modules** (no outgoing edges) are LcrModule (LCR record import), SlaModule (threshold computation), OtpModule (standalone code generation), and MinioModule (object storage) — they serve other modules without depending on them. **AgenciesModule** and **AccessCardsModule** are secondary hubs for the agency-facing side: the Agency Portal depends on Inter-Agency Referrals and Access Cards.
+**Leaf modules** (no outgoing edges) are LcrModule (LCR record import), SlaModule (threshold computation), OtpModule (standalone code generation), and MinioModule (object storage) — they serve other modules without depending on them. **ProgramsModule** and **AccessCardsModule** are drawn as standalone nodes: their data (program catalog; card codes and service logs) is consumed at the entity/FK level — see the ERD — rather than through module imports. **AgenciesModule** is the secondary hub for the agency-facing side: Inter-Agency Referrals resolves agencies (`IAR --> AGY`) and the Agency Portal builds on Inter-Agency Referrals (`AP --> IAR`).
 
 The **SynchronizationModule** depends on Intake and Auth: it delegates intake-style writes for offline submissions and validates FSM transitions against the shared case state, while the client shell's offline queue feeds it. It is the field-work channel rather than a structural hub in the module graph.
 

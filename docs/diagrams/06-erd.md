@@ -184,6 +184,21 @@ case_history {
         timestamp created_at
         timestamp updated_at
     }
+    irf_cases {
+        uuid id PK
+        text blotter_entry_number UK
+        text case_category
+        timestamp datetime_reported
+        timestamp datetime_incident
+        jsonb item_a_reporting_person
+        jsonb item_b_person_reported
+        bytea encrypted_narration
+        text case_disposition
+        text msdw_signature_url
+        text reporting_signature_url
+        timestamp created_at
+        timestamp updated_at
+    }
     document_vault {
         uuid id PK
         text file_name

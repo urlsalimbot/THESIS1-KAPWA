@@ -35,7 +35,7 @@ Documents the complete output surface of the system: the landing/auth experience
 | FR-38 | **Claimant —** `ClaimantDashboardPage` (`/my-dashboard`) shows the claimant's dashboard with their service history and notifications; `ClaimantAccessCardPage` (`/my-access-card`) shows their own access card; claimants may also view the card via `AccessCardViewPage` (`/beneficiary/:id/access-card`). |
 | **Mayor-Auditor-Admin** | |
 | FR-39 | **Mayor —** `MayorReportsPage` (`/reports`) shows reporting KPIs and drives the fund-utilization export through `ReportsExportButton` (`GET /export/monthly-funds`). |
-| FR-40 | **Auditor —** `AuditorPage` (`/audit-logs`) lists audit events and offers PDF/CSV export (`GET /export/audit-logs`, roles admin/auditor). |
+| FR-40 | **Auditor —** `AuditorPage` (`/audit-logs`) lists audit events and offers PDF/CSV export (`GET /export/audit-logs`, roles admin/auditor); `AuditPage` implements the COA fund-utilization export view (`GET /audit/coa-export`) but is not yet imported by `routes.tsx` (implemented, unrouted — flagged for routing). |
 | FR-41 | **Admin —** `AdminPage` (`/admin`) manages users, agencies, programs, and announcements (`AnnouncementsPage`/`AnnouncementEditPage` at `/announcements/manage*`, roles admin/social_worker/coordinator); `AdminWipePage` implements remote device/session wipe and demands the confirm phrase "Type WIPE to confirm" in its AlertDialog (page implemented, currently unrouted). |
 | **Agency Staff** | |
 | FR-42 | **Agency —** `AgencyDashboardPage` (`/agency/dashboard`), `AgencyReferralsPage` (`/agency/referrals`, inter-agency referral inbox), `AgencyCardActivitiesPage` (`/agency/card-activities`, services rendered against access cards), and `AgencyProfilePage` (`/agency/profile`). |
