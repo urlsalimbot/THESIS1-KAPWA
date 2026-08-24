@@ -460,7 +460,7 @@ case_history {
     agencies ||--o{ inter_agency_referrals : "from agency"
     agencies ||--o{ inter_agency_referrals : "to agency"
     agencies o|--o{ access_card_services : "service agency"
-    ```
+```
 
 > **Note on scope**: the diagram covers all 29 active tables documented in `DB-SCHEMA.md` and adds `inter_agency_referrals`, `physical_files`, and `agencies` — active tables defined only in their TypeORM entities (`inter-agency-referral.entity.ts`, `physical-file.entity.ts`, `agency.entity.ts`), required by FR-06 and FR-11 and by the FK columns `access_card_services.agency_id`, `inter_agency_referrals.from_agency_id` / `.to_agency_id`.
 
