@@ -25,70 +25,56 @@ Documents the operational feasibility factors for running KAPWA at the MSWDO Nor
 
 ## 3. Ishikawa Diagram (Mermaid)
 
-The fishbone is drawn left-to-right: the **effect (head)** sits at the right end; the **spine** is the horizontal axis; the six **major bones** (categories) branch off the spine; each category carries **minor bones** (causal factors) written as concrete cause statements. The FR mapping for every cause is given in Section 4.
+The fishbone is drawn top-down: the **effect (head)** sits at the top; the **spine** is the main axis; the six **major bones** (categories) align on one row beneath it; each category carries **minor bones** (causal factors) written as concrete cause statements. The FR mapping for every cause is given in Section 4.
 
 ```mermaid
-flowchart LR
-    %% ===== HEAD (the effect under analysis) =====
+flowchart TD
+    %% ===== HEAD (effect) at the top; bones and causes branch downward =====
     HEAD["Operational Feasibility<br/>of KAPWA at MSWDO Norzagaray"]
 
-    %% ===== SPINE (main axis; each category node sits on the spine) =====
-    SE["Security"] --- SU["Support &<br/>Maintenance"] --- DT["Data"] --- HW["Hardware &<br/>Connectivity"] --- PR["Process"] --- PP["People"] --- HEAD
+    %% ===== MAJOR BONES =====
+    HEAD --- SE["Security"]
+    HEAD --- SU["Support &<br/>Maintenance"]
+    HEAD --- DT["Data"]
+    HEAD --- HW["Hardware &<br/>Connectivity"]
+    HEAD --- PR["Process"]
+    HEAD --- PP["People"]
 
-    %% ===== PEOPLE — major bone + minor bones (causes) =====
-    PP1["Staff not trained on role-scoped screens and workflows"]
-    PP2["No onboarding for coordinators, agency staff, and claimants"]
-    PP3["Staff unfamiliar with offline-first field intake"]
-    PP1 --- PP
-    PP2 --- PP
-    PP3 --- PP
+    %% ===== MINOR BONES (causes) =====
+    SE --- SE1["Role boundaries not enforced exposes sensitive data"]
+    SE --- SE2["Unauthenticated or forged sync deltas accepted"]
+    SE --- SE3["Client-side tampering of financial records wins"]
 
-    %% ===== PROCESS — major bone + minor bones (causes) =====
-    PR1["Case lifecycle not standardized across statuses"]
-    PR2["Manual redeploy steps cause long downtime for fixes"]
-    PR3["No controlled shutdown procedure for updates"]
-    PR1 --- PR
-    PR2 --- PR
-    PR3 --- PR
+    SU --- SU1["Type errors ship to production without a typecheck gate"]
+    SU --- SU2["No health/readiness probes to detect outages"]
+    SU --- SU3["Environment drift between dev and production stacks"]
 
-    %% ===== HARDWARE & CONNECTIVITY — major bone + minor bones (causes) =====
-    HW1["Unstable connectivity at field sites"]
-    HW2["No offline capture queue for intake and case updates"]
-    HW3["No observability to detect wedged instances"]
-    HW1 --- HW
-    HW2 --- HW
-    HW3 --- HW
+    DT --- DT1["Empty database on first boot blocks day-one operation"]
+    DT --- DT2["No backup and restore path for a day's intake work"]
+    DT --- DT3["Conflicting offline updates corrupt financial records"]
+    DT --- DT4["Malformed sync payloads poison the data store"]
 
-    %% ===== DATA — major bone + minor bones (causes) =====
-    DT1["Empty database on first boot blocks day-one operation"]
-    DT2["No backup and restore path for a day's intake work"]
-    DT3["Conflicting offline updates corrupt financial records"]
-    DT4["Malformed sync payloads poison the data store"]
-    DT1 --- DT
-    DT2 --- DT
-    DT3 --- DT
-    DT4 --- DT
+    HW --- HW1["Unstable connectivity at field sites"]
+    HW --- HW2["No offline capture queue for intake and case updates"]
+    HW --- HW3["No observability to detect wedged instances"]
 
-    %% ===== SUPPORT & MAINTENANCE — major bone + minor bones (causes) =====
-    SU1["Type errors ship to production without a typecheck gate"]
-    SU2["No health/readiness probes to detect outages"]
-    SU3["Environment drift between dev and production stacks"]
-    SU1 --- SU
-    SU2 --- SU
-    SU3 --- SU
+    PR --- PR1["Case lifecycle not standardized across statuses"]
+    PR --- PR2["Manual redeploy steps cause long downtime for fixes"]
+    PR --- PR3["No controlled shutdown procedure for updates"]
 
-    %% ===== SECURITY — major bone + minor bones (causes) =====
-    SE1["Role boundaries not enforced exposes sensitive data"]
-    SE2["Unauthenticated or forged sync deltas accepted"]
-    SE3["Client-side tampering of financial records wins"]
-    SE1 --- SE
-    SE2 --- SE
-    SE3 --- SE
+    PP --- PP1["Staff not trained on role-scoped screens and workflows"]
+    PP --- PP2["No onboarding for coordinators, agency staff, and claimants"]
+    PP --- PP3["Staff unfamiliar with offline-first field intake"]
 ```
+
+
+
+
+
 
 ## 4. Diagram Narrative
 
-**Fishbone anatomy.** Following the Ishikawa (fishbone) definition, the diagram analyzes the **effect** — operational feasibility of running KAPWA at MSWDO Norzagaray — by tracing it back to its **causes**, grouped under six **major categories** (bones): People, Process, Hardware & Connectivity, Data, Support & Maintenance, and Security. Each cause is a concrete operational factor; the functional requirements (FR-01..FR-12) are the mitigations the system implements for those causes. The cause-to-FR mapping follows.
+**Fishbone anatomy.** Following the Ishikawa (fishbone) definition, the diagram analyzes the **effect** — operational feasibility of running KAPWA at MSWDO Norzagaray — by tracing it back to its **causes**, grouped under six **major categories** (bones): People, Process, Hardware & Connectivity, Data, Support & Maintenance, and Security. The head sits at the top of the spine and every major bone aligns beneath it on the same axis, with the minor bones (causes) fanning out from each bone. Each cause is a concrete operational factor; the functional requirements (FR-01..FR-12) are the mitigations the system implements for those causes. The cause-to-FR mapping follows.
 
 | Category (bone) | Cause (minor bone) | Mitigation (FR) | Implementation |
 |---|---|---|---|
