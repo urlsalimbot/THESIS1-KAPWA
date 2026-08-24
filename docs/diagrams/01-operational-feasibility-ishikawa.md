@@ -4,7 +4,7 @@ This document captures the operational feasibility of running the KAPWA social w
 
 ## 1. Purpose
 
-Documents the operational feasibility factors for running KAPWA at the MSWDO Norzagaray office, expressed as a functional specification (FR-01..FR-12) and an Ishikawa (fishbone) diagram that traces each feasibility factor back to a concrete requirement and its implementation location in the repository.
+Documents the operational feasibility factors for running KAPWA at the MSWDO Norzagaray office, expressed as a functional specification (FR-01..FR-12) and a proper Ishikawa (fishbone) diagram — effect (head) at the right, spine, six major category bones, and minor bones listing the concrete causal factors, each mapped to the functional requirement that mitigates it and to its implementation location in the repository.
 
 ## 2. Functional Specification
 
@@ -25,87 +25,94 @@ Documents the operational feasibility factors for running KAPWA at the MSWDO Nor
 
 ## 3. Ishikawa Diagram (Mermaid)
 
+The fishbone is drawn left-to-right: the **effect (head)** sits at the right end; the **spine** is the horizontal axis; the six **major bones** (categories) branch off the spine; each category carries **minor bones** (causal factors) written as concrete cause statements. The FR mapping for every cause is given in Section 4.
+
 ```mermaid
 flowchart LR
-    C["Operational Feasibility"]
-    P["People"]
-    PR["Process"]
-    HW["Hardware and Connectivity"]
-    DT["Data"]
-    SU["Support and Maintenance"]
-    SE["Security"]
+    %% ===== HEAD (the effect under analysis) =====
+    HEAD["Operational Feasibility<br/>of KAPWA at MSWDO Norzagaray"]
 
-    P1["FR-02 Role-based access for all 7 roles"]
-    P2["FR-04 Seeded staff and claimant accounts"]
-    P3["FR-12 FSM role gates per case status"]
+    %% ===== SPINE (main axis; each category node sits on the spine) =====
+    SE["Security"] --- SU["Support &<br/>Maintenance"] --- DT["Data"] --- HW["Hardware &<br/>Connectivity"] --- PR["Process"] --- PP["People"] --- HEAD
 
-    R1["FR-05 Reproducible deploy via deploy.sh"]
-    R2["FR-09 Graceful shutdown hooks"]
-    R3["FR-12 Shared case FSM workflow"]
+    %% ===== PEOPLE — major bone + minor bones (causes) =====
+    PP1["Staff not trained on role-scoped screens and workflows"]
+    PP2["No onboarding for coordinators, agency staff, and claimants"]
+    PP3["Staff unfamiliar with offline-first field intake"]
+    PP1 --- PP
+    PP2 --- PP
+    PP3 --- PP
 
-    H1["FR-01 Offline sync queue"]
-    H2["FR-06 Connectivity resilience"]
-    H3["FR-07 Health endpoints"]
+    %% ===== PROCESS — major bone + minor bones (causes) =====
+    PR1["Case lifecycle not standardized across statuses"]
+    PR2["Manual redeploy steps cause long downtime for fixes"]
+    PR3["No controlled shutdown procedure for updates"]
+    PR1 --- PR
+    PR2 --- PR
+    PR3 --- PR
 
-    D1["FR-03 Database backups"]
-    D2["FR-04 Seeded reference data"]
-    D3["FR-10 Reject unknown meta fields"]
-    D4["FR-11 Financial-table server-wins"]
+    %% ===== HARDWARE & CONNECTIVITY — major bone + minor bones (causes) =====
+    HW1["Unstable connectivity at field sites"]
+    HW2["No offline capture queue for intake and case updates"]
+    HW3["No observability to detect wedged instances"]
+    HW1 --- HW
+    HW2 --- HW
+    HW3 --- HW
 
-    S1["FR-05 Deploy script for redeploys"]
-    S2["FR-07 Liveness and readiness probes"]
-    S3["FR-08 Client tsc gate"]
+    %% ===== DATA — major bone + minor bones (causes) =====
+    DT1["Empty database on first boot blocks day-one operation"]
+    DT2["No backup and restore path for a day's intake work"]
+    DT3["Conflicting offline updates corrupt financial records"]
+    DT4["Malformed sync payloads poison the data store"]
+    DT1 --- DT
+    DT2 --- DT
+    DT3 --- DT
+    DT4 --- DT
 
-    E1["FR-02 Role-based access control"]
-    E2["FR-10 Meta-field rejection"]
-    E3["FR-11 Server-wins conflict authority"]
+    %% ===== SUPPORT & MAINTENANCE — major bone + minor bones (causes) =====
+    SU1["Type errors ship to production without a typecheck gate"]
+    SU2["No health/readiness probes to detect outages"]
+    SU3["Environment drift between dev and production stacks"]
+    SU1 --- SU
+    SU2 --- SU
+    SU3 --- SU
 
-    C --- P
-    C --- PR
-    C --- HW
-    C --- DT
-    C --- SU
-    C --- SE
-
-    P --- P1
-    P --- P2
-    P --- P3
-
-    PR --- R1
-    PR --- R2
-    PR --- R3
-
-    HW --- H1
-    HW --- H2
-    HW --- H3
-
-    DT --- D1
-    DT --- D2
-    DT --- D3
-    DT --- D4
-
-    SU --- S1
-    SU --- S2
-    SU --- S3
-
-    SE --- E1
-    SE --- E2
-    SE --- E3
+    %% ===== SECURITY — major bone + minor bones (causes) =====
+    SE1["Role boundaries not enforced exposes sensitive data"]
+    SE2["Unauthenticated or forged sync deltas accepted"]
+    SE3["Client-side tampering of financial records wins"]
+    SE1 --- SE
+    SE2 --- SE
+    SE3 --- SE
 ```
 
 ## 4. Diagram Narrative
 
-**People.** The office runs on staff who must each see only what their job requires. FR-02 delivers role-based access for all seven roles (`admin`, `social_worker`, `coordinator`, `claimant`, `mayor`, `auditor`, `agency_staff`); FR-04 seeds accounts for those roles so logins work on day one; and FR-12 restricts which roles may advance a case through the FSM.
+**Fishbone anatomy.** Following the Ishikawa (fishbone) definition, the diagram analyzes the **effect** — operational feasibility of running KAPWA at MSWDO Norzagaray — by tracing it back to its **causes**, grouped under six **major categories** (bones): People, Process, Hardware & Connectivity, Data, Support & Maintenance, and Security. Each cause is a concrete operational factor; the functional requirements (FR-01..FR-12) are the mitigations the system implements for those causes. The cause-to-FR mapping follows.
 
-**Process.** Operations depend on repeatable workflow and controlled restarts. FR-05 makes deployment reproducible from `deploy.sh` + `docker-compose.yml`; FR-09 ensures `SIGTERM` drains in-flight work via graceful shutdown hooks; FR-12 defines the canonical case workflow (ENROLLED → ASSESSED → IN_REVIEW → ACTIVE → TRANSITIONING → CLOSED) in the shared FSM.
+| Category (bone) | Cause (minor bone) | Mitigation (FR) | Implementation |
+|---|---|---|---|
+| People | Staff not trained on role-scoped screens and workflows | FR-02 (role-based access) | `@Roles` guards + `role-access.ts` |
+| People | No onboarding for coordinators, agency staff, claimants | FR-04 (seeded accounts) | `seed-accounts.ts` |
+| People | Staff unfamiliar with offline-first field intake | FR-12 (FSM role gates) | `case-fsm.ts` |
+| Process | Case lifecycle not standardized | FR-12 (shared case FSM) | `case-fsm.ts` |
+| Process | Manual redeploy steps cause long downtime | FR-05 (reproducible deploy) | `deploy.sh` + `docker-compose.yml` |
+| Process | No controlled shutdown procedure for updates | FR-09 (graceful shutdown) | `enableShutdownHooks` in `main.ts` |
+| Hardware & Connectivity | Unstable connectivity at field sites | FR-06 (connectivity resilience) | `useConnectivity.ts`, offline queue |
+| Hardware & Connectivity | No offline capture queue for intake/case updates | FR-01 (offline sync queue) | `sync_queue` + `sync.service.ts` |
+| Hardware & Connectivity | No observability to detect wedged instances | FR-07 (health endpoints) | `/health`, `/health/live`, `/health/ready` |
+| Data | Empty database on first boot | FR-04 (seeded reference data) | `seed-accounts.ts`, `seed-programs.ts` |
+| Data | No backup and restore path | FR-03 (automated backups) | `infra/backup/backup.sh` |
+| Data | Conflicting offline updates corrupt financial records | FR-11 (financial server-wins) | `conflict-resolver.ts` |
+| Data | Malformed sync payloads poison the store | FR-10 (meta-field rejection) | `sync.service.ts` (S-06) |
+| Support & Maintenance | Type errors ship without a typecheck gate | FR-08 (client tsc gate) | `tsc --noEmit` in client build |
+| Support & Maintenance | No health/readiness probes to detect outages | FR-07 (health endpoints) | `/health/live`, `/health/ready` |
+| Support & Maintenance | Environment drift between dev and production | FR-05 (reproducible deploy) | `deploy.sh` env validation |
+| Security | Role boundaries not enforced exposes data | FR-02 (role-based access) | `@Roles`, `AbacGuard` |
+| Security | Unauthenticated or forged sync deltas accepted | FR-10 (meta-field rejection) | Ed25519 signature + `assertNoUnknownMetaFields` |
+| Security | Client-side tampering of financial records wins | FR-11 (financial server-wins) | `conflict-resolver.ts` |
 
-**Hardware and Connectivity.** Field use at MSWDO Norzagaray means phones and laptops lose signal. FR-01 queues offline changes in `sync_queue` and flushes them on reconnect; FR-06 requires the system to degrade gracefully rather than fail on network loss; FR-07 exposes `/health`, `/health/live`, and `/health/ready` so connectivity and process state are observable.
-
-**Data.** The office's intake records must survive and stay consistent. FR-03 backs up the database via `infra/backup/backup.sh` (pg_dump → MinIO with rotation); FR-04 seeds reference data (programs with categories and fund sources) so forms and lookups work without manual entry; FR-10 rejects unknown meta fields in sync payloads so bad client data cannot poison the store; FR-11 applies server-wins resolution to financial tables so voucher and financial rows keep a single authoritative version.
-
-**Support and Maintenance.** Sustained operation needs redeploys, monitoring, and quality gates. FR-05's deploy script makes redeploys a single reproducible command; FR-07's liveness/readiness probes let the proxy and ops staff detect a wedged instance; FR-08's client `tsc --noEmit` gate keeps type errors out of shipped builds.
-
-**Security.** Operational trust rests on authentication and data-integrity controls. FR-02 enforces role boundaries at every endpoint; FR-10's rejection of unknown meta fields complements the Ed25519 signature check in `sync.service.ts` so only authenticated, well-formed deltas are applied; FR-11's server-wins policy prevents client-side tampering of financial records from winning over the server copy.
+**Reading the fishbone.** The effect is operationally feasible when each cause is neutralized by its mitigation: staff see only their role's screens (FR-02, FR-04) and follow a standardized case workflow (FR-12); deployments are reproducible and controlled (FR-05, FR-09); field connectivity loss degrades to offline capture rather than failure (FR-01, FR-06), with health probes making state observable (FR-07); data survives via backups and seeds (FR-03, FR-04) and stays consistent under conflict (FR-11) and malformed input (FR-10); quality gates and probes sustain the running system (FR-08, FR-07); and security controls keep access, sync, and financial records trustworthy (FR-02, FR-10, FR-11).
 
 ## 5. Cross-References
 
