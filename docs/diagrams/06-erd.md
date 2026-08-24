@@ -27,11 +27,17 @@ Documents the logical data model of the Kapwa system — the entities, their rel
 | FR-15 | Incident report cases SHALL reference a social welfare case (`irf_cases.case_id`) and carry a unique `blotter_entry_number`. |
 | FR-16 | `access_card_seq` and `irf_blotter_seq` SHALL provide SERIAL numbering per `year` for access card codes and blotter entry numbers respectively. |
 
-## 3. Entity Relationship Diagram (Mermaid)
+## 3. Entity Relationship Diagrams (Mermaid)
+
+**Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
+
+
+The full data model is split into ten cluster diagrams so each fits a letter-size page when printed. Each cluster shows complete entity definitions and the relationships **within** that cluster; cross-cluster relationships are described in Section 4 (Diagram Narrative) rather than drawn, so the diagrams stay page-sized. The full single-page model is documented in `DB-SCHEMA.md`.
+
+### C1 — Identity (persons & users)
 
 ```mermaid
 erDiagram
-    %% Identity & Households
     "persons" {
         uuid id PK
         text surname
@@ -49,7 +55,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-"users" {
+    "users" {
         uuid id PK
         text email UK
         text password
@@ -64,6 +70,13 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
+    "persons" ||--o{ "users" : "has account via person_id"
+```
+
+### C1b — Households & Beneficiary Roles
+
+```mermaid
+erDiagram
     beneficiaries {
         uuid id PK
         uuid person_id FK
@@ -116,8 +129,18 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
+    "persons" ||--o{ beneficiaries : "registered as"
+    "persons" ||--o{ household_memberships : "member of"
+    "persons" ||--o{ beneficiary_claimants : "beneficiary of"
+    "persons" ||--o{ beneficiary_roles : "holds roles"
+    households o|--o{ beneficiaries : "groups"
+    households o|--o{ household_memberships : "groups"
+```
 
-    %% Cases & Interventions
+### C2 — Cases, History & Interventions
+
+```mermaid
+erDiagram
     "cases" {
         uuid id PK
         text control_no UK
@@ -141,7 +164,7 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-case_history {
+    case_history {
         uuid id PK
         text case_id FK
         text from_status
@@ -167,6 +190,14 @@ case_history {
         timestamp created_at
         timestamp updated_at
     }
+    "cases" ||--o{ case_history : "status transitions"
+    "cases" ||--o{ case_interventions : "delivers"
+```
+
+### C2b — Reports & Documents
+
+```mermaid
+erDiagram
     csr_reports {
         uuid id PK
         uuid case_id FK
@@ -228,8 +259,16 @@ case_history {
         timestamp created_at
         timestamp updated_at
     }
+    "cases" ||--o{ csr_reports : "generates"
+    "cases" o|--o{ irf_cases : "blotter"
+    "cases" o|--o{ document_vault : "attaches documents"
+    case_interventions ||--o| physical_files : "stored in"
+```
 
-    %% Programs
+### C4 — Programs
+
+```mermaid
+erDiagram
     programs {
         uuid id PK
         text name
@@ -252,7 +291,13 @@ case_history {
         int version
         timestamp created_at
     }
-%% Referrals & Agencies
+    programs ||--o{ form_version_history : "versions"
+```
+
+### C5 — Referrals & Agencies
+
+```mermaid
+erDiagram
     referrals {
         uuid id PK
         uuid coordinator_id FK
@@ -295,8 +340,14 @@ case_history {
         timestamp created_at
         timestamp updated_at
     }
+    agencies ||--o{ inter_agency_referrals : "from agency"
+    agencies ||--o{ inter_agency_referrals : "to agency"
+```
 
-    %% Access Cards
+### C6 — Access Cards
+
+```mermaid
+erDiagram
     access_card_services {
         uuid id PK
         text access_card_code
@@ -311,8 +362,17 @@ case_history {
         uuid logged_by FK
         text source_barangay
     }
+    access_card_seq {
+        serial id PK
+        int year
+        timestamp created_at
+    }
+```
 
-    %% Sync
+### C7 — Sync
+
+```mermaid
+erDiagram
     sync_queue {
         uuid id PK
         text device_id
@@ -343,7 +403,12 @@ case_history {
         jsonb result
         timestamp created_at
     }
-%% Messaging
+```
+
+### C8 — Messaging
+
+```mermaid
+erDiagram
     chat_messages {
         uuid id PK
         text sender_id
@@ -379,8 +444,12 @@ case_history {
         timestamp created_at
         timestamp updated_at
     }
+```
 
-    %% Audit & Sequences
+### C9 — Audit & Sequences
+
+```mermaid
+erDiagram
     consent_ledger {
         uuid id PK
         uuid beneficiary_id FK
@@ -418,67 +487,30 @@ case_history {
         timestamp created_at
         timestamp updated_at
     }
-    access_card_seq {
-        serial id PK
-        int year
-        timestamp created_at
-    }
     irf_blotter_seq {
         serial id PK
         int year
         timestamp created_at
     }
-%% Relationships
-    "persons" ||--o{ "users" : "has account via person_id"
-    "persons" ||--o{ beneficiaries : "registered as"
-    "persons" ||--o{ household_memberships : "member of"
-    "persons" ||--o{ beneficiary_claimants : "beneficiary of"
-    "persons" ||--o{ beneficiary_claimants : "claims as"
-    "persons" ||--o{ beneficiary_roles : "holds roles"
-    "persons" ||--o{ inter_agency_referrals : "referred person"
-    households o|--o{ beneficiaries : "groups"
-    households o|--o{ household_memberships : "groups"
-    beneficiaries o|--o{ "cases" : "opens case"
-    beneficiaries o|--o{ document_vault : "owns documents"
-    beneficiaries o|--o{ consent_ledger : "consent events"
-    beneficiaries o|--o{ access_card_services : "card code services"
-    "users" o|--o{ "cases" : "assigned worker"
-    "users" ||--o{ referrals : "coordinator"
-    "users" o|--o{ access_card_services : "logged by"
-    "users" o|--o{ inter_agency_referrals : "created by"
-    "cases" ||--o{ case_history : "status transitions"
-    "cases" ||--o{ case_interventions : "delivers"
-    "cases" ||--o{ csr_reports : "generates"
-    "cases" o|--o{ referrals : "targets"
-    "cases" o|--o{ irf_cases : "blotter"
-    "cases" o|--o{ inter_agency_referrals : "originates"
-    "cases" o|--o{ document_vault : "attaches documents"
-    case_interventions o|--o{ access_card_services : "traces"
-    case_interventions ||--o| physical_files : "stored in"
-    programs o|--o{ case_interventions : "serves"
-    programs ||--o{ form_version_history : "versions"
-    agencies ||--o{ inter_agency_referrals : "from agency"
-    agencies ||--o{ inter_agency_referrals : "to agency"
-    agencies o|--o{ access_card_services : "service agency"
 ```
 
-> **Note on scope**: the diagram covers all 29 active tables documented in `DB-SCHEMA.md` and adds `inter_agency_referrals`, `physical_files`, and `agencies` — active tables defined only in their TypeORM entities (`inter-agency-referral.entity.ts`, `physical-file.entity.ts`, `agency.entity.ts`), required by FR-06 and FR-11 and by the FK columns `access_card_services.agency_id`, `inter_agency_referrals.from_agency_id` / `.to_agency_id`.
-
 ## 4. Diagram Narrative
+
+Cross-cluster relationships that are not drawn (to keep each diagram page-sized) are described here in text, e.g. `beneficiaries o|--o{ cases` (C1 → C2), `users o|--o{ cases` (C1 → C2), `programs o|--o{ case_interventions` (C3 → C2), `beneficiaries o|--o{ consent_ledger` (C1 → C8), and the access-card links from `beneficiaries`, `users`, `case_interventions`, and `agencies` into C5.
 **Identity & Households (FR-01, FR-02, FR-13, FR-14).** `persons` is the single identity root: every beneficiary, claimant, user, and coordinator is ultimately a `persons` row. `beneficiaries` narrows a person into a welfare beneficiary (`persons ||--o{ beneficiaries`); `users` links an account to a person via `users.person_id` (`persons ||--o{ users`); `beneficiary_claimants` pairs two persons — a beneficiary and a claimant, each via `persons ||--o{ beneficiary_claimants`; `beneficiary_roles` records role/consent/card attributes per person. `households` groups persons through `household_memberships` (`households o|--o{ household_memberships`, `persons ||--o{ household_memberships`); the partial unique index on `(person_id, household_id) WHERE household_id IS NOT NULL` enforces FR-02, so a person belongs to at most one household. `beneficiaries.household_id` also points directly at a household (`households o|--o{ beneficiaries`).
 
 **Cases & Interventions (FR-03, FR-04, FR-05, FR-11, FR-15).** `cases` is the social-welfare workflow hub: it belongs to a beneficiary (`beneficiaries o|--o{ cases`), is staffed by a user via `assigned_worker_id` (`users o|--o{ cases`), and its `status` CHECK constraint drives the case FSM. Every transition is appended to `case_history` (`cases ||--o{ case_history`) with `from_status` / `to_status` / `transition_type`. Delivered services live in `case_interventions` (`cases ||--o{ case_interventions`), optionally tied to a `program` (`programs o|--o{ case_interventions`). `csr_reports` and `document_vault` hang off `cases`; `physical_files` maps a physical cabinet/folder/shelf location one-to-one to an intervention (`case_interventions ||--o| physical_files`, UNIQUE `intervention_id`); `irf_cases` links an incident/blotter to a case (`cases o|--o{ irf_cases`) with a unique `blotter_entry_number`.
 
-**Programs (FR-12).** `programs` defines social service programs with a JSONB `form_template` and a current `form_version`; every template version is snapshotted into `form_version_history` (`programs ||--o{ form_version_history`, FK `program_id` ON DELETE CASCADE), supporting FR-12 versioning.
-**Referrals & Agencies (FR-06).** Two referral flows exist: barangay coordinator intake in `referrals` (`users ||--o{ referrals` by `coordinator_id`, optionally targeting a `case`), and the inter-agency workflow in `inter_agency_referrals`, which links a `person`, a `case`, `from_agency_id` / `to_agency_id` agencies (`agencies ||--o{ inter_agency_referrals` on both sides), is created by a `user` (`created_by`), and rides the CHECK-constrained lifecycle `referred` → `received` → `actioned` → `closed` / `declined`.
+**Programs (FR-12) — C4.** `programs` defines social service programs with a JSONB `form_template` and a current `form_version`; every template version is snapshotted into `form_version_history` (`programs ||--o{ form_version_history`, FK `program_id` ON DELETE CASCADE), supporting FR-12 versioning.
+**Referrals & Agencies (FR-06) — C5.** Two referral flows exist: barangay coordinator intake in `referrals` (`users ||--o{ referrals` by `coordinator_id`, optionally targeting a `case`), and the inter-agency workflow in `inter_agency_referrals`, which links a `person`, a `case`, `from_agency_id` / `to_agency_id` agencies (`agencies ||--o{ inter_agency_referrals` on both sides), is created by a `user` (`created_by`), and rides the CHECK-constrained lifecycle `referred` → `received` → `actioned` → `closed` / `declined`.
 
-**Access Cards (FR-07).** `access_card_services` logs services delivered per card code. The code itself is unique on `beneficiaries.access_card_code`, so `access_card_services` links logically to the beneficiary via `access_card_code` (`beneficiaries o|--o{ access_card_services`; there is no FK on the text code). It also traces to the originating `intervention` (`case_interventions o|--o{ access_card_services`), the responsible `user` (`logged_by`), and an optional `agency` (`agencies o|--o{ access_card_services`).
+**Access Cards (FR-07) — C6.** `access_card_services` logs services delivered per card code. The code itself is unique on `beneficiaries.access_card_code`, so `access_card_services` links logically to the beneficiary via `access_card_code` (`beneficiaries o|--o{ access_card_services`; there is no FK on the text code). It also traces to the originating `intervention` (`case_interventions o|--o{ access_card_services`), the responsible `user` (`logged_by`), and an optional `agency` (`agencies o|--o{ access_card_services`).
 
-**Sync (FR-09).** `sync_queue` accumulates offline changes per device/table with an `operation`, a `status` (pending/applied/conflict/failed), and an `idempotency_key`; `version_vectors` keeps per-device `local_version` / `server_version` counters (UNIQUE `device_id, table_name`); `idempotency_keys` deduplicates replayed operations by unique `key`. These three tables stand alone — they reference logical targets (`table_name`, `record_id`) rather than FK columns.
+**Sync (FR-09) — C7.** `sync_queue` accumulates offline changes per device/table with an `operation`, a `status` (pending/applied/conflict/failed), and an `idempotency_key`; `version_vectors` keeps per-device `local_version` / `server_version` counters (UNIQUE `device_id, table_name`); `idempotency_keys` deduplicates replayed operations by unique `key`. These three tables stand alone — they reference logical targets (`table_name`, `record_id`) rather than FK columns.
 
-**Messaging (FR-08).** `chat_messages` and `notifications` address recipients by ID (`recipient_id` TEXT, logical reference to `users` / `persons`). `notification_preferences` controls per-user opt-in per channel/category, unique on `(user_id, channel, category)` — the index behind FR-08.
+**Messaging (FR-08) — C8.** `chat_messages` and `notifications` address recipients by ID (`recipient_id` TEXT, logical reference to `users` / `persons`). `notification_preferences` controls per-user opt-in per channel/category, unique on `(user_id, channel, category)` — the index behind FR-08.
 
-**Audit & Sequences (FR-10, FR-15, FR-16).** `consent_ledger` is append-only: consent grants and revocations accumulate as rows, with `hash` / `prev_hash` forming an audit hash chain (FR-10); `otp_codes` and `audit_log` are supporting audit/verification tables. `intervention_types` is a code reference table (FA/C/CSR/R/H/HV/Other). `access_card_seq` and `irf_blotter_seq` are SERIAL-per-year counters (FR-16) used to mint unique `access_card_code` and `blotter_entry_number` values (FR-15).
+**Audit & Sequences (FR-10, FR-15, FR-16) — C9.** `consent_ledger` is append-only: consent grants and revocations accumulate as rows, with `hash` / `prev_hash` forming an audit hash chain (FR-10); `otp_codes` and `audit_log` are supporting audit/verification tables. `intervention_types` is a code reference table (FA/C/CSR/R/H/HV/Other). `access_card_seq` and `irf_blotter_seq` are SERIAL-per-year counters (FR-16) used to mint unique `access_card_code` and `blotter_entry_number` values (FR-15).
 
 ## 5. Cross-References
 

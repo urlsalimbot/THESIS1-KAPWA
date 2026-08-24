@@ -29,6 +29,9 @@ Documents the 4 core end-to-end flows (auth, intake, case FSM lifecycle, inter-a
 
 ## 3. Sequence Diagrams (Mermaid)
 
+**Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
+
+
 ### S1 — Auth: login, MFA challenge, single-flight refresh
 
 ```mermaid

@@ -26,6 +26,9 @@ Documents the production droplet topology — five containers (db, api, minio, c
 
 ## 3. Deployment Diagram (Mermaid)
 
+**Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
+
+
 ```mermaid
 flowchart LR
   subgraph Droplet["Droplet — Ubuntu 24.04 (Docker + Docker Compose)"]

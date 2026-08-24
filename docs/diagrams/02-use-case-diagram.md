@@ -31,75 +31,87 @@ Maps every actor — guest, claimant, social_worker, coordinator, admin, mayor, 
 | FR-19 | Notification preferences: read and update per-role preferences (`GET|PUT /notifications/preferences`, `PUT /notifications/preferences/bulk`). |
 | FR-20 | Admin wipe/reset: remote wipe a device or user session and list registered devices (`admin/wipe` controller, `@Roles('admin')`). |
 
-## 3. Use Case Diagram (Mermaid)
+## 3. Use Case Diagrams (Mermaid)
+
+**Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
+
+
+The use case model is split into three letter-sized diagrams by actor group.
+
+### U1 — Public, Authentication & Claimant Self-Service
 
 ```mermaid
 flowchart LR
     A1["guest"]
     A2["claimant"]
-    A3["social_worker"]
-    A4["coordinator"]
-    A5["admin"]
-    A6["mayor"]
-    A7["auditor"]
-    A8["agency_staff"]
 
     subgraph Auth[AUTH]
-        direction TB
+        direction LR
         UC-A1["View landing page and public announcements"]
         UC-A2["Register and verify email"]
         UC-A3["Login with MFA when enabled"]
         UC-A4["MFA setup and account settings"]
     end
 
+    subgraph Beneficiaries[BENEFICIARIES - CLAIMANT SELF-SERVICE]
+        direction LR
+        UC-B1["Claimant dashboard and self-service (card, services, consent)"]
+        UC-C3["View own service history"]
+        UC-AC3["View own access card"]
+    end
+
+    subgraph MessagingMine[MESSAGING - CLAIMANT]
+        direction LR
+        UC-M1C["Chat"]
+        UC-M2C["View and manage notifications"]
+        UC-M3C["Notification preferences"]
+    end
+
+    A1 --> UC-A1
+    A1 --> UC-A2
+    A1 --> UC-A3
+    A2 --> UC-A4
+    A2 --> UC-B1
+    A2 --> UC-C3
+    A2 --> UC-AC3
+    A2 --> UC-M1C
+    A2 --> UC-M2C
+    A2 --> UC-M3C
+```
+
+### U2 — MSWDO Staff (Social Worker, Coordinator, Admin, Mayor, Auditor)
+
+```mermaid
+flowchart LR
+    A3["social_worker"]
+    A4["coordinator"]
+    A5["admin"]
+    A6["mayor"]
+    A7["auditor"]
+
     subgraph Intake[INTAKE]
-        direction TB
+        direction LR
         UC-I1["Create intake"]
         UC-I2["Review intake requests"]
         UC-I3["File referral from intake"]
     end
 
-    subgraph Cases[CASES]
-        direction TB
+    subgraph Cases[CASES & BENEFICIARIES]
+        direction LR
         UC-C1["Assess cases and log interventions"]
         UC-C2["Track case status"]
-        UC-C3["View own service history"]
         UC-C4["Manage physical files"]
-    end
-
-    subgraph Beneficiaries[BENEFICIARIES]
-        direction TB
-        UC-B1["Claimant dashboard and self-service (card, services, consent)"]
         UC-B2["Manage beneficiary records"]
     end
 
-    subgraph Referrals[REFERRALS]
-        direction TB
-        UC-R1["File referrals (barangay)"]
-        UC-R2["Review, accept or decline referrals"]
-        UC-R3["Track referral status"]
-    end
-
-    subgraph InterAgency[INTER-AGENCY]
-        direction TB
-        UC-IA1["View agency dashboard and referrals"]
-        UC-IA2["View access-card activities"]
-    end
-
-    subgraph Programs[PROGRAMS]
-        direction TB
-        UC-P1["Manage programs"]
-    end
-
     subgraph AccessCards[ACCESS CARDS]
-        direction TB
+        direction LR
         UC-AC1["Assign and manage access cards"]
         UC-AC2["Log access-card activity"]
-        UC-AC3["View own access card"]
     end
 
-    subgraph ReportsAudit[REPORTS AND AUDIT]
-        direction TB
+    subgraph ReportsAudit[REPORTS, AUDIT & OUTPUTS]
+        direction LR
         UC-RA1["View reports and dashboard"]
         UC-RA2["Export fund utilization"]
         UC-RA3["View audit logs and export data"]
@@ -107,33 +119,11 @@ flowchart LR
     end
 
     subgraph Admin[ADMIN]
-        direction TB
+        direction LR
         UC-AD1["Manage users, programs, agencies, announcements"]
         UC-AD2["Wipe or reset device sessions"]
+        UC-P1["Manage programs"]
     end
-
-    subgraph Messaging[MESSAGING AND NOTIFICATIONS]
-        direction TB
-        UC-M1["Chat"]
-        UC-M2["View and manage notifications"]
-        UC-M3["Notification preferences"]
-    end
-
-    subgraph Sync[SYNC]
-        direction TB
-        UC-S1["Offline sync for field workers"]
-    end
-
-    A1 --> UC-A1
-    A1 --> UC-A2
-    A1 --> UC-A3
-    A2 --> UC-A4
-    A3 --> UC-A4
-    A4 --> UC-A4
-    A5 --> UC-A4
-    A6 --> UC-A4
-    A7 --> UC-A4
-    A8 --> UC-A4
 
     A3 --> UC-I1
     A5 --> UC-I1
@@ -149,24 +139,11 @@ flowchart LR
     A5 --> UC-C2
     A6 --> UC-C2
     A7 --> UC-C2
-    A2 --> UC-C3
     A3 --> UC-C4
     A4 --> UC-C4
     A5 --> UC-C4
-
-    A2 --> UC-B1
     A3 --> UC-B2
     A5 --> UC-B2
-
-    A4 --> UC-R1
-    A3 --> UC-R2
-    A5 --> UC-R2
-    A4 --> UC-R3
-
-    A8 --> UC-IA1
-    A8 --> UC-IA2
-
-    A5 --> UC-P1
 
     A3 --> UC-AC1
     A4 --> UC-AC1
@@ -174,8 +151,6 @@ flowchart LR
     A3 --> UC-AC2
     A4 --> UC-AC2
     A5 --> UC-AC2
-    A8 --> UC-AC2
-    A2 --> UC-AC3
 
     A6 --> UC-RA1
     A6 --> UC-RA2
@@ -186,6 +161,52 @@ flowchart LR
 
     A5 --> UC-AD1
     A5 --> UC-AD2
+    A5 --> UC-P1
+```
+
+### U3 — Coordinators, Agencies & Sync
+
+```mermaid
+flowchart LR
+    A4["coordinator"]
+    A8["agency_staff"]
+    A3["social_worker"]
+    A5["admin"]
+    A2["claimant"]
+    A7["auditor"]
+
+    subgraph Referrals[REFERRALS]
+        direction LR
+        UC-R1["File referrals (barangay)"]
+        UC-R2["Review, accept or decline referrals"]
+        UC-R3["Track referral status"]
+    end
+
+    subgraph InterAgency[INTER-AGENCY]
+        direction LR
+        UC-IA1["View agency dashboard and referrals"]
+        UC-IA2["View access-card activities"]
+    end
+
+    subgraph Messaging[MESSAGING AND NOTIFICATIONS]
+        direction LR
+        UC-M1["Chat"]
+        UC-M2["View and manage notifications"]
+        UC-M3["Notification preferences"]
+    end
+
+    subgraph Sync[SYNC]
+        direction LR
+        UC-S1["Offline sync for field workers"]
+    end
+
+    A4 --> UC-R1
+    A3 --> UC-R2
+    A5 --> UC-R2
+    A4 --> UC-R3
+
+    A8 --> UC-IA1
+    A8 --> UC-IA2
 
     A2 --> UC-M1
     A3 --> UC-M1

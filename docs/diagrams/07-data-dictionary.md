@@ -36,6 +36,9 @@ The functional requirements below cover all active tables:
 
 ## 3. Tables
 
+**Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
+
+
 ### 1. persons — Unified person records (core identity table)
 
 The single identity root of the system: every beneficiary, claimant, user, and coordinator is ultimately a `persons` row.

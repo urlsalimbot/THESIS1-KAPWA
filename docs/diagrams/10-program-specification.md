@@ -508,6 +508,9 @@ Documents the program-level specification of the KAPWA MSWDO social welfare syst
 
 ## 3. Module Dependency Overview (Mermaid)
 
+**Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
+
+
 Edges represent module imports (solid) and data/FK relationships (where noted).
 
 ```mermaid
