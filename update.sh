@@ -12,7 +12,19 @@ cd "$(dirname "$0")"
 
 echo "=== Kapwa Update ==="
 echo ""
-COMPOSE="docker compose -f kapwa-server/docker-compose.yml"
+
+# Engine detection: prefer the docker daemon when available, otherwise fall
+# back to podman-compose (e.g. local stacks where the docker daemon is down).
+if docker info >/dev/null 2>&1; then
+  COMPOSE=(docker compose -f kapwa-server/docker-compose.yml)
+  EXEC=(docker exec)
+  echo "Using engine: docker compose"
+else
+  COMPOSE=(podman-compose -f kapwa-server/docker-compose.yml)
+  EXEC=(podman exec)
+  echo "Using engine: podman-compose"
+fi
+echo ""
 
 # 1. Validate .env.production
 if [ ! -f infra/.env.production ]; then
@@ -28,12 +40,17 @@ echo ""
 
 # 3. Rebuild api + client images (db, minio, caddy unchanged)
 echo "[2/4] Rebuilding api and client images..."
-$COMPOSE build --pull api client
+if docker info >/dev/null 2>&1; then
+  "${COMPOSE[@]}" build --pull api client
+else
+  # podman-compose's --pull takes a value (missing = pull base images only when absent)
+  "${COMPOSE[@]}" build --pull=missing api client
+fi
 echo ""
 
 # 4. Recreate changed containers (existing volumes preserved)
 echo "[3/4] Restarting updated containers..."
-$COMPOSE up -d --no-deps api client
+"${COMPOSE[@]}" up -d --no-deps api client
 echo ""
 
 # 5. Wait for API health through Caddy
@@ -45,7 +62,7 @@ for i in $(seq 1 30); do
   fi
   if [ "$i" -eq 30 ]; then
     echo "  WARNING: API did not become healthy within 60s."
-    echo "  Check logs: $COMPOSE logs api"
+    echo "  Check logs: ${COMPOSE[@]} logs api"
   fi
   sleep 2
 done
@@ -53,11 +70,11 @@ done
 # 6. Run pending migrations (never auto-seed — seeds truncate data)
 echo ""
 echo "  Running pending migrations..."
-if docker exec kapwa-api node dist/database/migrate.js 2>/dev/null; then
+if "${EXEC[@]}" kapwa-api node dist/database/migrate.js 2>/dev/null; then
   echo "  Migrations applied."
 else
   echo "  WARNING: Migration command failed. Check if dist/ is built."
-  echo "  Manual: docker exec kapwa-api npm run migration:run"
+  echo "  Manual: ${EXEC[@]} kapwa-api npm run migration:run"
 fi
 
 echo ""
@@ -66,4 +83,4 @@ echo "  App:    http://localhost:8090"
 echo "  Swagger: http://localhost:8090/api/docs"
 echo ""
 echo "To reseed from scratch (WARNING: erases all data):"
-echo "  docker exec kapwa-api node dist/database/seed-comprehensive.js"
+echo "  ${EXEC[@]} kapwa-api node dist/database/seed-comprehensive.js"

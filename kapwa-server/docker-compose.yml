@@ -95,7 +95,9 @@ services:
     expose:
       - "80"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      # busybox wget resolves localhost to ::1 and does not fall back to IPv4;
+      # nginx listens IPv4-only here, so probe the explicit loopback address.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
       interval: 15s
       timeout: 5s
       retries: 3
