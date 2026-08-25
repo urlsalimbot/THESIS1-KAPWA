@@ -598,6 +598,8 @@ const en = {
     "logActivity": "Log Activity",
     "logFailed": "Failed to log activity",
     "logging": "Logging...",
+    "incomingReferrals": "Incoming Inter-Agency Referrals",
+    "noIncomingReferrals": "No incoming inter-agency referrals",
     "noReferrals": "No referrals yet.",
     "noServices": "No services logged yet.",
     "person": "Person",

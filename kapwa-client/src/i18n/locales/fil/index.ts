@@ -1086,6 +1086,8 @@ const fil: EnLocale = {
     "logActivity": "Itala ang Aktibidad",
     "logFailed": "Nabigo ang pagtala ng aktibidad",
     "logging": "Nagtatala...",
+    "incomingReferrals": "Mga Papasok na Inter-Agency Referral",
+    "noIncomingReferrals": "Walang papasok na inter-agency referral",
     "noReferrals": "Wala pang referral.",
     "noServices": "Wala pang naitalang serbisyo.",
     "person": "Tao",

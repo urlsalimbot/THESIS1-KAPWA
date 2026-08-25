@@ -13,6 +13,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { DataTable } from '@/components/data-table';
+import { IncomingInterAgencyReferrals } from '@/components/referrals/IncomingInterAgencyReferrals';
 import { Plus, Send, Check, X, Inbox, Loader2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -294,6 +295,8 @@ function WorkerReferralView() {
           </div>
         </Card>
       )}
+
+      <IncomingInterAgencyReferrals />
 
       <Dialog open={!!declineModal} onOpenChange={(open) => { if (!open) { setDeclineModal(null); setDeclineReason(''); } }}>
         <DialogContent>
