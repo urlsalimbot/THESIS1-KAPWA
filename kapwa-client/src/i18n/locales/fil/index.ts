@@ -630,6 +630,7 @@ const fil: EnLocale = {
     "generating": "Nag-ge-generate...",
     "household": "Sambahayan",
     "incidentReports": "Mga Ulat ng Insidente",
+    "interAgencyReferrals": "Mga Referral sa Pagitan ng mga Ahensya",
     "loadFailed": "Hindi ma-load ang mga kaso",
     "loadFailedMessage": "Suriin ang iyong koneksyon sa internet at subukang muli.",
     "loading": "Naglo-load...",
@@ -664,7 +665,8 @@ const fil: EnLocale = {
     "documents": "Mga Dokumento",
     "download": "I-download",
     "downloadFailed": "Nabigo ang pag-download",
-    "noDocuments": "Walang kalakip na dokumento sa kasong ito."
+    "noDocuments": "Walang kalakip na dokumento sa kasong ito.",
+    "noInterAgencyReferrals": "Walang inter-agency referral para sa kasong ito."
   },
   "intake": {
     "addAnotherBatch": "Magdagdag ng isa pang miyembro ng pamilya bilang isang batch?",

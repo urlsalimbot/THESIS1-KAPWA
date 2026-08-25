@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { statusLabel } from '@/i18n/display';
+import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
-import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock } from 'lucide-react';
+import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock, Send, ExternalLink } from 'lucide-react';
 import { api, downloadCsrPdf, downloadCertificate, downloadFilingDoc, type CertificateType } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDate, formatDateTime } from '../lib/format';
@@ -19,6 +19,7 @@ import { StepImplementHIP } from '@/components/case-view/StepImplementHIP';
 import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDelivery';
 import { StepTransition } from '@/components/case-view/StepTransition';
 import { StepClosure } from '@/components/case-view/StepClosure';
+import { InterAgencyReferral } from '@/components/referrals/referral-utils';
 
 const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   enrolled: 'outline',
@@ -70,6 +71,10 @@ export function CaseViewPage() {
   );
   const { data: documents = [] } = useSWR<any[]>(
     id ? queryKeys.filing.byCase(id) : null,
+  );
+  const { data: iarReferrals, isLoading: iarLoading } = useSWR(
+    id ? queryKeys.interAgencyReferrals.byCase(id) : null,
+    (key) => api.get<InterAgencyReferral[]>(key),
   );
 
   useEffect(() => {
@@ -442,6 +447,46 @@ export function CaseViewPage() {
               </div>
             </div>
           )}
+
+          {/* Inter-Agency Referrals card */}
+          <div className="rounded-lg border bg-card">
+            <div className="px-4 py-3 flex items-center gap-3">
+              <Send size={20} className="text-primary" />
+              <h3 className="text-sm font-semibold">{t('cases.interAgencyReferrals', 'Inter-Agency Referrals')}</h3>
+            </div>
+            <Separator />
+            <div className="px-4 py-3 space-y-2">
+              {iarLoading ? (
+                <p className="text-xs text-muted-foreground">{t('cases.loadingCase', 'Loading case...')}</p>
+              ) : (iarReferrals || []).length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('cases.noInterAgencyReferrals', 'No inter-agency referrals for this case')}</p>
+              ) : (
+                (iarReferrals || []).map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => navigate(`/agency/referrals/${r.id}`)}
+                    className="w-full text-left rounded-md border border-border/60 px-3 py-2 hover:bg-muted/50 transition-colors"
+                    aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id })}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {r.fromAgency?.name || r.fromAgencyId} → {r.toAgency?.name || r.toAgencyId}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant={r.status === 'declined' ? 'destructive' : 'default'}>{referralStatusLabel(t, r.status)}</Badge>
+                        <ExternalLink size={14} className="text-muted-foreground" />
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
 
           {/* Claimant card */}
           {caseData?.claimant && (
