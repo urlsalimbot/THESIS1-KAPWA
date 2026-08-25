@@ -79,4 +79,20 @@ describe('CoordinatorDashboardPage', () => {
     await user.click(screen.getByRole('button', { name: 'Verify Card' }));
     expect(await screen.findByText(/Card not found/)).toBeTruthy();
   });
+
+  it('hides MSWDO-only stats and case search for coordinators', async () => {
+    render(<MemoryRouter><CoordinatorDashboardPage /></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Coordinator Dashboard' });
+    expect(screen.queryByText('Served Today')).toBeNull();
+    expect(screen.queryByText('Pending Cases')).toBeNull();
+    expect(screen.queryByText('Quick Case Search')).toBeNull();
+  });
+
+  it('keeps coordinator-relevant stats and quick scan', async () => {
+    render(<MemoryRouter><CoordinatorDashboardPage /></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Coordinator Dashboard' });
+    expect(screen.getByText('My Referrals')).toBeTruthy();
+    expect(screen.getAllByText('Messages').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByLabelText(/access card code/i)).toBeDefined();
+  });
 });
