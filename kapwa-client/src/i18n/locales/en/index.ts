@@ -1772,6 +1772,7 @@ const en = {
     "searching": "Searching...",
     "selectAgency": "Select agency...",
     "toAgency": "To Agency *",
+    "viewDetailsAria": "View details for {{name}}",
   },
   "reports": {
     "exportFailed": "Export failed",
