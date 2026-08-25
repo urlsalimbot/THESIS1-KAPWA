@@ -111,6 +111,18 @@ export class InterAgencyReferralsService {
     });
   }
 
+  async findOne(id: string, caller: User): Promise<InterAgencyReferral> {
+    const ref = await this.repo.findOne({
+      where: { id },
+      relations: ['fromAgency', 'toAgency', 'person', 'case'],
+    });
+    if (!ref) throw new NotFoundException('Inter-agency referral not found');
+    if (caller.role === 'admin') return ref;
+    if (caller.agencyId && (ref.fromAgencyId === caller.agencyId || ref.toAgencyId === caller.agencyId)) return ref;
+    if (caller.role === UserRole.SW && ref.createdBy === caller.id) return ref;
+    throw new NotFoundException('Inter-agency referral not found');
+  }
+
   async findByPerson(personId: string, caller: User) {
     const scoped = await this.findInbox(caller);
     return scoped.filter(r => r.personId === personId);

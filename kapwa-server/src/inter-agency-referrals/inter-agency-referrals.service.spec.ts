@@ -157,6 +157,39 @@ describe('InterAgencyReferralsService', () => {
     });
   });
 
+  describe('findOne', () => {
+    const baseRef = { id: 'r1', fromAgencyId: 'ag-1', toAgencyId: 'ag-2', status: 'referred', personId: 'p1', createdBy: 'u1' };
+
+    it('returns the referral for a participating agency', async () => {
+      repoMock.findOne.mockResolvedValue({ ...baseRef, fromAgency: { id: 'ag-1' }, toAgency: { id: 'ag-2' }, person: { id: 'p1' } });
+      const result = await service.findOne('r1', agencyUser('u2', 'ag-2'));
+      expect(result.id).toBe('r1');
+      expect(result.toAgency).toEqual({ id: 'ag-2' });
+    });
+
+    it('admin sees any referral', async () => {
+      repoMock.findOne.mockResolvedValue({ ...baseRef });
+      const result = await service.findOne('r1', { id: 'u-admin', role: 'admin' } as any);
+      expect(result.id).toBe('r1');
+    });
+
+    it('social worker without agency sees referrals they created', async () => {
+      repoMock.findOne.mockResolvedValue({ ...baseRef });
+      const result = await service.findOne('r1', agencyUser('u1', ''));
+      expect(result.id).toBe('r1');
+    });
+
+    it('throws NotFound for a non-participating caller', async () => {
+      repoMock.findOne.mockResolvedValue({ ...baseRef });
+      await expect(service.findOne('r1', agencyUser('u3', 'ag-3'))).rejects.toThrow('Inter-agency referral not found');
+    });
+
+    it('throws NotFound for a missing referral', async () => {
+      repoMock.findOne.mockResolvedValue(null);
+      await expect(service.findOne('missing', agencyUser('u2', 'ag-2'))).rejects.toThrow('Inter-agency referral not found');
+    });
+  });
+
   describe('searchBeneficiaries', () => {
     function qbMock() {
       return {

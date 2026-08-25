@@ -64,6 +64,13 @@ export class InterAgencyReferralsController {
     return this.svc.searchBeneficiaries(q || '', req.user);
   }
 
+  @Get(':id')
+  @Roles('admin', 'social_worker', 'agency_staff')
+  @ApiOperation({ summary: 'Get a single referral (participant or MSWDO staff only)' })
+  async getOne(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.findOne(id, req.user);
+  }
+
   @Post()
   @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'Create an inter-agency referral' })
