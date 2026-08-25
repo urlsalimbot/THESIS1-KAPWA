@@ -38,6 +38,7 @@ import { AccessCardPrintView } from './pages/AccessCardPrintView';
 import { AnnouncementPage } from './pages/AnnouncementPage';
 import { AnnouncementsPage } from './components/announcements/AnnouncementsPage';
 import { AnnouncementEditPage } from './components/announcements/AnnouncementEditPage';
+import { CreateAnnouncementPage } from './components/announcements/CreateAnnouncementPage';
 import { ClaimantAccessCardPage } from './pages/ClaimantAccessCardPage';
 
 import { MayorReportsPage } from './pages/MayorReportsPage';
@@ -131,7 +132,7 @@ const router = createBrowserRouter([
   { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },
   { path: '/announcements/manage', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementsPage /></Private> },
-  { path: '/announcements/manage/new', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementEditPage /></Private> },
+  { path: '/announcements/manage/new', element: <Private roles={['admin','social_worker','coordinator']}><CreateAnnouncementPage /></Private> },
   { path: '/announcements/manage/:id', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementEditPage /></Private> },
   { path: '/my-access-card', element: <Private roles={['claimant']}><ClaimantAccessCardPage /></Private> },
   { path: '*', element: <Navigate to="/" /> },
