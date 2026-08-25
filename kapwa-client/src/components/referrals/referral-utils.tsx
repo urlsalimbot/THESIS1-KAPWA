@@ -24,6 +24,7 @@ export interface InterAgencyReferral {
   fromAgency?: Agency;
   toAgency?: Agency;
   person?: { id: string; surname: string; firstName: string };
+  case?: { controlNo?: string };
   createdAt: string;
 }
 
@@ -33,7 +34,7 @@ export function StatusTimeline({ status }: { status: ReferralStatus }): ReactEle
   const steps: ReferralStatus[] = ['referred', 'received', 'actioned', 'closed'];
   const activeIndex = status === 'declined' ? -1 : steps.indexOf(status);
   return (
-    <div className="flex items-center gap-1" aria-label="status-timeline">
+    <div className="flex items-center gap-1" role="img" aria-label="status-timeline">
       {steps.map((s, i) => (
         <div key={s} className="flex items-center gap-1">
           <span

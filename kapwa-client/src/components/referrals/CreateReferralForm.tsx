@@ -70,7 +70,7 @@ export function CreateReferralForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium" htmlFor="iar-to-agency">
-            {t('referrals.toAgency', 'To Agency *')}
+            {t('referrals.toAgency', 'To Agency')} *
           </label>
           <select
             id="iar-to-agency"
