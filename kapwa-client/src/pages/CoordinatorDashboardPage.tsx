@@ -102,29 +102,25 @@ export function CoordinatorDashboardPage() {
         <QuickScanCard />
       </div>
 
-      <Card className="mt-4">
-        <div className="border-b px-4 py-3">
+      <div className="mt-4">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold">{t('dashboard.todayTrackerEntries', "Today's Tracker Entries")}</h2>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/tracker')}>{t('dashboard.viewFullTracker', 'View Full Tracker')}</Button>
         </div>
-        <CardContent className="p-4">
-          {recentEntries.length === 0 ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">{t('dashboard.noEntriesToday', 'No entries today')}</div>
-          ) : (
-            <DataTable
-              columns={entryColumns}
-              data={recentEntries}
-              rowCount={recentEntries.length}
-              pagination={{ pageIndex: 0, pageSize: 10 }}
-              onPaginationChange={() => {}}
-              sorting={[]}
-            />
-          )}
-          <div className="flex items-center justify-between mt-3">
-            <span className="text-sm text-muted-foreground">{t('dashboard.entriesToday', '{{count}} entries today', { count: recentEntries.length })}</span>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/tracker')}>{t('dashboard.viewFullTracker', 'View Full Tracker')}</Button>
-          </div>
-        </CardContent>
-      </Card>
+        {recentEntries.length === 0 ? (
+          <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg bg-card">{t('dashboard.noEntriesToday', 'No entries today')}</div>
+        ) : (
+          <DataTable
+            columns={entryColumns}
+            data={recentEntries}
+            rowCount={recentEntries.length}
+            pagination={{ pageIndex: 0, pageSize: 10 }}
+            onPaginationChange={() => {}}
+            sorting={[]}
+          />
+        )}
+        <div className="text-sm text-muted-foreground mt-2">{t('dashboard.entriesToday', '{{count}} entries today', { count: recentEntries.length })}</div>
+      </div>
     </PageShell>
   );
 }

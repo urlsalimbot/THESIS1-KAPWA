@@ -172,15 +172,13 @@ export function ReferralReviewPage() {
           <p className="text-sm">{t('referral.noPending', 'No pending referrals.')}</p>
         </div>
       ) : (
-        <Card>
-          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
             <Inbox size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold text-foreground">{t('referral.pendingReferrals', 'Pending Referrals')}</h2>
           </div>
-          <div className="p-0">
-            <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
-          </div>
-        </Card>
+          <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
+        </div>
       )}
 
       <Dialog open={!!declineModal} onOpenChange={(open) => { if (!open) { setDeclineModal(null); setDeclineReason(''); } }}>

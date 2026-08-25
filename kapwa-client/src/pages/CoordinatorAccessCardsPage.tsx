@@ -371,10 +371,6 @@ function HistoryTab() {
   if (loading) return <div className="text-center py-8 text-muted-foreground">{t('accessCard.loading', 'Loading...')}</div>;
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        <DataTable columns={columns} data={data} rowCount={data.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
-      </CardContent>
-    </Card>
+    <DataTable columns={columns} data={data} rowCount={data.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
   );
 }

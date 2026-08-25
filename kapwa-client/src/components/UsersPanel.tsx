@@ -444,20 +444,16 @@ export default function UsersPanel() {
       </Card>
 
       {/* User Table */}
-      <Card>
-        <CardContent className="pt-6">
-          <DataTable
-            columns={columns}
-            data={users}
-            rowCount={total}
-            loading={isLoading}
-            pagination={pagination}
-            sorting={sorting}
-            onPaginationChange={setPagination}
-            onSortingChange={setSorting}
-          />
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={users}
+        rowCount={total}
+        loading={isLoading}
+        pagination={pagination}
+        sorting={sorting}
+        onPaginationChange={setPagination}
+        onSortingChange={setSorting}
+      />
 
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null); }}>

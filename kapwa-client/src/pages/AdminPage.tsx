@@ -71,20 +71,14 @@ export function AdminPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="users" className="mt-6">
-          <Card className="shadow-sm border-border/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="rounded-full bg-blue-500/10 p-2">
-                  <Users size={18} className="text-blue-600" />
-                </div>
-                <CardTitle className="text-sm">{t('admin.userManagement', 'User Management')}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <UsersPanel />
-            </CardContent>
-          </Card>
+        <TabsContent value="users" className="mt-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="rounded-full bg-blue-500/10 p-2">
+              <Users size={18} className="text-blue-600" />
+            </div>
+            <h2 className="text-sm font-semibold">{t('admin.userManagement', 'User Management')}</h2>
+          </div>
+          <UsersPanel />
         </TabsContent>
 
         <TabsContent value="sync" className="space-y-4 mt-6">
