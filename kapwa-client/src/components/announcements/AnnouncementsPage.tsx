@@ -141,7 +141,13 @@ export function AnnouncementsPage() {
               <div className="flex items-start justify-between p-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold font-heading truncate">{a.title}</h3>
+                    <button
+                      className="text-left hover:underline truncate"
+                      onClick={() => navigate(`/announcements/manage/${a.id}`)}
+                      aria-label={t('announcements.viewAria', 'View {{title}}', { title: a.title })}
+                    >
+                      <h3 className="font-semibold font-heading truncate">{a.title}</h3>
+                    </button>
                     {a.pinned && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent shrink-0">
                         <Pin size={12} />
@@ -176,8 +182,22 @@ export function AnnouncementsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={t('announcements.editAria', 'Edit {{title}}', { title: a.title })}
+                          aria-label={t('announcements.viewAria', 'View {{title}}', { title: a.title })}
                           onClick={() => navigate(`/announcements/manage/${a.id}`)}
+                        >
+                          <Eye size={16} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('announcements.view', 'View')}</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={t('announcements.editAria', 'Edit {{title}}', { title: a.title })}
+                          onClick={() => navigate(`/announcements/manage/${a.id}/edit`)}
                         >
                           <Pencil size={16} />
                         </Button>

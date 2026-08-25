@@ -117,6 +117,7 @@ export const queryKeys = {
   announcements: {
     all: ['announcements'] as const,
     list: () => memo('announcements.list', () => ['announcements'] as const),
+    detail: (id: string) => memo(`announcements.detail.${id}`, () => ['announcements', id] as const),
     public: {
       list: () => memo('announcements.public.list', () => ['announcements', 'public'] as const),
       detail: (slug: string) =>
