@@ -1,6 +1,6 @@
 # Use Case Diagram
 
-This document maps every actor of the KAPWA social welfare information system (MSWDO Norzagaray) to the use cases they can perform, expressed as a functional specification (FR-01..FR-20), a Mermaid use case diagram, a per-actor narrative, and cross-references to the implementation.
+This document maps every actor of the KAPWA social welfare information system (MSWDO Norzagaray) to the use cases they can perform, expressed as a functional specification (FR-01..FR-20), eight Mermaid use case diagrams (one per role, each sized to fit a letter page), a per-actor narrative, and cross-references to the implementation.
 
 ## 1. Purpose
 
@@ -35,199 +35,105 @@ Maps every actor — guest, claimant, social_worker, coordinator, admin, mayor, 
 
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
+One diagram per actor, so each fits a letter-size page together with its description in Section 4.
 
-The use case model is split into three letter-sized diagrams by actor group.
-
-### U1 — Public, Authentication & Claimant Self-Service
+### R1 — guest
 
 ```mermaid
 flowchart LR
-    A1["guest"]
-    A2["claimant"]
-
-    subgraph Auth[AUTH]
-        direction LR
-        UC-A1["View landing page and public announcements"]
-        UC-A2["Register and verify email"]
-        UC-A3["Login with MFA when enabled"]
-        UC-A4["MFA setup and account settings"]
-    end
-
-    subgraph Beneficiaries[BENEFICIARIES - CLAIMANT SELF-SERVICE]
-        direction LR
-        UC-B1["Claimant dashboard and self-service (card, services, consent)"]
-        UC-C3["View own service history"]
-        UC-AC3["View own access card"]
-    end
-
-    subgraph MessagingMine[MESSAGING - CLAIMANT]
-        direction LR
-        UC-M1C["Chat"]
-        UC-M2C["View and manage notifications"]
-        UC-M3C["Notification preferences"]
-    end
-
-    A1 --> UC-A1
-    A1 --> UC-A2
-    A1 --> UC-A3
-    A2 --> UC-A4
-    A2 --> UC-B1
-    A2 --> UC-C3
-    A2 --> UC-AC3
-    A2 --> UC-M1C
-    A2 --> UC-M2C
-    A2 --> UC-M3C
+    G["guest"]
+    G --> UC1["View landing page and public announcements"]
+    G --> UC2["Register and verify email"]
+    G --> UC3["Login with MFA when enabled"]
 ```
 
-### U2 — MSWDO Staff (Social Worker, Coordinator, Admin, Mayor, Auditor)
+### R2 — claimant
 
 ```mermaid
 flowchart LR
-    A3["social_worker"]
-    A4["coordinator"]
-    A5["admin"]
-    A6["mayor"]
-    A7["auditor"]
-
-    subgraph Intake[INTAKE]
-        direction LR
-        UC-I1["Create intake"]
-        UC-I2["Review intake requests"]
-        UC-I3["File referral from intake"]
-    end
-
-    subgraph Cases[CASES & BENEFICIARIES]
-        direction LR
-        UC-C1["Assess cases and log interventions"]
-        UC-C2["Track case status"]
-        UC-C4["Manage physical files"]
-        UC-B2["Manage beneficiary records"]
-    end
-
-    subgraph AccessCards[ACCESS CARDS]
-        direction LR
-        UC-AC1["Assign and manage access cards"]
-        UC-AC2["Log access-card activity"]
-    end
-
-    subgraph ReportsAudit[REPORTS, AUDIT & OUTPUTS]
-        direction LR
-        UC-RA1["View reports and dashboard"]
-        UC-RA2["Export fund utilization"]
-        UC-RA3["View audit logs and export data"]
-        UC-RA4["Generate certificates, CSR, IRF"]
-    end
-
-    subgraph Admin[ADMIN]
-        direction LR
-        UC-AD1["Manage users, programs, agencies, announcements"]
-        UC-AD2["Wipe or reset device sessions"]
-        UC-P1["Manage programs"]
-    end
-
-    A3 --> UC-I1
-    A5 --> UC-I1
-    A3 --> UC-I2
-    A4 -->|match-check & confirm| UC-I2
-    A5 --> UC-I2
-    A4 --> UC-I3
-
-    A3 --> UC-C1
-    A5 --> UC-C1
-    A3 --> UC-C2
-    A4 --> UC-C2
-    A5 --> UC-C2
-    A6 --> UC-C2
-    A7 --> UC-C2
-    A3 --> UC-C4
-    A4 --> UC-C4
-    A5 --> UC-C4
-    A3 --> UC-B2
-    A5 --> UC-B2
-
-    A3 --> UC-AC1
-    A4 --> UC-AC1
-    A5 --> UC-AC1
-    A3 --> UC-AC2
-    A4 --> UC-AC2
-    A5 --> UC-AC2
-
-    A6 --> UC-RA1
-    A6 --> UC-RA2
-    A5 --> UC-RA3
-    A7 --> UC-RA3
-    A3 --> UC-RA4
-    A5 --> UC-RA4
-
-    A5 --> UC-AD1
-    A5 --> UC-AD2
-    A5 --> UC-P1
+    C["claimant"]
+    C --> UC1["Claimant dashboard and self-service"]
+    C --> UC2["View own access card and service history"]
+    C --> UC3["View own consent records"]
+    C --> UC4["Chat, notifications and preferences"]
+    C --> UC5["MFA setup and account settings"]
 ```
 
-### U3 — Coordinators, Agencies & Sync
+### R3 — social_worker
 
 ```mermaid
 flowchart LR
-    A4["coordinator"]
-    A8["agency_staff"]
-    A3["social_worker"]
-    A5["admin"]
-    A2["claimant"]
-    A7["auditor"]
+    SW["social_worker"]
+    SW --> UC1["Create and review intakes"]
+    SW --> UC2["Assess cases and log interventions"]
+    SW --> UC3["Manage beneficiary records and physical files"]
+    SW --> UC4["Generate certificates, CSR, IRF"]
+    SW --> UC5["Review, accept or decline referrals"]
+    SW --> UC6["Assign access cards and log activity"]
+    SW --> UC7["Manage announcements"]
+    SW --> UC8["Offline sync for field work"]
+    SW --> UC9["Chat, notifications and preferences"]
+```
 
-    subgraph Referrals[REFERRALS]
-        direction LR
-        UC-R1["File referrals (barangay)"]
-        UC-R2["Review, accept or decline referrals"]
-        UC-R3["Track referral status"]
-    end
+### R4 — coordinator
 
-    subgraph InterAgency[INTER-AGENCY]
-        direction LR
-        UC-IA1["View agency dashboard and referrals"]
-        UC-IA2["View access-card activities"]
-    end
+```mermaid
+flowchart LR
+    CO["coordinator"]
+    CO --> UC1["File and track barangay referrals"]
+    CO --> UC2["Intake match-check and confirmation"]
+    CO --> UC3["Manage access cards for barangay"]
+    CO --> UC4["Manage physical files"]
+    CO --> UC5["Offline sync for field work"]
+    CO --> UC6["Chat, notifications and preferences"]
+    CO --> UC7["MFA setup and account settings"]
+```
 
-    subgraph Messaging[MESSAGING AND NOTIFICATIONS]
-        direction LR
-        UC-M1["Chat"]
-        UC-M2["View and manage notifications"]
-        UC-M3["Notification preferences"]
-    end
+### R5 — admin
 
-    subgraph Sync[SYNC]
-        direction LR
-        UC-S1["Offline sync for field workers"]
-    end
+```mermaid
+flowchart LR
+    AD["admin"]
+    AD --> UC1["Manage users, programs, agencies"]
+    AD --> UC2["Manage announcements"]
+    AD --> UC3["Wipe or reset device sessions"]
+    AD --> UC4["Intake, cases, referrals, access cards"]
+    AD --> UC5["Certificates, CSR, IRF"]
+    AD --> UC6["Audit logs and exports"]
+    AD --> UC7["Notifications broadcast"]
+    AD --> UC8["Offline sync"]
+```
 
-    A4 --> UC-R1
-    A3 --> UC-R2
-    A5 --> UC-R2
-    A4 --> UC-R3
+### R6 — mayor
 
-    A8 --> UC-IA1
-    A8 --> UC-IA2
+```mermaid
+flowchart LR
+    MA["mayor"]
+    MA --> UC1["View reports and dashboard"]
+    MA --> UC2["Export fund utilization"]
+    MA --> UC3["Read-only case tracking"]
+```
 
-    A2 --> UC-M1
-    A3 --> UC-M1
-    A4 --> UC-M1
-    A5 --> UC-M1
-    A2 --> UC-M2
-    A3 --> UC-M2
-    A4 --> UC-M2
-    A5 --> UC-M2
-    A7 --> UC-M2
-    A8 --> UC-M2
-    A2 --> UC-M3
-    A3 --> UC-M3
-    A4 --> UC-M3
-    A5 --> UC-M3
-    A7 --> UC-M3
-    A8 --> UC-M3
+### R7 — auditor
 
-    A3 --> UC-S1
-    A4 --> UC-S1
-    A5 --> UC-S1
+```mermaid
+flowchart LR
+    AU["auditor"]
+    AU --> UC1["View audit logs"]
+    AU --> UC2["Export audit data"]
+    AU --> UC3["Read-only CSR, IRF, case tracker"]
+    AU --> UC4["Notifications and preferences"]
+```
+
+### R8 — agency_staff
+
+```mermaid
+flowchart LR
+    AS["agency_staff"]
+    AS --> UC1["View agency dashboard and profile"]
+    AS --> UC2["Inter-agency referrals"]
+    AS --> UC3["Log access-card activity and read summaries"]
+    AS --> UC4["Notifications and preferences"]
 ```
 
 ## 4. Diagram Narrative
