@@ -17,7 +17,7 @@
  * PUPPETEER_EXECUTABLE_PATH pointing at a Chrome/Chromium binary, e.g.:
  *   PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -31,6 +31,7 @@ const MARGIN = 24; // points
 const args = process.argv.slice(2);
 const filter = args.find((a) => !a.startsWith('-'));
 const listOnly = args.includes('--list');
+const pngMode = args.includes('--png');
 
 const files = readdirSync(DOCS_DIR)
   .filter((f) => /^\d{2}-.+\.md$/.test(f))
@@ -92,6 +93,32 @@ async function main() {
   }
 
   mkdirSync(OUT_DIR, { recursive: true });
+
+  if (pngMode) {
+    // PNG mode: mmdc renders PNG directly at scale 2 (no puppeteer needed)
+    let total = 0;
+    for (const f of files) {
+      const md = readFileSync(join(DOCS_DIR, f), 'utf8');
+      const charts = extractCharts(md);
+      if (charts.length === 0) continue;
+      const base = join('/tmp', `png-${f.replace('.md', '')}`);
+      execFileSync('npx', ['-y', '@mermaid-js/mermaid-cli', '-i', join(DOCS_DIR, f), '-o', base + '.png', '-e', 'png', '-s', '2', '-b', 'white'], {
+        cwd: join(HERE, '..', '..', 'kapwa-server'),
+        stdio: 'pipe',
+        env: { ...process.env, PUPPETEER_EXECUTABLE_PATH: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable' },
+      });
+      for (const c of charts) {
+        const src = `${base}-${c.index}.png`;
+        const out = join(OUT_DIR, `${f.replace('.md', '')}-${String(c.index).padStart(2, '0')}.png`);
+        copyFileSync(src, out);
+        total++;
+        console.log(`  wrote ${out}`);
+      }
+    }
+    console.log(`\nDone: ${total} PNG(s) in ${OUT_DIR}`);
+    return;
+  }
+
   const puppeteer = await importPuppeteer();
   const browser = await puppeteer.launch({ headless: 'new' });
 
