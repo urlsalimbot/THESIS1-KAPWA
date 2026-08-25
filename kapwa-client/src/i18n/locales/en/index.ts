@@ -1757,7 +1757,6 @@ const en = {
     "closeTitle": "Close Referral?",
     "createFailed": "Failed to create referral",
     "createTitle": "Create Referral",
-    "createdOn": "Created on {{date}}",
     "decline": "Decline",
     "declineDesc": "This will decline the referral for this beneficiary. This action cannot be undone.",
     "declinedLabel": "Declined: {{reason}}",
@@ -1786,7 +1785,6 @@ const en = {
     "searching": "Searching...",
     "selectAgency": "Select agency...",
     "toAgency": "To Agency",
-    "viewDetails": "View Details",
     "viewDetailsAria": "View details for {{name}}",
   },
   "reports": {

@@ -42,7 +42,7 @@ export function IncomingInterAgencyReferrals() {
           {incoming.map(r => (
             <button
               key={r.id}
-              onClick={() => navigate(`/agency/referrals/${r.id}`)}
+              onClick={() => navigate(`/agency/referrals/${r.id}`, { state: { from: '/referrals' } })}
               className="w-full text-left rounded-lg border border-border/60 bg-card px-4 py-3 hover:bg-muted/50 transition-colors"
               aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id })}
             >

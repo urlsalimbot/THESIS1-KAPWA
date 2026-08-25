@@ -43,7 +43,7 @@ export function ReferralCard({
             size="sm"
             variant="ghost"
             aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: personName })}
-            onClick={() => navigate(`/agency/referrals/${referral.id}`)}
+            onClick={() => navigate(`/agency/referrals/${referral.id}`, { state: { from: '/agency/referrals' } })}
           >
             <Eye size={16} />
           </Button>

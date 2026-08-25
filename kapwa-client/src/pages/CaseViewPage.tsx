@@ -464,7 +464,7 @@ export function CaseViewPage() {
                 (iarReferrals || []).map(r => (
                   <button
                     key={r.id}
-                    onClick={() => navigate(`/agency/referrals/${r.id}`)}
+                    onClick={() => navigate(`/agency/referrals/${r.id}`, { state: { from: `/cases/${id}` } })}
                     className="w-full text-left rounded-md border border-border/60 px-3 py-2 hover:bg-muted/50 transition-colors"
                     aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id })}
                   >

@@ -89,7 +89,7 @@ export function CreateReferralForm({
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium" htmlFor="iar-legal-basis">
-            {t('referrals.legalBasis', 'Legal Basis *')}
+            {t('referrals.legalBasis', 'Legal Basis')} *
           </label>
           <select
             id="iar-legal-basis"

@@ -1632,7 +1632,6 @@ const fil: EnLocale = {
     "closeTitle": "Isara ang Referral?",
     "createFailed": "Nabigo ang paggawa ng referral",
     "createTitle": "Gumawa ng Referral",
-    "createdOn": "Ginawa noong {{date}}",
     "decline": "Tanggihan",
     "declineDesc": "Itatanggi ang referral para sa benepisyaryong ito. Hindi na ito maaaring i-undo.",
     "declinedLabel": "Tinanggihan: {{reason}}",
@@ -1661,7 +1660,6 @@ const fil: EnLocale = {
     "searching": "Nagha-hanap...",
     "selectAgency": "Pumili ng ahensya...",
     "toAgency": "Papunta sa Ahensya",
-    "viewDetails": "Tingnan ang mga Detalye",
     "viewDetailsAria": "Tingnan ang mga detalye para kay {{name}}"
   },
   "bulkActions": {
