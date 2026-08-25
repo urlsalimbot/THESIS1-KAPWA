@@ -86,7 +86,7 @@ describe('AgencyReferralsPage', () => {
     await user.selectOptions(await screen.findByLabelText('To Agency *'), 'MSWDO — Municipal Social Welfare');
 
     await user.type(screen.getByPlaceholderText('Search beneficiary by name...'), 'juan');
-    const resultButton = await screen.findByRole('button', { name: /Juan Santos/ }, { timeout: 3000 });
+    const resultButton = await screen.findByRole('button', { name: /Juan Santos Bigte/ }, { timeout: 3000 });
     await user.click(resultButton);
 
     await user.type(await screen.findByLabelText('Reason *'), 'Medical follow-up');
