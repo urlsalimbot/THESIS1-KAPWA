@@ -30,6 +30,7 @@ import { ReferralReviewPage } from './pages/ReferralReviewPage';
 import { ReferralsPage } from './pages/ReferralsPage';
 import { AgencyDashboardPage } from './pages/AgencyDashboardPage';
 import { AgencyReferralsPage } from './pages/AgencyReferralsPage';
+import { AgencyReferralDetailPage } from './pages/AgencyReferralDetailPage';
 import { AgencyCardActivitiesPage } from './pages/AgencyCardActivitiesPage';
 import { AgencyProfilePage } from './pages/AgencyProfilePage';
 import { AccessCardViewPage } from './pages/AccessCardViewPage';
@@ -122,6 +123,7 @@ const router = createBrowserRouter([
   { path: '/agency', element: <Navigate to="/agency/dashboard" replace /> },
   { path: '/agency/dashboard', element: <Private roles={['agency_staff']}><AgencyDashboardPage /></Private> },
   { path: '/agency/referrals', element: <Private roles={['agency_staff']}><AgencyReferralsPage /></Private> },
+  { path: '/agency/referrals/:id', element: <Private roles={['admin','social_worker','agency_staff']}><AgencyReferralDetailPage /></Private> },
   { path: '/agency/card-activities', element: <Private roles={['agency_staff']}><AgencyCardActivitiesPage /></Private> },
   { path: '/agency/profile', element: <Private roles={['agency_staff']}><AgencyProfilePage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
