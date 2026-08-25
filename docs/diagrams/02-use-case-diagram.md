@@ -35,7 +35,7 @@ Maps every actor — guest, claimant, social_worker, coordinator, admin, mayor, 
 
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
-One diagram per actor (busy roles split into two: welfare work, and cards/announcements/sync/comms); use cases are grouped by category, and each diagram is compact enough to print on a letter-size page together with its description.
+One diagram per actor; the use cases are grouped inside rectangle boxes by category, and each diagram is compact enough to print on a letter-size page together with its description.
 
 ### R1 — guest
 
@@ -87,25 +87,25 @@ flowchart LR
 
 Claimants are redirected to `/my-dashboard` (`ROLE_REDIRECT_MAP['claimant']`). They view their own access card, service history, and consent records via the claimant-only self endpoints `GET /beneficiaries/me/access-card`, `/me/services`, `/me/consent` (`@Roles('claimant')`), and their card at `/my-access-card` (FR-03, FR-12). Claimants chat (`CHAT_ROLES` includes claimant), receive notifications, and set preferences (FR-10, FR-19).
 
-### R3a — social_worker: welfare work
+### R3 — social_worker
 
 ```mermaid
 flowchart LR
     SW["social_worker"]
 
-    subgraph IntakeCases[INTAKE & CASES]
+    subgraph Welfare[WELFARE]
         direction LR
-        S1["Create and review intakes<br/>Assess cases and log interventions"]
+        S1["Create and review intakes<br/>Assess cases and log interventions<br/>Manage beneficiary records<br/>Manage physical files<br/>Generate certificates, CSR, IRF"]
     end
 
-    subgraph BenefFiles[BENEFICIARIES & FILES]
+    subgraph ReferralsCards[REFERRALS, CARDS & ANNOUNCEMENTS]
         direction LR
-        S2["Manage beneficiary records<br/>Manage physical files"]
+        S2["Review, accept or decline referrals<br/>Assign access cards and log activity<br/>Manage announcements"]
     end
 
-    subgraph Outputs[OUTPUTS & REFERRALS]
+    subgraph SyncComms[SYNC & COMMS]
         direction LR
-        S3["Generate certificates, CSR, IRF<br/>Review, accept or decline referrals"]
+        S3["Offline sync for field work<br/>Chat, notifications and preferences<br/>MFA setup and account settings"]
     end
 
     SW --> S1
@@ -113,29 +113,7 @@ flowchart LR
     SW --> S3
 ```
 
-The primary caseworker role: creates and reviews intakes, assesses cases, logs interventions, manages beneficiary records and physical files, and generates certificates/CSR/IRF (FR-04, FR-15, FR-17). They also review and accept/decline coordinator referrals (FR-14).
-
-### R3b — social_worker: cards, announcements, sync & comms
-
-```mermaid
-flowchart LR
-    SW["social_worker"]
-
-    subgraph CardsAnn[CARDS & ANNOUNCEMENTS]
-        direction LR
-        S4["Assign access cards and log activity<br/>Manage announcements"]
-    end
-
-    subgraph SyncComms[SYNC & COMMS]
-        direction LR
-        S5["Offline sync for field work<br/>Chat, notifications and preferences<br/>MFA setup and account settings"]
-    end
-
-    SW --> S4
-    SW --> S5
-```
-
-They assign access cards and log card activity (FR-05), manage announcements (FR-13), use offline sync in the field (FR-11), and participate in chat/notifications (FR-10).
+The primary caseworker role: creates and reviews intakes, assesses cases, logs interventions, manages beneficiary records and physical files, and generates certificates/CSR/IRF (FR-04, FR-15, FR-17). They review and accept/decline coordinator referrals (FR-14), assign access cards and log card activity (FR-05), manage announcements (FR-13), use offline sync in the field (FR-11), and participate in chat/notifications (FR-10).
 
 ### R4 — coordinator
 
@@ -143,53 +121,47 @@ They assign access cards and log card activity (FR-05), manage announcements (FR
 flowchart LR
     CO["coordinator"]
 
-    subgraph AuthComms[AUTH & COMMS]
-        direction LR
-        K1["MFA setup and account settings<br/>Chat, notifications and preferences"]
-    end
-
     subgraph IntakeRef[INTAKE & REFERRALS]
         direction LR
-        K2["Intake match-check and confirmation<br/>File and track barangay referrals"]
+        K1["Intake match-check and confirmation<br/>File and track barangay referrals"]
     end
 
     subgraph CardsFiles[ACCESS CARDS & FILES]
         direction LR
-        K3["Manage access cards for barangay<br/>Manage physical files"]
+        K2["Manage access cards for barangay<br/>Manage physical files"]
     end
 
-    subgraph Sync[SYNC]
+    subgraph SyncComms[SYNC & COMMS]
         direction LR
-        K4["Offline sync for field work"]
+        K3["Offline sync for field work<br/>Chat, notifications and preferences<br/>MFA setup and account settings"]
     end
 
     CO --> K1
     CO --> K2
     CO --> K3
-    CO --> K4
 ```
 
 Barangay coordinators are redirected to `/coordinator/dashboard`. They file referrals (`POST /referrals` is `@Roles('coordinator')` only), track their referral status via `/referrals/mine`, participate in intake match-check and confirmation (`POST /intake/match-check`, `POST /intake/confirm/:householdId` include coordinator), and manage access cards for their barangay (FR-05, FR-14). They manage physical files and sync offline data (FR-11, FR-15). Referral *approval* (accept/decline) is deliberately restricted to `admin` and `social_worker` — coordinators see status but cannot approve their own referrals.
 
-### R5a — admin: management & admin
+### R5 — admin
 
 ```mermaid
 flowchart LR
     AD["admin"]
 
-    subgraph AdminMgmt[ADMIN]
+    subgraph AdminMgmt[ADMIN & REPORTS]
         direction LR
-        A1["Manage users, programs, agencies<br/>Manage announcements<br/>Wipe or reset device sessions"]
+        A1["Manage users, programs, agencies<br/>Manage announcements<br/>Wipe or reset device sessions<br/>Audit logs and exports<br/>Generate certificates, CSR, IRF"]
     end
 
-    subgraph Reports[REPORTS & AUDIT]
+    subgraph Welfare[WELFARE]
         direction LR
-        A2["Audit logs and exports<br/>Generate certificates, CSR, IRF"]
+        A2["Create and review intakes<br/>Assess cases and log interventions<br/>Review, accept or decline referrals<br/>Assign access cards and log activity"]
     end
 
-    subgraph Comms[COMMS]
+    subgraph SyncComms[SYNC & COMMS]
         direction LR
-        A3["MFA setup and account settings<br/>Notifications broadcast"]
+        A3["Offline sync<br/>Notifications broadcast<br/>MFA setup and account settings"]
     end
 
     AD --> A1
@@ -197,29 +169,7 @@ flowchart LR
     AD --> A3
 ```
 
-Redirected to `/admin`. Admin is the only role on the user, agency (write), program, and wipe controllers: manages users, programs, agencies, announcements (FR-06), and remote wipes/resets (FR-20). Admin also accesses audit logs and exports (`@Roles('admin','auditor')`), certificates/CSR/IRF, and broadcasts notifications (`POST /notifications` is `@Roles('admin','social_worker')`).
-
-### R5b — admin: welfare, cards & sync
-
-```mermaid
-flowchart LR
-    AD["admin"]
-
-    subgraph Welfare[WELFARE]
-        direction LR
-        A4["Create and review intakes<br/>Assess cases and log interventions<br/>Review, accept or decline referrals<br/>Assign access cards and log activity"]
-    end
-
-    subgraph Sync[SYNC]
-        direction LR
-        A5["Offline sync"]
-    end
-
-    AD --> A4
-    AD --> A5
-```
-
-Admin also has broad read/write access across intake, cases, referrals, and access cards, plus offline sync for field operations.
+Redirected to `/admin`. Admin is the only role on the user, agency (write), program, and wipe controllers: manages users, programs, agencies, announcements (FR-06), and remote wipes/resets (FR-20). Admin also has broad read/write access across intake, cases, referrals, access cards, and exports, plus audit-log access (`@Roles('admin','auditor')`), certificates/CSR/IRF, and notifications broadcast (`POST /notifications` is `@Roles('admin','social_worker')`).
 
 ### R6 — mayor
 
