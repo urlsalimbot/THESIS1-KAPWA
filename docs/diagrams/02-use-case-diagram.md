@@ -1,6 +1,6 @@
 # Use Case Diagram
 
-This document maps every actor of the KAPWA social welfare information system (MSWDO Norzagaray) to the use cases they can perform, expressed as a functional specification (FR-01..FR-20), eight Mermaid use case diagrams (one per role, each sized to fit a letter page), a per-actor narrative, and cross-references to the implementation.
+This document maps every actor of the KAPWA social welfare information system (MSWDO Norzagaray) to the use cases they can perform, expressed as a functional specification (FR-01..FR-20), eleven Mermaid use case diagrams (one per role, split by category where needed, each sized to fit a letter page), a per-actor narrative, and cross-references to the implementation.
 
 ## 1. Purpose
 
@@ -35,16 +35,28 @@ Maps every actor — guest, claimant, social_worker, coordinator, admin, mayor, 
 
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
-One diagram per actor, so each fits a letter-size page together with its description in Section 4.
+One diagram per actor, with use cases grouped by category (Auth, Intake, Cases, Beneficiaries, Referrals, Access Cards, Reports & Audit, Admin, Messaging & Notifications, Sync, etc.); roles with many categories are split into two diagrams (a = welfare work, b = communications & sync) so every diagram fits a letter-size page together with its description in Section 4.
 
 ### R1 — guest
 
 ```mermaid
 flowchart LR
     G["guest"]
-    G --> UC1["View landing page and public announcements"]
-    G --> UC2["Register and verify email"]
-    G --> UC3["Login with MFA when enabled"]
+
+    subgraph Public[PUBLIC]
+        direction LR
+        G1["View landing page and public announcements"]
+    end
+
+    subgraph Auth[AUTH]
+        direction LR
+        G2["Register and verify email"]
+        G3["Login with MFA when enabled"]
+    end
+
+    G --> G1
+    G --> G2
+    G --> G3
 ```
 
 ### R2 — claimant
@@ -52,56 +64,245 @@ flowchart LR
 ```mermaid
 flowchart LR
     C["claimant"]
-    C --> UC1["Claimant dashboard and self-service"]
-    C --> UC2["View own access card and service history"]
-    C --> UC3["View own consent records"]
-    C --> UC4["Chat, notifications and preferences"]
-    C --> UC5["MFA setup and account settings"]
+
+    subgraph Auth[AUTH]
+        direction LR
+        C1["MFA setup and account settings"]
+    end
+
+    subgraph Beneficiaries[BENEFICIARIES - SELF-SERVICE]
+        direction LR
+        C2["Claimant dashboard and self-service"]
+        C3["View own access card and service history"]
+        C4["View own consent records"]
+    end
+
+    subgraph Messaging[MESSAGING & NOTIFICATIONS]
+        direction LR
+        C5["Chat, notifications and preferences"]
+    end
+
+    C --> C1
+    C --> C2
+    C --> C3
+    C --> C4
+    C --> C5
 ```
 
-### R3 — social_worker
+### R3a — social_worker: welfare work
 
 ```mermaid
 flowchart LR
     SW["social_worker"]
-    SW --> UC1["Create and review intakes"]
-    SW --> UC2["Assess cases and log interventions"]
-    SW --> UC3["Manage beneficiary records and physical files"]
-    SW --> UC4["Generate certificates, CSR, IRF"]
-    SW --> UC5["Review, accept or decline referrals"]
-    SW --> UC6["Assign access cards and log activity"]
-    SW --> UC7["Manage announcements"]
-    SW --> UC8["Offline sync for field work"]
-    SW --> UC9["Chat, notifications and preferences"]
+
+    subgraph Auth[AUTH]
+        direction LR
+        S1["MFA setup and account settings"]
+    end
+
+    subgraph Intake[INTAKE]
+        direction LR
+        S2["Create and review intakes"]
+    end
+
+    subgraph Cases[CASES]
+        direction LR
+        S3["Assess cases and log interventions"]
+    end
+
+    subgraph Beneficiaries[BENEFICIARIES]
+        direction LR
+        S4["Manage beneficiary records"]
+    end
+
+    subgraph Files[FILES]
+        direction LR
+        S5["Manage physical files"]
+    end
+
+    subgraph Reports[REPORTS & AUDIT]
+        direction LR
+        S6["Generate certificates, CSR, IRF"]
+    end
+
+    SW --> S1
+    SW --> S2
+    SW --> S3
+    SW --> S4
+    SW --> S5
+    SW --> S6
 ```
 
-### R4 — coordinator
+### R3b — social_worker: referrals, cards, comms & sync
+
+```mermaid
+flowchart LR
+    SW["social_worker"]
+
+    subgraph Referrals[REFERRALS]
+        direction LR
+        S7["Review, accept or decline referrals"]
+    end
+
+    subgraph AccessCards[ACCESS CARDS]
+        direction LR
+        S8["Assign access cards and log activity"]
+    end
+
+    subgraph Announcements[ANNOUNCEMENTS]
+        direction LR
+        S9["Manage announcements"]
+    end
+
+    subgraph Sync[SYNC]
+        direction LR
+        S10["Offline sync for field work"]
+    end
+
+    subgraph Messaging[MESSAGING & NOTIFICATIONS]
+        direction LR
+        S11["Chat, notifications and preferences"]
+    end
+
+    SW --> S7
+    SW --> S8
+    SW --> S9
+    SW --> S10
+    SW --> S11
+```
+
+### R4a — coordinator: welfare work
 
 ```mermaid
 flowchart LR
     CO["coordinator"]
-    CO --> UC1["File and track barangay referrals"]
-    CO --> UC2["Intake match-check and confirmation"]
-    CO --> UC3["Manage access cards for barangay"]
-    CO --> UC4["Manage physical files"]
-    CO --> UC5["Offline sync for field work"]
-    CO --> UC6["Chat, notifications and preferences"]
-    CO --> UC7["MFA setup and account settings"]
+
+    subgraph Auth[AUTH]
+        direction LR
+        K1["MFA setup and account settings"]
+    end
+
+    subgraph Intake[INTAKE]
+        direction LR
+        K2["Intake match-check and confirmation"]
+    end
+
+    subgraph Referrals[REFERRALS]
+        direction LR
+        K3["File and track barangay referrals"]
+    end
+
+    subgraph AccessCards[ACCESS CARDS]
+        direction LR
+        K4["Manage access cards for barangay"]
+    end
+
+    subgraph Files[FILES]
+        direction LR
+        K5["Manage physical files"]
+    end
+
+    CO --> K1
+    CO --> K2
+    CO --> K3
+    CO --> K4
+    CO --> K5
 ```
 
-### R5 — admin
+### R4b — coordinator: comms & sync
+
+```mermaid
+flowchart LR
+    CO["coordinator"]
+
+    subgraph Sync[SYNC]
+        direction LR
+        K6["Offline sync for field work"]
+    end
+
+    subgraph Messaging[MESSAGING & NOTIFICATIONS]
+        direction LR
+        K7["Chat, notifications and preferences"]
+    end
+
+    CO --> K6
+    CO --> K7
+```
+
+### R5a — admin: management & admin
 
 ```mermaid
 flowchart LR
     AD["admin"]
-    AD --> UC1["Manage users, programs, agencies"]
-    AD --> UC2["Manage announcements"]
-    AD --> UC3["Wipe or reset device sessions"]
-    AD --> UC4["Intake, cases, referrals, access cards"]
-    AD --> UC5["Certificates, CSR, IRF"]
-    AD --> UC6["Audit logs and exports"]
-    AD --> UC7["Notifications broadcast"]
-    AD --> UC8["Offline sync"]
+
+    subgraph Auth[AUTH]
+        direction LR
+        A1["MFA setup and account settings"]
+    end
+
+    subgraph Admin[ADMIN]
+        direction LR
+        A6["Manage users, programs, agencies"]
+        A7["Manage announcements"]
+        A8["Wipe or reset device sessions"]
+    end
+
+    subgraph Reports[REPORTS & AUDIT]
+        direction LR
+        A9["Audit logs and exports"]
+        A10["Generate certificates, CSR, IRF"]
+    end
+
+    AD --> A1
+    AD --> A6
+    AD --> A7
+    AD --> A8
+    AD --> A9
+    AD --> A10
+```
+
+### R5b — admin: welfare, comms & sync
+
+```mermaid
+flowchart LR
+    AD["admin"]
+
+    subgraph Intake[INTAKE]
+        direction LR
+        A2["Create and review intakes"]
+    end
+
+    subgraph Cases[CASES]
+        direction LR
+        A3["Assess cases and log interventions"]
+    end
+
+    subgraph Referrals[REFERRALS]
+        direction LR
+        A4["Review, accept or decline referrals"]
+    end
+
+    subgraph AccessCards[ACCESS CARDS]
+        direction LR
+        A5["Assign access cards and log activity"]
+    end
+
+    subgraph Sync[SYNC]
+        direction LR
+        A11["Offline sync"]
+    end
+
+    subgraph Messaging[MESSAGING & NOTIFICATIONS]
+        direction LR
+        A12["Notifications broadcast"]
+    end
+
+    AD --> A2
+    AD --> A3
+    AD --> A4
+    AD --> A5
+    AD --> A11
+    AD --> A12
 ```
 
 ### R6 — mayor
@@ -109,9 +310,21 @@ flowchart LR
 ```mermaid
 flowchart LR
     MA["mayor"]
-    MA --> UC1["View reports and dashboard"]
-    MA --> UC2["Export fund utilization"]
-    MA --> UC3["Read-only case tracking"]
+
+    subgraph Cases[CASES]
+        direction LR
+        M1["Read-only case tracking"]
+    end
+
+    subgraph Reports[REPORTS & AUDIT]
+        direction LR
+        M2["View reports and dashboard"]
+        M3["Export fund utilization"]
+    end
+
+    MA --> M1
+    MA --> M2
+    MA --> M3
 ```
 
 ### R7 — auditor
@@ -119,10 +332,29 @@ flowchart LR
 ```mermaid
 flowchart LR
     AU["auditor"]
-    AU --> UC1["View audit logs"]
-    AU --> UC2["Export audit data"]
-    AU --> UC3["Read-only CSR, IRF, case tracker"]
-    AU --> UC4["Notifications and preferences"]
+
+    subgraph Cases[CASES]
+        direction LR
+        T1["Read-only case tracker"]
+    end
+
+    subgraph Reports[REPORTS & AUDIT]
+        direction LR
+        T2["View audit logs"]
+        T3["Export audit data"]
+        T4["Read-only CSR, IRF"]
+    end
+
+    subgraph Messaging[MESSAGING & NOTIFICATIONS]
+        direction LR
+        T5["Notifications and preferences"]
+    end
+
+    AU --> T1
+    AU --> T2
+    AU --> T3
+    AU --> T4
+    AU --> T5
 ```
 
 ### R8 — agency_staff
@@ -130,10 +362,31 @@ flowchart LR
 ```mermaid
 flowchart LR
     AS["agency_staff"]
-    AS --> UC1["View agency dashboard and profile"]
-    AS --> UC2["Inter-agency referrals"]
-    AS --> UC3["Log access-card activity and read summaries"]
-    AS --> UC4["Notifications and preferences"]
+
+    subgraph AgencyPortal[AGENCY PORTAL]
+        direction LR
+        P1["View agency dashboard and profile"]
+    end
+
+    subgraph InterAgency[INTER-AGENCY]
+        direction LR
+        P2["Inter-agency referrals"]
+    end
+
+    subgraph AccessCards[ACCESS CARDS]
+        direction LR
+        P3["Log access-card activity and read summaries"]
+    end
+
+    subgraph Messaging[MESSAGING & NOTIFICATIONS]
+        direction LR
+        P4["Notifications and preferences"]
+    end
+
+    AS --> P1
+    AS --> P2
+    AS --> P3
+    AS --> P4
 ```
 
 ## 4. Diagram Narrative
