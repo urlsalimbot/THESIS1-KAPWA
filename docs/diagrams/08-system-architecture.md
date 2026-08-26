@@ -39,19 +39,19 @@ The system is organized into five horizontal layers; each layer depends only on 
 ```mermaid
 flowchart TB
     subgraph P["PRESENTATION"]
-        App["App shell, pages, SWR, role-filtered chrome"]
+        App["• App shell<br/>• Pages + SWR<br/>• Role-filtered chrome"]
     end
 
     subgraph A["APPLICATION (API)"]
-        Ctrl["Controllers + guards/filters/interceptors"]
+        Ctrl["• Feature controllers<br/>• Guards / filters / interceptors"]
     end
 
     subgraph B["BUSINESS / SERVICE"]
-        Svc["Feature services, case FSM, sync, notifications"]
+        Svc["• Feature services<br/>• Shared case FSM<br/>• Sync service<br/>• Notifications"]
     end
 
     subgraph D["DATA-ACCESS"]
-        Repo["TypeORM repositories, Zod pipes"]
+        Repo["• TypeORM repositories<br/>• Zod validation pipes"]
     end
 
     subgraph D2["DATA"]
@@ -75,9 +75,9 @@ Logical and physical separation: clients talk to the API server over HTTP/HTTPS;
 
 ```mermaid
 flowchart LR
-    C["Clients - browser SPA, field devices"]
-    CD["Caddy reverse proxy 8090/443"]
-    API["NestJS API 3000"]
+    C["• Browser SPA<br/>• Field devices"]
+    CD["• Caddy reverse proxy<br/>• Ports 8090 / 443"]
+    API["• NestJS API<br/>• Port 3000"]
     PG[("Postgres 5432")]
     MO[("Minio 9000/9001")]
 
@@ -91,10 +91,10 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    API["NestJS API 3000"]
-    GW["WS Gateway"]
-    SyncS["Sync service"]
-    WEB["Clients"]
+    API["• NestJS API<br/>• Port 3000"]
+    GW["• WS Gateway"]
+    SyncS["• Sync service"]
+    WEB["• Clients"]
     PG[("Postgres")]
 
     API --> GW
