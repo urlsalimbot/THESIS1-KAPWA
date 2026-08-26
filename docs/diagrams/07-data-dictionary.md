@@ -39,683 +39,730 @@ The functional requirements below cover all active tables:
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
 
+
+
 ### 1. persons — Unified person records (core identity table)
 
 The single identity root of the system: every beneficiary, claimant, user, and coordinator is ultimately a `persons` row.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. Time-ordered UUID v7 identifier. |
-| `surname` | TEXT | No | — | Family name of the person. |
-| `first_name` | TEXT | No | — | Given name of the person. |
-| `middle_name` | TEXT | Yes | — | Middle name, if any. |
-| `extension` | TEXT | Yes | — | Name suffix (Jr., Sr., III, etc.). |
-| `gender` | TEXT | Yes | — | CHECK IN ('Male','Female'). Legal/biological sex. |
-| `dob` | DATE | No | — | Date of birth. |
-| `address` | TEXT | Yes | — | Legacy plain-text address. |
-| `phone` | TEXT | Yes | — | Contact phone number. |
-| `philsys_number` | TEXT | Yes | — | Philippine Identification System (PhilSys) number; UNIQUE. |
-| `place_of_birth` | TEXT | Yes | — | Place of birth. |
-| `civil_status` | TEXT | Yes | — | Civil status (e.g. single, married, widowed). |
-| `current_address` | JSONB | Yes | — | Structured current address; shape: `{ street?, barangay?, city?, province?, region?, zip? }` (free-form key/value object). |
-| `email` | TEXT | Yes | — | Email address. |
-| `philhealth_number` | TEXT | Yes | — | PhilHealth membership number. |
-| `occupation` | TEXT | Yes | — | Occupation. |
-| `estimated_monthly_income` | DECIMAL(12,2) | Yes | — | Estimated monthly household/personal income. |
-| `age` | INTEGER | Yes | — | Derived age in years. |
-| `search_vector` | TSVECTOR | Yes | — | Full-text search vector, GIN-indexed (`idx_persons_search`) for name search. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `persons` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `surname` | TEXT | variable | Dela Cruz |
+| `first_name` | TEXT | variable | Juan |
+| `middle_name` | TEXT | variable | Santos |
+| `extension` | TEXT | variable | Jr. |
+| `gender` | TEXT | variable | Male |
+| `dob` | DATE | 4 bytes | 1990-01-15 |
+| `address` | TEXT | variable | Poblacion, Norzagaray, Bulacan |
+| `phone` | TEXT | variable | 09171000001 |
+| `philsys_number` | TEXT | variable | 1234-5678-9012 |
+| `place_of_birth` | TEXT | variable | Norzagaray, Bulacan |
+| `civil_status` | TEXT | variable | Married |
+| `current_address` | JSONB | variable | {"barangay":"Poblacion","city":"Norzagaray"} |
+| `email` | TEXT | variable | worker1@mswdo.test |
+| `philhealth_number` | TEXT | variable | 12-345678901-2 |
+| `occupation` | TEXT | variable | Farmer |
+| `estimated_monthly_income` | DECIMAL(12,2) | variable | 8000.00 |
+| `age` | INTEGER | 4 bytes | 35 |
+| `search_vector` | TSVECTOR | variable | 'juan':1 'dela':2 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 2. users — Application user accounts
 
 Login accounts and roles for system actors (social workers, admins, coordinators, claimants, mayor, auditor, agency staff).
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `email` | TEXT | No | — | Login email; UNIQUE, NOT NULL. |
-| `password` | TEXT | No | — | Password hash (never plaintext). |
-| `role` | TEXT | Yes | 'social_worker' | Enum: `social_worker`, `admin`, `coordinator`, `claimant`, `mayor`, `auditor` (entity also defines `agency_staff`). |
-| `full_name` | TEXT | Yes | — | Display name. |
-| `phone` | TEXT | Yes | — | Contact phone. |
-| `person_id` | UUID | Yes | — | FK → persons(id) — links the account to a person record. |
-| `pending_person_id` | UUID | Yes | — | Person id awaiting confirmation during self-link. |
-| `person_link_code` | TEXT | Yes | — | One-time code used by a person to link to this account. |
-| `person_link_code_expires_at` | TIMESTAMP | Yes | — | Expiry of `person_link_code`. |
-| `assigned_barangay` | TEXT | Yes | — | Barangay this user is assigned to. |
-| `permitted_barangays` | TEXT[] | Yes | '{}' | Array of barangays the user may act on. |
-| `is_active` | BOOLEAN | Yes | TRUE | Whether the account is active. |
-| `device_id` | TEXT | Yes | — | Registered device id (offline sync / push). |
-| `mfa_secret` | TEXT | Yes | — | TOTP secret for multi-factor authentication. |
-| `mfa_enabled` | BOOLEAN | Yes | FALSE | Whether MFA is enabled. |
-| `token_version` | INTEGER | Yes | 0 | Version counter for JWT invalidation. |
-| `email_verified` | BOOLEAN | Yes | TRUE | Whether the email has been verified. |
-| `verification_token` | TEXT | Yes | — | Email verification token. |
-| `verification_token_expires_at` | TIMESTAMP | Yes | — | Expiry of the verification token. |
-| `reset_token` | TEXT | Yes | — | Password reset token. |
-| `reset_token_expires_at` | TIMESTAMP | Yes | — | Expiry of the reset token. |
-| `new_email` | TEXT | Yes | — | Pending email address change. |
-| `new_email_token` | TEXT | Yes | — | Token confirming the email change. |
-| `new_email_token_expires_at` | TIMESTAMP | Yes | — | Expiry of the new-email token. |
-| `agency_id` | UUID | Yes | — | FK → agencies(id). *Added per entity (`user.entity.ts`) — not listed in DB-SCHEMA.md.* Links agency-staff accounts to an agency. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `users` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `email` | TEXT | variable | worker1@mswdo.test |
+| `password` | TEXT | variable | $2b$12$Uf3ng0NSL7J5ZiQNF69rY.2ftiQrGmlj2x8i6yP5zftFcutq7UQ8. |
+| `role` | TEXT | variable | social_worker |
+| `full_name` | TEXT | variable | Medical Assistance |
+| `phone` | TEXT | variable | 09171000001 |
+| `person_id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `pending_person_id` | UUID | 16 bytes | None |
+| `person_link_code` | TEXT | variable | 123456 |
+| `person_link_code_expires_at` | TIMESTAMP | 8 bytes | 123456 |
+| `assigned_barangay` | TEXT | variable | Poblacion |
+| `permitted_barangays` | TEXT[] | variable | Poblacion |
+| `is_active` | BOOLEAN | 1 byte | true |
+| `device_id` | TEXT | variable | tablet-02 |
+| `mfa_secret` | TEXT | variable | JBSWY3DPEHPK3PXP |
+| `mfa_enabled` | BOOLEAN | 1 byte | true |
+| `token_version` | INTEGER | 4 bytes | 2 |
+| `email_verified` | BOOLEAN | 1 byte | worker1@mswdo.test |
+| `verification_token` | TEXT | variable | vrf-abc123 |
+| `verification_token_expires_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:10:00 |
+| `reset_token` | TEXT | variable | rst-abc123 |
+| `reset_token_expires_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:10:00 |
+| `new_email` | TEXT | variable | worker1@mswdo.test |
+| `new_email_token` | TEXT | variable | worker1@mswdo.test |
+| `new_email_token_expires_at` | TIMESTAMP | 8 bytes | worker1@mswdo.test |
+| `agency_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 3. beneficiaries — Beneficiary registrations (thin wrapper around persons)
 
 Narrows a `persons` row into a welfare beneficiary; person attributes are accessed via FK join and flattened with `@Expose()` getters.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `person_id` | UUID | No | — | FK → persons(id) — the underlying person record. |
-| `access_card_code` | TEXT | Yes | — | Unique access card code assigned to the beneficiary. |
-| `user_id` | UUID | Yes | — | User account that created/owns this registration. |
-| `household_id` | UUID | Yes | — | FK → households(id) — the household this beneficiary belongs to. |
-| `consent_status` | TEXT | Yes | 'active' | Consent state (default `active`). |
-| `category` | TEXT | Yes | — | Beneficiary category (e.g. program category). |
-| `hash` | TEXT | Yes | — | Audit hash-chain value for this record. |
-| `prev_hash` | TEXT | Yes | — | Hash of the previous record in the chain. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `beneficiaries` |
+| Primary Key: | `id` (UUID) |
 
-RLS-enabled table (policies on `app.current_role` / `app.current_barangay`).
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `person_id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `access_card_code` | TEXT | variable | NORZ-AC-2026-0042 |
+| `user_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `household_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `consent_status` | TEXT | variable | active |
+| `category` | TEXT | variable | Senior Citizen |
+| `hash` | TEXT | variable | 5f4dcc3b5aa765d61d8327deb882cf99 |
+| `prev_hash` | TEXT | variable | 5f4dcc3b5aa765d61d8327deb882cf99 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 4. households — Household groupings
 
 Groups of persons that form a household for means-testing and program eligibility.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `primary_beneficiary_id` | UUID | Yes | — | Beneficiary designated as the household head. |
-| `barangay` | TEXT | Yes | — | Barangay where the household resides. |
-| `estimated_income` | DECIMAL(12,2) | Yes | — | Estimated aggregate household income. |
-| `verified_by` | TEXT | Yes | — | Name/role of the verifier. |
-| `verified_at` | TIMESTAMP | Yes | NOW() | When the household was verified (set on insert). |
-| `access_card_code` | TEXT | Yes | — | *Added per entity (`household.entity.ts`) — not listed in DB-SCHEMA.md.* Access card code held at household level. |
-| *(members)* | — | — | — | Virtual: `OneToMany` → `household_memberships`. |
+| Table Name: | `households` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `primary_beneficiary_id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `barangay` | TEXT | variable | Poblacion |
+| `estimated_income` | DECIMAL(12,2) | variable | 8000.00 |
+| `verified_by` | TEXT | variable | false |
+| `verified_at` | TIMESTAMP | 8 bytes | false |
+| `access_card_code` | TEXT | variable | NORZ-AC-2026-0042 |
+
 
 ### 5. household_memberships — Links persons to households
 
 Associates a person with a household and their role within it.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `person_id` | UUID | No | — | FK → persons(id) — the member. |
-| `household_id` | UUID | Yes | — | FK → households(id) — the household. |
-| `relationship` | TEXT | No | — | Role in the household (e.g. head, spouse, child). |
-| `is_primary` | BOOLEAN | Yes | FALSE | Whether this member is the primary household member. |
-| `status` | TEXT | Yes | — | Membership status. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `household_memberships` |
+| Primary Key: | `id` (UUID) |
 
-A partial unique index on `(person_id, household_id) WHERE household_id IS NOT NULL` enforces one household per person.
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `person_id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `household_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `relationship` | TEXT | variable | Spouse |
+| `is_primary` | BOOLEAN | 1 byte | true |
+| `status` | TEXT | variable | active |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 6. beneficiary_claimants — Claimant relationships for beneficiaries
 
 Records a claimant (e.g. a parent/guardian) claiming on behalf of a beneficiary person, both being `persons` rows.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `beneficiary_id` | UUID | No | — | FK → persons(id) — the beneficiary person. |
-| `claimant_id` | UUID | No | — | FK → persons(id) — the claimant person. |
-| `relationship` | TEXT | No | — | Relationship of claimant to beneficiary. |
-| `authorization_url` | TEXT | Yes | — | Signed authorization document URL. |
-| `calendar_year` | INTEGER | Yes | — | Year the claim applies to. |
-| `is_primary` | BOOLEAN | Yes | TRUE | Whether this is the primary claimant. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
+| Table Name: | `beneficiary_claimants` |
+| Primary Key: | `id` (UUID) |
 
-Unique index `idx_bc_unique_primary` on `(beneficiary_id, claimant_id)`.
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `beneficiary_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `claimant_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `relationship` | TEXT | variable | Spouse |
+| `authorization_url` | TEXT | variable | https://kapwa.local/auth/abc123 |
+| `calendar_year` | INTEGER | 4 bytes | 2026 |
+| `is_primary` | BOOLEAN | 1 byte | true |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 7. beneficiary_roles — Role/consent/access-card records per person
 
 Per-person role, consent, and access-card attributes.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `person_id` | UUID | No | — | FK → persons(id) — the person. |
-| `household_id` | UUID | Yes | — | Related household (if any). |
-| `user_id` | UUID | Yes | — | Related user account (if any). |
-| `consent_status` | TEXT | Yes | 'active' | Consent state (default `active`). |
-| `access_card_code` | TEXT | Yes | — | UNIQUE access card code for the person. |
-| `category` | TEXT | Yes | — | Role/category label. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `beneficiary_roles` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `person_id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `household_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `user_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `consent_status` | TEXT | variable | active |
+| `access_card_code` | TEXT | variable | NORZ-AC-2026-0042 |
+| `category` | TEXT | variable | Senior Citizen |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 8. cases — Social welfare case management (core case table)
 
 The central social-welfare workflow record; `status` drives the case FSM.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `control_no` | TEXT | No | — | UNIQUE, NOT NULL case control number. |
-| `beneficiary_id` | UUID | Yes | — | FK → beneficiaries(id) — the case owner. |
-| `service_requested` | TEXT[] | Yes | — | Array of requested service labels. |
-| `requirements_checklist` | JSONB | Yes | — | Shape: `{ "<requirementKey>": boolean }` — submitted/document requirements. |
-| `status` | TEXT (VARCHAR) | Yes | 'enrolled' | CHECK IN ('enrolled','assessed','in_review','active','transitioning','closed') — the FSM state. |
-| `certificate_url` | TEXT | Yes | — | Certificate document URL. |
-| `petty_cash_voucher_url` | TEXT | Yes | — | Petty cash voucher URL. |
-| `approved_by_signature` | TEXT | Yes | — | Approver signature (URL/text). |
-| `approved_by_role` | VARCHAR | Yes | — | Role of the approver. |
-| `assigned_worker_id` | UUID | Yes | — | FK → users(id) — assigned social worker. |
-| `assigned_worker_name` | TEXT | Yes | — | Denormalized worker name. |
-| `problems_presented` | TEXT | Yes | — | Narrative of problems presented. |
-| `social_worker_assessment` | TEXT | Yes | — | Assessment by the social worker. |
-| `client_category` | TEXT | Yes | — | Client category. |
-| `nature_of_service` | TEXT[] | Yes | — | Array of service natures. |
-| `financial_subsidies` | JSONB | Yes | — | Shape: `{ "<key>": <amount|details> }` — financial subsidy breakdown. |
-| `amount_assistance` | DECIMAL(12,2) | Yes | — | Total financial assistance amount. |
-| `mode_financial_assistance` | TEXT | Yes | — | Mode (e.g. cash, transfer, voucher). |
-| `source_of_fund` | TEXT | Yes | — | Funding source. |
-| `legislator_specify` | TEXT | Yes | — | Named legislator if from legislative fund. |
-| `other_assistance` | JSONB | Yes | — | Shape: `{ "<label>": <details> }` — non-financial assistance. |
-| `interviewed_by` | TEXT | Yes | — | Interviewer name. |
-| `client_signature` | TEXT | Yes | — | Client signature (URL/text). |
-| `self_reliance_plan` | TEXT | Yes | — | Self-reliance plan narrative. |
-| `referrals` | JSONB | Yes | — | Array of `{agencyName, contactInfo?, reason, status ('pending'|'completed'|'declined'), notes?}`. |
-| `follow_up_date` | DATE | Yes | — | Next follow-up date. |
-| `exit_notes` | TEXT | Yes | — | Notes on case exit. |
-| `frva_score` | DECIMAL(5,2) | Yes | — | Family Risk & Vulnerability Assessment score. |
-| `swdi_score` | DECIMAL(5,2) | Yes | — | Social Work Determinants Index score. |
-| `family_dialogue_notes` | TEXT | Yes | — | Notes from family dialogue. |
-| `self_reliance_level` | INTEGER | Yes | — | Self-reliance level rating. |
-| `sustainability_plan` | TEXT | Yes | — | Sustainability plan narrative. |
-| `transition_date` | DATE | Yes | — | Date of transition phase. |
-| `closure_outcome` | TEXT | Yes | — | Outcome recorded at closure. |
-| `closure_date` | DATE | Yes | — | Date the case was closed. |
-| `follow_up_visits` | JSONB | Yes | — | Array of `{date, type, notes, outcome}`. |
-| `hash` | TEXT | Yes | — | Audit hash-chain value. |
-| `prev_hash` | TEXT | Yes | — | Previous record hash in the chain. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `cases` |
+| Primary Key: | `id` (UUID) |
 
-RLS-enabled table.
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `control_no` | TEXT | variable | BLT-2026-0015 |
+| `beneficiary_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `service_requested` | TEXT[] | variable | {"Medical Assistance"} |
+| `requirements_checklist` | JSONB | variable | {"birth_certificate":true} |
+| `status` | TEXT (VARCHAR) | variable | active |
+| `certificate_url` | TEXT | variable | https://minio.kapwa.local/certs/c-001.pdf |
+| `petty_cash_voucher_url` | TEXT | variable | https://minio.kapwa.local/vouchers/v-001.pdf |
+| `approved_by_signature` | TEXT | variable | Lorna B. Santos |
+| `approved_by_role` | VARCHAR | variable | coordinator |
+| `assigned_worker_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `assigned_worker_name` | TEXT | variable | Medical Assistance |
+| `problems_presented` | TEXT | variable | true |
+| `social_worker_assessment` | TEXT | variable | Household qualifies for financial aid |
+| `client_category` | TEXT | variable | Senior Citizen |
+| `nature_of_service` | TEXT[] | variable | {"Financial Assistance"} |
+| `financial_subsidies` | JSONB | variable | {"amount":5000,"mode":"cash"} |
+| `amount_assistance` | DECIMAL(12,2) | variable | 5000.00 |
+| `mode_financial_assistance` | TEXT | variable | Cash |
+| `source_of_fund` | TEXT | variable | LGU |
+| `legislator_specify` | TEXT | variable | Councilor A. Reyes |
+| `other_assistance` | JSONB | variable | {"food_pack":2} |
+| `interviewed_by` | TEXT | variable | Juan Dela Cruz |
+| `client_signature` | TEXT | variable | data:image/png;base64,iVBOR... |
+| `self_reliance_plan` | TEXT | variable | Livelihood training completed |
+| `referrals` | JSONB | variable | {"accepted":true} |
+| `follow_up_date` | DATE | 4 bytes | 2026-09-01 |
+| `exit_notes` | TEXT | variable | Follow up in 30 days |
+| `frva_score` | DECIMAL(5,2) | variable | 28.5 |
+| `swdi_score` | DECIMAL(5,2) | variable | 19.0 |
+| `family_dialogue_notes` | TEXT | variable | Follow up in 30 days |
+| `self_reliance_level` | INTEGER | 4 bytes | Developing |
+| `sustainability_plan` | TEXT | variable | 6-month follow-up schedule |
+| `transition_date` | DATE | 4 bytes | 2026-08-10 |
+| `closure_outcome` | TEXT | variable | Service delivered |
+| `closure_date` | DATE | 4 bytes | 2026-08-20 |
+| `follow_up_visits` | JSONB | variable | 3 |
+| `hash` | TEXT | variable | 5f4dcc3b5aa765d61d8327deb882cf99 |
+| `prev_hash` | TEXT | variable | 5f4dcc3b5aa765d61d8327deb882cf99 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 9. case_history — Case status transition audit log
 
 Append-only log of every case FSM transition.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `case_id` | VARCHAR | No | — | Logical reference to cases(id) — stored as text. |
-| `from_status` | TEXT | Yes | — | Source status (enum matching case statuses). |
-| `to_status` | TEXT | No | — | Target status (enum matching case statuses). |
-| `changed_by_role` | VARCHAR | Yes | — | Role of the actor who changed status. |
-| `changed_by_id` | VARCHAR | Yes | — | Id of the actor who changed status. |
-| `remarks` | VARCHAR | Yes | — | Free-text remarks on the transition. |
-| `transition_type` | VARCHAR | Yes | 'standard' | Values: 'standard', 'override' (entity also permits 'bulk_export_unmasked'). |
-| `override_reason` | VARCHAR | Yes | — | Reason supplied for an override transition. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Transition timestamp (UTC). |
+| Table Name: | `case_history` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `case_id` | VARCHAR | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `from_status` | TEXT | variable | active |
+| `to_status` | TEXT | variable | active |
+| `changed_by_role` | VARCHAR | variable | social_worker |
+| `changed_by_id` | VARCHAR | variable | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `remarks` | VARCHAR | variable | FRVA completed |
+| `transition_type` | VARCHAR | variable | standard |
+| `override_reason` | VARCHAR | variable | admin override |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 10. case_interventions — Services/interventions delivered per case
 
 Records each service or intervention delivered for a case (replaces the dropped `interventions` table).
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `case_id` | TEXT | No | — | Logical reference to cases(id) — stored as text. |
-| `program_id` | UUID | Yes | — | FK → programs(id) — originating program, if any. |
-| `service_name` | TEXT | No | — | Name of the delivered service. |
-| `category` | TEXT | Yes | — | Service category. |
-| `delivery_date` | DATE | Yes | — | Date the service was delivered. |
-| `amount` | DECIMAL(12,2) | Yes | — | Monetary amount of the intervention. |
-| `mode_of_delivery` | TEXT | Yes | — | Delivery mode. |
-| `fund_source` | TEXT | Yes | — | Funding source. |
-| `notes` | TEXT | Yes | — | Free-text notes. |
-| `delivered_by` | TEXT | Yes | — | Person who delivered the service. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `case_interventions` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `case_id` | TEXT | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `program_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `service_name` | TEXT | variable | Medical Assistance |
+| `category` | TEXT | variable | Senior Citizen |
+| `delivery_date` | DATE | 4 bytes | 2026-08-04 |
+| `amount` | DECIMAL(12,2) | variable | 5000.00 |
+| `mode_of_delivery` | TEXT | variable | Cash |
+| `fund_source` | TEXT | variable | LGU |
+| `notes` | TEXT | variable | Follow up in 30 days |
+| `delivered_by` | TEXT | variable | MSWDO Staff |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 11. programs — Social service programs
 
 Catalog of social service programs with form templates and approval workflows.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `name` | TEXT | No | — | Program name. |
-| `category` | TEXT | Yes | — | Program category. |
-| `waiting_period_days` | INTEGER | Yes | — | Mandatory waiting period in days. |
-| `required_documents` | JSONB | Yes | — | String array of required document keys. |
-| `fund_sources` | TEXT[] | Yes | — | Array of fund source labels. |
-| `approval_workflow` | JSONB | Yes | — | Array of `{stepName, approverRole, slaDays, order}`. |
-| `form_template` | JSONB | Yes | — | Dynamic form definition (fields/sections). |
-| `legal_basis` | TEXT | Yes | — | Legal basis for the program. |
-| `form_version` | INTEGER | Yes | 1 | Current form template version. |
-| `is_active` | BOOLEAN | Yes | TRUE | Whether the program is active. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `programs` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `name` | TEXT | variable | Medical Assistance |
+| `category` | TEXT | variable | Senior Citizen |
+| `waiting_period_days` | INTEGER | 4 bytes | 14 |
+| `required_documents` | JSONB | variable | {"birth_certificate":"required"} |
+| `fund_sources` | TEXT[] | variable | LGU |
+| `approval_workflow` | JSONB | variable | {"step":"review","role":"admin"} |
+| `form_template` | JSONB | variable | {"fields":["surname","income"]} |
+| `legal_basis` | TEXT | variable | RA 9433 |
+| `form_version` | INTEGER | 4 bytes | 3 |
+| `is_active` | BOOLEAN | 1 byte | true |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 12. form_version_history — Versioned program form templates
 
 Snapshots of every program form template version.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `program_id` | UUID | No | — | FK → programs(id) ON DELETE CASCADE — owning program. |
-| `form_template` | JSONB | No | — | Immutable form template snapshot. |
-| `version` | INTEGER | No | — | Version number of the template. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Snapshot creation timestamp (UTC). |
+| Table Name: | `form_version_history` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `program_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `form_template` | JSONB | variable | {"fields":["surname","income"]} |
+| `version` | INTEGER | 4 bytes | 3 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 13. referrals — Barangay coordinator referrals
 
 Barangay-level coordinator intake referrals, optionally targeting a case.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `coordinator_id` | UUID | No | — | FK → users(id) — coordinator who made the referral. |
-| `barangay` | TEXT | No | — | Barangay of origin. |
-| `surname` | TEXT | No | — | Referred person's family name. |
-| `first_name` | TEXT | No | — | Referred person's given name. |
-| `middle_name` | TEXT | Yes | — | Referred person's middle name. |
-| `extension` | TEXT | Yes | — | Referred person's name suffix. |
-| `gender` | TEXT | No | — | Referred person's sex. |
-| `dob` | DATE | No | — | Referred person's date of birth. |
-| `address` | JSONB | Yes | — | Structured address of the referred person. |
-| `phone` | TEXT | Yes | — | Contact phone. |
-| `reason` | TEXT | No | — | Reason for the referral. |
-| `status` | TEXT | Yes | 'pending' | CHECK IN ('pending','accepted','declined'). |
-| `decline_reason` | TEXT | Yes | — | Reason when declined. |
-| `case_id` | UUID | Yes | — | FK → cases(id) — case the referral targets, if any. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `referrals` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `coordinator_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `barangay` | TEXT | variable | Poblacion |
+| `surname` | TEXT | variable | Dela Cruz |
+| `first_name` | TEXT | variable | Juan |
+| `middle_name` | TEXT | variable | Santos |
+| `extension` | TEXT | variable | Jr. |
+| `gender` | TEXT | variable | Male |
+| `dob` | DATE | 4 bytes | 1990-01-15 |
+| `address` | JSONB | variable | Poblacion, Norzagaray, Bulacan |
+| `phone` | TEXT | variable | 09171000001 |
+| `reason` | TEXT | variable | Medical emergency |
+| `status` | TEXT | variable | active |
+| `decline_reason` | TEXT | variable | Medical emergency |
+| `case_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 14. irf_cases — Incident Report Forms (intake + blotter)
 
 Incident Report Forms with blotter entry, encrypted narration, and disposition workflow.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `blotter_entry_number` | TEXT | No | — | UNIQUE, NOT NULL blotter entry number. |
-| `case_category` | TEXT (Enum) | Yes | — | CHECK IN ('Abuse','Neglect','Exploitation','Criminal'). |
-| `datetime_reported` | TIMESTAMP | Yes | — | When the incident was reported (UTC). |
-| `datetime_incident` | TIMESTAMP | Yes | — | When the incident occurred (UTC). |
-| `item_a_reporting_person` | JSONB | Yes | — | Reporting person details (free-form object). |
-| `item_b_person_reported` | JSONB | Yes | — | Person-reported details (free-form object). |
-| `case_id` | UUID | Yes | — | FK → cases(id) — linked social welfare case, if any. |
-| `encrypted_narration` | BYTEA | Yes | — | AES-256 encrypted narration blob. |
-| `case_disposition` | CUSTOM ENUM `irf_disposition` | No | 'Under Investigation' | Values: 'Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed'. |
-| `key_wraps` | JSONB | Yes | — | Array of `{userId, encryptedKey}` — per-user AES key wrapping. |
-| `key_version` | INTEGER | Yes | 1 | Key rotation tracking version. |
-| `dismissal_reason` | TEXT | Yes | — | Reason if dismissed. |
-| `msdw_signature_url` | TEXT | Yes | — | MSDW officer signature URL. |
-| `reporting_signature_url` | TEXT | Yes | — | Reporting party signature URL. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
+| Table Name: | `irf_cases` |
+| Primary Key: | `id` (UUID) |
 
-RLS-enabled table.
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `blotter_entry_number` | TEXT | variable | BLT-2026-0015 |
+| `case_category` | TEXT (Enum) | variable | Senior Citizen |
+| `datetime_reported` | TIMESTAMP | 8 bytes | 2026-08-04 09:30:00 |
+| `datetime_incident` | TIMESTAMP | 8 bytes | 2026-08-04 08:00:00 |
+| `item_a_reporting_person` | JSONB | variable | {"name":"Ana Reyes"} |
+| `item_b_person_reported` | JSONB | variable | {"name":"Pedro Reyes"} |
+| `case_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `encrypted_narration` | BYTEA | variable | \x8b1f... (pgcrypto) |
+| `case_disposition` | CUSTOM ENUM `irf_disposition` | variable | Pending |
+| `key_wraps` | JSONB | variable | {"userId":"master","encryptedKey":"..."} |
+| `key_version` | INTEGER | 4 bytes | 1 |
+| `dismissal_reason` | TEXT | variable | Medical emergency |
+| `msdw_signature_url` | TEXT | variable | https://minio.kapwa.local/sig/abc123.png |
+| `reporting_signature_url` | TEXT | variable | https://minio.kapwa.local/sig/abc123.png |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 15. access_card_services — Service log per access card
 
 Log of services rendered against a beneficiary's access card code.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `access_card_code` | TEXT | No | — | Card code; logically references `beneficiaries.access_card_code` (no FK on the text code). |
-| `service_date` | DATE | No | — | Date the service was rendered. |
-| `service_rendered` | TEXT | No | — | Description of the rendered service. |
-| `cost` | DECIMAL(12,2) | Yes | — | Cost of the service. |
-| `agency` | TEXT | Yes | — | Agency name (denormalized text). |
-| `agency_id` | UUID | Yes | — | FK → agencies(id). *Added per entity (`access-card-service.entity.ts`) and migration 20260803000003 — not listed in DB-SCHEMA.md.* Structured agency reference. |
-| `worker_name_sign` | TEXT | Yes | — | Worker name/signature. |
-| `category` | TEXT | Yes | — | Service category. |
-| `intervention_id` | UUID | Yes | — | FK target: case_interventions(id) — originating intervention, if any. |
-| `logged_by` | UUID | Yes | — | FK → users(id) — user who logged the service. |
-| `source_barangay` | TEXT | Yes | — | Barangay where the service originated. |
+| Table Name: | `access_card_services` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `access_card_code` | TEXT | variable | NORZ-AC-2026-0042 |
+| `service_date` | DATE | 4 bytes | 2026-08-04 |
+| `service_rendered` | TEXT | variable | Medical Assistance |
+| `cost` | DECIMAL(12,2) | variable | 1500.00 |
+| `agency` | TEXT | variable | 35 |
+| `agency_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `worker_name_sign` | TEXT | variable | Medical Assistance |
+| `category` | TEXT | variable | Senior Citizen |
+| `intervention_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `logged_by` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `source_barangay` | TEXT | variable | Poblacion |
+
 
 ### 16. csr_reports — Case Study Reports
 
 Formal Case Study Reports produced for a case.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `case_id` | UUID | No | — | FK target: cases(id) — the case the report belongs to (stored as NOT NULL UUID). |
-| `control_no` | TEXT | No | — | UNIQUE, NOT NULL report control number. |
-| `social_worker_name` | TEXT | No | — | Authoring social worker. |
-| `social_worker_position` | TEXT | Yes | — | Worker's position/title. |
-| `referral_origin` | TEXT | Yes | — | Referral origin. |
-| `reason_for_referral` | TEXT | Yes | — | Reason for the referral. |
-| `problem_presented` | TEXT | Yes | — | Problem narrative. |
-| `family_background` | TEXT | Yes | — | Family background narrative. |
-| `socio_economic_profile` | TEXT | Yes | — | Socio-economic profile. |
-| `assessment_analysis` | TEXT | Yes | — | Assessment/analysis. |
-| `recommendation` | TEXT | Yes | — | Recommendation. |
-| `intervention_plan` | TEXT | Yes | — | Intervention plan. |
-| `client_signature_url` | TEXT | Yes | — | Client signature URL. |
-| `worker_signature_url` | TEXT | Yes | — | Worker signature URL. |
-| `finalized` | BOOLEAN | Yes | FALSE | Whether the report is finalized. |
-| `created_by` | TEXT | No | — | Creator identifier. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `csr_reports` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `case_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `control_no` | TEXT | variable | BLT-2026-0015 |
+| `social_worker_name` | TEXT | variable | Juan Dela Cruz |
+| `social_worker_position` | TEXT | variable | Social Welfare Officer I |
+| `referral_origin` | TEXT | variable | MSWDO |
+| `reason_for_referral` | TEXT | variable | Medical emergency |
+| `problem_presented` | TEXT | variable | true |
+| `family_background` | TEXT | variable | 5-member household, father is farmer |
+| `socio_economic_profile` | TEXT | variable | Monthly income ~Php 8,000 |
+| `assessment_analysis` | TEXT | variable | Low income household |
+| `recommendation` | TEXT | variable | Approve assistance |
+| `intervention_plan` | TEXT | variable | Monthly cash aid for 3 months |
+| `client_signature_url` | TEXT | variable | https://minio.kapwa.local/sig/abc123.png |
+| `worker_signature_url` | TEXT | variable | https://minio.kapwa.local/sig/abc123.png |
+| `finalized` | BOOLEAN | 1 byte | false |
+| `created_by` | TEXT | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 17. document_vault — File/document storage
 
 Stores metadata for uploaded files/documents.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `file_name` | TEXT | No | — | Storage path of the file (NOT NULL). |
-| `original_name` | TEXT | Yes | — | Original uploaded file name. |
-| `mime_type` | TEXT | Yes | — | File MIME type. |
-| `file_size` | INTEGER | Yes | 0 | File size in bytes. |
-| `case_id` | UUID | Yes | — | FK target: cases(id) — associated case, if any. |
-| `beneficiary_id` | UUID | Yes | — | FK target: beneficiaries(id) — associated beneficiary, if any. |
-| `category` | TEXT | Yes | — | Document category. |
-| `notes` | TEXT | Yes | — | Free-text notes. |
-| `requirement_key` | VARCHAR | Yes | — | Maps to a program requirement key. |
-| `uploaded_by` | UUID | Yes | — | User id of the uploader. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Upload timestamp (UTC). |
+| Table Name: | `document_vault` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `file_name` | TEXT | variable | intake-form.pdf |
+| `original_name` | TEXT | variable | intake-form.pdf |
+| `mime_type` | TEXT | variable | application/pdf |
+| `file_size` | INTEGER | 4 bytes | 245760 |
+| `case_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `beneficiary_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `category` | TEXT | variable | Senior Citizen |
+| `notes` | TEXT | variable | Follow up in 30 days |
+| `requirement_key` | VARCHAR | variable | birth_certificate |
+| `uploaded_by` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 18. chat_messages — In-app messaging
 
 In-app chat messages between users.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `sender_id` | TEXT | No | — | Logical sender id (user/person). |
-| `sender_name` | TEXT | Yes | — | Denormalized sender name. |
-| `recipient_id` | TEXT | No | — | Logical recipient id (user/person). |
-| `content` | TEXT | No | — | Message body. |
-| `conversation_id` | TEXT | No | — | Conversation grouping key. |
-| `is_read` | BOOLEAN | Yes | FALSE | Whether the message has been read. |
-| `read_at` | TIMESTAMP | Yes | — | When the message was read (UTC). |
-| `created_at` | TIMESTAMP | Yes | NOW() | Message timestamp (UTC). |
+| Table Name: | `chat_messages` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `sender_id` | TEXT | variable | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `sender_name` | TEXT | variable | Juan Dela Cruz |
+| `recipient_id` | TEXT | variable | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `content` | TEXT | variable | Follow up on case #C-001 |
+| `conversation_id` | TEXT | variable | 019f1c77_019f1c78 |
+| `is_read` | BOOLEAN | 1 byte | false |
+| `read_at` | TIMESTAMP | 8 bytes | 2026-08-04 10:00:00 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 19. notifications — Outbound notifications
 
 Notifications delivered in-app, by SMS, or by email.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `recipient_id` | TEXT | No | — | Logical recipient id (user/person). |
-| `title` | TEXT | No | — | Notification title. |
-| `message` | TEXT | No | — | Notification body. |
-| `category` | TEXT (Enum) | Yes | 'system' | Values: 'case_update', 'sync_conflict', 'system', 'chat', 'approval', 'disbursement', 'sla_escalation'. |
-| `channel` | TEXT (Enum) | Yes | 'in_app' | Values: 'sms', 'in_app', 'email'. |
-| `phone` | TEXT | Yes | — | Recipient phone (SMS). |
-| `email` | TEXT | Yes | — | Recipient email (email channel). |
-| `reference_id` | TEXT | Yes | — | Related entity id (case, etc.). |
-| `is_read` | BOOLEAN | Yes | FALSE | Whether read. |
-| `sent` | BOOLEAN | Yes | FALSE | Whether dispatched. |
-| `consent_skipped` | BOOLEAN | Yes | FALSE | Whether consent was bypassed. |
-| `sent_at` | TIMESTAMP | Yes | — | When dispatched (UTC). |
-| `created_at` | TIMESTAMP | Yes | NOW() | Creation timestamp (UTC). |
+| Table Name: | `notifications` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `recipient_id` | TEXT | variable | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `title` | TEXT | variable | Case Update |
+| `message` | TEXT | variable | 35 |
+| `category` | TEXT (Enum) | variable | Senior Citizen |
+| `channel` | TEXT (Enum) | variable | in_app |
+| `phone` | TEXT | variable | 09171000001 |
+| `email` | TEXT | variable | worker1@mswdo.test |
+| `reference_id` | TEXT | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `is_read` | BOOLEAN | 1 byte | false |
+| `sent` | BOOLEAN | 1 byte | true |
+| `consent_skipped` | BOOLEAN | 1 byte | true |
+| `sent_at` | TIMESTAMP | 8 bytes | true |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 20. notification_preferences — Per-user notification opt-in
 
 Per-user opt-in preferences keyed by channel and category.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `user_id` | VARCHAR | No | — | Logical user id. |
-| `channel` | VARCHAR | No | — | One of 'sms', 'in_app', 'email'. |
-| `category` | VARCHAR | No | — | Maps to NotificationCategory enum (case_update, sync_conflict, system, chat, approval, disbursement, sla_escalation). |
-| `opted_in` | BOOLEAN | Yes | FALSE | Whether opted in. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `notification_preferences` |
+| Primary Key: | `id` (UUID) |
 
-Unique index `idx_notif_prefs_user_channel_category` on `(user_id, channel, category)`.
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `user_id` | VARCHAR | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `channel` | VARCHAR | variable | in_app |
+| `category` | VARCHAR | variable | Senior Citizen |
+| `opted_in` | BOOLEAN | 1 byte | true |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 21. consent_ledger — Beneficiary consent audit trail
 
 Append-only ledger of consent grants and revocations.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `beneficiary_id` | UUID | Yes | — | FK target: beneficiaries(id) — the beneficiary. |
-| `purpose` | TEXT | Yes | — | Consent purpose. |
-| `channel` | TEXT | Yes | — | Channel of consent. |
-| `status` | TEXT | Yes | 'active' | Consent status (default 'active'). |
-| `granted_at` | TIMESTAMP | Yes | NOW() | When consent was granted (UTC). |
-| `revoked_at` | TIMESTAMP | Yes | — | When consent was revoked (UTC), if ever. |
-| `revoked_reason` | TEXT | Yes | — | Reason for revocation. |
-| `hash` | TEXT | Yes | — | Audit hash-chain value. |
-| `prev_hash` | TEXT | Yes | — | Previous record hash in the chain. |
+| Table Name: | `consent_ledger` |
+| Primary Key: | `id` (UUID) |
 
-RLS-enabled table.
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `beneficiary_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `purpose` | TEXT | variable | Medical assistance consent |
+| `channel` | TEXT | variable | in_app |
+| `status` | TEXT | variable | active |
+| `granted_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+| `revoked_at` | TIMESTAMP | 8 bytes | None |
+| `revoked_reason` | TEXT | variable | Medical emergency |
+| `hash` | TEXT | variable | 5f4dcc3b5aa765d61d8327deb882cf99 |
+| `prev_hash` | TEXT | variable | 5f4dcc3b5aa765d61d8327deb882cf99 |
+
 
 ### 22. otp_codes — One-time password verification
 
 OTP codes for phone verification.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `phone` | TEXT | No | — | Phone number the OTP was sent to. |
-| `code` | TEXT | No | — | The OTP value. |
-| `verified` | BOOLEAN | Yes | FALSE | Whether verified. |
-| `expires_at` | TIMESTAMP | No | — | Expiry timestamp (UTC). |
-| `created_at` | TIMESTAMP | Yes | NOW() | Issue timestamp (UTC). |
+| Table Name: | `otp_codes` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `phone` | TEXT | variable | 09171000001 |
+| `code` | TEXT | variable | 123456 |
+| `verified` | BOOLEAN | 1 byte | false |
+| `expires_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:10:00 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 23. sync_queue — Offline sync change queue
 
 Queued offline changes awaiting application to the server.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `device_id` | TEXT | No | — | Source device id. |
-| `table_name` | TEXT | No | — | Logical target table name. |
-| `record_id` | TEXT | No | — | Logical target record id. |
-| `operation` | TEXT | No | — | One of 'INSERT', 'UPDATE', 'DELETE'. |
-| `payload` | JSONB | Yes | — | Changed row data (free-form object). |
-| `client_updated_at` | TIMESTAMP | No | — | Client-side change time (UTC). |
-| `status` | TEXT | Yes | 'pending' | Values: 'pending', 'applied', 'conflict', 'failed'. |
-| `idempotency_key` | TEXT | Yes | — | Deduplication key (mirrors `idempotency_keys.key`). |
-| `conflict_reason` | TEXT | Yes | — | Reason when conflicted. |
-| `resolved_at` | TIMESTAMP | Yes | — | When resolved (UTC). |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
+| Table Name: | `sync_queue` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `device_id` | TEXT | variable | tablet-02 |
+| `table_name` | TEXT | variable | cases |
+| `record_id` | TEXT | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `operation` | TEXT | variable | UPDATE |
+| `payload` | JSONB | variable | {"status":"active"} |
+| `client_updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:05:00 |
+| `status` | TEXT | variable | active |
+| `idempotency_key` | TEXT | variable | 4f9c2d10-... |
+| `conflict_reason` | TEXT | variable | Medical emergency |
+| `resolved_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:06:00 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 24. version_vectors — CRDT sync version tracking
 
 Per-device per-table version counters for conflict-free synchronization.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `device_id` | TEXT | No | — | Device id. |
-| `table_name` | TEXT | No | — | Logical table name. |
-| `local_version` | INTEGER | Yes | 0 | Local change version. |
-| `server_version` | INTEGER | Yes | 0 | Server-applied version. |
-| `last_synced_at` | TIMESTAMP | Yes | — | Last successful sync time (UTC). |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `version_vectors` |
+| Primary Key: | `id` (UUID) |
 
-UNIQUE constraint on `(device_id, table_name)`.
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `device_id` | TEXT | variable | tablet-02 |
+| `table_name` | TEXT | variable | cases |
+| `local_version` | INTEGER | 4 bytes | 3 |
+| `server_version` | INTEGER | 4 bytes | 5 |
+| `last_synced_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:07:00 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 25. idempotency_keys — Idempotent operation tracking
 
 Deduplicates replayed operations by unique key.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `key` | TEXT | No | — | UNIQUE, NOT NULL idempotency key. |
-| `result` | JSONB | No | — | Stored result of the operation (free-form). |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
+| Table Name: | `idempotency_keys` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `key` | TEXT | variable | 4f9c2d10-... |
+| `result` | JSONB | variable | {"applied":true} |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 26. audit_log — General audit log
 
 Generic audit trail of actions.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `action` | TEXT | No | — | Action performed. |
-| `reference_id` | TEXT | Yes | — | Related entity id. |
-| `user_id` | TEXT | Yes | — | Acting user id. |
-| `details` | JSONB | Yes | — | Free-form action details. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Event timestamp (UTC). |
+| Table Name: | `audit_log` |
+| Primary Key: | `id` (UUID) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `action` | TEXT | variable | LOGIN |
+| `reference_id` | TEXT | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `user_id` | TEXT | variable | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `details` | JSONB | variable | {"ip":"203.0.113.1"} |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 27. intervention_types — Intervention type reference/lookup table
 
 Reference table of intervention type codes.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `code` | VARCHAR(10) | No | — | UNIQUE, NOT NULL short code (e.g. 'FA', 'C', 'CSR'). |
-| `name` | VARCHAR(100) | No | — | Human-readable name. |
-| `description` | TEXT | Yes | — | Longer description. |
-| `is_active` | BOOLEAN | Yes | TRUE | Whether active. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Table Name: | `intervention_types` |
+| Primary Key: | `id` (UUID) |
 
-Seed data: 'FA' (Financial Assistance), 'C' (Cash Assistance), 'CSR' (Case Study Report), 'R' (Referral), 'H' (Home Visit), 'HV' (Home Visit Variation), 'Other' (Other Intervention).
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `code` | VARCHAR(10) | variable | 123456 |
+| `name` | VARCHAR(100) | variable | Medical Assistance |
+| `description` | TEXT | variable | Medical assistance program |
+| `is_active` | BOOLEAN | 1 byte | true |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 28. access_card_seq — Access card serial number sequence
 
 Per-year serial counter used to mint unique access card codes.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | SERIAL | No | nextval | PK. Auto-incrementing sequence id. |
-| `year` | INTEGER | No | — | Year the sequence belongs to. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
+| Table Name: | `access_card_seq` |
+| Primary Key: | `id` (SERIAL) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | SERIAL | 4 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `year` | INTEGER | 4 bytes | 2026 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 29. irf_blotter_seq — IRF blotter number sequence
 
 Per-year serial counter used to mint unique blotter entry numbers.
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | SERIAL | No | nextval | PK. Auto-incrementing sequence id. |
-| `year` | INTEGER | No | — | Year the sequence belongs to. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
+| Table Name: | `irf_blotter_seq` |
+| Primary Key: | `id` (SERIAL) |
+
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | SERIAL | 4 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `year` | INTEGER | 4 bytes | 2026 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+
 
 ### 30. agencies — Partner agencies
 
 *Added beyond DB-SCHEMA.md per entity (`agencies/agency.entity.ts`) and migration 20260803000001 — required by FR-07 and by the FK columns `users.agency_id`, `access_card_services.agency_id`, `inter_agency_referrals.from_agency_id`/`.to_agency_id`. Consistent with 06-erd.md.*
 
-Catalog of partner agencies for inter-agency workflows.
+| Table Name: | `agencies` |
+| Primary Key: | `id` (UUID) |
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `code` | VARCHAR(10) | No | — | UNIQUE, NOT NULL agency code (e.g. MSWDO, RHU, WCPD, PESO, DILG, DSWD, DepEd). |
-| `name` | VARCHAR(100) | No | — | Agency name. |
-| `type` | VARCHAR(50) | Yes | — | Agency type (e.g. social_services, health, police, labor, government, education). |
-| `contact_info` | JSONB | Yes | — | Shape: `{ phone?, email?, address? }` — free-form contact details. |
-| `is_active` | BOOLEAN | Yes | TRUE | Whether the agency is active. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `code` | VARCHAR(10) | variable | 123456 |
+| `name` | VARCHAR(100) | variable | Medical Assistance |
+| `type` | VARCHAR(50) | variable | Health |
+| `contact_info` | JSONB | variable | {"phone":"0917...","email":"rhu@..."} |
+| `is_active` | BOOLEAN | 1 byte | true |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 31. inter_agency_referrals — Inter-agency referral workflow
 
 *Added beyond DB-SCHEMA.md per entity (`inter-agency-referrals/inter-agency-referral.entity.ts`) and migration 20260803000002 — required by FR-07. Consistent with 06-erd.md.*
 
-Tracks a referral of a person/case from one agency to another through a CHECK-constrained lifecycle.
+| Table Name: | `inter_agency_referrals` |
+| Primary Key: | `id` (UUID) |
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `case_id` | UUID | Yes | — | FK → cases(id) — originating case, if any. |
-| `person_id` | UUID | No | — | FK → persons(id) — the referred person. |
-| `from_agency_id` | UUID | No | — | FK → agencies(id) — referring agency. |
-| `to_agency_id` | UUID | No | — | FK → agencies(id) — receiving agency. |
-| `status` | TEXT | No | 'referred' | CHECK IN ('referred','received','actioned','closed','declined'). |
-| `reason` | TEXT | No | — | Reason for referral. |
-| `notes` | TEXT | Yes | — | Free-text notes. |
-| `legal_basis_code` | TEXT | No | — | Legal basis code for the referral. |
-| `consent_ledger_id` | UUID | Yes | — | FK → consent_ledger(id) — linked consent event. |
-| `outcome` | TEXT | Yes | — | Final outcome. |
-| `received_at` | TIMESTAMP | Yes | — | When the referral was received (UTC). |
-| `actioned_at` | TIMESTAMP | Yes | — | When the referral was actioned (UTC). |
-| `closed_at` | TIMESTAMP | Yes | — | When the referral was closed (UTC). |
-| `declined_reason` | TEXT | Yes | — | Reason if declined. |
-| `created_by` | UUID | Yes | — | FK → users(id) — user who created the referral. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `case_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `person_id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `from_agency_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `to_agency_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `status` | TEXT | variable | active |
+| `reason` | TEXT | variable | Medical emergency |
+| `notes` | TEXT | variable | Follow up in 30 days |
+| `legal_basis_code` | TEXT | variable | RA 9433 |
+| `consent_ledger_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `outcome` | TEXT | variable | Service delivered |
+| `received_at` | TIMESTAMP | 8 bytes | 2026-08-05 09:00:00 |
+| `actioned_at` | TIMESTAMP | 8 bytes | LOGIN |
+| `closed_at` | TIMESTAMP | 8 bytes | 2026-08-12 10:30:00 |
+| `declined_reason` | TEXT | variable | Medical emergency |
+| `created_by` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
+
 
 ### 32. physical_files — Physical file locations
 
 *Added beyond DB-SCHEMA.md per entity (`physical-files/physical-file.entity.ts`) and migration 20260730000001 — required by FR-09. Consistent with 06-erd.md.*
 
-Maps a physical cabinet/folder/shelf location one-to-one to an intervention.
+| Table Name: | `physical_files` |
+| Primary Key: | `id` (UUID) |
 
-| Column | Type | Null | Default | Description |
-|---|---|---|---|---|
-| `id` | UUID | No | uuid_generate_v7() | PK. UUID v7 identifier. |
-| `intervention_id` | UUID | No | — | FK → case_interventions(id); UNIQUE (one-to-one) — the intervention whose physical file this is. |
-| `cabinet` | VARCHAR(50) | No | — | Cabinet identifier. |
-| `folder` | VARCHAR(100) | No | — | Folder identifier. |
-| `shelf` | VARCHAR(100) | No | — | Shelf identifier. |
-| `qr_hash` | VARCHAR(64) | Yes | — | UNIQUE QR hash for the physical file. |
-| `qr_data_url` | TEXT | Yes | — | Data URL of the QR code. |
-| `notes` | TEXT | Yes | — | Free-text notes. |
-| `created_at` | TIMESTAMP | Yes | NOW() | Row creation timestamp (UTC). |
-| `updated_at` | TIMESTAMP | Yes | NOW() | Last update timestamp (UTC). |
-
-## 4. Conventions & Legend
-
-**Primary keys.** Every table has a single `id` column. Unless noted (`access_card_seq`, `irf_blotter_seq` use `SERIAL`), the PK is a UUID v7 generated by the custom `uuid_generate_v7()` function (or by `@BeforeInsert()` in `BaseEntity`), written as `PK` in the Description column.
-
-**Foreign keys.** Written as `FK → target_table(target_column)`, e.g. `FK → persons(id)`. Some columns are *logical* references stored as text and not enforced by a DB constraint — these are described as "Logical reference to ..." (e.g. `cases.case_id` in `case_history`, `access_card_services.access_card_code`).
-
-**Enum / CHECK.** CHECK-constrained columns list their allowed values inline, e.g. `cases.status` CHECK IN (`enrolled`, `assessed`, `in_review`, `active`, `transitioning`, `closed`). PostgreSQL-native enums (e.g. `irf_cases.case_disposition` using `irf_disposition`) list their values in the Description column.
-
-**JSONB shape.** Where the schema or entity fixes a shape, it is documented in the Description (e.g. `cases.referrals`, `programs.approval_workflow`). Otherwise the column is a free-form JSON object.
-
-**Timestamps.** All timestamps are stored in UTC. `created_at`/`updated_at` track row mutation; event timestamps (`verified_at`, `granted_at`, `sent_at`, `read_at`, `received_at`, `actioned_at`, `closed_at`, `expires_at`, etc.) record the moment the named event occurred.
-
-**Worked examples.**
-
-1. *Case FSM status.* A social worker opens a case in `cases` with `status = 'enrolled'` (the CHECK constraint in Section 3, table 8 enforces the allowed set). Every transition — e.g. `assessed` → `active` — is appended as a row to `case_history` (table 9) carrying `from_status`, `to_status`, and `transition_type`, so the full FSM history is auditable. This realizes FR-04/FR-05.
-
-2. *Inter-agency referral lifecycle.* When a coordinator refers a beneficiary to another agency, a row is inserted in `inter_agency_referrals` (table 31) with `status = 'referred'` (CHECK IN (`referred`,`received`,`actioned`,`closed`,`declined`)) and `from_agency_id`/`to_agency_id` pointing at `agencies` (table 30). As the receiving agency updates the referral, `received_at`, `actioned_at`, and `closed_at` timestamps are stamped, and a final `outcome` or `declined_reason` is recorded — realizing FR-07.
-
-3. *Access card service trace.* A service rendered against a card is logged in `access_card_services` (table 15): `access_card_code` links back to `beneficiaries.access_card_code` (FR-08), `agency_id` resolves the agency in `agencies`, `intervention_id` traces to `case_interventions`, and `logged_by` identifies the responsible user. Unique card codes are minted from `access_card_seq` (table 28) — realizing FR-08.
-
-## 5. Cross-References
-
-| Item | Location |
-|---|---|
-| Authoritative schema: all active tables, columns, CHECK constraints, indexes, RLS | `DB-SCHEMA.md` (repo root) |
-| ERD and diagram narrative; scope note for `agencies`/`inter_agency_referrals`/`physical_files` | `docs/diagrams/06-erd.md` |
-| `persons` | `kapwa-server/src/beneficiaries/person.entity.ts` |
-| `users` (incl. `agency_id`) | `kapwa-server/src/auth/user.entity.ts` |
-| `beneficiaries` | `kapwa-server/src/beneficiaries/beneficiary.entity.ts` |
-| `households` (incl. `access_card_code`), `household_memberships` | `kapwa-server/src/beneficiaries/household.entity.ts`, `household-membership.entity.ts` |
-| `beneficiary_claimants` | `kapwa-server/src/beneficiaries/beneficiary-claimant.entity.ts` |
-| `beneficiary_roles` | `kapwa-server/src/beneficiaries/beneficiary-role.entity.ts` |
-| `consent_ledger` | `kapwa-server/src/beneficiaries/consent-ledger.entity.ts` |
-| `cases`, `case_history` | `kapwa-server/src/cases/case.entity.ts`, `case-history.entity.ts` |
-| `case_interventions` | `kapwa-server/src/case-interventions/case-intervention.entity.ts` |
-| `programs`, `form_version_history` | `kapwa-server/src/programs/program.entity.ts`, `form-version-history.entity.ts` |
-| `referrals` | `kapwa-server/src/referrals/referral.entity.ts` |
-| `agencies` | `kapwa-server/src/agencies/agency.entity.ts` |
-| `inter_agency_referrals` (status CHECK values) | `kapwa-server/src/inter-agency-referrals/inter-agency-referral.entity.ts` |
-| `irf_cases` | `kapwa-server/src/irf/irf-case.entity.ts` |
-| `access_card_services` (incl. `agency_id`) | `kapwa-server/src/access-cards/access-card-service.entity.ts` |
-| `csr_reports` | `kapwa-server/src/csr/csr.entity.ts` |
-| `document_vault` | `kapwa-server/src/filing/filing.entity.ts` |
-| `physical_files` | `kapwa-server/src/physical-files/physical-file.entity.ts` |
-| `chat_messages` | `kapwa-server/src/chat/chat.entity.ts` |
-| `notifications`, `notification_preferences` | `kapwa-server/src/notifications/notification.entity.ts`, `notification-preference.entity.ts` |
-| `otp_codes` | `kapwa-server/src/otp/otp.entity.ts` |
-| `sync_queue`, `version_vectors` | `kapwa-server/src/sync/sync-queue.entity.ts`, `version-vector.entity.ts` |
-| `idempotency_keys` | `kapwa-server/src/database/migrations/20260619000001-audit-hash-chain.ts` |
-| `audit_log` | `kapwa-server/src/database/migrations/20260622000005-IRFDispositionEncryption.ts` |
-| `intervention_types` | `kapwa-server/src/database/migrations/20260712000001-CreateInterventionTypesTable.ts` |
-| `access_card_seq`, `irf_blotter_seq` | `kapwa-server/src/database/migrations/0000000000002-AaaInitialSchema.ts` |
-| `agencies` (DDL + seed data) | `kapwa-server/src/database/migrations/20260803000001-CreateAgenciesTable.ts` |
-| `inter_agency_referrals` (DDL) | `kapwa-server/src/database/migrations/20260803000002-CreateInterAgencyReferralsTable.ts` |
-| `physical_files` (DDL) | `kapwa-server/src/database/migrations/20260730000001-CreatePhysicalFilesTable.ts` |
-| `announcements` (entity + migration; outside DB-SCHEMA.md / ERD scope, not documented here) | `kapwa-server/src/announcements/announcement.entity.ts`, `kapwa-server/src/database/migrations/20260801000000-CreateAnnouncements.ts` |
+| Column Name | Data Type | Storage | Sample Data |
+|---|---|---|---|
+| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
+| `intervention_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
+| `cabinet` | VARCHAR(50) | variable | A-01 |
+| `folder` | VARCHAR(100) | variable | 2026-Cases |
+| `shelf` | VARCHAR(100) | variable | 3 |
+| `qr_hash` | VARCHAR(64) | variable | 5f4dcc3b5aa765d61d8327deb882cf99 |
+| `qr_data_url` | TEXT | variable | https://kapwa.local/physical/abc123 |
+| `notes` | TEXT | variable | Follow up in 30 days |
+| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
+| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
