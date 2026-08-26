@@ -428,4 +428,19 @@ describe('IntakePage — user-scoped draft', () => {
     expect(localStorage.getItem('kapwa:intake:draft:u1')).toBeNull();
     expect(localStorage.getItem('kapwa:intake:draft:u2')).not.toBeNull();
   });
+
+  it('keeps focus on the surname input while typing (no remount on re-render)', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    const input = screen.getByLabelText('ben-surname') as HTMLInputElement;
+    input.focus();
+    fireEvent.change(input, { target: { value: 'Dela' } });
+
+    expect(document.activeElement).toBe(input);
+  });
 });

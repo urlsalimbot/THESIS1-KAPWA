@@ -61,6 +61,15 @@ const emptyPerson = (): PersonForm => ({
   philhealthNumber: '', occupation: '', estimatedMonthlyIncome: '',
 });
 
+function FieldError({ error, children }: { error: string; children: React.ReactNode }) {
+  return (
+    <div>
+      {children}
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    </div>
+  );
+}
+
 function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge = true }: {
   prefix: string; form: PersonForm; onChange: (field: string, value: string) => void;
   onAddressChange: (type: 'currentAddress', field: string, value: string) => void;
@@ -71,34 +80,24 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
     return errors[`${prefix}.${field}`] || errors[field] || '';
   }
 
-  function InputWithError({ field, children }: { field: string; children: React.ReactNode }) {
-    const err = getError(field);
-    return (
-      <div>
-        {children}
-        {err && <p className="text-xs text-destructive mt-1">{err}</p>}
-      </div>
-    );
-  }
-
   const age = computeAge(form.dob);
   return (
     <div className="space-y-4">
       <div>
         <p className="text-xs text-muted-foreground mb-2">{t('intake.clientName', 'Name of the Client')}</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <InputWithError field="surname">
+          <FieldError error={getError('surname')}>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('intake.surname', 'Surname *')}</label>
               <Input required value={form.surname} onChange={e => onChange('surname', e.target.value)} aria-label={`${prefix}-surname`} className={getError('surname') ? 'border-destructive' : ''} />
             </div>
-          </InputWithError>
-          <InputWithError field="firstName">
+          </FieldError>
+          <FieldError error={getError('firstName')}>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('intake.firstName', 'First Name *')}</label>
               <Input required value={form.firstName} onChange={e => onChange('firstName', e.target.value)} aria-label={`${prefix}-firstName`} className={getError('firstName') ? 'border-destructive' : ''} />
             </div>
-          </InputWithError>
+          </FieldError>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.middleName', 'Middle Name')}</label>
             <Input value={form.middleName} onChange={e => onChange('middleName', e.target.value)} aria-label={`${prefix}-middleName`} />
@@ -113,7 +112,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <InputWithError field="gender">
+        <FieldError error={getError('gender')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.sex', 'Sex *')}</label>
             <div className="flex h-10 items-center gap-4">
@@ -125,29 +124,29 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
               ))}
             </div>
           </div>
-        </InputWithError>
+        </FieldError>
         {showAge && (
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.age', 'Age')}</label>
             <Input type="number" value={age || ''} disabled aria-label={`${prefix}-age`} className="bg-muted" />
           </div>
         )}
-        <InputWithError field="dob">
+        <FieldError error={getError('dob')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.dateOfBirth', 'Date of Birth *')}</label>
             <Input type="date" required value={form.dob} onChange={e => onChange('dob', e.target.value)} aria-label={`${prefix}-dob`} className={`[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:opacity-60${getError('dob') ? ' border-destructive' : ''}`} />
           </div>
-        </InputWithError>
-        <InputWithError field="placeOfBirth">
+        </FieldError>
+        <FieldError error={getError('placeOfBirth')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.placeOfBirth', 'Place of Birth *')}</label>
             <Input required value={form.placeOfBirth} onChange={e => onChange('placeOfBirth', e.target.value)} aria-label={`${prefix}-placeOfBirth`} className={getError('placeOfBirth') ? 'border-destructive' : ''} />
           </div>
-        </InputWithError>
+        </FieldError>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <InputWithError field="civilStatus">
+        <FieldError error={getError('civilStatus')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.civilStatus', 'Civil Status *')}</label>
             <select className={`flex h-10 w-full rounded-md border ${getError('civilStatus') ? 'border-destructive' : 'border-input'} bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`} required value={form.civilStatus} onChange={e => onChange('civilStatus', e.target.value)} aria-label={`${prefix}-civilStatus`}>
@@ -155,19 +154,19 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
               {CIVIL_STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
-        </InputWithError>
-        <InputWithError field="cellularNumber">
+        </FieldError>
+        <FieldError error={getError('cellularNumber')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.cellularNumber', 'Cellular Number *')}</label>
             <Input type="tel" required value={form.cellularNumber} onChange={e => onChange('cellularNumber', e.target.value.replace(/\D/g, ''))} aria-label={`${prefix}-cellularNumber`} className={getError('cellularNumber') ? 'border-destructive' : ''} />
           </div>
-        </InputWithError>
-        <InputWithError field="email">
+        </FieldError>
+        <FieldError error={getError('email')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.email', 'Email *')}</label>
             <Input type="email" value={form.email} onChange={e => onChange('email', e.target.value)} aria-label={`${prefix}-email`} placeholder="email@example.com" className={getError('email') ? 'border-destructive' : ''} />
           </div>
-        </InputWithError>
+        </FieldError>
       </div>
 
       <Separator />
@@ -179,13 +178,13 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <InputWithError field="occupation">
+        <FieldError error={getError('occupation')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.occupation', 'Occupation *')}</label>
             <Input required value={form.occupation} onChange={e => onChange('occupation', e.target.value)} aria-label={`${prefix}-occupation`} className={getError('occupation') ? 'border-destructive' : ''} />
           </div>
-        </InputWithError>
-        <InputWithError field="estimatedMonthlyIncome">
+        </FieldError>
+        <FieldError error={getError('estimatedMonthlyIncome')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.estimatedIncome', 'Estimated Monthly Income *')}</label>
             <div className="relative">
@@ -193,7 +192,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
               <Input type="text" inputMode="numeric" required value={form.estimatedMonthlyIncome} onChange={e => onChange('estimatedMonthlyIncome', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) onChange('estimatedMonthlyIncome', formatMoney(v)); }} aria-label={`${prefix}-income`} className={`pl-7${getError('estimatedMonthlyIncome') ? ' border-destructive' : ''}`} />
             </div>
           </div>
-        </InputWithError>
+        </FieldError>
       </div>
     </div>
   );
