@@ -6,7 +6,6 @@ import { queryKeys } from '../lib/query-keys';
 import { Link } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
-import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -151,7 +150,7 @@ export function ClaimantDashboardPage() {
         </div>
         {services.length === 0 ? (
           <CardContent>
-            <EmptyState variant="no-data" />
+            <p className="text-center py-8 text-sm text-muted-foreground">{t('claims.noServices', 'No services recorded yet.')}</p>
           </CardContent>
         ) : (
           <div className="divide-y">
@@ -173,13 +172,12 @@ export function ClaimantDashboardPage() {
 
       {/* Consent Hub */}
       <Card>
-        <div className="border-b px-4 py-3 flex items-center justify-between">
+        <div className="border-b px-4 py-3">
           <h3 className="font-semibold text-sm text-primary">{t('claims.consentManagement', 'Consent Management')}</h3>
-          <Button variant="default" size="sm">{t('claims.manageConsent', 'Manage Consent')}</Button>
         </div>
         {consents.length === 0 ? (
           <CardContent>
-            <EmptyState variant="no-data" />
+            <p className="text-center py-8 text-sm text-muted-foreground">{t('dashboard.noConsentRecords', 'No consent records found')}</p>
           </CardContent>
         ) : (
           <div className="divide-y">

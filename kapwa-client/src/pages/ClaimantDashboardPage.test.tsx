@@ -65,4 +65,16 @@ describe('ClaimantDashboardPage', () => {
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
+
+  it('does not show an "Add first record" button on empty states', async () => {
+    renderWithSWR(<ClaimantDashboardPage />);
+    await screen.findByRole('heading', { name: 'My Dashboard' });
+    expect(screen.queryByRole('button', { name: 'Add first record' })).toBeNull();
+  });
+
+  it('does not show a dead "Manage Consent" button', async () => {
+    renderWithSWR(<ClaimantDashboardPage />);
+    await screen.findByRole('heading', { name: 'My Dashboard' });
+    expect(screen.queryByRole('button', { name: 'Manage Consent' })).toBeNull();
+  });
 });
