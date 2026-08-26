@@ -1,10 +1,10 @@
 # System Architecture
 
-This document describes the KAPWA (MSWDO Norzagaray Social Welfare System) runtime architecture: a three-tier client–API–data deployment with cross-cutting security, observability, and offline-sync concerns that span all tiers.
+This document describes the KAPWA (MSWDO Norzagaray Social Welfare System) runtime architecture from two complementary viewpoints: the **layered architecture** (the internal organization of the software into horizontal layers) and the **client–server architecture** (the physical and logical separation between client and server components). Both views share the same cross-cutting concerns: security, observability, and offline sync.
 
 ## 1. Purpose
 
-Documents the three-tier architecture — browser client, NestJS API, and Postgres/Minio data tier — together with the cross-cutting concerns (auth, authorization, rate limiting, PII masking, audit, logging, graceful shutdown, and offline sync) that cut across every tier.
+Documents the KAPWA architecture from two viewpoints: (1) the layered architecture — presentation, application (API), business/service, data-access, and data layers with the cross-cutting concerns that span them — and (2) the client–server architecture — the browser/field clients, the NestJS API server, and the Postgres/Minio data servers, connected by HTTP/HTTPS and WebSocket. All functional requirements (FR-01..FR-17) are mapped onto both views.
 
 ## 2. Functional Specification
 
@@ -28,82 +28,89 @@ Documents the three-tier architecture — browser client, NestJS API, and Postgr
 | FR-16 | Postgres audit: the `pgaudit` extension is enabled during migration bootstrap (migrate.ts) and the `audit_log` table records IRF dispositions; the audit module exposes hash-chain verification and log queries (`/audit/verify-all`, `/audit/logs`). |
 | FR-17 | Sync idempotency: duplicate deltas are answered from a 24 h idempotency window (`IDEMPOTENCY_TTL_MS = 86_400_000`) backed by an in-memory cache plus the `idempotency_keys` table, with stale-entry eviction. |
 
-## 3. System Architecture (Mermaid)
+## 3. Architecture Diagrams (Mermaid)
 
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
+### 3.1 Layered Architecture
+
+The system is organized into five horizontal layers; each layer depends only on the layer below it, and the cross-cutting concerns wrap every layer.
+
+```mermaid
+flowchart TB
+    subgraph P["PRESENTATION"]
+        App["App shell, pages, SWR, role-filtered chrome"]
+    end
+
+    subgraph A["APPLICATION (API)"]
+        Ctrl["Controllers + guards/filters/interceptors"]
+    end
+
+    subgraph B["BUSINESS / SERVICE"]
+        Svc["Feature services, case FSM, sync, notifications"]
+    end
+
+    subgraph D["DATA-ACCESS"]
+        Repo["TypeORM repositories, Zod pipes"]
+    end
+
+    subgraph D2["DATA"]
+        DB[("Postgres")]
+        MO[("Minio")]
+    end
+
+    App --> Ctrl
+    Ctrl --> Svc
+    Svc --> Repo
+    Repo --> DB
+    Repo --> MO
+
+```
+
+### 3.2 Client–Server Architecture
+
+Logical and physical separation: clients talk to the API server over HTTP/HTTPS; the API server talks to the data servers; a WebSocket channel carries realtime push. The view is split into two compact diagrams: the request path and the async channels.
+
+#### 3.2a Request path
 
 ```mermaid
 flowchart LR
-  subgraph Client["Client Tier"]
-    App["App shell"]
-    Pages["Pages"]
-    SWR["SWR"]
-    API["api.ts"]
-    Queue["Offline queue"]
-  end
+    C["Clients - browser SPA, field devices"]
+    CD["Caddy reverse proxy 8090/443"]
+    API["NestJS API 3000"]
+    PG[("Postgres 5432")]
+    MO[("Minio 9000/9001")]
 
-  subgraph APITier["API Tier (api/v1)"]
-    Throttle["ThrottlerGuard"]
-    Csrf["CsrfGuard"]
-    RolesG["RolesGuard"]
-    AbacG["AbacGuard"]
-    Filter["AllExceptionsFilter"]
-    Pii["PiiMaskingInterceptor"]
-    NotifGW["Notifications Gateway"]
+    C -->|"HTTPS /api/v1"| CD
+    CD --> API
+    API -->|"queries"| PG
+    API -->|"objects"| MO
+```
 
-    subgraph Modules["Module groups"]
-      Auth["Auth"]
-      SyncS["Sync"]
-      CasesM["Cases"]
-      Benef["Beneficiaries"]
-      Prog["Programs"]
-      Ref["Referrals"]
-      Ag["Agencies"]
-      Exp["Export"]
-      Notif["Notifications"]
-      Ann["Announcements"]
-      Audit["Audit"]
-    end
-  end
+#### 3.2b Async channels
 
-  subgraph Data["Data Tier"]
+```mermaid
+flowchart LR
+    API["NestJS API 3000"]
+    GW["WS Gateway"]
+    SyncS["Sync service"]
+    WEB["Clients"]
     PG[("Postgres")]
-    Minio[("Minio")]
-  end
 
-  App --> Pages
-  Pages --> SWR
-  SWR -->|"FR-03 SWR fetcher + caching"| API
-  API -->|"FR-01 Bearer token on /api/v1"| Throttle
-  API -.->|"FR-02 single-flight 401 refresh"| Auth
-  API -.->|"FR-02 kapwa:auth:logout on failure"| App
-  API -->|"FR-07 queue while offline"| Queue
-  Queue -.->|"FR-07 signed delta loop"| SyncS
-  Throttle -->|"FR-04/FR-15"| Csrf
-  Csrf -->|"FR-04"| RolesG
-  RolesG -->|"FR-05"| AbacG
-  AbacG -->|"FR-05 module access"| Modules
-  Filter -.->|"FR-14 normalized errors"| Modules
-  Pii -.->|"FR-13 mask revoked PII"| Modules
-  SyncS -->|"FR-06 shared case FSM"| CasesM
-  SyncS -->|"FR-17 idempotency_keys 24h TTL"| PG
-  Modules --> PG
-  Notif -->|"FR-08 REST fallback"| NotifGW
-  NotifGW -.->|"FR-08 WS push user:{id}"| App
-  Exp -->|"FR-09 PDF/XLSX/CSV"| Minio
-  Audit -->|"FR-16 pgaudit + audit_log"| PG
+    API --> GW
+    API --> SyncS
+    GW -.->|"WS push user:{id}"| WEB
+    SyncS -.->|"offline queue replay - signed deltas"| WEB
+    SyncS -->|"idempotency + conflicts"| PG
 ```
 
 ## 4. Diagram Narrative
 
-**Tiers.** The client tier is a React SPA: the app shell holds routing/auth providers, pages render feature screens through SWR hooks, `api.ts` is the single HTTP facade, and the offline queue persists mutations in localStorage with version vectors. The API tier is the NestJS backend: a root pipeline of guards/filters/interceptors wraps eleven module groups (Auth, Sync, Cases, Beneficiaries, Programs, Referrals, Agencies, Export, Notifications, Announcements, Audit). The data tier is Postgres (relational state, idempotency keys, audit_log) plus Minio (documents/blobs).
+**Layered view (3.1).** The presentation layer holds the React SPA: the app shell (routing, auth context, theme), feature pages that consume data through SWR hooks (FR-03), and the role-filtered chrome (Topbar, Sidebar, BottomNav). The application layer is the NestJS API: controllers receive HTTP requests and pass them through the global pipeline of guards (ThrottlerGuard FR-15, CsrfGuard FR-04, RolesGuard + AbacGuard FR-05), the AllExceptionsFilter (FR-14), and the PiiMaskingInterceptor (FR-13). The business/service layer implements the rules — feature services, the shared case FSM (FR-06), the sync service (FR-07, FR-17), and notifications (FR-08). The data-access layer is TypeORM repositories plus Zod validation pipes; the data layer is Postgres and Minio (FR-09, FR-10). Strictly layered: presentation → application → service → data-access → data. The layered view shows the pure layer structure; the cross-cutting concerns (auth FR-01/02, guards FR-04/05/15, PII masking FR-13, JSON logging FR-11, normalized errors FR-14, graceful shutdown FR-12) are enforced at the API boundaries and are specified in Section 2 rather than drawn as diagram edges.
 
-**Request lifecycle.** A page-level SWR hook calls `api.get` (FR-03), which attaches the Bearer token and hits `/api/v1` (FR-01). The request crosses the global guard pipeline — ThrottlerGuard (FR-15), CsrfGuard (FR-04), RolesGuard + AbacGuard (FR-05) — then enters the module's controller/service/repository and lands in Postgres (FR-10). Responses pass through PiiMaskingInterceptor (FR-13) and any error is normalized by AllExceptionsFilter (FR-14); every log line is JSON (FR-11). If the API answers 401, `api.ts` single-flights a refresh (FR-02) and, on failure, dispatches `kapwa:auth:logout`.
+**Client–server view (3.2).** Two diagrams. (3.2a) **Request path**: clients — the browser SPA and offline-capable field devices — reach the server only through Caddy, which proxies `/api/v1` to the NestJS API (FR-01); the API queries Postgres (relational state, idempotency keys, audit_log — FR-16, FR-17) and stores objects in Minio (FR-09). (3.2b) **Async channels**: the WebSocket gateway pushes realtime notifications into per-user `user:{id}` rooms (FR-08), and the sync service receives offline queue replays as signed deltas, deduplicates them via the 24 h idempotency window, and resolves conflicts against Postgres (FR-07, FR-17).
 
-**Async channels.** Two channels bypass the request/response path. (1) WebSocket push: the notifications gateway authenticates the JWT at connect, joins `user:{id}`, and pushes realtime events (FR-08) with REST fallback. (2) Sync delta loop: offline mutations are queued client-side (FR-07), then replayed to the sync module as signed batches — verified via Ed25519, deduplicated via the 24 h idempotency window (FR-17), sanitized against unknown meta fields, and applied with server-wins conflict resolution for financial tables; case-status changes are re-validated against the shared FSM (FR-06). Sync shutdown is graceful and retry-safe (FR-12).
-
-**Mapping.** Every edge in the diagram carries the FR id that governs it; the functional table in Section 2 is the contract the diagram renders.
+**Mapping.** Every edge in both diagrams carries the FR id that governs it; the functional table in Section 2 is the contract the diagrams render. The two views are complementary: the layered view answers "how is the software organized inside?", the client–server view answers "which components talk to which, over what protocol?".
 
 ## 5. Cross-References
 
