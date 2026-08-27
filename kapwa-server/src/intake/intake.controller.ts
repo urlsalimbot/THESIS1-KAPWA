@@ -19,7 +19,7 @@ export class IntakeController {
     @Body(new ZodPipe(IntakeInputSchema)) body: IntakeInput,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.intakeService.submitIntake(body, req.user.id);
+    return this.intakeService.submitIntake(body, req.user);
   }
 
   @Post('batch-family')
@@ -46,6 +46,6 @@ export class IntakeController {
     @Request() req: AuthenticatedRequest,
   ) {
     const permittedBarangays: string[] = req.user?.permittedBarangays || [];
-    return this.intakeService.confirmMatch(householdId, body, permittedBarangays, req.user.id);
+    return this.intakeService.confirmMatch(householdId, body, permittedBarangays, req.user);
   }
 }

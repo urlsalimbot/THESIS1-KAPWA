@@ -10,7 +10,14 @@ import { Case, CaseStatus } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { memberToPerson } from './member-person';
+import { User, UserRole } from '../auth/user.entity';
 import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse, BatchFamilyInput } from './dto/intake.zod';
+
+// Only MSWDO staff (admin / social worker) may be assigned as a case worker;
+// coordinators are not MSWDO employees and must never be assigned.
+function isCaseWorker(role?: string): boolean {
+  return role === UserRole.ADMIN || role === UserRole.SW;
+}
 
 @Injectable()
 export class IntakeService {
@@ -104,7 +111,7 @@ export class IntakeService {
     };
   }
 
-  async submitIntake(data: IntakeInput, callerId?: string): Promise<{
+  async submitIntake(data: IntakeInput, caller?: Pick<User, 'id' | 'role'>): Promise<{
     beneficiaryId: string;
     caseId: string;
     controlNo: string;
@@ -175,7 +182,7 @@ export class IntakeService {
         status: CaseStatus.ENROLLED,
         serviceRequested: data.case.serviceRequested,
         requirementsChecklist: data.case.requirementsChecklist,
-        assignedWorkerId: callerId,
+        assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
       });
       const savedCase = await queryRunner.manager.save(caseEntity);
 
@@ -383,7 +390,7 @@ export class IntakeService {
     return { candidates };
   }
 
-  async confirmMatch(householdId: string, data: ConfirmMatchInput, workerBarangays: string[], callerId: string): Promise<ConfirmMatchResponse> {
+  async confirmMatch(householdId: string, data: ConfirmMatchInput, workerBarangays: string[], caller: Pick<User, 'id' | 'role'>): Promise<ConfirmMatchResponse> {
     const household = await this.hhRepo.findOne({ where: { id: householdId } });
     if (!household) throw new NotFoundException('Household not found');
     if (workerBarangays.length > 0 && household.barangay && !workerBarangays.includes(household.barangay)) {
@@ -469,7 +476,7 @@ export class IntakeService {
           status: CaseStatus.ENROLLED,
           serviceRequested: data.case.serviceRequested,
           requirementsChecklist: data.case.requirementsChecklist,
-          assignedWorkerId: callerId,
+assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
         });
         savedCase = await queryRunner.manager.save(caseEntity);
       }

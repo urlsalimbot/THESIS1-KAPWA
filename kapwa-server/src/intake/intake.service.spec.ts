@@ -10,6 +10,7 @@ import { HouseholdMembership } from '../beneficiaries/household-membership.entit
 import { Case, CaseStatus } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
+import { UserRole } from '../auth/user.entity';
 import { batchFamilySchema, IntakeInputSchema } from './dto/intake.zod';
 import type { BatchFamilyInput, IntakeInput } from './dto/intake.zod';
 
@@ -165,7 +166,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      const result = await service.submitIntake(validIntakeInput, 'caller-1');
+      const result = await service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW });
 
       expect(queryRunnerMock.startTransaction).toHaveBeenCalledWith('SERIALIZABLE');
       expect(queryRunnerMock.commitTransaction).toHaveBeenCalled();
@@ -186,6 +187,29 @@ describe('IntakeService', () => {
       );
     });
 
+    it('does not assign a coordinator caller as the case worker', async () => {
+      const saveMock = mockSaveSequence();
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid-1' })
+        .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz' })
+        .mockResolvedValueOnce({ id: claimUuid })
+        .mockResolvedValueOnce({ id: bcUuid })
+        .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
+        .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001' })
+        .mockResolvedValueOnce({ id: clUuid });
+
+      stubCreates();
+
+      await service.submitIntake(validIntakeInput, { id: 'coord-1', role: UserRole.COORDINATOR });
+
+      expect(caseRepo.create).toHaveBeenCalledWith(
+        expect.not.objectContaining({ assignedWorkerId: 'coord-1' }),
+      );
+    });
+
     it('should return control_no in KAPWA-YYYY-XXXXX format', async () => {
       const saveMock = mockSaveSequence();
       saveMock
@@ -202,7 +226,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      const result = await service.submitIntake(validIntakeInput, 'caller-1');
+      const result = await service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW });
       expect(result.controlNo).toMatch(/^KAPWA-\d{4}-\d{5}$/);
     });
 
@@ -222,7 +246,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      await service.submitIntake(validIntakeInput, 'caller-1');
+      await service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW });
 
       expect(personRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ surname: 'Dela Cruz' })
@@ -247,7 +271,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      await expect(service.submitIntake(validIntakeInput, 'caller-1')).rejects.toThrow('Service temporarily unavailable');
+      await expect(service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW })).rejects.toThrow('Service temporarily unavailable');
 
       expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalled();
       expect(queryRunnerMock.commitTransaction).not.toHaveBeenCalled();
@@ -287,7 +311,7 @@ describe('IntakeService', () => {
       hhRepo.findOne = jest.fn().mockResolvedValue(null) as any;
 
       await expect(
-        service.confirmMatch('nonexistent-id', validIntakeInput, [], 'caller-1'),
+        service.confirmMatch('nonexistent-id', validIntakeInput, [], { id: 'caller-1', role: UserRole.SW }),
       ).rejects.toThrow('Household not found');
     });
 
@@ -295,7 +319,7 @@ describe('IntakeService', () => {
       hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'hh-id', barangay: 'Bigte' }) as any;
 
       await expect(
-        service.confirmMatch('hh-id', validIntakeInput, ['Matictic'], 'caller-1'),
+        service.confirmMatch('hh-id', validIntakeInput, ['Matictic'], { id: 'caller-1', role: UserRole.SW }),
       ).rejects.toThrow('You do not have permission for this barangay');
     });
 
@@ -322,7 +346,7 @@ describe('IntakeService', () => {
 
       caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
 
-      const result = await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], 'caller-1');
+      const result = await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], { id: 'caller-1', role: UserRole.SW });
 
       expect(queryRunnerMock.manager.create).toHaveBeenCalledWith(
         Beneficiary,
@@ -333,6 +357,35 @@ describe('IntakeService', () => {
 
       expect(caseRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ assignedWorkerId: 'caller-1' }),
+      );
+    });
+
+    it('does not assign a coordinator caller as the case worker on confirm', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+
+      const saveMock = queryRunnerMock.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid' })
+        .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'claim-uuid' })
+        .mockResolvedValueOnce({ id: 'bc-uuid' })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'new-case-id', controlNo: 'KAPWA-2026-00001' })
+        .mockResolvedValueOnce({ id: 'cl-1' });
+
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+      caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
+
+      await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], { id: 'coord-1', role: UserRole.COORDINATOR });
+
+      expect(caseRepo.create).toHaveBeenCalledWith(
+        expect.not.objectContaining({ assignedWorkerId: 'coord-1' }),
       );
     });
   });
@@ -368,7 +421,7 @@ describe('IntakeService', () => {
           familyMembers: [
             { surname: 'Dela Cruz', firstName: 'Jose', gender: 'Female', dob: '2010-06-15', relationship: 'Child' },
           ],
-        }, 'caller-1');
+        }, { id: 'caller-1', role: UserRole.SW });
 
         const fmSaveCall = saveMock.mock.calls[6];
         expect(fmSaveCall[0]).toBe(Person);
