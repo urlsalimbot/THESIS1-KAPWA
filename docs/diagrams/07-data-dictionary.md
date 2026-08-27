@@ -66,7 +66,7 @@ The single identity root of the system: every beneficiary, claimant, user, and c
 | `email` | TEXT | variable | worker1@mswdo.test |
 | `philhealth_number` | TEXT | variable | 12-345678901-2 |
 | `occupation` | TEXT | variable | Farmer |
-| `estimated_monthly_income` | DECIMAL(12,2) | variable | 8000.00 |
+| `estimated_monthly_income` | DECIMAL(12,2) | variable | ₱8,000.00 |
 | `age` | INTEGER | 4 bytes | 35 |
 | `search_vector` | TSVECTOR | variable | 'juan':1 'dela':2 |
 | `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
@@ -146,7 +146,7 @@ Groups of persons that form a household for means-testing and program eligibilit
 | `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
 | `primary_beneficiary_id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
 | `barangay` | TEXT | variable | Poblacion |
-| `estimated_income` | DECIMAL(12,2) | variable | 8000.00 |
+| `estimated_income` | DECIMAL(12,2) | variable | ₱8,000.00 |
 | `verified_by` | TEXT | variable | false |
 | `verified_at` | TIMESTAMP | 8 bytes | false |
 | `access_card_code` | TEXT | variable | NORZ-AC-2026-0042 |
@@ -236,7 +236,7 @@ The central social-welfare workflow record; `status` drives the case FSM.
 | `client_category` | TEXT | variable | Senior Citizen |
 | `nature_of_service` | TEXT[] | variable | {"Financial Assistance"} |
 | `financial_subsidies` | JSONB | variable | {"amount":5000,"mode":"cash"} |
-| `amount_assistance` | DECIMAL(12,2) | variable | 5000.00 |
+| `amount_assistance` | DECIMAL(12,2) | variable | ₱5,000.00 |
 | `mode_financial_assistance` | TEXT | variable | Cash |
 | `source_of_fund` | TEXT | variable | LGU |
 | `legislator_specify` | TEXT | variable | Councilor A. Reyes |
@@ -298,7 +298,7 @@ Records each service or intervention delivered for a case (replaces the dropped 
 | `service_name` | TEXT | variable | Medical Assistance |
 | `category` | TEXT | variable | Senior Citizen |
 | `delivery_date` | DATE | 4 bytes | 2026-08-04 |
-| `amount` | DECIMAL(12,2) | variable | 5000.00 |
+| `amount` | DECIMAL(12,2) | variable | ₱5,000.00 |
 | `mode_of_delivery` | TEXT | variable | Cash |
 | `fund_source` | TEXT | variable | LGU |
 | `notes` | TEXT | variable | Follow up in 30 days |
@@ -415,7 +415,7 @@ Log of services rendered against a beneficiary's access card code.
 | `access_card_code` | TEXT | variable | NORZ-AC-2026-0042 |
 | `service_date` | DATE | 4 bytes | 2026-08-04 |
 | `service_rendered` | TEXT | variable | Medical Assistance |
-| `cost` | DECIMAL(12,2) | variable | 1500.00 |
+| `cost` | DECIMAL(12,2) | variable | ₱1,500.00 |
 | `agency` | TEXT | variable | 35 |
 | `agency_id` | UUID | 16 bytes | 019f2a10-5b3e-7c21-9a00-3a1b9e4c2d11 |
 | `worker_name_sign` | TEXT | variable | Medical Assistance |
@@ -443,7 +443,7 @@ Formal Case Study Reports produced for a case.
 | `reason_for_referral` | TEXT | variable | Medical emergency |
 | `problem_presented` | TEXT | variable | true |
 | `family_background` | TEXT | variable | 5-member household, father is farmer |
-| `socio_economic_profile` | TEXT | variable | Monthly income ~Php 8,000 |
+| `socio_economic_profile` | TEXT | variable | Monthly income ₱8,000 |
 | `assessment_analysis` | TEXT | variable | Low income household |
 | `recommendation` | TEXT | variable | Approve assistance |
 | `intervention_plan` | TEXT | variable | Monthly cash aid for 3 months |
