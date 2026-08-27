@@ -43,7 +43,7 @@ Documents the 12 decision-heavy business workflows (intake, case lifecycle trans
 
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — the print script scales each diagram to fit a letter page — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
-Each diagram is a swimlane: the **user (role)** lane is on the **left**, the **system** lane is on the **right**; arrows crossing lanes are the user's request (→) and the system's response/validation (→).
+Each diagram is a swimlane: the **user (role)** lane is on the **left**, the **system** lane is on the **right**, separated by a **vertical divider line** (the dashed bar between the lanes). Every arrow that crosses the divider is **data changing context** — a request leaving the user lane into the system lane (e.g. `POST /intake`, `PATCH /cases/:id/status`, `POST /sync/v1`) or a response/validation returning to the user lane (e.g. `candidates`, `challenge`, `link`).
 
 ### A1 — Intake: user fills form, system match-checks and creates case
 
@@ -51,27 +51,24 @@ Each diagram is a swimlane: the **user (role)** lane is on the **left**, the **s
 flowchart LR
     subgraph U["USER - social_worker"]
         direction TB
-        A([start]) --> B[Fill intake form]
+        A([start]) --> B[Fill intake form - beneficiary, claimant, family]
         B --> C{Duplicate found?}
-        C -- yes --> D[Confirm match]
-        C -- no --> E[Create new record]
+        C -- yes --> D[Confirm match - merge into existing household]
+        C -- no --> E[Create new beneficiary record]
         D --> F[Submit intake]
         E --> F
     end
     subgraph S["SYSTEM"]
         direction TB
-        G[Autosave draft - 2s, user-scoped key]
-        H[Match-check - score candidates]
-        I[Create case - enrolled]
-        J[Recover draft via loadDraft]
+        G[Match-check - score candidates]
+        G --> H[Create case - enrolled, control number, consent row]
+        H --> K([end])
     end
-    B -.->|"parallel"| G
-    B -->|"match-check"| H
-    H -->|"candidates"| C
-    F -->|"POST /intake"| I
-    I --> K([end])
-    G -.->|"persist"| J
-    J -.->|"restore"| B
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    F -->|"POST /intake"| DIV --> H
+    B -->|"match-check"| DIV --> G
+    G -->|"candidates"| C
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A2 — Case FSM: user attempts transition, system guards it
@@ -80,18 +77,19 @@ flowchart LR
 flowchart LR
     subgraph U["USER - social_worker / coordinator / admin"]
         direction TB
-        A([start]) --> B[Attempt transition]
+        A([start]) --> B[Attempt transition - current status to target]
     end
     subgraph S["SYSTEM"]
         direction TB
         C{isValidTransition?}
         D{canTransition role?}
-        E[Update status + case_history]
+        E[Update case status + case_history row]
         F[Notify assigned worker]
         G[400 - invalid FSM edge]
-        H[403 - role denied]
+        H[403 - role not in CASE_FSM_ROLES]
     end
-    B -->|"PATCH /cases/:id/status"| C
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"PATCH /cases/:id/status"| DIV --> C
     C -- no --> G
     G --> Z([end])
     C -- yes --> D
@@ -100,31 +98,33 @@ flowchart LR
     D -- yes --> E
     E --> F
     F --> Z
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A3 — Sync: client sends deltas, system validates and resolves
 
 ```mermaid
 flowchart LR
-    subgraph U["USER - field device"]
+    subgraph U["USER - field device (client)"]
         direction TB
         A([start]) --> B[Collect offline changes]
         B --> C[Send signed delta batch]
     end
     subgraph S["SYSTEM"]
         direction TB
-        D{Unknown meta fields?}
-        E{Signature valid?}
+        D{Unknown underscore meta fields?}
+        E{Ed25519 signature valid?}
         F{Idempotent replay?}
         G[Apply change - transactional]
         H{Conflict?}
-        I[Resolve - server-wins financial]
+        I[Server-wins for financial tables]
         J[Record queue entry]
-        K[400 - bad request]
-        L[403 - bad signature]
+        K[400 - BadRequest]
+        L[403 - Forbidden]
         M[Return cached result]
     end
-    C -->|"POST /sync/v1"| D
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    C -->|"POST /sync/v1"| DIV --> D
     D -- yes --> K
     K --> Z([end])
     D -- no --> E
@@ -139,6 +139,7 @@ flowchart LR
     I --> J
     H -- no --> J
     J --> Z
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A4 — Referral: agency staff acts, system guards lifecycle
@@ -147,28 +148,26 @@ flowchart LR
 flowchart LR
     subgraph U["USER - agency_staff / admin"]
         direction TB
-        A([start]) --> B[Create referral]
-        B --> C{Received?}
-        C -- no --> D[Decline - with reason]
+        A([start]) --> B[Create referral - status referred]
+        B --> C{Received by agency?}
+        C -- no --> D[Decline - status declined with reason]
         C -- yes --> E[Action - status actioned]
-        E --> F[Close - with outcome]
+        E --> F[Close - status closed with outcome]
     end
     subgraph S["SYSTEM"]
         direction TB
-        G[Validate agencies + person]
-        H[Notify receiving agency]
-        I[Guards: receiver + transition]
-        J[Notify creator - try/catch]
+        G[Validate agency + person, resolve source agency]
+        G --> H[Notify receiving agency staff]
+        H --> I[Guards: assertReceiver + assertTransition]
+        I --> J[Notify creator - try/catch]
+        J --> K([end])
     end
-    B -->|"POST create"| G
-    G --> H
-    H --> C
-    C --> I
-    D -->|"decline"| I
-    E -->|"action"| I
-    F -->|"close"| I
-    I --> J
-    J --> K([end])
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    F -->|"PATCH decline / action / close"| DIV --> I
+    B -->|"POST /inter-agency-referrals"| DIV --> G
+    D -->|"PATCH decline"| I
+    E -->|"PATCH action"| I
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A5 — Authentication & MFA
@@ -183,25 +182,20 @@ flowchart LR
     subgraph S["SYSTEM"]
         direction TB
         D{Credentials valid?}
-        E{MFA enabled?}
-        F[Temp token - 5 min]
-        G{Code valid?}
-        H[Issue access + refresh tokens]
-        I[401 - invalid credentials]
-        J[401 - MFA failed]
+        D --> E{MFA enabled?}
+        E -- yes --> F[Temp token - 5 min]
+        F --> G{Code valid?}
+        G -- yes --> H[Issue access + refresh tokens]
+        E -- no --> H
+        H --> K([end])
+        D -- no --> I[401 - invalid credentials]
+        G -- no --> J[401 - MFA verification failed]
     end
-    B -->|"login"| D
-    D -- no --> I
-    I --> Z([end])
-    D -- yes --> E
-    E -- no --> H
-    E -- yes --> F
-    F --> C
-    C -->|"mfa/verify"| G
-    G -- no --> J
-    J --> Z
-    G -- yes --> H
-    H --> K([end])
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"POST /auth/login"| DIV --> D
+    C -->|"POST /auth/mfa/verify"| DIV --> G
+    F -->|"challenge"| C
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A6 — Registration & email verification
@@ -212,27 +206,21 @@ flowchart LR
         direction TB
         A([start]) --> B[Fill registration form]
         B --> C[Click verification link]
-        C -- no --> D[Request resend]
     end
     subgraph S["SYSTEM"]
         direction TB
-        E{Email registered?}
-        F[Create account - unverified]
-        G[Send verification email]
-        H[Verify email]
-        I[409 - account exists]
-        J[Login now allowed]
+        E{Email already registered?}
+        E -- no --> F[Create account - emailVerified false]
+        F --> G[Send verification email]
+        G --> H[Verify email - emailVerified true]
+        H --> J[Login now allowed]
+        J --> K([end])
+        E -- yes --> I[409 - account exists]
     end
-    B -->|"register"| E
-    E -- yes --> I
-    I --> Z([end])
-    E -- no --> F
-    F --> G
-    G --> C
-    C -->|"verify-email"| H
-    D -->|"resend"| G
-    H --> J
-    J --> K([end])
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"POST /auth/register"| DIV --> E
+    C -->|"GET verify-email"| DIV --> H
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A7 — Password recovery
@@ -247,20 +235,18 @@ flowchart LR
     end
     subgraph S["SYSTEM"]
         direction TB
-        E[Email reset link]
-        F{Token valid?}
-        G[Set new password - hash]
-        H[Bump token_version]
-        I[400 - invalid token]
+        E[Email reset link with token]
+        E --> F{Reset token valid and unexpired?}
+        F -- yes --> G[Set new password - hash]
+        G --> H[Bump token_version - invalidate old tokens]
+        H --> K([end])
+        F -- no --> I[400 - invalid or expired token]
     end
-    B -->|"forgot-password"| E
-    E --> C
-    D -->|"reset-password"| F
-    F -- no --> I
-    I --> Z([end])
-    F -- yes --> G
-    G --> H
-    H --> J([end])
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"POST /auth/forgot-password"| DIV --> E
+    D -->|"POST /auth/reset-password"| DIV --> F
+    E -->|"link"| C
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A8 — Access card assignment & service logging
@@ -269,32 +255,27 @@ flowchart LR
 flowchart LR
     subgraph U["USER - staff"]
         direction TB
-        A([start]) --> B[Request card]
-        C([start]) --> D[Log service]
+        A([start]) --> B[Request access card for beneficiary]
+        C([start]) --> D[Log a service against card code]
     end
     subgraph S["SYSTEM"]
         direction TB
-        E{Card exists?}
-        F[Generate NORZ-AC-seq]
-        G[Assign code]
-        H[Return existing code]
-        I{Code exists?}
-        J[Record service]
-        K[Update summary]
-        L[404 - not found]
+        E{Beneficiary already has a card?}
+        E -- yes --> F[Return existing card code]
+        E -- no --> G[Generate NORZ-AC-year-seq]
+        G --> H[Assign code to beneficiary]
+        F --> M1([end])
+        H --> M1
+        I{Card code exists?}
+        I -- yes --> J[Record service - date, service, cost, agency]
+        J --> K[Update summary - total + per-category]
+        K --> M2([end])
+        I -- no --> L[404 - card not found]
     end
-    B -->|"assign"| E
-    E -- yes --> H
-    H --> M([end])
-    E -- no --> F
-    F --> G
-    G --> M
-    D -->|"log"| I
-    I -- no --> L
-    L --> N([end])
-    I -- yes --> J
-    J --> K
-    K --> N
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"POST /access-cards/assign/:beneficiaryId"| DIV --> E
+    D -->|"POST /access-cards/log"| DIV --> I
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A9 — Export & certificate generation
@@ -303,29 +284,23 @@ flowchart LR
 flowchart LR
     subgraph U["USER - admin / SW / coordinator / mayor / auditor"]
         direction TB
-        A([start]) --> B[Request export]
+        A([start]) --> B[Request an export]
     end
     subgraph S["SYSTEM"]
         direction TB
         C{Export type?}
-        D[Validate type / month]
-        E[Generate PDF via pdfkit]
-        F[Aggregate transitioning cases]
-        G[Generate XLSX via exceljs]
-        H[Return file - Content-Disposition]
-        I[400 - invalid]
+        C --> D[Validate certificate type or month - YYYY-MM]
+        D -- no --> I[400 - invalid type or month]
+        D -- yes --> E[Generate PDF via pdfkit]
+        D -- yes --> F[Aggregate case_interventions - transitioning only]
+        F --> G[Generate XLSX via exceljs]
+        E --> H[Return file with Content-Disposition]
+        G --> H
+        H --> N([end])
     end
-    B -->|"export"| C
-    C -- certificate --> D
-    C -- monthly-funds --> D
-    D -- no --> I
-    I --> Z([end])
-    D -- yes --> E
-    D -- yes --> F
-    F --> G
-    E --> H
-    G --> H
-    H --> N([end])
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"export request"| DIV --> C
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A10 — Announcement publishing
@@ -334,28 +309,26 @@ flowchart LR
 flowchart LR
     subgraph U["USER - admin / SW / coordinator"]
         direction TB
-        A([start]) --> B[Compose announcement]
-        B --> C[Pick status + pin]
+        A([start]) --> B[Compose announcement - title, body HTML]
+        B --> C[Choose status and pinned]
     end
     subgraph S["SYSTEM"]
         direction TB
-        D[Sanitize HTML + slugify]
-        E{Status?}
-        F[Save draft - hidden]
-        G[Publish - visible]
-        H{Should be pinned?}
-        I[Mark pinned - ordered first]
+        D[Sanitize HTML - allow-list tags and attributes]
+        D --> E[Generate slug from title]
+        E --> F{Status?}
+        F -- draft --> G[Save as draft - hidden]
+        F -- published --> H[Set published_at - visible]
+        H --> I{Should be pinned?}
+        I -- yes --> J[Mark pinned - ordered first]
+        I -- no --> L[Leave unpinned]
+        J --> M([end])
+        G --> M
+        L --> M
     end
-    B -->|"POST /announcements"| D
-    D --> E
-    E -- draft --> F
-    E -- published --> G
-    G --> H
-    H -- yes --> I
-    H -- no --> J[Leave unpinned]
-    F --> M([end])
-    I --> M
-    J --> M
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    C -->|"POST /announcements"| DIV --> D
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A11 — OTP verification
@@ -368,21 +341,15 @@ flowchart LR
     end
     subgraph S["SYSTEM"]
         direction TB
-        C[Generate code with expiry]
-        D[Send via SMS or email]
-        E{Matches and unexpired?}
-        F[Mark verified - single use]
-        G[Purge expired codes]
-        H[Fail - invalid]
+        E{Code matches and unexpired?}
+        E -- yes --> F[Mark code verified - single use]
+        F --> G[Purge expired codes periodically]
+        G --> K([end])
+        E -- no --> H[Fail - invalid or expired]
     end
-    C --> D
-    D --> A
-    B -->|"verify"| E
-    E -- no --> H
-    H --> Z([end])
-    E -- yes --> F
-    F --> G
-    G --> I([end])
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"verify"| DIV --> E
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ### A12 — Notification delivery
@@ -391,28 +358,21 @@ flowchart LR
 flowchart LR
     subgraph U["USER - recipient"]
         direction TB
-        A([start]) --> B[Read / read-all / delete]
+        A([start]) --> B[Read / read-all / delete notification]
     end
     subgraph S["SYSTEM"]
         direction TB
-        C[Event triggers notification]
-        D[Create notification record]
-        E[Emit notification:new - WS user room]
         F{Recipient action?}
-        G[Mark read + unread:count]
-        H[Mark all read + unread:count]
-        I[Delete + unread:count]
+        F -- read --> G[Mark read - emit notification:updated + unread:count]
+        F -- read-all --> H[Mark all read - emit notifications:read-all + unread:count]
+        F -- delete --> I[Delete - emit notification:deleted + unread:count]
+        G --> J([end])
+        H --> J
+        I --> J
     end
-    C --> D
-    D --> E
-    E --> B
-    B -->|"action"| F
-    F -- read --> G
-    F -- read-all --> H
-    F -- delete --> I
-    G --> J([end])
-    H --> J
-    I --> J
+    DIV["││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││<br/>││││"]
+    B -->|"action"| DIV --> F
+    style DIV fill:none,stroke:none,color:#94a3b8,font-size:16px,font-weight:bold
 ```
 
 ## 4. Diagram Narrative
