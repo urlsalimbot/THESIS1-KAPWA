@@ -1,12 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { api, downloadFilingDoc } from '@/lib/api';
+import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Upload, Download, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Download, X } from 'lucide-react';
+import { RequirementFileUpload } from './RequirementFileUpload';
 import { SERVICE_TYPES, NATURE_OF_SERVICE } from '@/lib/constants';
 import { useTranslation } from 'react-i18next';
 
@@ -78,9 +79,7 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
     docsByRequirement[k].push(d);
   }
 
-  const [uploading, setUploading] = useState<string | null>(null);
-  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const canUpload = userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole) && !readOnly;
+  const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole) && !readOnly);
 
   async function handleAdd() {
     setSaving(true);
@@ -127,23 +126,6 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
       console.error('Failed to update requirements:', e);
     } finally {
       setSavingReqs(false);
-    }
-  }
-
-  async function handleUpload(key: string, file: File) {
-    if (!file) return;
-    setUploading(key);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('caseId', caseId);
-      form.append('requirementKey', key);
-      await api.upload('/filing/upload', form);
-      await globalMutate(`/filing?caseId=${caseId}`);
-    } catch (e) {
-      console.error('Upload failed:', e);
-    } finally {
-      setUploading(null);
     }
   }
 
@@ -344,50 +326,15 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
                           <FileText size={10} /> {uploadedDocs.length}
                         </Badge>
                       )}
-                      {canUpload && (
-                        <>
-                          <input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
-                            className="hidden"
-                            ref={el => { fileInputRefs.current[req] = el; }}
-                            onChange={e => {
-                              const f = e.target.files?.[0];
-                              if (f) handleUpload(req, f);
-                              e.target.value = '';
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={uploading === req}
-                            onClick={() => fileInputRefs.current[req]?.click()}
-                          >
-                            {uploading === req
-                              ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                              : <Upload size={14} />
-                            }
-                          </Button>
-                        </>
-                      )}
                     </div>
                   </div>
-                  {uploadedDocs.length > 0 && (
-                    <div className="px-3 pb-2 space-y-1">
-                      {uploadedDocs.map((doc: any) => (
-                        <div key={doc.id} className="flex items-center gap-2 text-xs text-muted-foreground pl-9">
-                          <FileText size={10} />
-                          <button
-                            onClick={() => downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() => alert(t('caseView.documents.downloadFailed', 'Download failed')))}
-                            className="hover:underline truncate text-left"
-                          >
-                            {doc.originalName}
-                          </button>
-                          <span className="text-[10px]">({(doc.fileSize / 1024).toFixed(0)} KB)</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <RequirementFileUpload
+                    caseId={caseId}
+                    requirementKey={req}
+                    canUpload={canUpload}
+                    docs={uploadedDocs}
+                    onChanged={() => globalMutate(`/filing?caseId=${caseId}`)}
+                  />
                 </div>
               );
             })}
