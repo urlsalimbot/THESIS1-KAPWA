@@ -210,6 +210,36 @@ describe('IntakeService', () => {
       );
     });
 
+    it('reuses the existing case when the beneficiary person already has one (no duplicate)', async () => {
+      queryRunnerMock.manager.findOne = jest.fn().mockImplementation((entity: unknown) => {
+        if (entity === Beneficiary) {
+          return Promise.resolve({ id: 'existing-ben', personId: 'person-ana', householdId: 'existing-hh' });
+        }
+        if (entity === Household) {
+          return Promise.resolve({ id: 'existing-hh', primaryBeneficiaryId: 'existing-ben' });
+        }
+        return Promise.resolve(null);
+      });
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+      caseRepo.findOne = jest.fn().mockResolvedValue({
+        id: 'existing-case',
+        controlNo: 'KAPWA-2026-00002',
+        status: 'enrolled',
+      }) as any;
+
+      const result = await service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW });
+
+      expect(result).toEqual({
+        beneficiaryId: 'existing-ben',
+        caseId: 'existing-case',
+        controlNo: 'KAPWA-2026-00002',
+        status: 'enrolled',
+      });
+      expect(caseRepo.create).not.toHaveBeenCalled();
+      expect(hhRepo.create).not.toHaveBeenCalled();
+      expect(benRepo.create).not.toHaveBeenCalled();
+    });
+
     it('should return control_no in KAPWA-YYYY-XXXXX format', async () => {
       const saveMock = mockSaveSequence();
       saveMock

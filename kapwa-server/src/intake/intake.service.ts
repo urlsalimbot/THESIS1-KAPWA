@@ -120,17 +120,97 @@ export class IntakeService {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction('SERIALIZABLE');
+    await queryRunner.query(`SELECT pg_advisory_xact_lock($1, $2)`, this.hashToLockPair(data.beneficiary.surname, data.beneficiary.firstName, data.beneficiary.dob));
 
     try {
       // 1. Find or create Person for BENEFICIARY (with dedup check)
       const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true);
 
-      // 2. Create Beneficiary (thin record linked to Person)
-      const beneficiary = this.benRepo.create({
-        personId: benPerson.id,
-        consentStatus: 'active',
+      // 1b. Duplicate-case guard: if this person already has a Beneficiary + Household + a recent
+      //     Case (30 days), reuse that household/case instead of creating duplicates. This mirrors
+      //     confirmMatch and closes the "case created even when persons match" gap that occurs when
+      //     the client-side match-check misses (near-miss names, barangay scope, or a failed check).
+      const existingBeneficiary = await queryRunner.manager.findOne(Beneficiary, {
+        where: { personId: benPerson.id },
       });
-      const savedBeneficiary = await queryRunner.manager.save(beneficiary);
+      const existingHousehold = existingBeneficiary
+        ? await queryRunner.manager.findOne(Household, {
+            where: { primaryBeneficiaryId: existingBeneficiary.id },
+          })
+        : null;
+
+      if (existingBeneficiary && existingHousehold) {
+        const recentCase = await this.caseRepo.findOne({
+          where: {
+            beneficiaryId: In(
+              (await this.benRepo.find({
+                where: { householdId: existingHousehold.id },
+                select: ['id'],
+              })).map(b => b.id),
+            ),
+            createdAt: MoreThan(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+          },
+          order: { createdAt: 'DESC' },
+        });
+
+        if (recentCase) {
+          // Reuse: link claimant + family members into the existing household, then return the
+          // existing case — no new Beneficiary / Household / Case is created.
+          const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true);
+          const existingClaimantLink = await queryRunner.manager.findOne(BeneficiaryClaimant, {
+            where: { beneficiaryId: benPerson.id, isPrimary: true },
+          });
+          if (existingClaimantLink) {
+            if (existingClaimantLink.relationship !== data.claimant.relationshipToBeneficiary) {
+              existingClaimantLink.relationship = data.claimant.relationshipToBeneficiary;
+              await queryRunner.manager.save(existingClaimantLink);
+            }
+          } else {
+            await queryRunner.manager.save(queryRunner.manager.create(BeneficiaryClaimant, {
+              beneficiaryId: benPerson.id,
+              claimantId: claimPerson.id,
+              relationship: data.claimant.relationshipToBeneficiary,
+              isPrimary: true,
+              calendarYear: new Date().getFullYear(),
+            }));
+          }
+          if (data.familyMembers && data.familyMembers.length > 0) {
+            const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
+            for (const fm of validMembers) {
+              const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true);
+              const existingMembership = await queryRunner.manager.findOne(HouseholdMembership, {
+                where: { personId: memberPerson.id, householdId: existingHousehold.id },
+              });
+              if (!existingMembership) {
+                await queryRunner.manager.save(queryRunner.manager.create(HouseholdMembership, {
+                  personId: memberPerson.id,
+                  householdId: existingHousehold.id,
+                  relationship: fm.relationship,
+                  isPrimary: false,
+                  status: fm.status,
+                }));
+              }
+            }
+          }
+          await queryRunner.commitTransaction();
+          return {
+            beneficiaryId: existingBeneficiary.id,
+            caseId: recentCase.id,
+            controlNo: recentCase.controlNo,
+            status: recentCase.status,
+          };
+        }
+      }
+
+      // 2. Beneficiary — reuse the existing thin record if the person already has one, else create.
+      let savedBeneficiary = existingBeneficiary ?? null;
+      if (!savedBeneficiary) {
+        const beneficiary = this.benRepo.create({
+          personId: benPerson.id,
+          consentStatus: 'active',
+        });
+        savedBeneficiary = await queryRunner.manager.save(beneficiary);
+      }
 
       // 3. Create Person for CLAIMANT (always new, no dedup)
       const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, false);
@@ -144,17 +224,22 @@ export class IntakeService {
         calendarYear: new Date().getFullYear(),
       }));
 
-      // 5. Create Household
-      const household = this.hhRepo.create({
-        primaryBeneficiaryId: savedBeneficiary.id,
-        barangay: data.beneficiary.currentAddress?.barangay || '',
-        estimatedIncome: data.beneficiary.estimatedMonthlyIncome,
-      });
-      const savedHousehold = await queryRunner.manager.save(household);
+      // 5. Household — reuse the existing one when present (new assistance episode), else create.
+      let savedHousehold = existingHousehold;
+      if (!savedHousehold) {
+        const household = this.hhRepo.create({
+          primaryBeneficiaryId: savedBeneficiary.id,
+          barangay: data.beneficiary.currentAddress?.barangay || '',
+          estimatedIncome: data.beneficiary.estimatedMonthlyIncome,
+        });
+        savedHousehold = await queryRunner.manager.save(household);
+      }
 
       // 6. Link Beneficiary to Household
-      savedBeneficiary.householdId = savedHousehold.id;
-      await queryRunner.manager.save(savedBeneficiary);
+      if (savedBeneficiary.householdId !== savedHousehold.id) {
+        savedBeneficiary.householdId = savedHousehold.id;
+        await queryRunner.manager.save(savedBeneficiary);
+      }
 
       // 7. Create HouseholdMemberships (always new persons, no dedup)
       if (data.familyMembers && data.familyMembers.length > 0) {
