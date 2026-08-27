@@ -203,6 +203,43 @@ export const api = {
   },
 };
 
+export async function uploadWithProgress<T>(
+  path: string,
+  formData: FormData,
+  onProgress: (percent: number) => void,
+  opts?: { signal?: AbortSignal },
+): Promise<T> {
+  const token = getToken();
+  const url = `${API_BASE}${normalizePath(path)}`;
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    if (opts?.signal) {
+      opts.signal.addEventListener('abort', () => xhr.abort());
+    }
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          resolve(undefined as unknown as T);
+        }
+      } else {
+        let body: unknown = null;
+        try { body = JSON.parse(xhr.responseText); } catch { /* ignore */ }
+        reject(new ApiError(xhr.status, body, xhr.statusText));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out'));
+    xhr.send(formData);
+  });
+}
+
 // FormData uploads (D-10 deferred — api client only handles JSON).
 async function rawUpload(path: string, file: Blob, fileName: string): Promise<string> {
   const token = localStorage.getItem(TOKEN_KEY);

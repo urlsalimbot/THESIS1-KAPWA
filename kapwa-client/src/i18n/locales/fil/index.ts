@@ -1609,7 +1609,22 @@ const fil: EnLocale = {
       }
     },
     "documents": {
-      "downloadFailed": "Nabigo ang pag-download"
+      "cancel": "Kanselahin",
+      "download": "I-download",
+      "downloadFailed": "Nabigo ang pag-download",
+      "dropzone": "I-click para mag-browse o mag-drop ng mga file",
+      "openFile": "Buksan ang file",
+      "preview": "Silipin",
+      "remove": "Alisin",
+      "removeConfirm": "Alisin ang dokumentong ito? Hindi ito maaaring i-undo.",
+      "removeFailed": "Nabigong alisin ang dokumento",
+      "removeTitle": "Alisin ang dokumento?",
+      "removed": "Naalis ang dokumento",
+      "sizeRejected": "Ang {{name}} ay mas malaki sa 10 MB",
+      "typeRejected": "Hindi suportadong uri ng file: {{name}}",
+      "uploadFailed": "Nabigong i-upload ang {{name}}",
+      "uploaded": "Na-upload ang {{name}}",
+      "uploading": "Ina-upload ang {{name}}…"
     }
   },
   "conflict": {
