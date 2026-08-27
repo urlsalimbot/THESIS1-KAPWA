@@ -5,9 +5,10 @@ import { AnnouncementsService } from './announcements.service';
 import { AnnouncementsController } from './announcements.controller';
 import { AnnouncementsPublicController } from './announcements-public.controller';
 import { AuthModule } from '../auth/auth.module';
+import { FilingModule } from '../filing/filing.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Announcement]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Announcement]), AuthModule, FilingModule],
   controllers: [AnnouncementsPublicController, AnnouncementsController],
   providers: [AnnouncementsService],
   exports: [AnnouncementsService],
