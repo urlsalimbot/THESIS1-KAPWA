@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Lock, Unlock, Download, FileJson, Shield, User, Hash, Calendar, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Lock, Unlock, Download, FileJson, Shield, User, Hash, Calendar, ArrowLeft, Eye, EyeOff, ImageIcon } from 'lucide-react';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth-context';
 import { useIrfOperations } from '../hooks/useIrfOperations';
+import { FileUploadList, type FilingDoc } from '../components/case-view/FileUploadList';
 import { PageShell } from '@/components/PageShell';
 import VictimNarrationField from '../components/irf/VictimNarrationField';
 import { Badge } from '@/components/ui/badge';
@@ -307,13 +309,31 @@ export function IrfDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const canUploadPhotos = ['admin', 'social_worker'].includes(user?.role ?? '');
   const [irf, setIrf] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [photos, setPhotos] = useState<FilingDoc[]>([]);
   const ops = useIrfOperations(id);
 
   useEffect(() => {
     if (id) load();
   }, [id]);
+
+  useEffect(() => {
+    if (id && isAdmin) loadPhotos();
+  }, [id, isAdmin]);
+
+  async function loadPhotos() {
+    if (!id) return;
+    try {
+      const data = await api.get<FilingDoc[]>(`/filing/irf/${id}/photos`);
+      setPhotos(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Failed to load IRF photos:', e);
+    }
+  }
 
   async function load() {
     if (!id) return;
@@ -418,6 +438,27 @@ export function IrfDetailPage() {
             exportLegalBasisRef={ops.exportLegalBasisRef} onExportLegalBasisRefChange={ops.setExportLegalBasisRef}
             exportPassword={ops.exportPassword} onExportPasswordChange={ops.setExportPassword}
             onExportPdf={ops.handleExportPdf} onExportJson={ops.handleExportJson} />
+
+          {isAdmin && (
+            <div className="rounded-lg border bg-card">
+              <div className="px-4 py-3 flex items-center gap-2">
+                <ImageIcon size={16} className="text-primary" />
+                <h2 className="text-sm font-semibold">{t('irf.photos', 'Evidence Photos')}</h2>
+              </div>
+              <Separator />
+              <div className="px-4 py-4">
+                <FileUploadList
+                  docs={photos}
+                  canUpload={canUploadPhotos}
+                  onChanged={loadPhotos}
+                  formExtras={{ category: 'irf_photo', irfId: id! }}
+                />
+                {photos.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t('irf.photosEmpty', 'No evidence photos attached.')}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </PageShell>
