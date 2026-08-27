@@ -1,5 +1,5 @@
 import { MAX_FILE_SIZE } from './constants';
-import { Controller, Get, Post, Delete, Param, Query, UseGuards, UploadedFile, Body, Request, UseInterceptors, StreamableFile, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, UseGuards, UploadedFile, Body, Request, UseInterceptors, StreamableFile, Res, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -48,18 +48,32 @@ export class FilingController {
     return this.filingService.findAll(caseId, beneficiaryId);
   }
 
+  @Get('irf/:irfId/photos')
+  @Roles('admin')
+  @ApiOperation({ summary: 'List IRF evidence photos (admin only)' })
+  async irfPhotos(@Param('irfId') irfId: string) {
+    return this.filingService.findPhotosByIrf(irfId);
+  }
+
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get document metadata' })
-  async findOne(@Param('id') id: string) {
-    return this.filingService.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req: any) {
+    const doc = await this.filingService.findOne(id);
+    if (!this.filingService.isPhotoAccessAllowed(req.user?.role, doc.category)) {
+      throw new ForbiddenException('You do not have access to this document');
+    }
+    return doc;
   }
 
   @Get(':id/download')
   @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   @ApiOperation({ summary: 'Download document file' })
-  async download(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+  async download(@Param('id') id: string, @Request() req: any, @Res({ passthrough: true }) res: Response) {
     const doc = await this.filingService.findOne(id);
+    if (!this.filingService.isPhotoAccessAllowed(req.user?.role, doc.category)) {
+      throw new ForbiddenException('You do not have access to this document');
+    }
     const filePath = path.resolve(process.cwd(), 'uploads', doc.fileName);
     if (!fs.existsSync(filePath)) throw new NotFoundException('File not found on disk');
     const stream = fs.createReadStream(filePath);
@@ -68,9 +82,13 @@ export class FilingController {
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Delete document' })
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: string, @Request() req: any) {
+    const doc = await this.filingService.findOne(id);
+    if (!this.filingService.isPhotoAccessAllowed(req.user?.role, doc.category, 'delete')) {
+      throw new ForbiddenException('Only admins can remove documents');
+    }
     return this.filingService.delete(id);
   }
 

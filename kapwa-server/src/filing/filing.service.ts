@@ -72,6 +72,17 @@ export class FilingService {
     return this.docRepo.find({ where, order: { createdAt: 'DESC' }, take: DEFAULT_DOC_LIMIT });
   }
 
+  // IRF photos are evidence and only MSWDO admins may view them; announcement
+  // photos are managed by the announcement roles; other docs stay admin-delete.
+  isPhotoAccessAllowed(role: string | undefined, category?: string | null, action: 'view' | 'delete' = 'view'): boolean {
+    if (role === 'admin') return true;
+    if (category === 'irf_photo') return false;
+    if (category === 'announcement_photo') {
+      return ['admin', 'social_worker', 'coordinator'].includes(role ?? '');
+    }
+    return action === 'delete' ? false : ['admin', 'social_worker', 'coordinator', 'claimant'].includes(role ?? '');
+  }
+
   async findOne(id: string) {
     const doc = await this.docRepo.findOne({ where: { id } });
     if (!doc) throw new NotFoundException('Document not found');

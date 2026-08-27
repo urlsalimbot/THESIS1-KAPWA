@@ -86,6 +86,22 @@ describe('FilingService', () => {
     });
   });
 
+  describe('photo access gating', () => {
+    it('allows admins for irf_photo', () => {
+      expect(service.isPhotoAccessAllowed('admin', 'irf_photo')).toBe(true);
+    });
+    it('denies non-admins for irf_photo', () => {
+      expect(service.isPhotoAccessAllowed('social_worker', 'irf_photo')).toBe(false);
+    });
+    it('allows manage roles for announcement_photo', () => {
+      expect(service.isPhotoAccessAllowed('social_worker', 'announcement_photo')).toBe(true);
+    });
+    it('allows only admins for other document categories', () => {
+      expect(service.isPhotoAccessAllowed('coordinator', 'case_document', 'delete')).toBe(false);
+      expect(service.isPhotoAccessAllowed('admin', 'case_document', 'delete')).toBe(true);
+    });
+  });
+
   describe('photo queries', () => {
     it('finds IRF photos by irfId ordered by created_at', async () => {
       (docRepoMock.find as jest.Mock).mockResolvedValue([{ id: 'p1' }]);
