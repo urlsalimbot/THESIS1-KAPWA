@@ -22,6 +22,12 @@ export class DocumentVault extends BaseEntity {
   @Column({ nullable: true })
   beneficiaryId?: string;
 
+  @Column({ name: 'irf_id', nullable: true })
+  irfId?: string;
+
+  @Column({ name: 'announcement_id', nullable: true })
+  announcementId?: string;
+
   @Column({ nullable: true })
   category?: string;
 

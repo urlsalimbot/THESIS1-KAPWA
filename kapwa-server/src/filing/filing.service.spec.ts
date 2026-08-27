@@ -85,4 +85,36 @@ describe('FilingService', () => {
       expect(result).toEqual({ affected: 1 });
     });
   });
+
+  describe('photo queries', () => {
+    it('finds IRF photos by irfId ordered by created_at', async () => {
+      (docRepoMock.find as jest.Mock).mockResolvedValue([{ id: 'p1' }]);
+      const rows = await service.findPhotosByIrf('irf-1');
+      expect(docRepoMock.find).toHaveBeenCalledWith(expect.objectContaining({
+        where: { category: 'irf_photo', irfId: 'irf-1' },
+        order: { createdAt: 'ASC' },
+      }));
+      expect(rows).toHaveLength(1);
+    });
+
+    it('finds announcement photos by announcementId ordered by created_at', async () => {
+      (docRepoMock.find as jest.Mock).mockResolvedValue([]);
+      await service.findPhotosByAnnouncement('ann-1');
+      expect(docRepoMock.find).toHaveBeenCalledWith(expect.objectContaining({
+        where: { category: 'announcement_photo', announcementId: 'ann-1' },
+        order: { createdAt: 'ASC' },
+      }));
+    });
+
+    it('findOneByCategory returns the doc only when the category matches', async () => {
+      (docRepoMock.findOne as jest.Mock).mockResolvedValue({ id: 'p1', category: 'announcement_photo' });
+      const doc = await service.findOneByCategory('p1', 'announcement_photo');
+      expect(doc.id).toBe('p1');
+    });
+
+    it('findOneByCategory throws NotFound when category mismatches', async () => {
+      (docRepoMock.findOne as jest.Mock).mockResolvedValue({ id: 'p1', category: 'irf_photo' });
+      await expect(service.findOneByCategory('p1', 'announcement_photo')).rejects.toThrow('File not found');
+    });
+  });
 });

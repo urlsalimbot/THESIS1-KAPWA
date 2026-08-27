@@ -20,7 +20,7 @@ export class FilingService {
     if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   }
 
-  async upload(file: { originalname: string; mimetype: string; size: number; buffer: Buffer }, metadata: { caseId?: string; beneficiaryId?: string; category?: string; notes?: string; requirementKey?: string; uploadedBy?: string; userId?: string; personId?: string; userRole?: string }) {
+  async upload(file: { originalname: string; mimetype: string; size: number; buffer: Buffer }, metadata: { caseId?: string; beneficiaryId?: string; irfId?: string; announcementId?: string; category?: string; notes?: string; requirementKey?: string; uploadedBy?: string; userId?: string; personId?: string; userRole?: string }) {
     const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedMimes.includes(file.mimetype)) {
       throw new BadRequestException('Invalid file type. Allowed: PDF, JPEG, PNG, GIF, DOC');
@@ -49,6 +49,8 @@ export class FilingService {
       fileSize: file.size,
       caseId: metadata.caseId,
       beneficiaryId: metadata.beneficiaryId,
+      irfId: metadata.irfId,
+      announcementId: metadata.announcementId,
       category: metadata.category,
       notes: metadata.notes,
       requirementKey: metadata.requirementKey,
@@ -73,6 +75,20 @@ export class FilingService {
   async findOne(id: string) {
     const doc = await this.docRepo.findOne({ where: { id } });
     if (!doc) throw new NotFoundException('Document not found');
+    return doc;
+  }
+
+  async findPhotosByIrf(irfId: string) {
+    return this.docRepo.find({ where: { category: 'irf_photo', irfId }, order: { createdAt: 'ASC' } });
+  }
+
+  async findPhotosByAnnouncement(announcementId: string) {
+    return this.docRepo.find({ where: { category: 'announcement_photo', announcementId }, order: { createdAt: 'ASC' } });
+  }
+
+  async findOneByCategory(id: string, category: string) {
+    const doc = await this.findOne(id);
+    if (!doc || doc.category !== category) throw new NotFoundException('File not found');
     return doc;
   }
 

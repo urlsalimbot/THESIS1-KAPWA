@@ -143,6 +143,10 @@ export async function migrate() {
 
   await q.query(`CREATE INDEX IF NOT EXISTS idx_doc_case ON document_vault(case_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_doc_beneficiary ON document_vault(beneficiary_id)`);
+  await q.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS irf_id UUID`);
+  await q.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS announcement_id UUID`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_doc_irf ON document_vault(irf_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_doc_announcement ON document_vault(announcement_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_user ON beneficiaries(user_id)`);
 
   await q.query(`CREATE INDEX IF NOT EXISTS idx_chat_conversation ON chat_messages(conversation_id)`);

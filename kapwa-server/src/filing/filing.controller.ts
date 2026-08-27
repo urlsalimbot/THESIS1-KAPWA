@@ -26,7 +26,7 @@ export class FilingController {
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_SIZE } }))
   async upload(
     @UploadedFile() file: any,
-    @Body(new ZodPipe(UploadMetadataSchema)) metadata: { caseId?: string; beneficiaryId?: string; category?: string; notes?: string; requirementKey?: string },
+    @Body(new ZodPipe(UploadMetadataSchema)) metadata: { caseId?: string; beneficiaryId?: string; irfId?: string; announcementId?: string; category?: string; notes?: string; requirementKey?: string },
     @Request() req: any,
   ) {
     return this.filingService.upload(file, {
