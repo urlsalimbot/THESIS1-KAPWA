@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageShell } from '@/components/PageShell';
+import { FileUploadList, type FilingDoc } from '@/components/case-view/FileUploadList';
 import { toast } from 'sonner';
-import { Loader2, Pin, PinOff, Pencil, Trash2, Eye, ExternalLink } from 'lucide-react';
+import { Loader2, Pin, PinOff, Pencil, Trash2, Eye, ExternalLink, ImageIcon } from 'lucide-react';
 
 interface AnnouncementDetail {
   id: string;
@@ -30,6 +31,11 @@ export function AnnouncementDetailPage() {
   const { data, mutate, isLoading, error } = useSWR(
     id ? queryKeys.announcements.detail(id) : null,
     (key) => api.get<AnnouncementDetail>(key),
+  );
+
+  const { data: photos, mutate: mutatePhotos } = useSWR(
+    id ? ['filing', 'announcements', id, 'photos'] : null,
+    (key) => api.get<FilingDoc[]>(key),
   );
 
   const handleDelete = async () => {
@@ -146,6 +152,23 @@ export function AnnouncementDetailPage() {
                 className="prose prose-slate max-w-none prose-headings:font-heading prose-headings:tracking-tight prose-a:text-primary dark:prose-invert"
                 dangerouslySetInnerHTML={{ __html: data.bodyHtml }}
               />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-3">
+              <ImageIcon size={16} className="text-primary" />
+              <h2 className="text-lg font-semibold font-heading">{t('announcements.photos', 'Photos')}</h2>
+            </div>
+            <FileUploadList
+              docs={photos || []}
+              onChanged={() => mutatePhotos()}
+              formExtras={{ category: 'announcement_photo', announcementId: data.id }}
+            />
+            {(!photos || photos.length === 0) && (
+              <p className="text-sm text-muted-foreground">{t('announcements.photosEmpty', 'No photos attached.')}</p>
             )}
           </CardContent>
         </Card>

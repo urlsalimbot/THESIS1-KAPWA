@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AnnouncementsService } from './announcements.service';
 import { Announcement } from './announcement.entity';
+import { FilingService } from '../filing/filing.service';
 
 type MockRepo = {
   save: jest.Mock;
@@ -33,6 +34,7 @@ function createAnnouncement(overrides: Partial<Announcement> = {}): Announcement
 describe('AnnouncementsService', () => {
   let service: AnnouncementsService;
   let repo: MockRepo;
+  let filingService: { findPhotosByAnnouncement: jest.Mock };
 
   beforeEach(async () => {
     repo = {
@@ -43,11 +45,13 @@ describe('AnnouncementsService', () => {
       create: jest.fn(),
       createQueryBuilder: jest.fn(),
     };
+    filingService = { findPhotosByAnnouncement: jest.fn().mockResolvedValue([]) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnnouncementsService,
         { provide: getRepositoryToken(Announcement), useValue: repo },
+        { provide: FilingService, useValue: filingService },
       ],
     }).compile();
 
@@ -134,6 +138,43 @@ describe('AnnouncementsService', () => {
         take: 10,
       });
       expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('photo summaries', () => {
+    it('attaches photoCount and coverPhotoId in findPublished', async () => {
+      repo.find.mockResolvedValue([createAnnouncement({ status: 'published' })]);
+      filingService.findPhotosByAnnouncement.mockResolvedValue([{ id: 'photo-1' }, { id: 'photo-2' }]);
+
+      const result = await service.findPublished(10);
+
+      expect(filingService.findPhotosByAnnouncement).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440000');
+      expect(result[0].photoCount).toBe(2);
+      expect(result[0].coverPhotoId).toBe('photo-1');
+    });
+
+    it('sets coverPhotoId null when an announcement has no photos', async () => {
+      repo.find.mockResolvedValue([createAnnouncement({ status: 'published' })]);
+
+      const result = await service.findPublished(10);
+
+      expect(result[0].photoCount).toBe(0);
+      expect(result[0].coverPhotoId).toBeNull();
+    });
+
+    it('attaches photo summaries in findAll', async () => {
+      repo.createQueryBuilder.mockReturnValue({
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([createAnnouncement()]),
+      });
+      filingService.findPhotosByAnnouncement.mockResolvedValue([{ id: 'photo-9' }]);
+
+      const result = await service.findAll();
+
+      expect(result[0].photoCount).toBe(1);
+      expect(result[0].coverPhotoId).toBe('photo-9');
     });
   });
 

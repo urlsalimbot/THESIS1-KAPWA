@@ -55,6 +55,13 @@ export class FilingController {
     return this.filingService.findPhotosByIrf(irfId);
   }
 
+  @Get('announcements/:announcementId/photos')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @ApiOperation({ summary: 'List announcement photos (manage roles)' })
+  async announcementPhotos(@Param('announcementId') announcementId: string) {
+    return this.filingService.findPhotosByAnnouncement(announcementId);
+  }
+
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get document metadata' })

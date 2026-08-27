@@ -26,6 +26,8 @@ interface Announcement {
   pinned: boolean;
   publishedAt: string | null;
   updatedAt: string;
+  photoCount: number;
+  coverPhotoId: string | null;
 }
 
 export function AnnouncementsPage() {
@@ -139,6 +141,14 @@ export function AnnouncementsPage() {
               className={a.status === 'draft' ? 'opacity-75' : ''}
             >
               <div className="flex items-start justify-between p-4">
+                {a.coverPhotoId && (
+                  <img
+                    src={`/announcements/public/photo/${a.coverPhotoId}`}
+                    alt={t('announcements.photoCover', 'Cover photo')}
+                    className="h-16 w-24 rounded-md object-cover mr-4 shrink-0"
+                    loading="lazy"
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <button

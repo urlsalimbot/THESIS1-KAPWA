@@ -25,6 +25,8 @@ export class AnnouncementsPublicController {
       excerpt: a.excerpt,
       pinned: a.pinned,
       publishedAt: a.publishedAt,
+      photoCount: a.photoCount,
+      coverPhotoId: a.coverPhotoId,
     }));
   }
 

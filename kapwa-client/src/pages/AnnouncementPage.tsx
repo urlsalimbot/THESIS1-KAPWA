@@ -16,6 +16,11 @@ interface AnnouncementDetail {
   publishedAt: string | null;
 }
 
+interface PublicPhoto {
+  id: string;
+  originalName: string;
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
     year: 'numeric',
@@ -30,6 +35,11 @@ export function AnnouncementPage() {
   const { data, isLoading, error } = useSWR(
     slug ? queryKeys.announcements.public.detail(slug) : null,
     (key) => api.get<AnnouncementDetail>(key),
+  );
+
+  const { data: photos } = useSWR(
+    slug ? ['announcements', 'public', slug, 'photos'] : null,
+    (key) => api.get<PublicPhoto[]>(key),
   );
 
   if (isLoading) {
@@ -103,6 +113,19 @@ export function AnnouncementPage() {
           className="prose prose-slate max-w-none prose-headings:font-heading prose-headings:tracking-tight prose-a:text-primary prose-img:rounded-lg prose-img:my-6 dark:prose-invert"
           dangerouslySetInnerHTML={{ __html: data.bodyHtml }}
         />
+
+        {photos && photos.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-lg font-semibold mb-4">{t('announcements.photos', 'Photos')}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {photos.map(p => (
+                <a key={p.id} href={`/announcements/public/photo/${p.id}`} target="_blank" rel="noreferrer">
+                  <img src={`/announcements/public/photo/${p.id}`} alt={p.originalName} className="w-full rounded-lg border object-cover aspect-video" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-12 pt-8 border-t flex items-center justify-between">
           <p className="text-sm text-muted-foreground">

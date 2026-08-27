@@ -14,6 +14,8 @@ interface PublicAnnouncement {
   excerpt: string;
   pinned: boolean;
   publishedAt: string | null;
+  photoCount: number;
+  coverPhotoId: string | null;
 }
 
 function formatDate(iso: string) {
@@ -67,6 +69,14 @@ export function LatestAnnouncements() {
                 )}
               >
                 <CardContent className="p-5 flex flex-col h-full">
+                  {a.coverPhotoId && (
+                    <img
+                      src={`/announcements/public/photo/${a.coverPhotoId}`}
+                      alt={t('announcements.photoCover', 'Cover photo')}
+                      className="w-full aspect-video object-cover rounded-md mb-4"
+                      loading="lazy"
+                    />
+                  )}
                   <div className="flex items-center justify-between gap-2 mb-3">
                     {a.pinned ? (
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent">

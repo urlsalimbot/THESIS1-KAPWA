@@ -3,6 +3,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as sanitizeHtml from 'sanitize-html';
 import { Announcement } from './announcement.entity';
+import { FilingService } from '../filing/filing.service';
+
+export interface AnnouncementWithPhotos {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  bodyHtml: string;
+  bodyText: string;
+  status: 'draft' | 'published';
+  pinned: boolean;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  photoCount: number;
+  coverPhotoId: string | null;
+}
 
 interface CreateDto {
   title: string;
@@ -48,6 +65,7 @@ export class AnnouncementsService {
   constructor(
     @InjectRepository(Announcement)
     private repo: Repository<Announcement>,
+    private readonly filingService: FilingService,
   ) {}
 
   async create(dto: CreateDto): Promise<Announcement> {
@@ -70,7 +88,7 @@ export class AnnouncementsService {
     );
   }
 
-  async findAll(opts?: { status?: string; limit?: number }): Promise<Announcement[]> {
+  async findAll(opts?: { status?: string; limit?: number }): Promise<AnnouncementWithPhotos[]> {
     const qb = this.repo.createQueryBuilder('a').orderBy('a.pinned', 'DESC');
     if (opts?.status) {
       qb.andWhere('a.status = :status', { status: opts.status });
@@ -79,15 +97,30 @@ export class AnnouncementsService {
     if (opts?.limit) {
       qb.limit(opts.limit);
     }
-    return qb.getMany();
+    return this.withPhotoSummary(await qb.getMany());
   }
 
-  async findPublished(limit?: number): Promise<Announcement[]> {
-    return this.repo.find({
-      where: { status: 'published' },
-      order: { pinned: 'DESC', publishedAt: 'DESC' },
-      take: limit,
-    });
+  async findPublished(limit?: number): Promise<AnnouncementWithPhotos[]> {
+    return this.withPhotoSummary(
+      await this.repo.find({
+        where: { status: 'published' },
+        order: { pinned: 'DESC', publishedAt: 'DESC' },
+        take: limit,
+      }),
+    );
+  }
+
+  private async withPhotoSummary(announcements: Announcement[]): Promise<AnnouncementWithPhotos[]> {
+    return Promise.all(
+      announcements.map(async (a) => {
+        const photoRows = await this.filingService.findPhotosByAnnouncement(a.id);
+        return {
+          ...a,
+          photoCount: photoRows.length,
+          coverPhotoId: photoRows[0]?.id ?? null,
+        };
+      }),
+    );
   }
 
   async findOne(id: string): Promise<Announcement | null> {

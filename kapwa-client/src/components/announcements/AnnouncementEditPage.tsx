@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import useSWR from 'swr';
 import { api } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
+import { Card, CardContent } from '@/components/ui/card';
+import { FileUploadList, type FilingDoc } from '@/components/case-view/FileUploadList';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ImageIcon } from 'lucide-react';
 import { AnnouncementForm, type AnnouncementFormValues } from './AnnouncementForm';
 import { useTranslation } from 'react-i18next';
 
@@ -28,6 +30,11 @@ export function AnnouncementEditPage() {
   const { data, isLoading } = useSWR(
     id ? ['announcements', id] : null,
     (key) => api.get<AnnouncementDetail>(key),
+  );
+
+  const { data: photos, mutate: mutatePhotos } = useSWR(
+    id ? ['filing', 'announcements', id, 'photos'] : null,
+    (key) => api.get<FilingDoc[]>(key),
   );
 
   const save = async (status: 'draft' | 'published', values: AnnouncementFormValues) => {
@@ -67,6 +74,24 @@ export function AnnouncementEditPage() {
             saving={saving}
             onSave={save}
           />
+        )}
+        {data && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <ImageIcon size={16} className="text-primary" />
+                <h2 className="text-lg font-semibold font-heading">{t('announcements.photos', 'Photos')}</h2>
+              </div>
+              <FileUploadList
+                docs={photos || []}
+                onChanged={() => mutatePhotos()}
+                formExtras={{ category: 'announcement_photo', announcementId: data.id }}
+              />
+              {(!photos || photos.length === 0) && (
+                <p className="text-sm text-muted-foreground">{t('announcements.photosEmpty', 'No photos attached.')}</p>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </PageShell>
