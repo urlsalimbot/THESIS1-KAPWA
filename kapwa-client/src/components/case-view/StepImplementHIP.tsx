@@ -79,7 +79,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
     docsByRequirement[k].push(d);
   }
 
-  const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole));
+  const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole) && !readOnly);
 
   async function handleAdd() {
     setSaving(true);

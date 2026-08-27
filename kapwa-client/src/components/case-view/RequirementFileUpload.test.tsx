@@ -3,15 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RequirementFileUpload, type FilingDoc } from './RequirementFileUpload';
 import { api } from '@/lib/api';
 
-const { mockUpload, mockDel, mockUrl } = vi.hoisted(() => ({
+const { mockUpload, mockDel } = vi.hoisted(() => ({
   mockUpload: vi.fn(),
   mockDel: vi.fn(),
-  mockUrl: vi.fn((p: string) => 'https://cdn.test' + p),
 }));
 
 vi.mock('@/lib/api', () => ({
-  api: { del: (...a: unknown[]) => mockDel(...a), url: (p: string) => mockUrl(p) },
+  api: { del: (...a: unknown[]) => mockDel(...a) },
   uploadWithProgress: (...args: unknown[]) => mockUpload(...args),
+  downloadFilingDoc: vi.fn().mockResolvedValue(undefined),
+  getFilingObjectUrl: vi.fn().mockResolvedValue('blob:mock'),
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

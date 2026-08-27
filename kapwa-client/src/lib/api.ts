@@ -302,6 +302,15 @@ export async function downloadFilingDoc(id: string, fallbackName = 'document'): 
   URL.revokeObjectURL(url);
 }
 
+export async function getFilingObjectUrl(id: string): Promise<string> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/filing/${id}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Document fetch failed: ${res.status}`);
+  return URL.createObjectURL(await res.blob());
+}
+
 export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(

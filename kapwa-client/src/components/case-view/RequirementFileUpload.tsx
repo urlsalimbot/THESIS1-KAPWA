@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { api, uploadWithProgress } from '@/lib/api';
+import { api, uploadWithProgress, downloadFilingDoc, getFilingObjectUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -50,9 +50,29 @@ export function RequirementFileUpload({
   const [preview, setPreview] = useState<FilingDoc | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const urls: Record<string, string> = {};
+    let cancelled = false;
+    const imageDocs = docs.filter((d) => d.mimeType?.startsWith('image/'));
+    (async () => {
+      for (const d of imageDocs) {
+        try {
+          const url = await getFilingObjectUrl(d.id);
+          if (!cancelled) urls[d.id] = url;
+        } catch { /* skip broken thumbnail */ }
+      }
+      if (!cancelled) setThumbs((prev) => ({ ...prev, ...urls }));
+    })();
+    return () => {
+      cancelled = true;
+      Object.values(urls).forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docs]);
 
   const extOf = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
-  const downloadUrl = (id: string) => api.url(`/filing/${id}/download`);
 
   function validate(file: File): string | null {
     if (!ACCEPTED.has(extOf(file.name))) {
@@ -119,7 +139,7 @@ export function RequirementFileUpload({
             return (
               <div key={doc.id} className="flex items-center gap-2 text-xs text-muted-foreground pl-9">
                 {isImage ? (
-                  <img src={downloadUrl(doc.id)} alt="" className="h-8 w-8 rounded border object-cover" />
+                  <img src={thumbs[doc.id]} alt="" className="h-8 w-8 rounded border object-cover" />
                 ) : (
                   <FileText size={16} className="shrink-0" />
                 )}
@@ -135,7 +155,9 @@ export function RequirementFileUpload({
                   variant="ghost"
                   size="sm"
                   className="h-6 px-1.5"
-                  onClick={() => window.open(downloadUrl(doc.id), '_blank')}
+                  onClick={() => downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() =>
+                    toast.error(t('caseView.documents.downloadFailed', 'Download failed')),
+                  )}
                   aria-label={t('caseView.documents.download', 'Download')}
                 >
                   <Download size={12} />
@@ -203,14 +225,19 @@ export function RequirementFileUpload({
             <DialogDescription>{preview ? `${(preview.fileSize / 1024).toFixed(0)} KB` : ''}</DialogDescription>
           </DialogHeader>
           {preview?.mimeType?.startsWith('image/') ? (
-            <img src={downloadUrl(preview.id)} alt={preview?.originalName} className="max-h-[60vh] w-full rounded border object-contain" />
+            <img src={thumbs[preview.id]} alt={preview?.originalName} className="max-h-[60vh] w-full rounded border object-contain" />
           ) : (
             <div className="flex flex-col items-center gap-3 py-8">
               <FileText size={40} className="text-muted-foreground" />
-              <Button asChild variant="outline" size="sm">
-                <a href={downloadUrl(preview?.id || '')} target="_blank" rel="noreferrer">
-                  {t('caseView.documents.openFile', 'Open file')}
-                </a>
+              <Button variant="outline" size="sm" onClick={async () => {
+                if (!preview) return;
+                try {
+                  window.open(await getFilingObjectUrl(preview.id), '_blank');
+                } catch {
+                  toast.error(t('caseView.documents.downloadFailed', 'Download failed'));
+                }
+              }}>
+                {t('caseView.documents.openFile', 'Open file')}
               </Button>
             </div>
           )}
