@@ -268,14 +268,6 @@ export function CaseViewPage() {
                 <span className="text-muted-foreground">{t('cases.assignedWorker', 'Assigned Worker')}</span>
                 <p className="font-medium">{caseData.assignedWorker?.fullName || '—'}</p>
               </div>
-              <div>
-                <span className="text-muted-foreground">{t('cases.certificateUrl', 'Certificate URL')}</span>
-                <p className="font-medium truncate">{caseData.certificateUrl || '—'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">{t('cases.pettyCashVoucher', 'Petty Cash Voucher')}</span>
-                <p className="font-medium truncate">{caseData.pettyCashVoucherUrl || '—'}</p>
-              </div>
               {caseData.approvedByRole && (
                 <div>
                   <span className="text-muted-foreground">{t('cases.approvedBy', 'Approved By')}</span>
