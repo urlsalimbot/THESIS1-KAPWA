@@ -165,7 +165,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      const result = await service.submitIntake(validIntakeInput);
+      const result = await service.submitIntake(validIntakeInput, 'caller-1');
 
       expect(queryRunnerMock.startTransaction).toHaveBeenCalledWith('SERIALIZABLE');
       expect(queryRunnerMock.commitTransaction).toHaveBeenCalled();
@@ -176,6 +176,14 @@ describe('IntakeService', () => {
       expect(result).toHaveProperty('caseId', caseUuid);
       expect(result).toHaveProperty('controlNo', 'KAPWA-2026-00001');
       expect(result).toHaveProperty('status', CaseStatus.ENROLLED);
+
+      expect(caseRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignedWorkerId: 'caller-1',
+          controlNo: 'KAPWA-2026-00001',
+          status: CaseStatus.ENROLLED,
+        }),
+      );
     });
 
     it('should return control_no in KAPWA-YYYY-XXXXX format', async () => {
@@ -194,7 +202,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      const result = await service.submitIntake(validIntakeInput);
+      const result = await service.submitIntake(validIntakeInput, 'caller-1');
       expect(result.controlNo).toMatch(/^KAPWA-\d{4}-\d{5}$/);
     });
 
@@ -214,7 +222,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      await service.submitIntake(validIntakeInput);
+      await service.submitIntake(validIntakeInput, 'caller-1');
 
       expect(personRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ surname: 'Dela Cruz' })
@@ -239,7 +247,7 @@ describe('IntakeService', () => {
 
       stubCreates();
 
-      await expect(service.submitIntake(validIntakeInput)).rejects.toThrow('Service temporarily unavailable');
+      await expect(service.submitIntake(validIntakeInput, 'caller-1')).rejects.toThrow('Service temporarily unavailable');
 
       expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalled();
       expect(queryRunnerMock.commitTransaction).not.toHaveBeenCalled();
@@ -279,7 +287,7 @@ describe('IntakeService', () => {
       hhRepo.findOne = jest.fn().mockResolvedValue(null) as any;
 
       await expect(
-        service.confirmMatch('nonexistent-id', validIntakeInput, []),
+        service.confirmMatch('nonexistent-id', validIntakeInput, [], 'caller-1'),
       ).rejects.toThrow('Household not found');
     });
 
@@ -287,7 +295,7 @@ describe('IntakeService', () => {
       hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'hh-id', barangay: 'Bigte' }) as any;
 
       await expect(
-        service.confirmMatch('hh-id', validIntakeInput, ['Matictic']),
+        service.confirmMatch('hh-id', validIntakeInput, ['Matictic'], 'caller-1'),
       ).rejects.toThrow('You do not have permission for this barangay');
     });
 
@@ -314,7 +322,7 @@ describe('IntakeService', () => {
 
       caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
 
-      const result = await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte']);
+      const result = await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], 'caller-1');
 
       expect(queryRunnerMock.manager.create).toHaveBeenCalledWith(
         Beneficiary,
@@ -322,6 +330,10 @@ describe('IntakeService', () => {
       );
       expect(result).toHaveProperty('beneficiaryId', 'new-ben-id');
       expect(result).toHaveProperty('status', CaseStatus.ENROLLED);
+
+      expect(caseRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ assignedWorkerId: 'caller-1' }),
+      );
     });
   });
 
@@ -356,7 +368,7 @@ describe('IntakeService', () => {
           familyMembers: [
             { surname: 'Dela Cruz', firstName: 'Jose', gender: 'Female', dob: '2010-06-15', relationship: 'Child' },
           ],
-        });
+        }, 'caller-1');
 
         const fmSaveCall = saveMock.mock.calls[6];
         expect(fmSaveCall[0]).toBe(Person);

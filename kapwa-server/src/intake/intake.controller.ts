@@ -15,8 +15,11 @@ export class IntakeController {
 
   @Post()
   @Roles('admin', 'social_worker')
-  async submitIntake(@Body(new ZodPipe(IntakeInputSchema)) body: IntakeInput) {
-    return this.intakeService.submitIntake(body);
+  async submitIntake(
+    @Body(new ZodPipe(IntakeInputSchema)) body: IntakeInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.intakeService.submitIntake(body, req.user.id);
   }
 
   @Post('batch-family')
@@ -43,6 +46,6 @@ export class IntakeController {
     @Request() req: AuthenticatedRequest,
   ) {
     const permittedBarangays: string[] = req.user?.permittedBarangays || [];
-    return this.intakeService.confirmMatch(householdId, body, permittedBarangays);
+    return this.intakeService.confirmMatch(householdId, body, permittedBarangays, req.user.id);
   }
 }

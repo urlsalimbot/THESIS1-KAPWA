@@ -104,7 +104,7 @@ export class IntakeService {
     };
   }
 
-  async submitIntake(data: IntakeInput): Promise<{
+  async submitIntake(data: IntakeInput, callerId?: string): Promise<{
     beneficiaryId: string;
     caseId: string;
     controlNo: string;
@@ -175,7 +175,7 @@ export class IntakeService {
         status: CaseStatus.ENROLLED,
         serviceRequested: data.case.serviceRequested,
         requirementsChecklist: data.case.requirementsChecklist,
-        assignedWorkerId: data.case.assignedWorkerId,
+        assignedWorkerId: callerId,
       });
       const savedCase = await queryRunner.manager.save(caseEntity);
 
@@ -383,7 +383,7 @@ export class IntakeService {
     return { candidates };
   }
 
-  async confirmMatch(householdId: string, data: ConfirmMatchInput, workerBarangays: string[]): Promise<ConfirmMatchResponse> {
+  async confirmMatch(householdId: string, data: ConfirmMatchInput, workerBarangays: string[], callerId: string): Promise<ConfirmMatchResponse> {
     const household = await this.hhRepo.findOne({ where: { id: householdId } });
     if (!household) throw new NotFoundException('Household not found');
     if (workerBarangays.length > 0 && household.barangay && !workerBarangays.includes(household.barangay)) {
@@ -469,7 +469,7 @@ export class IntakeService {
           status: CaseStatus.ENROLLED,
           serviceRequested: data.case.serviceRequested,
           requirementsChecklist: data.case.requirementsChecklist,
-          assignedWorkerId: data.case.assignedWorkerId,
+          assignedWorkerId: callerId,
         });
         savedCase = await queryRunner.manager.save(caseEntity);
       }
