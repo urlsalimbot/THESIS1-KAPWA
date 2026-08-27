@@ -1,5 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 
+/* Peso sign (U+20B1) fallback: Geist and Source Sans 3 do not ship the
+   Philippine peso glyph, so without this the peso renders as tofu/box.
+   unicode-range scopes this face to the peso character only; all other
+   glyphs keep the primary fonts. */
+@font-face {
+  font-family: 'PesoSymbol';
+  src:
+    local('Segoe UI Symbol'),
+    local('Noto Sans Symbols'),
+    local('Noto Sans Symbols 2'),
+    local('Arial Unicode MS'),
+    local('DejaVu Sans'),
+    local('FreeSans'),
+    local('Tahoma');
+  unicode-range: U+20B1;
+}
+
+/* Ensure the peso fallback is in the stack actually used by Tailwind v4's
+   preflight body rule (which does not read --font-body). */
+body {
+  font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PesoSymbol', sans-serif;
+}
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
@@ -167,8 +190,8 @@
   --alert-error-bg: #FFF3CD;
   --alert-error-fg: #856404;
 
-  --font-heading: 'Geist', sans-serif;
-  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Geist', 'PesoSymbol', sans-serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PesoSymbol', sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -285,8 +308,8 @@
   --color-alert-error-bg: var(--alert-error-bg);
   --color-alert-error-fg: var(--alert-error-fg);
 
-  --font-heading: 'Geist', sans-serif;
-  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Geist', 'PesoSymbol', sans-serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PesoSymbol', sans-serif;
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
