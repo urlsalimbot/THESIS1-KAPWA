@@ -23,3 +23,15 @@ describe('schema normalization — person child entities', () => {
     expect(addr.barangay).toBe('Poblacion');
   });
 });
+
+import { Beneficiary } from './beneficiary.entity';
+
+describe('schema normalization — beneficiary dedup groundwork', () => {
+  it('beneficiary still exposes legacy category for Wave-1 compatibility', () => {
+    const b = new Beneficiary();
+    b.category = 'Senior Citizen';
+    b.consentStatus = 'active';
+    expect(b.category).toBe('Senior Citizen');
+    expect(b.consentStatus).toBe('active');
+  });
+});
