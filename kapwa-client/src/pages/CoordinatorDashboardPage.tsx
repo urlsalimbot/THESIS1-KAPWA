@@ -105,7 +105,6 @@ export function CoordinatorDashboardPage() {
       <div className="mt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold">{t('dashboard.todayTrackerEntries', "Today's Tracker Entries")}</h2>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/tracker')}>{t('dashboard.viewFullTracker', 'View Full Tracker')}</Button>
         </div>
         {recentEntries.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg bg-card">{t('dashboard.noEntriesToday', 'No entries today')}</div>
