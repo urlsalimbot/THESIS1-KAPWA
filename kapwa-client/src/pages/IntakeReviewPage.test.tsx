@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { IntakeReviewPage } from './IntakeReviewPage';
+import { uploadIntakeIdPhoto } from '@/lib/intake-id-photo';
 import { axe } from 'vitest-axe';
+
+vi.mock('@/lib/intake-id-photo', () => ({
+  uploadIntakeIdPhoto: vi.fn().mockResolvedValue(true),
+  setPendingIdPhoto: vi.fn(),
+  getPendingIdPhoto: vi.fn(),
+  clearPendingIdPhoto: vi.fn(),
+}));
 
 const mockNavigate = vi.fn();
 
@@ -183,6 +191,31 @@ describe('IntakeReviewPage', () => {
     fireEvent.click(confirmBtn);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalled();
+    });
+  });
+
+  it('uploads the pending ID photo once a case is confirmed', async () => {
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    const confirmBtn = screen.getAllByRole('button', { name: /update info/i })[0];
+    fireEvent.click(confirmBtn);
+    await waitFor(() => {
+      expect(uploadIntakeIdPhoto).toHaveBeenCalledWith('case-1');
+    });
+  });
+
+  it('uploads the pending ID photo when registering as a new client', async () => {
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /register as new client/i }));
+    await waitFor(() => {
+      expect(uploadIntakeIdPhoto).toHaveBeenCalledWith('case-1');
     });
   });
 
