@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColu
 import { BaseEntity } from '../common/base.entity';
 import { User } from '../auth/user.entity';
 import { Case } from '../cases/case.entity';
+import { Person } from '../beneficiaries/person.entity';
 
 export enum ReferralStatus {
   PENDING = 'pending',
@@ -60,6 +61,13 @@ export class Referral extends BaseEntity {
   @ManyToOne(() => Case)
   @JoinColumn({ name: 'case_id' })
   case?: Case;
+
+  @Column({ name: 'person_id', nullable: true })
+  personId?: string;
+
+  @ManyToOne(() => Person)
+  @JoinColumn({ name: 'person_id' })
+  person?: Person;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

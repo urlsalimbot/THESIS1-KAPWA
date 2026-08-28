@@ -1,6 +1,22 @@
 import { AgencyContact } from '../agencies/agency-contact.entity';
 import { ProgramFundSource } from '../programs/program-fund-source.entity';
 import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
+import { Referral } from '../referrals/referral.entity';
+
+describe('schema normalization — referrals person link', () => {
+  it('supports a nullable person_id', () => {
+    const r = new Referral();
+    r.coordinatorId = 'u1';
+    r.barangay = 'Poblacion';
+    r.surname = 'Dela Cruz';
+    r.firstName = 'Juan';
+    r.gender = 'Male';
+    r.dob = '1990-01-15';
+    r.reason = 'Medical emergency';
+    r.personId = 'p1';
+    expect(r.personId).toBe('p1');
+  });
+});
 
 describe('schema normalization — agency/program child entities', () => {
   it('defines agency_contacts', () => {
