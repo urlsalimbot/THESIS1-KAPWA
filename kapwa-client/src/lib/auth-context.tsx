@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { api } from './api';
 import { clearDraft } from '../hooks/useIntakeAutosave';
+import { clearPendingIdPhoto } from './intake-id-photo';
 
 interface User { id: string; email: string; fullName: string; role: string; phone?: string; agencyId?: string; }
 
@@ -128,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Purge the intake draft for the current user — PII must not survive a session
     // handoff on a shared field tablet.
     if (userIdRef.current) clearDraft(userIdRef.current);
+    clearPendingIdPhoto();
     localStorage.removeItem('kapwa_token');
     setToken(null);
     setUser(null);

@@ -13,7 +13,7 @@ import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
 import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { setPendingIdPhoto, getPendingIdPhoto, uploadIntakeIdPhoto } from '@/lib/intake-id-photo';
+import { setPendingIdPhoto, getPendingIdPhoto, clearPendingIdPhoto, uploadIntakeIdPhoto } from '@/lib/intake-id-photo';
 import { validatePerson, type PersonFormValues, type ValidationErrors } from '@/hooks/useIntakeValidation';
 
 function computeAge(dob: string): number {
@@ -220,6 +220,27 @@ export function IntakePage() {
   const [batchSubmitting, setBatchSubmitting] = useState(false);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewUrlRef = useRef<string | null>(null);
+
+  function showPreview(url: string) {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = url;
+    setPendingPreview(url);
+  }
+
+  function clearPreview() {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
+    setPendingPreview(null);
+  }
+
+  useEffect(() => {
+    const pending = getPendingIdPhoto();
+    if (pending) showPreview(URL.createObjectURL(pending));
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    };
+  }, []);
 
   const formSnapshot = useMemo(() => ({
     beneficiary,
@@ -476,12 +497,14 @@ export function IntakePage() {
         clearDraft(userId);
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);
+        clearPendingIdPhoto();
       }
     } catch (err: unknown) {
       try {
         clearDraft(userId);
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);
+        clearPendingIdPhoto();
       } catch (fallbackErr: unknown) {
         setError(fallbackErr instanceof Error ? fallbackErr.message : t('intake.submitFailed', 'Failed to submit intake'));
       }
@@ -669,13 +692,13 @@ export function IntakePage() {
                 </button>
               )}
               {pendingPreview && (
-                <button type="button" onClick={() => { setPendingIdPhoto(null); setPendingPreview(null); }} className="text-xs text-red-500">
+                <button type="button" onClick={() => { clearPendingIdPhoto(); clearPreview(); }} className="text-xs text-red-500">
                   {t('intake.idPhoto.remove', 'Remove')}
                 </button>
               )}
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" aria-label={t('intake.idPhoto.pick', 'Choose ID photo')} onChange={(e) => {
                 const file = e.target.files?.[0] ?? null;
-                if (file) { setPendingIdPhoto(file); setPendingPreview(URL.createObjectURL(file)); }
+                if (file) { setPendingIdPhoto(file); showPreview(URL.createObjectURL(file)); }
               }} />
             </div>
           </div>

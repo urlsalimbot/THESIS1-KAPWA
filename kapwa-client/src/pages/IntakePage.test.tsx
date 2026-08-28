@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { IntakePage } from './IntakePage';
 import { api } from '../lib/api';
+import { setPendingIdPhoto } from '../lib/intake-id-photo';
 
 const queueCalls: unknown[][] = [];
 const mockQueueChange = vi.fn((...args: unknown[]) => {
@@ -463,5 +464,61 @@ describe('IntakePage — optional government ID photo', () => {
     await screen.findByRole('heading', { name: /ID Photo/i });
     expect(screen.getByText(/Optional photo of the beneficiary government ID/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose ID photo/i })).toBeInTheDocument();
+  });
+});
+
+describe('IntakePage — ID photo preview lifecycle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+    setPendingIdPhoto(null);
+    // jsdom may not implement blob URLs; stub them so preview + revocation are assertable.
+    if (typeof URL.createObjectURL !== 'function') {
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:guarded') });
+    }
+    if (typeof URL.revokeObjectURL !== 'function') {
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+    }
+  });
+
+  it('re-initializes the preview from the pending holder on mount', async () => {
+    setPendingIdPhoto(new File(['id'], 'id.png', { type: 'image/png' }));
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:id-preview');
+
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+
+    const img = await screen.findByAltText('Government ID preview');
+    expect(img).toHaveAttribute('src', 'blob:id-preview');
+    expect(create).toHaveBeenCalled();
+  });
+
+  it('revokes the object URL when the picked photo is removed', async () => {
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:id-preview');
+
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /ID Photo/i });
+
+    fireEvent.change(screen.getByLabelText('Choose ID photo'), {
+      target: { files: [new File(['id'], 'id.png', { type: 'image/png' })] },
+    });
+
+    const img = await screen.findByAltText('Government ID preview');
+    expect(img).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+
+    expect(revoke).toHaveBeenCalledWith('blob:id-preview');
+    expect(screen.queryByAltText('Government ID preview')).not.toBeInTheDocument();
   });
 });

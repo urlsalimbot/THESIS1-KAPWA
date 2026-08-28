@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth-context';
+import { setPendingIdPhoto, getPendingIdPhoto } from './intake-id-photo';
 
 function AuthProbe({ onAuth }: { onAuth: (auth: { user: unknown; token: string | null }) => void }) {
   const auth = useAuth();
@@ -222,6 +223,53 @@ describe('AuthProvider — fetchUser uses api.get("/auth/me")', () => {
     // Verify the URL passed to fetch is the /auth/me endpoint
     const url = String(fetchMock.mock.calls[0][0]);
     expect(url).toMatch(/\/auth\/me$/);
+  });
+});
+
+describe('AuthProvider — logout clears the pending ID photo', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+    localStorage.setItem('kapwa_token', 'test-tok');
+    setPendingIdPhoto(new File(['id'], 'id.png', { type: 'image/png' }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    setPendingIdPhoto(null);
+  });
+
+  it('clears the pending ID photo on kapwa:auth:logout', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+    });
+
+    const onAuth = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={onAuth} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const lastCall = onAuth.mock.calls[onAuth.mock.calls.length - 1][0];
+      expect(lastCall.user).not.toBeNull();
+    });
+    expect(getPendingIdPhoto()).not.toBeNull();
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('kapwa:auth:logout', { detail: { reason: 'refresh_failed' } }));
+    });
+
+    await waitFor(() => {
+      expect(localStorage.getItem('kapwa_token')).toBeNull();
+    });
+    expect(getPendingIdPhoto()).toBeNull();
   });
 });
 
