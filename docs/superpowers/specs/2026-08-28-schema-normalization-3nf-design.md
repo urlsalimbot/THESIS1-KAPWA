@@ -125,7 +125,7 @@ Candidate: reference `persons` with nullable FKs, or keep as legal-record snapsh
 - Tables already 3NF / structurally sound: ~16
 - Tables with genuine violations needing decomposition: `persons`, `users`, `beneficiaries`,
   `beneficiary_roles` (dedup), `households`, `cases`, `referrals`, `agencies`, `programs`,
-  `irf_cases` (candidate), `access_card_services`
+  `irf_cases` (no change — D3), `access_card_services`
 
 ## 4. Target normalized schema
 
@@ -305,13 +305,10 @@ Remove multi-valued: `fund_sources` (TEXT[]), `required_documents` (JSONB).
 | `document_key` | varchar | |
 | `mandatory` | boolean | value |
 
-### 4.9 `irf_cases` (candidate)
+### 4.9 `irf_cases` — no change (legal snapshots)
 
-`item_a_reporting_person` / `item_b_person_reported` (JSONB) are legal-record snapshots.
-Superseded by optional `person_id`-style FKs is **flagged for confirmation** — see §6
-decision record. If normalized, introduce nullable `reporting_person_id` /
-`person_reported_id` FKs → `persons`; otherwise keep the JSONB snapshot (legal snapshots are
-commonly exempted as intentional denormalization).
+`item_a_reporting_person` / `item_b_person_reported` (JSONB) are kept as legal-record
+snapshots (D3, confirmed 2026-08-28). No FKs, no column change, no migration. See §6.
 
 ### 4.10 `access_card_services`
 
@@ -353,7 +350,7 @@ from parent columns (INSERT … SELECT) → then (after review) drop deprecated 
 | M10 | Agency contacts | `agencies.contact_info` → `agency_contacts` | `jsonb_each/INSERT`; drop block. |
 | M11 | Program children | `programs.fund_sources`/`required_documents` → child tables | Unnest/`jsonb_each`; drop columns. |
 | M12 | Misc scalar | `access_card_services.agency` drop | Drop column. |
-| M13 | (Candidate) IRF person FKs | `item_a/b` JSONB → FKs or keep | Decision-dependent; see §6. |
+| M13 | (No-op) IRF person JSONB | `item_a/b` JSONB snapshots | **Kept** — D3 confirmed legal-record snapshots (see §6). No migration. |
 
 Dependency order: M1 → M2 before anything referencing person; M3/M4 independent;
 M5→M6; M7→M8; M9..M13 mostly independent. Each child table gets a FK + index on the
@@ -369,22 +366,21 @@ Kept as-is (documented, acknowledged deviation from strict 3NF):
 3. `programs.required_documents` → normalized per §4.8 (addressed), but the *document
    definitions* themselves remain JSONB templates.
 
-Open decisions for user confirmation during planning:
+Decisions confirmed on 2026-08-28 (all six resolved; no remaining open items):
 
-- **D1:** `persons.estimated_monthly_income` with occupation — keep on `persons` (single
-  temporal value) vs. move to a `person_incomes` history child. Default: keep on `persons`.
-- **D2:** `households.estimated_income` — derived; **drop** (compute from members) vs.
-  **keep** cached for means-testing perf. Recommend: keep (read-heavy, recompute on member
-  change) — flagged as acknowledged derived column.
-- **D3:** `irf_cases.item_a_reporting_person` / `item_b_person_reported` — convert to
-  `persons` FKs vs. keep as legal-record JSONB snapshots. Recommend: **keep as snapshot**
-  (legal record immutability), out of relational scope.
-- **D4:** `referrals` embedded person → link to `persons` (add `person_id` FK) vs. keep the
-  copy. Recommend: link to `persons` (M9). Confirms row-atom with existing
-  `inter_agency_referrals.person_id` pattern.
-- **D5:** `beneficiaries.hash`/`prev_hash` and `cases.hash`/`prev_hash` — integrity hashes;
-  keep (not derived from schema, and intentional).
-- **D6:** `age` — confirmed drop (computed from `dob`) per §4.1.
+- **D1 — keep on `persons`:** `estimated_monthly_income` + `occupation` stay as a single
+  temporal value on `persons`. No `person_incomes` child table.
+- **D2 — keep cached:** `households.estimated_income` is retained as a cached/derived value
+  (recomputed when member incomes change) — acknowledged read-optimization deviation.
+- **D3 — keep JSONB snapshot:** `irf_cases.item_a_reporting_person` / `item_b_person_reported`
+  stay as JSONB legal-record snapshots (immutability). M13 is a **no-op** — no migration.
+- **D4 — link to `persons`:** `referrals` gains nullable `person_id` FK → `persons` (Option A);
+  the embedded `surname`/`first_name`/`middle_name`/`extension`/`gender`/`dob`/`address`/`phone`
+  copy is dropped. See M9.
+- **D5 — keep hashes:** `beneficiaries.hash`/`prev_hash` and `cases.hash`/`prev_hash` kept
+  (intentional integrity / tamper-evidence columns).
+- **D6 — drop `age`:** `persons.age` is removed; computed from `dob` via an entity getter /
+  read-time expression. See M2.
 
 ## 7. Impact / risk notes (for future implementation waves)
 
