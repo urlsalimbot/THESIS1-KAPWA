@@ -173,4 +173,49 @@ describe('FilingService', () => {
       await expect(service.findOneByCategory('p1', 'announcement_photo')).rejects.toThrow('File not found');
     });
   });
+
+  describe('id_photo + coordinator case-access gate', () => {
+    it('findIdPhotoByCase returns the latest id_photo for a case', async () => {
+      const rows = [{ id: 'f2', category: 'id_photo', caseId: 'c1', createdAt: new Date() }];
+      (docRepoMock.find as jest.Mock).mockResolvedValue(rows);
+      const out = await service.findIdPhotoByCase('c1');
+      expect(docRepoMock.find).toHaveBeenCalledWith(expect.objectContaining({
+        where: { category: 'id_photo', caseId: 'c1' },
+        order: { createdAt: 'DESC' },
+        take: 1,
+      }));
+      expect(out?.id).toBe('f2');
+    });
+
+    it('findIdPhotoByCase returns null when none', async () => {
+      (docRepoMock.find as jest.Mock).mockResolvedValue([]);
+      const out = await service.findIdPhotoByCase('c1');
+      expect(out).toBeNull();
+    });
+
+    it('isPhotoAccessAllowed denies coordinator for generic case docs and id_photo', () => {
+      expect(service.isPhotoAccessAllowed('coordinator', 'id_photo')).toBe(false);
+      expect(service.isPhotoAccessAllowed('coordinator', null)).toBe(false);
+      expect(service.isPhotoAccessAllowed('coordinator', null, 'delete')).toBe(false);
+    });
+
+    it('isPhotoAccessAllowed keeps coordinator for announcement_photo', () => {
+      expect(service.isPhotoAccessAllowed('coordinator', 'announcement_photo')).toBe(true);
+      expect(service.isPhotoAccessAllowed('coordinator', 'announcement_photo', 'delete')).toBe(true);
+    });
+
+    it('isPhotoAccessAllowed still allows admin and social_worker for case docs', () => {
+      expect(service.isPhotoAccessAllowed('admin', null)).toBe(true);
+      expect(service.isPhotoAccessAllowed('social_worker', 'id_photo')).toBe(true);
+    });
+
+    it('findAll scopes coordinators to announcement_photo rows', async () => {
+      docRepoMock.find.mockResolvedValue([]);
+      await service.findAll(undefined, undefined, 'coordinator');
+      expect(docRepoMock.find).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ category: 'announcement_photo' }),
+        take: DEFAULT_DOC_LIMIT,
+      }));
+    });
+  });
 });

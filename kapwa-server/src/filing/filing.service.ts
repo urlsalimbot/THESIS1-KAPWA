@@ -85,6 +85,9 @@ export class FilingService {
       // photo rows out of it for non-admins (they have dedicated endpoints).
       where.category = Not(In(['irf_photo', 'announcement_photo']));
     }
+    if (role === 'coordinator') {
+      where.category = 'announcement_photo';
+    }
     return this.docRepo.find({ where, order: { createdAt: 'DESC' }, take: DEFAULT_DOC_LIMIT });
   }
 
@@ -96,7 +99,9 @@ export class FilingService {
     if (category === 'announcement_photo') {
       return ['admin', 'social_worker', 'coordinator'].includes(role ?? '');
     }
-    return action === 'delete' ? false : ['admin', 'social_worker', 'coordinator', 'claimant'].includes(role ?? '');
+    return action === 'delete'
+      ? ['admin', 'social_worker'].includes(role ?? '')
+      : ['admin', 'social_worker', 'claimant'].includes(role ?? '');
   }
 
   async findOne(id: string) {
@@ -111,6 +116,15 @@ export class FilingService {
 
   async findPhotosByAnnouncement(announcementId: string) {
     return this.docRepo.find({ where: { category: 'announcement_photo', announcementId }, order: { createdAt: 'ASC' } });
+  }
+
+  async findIdPhotoByCase(caseId: string): Promise<DocumentVault | null> {
+    const rows = await this.docRepo.find({
+      where: { category: 'id_photo', caseId },
+      order: { createdAt: 'DESC' },
+      take: 1,
+    });
+    return rows[0] ?? null;
   }
 
   async findOneByCategory(id: string, category: string) {

@@ -62,6 +62,15 @@ export class FilingController {
     return this.filingService.findPhotosByAnnouncement(announcementId);
   }
 
+  @Get('case/:caseId/id-photo')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Get the ID photo for a case' })
+  async getCaseIdPhoto(@Param('caseId') caseId: string) {
+    const photo = await this.filingService.findIdPhotoByCase(caseId);
+    if (!photo) throw new NotFoundException('ID photo not found');
+    return photo;
+  }
+
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get document metadata' })
