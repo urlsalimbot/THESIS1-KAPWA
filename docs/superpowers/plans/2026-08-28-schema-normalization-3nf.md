@@ -1033,7 +1033,7 @@ git commit -m "feat(schema): add referrals.person_id FK (D4) for person linkage"
 
 ---
 
-### Task 6: Dedup `beneficiaries` — drop the duplicate access-card/category/consent columns (D4/D5 housekeeping, additive-safe)
+### Task 6: Dedup `beneficiaries` — record intent via additive groundwork migration (D4/D5 housekeeping; actual column drops deferred to Wave 2)
 
 **Files:**
 - Modify: `kapwa-server/src/beneficiaries/beneficiary.entity.ts` (keep the columns for Wave-1 compile safety — see note)
