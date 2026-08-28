@@ -44,7 +44,7 @@ export class CasesController {
   ) {}
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
@@ -68,25 +68,25 @@ export class CasesController {
   }
 
   @Get('tracker/daily')
-  @Roles('admin', 'social_worker', 'coordinator', 'mayor', 'auditor')
+  @Roles('admin', 'social_worker', 'mayor', 'auditor')
   async getTrackerDaily(@Query('date') date?: string) {
     return this.casesService.getTrackerDaily(date);
   }
 
   @Get('tracker/range')
-  @Roles('admin', 'social_worker', 'coordinator', 'mayor', 'auditor')
+  @Roles('admin', 'social_worker', 'mayor', 'auditor')
   async getTrackerRange(@Query('start') start: string, @Query('end') end: string) {
     return this.casesService.getTrackerRange(start, end);
   }
 
   @Get('tracker/stats')
-  @Roles('admin', 'social_worker', 'coordinator', 'mayor', 'auditor')
+  @Roles('admin', 'social_worker', 'mayor', 'auditor')
   async getTrackerStats() {
     return this.casesService.getTrackerStats();
   }
 
   @Get(':id')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   async findOne(@Param('id') id: string) {
     return this.casesService.getCaseWithSla(id);
   }
@@ -127,7 +127,7 @@ export class CasesController {
   }
 
   @Patch(':id/status')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   async updateStatus(@Param('id') id: string, @Body(new ZodPipe(UpdateStatusSchema)) body: { status: CaseStatus }, @Request() req: AuthenticatedRequest) {
     return this.casesService.updateStatus(id, mapStatus(body.status as string), req.user?.role);
   }
@@ -196,7 +196,7 @@ export class CasesController {
   }
 
   @Patch(':id/closure')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   async updateClosure(
     @Param('id') id: string,
     @Body(new ZodPipe(ClosureSchema)) body: ClosureInput,
@@ -206,7 +206,7 @@ export class CasesController {
   }
 
   @Get(':id/csr-pdf')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   async downloadCsrPdf(@Param('id') id: string, @Res() res: any) {
     const pdf = await this.casesExportService.generateCsrPdf(id);
     res.set({
