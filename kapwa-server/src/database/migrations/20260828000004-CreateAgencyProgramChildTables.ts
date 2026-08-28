@@ -56,11 +56,11 @@ export class CreateAgencyProgramChildTables20260828000004 implements MigrationIn
     `);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_program_docs_program ON program_required_documents(program_id)`);
 
-    // Backfill programs.required_documents jsonb.
+    // Backfill programs.required_documents jsonb array.
     await queryRunner.query(`
       INSERT INTO program_required_documents (program_id, document_key, mandatory)
-      SELECT p.id, e.key, (e.value = 'required')
-      FROM programs p, jsonb_each_text(p.required_documents) AS e
+      SELECT p.id, doc, true
+      FROM programs p, jsonb_array_elements_text(p.required_documents) AS doc
       WHERE p.required_documents IS NOT NULL
     `);
   }
