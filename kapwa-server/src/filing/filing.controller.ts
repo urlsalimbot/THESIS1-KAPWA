@@ -41,11 +41,11 @@ export class FilingController {
   @Get()
   @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   @ApiOperation({ summary: 'List documents' })
-  async findAll(@Query('caseId') caseId?: string, @Query('beneficiaryId') beneficiaryId?: string, @Query('requirementKey') requirementKey?: string) {
+  async findAll(@Request() req: any, @Query('caseId') caseId?: string, @Query('beneficiaryId') beneficiaryId?: string, @Query('requirementKey') requirementKey?: string) {
     if (caseId && requirementKey !== undefined) {
       return this.filingService.findByCaseAndRequirement(caseId, requirementKey || undefined);
     }
-    return this.filingService.findAll(caseId, beneficiaryId);
+    return this.filingService.findAll(caseId, beneficiaryId, req.user?.role);
   }
 
   @Get('irf/:irfId/photos')

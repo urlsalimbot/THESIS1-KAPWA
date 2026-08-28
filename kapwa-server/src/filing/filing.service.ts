@@ -1,7 +1,7 @@
 import { MAX_FILE_SIZE, DEFAULT_DOC_LIMIT } from './constants';
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, LessThan } from 'typeorm';
+import { Repository, FindOptionsWhere, LessThan, Not, In } from 'typeorm';
 import { DocumentVault } from './filing.entity';
 import { Case } from '../cases/case.entity';
 import * as fs from 'fs';
@@ -37,6 +37,17 @@ export class FilingService {
       }
     }
 
+    // Photos are role-restricted per category: IRF evidence photos are uploaded by
+    // MSWDO staff only; announcement photos by the announcement manage roles. This
+    // prevents e.g. claimants tagging arbitrary public announcements or IRFs.
+    const callerRole = metadata.userRole ?? '';
+    if (metadata.category === 'irf_photo' && !['admin', 'social_worker'].includes(callerRole)) {
+      throw new ForbiddenException('Only MSWDO staff can attach IRF photos');
+    }
+    if (metadata.category === 'announcement_photo' && !['admin', 'social_worker', 'coordinator'].includes(callerRole)) {
+      throw new ForbiddenException('Only announcement managers can attach photos');
+    }
+
     const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\./g, '');
     const fileName = `${Date.now()}-${safeName}`;
     const filePath = path.join(UPLOAD_DIR, fileName);
@@ -65,10 +76,15 @@ export class FilingService {
     return this.docRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async findAll(caseId?: string, beneficiaryId?: string) {
+  async findAll(caseId?: string, beneficiaryId?: string, role?: string) {
     const where: FindOptionsWhere<DocumentVault> = {};
     if (caseId) where.caseId = caseId;
     if (beneficiaryId) where.beneficiaryId = beneficiaryId;
+    if (!caseId && !beneficiaryId && role !== 'admin') {
+      // Unfiltered listing is a general documents query; keep evidence/announcement
+      // photo rows out of it for non-admins (they have dedicated endpoints).
+      where.category = Not(In(['irf_photo', 'announcement_photo']));
+    }
     return this.docRepo.find({ where, order: { createdAt: 'DESC' }, take: DEFAULT_DOC_LIMIT });
   }
 

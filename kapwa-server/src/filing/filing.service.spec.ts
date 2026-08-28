@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { ForbiddenException } from '@nestjs/common';
+import { In, Not } from 'typeorm';
 import { FilingService } from './filing.service';
 import { DocumentVault } from './filing.entity';
 import { Case } from '../cases/case.entity';
+import { DEFAULT_DOC_LIMIT } from './constants';
 
 describe('FilingService', () => {
   let service: FilingService;
@@ -54,6 +57,25 @@ describe('FilingService', () => {
       const result = await service.upload(file, { caseId: 'case-1' });
       expect(result).toHaveProperty('id', 'doc-1');
     });
+
+    it('rejects a claimant tagging an announcement photo', async () => {
+      const file = { originalname: 'photo.jpg', mimetype: 'image/jpeg', size: 5000, buffer: Buffer.from('x') };
+      await expect(service.upload(file, { category: 'announcement_photo', announcementId: 'ann-1', userRole: 'claimant' }))
+        .rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows an announcement manager to tag an announcement photo', async () => {
+      const file = { originalname: 'photo.jpg', mimetype: 'image/jpeg', size: 5000, buffer: Buffer.from('x') };
+      docRepoMock.save.mockResolvedValue({ id: 'doc-1' });
+      await expect(service.upload(file, { category: 'announcement_photo', announcementId: 'ann-1', userRole: 'coordinator' }))
+        .resolves.toBeDefined();
+    });
+
+    it('rejects a claimant tagging an IRF photo', async () => {
+      const file = { originalname: 'photo.jpg', mimetype: 'image/jpeg', size: 5000, buffer: Buffer.from('x') };
+      await expect(service.upload(file, { category: 'irf_photo', irfId: 'irf-1', userRole: 'claimant' }))
+        .rejects.toBeInstanceOf(ForbiddenException);
+    });
   });
 
   describe('findAll', () => {
@@ -61,6 +83,24 @@ describe('FilingService', () => {
       docRepoMock.find.mockResolvedValue([{ id: '1' }]);
       const result = await service.findAll('case-1');
       expect(result).toHaveLength(1);
+    });
+
+    it('excludes photo categories from unfiltered listing for non-admins', async () => {
+      docRepoMock.find.mockResolvedValue([]);
+      await service.findAll(undefined, undefined, 'social_worker');
+      expect(docRepoMock.find).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          category: Not(In(['irf_photo', 'announcement_photo'])),
+        }),
+        take: DEFAULT_DOC_LIMIT,
+      }));
+    });
+
+    it('does not exclude photo categories for admins in unfiltered listing', async () => {
+      docRepoMock.find.mockResolvedValue([]);
+      await service.findAll(undefined, undefined, 'admin');
+      const arg = docRepoMock.find.mock.calls[0][0];
+      expect(arg.where.category).toBeUndefined();
     });
   });
 

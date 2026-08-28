@@ -46,15 +46,6 @@ export class AnnouncementsPublicController {
     };
   }
 
-  @Get(':slug/photos')
-  @ApiOperation({ summary: 'List photos for a published announcement (public)' })
-  async photos(@Param('slug') slug: string) {
-    const announcement = await this.svc.findBySlug(slug);
-    if (!announcement) throw new NotFoundException('Announcement not found');
-    const rows = await this.filingService.findPhotosByAnnouncement(announcement.id);
-    return rows.map((d) => ({ id: d.id, originalName: d.originalName, mimeType: d.mimeType, fileSize: d.fileSize }));
-  }
-
   @Get('photo/:id')
   @ApiOperation({ summary: 'Stream an announcement photo (public, category-gated)' })
   async photo(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
@@ -64,5 +55,14 @@ export class AnnouncementsPublicController {
     const stream = fs.createReadStream(filePath);
     res.set({ 'Content-Type': doc.mimeType || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' });
     return new StreamableFile(stream);
+  }
+
+  @Get(':slug/photos')
+  @ApiOperation({ summary: 'List photos for a published announcement (public)' })
+  async photos(@Param('slug') slug: string) {
+    const announcement = await this.svc.findBySlug(slug);
+    if (!announcement) throw new NotFoundException('Announcement not found');
+    const rows = await this.filingService.findPhotosByAnnouncement(announcement.id);
+    return rows.map((d) => ({ id: d.id, originalName: d.originalName, mimeType: d.mimeType, fileSize: d.fileSize }));
   }
 }
