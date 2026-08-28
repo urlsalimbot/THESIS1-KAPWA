@@ -70,9 +70,12 @@ export class FilingService {
     return this.docRepo.save(doc);
   }
 
-  async findByCaseAndRequirement(caseId: string, requirementKey?: string) {
+  async findByCaseAndRequirement(caseId: string, requirementKey?: string, role?: string) {
     const where: FindOptionsWhere<DocumentVault> = { caseId };
     if (requirementKey) where.requirementKey = requirementKey;
+    if (role === 'coordinator') {
+      where.category = 'announcement_photo';
+    }
     return this.docRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 

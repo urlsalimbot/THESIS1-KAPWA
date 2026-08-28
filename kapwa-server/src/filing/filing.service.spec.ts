@@ -218,4 +218,14 @@ describe('FilingService', () => {
       }));
     });
   });
+
+  describe('findByCaseAndRequirement', () => {
+    it('scopes coordinators to announcement_photo rows', async () => {
+      docRepoMock.find.mockResolvedValue([]);
+      await service.findByCaseAndRequirement('case-1', 'req-1', 'coordinator');
+      expect(docRepoMock.find).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ caseId: 'case-1', category: 'announcement_photo' }),
+      }));
+    });
+  });
 });

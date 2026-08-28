@@ -43,7 +43,7 @@ export class FilingController {
   @ApiOperation({ summary: 'List documents' })
   async findAll(@Request() req: any, @Query('caseId') caseId?: string, @Query('beneficiaryId') beneficiaryId?: string, @Query('requirementKey') requirementKey?: string) {
     if (caseId && requirementKey !== undefined) {
-      return this.filingService.findByCaseAndRequirement(caseId, requirementKey || undefined);
+      return this.filingService.findByCaseAndRequirement(caseId, requirementKey || undefined, req.user?.role);
     }
     return this.filingService.findAll(caseId, beneficiaryId, req.user?.role);
   }
@@ -103,7 +103,7 @@ export class FilingController {
   async delete(@Param('id') id: string, @Request() req: any) {
     const doc = await this.filingService.findOne(id);
     if (!this.filingService.isPhotoAccessAllowed(req.user?.role, doc.category, 'delete')) {
-      throw new ForbiddenException('Only admins can remove documents');
+      throw new ForbiddenException('You are not allowed to remove this document');
     }
     return this.filingService.delete(id);
   }
