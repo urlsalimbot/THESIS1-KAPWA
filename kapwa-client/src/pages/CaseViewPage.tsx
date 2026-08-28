@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock, Send, ExternalLink } from 'lucide-react';
-import { api, downloadCsrPdf, downloadFilingDoc } from '../lib/api';
+import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDate, formatDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth-context';
@@ -72,6 +72,42 @@ export function CaseViewPage() {
   const { data: documents = [] } = useSWR<any[]>(
     id ? queryKeys.filing.byCase(id) : null,
   );
+  const canViewIdPhoto = ['admin', 'social_worker'].includes(user?.role ?? '');
+  const { data: idPhoto } = useSWR<any>(
+    id && canViewIdPhoto ? queryKeys.filing.caseIdPhoto(id) : null,
+    async () => {
+      try {
+        return await api.get(`/filing/case/${id}/id-photo`);
+      } catch {
+        return null;
+      }
+    },
+  );
+  const [idPhotoUrl, setIdPhotoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    let createdUrl: string | null = null;
+    if (idPhoto?.id) {
+      getFilingObjectUrl(idPhoto.id)
+        .then((url) => {
+          if (!active) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          createdUrl = url;
+          setIdPhotoUrl(url);
+        })
+        .catch(() => {
+          if (active) setIdPhotoUrl(null);
+        });
+    } else {
+      setIdPhotoUrl(null);
+    }
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [idPhoto]);
   const { data: iarReferrals, isLoading: iarLoading } = useSWR(
     id ? queryKeys.interAgencyReferrals.byCase(id) : null,
     (key) => api.get<InterAgencyReferral[]>(key),
@@ -375,6 +411,16 @@ export function CaseViewPage() {
                   ))
                 )}
               </div>
+              {canViewIdPhoto && idPhoto && idPhotoUrl && (
+                <div className="border-t px-4 py-3">
+                  <h4 className="text-sm font-semibold">{t('cases.idPhoto.title', 'Government ID')}</h4>
+                  <img
+                    src={idPhotoUrl}
+                    alt={t('cases.idPhoto.alt', 'Beneficiary government ID')}
+                    className="mt-2 h-40 w-40 rounded border object-cover"
+                  />
+                </div>
+              )}
             </div>
           )}
 

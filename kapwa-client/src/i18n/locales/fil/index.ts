@@ -629,6 +629,10 @@ const fil: EnLocale = {
     "gender": "Kasarian",
     "generating": "Nag-ge-generate...",
     "household": "Sambahayan",
+    "idPhoto": {
+      "alt": "Government ID ng Benepisyaryo",
+      "title": "ID ng Gobyerno"
+    },
     "incidentReports": "Mga Ulat ng Insidente",
     "interAgencyReferrals": "Mga Referral sa Pagitan ng mga Ahensya",
     "loadFailed": "Hindi ma-load ang mga kaso",

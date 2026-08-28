@@ -975,6 +975,10 @@ const en = {
     "gender": "Gender",
     "generating": "Generating...",
     "household": "Household",
+    "idPhoto": {
+      "alt": "Beneficiary government ID",
+      "title": "Government ID"
+    },
     "incidentReports": "Incident Reports",
     "interAgencyReferrals": "Inter-Agency Referrals",
     "loadFailed": "Could not load cases",
