@@ -99,6 +99,9 @@ export class FilingService {
   isPhotoAccessAllowed(role: string | undefined, category?: string | null, action: 'view' | 'delete' = 'view'): boolean {
     if (role === 'admin') return true;
     if (category === 'irf_photo') return false;
+    if (category === 'id_photo') {
+      return ['admin', 'social_worker'].includes(role ?? '');
+    }
     if (category === 'announcement_photo') {
       return ['admin', 'social_worker', 'coordinator'].includes(role ?? '');
     }

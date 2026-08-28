@@ -228,4 +228,15 @@ describe('FilingService', () => {
       }));
     });
   });
+
+  describe('id_photo claimant privacy', () => {
+    it('denies claimants id_photo access', () => {
+      expect(service.isPhotoAccessAllowed('claimant', 'id_photo')).toBe(false);
+    });
+
+    it('allows admins and social workers id_photo access', () => {
+      expect(service.isPhotoAccessAllowed('admin', 'id_photo')).toBe(true);
+      expect(service.isPhotoAccessAllowed('social_worker', 'id_photo')).toBe(true);
+    });
+  });
 });
