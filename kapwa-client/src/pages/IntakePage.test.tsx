@@ -444,3 +444,24 @@ describe('IntakePage — user-scoped draft', () => {
     expect(document.activeElement).toBe(input);
   });
 });
+
+describe('IntakePage — optional government ID photo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
+  it('renders the optional ID photo picker section with a choose button', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('heading', { name: /ID Photo/i });
+    expect(screen.getByText(/Optional photo of the beneficiary government ID/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Choose ID photo/i })).toBeInTheDocument();
+  });
+});

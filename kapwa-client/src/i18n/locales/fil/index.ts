@@ -718,6 +718,14 @@ const fil: EnLocale = {
     "fixHighlighted": "Pakiyusin ang mga naka-highlight na field sa ibaba.",
     "foundRecords": "Nakahanap kami ng mga rekord na maaaring para sa kliyenteng ito.",
     "infoUpdated": "Na-update ang impormasyon",
+    "idPhoto": {
+      "optional": "Opsyonal na larawan ng government ID ng benepisyaryo.",
+      "pick": "Pumili ng larawan ng ID",
+      "previewAlt": "Preview ng government ID",
+      "remove": "Alisin",
+      "title": "Larawan ng ID (opsyonal)",
+      "uploadFailed": "Nabigo ang pag-upload ng larawan ng ID"
+    },
     "invalidDob": "Hindi wastong petsa ng kapanganakan",
     "isThis": "Ito ba si",
     "markedDifferent": "Minarkahan bilang ibang tao. Maaari kang pumili ng ibang tugma o gumawa ng bagong rekord sa ibaba.",

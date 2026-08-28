@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIntakeAutosave, loadDraft, clearDraft } from '@/hooks/useIntakeAutosave';
 import { useAuth } from '@/lib/auth-context';
@@ -11,7 +11,9 @@ import { Separator } from '@/components/ui/separator';
 import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
-import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera } from 'lucide-react';
+import { toast } from 'sonner';
+import { setPendingIdPhoto, getPendingIdPhoto, uploadIntakeIdPhoto } from '@/lib/intake-id-photo';
 import { validatePerson, type PersonFormValues, type ValidationErrors } from '@/hooks/useIntakeValidation';
 
 function computeAge(dob: string): number {
@@ -216,6 +218,8 @@ export function IntakePage() {
   const [claimErrors, setClaimErrors] = useState<ValidationErrors>({});
   const [submittedCase, setSubmittedCase] = useState<{ caseId: string } | null>(null);
   const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formSnapshot = useMemo(() => ({
     beneficiary,
@@ -371,6 +375,9 @@ export function IntakePage() {
   }
 
   function completeIntake(caseId: string) {
+    void uploadIntakeIdPhoto(caseId).then((ok) => {
+      if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
+    });
     if (family.some(m => m.surname.trim())) {
       setSubmittedCase({ caseId });
     } else {
@@ -642,6 +649,35 @@ export function IntakePage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* ID Photo (optional) */}
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+            <Camera size={16} className="text-muted-foreground" />
+            <h2 className="text-sm font-semibold">{t('intake.idPhoto.title', 'ID Photo (optional)')}</h2>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-muted-foreground">{t('intake.idPhoto.optional', 'Optional photo of the beneficiary government ID.')}</p>
+            <div className="mt-3 flex items-center gap-3">
+              {pendingPreview ? (
+                <img src={pendingPreview} className="h-24 w-24 rounded border object-cover" alt={t('intake.idPhoto.previewAlt', 'Government ID preview')} />
+              ) : (
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded border px-3 py-2 text-xs">
+                  {t('intake.idPhoto.pick', 'Choose ID photo')}
+                </button>
+              )}
+              {pendingPreview && (
+                <button type="button" onClick={() => { setPendingIdPhoto(null); setPendingPreview(null); }} className="text-xs text-red-500">
+                  {t('intake.idPhoto.remove', 'Remove')}
+                </button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" aria-label={t('intake.idPhoto.pick', 'Choose ID photo')} onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                if (file) { setPendingIdPhoto(file); setPendingPreview(URL.createObjectURL(file)); }
+              }} />
+            </div>
           </div>
         </div>
 

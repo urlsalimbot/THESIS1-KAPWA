@@ -1367,6 +1367,14 @@ const en = {
     "fixHighlighted": "Please fix the highlighted fields below.",
     "foundRecords": "We found records that may belong to this client.",
     "infoUpdated": "Info updated",
+    "idPhoto": {
+      "optional": "Optional photo of the beneficiary government ID.",
+      "pick": "Choose ID photo",
+      "previewAlt": "Government ID preview",
+      "remove": "Remove",
+      "title": "ID Photo (optional)",
+      "uploadFailed": "ID photo upload failed"
+    },
     "invalidDob": "Invalid date of birth",
     "isThis": "Is this",
     "isThisQ": "?",
