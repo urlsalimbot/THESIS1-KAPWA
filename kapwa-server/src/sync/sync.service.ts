@@ -16,6 +16,7 @@ const ALLOWED_COLUMNS = new Set([
   "id","name","surname","first_name","middle_name","gender","dob","address","phone",
   "email","password","role","full_name",
   "is_active","device_id","category","waiting_period_days",
+  "consent_status",
   "approval_workflow","form_template","created_at","updated_at","barangay",
   "estimated_income","verified_by","status","control_no","beneficiary_id",
   "service_requested","certificate_url","petty_cash_voucher_url",
@@ -48,6 +49,13 @@ const REFERRAL_EMBEDDED_PERSON_COLUMNS = new Set([
   "surname", "first_name", "middle_name", "extension", "gender", "dob", "address", "phone",
 ]);
 
+// Person-entity getters (assembled from the person_contacts/person_addresses child
+// rows) that are NOT real `persons` columns — waves 2/1 dropped them from the table.
+// Stripped only for the `persons` table so a stale client cannot write to undefined
+// columns; the names remain allowlisted for the tables that actually own them
+// (phone/email on users, notifications, otp).
+const PERSONS_GETTER_ONLY_COLUMNS = new Set(["address", "age", "phone", "email"]);
+
 const FSM_CONTROL_FIELDS = new Set(['_fsmTransition', '_clientUpdatedAt']);
 
 // S-06: reject unknown underscore-prefixed meta fields instead of silently stripping them.
@@ -65,6 +73,7 @@ function sanitizePayload(payload: Record<string, any>, tableName: string): Recor
   for (const [k, v] of Object.entries(payload)) {
     if (FSM_CONTROL_FIELDS.has(k)) continue; // strip FSM control fields
     if (tableName === 'referrals' && REFERRAL_EMBEDDED_PERSON_COLUMNS.has(k)) continue;
+    if (tableName === 'persons' && PERSONS_GETTER_ONLY_COLUMNS.has(k)) continue;
     if (ALLOWED_COLUMNS.has(k)) sanitized[k] = v;
   }
   return sanitized;
@@ -517,7 +526,11 @@ export class SyncService implements OnApplicationShutdown {
       access_card_services: 'access_card_services',
       cases: 'cases',
       beneficiaries: 'beneficiaries',
-      interventions: 'interventions',
+      // Legacy `interventions` table was dropped; route old clients to the live
+      // case_interventions table (also listed explicitly below).
+      interventions: 'case_interventions',
+      case_interventions: 'case_interventions',
+      beneficiary_roles: 'beneficiary_roles',
       programs: 'programs',
       users: 'users',
       user_tokens: 'user_tokens',

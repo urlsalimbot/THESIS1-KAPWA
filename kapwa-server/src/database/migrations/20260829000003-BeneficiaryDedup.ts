@@ -25,25 +25,34 @@ export class BeneficiaryDedup20260829000003 implements MigrationInterface {
       WHERE NOT EXISTS (SELECT 1 FROM persons p WHERE p.id = r.person_id);
     `);
 
-    // 3. Add the physical person FK if it is not already present (the Wave-1
-    //    migration only added an index; the catch-up schema's inline REFERENCES may
-    //    or may not have created a constraint). Guard against creating a duplicate.
+    // 3. Ensure the physical person FK is present with ON DELETE CASCADE. The
+    //    catch-up schema created an anonymous inline `person_id REFERENCES
+    //    persons(id)` with NO ACTION (no cascade) which would otherwise block
+    //    person deletion; upgrade it to the named CASCADE constraint instead.
     await queryRunner.query(`
       DO $$
+      DECLARE
+        stale_fk TEXT;
       BEGIN
+        -- Drop any existing non-CASCADE FK on beneficiary_roles.person_id -> persons.
+        SELECT c.conname INTO stale_fk
+        FROM pg_constraint c
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+        WHERE c.contype = 'f'
+          AND c.conrelid = 'beneficiary_roles'::regclass
+          AND c.confrelid = 'persons'::regclass
+          AND a.attname = 'person_id'
+          AND c.confdeltype <> 'c';
+
+        IF stale_fk IS NOT NULL THEN
+          EXECUTE format('ALTER TABLE beneficiary_roles DROP CONSTRAINT %I', stale_fk);
+        END IF;
+
         IF NOT EXISTS (
           SELECT 1 FROM pg_constraint c
-          WHERE c.contype = 'f'
-            AND c.conname = 'fk_beneficiary_roles_person'
+          WHERE c.contype = 'f' AND c.conname = 'fk_beneficiary_roles_person'
             AND c.conrelid = 'beneficiary_roles'::regclass
             AND c.confrelid = 'persons'::regclass
-        ) AND NOT EXISTS (
-          SELECT 1 FROM pg_constraint c
-          JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
-          WHERE c.contype = 'f'
-            AND c.conrelid = 'beneficiary_roles'::regclass
-            AND c.confrelid = 'persons'::regclass
-            AND a.attname = 'person_id'
         ) THEN
           ALTER TABLE beneficiary_roles
             ADD CONSTRAINT fk_beneficiary_roles_person

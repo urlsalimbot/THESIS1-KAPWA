@@ -1,5 +1,6 @@
 import { DEFAULT_PAGE_SIZE } from './constants';
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
@@ -11,6 +12,8 @@ import { CreateUserInputSchema, CreateUserInput, UpdateUserSchema, UpdateUserInp
 @ApiTags('Users')
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 @ApiBearerAuth()
 export class UsersController {
   constructor(private usersService: UsersService) {}

@@ -1,4 +1,5 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException, BadRequestException, UseInterceptors } from '@nestjs/common';
+import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
@@ -26,8 +27,10 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  @SerializeOptions({ strategy: 'exposeAll' })
   async getMe(@Request() req: AuthenticatedRequest) {
-    const { password, mfaSecret, ...safeUser } = req.user; return { user: safeUser };
+    return { user: req.user };
   }
 
   @Post('refresh')

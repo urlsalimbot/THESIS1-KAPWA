@@ -1,6 +1,7 @@
 import { User } from '../auth/user.entity';
 import { UserToken } from '../auth/user-token.entity';
 import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity';
+import { instanceToPlain } from 'class-transformer';
 
 describe('User wave-2 getters', () => {
   it('assembles legacy flattened token fields from child rows', () => {
@@ -41,5 +42,33 @@ describe('User wave-2 getters', () => {
     a.barangay = 'Partida'; a.isPrimary = false;
     (u as any).barangayAssignments = [a];
     expect(u.assignedBarangay).toBe('Partida');
+  });
+});
+
+describe('User serialized shape (ClassSerializerInterceptor + @Exclude)', () => {
+  it('does NOT leak eager token/barangay child arrays or secrets, but exposes flat getters', () => {
+    const u = new User();
+    u.password = 'hashed-secret' as any;
+    u.mfaSecret = 'mfa-secret' as any;
+    const vt = new UserToken();
+    vt.purpose = 'email_verification'; vt.token = 'vt-secret'; vt.expiresAt = new Date('2026-01-01');
+    const primary = new UserBarangayAssignment();
+    primary.barangay = 'Bigte'; primary.isPrimary = true;
+
+    const plain = instanceToPlain(u, { strategy: 'exposeAll' }) as Record<string, unknown>;
+
+    expect(plain).not.toHaveProperty('password');
+    expect(plain).not.toHaveProperty('mfaSecret');
+    expect(plain).not.toHaveProperty('tokens');
+    expect(plain).not.toHaveProperty('barangayAssignments');
+
+    u.tokens = [vt];
+    u.barangayAssignments = [primary];
+    const full = instanceToPlain(u, { strategy: 'exposeAll' }) as Record<string, unknown>;
+    expect(full).not.toHaveProperty('tokens');
+    expect(full).not.toHaveProperty('barangayAssignments');
+    expect(full.verificationToken).toBe('vt-secret');
+    expect(full.assignedBarangay).toBe('Bigte');
+    expect(full.permittedBarangays).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Expose } from 'class-transformer';
+import { Expose, Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { UserToken } from './user-token.entity';
 import { UserBarangayAssignment } from './user-barangay-assignment.entity';
@@ -20,6 +20,7 @@ export class User extends BaseEntity {
   @Column({ name: 'email', unique: true })
   email!: string;
 
+  @Exclude()
   @Column({ name: 'password' })
   password!: string;
 
@@ -53,6 +54,7 @@ export class User extends BaseEntity {
   @Column({ name: 'device_id', nullable: true })
   deviceId?: string;
 
+  @Exclude()
   @Column({ name: 'mfa_secret', nullable: true })
   mfaSecret?: string;
 
@@ -65,9 +67,11 @@ export class User extends BaseEntity {
   @Column({ name: 'email_verified', default: true })
   emailVerified!: boolean;
 
+  @Exclude()
   @OneToMany(() => UserToken, t => t.user, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   tokens!: UserToken[];
 
+  @Exclude()
   @OneToMany(() => UserBarangayAssignment, b => b.user, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   barangayAssignments!: UserBarangayAssignment[];
 

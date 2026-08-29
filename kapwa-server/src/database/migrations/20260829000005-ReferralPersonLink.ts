@@ -100,6 +100,9 @@ export class ReferralPersonLink20260829000005 implements MigrationInterface {
 
       -- Backfill the re-added embedded columns from the joined person row so clients
       -- that still read the flattened shape keep working after a rollback.
+      -- NOTE: persons.phone was dropped by 20260829000001 (and only re-added by that
+      -- migration's down), so source phone from person_contacts instead — reverting
+      -- this migration always runs while 20260829000001::up's drop is still in force.
       UPDATE referrals r
         SET surname = p.surname,
             first_name = p.first_name,
@@ -107,7 +110,13 @@ export class ReferralPersonLink20260829000005 implements MigrationInterface {
             extension = p.extension,
             gender = p.gender,
             dob = p.dob,
-            phone = p.phone
+            phone = (
+              SELECT pc.value
+              FROM person_contacts pc
+              WHERE pc.person_id = p.id AND pc.contact_type = 'phone'
+              ORDER BY pc.is_primary DESC NULLS LAST, pc.created_at ASC
+              LIMIT 1
+            )
         FROM persons p
         WHERE r.person_id = p.id;
 

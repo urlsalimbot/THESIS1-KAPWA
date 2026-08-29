@@ -33,6 +33,9 @@ export class CaseDecompose20260829000004 implements MigrationInterface {
           AND elem->>'agencyName' = cr.agency
           AND COALESCE(elem->>'status', '') = COALESCE(cr.status, '')
           AND COALESCE(elem->>'notes', '') = COALESCE(cr.notes, '');
+      -- A referral row with no matching element in cases.referrals keeps reason NULL;
+      -- coerce to '' so SET NOT NULL below cannot abort the migration on such rows.
+      UPDATE case_referrals SET reason = '' WHERE reason IS NULL;
       ALTER TABLE case_referrals ALTER COLUMN reason SET NOT NULL;
 
       ALTER TABLE case_assistances

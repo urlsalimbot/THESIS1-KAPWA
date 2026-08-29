@@ -30,7 +30,7 @@ export class Person extends BaseEntity {
   addresses!: PersonAddress[];
 
   @Exclude()
-  @OneToMany(() => BeneficiaryRole, r => r.person, { eager: true })
+  @OneToMany(() => BeneficiaryRole, r => r.person, { eager: true, orphanedRowAction: 'delete' })
   roles!: BeneficiaryRole[];
 
   @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
