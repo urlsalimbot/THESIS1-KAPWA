@@ -65,10 +65,10 @@ export class User extends BaseEntity {
   @Column({ name: 'email_verified', default: true })
   emailVerified!: boolean;
 
-  @OneToMany(() => UserToken, t => t.user, { eager: true, cascade: true })
+  @OneToMany(() => UserToken, t => t.user, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   tokens!: UserToken[];
 
-  @OneToMany(() => UserBarangayAssignment, b => b.user, { eager: true, cascade: true })
+  @OneToMany(() => UserBarangayAssignment, b => b.user, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   barangayAssignments!: UserBarangayAssignment[];
 
   @CreateDateColumn({ name: 'created_at' })

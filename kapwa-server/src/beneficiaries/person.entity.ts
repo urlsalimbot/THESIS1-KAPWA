@@ -20,10 +20,10 @@ export class Person extends BaseEntity {
   @Column({ name: 'estimated_monthly_income', type: 'decimal', precision: 12, scale: 2, nullable: true }) estimatedMonthlyIncome?: number;
   @Column({ type: 'tsvector', name: 'search_vector', select: false, nullable: true }) searchVector?: string;
 
-  @OneToMany(() => PersonContact, c => c.person, { eager: true, cascade: true })
+  @OneToMany(() => PersonContact, c => c.person, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   contacts!: PersonContact[];
 
-  @OneToMany(() => PersonAddress, a => a.person, { eager: true, cascade: true })
+  @OneToMany(() => PersonAddress, a => a.person, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   addresses!: PersonAddress[];
 
   @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
