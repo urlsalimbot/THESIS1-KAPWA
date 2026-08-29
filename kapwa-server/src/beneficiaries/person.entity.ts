@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Expose } from 'class-transformer';
+import { Expose, Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { PersonContact } from './person-contact.entity';
 import { PersonAddress } from './person-address.entity';
@@ -21,12 +21,15 @@ export class Person extends BaseEntity {
   @Column({ name: 'estimated_monthly_income', type: 'decimal', precision: 12, scale: 2, nullable: true }) estimatedMonthlyIncome?: number;
   @Column({ type: 'tsvector', name: 'search_vector', select: false, nullable: true }) searchVector?: string;
 
+  @Exclude()
   @OneToMany(() => PersonContact, c => c.person, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   contacts!: PersonContact[];
 
+  @Exclude()
   @OneToMany(() => PersonAddress, a => a.person, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   addresses!: PersonAddress[];
 
+  @Exclude()
   @OneToMany(() => BeneficiaryRole, r => r.person, { eager: true })
   roles!: BeneficiaryRole[];
 

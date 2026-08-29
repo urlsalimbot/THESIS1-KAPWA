@@ -143,5 +143,35 @@ describe('Inter-Agency Referral wave-2 nested agency serialization', () => {
     expect(plain!.fromAgency!.contacts).toBeUndefined();
     expect(plain!.toAgency!.contactInfo).toEqual({ phone: '123' });
     expect(plain!.person!.surname).toBe('X');
+    expect(plain!.person!.contacts).toBeUndefined();
+    expect(plain!.person!.addresses).toBeUndefined();
+    expect(plain!.person!.roles).toBeUndefined();
+    expect(plain!.person!.phone).toBe('9');
+  });
+
+  it('agency-portal dashboard wrapper serializes agency contactInfo without leaking contacts', () => {
+    const a = new Agency();
+    a.code = 'RHU'; a.name = 'RHU 1';
+    const ac = new AgencyContact();
+    ac.contactType = 'email'; ac.value = 'rhu@example.com'; ac.isPrimary = true;
+    (a as any).contacts = [ac];
+
+    const r = new InterAgencyReferral();
+    (r as any).fromAgency = a;
+    (r as any).toAgency = a;
+
+    // Mirrors agency-portal.service.getDashboard return shape { agency, counts, recent }
+    const dashboard = { agency: a, counts: { sent: 1, received: 0 }, recent: [r] };
+    let plain: any;
+    expect(() => {
+      // Mirrors agency-portal.controller.ts @SerializeOptions({ strategy: 'exposeAll' })
+      plain = instanceToPlain(dashboard, { strategy: 'exposeAll' });
+    }).not.toThrow();
+
+    expect(plain!.agency!.contactInfo).toEqual({ email: 'rhu@example.com' });
+    expect(plain!.agency!.contacts).toBeUndefined();
+    expect(plain!.counts).toEqual({ sent: 1, received: 0 });
+    expect(plain!.recent[0]!.fromAgency!.contactInfo).toEqual({ email: 'rhu@example.com' });
+    expect(plain!.recent[0]!.fromAgency!.contacts).toBeUndefined();
   });
 });

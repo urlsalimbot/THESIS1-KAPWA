@@ -1,4 +1,5 @@
-import { Controller, Get, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Request, UseGuards, UseInterceptors } from '@nestjs/common';
+import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -8,6 +9,8 @@ import { AgencyPortalService } from './agency-portal.service';
 
 @ApiTags('Agency Portal')
 @Controller('agency-portal')
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class AgencyPortalController {

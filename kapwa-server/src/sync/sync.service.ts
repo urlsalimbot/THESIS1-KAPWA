@@ -19,7 +19,7 @@ const ALLOWED_COLUMNS = new Set([
   "approval_workflow","form_template","created_at","updated_at","barangay",
   "estimated_income","verified_by","status","control_no","beneficiary_id",
   "service_requested","certificate_url","petty_cash_voucher_url",
-  "assigned_worker_id","case_id","intervention_type","amount","fund_source",
+  "assigned_worker_id","case_id","intervention_type","amount","fund_source","agency",
   "service_rendered","service_date","voucher_no","or_reference","worker_signature_url","worker_name_sign","logged_by","hash",
   "philsys_number","access_card_code","cost","search_vector","household_id",
   "age","occupation","is_primary","blotter_entry_number","case_category",
