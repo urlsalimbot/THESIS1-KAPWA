@@ -3,6 +3,7 @@ import { Injectable, NotFoundException, ConflictException, BadRequestException }
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, FindOptionsWhere } from 'typeorm';
 import { User, UserRole } from '../auth/user.entity';
+import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity';
 import * as bcrypt from 'bcrypt';
 
 export interface CreateUserInput {
@@ -22,6 +23,15 @@ export class UsersService {
     @InjectRepository(User)
     private userRepo: Repository<User>,
   ) {}
+
+  private buildAssignments(assigned?: string, permitted: string[] = []): UserBarangayAssignment[] {
+    const assignments: UserBarangayAssignment[] = [];
+    if (assigned) assignments.push(Object.assign(new UserBarangayAssignment(), { userId: undefined as any, barangay: assigned, isPrimary: true }));
+    for (const b of permitted) {
+      assignments.push(Object.assign(new UserBarangayAssignment(), { userId: undefined as any, barangay: b, isPrimary: false }));
+    }
+    return assignments;
+  }
 
   async findAll(search?: string, role?: string, page = 1, limit = DEFAULT_PAGE_SIZE) {
     const where: FindOptionsWhere<User> = {};
@@ -63,9 +73,8 @@ export class UsersService {
       role: dto.role as UserRole,
       fullName: dto.full_name,
       phone: dto.phone,
-      assignedBarangay: dto.assigned_barangay,
       agencyId: dto.agency_id,
-      permittedBarangays: dto.permitted_barangays || [],
+      barangayAssignments: this.buildAssignments(dto.assigned_barangay, dto.permitted_barangays || []),
     });
 
     const saved = await this.userRepo.save(user);
@@ -88,9 +97,12 @@ export class UsersService {
     if (data.role) user.role = data.role as UserRole;
     if (data.fullName !== undefined) user.fullName = data.fullName;
     if (data.isActive !== undefined) user.isActive = data.isActive;
-    if (data.assignedBarangay !== undefined) user.assignedBarangay = data.assignedBarangay;
     if (data.agencyId !== undefined) user.agencyId = data.agencyId;
-    if (data.permittedBarangays !== undefined) user.permittedBarangays = data.permittedBarangays;
+    if (data.assignedBarangay !== undefined || data.permittedBarangays !== undefined) {
+      const assigned = data.assignedBarangay !== undefined ? data.assignedBarangay : user.assignedBarangay;
+      const permitted = data.permittedBarangays !== undefined ? data.permittedBarangays : user.permittedBarangays;
+      user.barangayAssignments = this.buildAssignments(assigned, permitted);
+    }
     await this.userRepo.save(user);
     const { password, ...safe } = user;
     return safe;

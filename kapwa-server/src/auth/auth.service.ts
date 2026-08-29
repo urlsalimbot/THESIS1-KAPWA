@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp';
 import { User } from './user.entity';
+import { UserToken } from './user-token.entity';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { OtpService } from '../otp/otp.service';
@@ -20,6 +21,8 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(UserToken)
+    private tokenRepo: Repository<UserToken>,
     @InjectRepository(Person)
     private personRepo: Repository<Person>,
     @InjectRepository(Beneficiary)
@@ -29,6 +32,16 @@ export class AuthService {
     private smsGateway: SmsGatewayService,
     private emailService: EmailService,
   ) {}
+
+  private async upsertToken(userId: string, purpose: string, opts: { token: string; expiresAt?: Date; meta?: Record<string, any> }) {
+    const row = this.tokenRepo.create({ userId, purpose, token: opts.token, expiresAt: opts.expiresAt, meta: opts.meta });
+    await this.tokenRepo.delete({ userId, purpose });
+    await this.tokenRepo.save(row);
+  }
+
+  private async deleteTokens(userId: string, purpose: string) {
+    await this.tokenRepo.delete({ userId, purpose });
+  }
 
   async register(data: { email: string; password: string; role?: string; fullName?: string; phone?: string; dob?: string }) {
     const existing = await this.userRepo.findOne({ where: { email: data.email } });
@@ -46,10 +59,14 @@ export class AuthService {
       phone: data.phone,
       isActive: true,
       emailVerified: false,
-      verificationToken,
-      verificationTokenExpiresAt,
     });
     await this.userRepo.save(user);
+    await this.tokenRepo.save(this.tokenRepo.create({
+      userId: user.id,
+      purpose: 'email_verification',
+      token: verificationToken,
+      expiresAt: verificationTokenExpiresAt,
+    }));
 
     let personFound = false;
     let contactType: 'sms' | 'email' | null = null;
@@ -245,17 +262,19 @@ export class AuthService {
   }
 
   async verifyEmail(token: string) {
-    const user = await this.userRepo.findOne({ where: { verificationToken: token } });
-    if (!user) throw new BadRequestException('Invalid or expired verification token');
+    const tokenRow = await this.tokenRepo.findOne({ where: { purpose: 'email_verification', token } });
+    if (!tokenRow) throw new BadRequestException('Invalid or expired verification token');
 
-    if (user.verificationTokenExpiresAt && user.verificationTokenExpiresAt < new Date()) {
+    if (tokenRow.expiresAt && tokenRow.expiresAt < new Date()) {
       throw new BadRequestException('Verification token has expired. Request a new one.');
     }
 
+    const user = await this.userRepo.findOne({ where: { id: tokenRow.userId } });
+    if (!user) throw new BadRequestException('Invalid or expired verification token');
+
     user.emailVerified = true;
-    user.verificationToken = null as any;
-    user.verificationTokenExpiresAt = null as any;
     await this.userRepo.save(user);
+    await this.deleteTokens(user.id, 'email_verification');
 
     return { message: 'Email verified successfully. You can now log in.' };
   }
@@ -272,9 +291,7 @@ export class AuthService {
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    user.verificationToken = verificationToken;
-    user.verificationTokenExpiresAt = verificationTokenExpiresAt;
-    await this.userRepo.save(user);
+    await this.upsertToken(user.id, 'email_verification', { token: verificationToken, expiresAt: verificationTokenExpiresAt });
 
     await this.emailService.sendVerificationEmail(user.email, verificationToken);
     return { message: 'Verification email sent. Please check your inbox.' };
@@ -288,27 +305,27 @@ export class AuthService {
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    user.resetToken = resetToken;
-    user.resetTokenExpiresAt = resetTokenExpiresAt;
-    await this.userRepo.save(user);
+    await this.upsertToken(user.id, 'password_reset', { token: resetToken, expiresAt: resetTokenExpiresAt });
 
     await this.emailService.sendForgotPasswordEmail(user.email, resetToken);
     return { message: 'If an account with that email exists, a password reset link has been sent.' };
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const user = await this.userRepo.findOne({ where: { resetToken: token } });
-    if (!user) throw new BadRequestException('Invalid or expired reset token');
+    const tokenRow = await this.tokenRepo.findOne({ where: { purpose: 'password_reset', token } });
+    if (!tokenRow) throw new BadRequestException('Invalid or expired reset token');
 
-    if (user.resetTokenExpiresAt && user.resetTokenExpiresAt < new Date()) {
+    if (tokenRow.expiresAt && tokenRow.expiresAt < new Date()) {
       throw new BadRequestException('Reset token has expired. Request a new one.');
     }
 
+    const user = await this.userRepo.findOne({ where: { id: tokenRow.userId } });
+    if (!user) throw new BadRequestException('Invalid or expired reset token');
+
     const hashed = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
     user.password = hashed;
-    user.resetToken = null as any;
-    user.resetTokenExpiresAt = null as any;
     await this.userRepo.save(user);
+    await this.deleteTokens(user.id, 'password_reset');
 
     return { message: 'Password reset successfully. You can now log in with your new password.' };
   }
@@ -325,29 +342,34 @@ export class AuthService {
 
     const newEmailToken = crypto.randomBytes(32).toString('hex');
     const newEmailTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    user.newEmail = body.newEmail;
-    user.newEmailToken = newEmailToken;
-    user.newEmailTokenExpiresAt = newEmailTokenExpiresAt;
-    await this.userRepo.save(user);
+    await this.upsertToken(user.id, 'change_email', {
+      token: newEmailToken,
+      expiresAt: newEmailTokenExpiresAt,
+      meta: { newEmail: body.newEmail },
+    });
 
     await this.emailService.sendEmailChangeVerification(body.newEmail, newEmailToken);
     return { message: 'Verification sent to the new email address. Please check your inbox to confirm.' };
   }
 
   async confirmEmailChange(token: string) {
-    const user = await this.userRepo.findOne({ where: { newEmailToken: token } });
-    if (!user) throw new BadRequestException('Invalid or expired email change token');
+    const tokenRow = await this.tokenRepo.findOne({ where: { purpose: 'change_email', token } });
+    if (!tokenRow) throw new BadRequestException('Invalid or expired email change token');
 
-    if (user.newEmailTokenExpiresAt && user.newEmailTokenExpiresAt < new Date()) {
+    if (tokenRow.expiresAt && tokenRow.expiresAt < new Date()) {
       throw new BadRequestException('Email change token has expired. Try again.');
     }
 
-    user.email = user.newEmail!;
-    user.newEmail = null as any;
-    user.newEmailToken = null as any;
-    user.newEmailTokenExpiresAt = null as any;
+    const newEmail = (tokenRow.meta as any)?.newEmail;
+    if (!newEmail) throw new BadRequestException('Invalid or expired email change token');
+
+    const user = await this.userRepo.findOne({ where: { id: tokenRow.userId } });
+    if (!user) throw new BadRequestException('Invalid or expired email change token');
+
+    user.email = newEmail;
     user.emailVerified = true;
     await this.userRepo.save(user);
+    await this.deleteTokens(user.id, 'change_email');
 
     return { message: 'Email changed successfully.' };
   }

@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { UserToken } from './user-token.entity';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { OtpService } from '../otp/otp.service';
@@ -16,6 +17,7 @@ jest.mock('bcrypt');
 describe('AuthService', () => {
   let service: AuthService;
   let repoMock: Partial<Repository<User>>;
+  let tokenRepoMock: Partial<Repository<UserToken>>;
   let jwtMock: Partial<JwtService>;
   let otpMock: Partial<OtpService>;
   let emailMock: { [k: string]: jest.Mock };
@@ -25,6 +27,12 @@ describe('AuthService', () => {
       findOne: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
+    };
+    tokenRepoMock = {
+      findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      delete: jest.fn(),
     };
     jwtMock = {
       sign: jest.fn().mockReturnValue('signed-token'),
@@ -49,6 +57,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: getRepositoryToken(User), useValue: repoMock },
+        { provide: getRepositoryToken(UserToken), useValue: tokenRepoMock },
         { provide: getRepositoryToken(Person), useValue: personRepoMock },
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
         { provide: JwtService, useValue: jwtMock },

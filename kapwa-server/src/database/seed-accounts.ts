@@ -123,11 +123,38 @@ async function seedAccounts(dataSource: DataSource) {
 
     for (const { acct, hash } of hashed) {
       await q.query(
-        `INSERT INTO users (email, password, role, full_name, phone, assigned_barangay, permitted_barangays, is_active, email_verified)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::text[],true,true)
+        `INSERT INTO users (email, password, role, full_name, phone, is_active, email_verified)
+         VALUES ($1,$2,$3,$4,$5,true,true)
          ON CONFLICT (email) DO NOTHING`,
-        [acct.email, hash, acct.role, acct.fullName, acct.phone, acct.assignedBarangay ?? null, acct.permittedBarangays ?? []],
+        [acct.email, hash, acct.role, acct.fullName, acct.phone],
       );
+    }
+
+    // 3NF: seed barangay assignments into the child table instead of legacy columns.
+    const seededBarangays = hashed.filter(h => h.acct.assignedBarangay);
+    for (const { acct } of seededBarangays) {
+      const rows = await q.query(
+        `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+        [acct.email],
+      );
+      if (!rows.length) continue;
+      const userId = rows[0].id;
+      await q.query(
+        `DELETE FROM user_barangay_assignments WHERE user_id = $1`,
+        [userId],
+      );
+      if (acct.assignedBarangay) {
+        await q.query(
+          `INSERT INTO user_barangay_assignments (user_id, barangay, is_primary) VALUES ($1,$2,true)`,
+          [userId, acct.assignedBarangay],
+        );
+      }
+      for (const b of acct.permittedBarangays ?? []) {
+        await q.query(
+          `INSERT INTO user_barangay_assignments (user_id, barangay, is_primary) VALUES ($1,$2,false)`,
+          [userId, b],
+        );
+      }
     }
 
     for (const link of AGENCY_LINKS) {

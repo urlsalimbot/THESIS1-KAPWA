@@ -1,5 +1,8 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Expose } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
+import { UserToken } from './user-token.entity';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 
 export enum UserRole {
   SW = 'social_worker',
@@ -41,14 +44,8 @@ export class User extends BaseEntity {
   @Column({ name: 'person_link_code_expires_at', nullable: true, type: 'timestamp' })
   personLinkCodeExpiresAt?: Date;
 
-  @Column({ name: 'assigned_barangay', nullable: true })
-  assignedBarangay?: string;
-
   @Column({ name: 'agency_id', nullable: true })
   agencyId?: string;
-
-  @Column({ name: 'permitted_barangays', type: 'text', array: true, default: [] })
-  permittedBarangays!: string[];
 
   @Column({ name: 'is_active', default: true })
   isActive!: boolean;
@@ -68,30 +65,44 @@ export class User extends BaseEntity {
   @Column({ name: 'email_verified', default: true })
   emailVerified!: boolean;
 
-  @Column({ name: 'verification_token', nullable: true })
-  verificationToken?: string;
+  @OneToMany(() => UserToken, t => t.user, { eager: true, cascade: true })
+  tokens!: UserToken[];
 
-  @Column({ name: 'verification_token_expires_at', nullable: true, type: 'timestamp' })
-  verificationTokenExpiresAt?: Date;
-
-  @Column({ name: 'reset_token', nullable: true })
-  resetToken?: string;
-
-  @Column({ name: 'reset_token_expires_at', nullable: true, type: 'timestamp' })
-  resetTokenExpiresAt?: Date;
-
-  @Column({ name: 'new_email', nullable: true })
-  newEmail?: string;
-
-  @Column({ name: 'new_email_token', nullable: true })
-  newEmailToken?: string;
-
-  @Column({ name: 'new_email_token_expires_at', nullable: true, type: 'timestamp' })
-  newEmailTokenExpiresAt?: Date;
+  @OneToMany(() => UserBarangayAssignment, b => b.user, { eager: true, cascade: true })
+  barangayAssignments!: UserBarangayAssignment[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  // --- Legacy flattened shape, now assembled from child rows ---
+  @Expose() get assignedBarangay(): string | undefined {
+    return this.barangayAssignments?.find(b => b.isPrimary)?.barangay ?? this.barangayAssignments?.[0]?.barangay;
+  }
+  @Expose() get permittedBarangays(): string[] {
+    return (this.barangayAssignments ?? []).filter(b => !b.isPrimary).map(b => b.barangay);
+  }
+  @Expose() get verificationToken(): string | undefined {
+    return this.tokens?.find(t => t.purpose === 'email_verification')?.token;
+  }
+  @Expose() get verificationTokenExpiresAt(): Date | undefined {
+    return this.tokens?.find(t => t.purpose === 'email_verification')?.expiresAt;
+  }
+  @Expose() get resetToken(): string | undefined {
+    return this.tokens?.find(t => t.purpose === 'password_reset')?.token;
+  }
+  @Expose() get resetTokenExpiresAt(): Date | undefined {
+    return this.tokens?.find(t => t.purpose === 'password_reset')?.expiresAt;
+  }
+  @Expose() get newEmail(): string | undefined {
+    return (this.tokens?.find(t => t.purpose === 'change_email')?.meta as any)?.newEmail;
+  }
+  @Expose() get newEmailToken(): string | undefined {
+    return this.tokens?.find(t => t.purpose === 'change_email')?.token;
+  }
+  @Expose() get newEmailTokenExpiresAt(): Date | undefined {
+    return this.tokens?.find(t => t.purpose === 'change_email')?.expiresAt;
+  }
 }

@@ -14,7 +14,7 @@ const MAX_CACHE_SIZE = 10_000;
 
 const ALLOWED_COLUMNS = new Set([
   "id","name","surname","first_name","middle_name","gender","dob","address","phone",
-  "email","password","role","full_name","assigned_barangay","permitted_barangays",
+  "email","password","role","full_name",
   "is_active","device_id","category","waiting_period_days","required_documents",
   "fund_sources","approval_workflow","form_template","created_at","updated_at","barangay",
   "estimated_income","verified_by","status","control_no","beneficiary_id",
@@ -27,6 +27,7 @@ const ALLOWED_COLUMNS = new Set([
   "encrypted_narration","case_disposition","msdw_signature_url","reporting_signature_url",
   "recipient_id","title","message","channel","phone","sent","sent_at","is_read","reference_id",
   "sender_id","content","conversation_id","read_at","purpose","table_name","record_id",
+  "user_id","expires_at","meta",
   "operation","payload","client_updated_at","idempotency_key","conflict_reason","resolved_at",
   "local_version","server_version","last_synced_at","social_worker_name",
   "social_worker_position","referral_origin","reason_for_referral","problem_presented",
@@ -508,6 +509,8 @@ export class SyncService implements OnApplicationShutdown {
       interventions: 'interventions',
       programs: 'programs',
       users: 'users',
+      user_tokens: 'user_tokens',
+      user_barangay_assignments: 'user_barangay_assignments',
       households: 'households',
       consent_ledger: 'consent_ledger',
       irf_cases: 'irf_cases',
