@@ -398,55 +398,71 @@ import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 
 ---
 
-## Task 3: Beneficiary + Household — make beneficiary_roles the owner, drop category/consent_status/access_card_code
+## Task 3: Beneficiary + Household — make beneficiary_roles the owner (person-keyed), drop category/consent_status from beneficiaries
 
 **Files:**
 - Modify: `kapwa-server/src/beneficiaries/beneficiary.entity.ts`
-- Modify: `kapwa-server/src/beneficiaries/household.entity.ts`
-- Modify: `kapwa-server/src/beneficiaries/beneficiary-role.entity.ts` (add `@ManyToOne` Beneficiary + relations; this is the new owner)
-- Modify: `kapwa-server/src/beneficiaries/beneficiaries.module.ts` (register BeneficiaryRole already; ensure PersonContact/Address from Task1)
-- Modify: `kapwa-server/src/beneficiaries/beneficiaries.service.ts` (create/write/read of category/consentStatus + getAccessCard)
+- Modify: `kapwa-server/src/beneficiaries/person.entity.ts` (add `roles` OneToMany → BeneficiaryRole)
+- Modify: `kapwa-server/src/beneficiaries/beneficiaries.service.ts` (create/revokeConsent/findAll category+consentStatus paths)
+- Modify: `kapwa-server/src/beneficiaries/person-normalization.spec.ts` (update to populate role relation instead of setter)
 - Modify: `kapwa-server/src/intake/intake.service.ts` (consentStatus writes, matchCheck b.category)
 - Modify: `kapwa-server/src/lcr/lcr.service.ts` (consentStatus write)
-- Modify: `kapwa-server/src/access-cards/access-cards.service.ts` (access_card_code reads/writes)
-- Modify: `kapwa-server/src/database/seed-demo.ts` (if writes beneficiary legacy)
 - Modify: `kapwa-server/src/sync/sync.service.ts` (ALLOWED_COLUMNS)
+- Modify: `kapwa-server/src/database/seed-*` (if writes beneficiary category/consent_status)
 - Create: `kapwa-server/src/database/migrations/20260829000003-BeneficiaryDedup.ts`
 - Test: `kapwa-server/src/database/beneficiary-wave2.spec.ts`
 
-- [ ] **Step 1: Write failing test** — `beneficiary-wave2.spec.ts`: construct `Beneficiary` with a `BeneficiaryRole` child; assert `category`/`consentStatus`/`accessCardCode` getters return role-owned values; assert `Beneficiary` flattened person getters still work.
+**ARCHITECTURE (verified against actual code — DIVERGENCE from earlier drafting corrected):** `beneficiary_roles` is **person-keyed** (`person_id` UUID NOT NULL → `persons`), NOT beneficiary-keyed. It ALREADY owns `consent_status` (default 'active'), `category`, `access_card_code` (UNIQUE), plus `household_id`/`user_id`. Wave-1 Task-6 migration `20260828000006-DedupBeneficiaryColumns.ts` already declared it the authoritative owner and added `idx_beneficiary_roles_person`. So:
+- The link is `Beneficiary.personId → BeneficiaryRole.personId` (via `Person.roles` OneToMany). NO `beneficiary_id` column — do NOT add one.
+- Drop ONLY `beneficiaries.consent_status` + `beneficiaries.category`. `households.access_card_code` is KEPT (D2; actively read by `inter-agency-referrals` `h.access_card_code` and `getAccessCard`). `beneficiary_roles.access_card_code` is per-person — KEPT, untouched.
+- Add the physical FK `beneficiary_roles.person_id → persons(id)` if not already present (Task-6 only added an index).
+
+- [ ] **Step 1: Write failing test** — `beneficiary-wave2.spec.ts`: construct a `Beneficiary` whose `person.roles` contains a `BeneficiaryRole { consentStatus:'active', category:'Senior Citizen' }`; assert getters `category` and `consentStatus` return the role-owned values; assert `accessCardCode` still resolves via `household.accessCardCode` (when household set). Also update `person-normalization.spec.ts:30-35` which currently sets `b.category`/`b.consentStatus` as columns — change to build `b.person.roles = [role]` and assert the getters.
 
 - [ ] **Step 2: Run to verify fail.**
 
 - [ ] **Step 3: Edit `beneficiary.entity.ts`**
 
-Remove `@Column({name:'category'}) category?` (`:26-27`) and `@Column({name:'consent_status'}) consentStatus!` (`:20-21`). Add `@Expose()` getters reading the (joined) role. Since a beneficiary has at most one role row in practice, add `@OneToMany(() => BeneficiaryRole, r => r.beneficiary, { eager:true }) roles!` and:
+Remove `@Column({name:'category'}) category?` (`:26-27`) and `@Column({name:'consent_status'}) consentStatus!` (`:20-21`). Add `@Expose()` getters reading the role via the person:
 
 ```ts
-@Expose() get category(): string | undefined { return this.roles?.[0]?.category; }
-@Expose() get consentStatus(): string { return this.roles?.[0]?.consentStatus ?? 'active'; }
-@Expose() get accessCardCode(): string | undefined { return this.household?.accessCardCode; }
+@Expose() get category(): string | undefined { return this.person?.roles?.[0]?.category; }
+@Expose() get consentStatus(): string { return this.person?.roles?.[0]?.consentStatus ?? 'active'; }
 ```
 
-Note: keep `household.accessCardCode` (it stays on household, D2 keeps estimated_income). Also add `@OneToMany` on household to beneficiary if needed for getters.
+Keep `household.accessCardCode` reads (`getAccessCard`) — `households.access_card_code` stays. `person-normalization.spec.ts` must be updated to use the role relation.
 
-- [ ] **Step 4: Make `beneficiary-role.entity.ts` the owner** — add `@ManyToOne(() => Beneficiary, b => b.roles, { onDelete:'CASCADE' }) @JoinColumn({ name:'beneficiary_id' })` + `@Column({ name:'beneficiary_id' }) beneficiaryId!`. Confirm DB has `beneficiary_id` column; if the existing `beneficiary_roles` table uses `person_id` as the owner instead, add `beneficiary_id` via the migration (Step 10) and backfill `beneficiary_id` from the beneficiary's `person_id` where available.
+- [ ] **Step 4: Add `Person.roles` OneToMany** in `person.entity.ts`:
 
-- [ ] **Step 5: Rewire `beneficiaries.service.ts`** — `createBeneficiary :60` `consentStatus:'active'` → create a `BeneficiaryRole { beneficiaryId, consentStatus:'active', category }` row (initialize roles array); `revokeConsent :242` update → update the role row `consentStatus:'revoked'`; `findAll :88,96` `b.category` → join role `br` and filter `br.category`; `getAccessCard :266,270` reads `household.accessCardCode` via getter (unchanged).
+```ts
+@OneToMany(() => BeneficiaryRole, r => r.person, { eager: true })
+roles!: BeneficiaryRole[];
+```
 
-- [ ] **Step 6: Rewire `intake.service.ts` `:210,503`** consentStatus → role row; `:412,468` `b.category`/`r.category` → `br.category` via join `beneficiary_roles br`. `lcr.service.ts :75` same.
+(`beneficiary-role.entity.ts` already has the inverse `@ManyToOne(() => Person, { nullable: false }) @JoinColumn({ name: 'person_id' }) person?` — no change needed there.)
 
-- [ ] **Step 7: Rewire `access-cards.service.ts`** — `:38` `UPDATE households SET access_card_code` stays (household column kept). Ensure `getSummary`/`autoLogFromIntervention` reads via `h.access_card_code` (kept) — no change; only remove any `beneficiaries.access_card_code` references if present (there are none per research; the column moved to household already).
+- [ ] **Step 5: Rewire `beneficiaries.service.ts`**
+  - `createBeneficiary :65` `consentStatus:'active'` → do NOT set on the entity; after person save, create/insert a `BeneficiaryRole { personId: person.id, consentStatus:'active', category: data.category }` row if one does not already exist for that person (inject `BeneficiaryRole` repo).
+  - `revokeConsent :247` `benRepo.update(beneficiaryId, { consentStatus:'revoked' })` → look up the beneficiary's `personId`, then update `beneficiary_roles SET consent_status='revoked' WHERE person_id = :personId`.
+  - `findAll :92-93,101-103,111` `b.category` filters → JOIN `beneficiary_roles br ON br.person_id = b.person_id` and filter `br.category` (`br.category = :category` / `br.category ILIKE :categoryMatch`).
 
-- [ ] **Step 8: Update `sync.service.ts` ALLOWED_COLUMNS** — remove `"access_card_code","consent_status","category"` (they are no longer on `beneficiaries`); add `"beneficiary_roles"` to tableMap if sync should replicate roles.
+- [ ] **Step 6: Rewire `intake.service.ts`** — search for any `consentStatus`/`category` writes on the beneficiary or `matchCheck` raw-SQL reads of `b.category`/`r.category`; rewire to `beneficiary_roles` (join by person_id). `lcr.service.ts` same (`consentStatus`/`category` writes → role row). Confirm `b.consentStatus`/`b.category` entity reads anywhere go through the new getters (`person.roles[0]`) — eager-loading Person on those queries must load `roles` (it does, eager).
 
-- [ ] **Step 9: Update seeds** — adjust any `seed-demo.ts`/`seed-accounts.ts` writes touching beneficiary category/consent_status.
+- [ ] **Step 7: Verify access-cards service** — `UPDATE households SET access_card_code` stays (column kept); `getSummary`/`autoLogFromIntervention` read `h.access_card_code` (kept) — no change. Only remove any `beneficiaries.access_card_code` reference if one exists (the column was already moved to household in `20260730000003`; verify there is none).
 
-- [ ] **Step 10: Create drop migration** `20260829000003-BeneficiaryDedup.ts` — ensure `beneficiary_roles.beneficiary_id` column exists (add if missing + backfill from `beneficiaries.person_id`), add FK on `beneficiary_roles.beneficiary_id` → beneficiaries, `DROP COLUMN IF EXISTS` `beneficiaries.category`, `beneficiaries.consent_status` (and `beneficiaries.access_card_code` if it exists — verify in DB first; research says it was already moved to household). `down()` re-adds columns/drops FK.
+- [ ] **Step 8: Update `sync.service.ts` ALLOWED_COLUMNS** — for `beneficiaries`, remove `"consent_status"` and `"category"` (dropped columns). `access_card_code` stays on `households` (keep it in the household line). Add `"beneficiary_roles"` to `tableMap` if sync should replicate roles.
 
-- [ ] **Step 11: Run tests + typecheck.**
+- [ ] **Step 9: Update seeds** — adjust any `seed-demo.ts`/`seed-accounts.ts` writes touching beneficiary category/consent_status to insert into `beneficiary_roles` instead.
 
-- [ ] **Step 12: Commit.**
+- [ ] **Step 10: Create drop migration** `20260829000003-BeneficiaryDedup.ts`:
+  - Backfill: `INSERT INTO beneficiary_roles (person_id, household_id, user_id, consent_status, category) SELECT b.person_id, b.household_id, b.user_id, b.consent_status, b.category FROM beneficiaries b WHERE b.person_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM beneficiary_roles r WHERE r.person_id = b.person_id);` (use `uuid_generate_v7()` id + NOW() timestamps).
+  - Add physical FK if missing: `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_beneficiary_roles_person') THEN ALTER TABLE beneficiary_roles ADD CONSTRAINT fk_beneficiary_roles_person FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE CASCADE; END IF; END $$;` (plain `ADD CONSTRAINT` is fine — the backfill guarantees no orphans; verify no orphan rows first with a DELETE purging roles whose person_id has no persons row).
+  - `ALTER TABLE beneficiaries DROP COLUMN IF EXISTS consent_status; ALTER TABLE beneficiaries DROP COLUMN IF EXISTS category;`
+  - `down()` re-adds the two columns (`TEXT DEFAULT 'active'` / `TEXT`), backfills from `beneficiary_roles`, drops the FK.
+
+- [ ] **Step 11: Run tests + typecheck** — `npx jest src/beneficiaries src/access-cards src/database/beneficiary-wave2.spec.ts --silent`, then `npm run typecheck`, then FULL `npx jest --silent`.
+
+- [ ] **Step 12: Commit** — `feat(schema): wave2 beneficiary — person-keyed beneficiary_roles owns category/consent_status, drop legacy columns`.
 
 ---
 
