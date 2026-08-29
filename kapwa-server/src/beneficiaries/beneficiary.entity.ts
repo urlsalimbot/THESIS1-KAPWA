@@ -17,14 +17,8 @@ export class Beneficiary extends BaseEntity {
   @Column({ name: 'user_id', nullable: true })
   userId?: string;
 
-  @Column({ name: 'consent_status', default: 'active' })
-  consentStatus!: string;
-
   @Column({ name: 'household_id', nullable: true })
   householdId?: string;
-
-  @Column({ name: 'category', nullable: true })
-  category?: string;
 
   @ManyToOne(() => Household, { nullable: true })
   @JoinColumn({ name: 'household_id' })
@@ -38,6 +32,8 @@ export class Beneficiary extends BaseEntity {
 
   // -- Flattened person fields for API backward compatibility --
 
+  @Expose() get category(): string | undefined { return this.person?.roles?.[0]?.category; }
+  @Expose() get consentStatus(): string { return this.person?.roles?.[0]?.consentStatus ?? 'active'; }
   @Expose() get surname(): string { return this.person?.surname || ''; }
   @Expose() get firstName(): string { return this.person?.firstName || ''; }
   @Expose() get middleName(): string | undefined { return this.person?.middleName; }

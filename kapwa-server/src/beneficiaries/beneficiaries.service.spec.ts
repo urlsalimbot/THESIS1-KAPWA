@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { BeneficiariesService } from './beneficiaries.service';
 import { Person } from './person.entity';
 import { Beneficiary } from './beneficiary.entity';
+import { BeneficiaryRole } from './beneficiary-role.entity';
 import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
 import { ConsentLedger } from './consent-ledger.entity';
 import { HouseholdMembership } from './household-membership.entity';
@@ -23,6 +24,7 @@ describe('BeneficiariesService', () => {
         BeneficiariesService,
         { provide: getRepositoryToken(Person), useValue: personRepoMock },
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
+        { provide: getRepositoryToken(BeneficiaryRole), useValue: { findOne: jest.fn().mockResolvedValue(null), create: jest.fn((d: any) => d), save: jest.fn(async (d: any) => ({ id: 'role-1', ...d })) } },
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
         { provide: getRepositoryToken(HouseholdMembership), useValue: { query: jest.fn() } },

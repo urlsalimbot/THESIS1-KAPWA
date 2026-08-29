@@ -6,6 +6,7 @@ import { Person } from './person.entity';
 import { PersonContact } from './person-contact.entity';
 import { PersonAddress } from './person-address.entity';
 import { Beneficiary } from './beneficiary.entity';
+import { BeneficiaryRole } from './beneficiary-role.entity';
 import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
 import { ConsentLedger } from './consent-ledger.entity';
 import { HouseholdMembership } from './household-membership.entity';
@@ -18,6 +19,8 @@ export class BeneficiariesService {
     private personRepo: Repository<Person>,
     @InjectRepository(Beneficiary)
     private benRepo: Repository<Beneficiary>,
+    @InjectRepository(BeneficiaryRole)
+    private roleRepo: Repository<BeneficiaryRole>,
     @InjectRepository(BeneficiaryClaimant)
     private bcRepo: Repository<BeneficiaryClaimant>,
     @InjectRepository(ConsentLedger)
@@ -62,9 +65,20 @@ export class BeneficiariesService {
     const ben = this.benRepo.create({
       personId: savedPerson.id,
       householdId: data.householdId,
-      consentStatus: 'active',
     });
     await this.benRepo.save(ben);
+
+    const existingRole = await this.roleRepo.findOne({ where: { personId: savedPerson.id } });
+    if (!existingRole) {
+      await this.roleRepo.save(
+        this.roleRepo.create({
+          personId: savedPerson.id,
+          householdId: data.householdId,
+          consentStatus: 'active',
+          category: (data as any).category,
+        }),
+      );
+    }
 
     await this.consentRepo.save({
       beneficiaryId: ben.id,
@@ -85,12 +99,13 @@ export class BeneficiariesService {
   ) {
     const qb = this.benRepo.createQueryBuilder('b')
       .leftJoinAndSelect('b.person', 'p')
-      .leftJoinAndSelect('b.household', 'h');
+      .leftJoinAndSelect('b.household', 'h')
+      .leftJoin('beneficiary_roles', 'br', 'br.person_id = b.person_id');
     if (barangay) {
       qb.andWhere('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
     }
     if (category) {
-      qb.andWhere('b.category = :category', { category });
+      qb.andWhere('br.category = :category', { category });
     }
     if (search && search.length >= 2) {
       if (search.length >= 3) {
@@ -98,7 +113,7 @@ export class BeneficiariesService {
           `(p.search_vector @@ plainto_tsquery('english', :search)
             OR similarity(p.surname, :search) > 0.3
             OR similarity(p.first_name, :search) > 0.3
-            OR b.category ILIKE :categoryMatch
+            OR br.category ILIKE :categoryMatch
             OR EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :addressMatch OR pa2.raw ILIKE :addressMatch)))`,
           { search, categoryMatch: `%${search}%`, addressMatch: `%${search}%` },
         );
@@ -244,7 +259,10 @@ export class BeneficiariesService {
     if (body.reason) (ledger as any).revokedReason = body.reason;
     await this.consentRepo.save(ledger);
 
-    await this.benRepo.update(beneficiaryId, { consentStatus: 'revoked' } as any);
+    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id', 'personId'] });
+    if (ben?.personId) {
+      await this.roleRepo.update({ personId: ben.personId }, { consentStatus: 'revoked' });
+    }
 
     return { status: 'revoked', revokedAt: ledger.revokedAt };
   }

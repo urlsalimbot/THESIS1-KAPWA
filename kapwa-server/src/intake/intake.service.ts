@@ -5,6 +5,7 @@ import { Person } from '../beneficiaries/person.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
@@ -268,9 +269,16 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       if (!savedBeneficiary) {
         const beneficiary = this.benRepo.create({
           personId: benPerson.id,
-          consentStatus: 'active',
         });
         savedBeneficiary = await queryRunner.manager.save(beneficiary);
+
+        // Own category/consent_status via the person-keyed beneficiary_roles child row.
+        await queryRunner.manager.save(
+          queryRunner.manager.create(BeneficiaryRole, {
+            personId: benPerson.id,
+            consentStatus: 'active',
+          }),
+        );
       }
 
       // 3. Create Person for CLAIMANT (always new, no dedup)
@@ -475,7 +483,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         p.civil_status,
         (SELECT jsonb_build_object('barangay', pa3.barangay, 'city', pa3.city, 'province', pa3.province)
          FROM person_addresses pa3 WHERE pa3.person_id = p.id AND pa3.address_type = 'current' LIMIT 1) AS current_address,
-        p.philhealth_number, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.gender, p.middle_name, b.category,
+        p.philhealth_number, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.gender, p.middle_name, br.category,
         (SELECT json_agg(json_build_object('id', b2.id, 'surname', p2.surname, 'first_name', p2.first_name))
          FROM beneficiaries b2
          JOIN persons p2 ON p2.id = b2.person_id
@@ -501,6 +509,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       JOIN households h ON h.id = hs.id
       JOIN beneficiaries b ON b.id = h.primary_beneficiary_id
       JOIN persons p ON p.id = b.person_id
+      LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
       WHERE (0.6 * COALESCE(hs.ben_score, 0) + 0.4 * COALESCE(hs.family_score, 0)) >= 0.6
       ORDER BY (0.6 * COALESCE(hs.ben_score, 0) + 0.4 * COALESCE(hs.family_score, 0)) DESC
       LIMIT 10`,
@@ -566,8 +575,14 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         savedBeneficiary = await queryRunner.manager.save(queryRunner.manager.create(Beneficiary, {
           personId: benPerson.id,
           householdId,
-          consentStatus: 'active',
         }));
+
+        await queryRunner.manager.save(
+          queryRunner.manager.create(BeneficiaryRole, {
+            personId: benPerson.id,
+            consentStatus: 'active',
+          }),
+        );
       }
 
       const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true, undefined, this.personExtras(data.claimant));

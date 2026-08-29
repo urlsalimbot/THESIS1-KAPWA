@@ -3,6 +3,7 @@ import { Expose } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { PersonContact } from './person-contact.entity';
 import { PersonAddress } from './person-address.entity';
+import { BeneficiaryRole } from './beneficiary-role.entity';
 
 @Entity('persons')
 export class Person extends BaseEntity {
@@ -25,6 +26,9 @@ export class Person extends BaseEntity {
 
   @OneToMany(() => PersonAddress, a => a.person, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   addresses!: PersonAddress[];
+
+  @OneToMany(() => BeneficiaryRole, r => r.person, { eager: true })
+  roles!: BeneficiaryRole[];
 
   @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
   @UpdateDateColumn({ name: 'updated_at' }) updatedAt!: Date;

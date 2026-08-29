@@ -25,13 +25,25 @@ describe('schema normalization — person child entities', () => {
 });
 
 import { Beneficiary } from './beneficiary.entity';
+import { Person } from './person.entity';
+import { BeneficiaryRole } from './beneficiary-role.entity';
 
 describe('schema normalization — beneficiary dedup groundwork', () => {
   it('beneficiary still exposes legacy category for Wave-1 compatibility', () => {
+    const p = new Person();
+    const role = new BeneficiaryRole();
+    role.category = 'Senior Citizen';
+    role.consentStatus = 'active';
+    (p as any).roles = [role];
+
     const b = new Beneficiary();
-    b.category = 'Senior Citizen';
-    b.consentStatus = 'active';
+    (b as any).person = p;
     expect(b.category).toBe('Senior Citizen');
+    expect(b.consentStatus).toBe('active');
+  });
+
+  it('beneficiary consentStatus defaults to active when no role row exists', () => {
+    const b = new Beneficiary();
     expect(b.consentStatus).toBe('active');
   });
 });

@@ -7,6 +7,7 @@ import { Person } from '../src/beneficiaries/person.entity';
 import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity';
 import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
+import { BeneficiaryRole } from '../src/beneficiaries/beneficiary-role.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
 import { Case } from '../src/cases/case.entity';
 
@@ -30,6 +31,15 @@ describe('BeneficiariesService — Family Graph', () => {
             create: jest.fn(),
             save: jest.fn(),
             createQueryBuilder: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(BeneficiaryRole),
+          useValue: {
+            findOne: jest.fn(),
+            update: jest.fn().mockResolvedValue({}),
+            create: jest.fn(),
+            save: jest.fn(),
           },
         },
         {

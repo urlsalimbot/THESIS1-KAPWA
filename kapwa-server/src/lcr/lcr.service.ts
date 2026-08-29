@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
 import { PersonAddress } from '../beneficiaries/person-address.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
 
 @Injectable()
 export class LcrService {
@@ -81,9 +82,14 @@ export class LcrService {
 
     const ben = this.benRepo.create({
       personId: savedPerson.id,
-      consentStatus: 'active',
     });
     const savedBen = await this.benRepo.save(ben);
+
+    await this.personRepo.manager.save(BeneficiaryRole, {
+      personId: savedPerson.id,
+      consentStatus: 'active',
+    });
+
     this.logger.log(`LCR: Created new beneficiary ${savedBen.id} from person ${savedPerson.id}`);
     return { matched: false, beneficiaryId: savedBen.id, action: 'created' };
   }

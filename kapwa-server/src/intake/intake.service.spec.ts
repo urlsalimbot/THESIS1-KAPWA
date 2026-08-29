@@ -7,6 +7,7 @@ import { Person } from '../beneficiaries/person.entity';
 import { PersonContact } from '../beneficiaries/person-contact.entity';
 import { PersonAddress } from '../beneficiaries/person-address.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
@@ -167,10 +168,11 @@ describe('IntakeService', () => {
 
     it('should create Person + Beneficiary + Claimant + HouseholdMemberships + Case + ConsentLedger on successful intake', async () => {
       const saveMock = mockSaveSequence();
-      // save order: Person(beneficiary), Beneficiary, Person(claimant), BeneficiaryClaimant, Household, Beneficiary(update), Person(FM), HouseholdMembership, Case, ConsentLedger
+      // save order: Person(beneficiary), Beneficiary, BeneficiaryRole, Person(claimant), BeneficiaryClaimant, Household, Beneficiary(update), Person(FM), HouseholdMembership, Case, ConsentLedger
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
         .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz', consentStatus: 'active' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: claimUuid })
         .mockResolvedValueOnce({ id: bcUuid })
         .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
@@ -208,6 +210,7 @@ describe('IntakeService', () => {
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
         .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: claimUuid })
         .mockResolvedValueOnce({ id: bcUuid })
         .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
@@ -261,6 +264,7 @@ describe('IntakeService', () => {
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
         .mockResolvedValueOnce({ id: benUuid })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: claimUuid })
         .mockResolvedValueOnce({ id: bcUuid })
         .mockResolvedValueOnce({ id: hhUuid })
@@ -281,6 +285,7 @@ describe('IntakeService', () => {
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
         .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: claimUuid })
         .mockResolvedValueOnce({ id: bcUuid })
         .mockResolvedValueOnce({ id: hhUuid })
@@ -298,7 +303,11 @@ describe('IntakeService', () => {
         expect.objectContaining({ surname: 'Dela Cruz' })
       );
       expect(benRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ consentStatus: 'active' })
+        expect.objectContaining({ personId: 'person-uuid-1' })
+      );
+      expect(queryRunnerMock.manager.create).toHaveBeenCalledWith(
+        BeneficiaryRole,
+        expect.objectContaining({ personId: 'person-uuid-1', consentStatus: 'active' }),
       );
     });
 
@@ -307,6 +316,7 @@ describe('IntakeService', () => {
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
         .mockResolvedValueOnce({ id: benUuid })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: claimUuid })
         .mockResolvedValueOnce({ id: bcUuid })
         .mockResolvedValueOnce({ id: hhUuid })
@@ -377,6 +387,7 @@ describe('IntakeService', () => {
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid' })
         .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: 'claim-uuid' })
         .mockResolvedValueOnce({ id: 'bc-uuid' })
         .mockResolvedValueOnce({ id: 'fm-person-1' })
@@ -414,6 +425,7 @@ describe('IntakeService', () => {
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid' })
         .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: 'claim-uuid' })
         .mockResolvedValueOnce({ id: 'bc-uuid' })
         .mockResolvedValueOnce({ id: 'fm-person-1' })
@@ -446,6 +458,7 @@ describe('IntakeService', () => {
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
         .mockResolvedValueOnce({ id: 'ben-uuid-1' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
         .mockResolvedValueOnce({ id: 'claim-uuid' })
         .mockResolvedValueOnce({ id: 'bc-uuid' })
         .mockResolvedValueOnce({ id: 'hh-uuid' })
@@ -469,7 +482,7 @@ describe('IntakeService', () => {
           ],
         }, { id: 'caller-1', role: UserRole.SW });
 
-        const fmSaveCall = saveMock.mock.calls[6];
+        const fmSaveCall = saveMock.mock.calls[7];
         expect(fmSaveCall[0]).toBe(Person);
         expect(fmSaveCall[1]).toMatchObject({ surname: 'Dela Cruz', firstName: 'Jose', gender: 'Female' });
         expect(fmSaveCall[1].dob).toEqual(new Date('2010-06-15'));
@@ -660,7 +673,7 @@ describe('IntakeService', () => {
     });
 
     it('generates column-safe SQL for the barangay-scoped dedup lookup', async () => {
-      const dataSource = new DataSource({ type: 'postgres', entities: [Person, PersonContact, PersonAddress] });
+      const dataSource = new DataSource({ type: 'postgres', entities: [Person, PersonContact, PersonAddress, BeneficiaryRole] });
       await (dataSource as any).buildMetadatas();
       const repo = dataSource.getRepository(Person);
       const sql = repo

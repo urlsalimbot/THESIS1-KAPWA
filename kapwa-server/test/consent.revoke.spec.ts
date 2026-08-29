@@ -5,6 +5,7 @@ import { NotFoundException } from '@nestjs/common';
 import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service';
 import { Person } from '../src/beneficiaries/person.entity';
 import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
+import { BeneficiaryRole } from '../src/beneficiaries/beneficiary-role.entity';
 import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
 import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
@@ -13,7 +14,7 @@ import { Case } from '../src/cases/case.entity';
 describe('BeneficiariesService — Consent Revoke', () => {
   let service: BeneficiariesService;
   let consentRepo: Repository<ConsentLedger>;
-  let benRepo: Repository<Beneficiary>;
+  let roleRepo: Repository<BeneficiaryRole>;
 
   const savedLedgers: any[] = [];
 
@@ -27,13 +28,14 @@ describe('BeneficiariesService — Consent Revoke', () => {
         {
           provide: getRepositoryToken(Beneficiary),
           useValue: {
-            findOne: jest.fn().mockResolvedValue({ id: 'ben-1', consentStatus: 'active' }),
+            findOne: jest.fn().mockResolvedValue({ id: 'ben-1', personId: 'person-1', consentStatus: 'active' }),
             update: jest.fn().mockResolvedValue({}),
             create: jest.fn(),
             save: jest.fn(),
             createQueryBuilder: jest.fn(),
           },
         },
+        { provide: getRepositoryToken(BeneficiaryRole), useValue: { findOne: jest.fn(), update: jest.fn().mockResolvedValue({}), create: jest.fn(), save: jest.fn() } },
         {
           provide: getRepositoryToken(ConsentLedger),
           useValue: {
@@ -54,7 +56,7 @@ describe('BeneficiariesService — Consent Revoke', () => {
 
     service = module.get<BeneficiariesService>(BeneficiariesService);
     consentRepo = module.get<Repository<ConsentLedger>>(getRepositoryToken(ConsentLedger));
-    benRepo = module.get<Repository<Beneficiary>>(getRepositoryToken(Beneficiary));
+    roleRepo = module.get<Repository<BeneficiaryRole>>(getRepositoryToken(BeneficiaryRole));
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -114,6 +116,6 @@ describe('BeneficiariesService — Consent Revoke', () => {
 
     await service.revokeConsent('ben-1', { reason: 'Withdrawn' });
 
-    expect(benRepo.update).toHaveBeenCalledWith('ben-1', { consentStatus: 'revoked' });
+    expect(roleRepo.update).toHaveBeenCalledWith({ personId: 'person-1' }, { consentStatus: 'revoked' });
   });
 });

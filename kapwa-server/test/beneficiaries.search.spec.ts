@@ -5,6 +5,7 @@ import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service
 import { Person } from '../src/beneficiaries/person.entity';
 import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
 import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.entity';
+import { BeneficiaryRole } from '../src/beneficiaries/beneficiary-role.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
 import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
 import { Case } from '../src/cases/case.entity';
@@ -12,6 +13,7 @@ import { Case } from '../src/cases/case.entity';
 function createMockQb() {
   return {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
+    leftJoin: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     addSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -36,6 +38,7 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
         BeneficiariesService,
         { provide: getRepositoryToken(Person), useValue: { find: jest.fn(), create: jest.fn(), save: jest.fn() } },
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
+        { provide: getRepositoryToken(BeneficiaryRole), useValue: { findOne: jest.fn(), update: jest.fn(), save: jest.fn(), create: jest.fn() } },
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(ConsentLedger), useValue: { find: jest.fn(), findOne: jest.fn() } },
         { provide: getRepositoryToken(HouseholdMembership), useValue: { find: jest.fn(), query: jest.fn() } },
@@ -65,12 +68,12 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
   });
 
   // Test 2: Category filter — exact match filter
-  it('should add b.category = :category filter when category param provided', async () => {
+  it('should add br.category = :category filter when category param provided', async () => {
     mockQb.getMany.mockResolvedValueOnce([]);
     await service.findAll(undefined, undefined, 1, 100, 'Senior');
 
     expect(mockQb.andWhere).toHaveBeenCalledWith(
-      expect.stringContaining('b.category = :category'),
+      expect.stringContaining('br.category = :category'),
       expect.objectContaining({ category: 'Senior' }),
     );
   });
@@ -99,7 +102,7 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
 
     expect(allArgs).toContain('ILIKE :barangay');
     expect(allArgs).toContain('similarity(p.surname');
-    expect(allArgs).toContain('b.category = :category');
+    expect(allArgs).toContain('br.category = :category');
   });
 
   // Test 5: Empty search — returns all beneficiaries
