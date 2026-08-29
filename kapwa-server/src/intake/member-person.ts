@@ -21,7 +21,7 @@ export function memberToPerson(fm: FamilyMemberInput): MemberPersonData {
     extension: fm.extension,
     gender: fm.gender,
     dob: new Date(fm.dob),
-    age: fm.age ?? computeAgeFromDob(fm.dob),
+    age: computeAgeFromDob(fm.dob),
     occupation: fm.occupation,
     estimatedMonthlyIncome: fm.income,
   };

@@ -24,9 +24,10 @@ describe('memberToPerson', () => {
     expect(p.age).toBe(10);
   });
 
-  it('prefers a provided age over the computed one', () => {
+  it('always derives age from dob, ignoring any provided age', () => {
+    jest.setSystemTime(new Date(2026, 6, 31, 12));
     const p = memberToPerson({ ...base, age: 99 });
-    expect(p.age).toBe(99);
+    expect(p.age).toBe(10);
   });
 
   it('maps income to estimatedMonthlyIncome', () => {

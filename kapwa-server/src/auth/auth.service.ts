@@ -60,7 +60,7 @@ export class AuthService {
       const rawPhone = data.phone.replace(/\D/g, '');
       const candidates = await this.personRepo
         .createQueryBuilder('p')
-        .where('p.phone = :p1 OR p.phone = :p2', { p1: data.phone, p2: rawPhone })
+        .where('EXISTS (SELECT 1 FROM person_contacts pc WHERE pc.person_id = p.id AND pc.contact_type = \'phone\' AND (pc.value = :p1 OR pc.value = :p2))', { p1: data.phone, p2: rawPhone })
         .getMany();
 
       const match = candidates.find(p => {
@@ -367,7 +367,7 @@ export class AuthService {
     const rawPhone = phone.replace(/\D/g, '');
     const candidate = await this.personRepo
       .createQueryBuilder('p')
-      .where('p.phone = :p1 OR p.phone = :p2', { p1: phone, p2: rawPhone })
+      .where('EXISTS (SELECT 1 FROM person_contacts pc WHERE pc.person_id = p.id AND pc.contact_type = \'phone\' AND (pc.value = :p1 OR pc.value = :p2))', { p1: phone, p2: rawPhone })
       .getOne();
 
     if (!candidate) throw new BadRequestException('No matching person record found');

@@ -140,24 +140,40 @@ export class UnifiedPersonModel20260720000001 implements MigrationInterface {
     // ==========================================================================
     // 4. RECREATE RLS POLICIES with join to persons
     // ==========================================================================
+    // These policies originally referenced persons.address. The Wave-2 drop
+    // migration (20260829000001) removes that column and recreates the policies
+    // scoped to person_addresses. On a fresh sequential run the child tables
+    // don't exist yet here, so guard each CREATE behind a check that the legacy
+    // column is still present — keeps fresh-run behavior and is idempotent if
+    // re-run after the drop migration.
     await queryRunner.query(`
-      CREATE POLICY ben_barangay_scope ON beneficiaries
-      FOR ALL USING (
-        current_setting('app.current_role') IN ('social_worker', 'coordinator')
-        AND (current_setting('app.current_barangay') = '' OR
-             EXISTS (SELECT 1 FROM persons p WHERE p.id = beneficiaries.person_id
-                     AND p.address ILIKE '%' || current_setting('app.current_barangay') || '%'))
-      )
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'persons' AND column_name = 'address') THEN
+          CREATE POLICY ben_barangay_scope ON beneficiaries
+          FOR ALL USING (
+            current_setting('app.current_role') IN ('social_worker', 'coordinator')
+            AND (current_setting('app.current_barangay') = '' OR
+                 EXISTS (SELECT 1 FROM persons p WHERE p.id = beneficiaries.person_id
+                         AND p.address ILIKE '%' || current_setting('app.current_barangay') || '%'))
+          );
+        END IF;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE POLICY cases_barangay_scope ON cases
-      FOR ALL USING (
-        current_setting('app.current_role') IN ('social_worker', 'coordinator')
-        AND (current_setting('app.current_barangay') = '' OR
-             EXISTS (SELECT 1 FROM persons p WHERE p.id = cases.beneficiary_id
-                     AND p.address ILIKE '%' || current_setting('app.current_barangay') || '%'))
-      )
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'persons' AND column_name = 'address') THEN
+          CREATE POLICY cases_barangay_scope ON cases
+          FOR ALL USING (
+            current_setting('app.current_role') IN ('social_worker', 'coordinator')
+            AND (current_setting('app.current_barangay') = '' OR
+                 EXISTS (SELECT 1 FROM persons p WHERE p.id = cases.beneficiary_id
+                         AND p.address ILIKE '%' || current_setting('app.current_barangay') || '%'))
+          );
+        END IF;
+      END $$;
     `);
 
     // ==========================================================================

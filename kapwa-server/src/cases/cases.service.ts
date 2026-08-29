@@ -96,7 +96,7 @@ export class CasesService {
       );
     }
     if (filters?.barangay) {
-      qb.andWhere('(person.current_address->>\'barangay\') ILIKE :barangay OR person.address ILIKE :barangay', { barangay: `%${filters.barangay}%` });
+      qb.andWhere('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = person.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${filters.barangay}%` });
     }
     if (filters?.gender) {
       qb.andWhere('person.gender = :gender', { gender: filters.gender });
@@ -161,7 +161,7 @@ export class CasesService {
       const rows = await this.familyRepo.query(
         `SELECT hm.id,
                 TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
-                hm.relationship, p.age, p.occupation, p.estimated_monthly_income AS income,
+                hm.relationship, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.occupation, p.estimated_monthly_income AS income,
                 hm.status, hm.is_primary
          FROM household_memberships hm
          JOIN persons p ON p.id = hm.person_id
@@ -472,13 +472,13 @@ export class CasesService {
         p.middle_name AS "middleName",
         p.gender,
         CASE
-          WHEN p.age IS NULL THEN 'Unknown'
-          WHEN p.age < 18 THEN '0-17'
-          WHEN p.age > 59 THEN '60+'
+          WHEN p.dob IS NULL THEN 'Unknown'
+          WHEN p.dob > NOW() - INTERVAL '18 years' THEN '0-17'
+          WHEN p.dob < NOW() - INTERVAL '60 years' THEN '60+'
           ELSE '18-59'
         END AS "ageRange",
         c.client_category AS "clientCategory",
-        COALESCE(NULLIF(p.current_address->>'barangay', ''), p.address) AS barangay,
+        COALESCE((SELECT pa2.barangay FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' LIMIT 1), (SELECT pa3.raw FROM person_addresses pa3 WHERE pa3.person_id = p.id LIMIT 1)) AS barangay,
         COALESCE(c.problems_presented, c.social_worker_assessment, '') AS "interventionRemarks",
         ROW_NUMBER() OVER (PARTITION BY DATE(c.created_at) ORDER BY c.created_at) AS "dailySeqNum"
       FROM cases c

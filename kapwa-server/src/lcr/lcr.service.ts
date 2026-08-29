@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
+import { PersonAddress } from '../beneficiaries/person-address.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 
 @Injectable()
@@ -66,9 +67,17 @@ export class LcrService {
       middleName: data.middleName,
       dob: new Date(data.dob),
       gender: data.gender as 'Male' | 'Female',
-      address: data.address,
     });
     const savedPerson = await this.personRepo.save(person);
+
+    if (data.address) {
+      await this.personRepo.manager.save(PersonAddress, {
+        personId: savedPerson.id,
+        addressType: 'current',
+        raw: data.address,
+        isPrimary: true,
+      });
+    }
 
     const ben = this.benRepo.create({
       personId: savedPerson.id,

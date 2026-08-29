@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, JsonContains, MoreThan, Repository } from 'typeorm';
+import { DataSource, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -43,6 +43,7 @@ export class IntakeService {
     queryRunner?: any,
     deduplicate = false,
     scope?: { currentAddress?: Record<string, string> },
+    extras?: { phone?: string; email?: string; currentAddress?: Record<string, string> },
   ): Promise<Person> {
     const find = (where: any) => queryRunner
       ? queryRunner.manager.findOne(Person, { where })
@@ -51,38 +52,102 @@ export class IntakeService {
       ? queryRunner.manager.save(Person, entity)
       : this.personRepo.save(entity);
 
+    let saved: Person;
     if (deduplicate) {
       let existing: Person | null = null;
       if (data.philhealthNumber) {
         existing = await find({ philhealthNumber: data.philhealthNumber });
       }
       if (!existing) {
-        const where: Record<string, unknown> = {
-          surname: data.surname,
-          firstName: data.firstName,
-          dob: data.dob,
-        };
         const barangay = scope?.currentAddress?.barangay;
         if (barangay) {
           // Scope dedup to the household's barangay so a same-name/same-dob
-          // person in a different barangay is never matched. JsonContains maps
-          // the property to the current_address column (Raw() would not).
-          where.currentAddress = JsonContains({ barangay });
+          // person in a different barangay is never matched. The current
+          // address lives in person_addresses, so scope via an EXISTS subquery.
+          const repo = queryRunner ? queryRunner.manager.getRepository(Person) : this.personRepo;
+          existing = (await repo
+            .createQueryBuilder('p')
+            .where('p.surname = :surname', { surname: data.surname })
+            .andWhere('p.first_name = :firstName', { firstName: data.firstName })
+            .andWhere('p.dob = :dob', { dob: data.dob })
+            .andWhere(
+              `EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' AND pa2.barangay = :barangay)`,
+              { barangay },
+            )
+            .getOne()) ?? null;
+        } else {
+          existing = await find({ surname: data.surname, firstName: data.firstName, dob: data.dob });
         }
-        existing = await find(where);
       }
       if (existing) {
         const updatable = { ...data } as Partial<Person>;
         for (const [k, v] of Object.entries(updatable)) {
           if (v === undefined || v === null || v === '') delete (updatable as Record<string, unknown>)[k];
         }
-        if (data.currentAddress && typeof data.currentAddress === 'object') {
-          updatable.currentAddress = { ...(existing.currentAddress || {}), ...data.currentAddress };
-        }
-        return save(Object.assign(existing, updatable));
+        saved = await save(Object.assign(existing, updatable));
+      } else {
+        saved = await save(this.personRepo.create(data as Person));
       }
+    } else {
+      saved = await save(this.personRepo.create(data as Person));
     }
-    return save(this.personRepo.create(data as Person));
+
+    await this.persistPersonExtras(saved.id, extras || {}, queryRunner);
+    return saved;
+  }
+
+  private personExtras(data: {
+    cellularNumber?: string; email?: string; currentAddress?: Record<string, string>;
+  }): { phone?: string; email?: string; currentAddress?: Record<string, string> } {
+    return {
+      phone: data.cellularNumber,
+      email: data.email,
+      currentAddress: data.currentAddress,
+    };
+  }
+
+  private async persistPersonExtras(
+    personId: string,
+    extras: { phone?: string; email?: string; currentAddress?: Record<string, string> },
+    queryRunner?: any,
+  ): Promise<void> {
+    const { phone, email, currentAddress } = extras || {};
+    if (!phone && !email && !currentAddress) return;
+    const run = (sql: string, params: unknown[]) =>
+      queryRunner ? queryRunner.query(sql, params) : this.personRepo.query(sql, params);
+
+    const upsertContact = async (contactType: string, value: string) => {
+      await run(
+        `WITH updated AS (
+           UPDATE person_contacts SET value = $3, is_primary = TRUE
+           WHERE person_id = $1 AND contact_type = $2 RETURNING id
+         )
+         INSERT INTO person_contacts (person_id, contact_type, value, is_primary)
+         SELECT $1, $2, $3, TRUE
+         WHERE NOT EXISTS (SELECT 1 FROM updated)`,
+        [personId, contactType, value],
+      );
+    };
+
+    if (phone) await upsertContact('phone', phone);
+    if (email) await upsertContact('email', email);
+
+    if (currentAddress) {
+      await run(
+        `WITH updated AS (
+           UPDATE person_addresses SET
+             barangay = COALESCE($3, barangay),
+             city = COALESCE($4, city),
+             province = COALESCE($5, province),
+             is_primary = TRUE
+           WHERE person_id = $1 AND address_type = 'current' RETURNING id
+         )
+         INSERT INTO person_addresses (person_id, address_type, barangay, city, province, is_primary)
+         SELECT $1, 'current', $3, $4, $5, TRUE
+         WHERE NOT EXISTS (SELECT 1 FROM updated)`,
+        [personId, currentAddress.barangay ?? null, currentAddress.city ?? null, currentAddress.province ?? null],
+      );
+    }
   }
 
   private personFromInput(data: {
@@ -99,12 +164,8 @@ export class IntakeService {
       extension: data.extension,
       gender: data.gender as 'Male' | 'Female',
       dob: new Date(data.dob),
-      age: data.age || undefined,
       placeOfBirth: data.placeOfBirth,
       civilStatus: data.civilStatus,
-      phone: data.cellularNumber,
-      email: data.email,
-      currentAddress: data.currentAddress,
       philhealthNumber: data.philhealthNumber || undefined,
       occupation: data.occupation,
       estimatedMonthlyIncome: data.estimatedMonthlyIncome,
@@ -124,7 +185,7 @@ export class IntakeService {
 
     try {
       // 1. Find or create Person for BENEFICIARY (with dedup check)
-      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true);
+      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true, undefined, this.personExtras(data.beneficiary));
 
       // 1b. Duplicate-case guard: if this person already has a Beneficiary + Household + a recent
       //     Case (30 days), reuse that household/case instead of creating duplicates. This mirrors
@@ -156,7 +217,7 @@ export class IntakeService {
         if (recentCase) {
           // Reuse: link claimant + family members into the existing household, then return the
           // existing case — no new Beneficiary / Household / Case is created.
-          const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true);
+const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true, undefined, this.personExtras(data.claimant));
           const existingClaimantLink = await queryRunner.manager.findOne(BeneficiaryClaimant, {
             where: { beneficiaryId: benPerson.id, isPrimary: true },
           });
@@ -213,7 +274,7 @@ export class IntakeService {
       }
 
       // 3. Create Person for CLAIMANT (always new, no dedup)
-      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, false);
+      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, false, undefined, this.personExtras(data.claimant));
 
       // 4. Create BeneficiaryClaimant link
       await queryRunner.manager.save(queryRunner.manager.create(BeneficiaryClaimant, {
@@ -407,9 +468,14 @@ export class IntakeService {
       SELECT
         hs.id AS household_id,
         (0.6 * COALESCE(hs.ben_score, 0) + 0.4 * COALESCE(hs.family_score, 0)) AS score,
-        b.id AS ben_id, p.surname, p.first_name, p.address,
-        p.phone, p.occupation, p.estimated_monthly_income,
-        p.civil_status, p.current_address, p.philhealth_number, p.age, p.gender, p.middle_name, b.category,
+        b.id AS ben_id, p.surname, p.first_name,
+        (SELECT pa2.raw FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' LIMIT 1) AS address,
+        (SELECT pc2.value FROM person_contacts pc2 WHERE pc2.person_id = p.id AND pc2.contact_type = 'phone' LIMIT 1) AS phone,
+        p.occupation, p.estimated_monthly_income,
+        p.civil_status,
+        (SELECT jsonb_build_object('barangay', pa3.barangay, 'city', pa3.city, 'province', pa3.province)
+         FROM person_addresses pa3 WHERE pa3.person_id = p.id AND pa3.address_type = 'current' LIMIT 1) AS current_address,
+        p.philhealth_number, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.gender, p.middle_name, b.category,
         (SELECT json_agg(json_build_object('id', b2.id, 'surname', p2.surname, 'first_name', p2.first_name))
          FROM beneficiaries b2
          JOIN persons p2 ON p2.id = b2.person_id
@@ -417,7 +483,7 @@ export class IntakeService {
         (SELECT json_agg(json_build_object(
           'id', hm.id, 'fullName', TRIM(CONCAT(p3.first_name, ' ', p3.surname)),
           'relationship', hm.relationship,
-          'age', p3.age, 'occupation', p3.occupation,
+          'age', EXTRACT(YEAR FROM AGE(NOW(), p3.dob))::integer, 'occupation', p3.occupation,
           'income', p3.estimated_monthly_income, 'status', hm.status
          )) FROM household_memberships hm
            JOIN persons p3 ON p3.id = hm.person_id
@@ -491,7 +557,7 @@ export class IntakeService {
     await queryRunner.query(`SELECT pg_advisory_xact_lock($1, $2)`, [lk1, lk2]);
 
     try {
-      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true);
+      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true, undefined, this.personExtras(data.beneficiary));
 
       let savedBeneficiary = await queryRunner.manager.findOne(Beneficiary, {
         where: { personId: benPerson.id },
@@ -504,7 +570,7 @@ export class IntakeService {
         }));
       }
 
-      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true);
+      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true, undefined, this.personExtras(data.claimant));
       const existingClaimantLink = await queryRunner.manager.findOne(BeneficiaryClaimant, {
         where: { beneficiaryId: benPerson.id, isPrimary: true },
       });

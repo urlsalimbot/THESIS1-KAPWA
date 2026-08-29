@@ -3,6 +3,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Person } from './person.entity';
+import { PersonContact } from './person-contact.entity';
+import { PersonAddress } from './person-address.entity';
 import { Beneficiary } from './beneficiary.entity';
 import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
 import { ConsentLedger } from './consent-ledger.entity';
@@ -31,15 +33,18 @@ export class BeneficiariesService {
     gender: string; dob: Date; address?: string; phone?: string;
     philsysNumber?: string; householdId?: string;
   }) {
-    const personData = {
-      surname: data.surname,
-      firstName: data.firstName,
-      middleName: data.middleName,
-      gender: data.gender as 'Male' | 'Female',
-      dob: data.dob,
-      address: data.address,
-      phone: data.phone,
-      philsysNumber: data.philsysNumber,
+    const buildPerson = (): Person => {
+      const person = this.personRepo.create({
+        surname: data.surname,
+        firstName: data.firstName,
+        middleName: data.middleName,
+        gender: data.gender as 'Male' | 'Female',
+        dob: data.dob,
+        philsysNumber: data.philsysNumber,
+      });
+      person.contacts = data.phone ? [{ personId: undefined as any, contactType: 'phone', value: data.phone, isPrimary: true } as PersonContact] : [];
+      person.addresses = data.address ? [{ personId: undefined as any, addressType: 'current', raw: data.address, isPrimary: true } as PersonAddress] : [];
+      return person;
     };
 
     let savedPerson: Person;
@@ -48,10 +53,10 @@ export class BeneficiariesService {
       if (existing) {
         savedPerson = existing;
       } else {
-        savedPerson = await this.personRepo.save(this.personRepo.create(personData));
+        savedPerson = await this.personRepo.save(buildPerson());
       }
     } else {
-      savedPerson = await this.personRepo.save(this.personRepo.create(personData));
+      savedPerson = await this.personRepo.save(buildPerson());
     }
 
     const ben = this.benRepo.create({
@@ -82,7 +87,7 @@ export class BeneficiariesService {
       .leftJoinAndSelect('b.person', 'p')
       .leftJoinAndSelect('b.household', 'h');
     if (barangay) {
-      qb.andWhere('p.address ILIKE :barangay', { barangay: `%${barangay}%` });
+      qb.andWhere('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
     }
     if (category) {
       qb.andWhere('b.category = :category', { category });
@@ -94,7 +99,7 @@ export class BeneficiariesService {
             OR similarity(p.surname, :search) > 0.3
             OR similarity(p.first_name, :search) > 0.3
             OR b.category ILIKE :categoryMatch
-            OR p.address ILIKE :addressMatch)`,
+            OR EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :addressMatch OR pa2.raw ILIKE :addressMatch)))`,
           { search, categoryMatch: `%${search}%`, addressMatch: `%${search}%` },
         );
         qb.addSelect(
@@ -109,7 +114,7 @@ export class BeneficiariesService {
           `(p.search_vector @@ plainto_tsquery('english', :search)
             OR p.surname ILIKE :like
             OR p.first_name ILIKE :like
-            OR p.address ILIKE :like)`,
+            OR EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :like OR pa2.raw ILIKE :like)))`,
           { search, like: `%${search}%` },
         );
         qb.orderBy('ts_rank(p.search_vector, plainto_tsquery(:search))', 'DESC');
@@ -179,7 +184,7 @@ export class BeneficiariesService {
 
     const person = await this.personRepo.findOne({
       where: { id: ben.personId },
-      select: ['id', 'surname', 'firstName', 'middleName', 'age', 'occupation', 'estimatedMonthlyIncome'],
+      select: ['id', 'surname', 'firstName', 'middleName', 'dob', 'occupation', 'estimatedMonthlyIncome'],
     });
 
     const primaryMember = person ? {
@@ -197,7 +202,7 @@ export class BeneficiariesService {
     const members = await this.hmRepo.query(
       `SELECT hm.id,
               TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
-              hm.relationship, p.age, p.occupation, p.estimated_monthly_income AS income,
+              hm.relationship, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.occupation, p.estimated_monthly_income AS income,
               hm.status, hm.is_primary
        FROM household_memberships hm
        JOIN persons p ON p.id = hm.person_id

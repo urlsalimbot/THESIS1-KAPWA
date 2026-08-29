@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, FindOperator, JsonContains } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { IntakeService } from './intake.service';
 import { Person } from '../beneficiaries/person.entity';
+import { PersonContact } from '../beneficiaries/person-contact.entity';
+import { PersonAddress } from '../beneficiaries/person-address.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -24,7 +26,12 @@ describe('IntakeService', () => {
     rollbackTransaction: jest.Mock;
     release: jest.Mock;
     query: jest.Mock;
-    manager: { findOne: jest.Mock; create: jest.Mock; save: jest.Mock };
+    manager: {
+      findOne: jest.Mock;
+      create: jest.Mock;
+      save: jest.Mock;
+      getRepository: jest.Mock;
+    };
   };
   let caseRepo: { findOne: jest.Mock; create: jest.Mock };
   let benRepo: { findOne: jest.Mock; create: jest.Mock; find: jest.Mock };
@@ -46,6 +53,15 @@ describe('IntakeService', () => {
         save: jest.fn().mockImplementation((entity: unknown, data?: unknown) =>
           Promise.resolve(data ?? entity),
         ),
+        getRepository: jest.fn(() => ({
+          createQueryBuilder: jest.fn(() => {
+            const qb: any = {};
+            qb.where = jest.fn(() => qb);
+            qb.andWhere = jest.fn(() => qb);
+            qb.getOne = jest.fn().mockResolvedValue(null);
+            return qb;
+          }),
+        })),
       },
     };
     dataSourceMock = { createQueryRunner: jest.fn(() => queryRunnerMock), query: jest.fn() };
@@ -614,12 +630,14 @@ describe('IntakeService', () => {
       seedExistingRecords();
       (hhRepo.findOne as jest.Mock).mockResolvedValue({ id: 'household-1', barangay: 'Bigte' });
       await service.submitBatchFamily(validBatchInput);
-      const [entity, options] = queryRunnerMock.manager.findOne.mock.calls[0];
-      expect(entity).toBe(Person);
-      expect(options.where).toMatchObject({ surname: 'Dela Cruz', firstName: 'Ana' });
-      expect(options.where.currentAddress).toBeInstanceOf(FindOperator);
-      expect(options.where.currentAddress.type).toBe('jsonContains');
-      expect(options.where.currentAddress.value).toEqual({ barangay: 'Bigte' });
+      const qrMgr = queryRunnerMock.manager;
+      expect(qrMgr.getRepository).toHaveBeenCalledWith(Person);
+      const qb = qrMgr.getRepository.mock.results[0].value.createQueryBuilder.mock.results[0].value;
+      expect(qb.where).toHaveBeenCalledWith('p.surname = :surname', { surname: 'Dela Cruz' });
+      const scopedCall = (qb.andWhere as jest.Mock).mock.calls.find(c => c[1] && c[1].barangay === 'Bigte');
+      expect(scopedCall).toBeDefined();
+      expect(scopedCall[0]).toContain('person_addresses');
+      expect(scopedCall[0]).toContain("pa2.address_type = 'current'");
     });
 
     it('falls back to an unscoped dedup lookup when the household has no barangay', async () => {
@@ -642,15 +660,22 @@ describe('IntakeService', () => {
     });
 
     it('generates column-safe SQL for the barangay-scoped dedup lookup', async () => {
-      const dataSource = new DataSource({ type: 'postgres', entities: [Person] });
+      const dataSource = new DataSource({ type: 'postgres', entities: [Person, PersonContact, PersonAddress] });
       await (dataSource as any).buildMetadatas();
       const repo = dataSource.getRepository(Person);
       const sql = repo
-        .createQueryBuilder('person')
-        .where({ currentAddress: JsonContains({ barangay: 'Bigte' }) })
+        .createQueryBuilder('p')
+        .where('p.surname = :surname', { surname: 'Dela Cruz' })
+        .andWhere('p.first_name = :firstName', { firstName: 'Ana' })
+        .andWhere('p.dob = :dob', { dob: new Date('1992-02-02') })
+        .andWhere(
+          `EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' AND pa2.barangay = :barangay)`,
+          { barangay: 'Bigte' },
+        )
         .getSql();
-      expect(sql).toContain('"person"."current_address" ::jsonb @>');
-      expect(sql).not.toContain('currentAddress');
+      expect(sql).toContain('person_addresses');
+      expect(sql).toContain('current');
+      expect(sql).not.toContain('current_address');
     });
   });
 });

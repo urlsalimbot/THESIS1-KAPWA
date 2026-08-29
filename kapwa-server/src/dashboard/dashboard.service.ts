@@ -51,7 +51,7 @@ export class DashboardService {
         .leftJoin('b.person', 'p');
 
       if (barangay) {
-        caseQb.where('(p.current_address->>\'barangay\') ILIKE :barangay OR p.address ILIKE :barangay', { barangay: `%${barangay}%` });
+        caseQb.where('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
       }
 
       const totalCases = await caseQb.clone().getCount();
@@ -65,7 +65,7 @@ export class DashboardService {
       const benQb = this.benRepo.createQueryBuilder('b')
         .leftJoin('b.person', 'p');
       if (barangay) {
-        benQb.where('(p.current_address->>\'barangay\') ILIKE :barangay OR p.address ILIKE :barangay', { barangay: `%${barangay}%` });
+        benQb.where('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
       }
       const { count: uniqueHouseholds } = await benQb
         .select('COUNT(DISTINCT b.household_id)', 'count')
@@ -105,7 +105,7 @@ export class DashboardService {
       .orderBy('c.updated_at', 'DESC');
 
     if (barangay) {
-      qb.andWhere('(p.current_address->>\'barangay\') ILIKE :barangay OR p.address ILIKE :barangay', { barangay: `%${barangay}%` });
+      qb.andWhere('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
     }
 
     paginate(qb, page, limit);
@@ -120,7 +120,7 @@ export class DashboardService {
       if (barangay) {
         qb2.where('c.beneficiary_id IN ' +
           '(SELECT b2.id FROM beneficiaries b2 JOIN persons b2p ON b2p.id = b2.person_id ' +
-          'WHERE (b2p.current_address->>\'barangay\') ILIKE :barangay OR b2p.address ILIKE :barangay)',
+          'WHERE EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = b2p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay)))',
           { barangay: `%${barangay}%` });
       }
       paginate(qb2, page, limit);

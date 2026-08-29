@@ -1,8 +1,13 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { BaseEntity } from '../common/base.entity';
+import { Person } from './person.entity';
 
 @Entity('person_contacts')
 export class PersonContact extends BaseEntity {
+  @ManyToOne(() => Person, p => p.contacts, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'person_id' })
+  person!: Person;
+
   @Column({ name: 'person_id' })
   personId!: string;
 
