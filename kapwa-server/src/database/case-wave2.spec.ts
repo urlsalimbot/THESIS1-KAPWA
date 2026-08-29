@@ -2,6 +2,7 @@ import { Case } from '../cases/case.entity';
 import { CaseRequirement } from '../cases/case-requirement.entity';
 import { CaseReferral } from '../cases/case-referral.entity';
 import { CaseAssistance } from '../cases/case-assistance.entity';
+import { instanceToPlain } from 'class-transformer';
 
 describe('Case wave-2 getters', () => {
   it('reassembles requirementsChecklist from child requirement rows', () => {
@@ -89,5 +90,33 @@ describe('Case wave-2 getters', () => {
   it('returns undefined followUpVisits (column dropped)', () => {
     const c = new Case();
     expect(c.followUpVisits).toBeUndefined();
+  });
+
+  it('serializes a fully-loaded case without stack overflow and preserves flattened shape', () => {
+    const c = new Case();
+    (c as any).controlNo = 'C-100';
+    const r = new CaseRequirement();
+    r.requirementKey = 'bir'; r.met = true; r.case = c;
+    const fin = new CaseAssistance();
+    fin.assistanceType = 'financial'; fin.amount = '4500' as any; fin.mode = 'Cash'; fin.details = {} as any;
+    fin.case = c;
+    const ref = new CaseReferral();
+    ref.agency = 'DSWD'; ref.status = 'pending'; ref.case = c;
+    (c as any).requirements = [r];
+    (c as any).assistances = [fin];
+    (c as any).referralRows = [ref];
+
+    let plain: Record<string, unknown>;
+    expect(() => {
+      // Mirror cases.controller.ts @SerializeOptions({ strategy: 'exposeAll' })
+      plain = instanceToPlain(c, { strategy: 'exposeAll' }) as Record<string, unknown>;
+    }).not.toThrow();
+
+    expect(plain!.requirementsChecklist).toEqual({ bir: true });
+    expect(plain!.amountAssistance).toBe(4500);
+    expect(plain!.referrals).toEqual([{ agencyName: 'DSWD', status: 'pending', notes: undefined }]);
+    expect(plain!.requirements).toBeUndefined();
+    expect(plain!.referralRows).toBeUndefined();
+    expect(plain!.assistances).toBeUndefined();
   });
 });

@@ -1,5 +1,5 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Expose } from 'class-transformer';
+import { Expose, Exclude } from 'class-transformer';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { User } from '../auth/user.entity';
 import { BaseEntity } from '../common/base.entity';
@@ -31,12 +31,15 @@ export class Case extends BaseEntity {
   @Column('text', { name: 'nature_of_service', array: true, nullable: true })
   natureOfService?: string[];
 
+  @Exclude()
   @OneToMany(() => CaseRequirement, r => r.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   requirements!: CaseRequirement[];
 
+  @Exclude()
   @OneToMany(() => CaseReferral, r => r.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   referralRows!: CaseReferral[];
 
+  @Exclude()
   @OneToMany(() => CaseAssistance, a => a.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   assistances!: CaseAssistance[];
 
