@@ -75,10 +75,17 @@ describe('Case wave-2 getters', () => {
     const c = new Case();
     const ref = new CaseReferral();
     ref.agency = 'DSWD Field Office III'; ref.status = 'pending'; ref.notes = 'Assistance for medicines';
+    ref.reason = 'Medication support'; ref.contactInfo = '0917-123-4567';
     (c as any).referralRows = [ref];
 
     expect(c.referrals).toEqual([
-      { agencyName: 'DSWD Field Office III', status: 'pending', notes: 'Assistance for medicines' },
+      {
+        agencyName: 'DSWD Field Office III',
+        status: 'pending',
+        notes: 'Assistance for medicines',
+        reason: 'Medication support',
+        contactInfo: '0917-123-4567',
+      },
     ]);
   });
 
@@ -101,7 +108,7 @@ describe('Case wave-2 getters', () => {
     fin.assistanceType = 'financial'; fin.amount = '4500' as any; fin.mode = 'Cash'; fin.details = {} as any;
     fin.case = c;
     const ref = new CaseReferral();
-    ref.agency = 'DSWD'; ref.status = 'pending'; ref.case = c;
+    ref.agency = 'DSWD'; ref.status = 'pending'; ref.reason = 'Support'; ref.case = c;
     (c as any).requirements = [r];
     (c as any).assistances = [fin];
     (c as any).referralRows = [ref];
@@ -114,7 +121,7 @@ describe('Case wave-2 getters', () => {
 
     expect(plain!.requirementsChecklist).toEqual({ bir: true });
     expect(plain!.amountAssistance).toBe(4500);
-    expect(plain!.referrals).toEqual([{ agencyName: 'DSWD', status: 'pending', notes: undefined }]);
+    expect(plain!.referrals).toEqual([{ agencyName: 'DSWD', status: 'pending', notes: undefined, reason: 'Support', contactInfo: null }]);
     expect(plain!.requirements).toBeUndefined();
     expect(plain!.referralRows).toBeUndefined();
     expect(plain!.assistances).toBeUndefined();

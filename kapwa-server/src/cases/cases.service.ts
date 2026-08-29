@@ -393,7 +393,7 @@ export class CasesService {
     Object.assign(caseEntity, rest);
     if (referrals !== undefined && referrals !== null) {
       caseEntity.referralRows = referrals.map(r =>
-        this.caseRepo.manager.create(CaseReferral, { caseId: caseEntity.id, agency: r.agencyName, status: r.status, notes: r.notes ?? undefined }),
+        this.caseRepo.manager.create(CaseReferral, { caseId: caseEntity.id, agency: r.agencyName, status: r.status, notes: r.notes ?? undefined, reason: r.reason, contactInfo: r.contactInfo ?? undefined }),
       );
     }
     return this.caseRepo.save(caseEntity);
@@ -449,7 +449,7 @@ export class CasesService {
       for (const [key, value] of Object.entries(data.otherAssistance)) {
         assistances.push(this.caseRepo.manager.create(CaseAssistance, {
           assistanceType: key,
-          details: value && typeof value === 'object' ? value : {},
+          details: value as Record<string, unknown>,
         }));
       }
     }

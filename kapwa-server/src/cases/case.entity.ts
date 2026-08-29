@@ -87,12 +87,14 @@ export class Case extends BaseEntity {
   }
 
   @Expose()
-  get referrals(): Array<{ agencyName: string; status: string; notes?: string }> | undefined {
+  get referrals(): Array<{ agencyName: string; status: string; notes?: string; reason: string; contactInfo?: string | null }> | undefined {
     if (!this.referralRows || this.referralRows.length === 0) return undefined;
     return this.referralRows.map(r => ({
       agencyName: r.agency ?? '',
       status: r.status ?? 'pending',
       notes: r.notes,
+      reason: r.reason,
+      contactInfo: r.contactInfo ?? null,
     }));
   }
 

@@ -19,6 +19,22 @@ export class CaseDecompose20260829000004 implements MigrationInterface {
       DELETE FROM case_referrals cr WHERE NOT EXISTS (SELECT 1 FROM cases c WHERE c.id = cr.case_id);
       ALTER TABLE case_referrals VALIDATE CONSTRAINT fk_case_referrals_case;
 
+      -- Preserve the legacy referrals reason/contactInfo (Wave-1 backfill dropped
+      -- them): add the columns and backfill from the still-present cases.referrals
+      -- JSONB array (must run BEFORE cases.referrals is dropped below).
+      ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS reason TEXT;
+      ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS contact_info TEXT;
+      UPDATE case_referrals cr
+        SET reason = COALESCE(elem->>'reason', ''),
+            contact_info = elem->>'contactInfo'
+        FROM cases c,
+             jsonb_array_elements(COALESCE(c.referrals, '[]'::jsonb)) AS elem
+        WHERE c.id = cr.case_id
+          AND elem->>'agencyName' = cr.agency
+          AND COALESCE(elem->>'status', '') = COALESCE(cr.status, '')
+          AND COALESCE(elem->>'notes', '') = COALESCE(cr.notes, '');
+      ALTER TABLE case_referrals ALTER COLUMN reason SET NOT NULL;
+
       ALTER TABLE case_assistances
         ADD CONSTRAINT fk_case_assistances_case FOREIGN KEY (case_id)
         REFERENCES cases(id) ON DELETE CASCADE
@@ -65,6 +81,8 @@ export class CaseDecompose20260829000004 implements MigrationInterface {
       ALTER TABLE case_assistances DROP CONSTRAINT IF EXISTS fk_case_assistances_case;
       ALTER TABLE case_referrals DROP CONSTRAINT IF EXISTS fk_case_referrals_case;
       ALTER TABLE case_requirements DROP CONSTRAINT IF EXISTS fk_case_requirements_case;
+      ALTER TABLE case_referrals DROP COLUMN IF EXISTS reason;
+      ALTER TABLE case_referrals DROP COLUMN IF EXISTS contact_info;
     `);
   }
 }

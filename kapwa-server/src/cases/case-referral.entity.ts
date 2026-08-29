@@ -20,6 +20,12 @@ export class CaseReferral extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
+  @Column({ type: 'text', nullable: false })
+  reason!: string;
+
+  @Column({ name: 'contact_info', type: 'text', nullable: true })
+  contactInfo?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
