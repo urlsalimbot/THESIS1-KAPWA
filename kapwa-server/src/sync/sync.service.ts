@@ -35,7 +35,17 @@ const ALLOWED_COLUMNS = new Set([
   "intervention_plan","client_signature_url","worker_signature_url","finalized","created_by",
   "full_name","relationship","intervention_id",
   // Allow SLA field on cases
-  "sla_overdue"
+  "sla_overdue",
+  // Referrals now link to persons via person_id (embedded person copy columns dropped)
+  "person_id"
+]);
+
+// Embedded person-copy columns that used to live on referrals but are now owned by
+// the referenced persons row. Stripped only for the referrals table so obsolete
+// clients cannot write to the dropped columns; these names must still be allowed for
+// persons/users/beneficiaries which legitimately sync them.
+const REFERRAL_EMBEDDED_PERSON_COLUMNS = new Set([
+  "surname", "first_name", "middle_name", "extension", "gender", "dob", "address", "phone",
 ]);
 
 const FSM_CONTROL_FIELDS = new Set(['_fsmTransition', '_clientUpdatedAt']);
@@ -49,11 +59,12 @@ function assertNoUnknownMetaFields(payload: Record<string, any>): void {
   }
 }
 
-function sanitizePayload(payload: Record<string, any>): Record<string, any> {
+function sanitizePayload(payload: Record<string, any>, tableName: string): Record<string, any> {
   assertNoUnknownMetaFields(payload);
   const sanitized: Record<string, any> = {};
   for (const [k, v] of Object.entries(payload)) {
     if (FSM_CONTROL_FIELDS.has(k)) continue; // strip FSM control fields
+    if (tableName === 'referrals' && REFERRAL_EMBEDDED_PERSON_COLUMNS.has(k)) continue;
     if (ALLOWED_COLUMNS.has(k)) sanitized[k] = v;
   }
   return sanitized;
@@ -442,7 +453,7 @@ export class SyncService implements OnApplicationShutdown {
 
     try {
       const tableNameFull = this.resolveTableName(tableName);
-      const safePayload = sanitizePayload(payload);
+      const safePayload = sanitizePayload(payload, tableName);
 
       if (operation === 'INSERT') {
         safePayload.id = recordId;
@@ -518,6 +529,7 @@ export class SyncService implements OnApplicationShutdown {
       case_requirements: 'case_requirements',
       case_referrals: 'case_referrals',
       case_assistances: 'case_assistances',
+      referrals: 'referrals',
       sync_queue: 'sync_queue',
       sync_events: 'sync_events',
     };

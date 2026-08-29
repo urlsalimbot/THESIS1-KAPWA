@@ -8,10 +8,6 @@ describe('schema normalization — referrals person link', () => {
     const r = new Referral();
     r.coordinatorId = 'u1';
     r.barangay = 'Poblacion';
-    r.surname = 'Dela Cruz';
-    r.firstName = 'Juan';
-    r.gender = 'Male';
-    r.dob = '1990-01-15';
     r.reason = 'Medical emergency';
     r.personId = 'p1';
     expect(r.personId).toBe('p1');

@@ -1,4 +1,5 @@
 import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Expose } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { User } from '../auth/user.entity';
 import { Case } from '../cases/case.entity';
@@ -22,30 +23,6 @@ export class Referral extends BaseEntity {
   @Column()
   barangay!: string;
 
-  @Column()
-  surname!: string;
-
-  @Column({ name: 'first_name' })
-  firstName!: string;
-
-  @Column({ name: 'middle_name', nullable: true })
-  middleName?: string;
-
-  @Column({ nullable: true })
-  extension?: string;
-
-  @Column()
-  gender!: string;
-
-  @Column({ type: 'date' })
-  dob!: string;
-
-  @Column({ type: 'jsonb', nullable: true })
-  address?: Record<string, any>;
-
-  @Column({ nullable: true })
-  phone?: string;
-
   @Column({ type: 'text' })
   reason!: string;
 
@@ -65,9 +42,23 @@ export class Referral extends BaseEntity {
   @Column({ name: 'person_id', nullable: true })
   personId?: string;
 
-  @ManyToOne(() => Person)
+  @ManyToOne(() => Person, { eager: true, nullable: true })
   @JoinColumn({ name: 'person_id' })
   person?: Person;
+
+  // --- Legacy flattened embedded fields, now assembled from the joined Person ---
+  @Expose() get surname(): string { return this.person?.surname ?? ''; }
+  @Expose() get firstName(): string { return this.person?.firstName ?? ''; }
+  @Expose() get middleName(): string | undefined { return this.person?.middleName; }
+  @Expose() get extension(): string | undefined { return this.person?.extension; }
+  @Expose() get gender(): string { return this.person?.gender ?? ''; }
+  @Expose() get dob(): string {
+    return this.person?.dob ? new Date(this.person.dob).toISOString().split('T')[0] : '';
+  }
+  @Expose() get address(): Record<string, any> | undefined {
+    return this.person?.currentAddress;
+  }
+  @Expose() get phone(): string | undefined { return this.person?.phone; }
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
