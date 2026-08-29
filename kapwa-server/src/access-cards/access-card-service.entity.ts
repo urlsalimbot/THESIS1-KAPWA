@@ -17,9 +17,6 @@ export class AccessCardService extends BaseEntity {
   @Column({ name: 'cost', type: 'decimal', precision: 12, scale: 2, nullable: true })
   cost?: number;
 
-  @Column({ name: 'agency', nullable: true })
-  agency?: string;
-
   @Column({ name: 'agency_id', nullable: true })
   agencyId?: string;
 

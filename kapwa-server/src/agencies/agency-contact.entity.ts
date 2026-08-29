@@ -1,10 +1,15 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../common/base.entity';
+import { Agency } from './agency.entity';
 
 @Entity('agency_contacts')
 export class AgencyContact extends BaseEntity {
   @Column({ name: 'agency_id' })
   agencyId!: string;
+
+  @ManyToOne(() => Agency, a => a.contacts, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'agency_id' })
+  agency!: Agency;
 
   @Column({ name: 'contact_type' })
   contactType!: string;

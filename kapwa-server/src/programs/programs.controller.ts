@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ProgramsService } from './programs.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,6 +12,8 @@ import { CreateProgramSchema, UpdateProgramSchema, CreateProgramInput, UpdatePro
 @ApiBearerAuth()
 @Controller('programs')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 export class ProgramsController {
   constructor(private progService: ProgramsService) {}
 

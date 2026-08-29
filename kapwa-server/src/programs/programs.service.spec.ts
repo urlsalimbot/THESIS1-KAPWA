@@ -16,6 +16,7 @@ describe('ProgramsService', () => {
       findOne: jest.fn(),
       update: jest.fn(),
       query: jest.fn(),
+      manager: { create: jest.fn((_entity: any, dto: any) => dto) },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,9 +61,21 @@ describe('ProgramsService', () => {
       const saved = { id: '1', ...data, formVersion: 1 };
       repoMock.create.mockReturnValue(saved);
       repoMock.save.mockResolvedValue(saved);
-      const result = await service.create(data);
-      expect(repoMock.create).toHaveBeenCalledWith(data);
-      expect(repoMock.save).toHaveBeenCalledWith(saved);
+      const result = await service.create(data as any);
+      expect(repoMock.create).toHaveBeenCalledWith({
+        name: 'AICS',
+        category: 'Medical Assistance',
+        waitingPeriodDays: 3,
+        legalBasis: 'RA 11223',
+        approvalWorkflow: data.approvalWorkflow,
+        isActive: true,
+        // fundSources/requiredDocuments are decomposed into child rows
+        fundSourceRows: [{ name: 'DSWD' }, { name: 'LGU' }],
+        requiredDocumentRows: [
+          { documentKey: 'Valid ID', mandatory: true },
+          { documentKey: 'Barangay Certificate', mandatory: true },
+        ],
+      });
       expect(result.approvalWorkflow).toHaveLength(2);
       expect(result.approvalWorkflow![0].stepName).toBe('Intake Review');
       expect(result.approvalWorkflow![0].approverRole).toBe('social_worker');

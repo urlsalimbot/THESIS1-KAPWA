@@ -1,5 +1,8 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Expose, Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
+import { ProgramFundSource } from './program-fund-source.entity';
+import { ProgramRequiredDocument } from './program-required-document.entity';
 
 export interface ApprovalStep {
   stepName: string;
@@ -20,11 +23,25 @@ export class Program extends BaseEntity {
   @Column({ nullable: true })
   waitingPeriodDays?: number;
 
-  @Column({ type: 'jsonb', nullable: true })
-  requiredDocuments?: string[];
+  @Exclude()
+  @OneToMany(() => ProgramFundSource, f => f.program, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  fundSourceRows!: ProgramFundSource[];
 
-  @Column('text', { name: 'fund_sources', array: true, nullable: true })
-  fundSources?: string[];
+  @Exclude()
+  @OneToMany(() => ProgramRequiredDocument, d => d.program, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  requiredDocumentRows!: ProgramRequiredDocument[];
+
+  @Expose()
+  get fundSources(): string[] | undefined {
+    if (!this.fundSourceRows || this.fundSourceRows.length === 0) return undefined;
+    return this.fundSourceRows.map(f => f.name);
+  }
+
+  @Expose()
+  get requiredDocuments(): string[] | undefined {
+    if (!this.requiredDocumentRows || this.requiredDocumentRows.length === 0) return undefined;
+    return this.requiredDocumentRows.map(d => d.documentKey);
+  }
 
   @Column({ type: 'jsonb', name: 'approval_workflow', nullable: true })
   approvalWorkflow?: ApprovalStep[];       // WAS: string[] (text[])

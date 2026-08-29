@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Program, ApprovalStep } from './program.entity';
+import { ProgramFundSource } from './program-fund-source.entity';
+import { ProgramRequiredDocument } from './program-required-document.entity';
 import { FormVersionHistory } from './form-version-history.entity';
 import { UpdateProgramInput } from './dto/programs.zod';
 
@@ -16,7 +18,21 @@ export class ProgramsService {
     if (data.approvalWorkflow) {
       this.validateWorkflow(data.approvalWorkflow);
     }
-    const prog = this.progRepo.create(data);
+    const { fundSources, requiredDocuments, ...rest } = data;
+    const hasChildren = Array.isArray(fundSources) || Array.isArray(requiredDocuments);
+    const prog = this.progRepo.create(
+      hasChildren
+        ? {
+            ...rest,
+            fundSourceRows: Array.isArray(fundSources)
+              ? fundSources.map(f => this.progRepo.manager.create(ProgramFundSource, { name: f }))
+              : undefined,
+            requiredDocumentRows: Array.isArray(requiredDocuments)
+              ? requiredDocuments.map(d => this.progRepo.manager.create(ProgramRequiredDocument, { documentKey: d, mandatory: true }))
+              : undefined,
+          }
+        : rest,
+    );
     return this.progRepo.save(prog);
   }
 
@@ -36,8 +52,23 @@ export class ProgramsService {
     if (data.approvalWorkflow) {
       this.validateWorkflow(data.approvalWorkflow);
     }
+    // Upsert child rows (orphanedRowAction:'delete' removes rows dropped from the array).
+    if (Array.isArray(data.fundSources) || Array.isArray(data.requiredDocuments)) {
+      if (Array.isArray(data.fundSources)) {
+        prog.fundSourceRows = data.fundSources.map(f =>
+          this.progRepo.manager.create(ProgramFundSource, { programId: id, name: f }),
+        );
+      }
+      if (Array.isArray(data.requiredDocuments)) {
+        prog.requiredDocumentRows = data.requiredDocuments.map(d =>
+          this.progRepo.manager.create(ProgramRequiredDocument, { programId: id, documentKey: d, mandatory: true }),
+        );
+      }
+      await this.progRepo.save(prog);
+    }
+    const { fundSources, requiredDocuments, ...rest } = data;
     const changed = 'formTemplate' in data && JSON.stringify(data.formTemplate) !== JSON.stringify(prog.formTemplate);
-    await this.progRepo.update(id, data as any);
+    await this.progRepo.update(id, rest as any);
     if (changed) {
       await this.progRepo.query(
         'UPDATE programs SET form_version = form_version + 1 WHERE id = $1',

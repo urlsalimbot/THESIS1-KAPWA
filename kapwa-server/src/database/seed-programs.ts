@@ -304,10 +304,26 @@ async function seedPrograms(dataSource: DataSource) {
       }
 
       await q.query(
-        `INSERT INTO programs (id, name, category, waiting_period_days, required_documents, fund_sources, legal_basis, is_active)
-         VALUES ($1,$2,$3,$4,$5::jsonb,$6::text[],$7,$8)`,
-        [prog.id, prog.name, prog.category, prog.waitingPeriodDays, JSON.stringify(prog.requiredDocuments), prog.fundSources, prog.legalBasis, prog.isActive],
+        `INSERT INTO programs (id, name, category, waiting_period_days, legal_basis, is_active)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [prog.id, prog.name, prog.category, prog.waitingPeriodDays, prog.legalBasis, prog.isActive],
       );
+
+      for (const fundSource of prog.fundSources) {
+        await q.query(
+          `INSERT INTO program_fund_sources (program_id, name)
+           VALUES ($1, $2)`,
+          [prog.id, fundSource],
+        );
+      }
+
+      for (const documentKey of prog.requiredDocuments) {
+        await q.query(
+          `INSERT INTO program_required_documents (program_id, document_key, mandatory)
+           VALUES ($1, $2, true)`,
+          [prog.id, documentKey],
+        );
+      }
 
       inserted.push(`  SEED  ${prog.name}`);
     }

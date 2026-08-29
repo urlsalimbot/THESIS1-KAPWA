@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Agency } from './agency.entity';
+import { AgencyContact } from './agency-contact.entity';
 import { CreateAgencyInput } from './dto/agencies.zod';
 
 @Injectable()
@@ -27,12 +28,21 @@ export class AgenciesService {
     const code = dto.code.toUpperCase();
     const existing = await this.repo.findOne({ where: { code } });
     if (existing) throw new BadRequestException(`Agency code already exists: ${code}`);
+    const contacts = dto.contactInfo
+      ? Object.entries(dto.contactInfo).map(([contactType, value]) =>
+          this.repo.manager.create(AgencyContact, {
+            contactType,
+            value: String(value),
+            isPrimary: true,
+          }),
+        )
+      : undefined;
     return this.repo.save(
       this.repo.create({
         code,
         name: dto.name,
         type: dto.type,
-        contactInfo: dto.contactInfo,
+        contacts,
         isActive: true,
       }),
     );

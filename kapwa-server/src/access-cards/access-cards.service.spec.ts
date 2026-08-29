@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccessCardsService } from './access-cards.service';
 import { AccessCardService } from './access-card-service.entity';
-import { Agency } from '../agencies/agency.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 
@@ -10,7 +9,6 @@ describe('AccessCardsService', () => {
   let service: AccessCardsService;
   let repoMock: any;
   let queryRunnerMock: any;
-  let agencyRepoMock: any;
   let consentRepoMock: any;
   let referralRepoMock: any;
 
@@ -36,14 +34,12 @@ describe('AccessCardsService', () => {
         },
       },
     };
-    agencyRepoMock = { findOne: jest.fn() };
     consentRepoMock = { findOne: jest.fn() };
     referralRepoMock = { find: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccessCardsService,
         { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
-        { provide: getRepositoryToken(Agency), useValue: agencyRepoMock },
         { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepoMock },
       ],
@@ -145,33 +141,6 @@ describe('AccessCardsService', () => {
         agencyId: 'ag-1',
       });
       expect(result).toEqual(expect.objectContaining({ id: 's1', agencyId: 'ag-1' }));
-      expect(agencyRepoMock.findOne).not.toHaveBeenCalled();
-    });
-
-    it('resolves a freeform code to agencyId', async () => {
-      agencyRepoMock.findOne.mockResolvedValue({ id: 'ag-1', code: 'RHU' });
-      repoMock.create.mockImplementation((dto: any) => dto);
-      repoMock.save.mockImplementation(async (dto: any) => ({ id: 's1', ...dto }));
-      const result = await service.logService({
-        accessCardCode: 'NORZ-AC-2026-0042',
-        serviceRendered: 'Medical Aid',
-        serviceDate: new Date(),
-        agency: 'rhu',
-      });
-      expect(agencyRepoMock.findOne).toHaveBeenCalledWith({ where: [{ code: 'RHU' }, { name: 'rhu' }] });
-      expect(result).toEqual(expect.objectContaining({ id: 's1', agencyId: 'ag-1' }));
-    });
-
-    it('throws 422 for an unknown freeform code', async () => {
-      agencyRepoMock.findOne.mockResolvedValue(null);
-      await expect(
-        service.logService({
-          accessCardCode: 'NORZ-AC-2026-0042',
-          serviceRendered: 'Medical Aid',
-          serviceDate: new Date(),
-          agency: 'bogus',
-        }),
-      ).rejects.toThrow('Unknown agency: bogus');
     });
   });
 

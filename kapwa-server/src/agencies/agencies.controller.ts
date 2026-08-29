@@ -1,4 +1,5 @@
-import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -10,6 +11,8 @@ import { CreateAgencySchema } from './dto/agencies.zod';
 @ApiTags('Agencies')
 @Controller('agencies')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 @ApiBearerAuth()
 export class AgenciesController {
   constructor(private readonly svc: AgenciesService) {}

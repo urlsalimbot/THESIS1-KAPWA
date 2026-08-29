@@ -1,8 +1,7 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccessCardService } from './access-card-service.entity';
-import { Agency } from '../agencies/agency.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { User } from '../auth/user.entity';
@@ -13,8 +12,6 @@ export class AccessCardsService {
   constructor(
     @InjectRepository(AccessCardService)
     private repo: Repository<AccessCardService>,
-    @InjectRepository(Agency)
-    private agencyRepo: Repository<Agency>,
     @InjectRepository(ConsentLedger)
     private consentRepo: Repository<ConsentLedger>,
     @InjectRepository(InterAgencyReferral)
@@ -82,33 +79,19 @@ export class AccessCardsService {
     return { beneficiary: ben[0], code: ben[0].access_card_code, services };
   }
 
-  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agency?: string; agencyId?: string; workerNameSign?: string; category?: string; loggedBy?: string; sourceBarangay?: string }) {
-    let agencyId = data.agencyId;
-    if (!agencyId && data.agency && data.agency.trim()) {
-      agencyId = await this.resolveAgencyId(data.agency);
-    }
+  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agencyId?: string; workerNameSign?: string; category?: string; loggedBy?: string; sourceBarangay?: string }) {
     const entry = this.repo.create({
       accessCardCode: data.accessCardCode,
       serviceRendered: data.serviceRendered,
       serviceDate: data.serviceDate,
       cost: data.cost,
-      agency: data.agency,
-      agencyId,
+      agencyId: data.agencyId,
       workerNameSign: data.workerNameSign,
       category: data.category || 'referral',
       loggedBy: data.loggedBy,
       sourceBarangay: data.sourceBarangay,
     });
     return this.repo.save(entry);
-  }
-
-  private async resolveAgencyId(agencyText: string): Promise<string> {
-    const trimmed = agencyText.trim();
-    const agency = await this.agencyRepo.findOne({
-      where: [{ code: trimmed.toUpperCase() }, { name: trimmed }],
-    });
-    if (!agency) throw new UnprocessableEntityException(`Unknown agency: ${agencyText}`);
-    return agency.id;
   }
 
   async getAgencySummary(cardCode: string, caller: User) {
