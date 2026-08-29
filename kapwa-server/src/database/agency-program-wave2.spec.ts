@@ -4,6 +4,9 @@ import { Program } from '../programs/program.entity';
 import { ProgramFundSource } from '../programs/program-fund-source.entity';
 import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
 import { AccessCardService } from '../access-cards/access-card-service.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
+import { Person } from '../beneficiaries/person.entity';
+import { PersonContact } from '../beneficiaries/person-contact.entity';
 import { instanceToPlain } from 'class-transformer';
 
 describe('Agency/Program wave-2 getters', () => {
@@ -106,5 +109,39 @@ describe('Agency/Program wave-2 getters', () => {
     const plain = instanceToPlain(s, { strategy: 'exposeAll' }) as Record<string, unknown>;
     expect(plain!.agencyId).toBe('ag-1');
     expect(plain!.agency).toBeUndefined();
+  });
+});
+
+describe('Inter-Agency Referral wave-2 nested agency serialization', () => {
+  it('serializes nested Agency contactInfo under exposeAll without leaking contacts or crashing', () => {
+    const a = new Agency();
+    a.code = 'RHU'; a.name = 'RHU 1';
+    const ac = new AgencyContact();
+    ac.contactType = 'phone'; ac.value = '123'; ac.isPrimary = true;
+    (a as any).contacts = [ac];
+
+    const p = new Person();
+    p.surname = 'X'; p.firstName = 'Y';
+    const pc = new PersonContact();
+    pc.contactType = 'phone'; pc.value = '9'; pc.isPrimary = true;
+    (p as any).contacts = [pc];
+    (p as any).addresses = [];
+    (p as any).roles = [];
+
+    const r = new InterAgencyReferral();
+    (r as any).fromAgency = a;
+    (r as any).toAgency = a;
+    (r as any).person = p;
+
+    let plain: any;
+    expect(() => {
+      // Mirrors inter-agency-referrals.controller.ts @SerializeOptions({ strategy: 'exposeAll' })
+      plain = instanceToPlain(r, { strategy: 'exposeAll' });
+    }).not.toThrow();
+
+    expect(plain!.fromAgency!.contactInfo).toEqual({ phone: '123' });
+    expect(plain!.fromAgency!.contacts).toBeUndefined();
+    expect(plain!.toAgency!.contactInfo).toEqual({ phone: '123' });
+    expect(plain!.person!.surname).toBe('X');
   });
 });

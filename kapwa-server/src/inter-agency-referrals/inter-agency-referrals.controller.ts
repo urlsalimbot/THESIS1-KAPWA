@@ -9,7 +9,9 @@ import {
   Query,
   Request,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -25,6 +27,8 @@ import { AuthenticatedRequest } from '../auth/types';
 
 @ApiTags('Inter-Agency Referrals')
 @Controller('inter-agency-referrals')
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class InterAgencyReferralsController {
