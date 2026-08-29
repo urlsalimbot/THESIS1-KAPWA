@@ -9,16 +9,15 @@ export class DropPersonLegacyColumns20260829000001 implements MigrationInterface
         ADD CONSTRAINT fk_person_addresses_person FOREIGN KEY (person_id)
         REFERENCES persons(id) ON DELETE CASCADE
         NOT VALID;
+      DELETE FROM person_addresses pa WHERE NOT EXISTS (SELECT 1 FROM persons p WHERE p.id = pa.person_id);
       ALTER TABLE person_addresses VALIDATE CONSTRAINT fk_person_addresses_person;
 
       ALTER TABLE person_contacts
         ADD CONSTRAINT fk_person_contacts_person FOREIGN KEY (person_id)
         REFERENCES persons(id) ON DELETE CASCADE
         NOT VALID;
-      ALTER TABLE person_contacts VALIDATE CONSTRAINT fk_person_contacts_person;
-
       DELETE FROM person_contacts pc WHERE NOT EXISTS (SELECT 1 FROM persons p WHERE p.id = pc.person_id);
-      DELETE FROM person_addresses pa WHERE NOT EXISTS (SELECT 1 FROM persons p WHERE p.id = pa.person_id);
+      ALTER TABLE person_contacts VALIDATE CONSTRAINT fk_person_contacts_person;
 
       ALTER TABLE persons DROP COLUMN IF EXISTS address;
       ALTER TABLE persons DROP COLUMN IF EXISTS phone;

@@ -81,7 +81,9 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
     await service.findAll('Norzagaray', undefined, 1, 100);
 
     expect(mockQb.andWhere).toHaveBeenCalledWith(
-      expect.stringContaining('p.address ILIKE :barangay'),
+      expect.stringContaining(
+        'EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))',
+      ),
       expect.objectContaining({ barangay: expect.stringContaining('Norzagaray') }),
     );
   });

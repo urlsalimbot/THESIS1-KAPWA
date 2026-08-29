@@ -136,14 +136,14 @@ export class IntakeService {
       await run(
         `WITH updated AS (
            UPDATE person_addresses SET
-             barangay = COALESCE($3, barangay),
-             city = COALESCE($4, city),
-             province = COALESCE($5, province),
+             barangay = $2,
+             city = $3,
+             province = $4,
              is_primary = TRUE
            WHERE person_id = $1 AND address_type = 'current' RETURNING id
          )
          INSERT INTO person_addresses (person_id, address_type, barangay, city, province, is_primary)
-         SELECT $1, 'current', $3, $4, $5, TRUE
+         SELECT $1, 'current', $2, $3, $4, TRUE
          WHERE NOT EXISTS (SELECT 1 FROM updated)`,
         [personId, currentAddress.barangay ?? null, currentAddress.city ?? null, currentAddress.province ?? null],
       );
