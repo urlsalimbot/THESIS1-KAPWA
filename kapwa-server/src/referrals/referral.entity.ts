@@ -1,5 +1,5 @@
 import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Expose } from 'class-transformer';
+import { Expose, Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { User } from '../auth/user.entity';
 import { Case } from '../cases/case.entity';
@@ -44,6 +44,7 @@ export class Referral extends BaseEntity {
 
   @ManyToOne(() => Person, { eager: true, nullable: true })
   @JoinColumn({ name: 'person_id' })
+  @Exclude()
   person?: Person;
 
   // --- Legacy flattened embedded fields, now assembled from the joined Person ---
@@ -53,7 +54,14 @@ export class Referral extends BaseEntity {
   @Expose() get extension(): string | undefined { return this.person?.extension; }
   @Expose() get gender(): string { return this.person?.gender ?? ''; }
   @Expose() get dob(): string {
-    return this.person?.dob ? new Date(this.person.dob).toISOString().split('T')[0] : '';
+    const d = this.person?.dob;
+    if (!d) return '';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
   @Expose() get address(): Record<string, any> | undefined {
     return this.person?.currentAddress;

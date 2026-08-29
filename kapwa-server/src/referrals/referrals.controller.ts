@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { CreateReferralSchema, DeclineReferralSchema, CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -11,6 +12,8 @@ import { AuthenticatedRequest } from '../auth/types';
 
 @ApiTags('Referrals')
 @Controller('referrals')
+@UseInterceptors(ClassSerializerInterceptor)
+@SerializeOptions({ strategy: 'exposeAll' })
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
 @ApiBearerAuth()
 export class ReferralsController {

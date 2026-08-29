@@ -49,7 +49,11 @@ export class ReferralPersonLink20260829000005 implements MigrationInterface {
           IF matched IS NULL THEN
             INSERT INTO persons (id, surname, first_name, middle_name, extension, gender, dob, created_at, updated_at)
             VALUES (uuid_generate_v7(), ref.surname, ref.first_name, ref.middle_name, ref.extension,
-                    COALESCE(NULLIF(ref.gender, ''), 'Male'), ref.dob, NOW(), NOW())
+                    CASE
+                      WHEN NULLIF(BTRIM(ref.gender), '') IS NULL THEN 'Male'
+                      WHEN UPPER(BTRIM(ref.gender)) IN ('MALE','M') THEN 'Male'
+                      ELSE 'Female'
+                    END, ref.dob, NOW(), NOW())
             RETURNING id INTO matched;
 
             IF ref.phone IS NOT NULL AND ref.phone <> '' THEN

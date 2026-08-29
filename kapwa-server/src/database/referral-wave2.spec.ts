@@ -2,6 +2,7 @@ import { Referral } from '../referrals/referral.entity';
 import { Person } from '../beneficiaries/person.entity';
 import { PersonContact } from '../beneficiaries/person-contact.entity';
 import { PersonAddress } from '../beneficiaries/person-address.entity';
+import { instanceToPlain } from 'class-transformer';
 
 describe('Referral wave-2 getters', () => {
   it('assembles flattened embedded fields from the joined Person', () => {
@@ -48,5 +49,31 @@ describe('Referral wave-2 getters', () => {
     expect(r.dob).toBe('');
     expect(r.address).toBeUndefined();
     expect(r.phone).toBeUndefined();
+  });
+
+  it('serializes flattened shape under exposeAll without leaking the person relation', () => {
+    const person = new Person();
+    person.surname = 'Reyes';
+    person.firstName = 'Maria';
+    person.gender = 'Female';
+    person.dob = new Date('1995-08-20');
+    const r = new Referral();
+    r.reason = 'Medical emergency';
+    r.barangay = 'Poblacion';
+    r.coordinatorId = 'u1';
+    r.person = person;
+    r.personId = person.id;
+
+    let plain: Record<string, unknown>;
+    expect(() => {
+      // Mirror referrals.controller.ts @SerializeOptions({ strategy: 'exposeAll' })
+      plain = instanceToPlain(r, { strategy: 'exposeAll' }) as Record<string, unknown>;
+    }).not.toThrow();
+
+    expect(plain!.surname).toBe('Reyes');
+    expect(plain!.firstName).toBe('Maria');
+    expect(plain!.gender).toBe('Female');
+    expect(plain!.dob).toBe('1995-08-20');
+    expect(plain!.person).toBeUndefined();
   });
 });
