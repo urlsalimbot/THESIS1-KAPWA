@@ -1,10 +1,15 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../common/base.entity';
+import { Case } from './case.entity';
 
 @Entity('case_assistances')
 export class CaseAssistance extends BaseEntity {
   @Column({ name: 'case_id' })
   caseId!: string;
+
+  @ManyToOne(() => Case, c => c.assistances, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'case_id' })
+  case!: Case;
 
   @Column({ name: 'assistance_type' })
   assistanceType!: string;

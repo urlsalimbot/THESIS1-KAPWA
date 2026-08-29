@@ -8,6 +8,7 @@ import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
+import { CaseRequirement } from '../cases/case-requirement.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { memberToPerson } from './member-person';
@@ -335,10 +336,19 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         beneficiaryId: savedBeneficiary.id,
         status: CaseStatus.ENROLLED,
         serviceRequested: data.case.serviceRequested,
-        requirementsChecklist: data.case.requirementsChecklist,
         assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
       });
       const savedCase = await queryRunner.manager.save(caseEntity);
+
+      if (data.case?.requirementsChecklist) {
+        for (const [requirementKey, met] of Object.entries(data.case.requirementsChecklist)) {
+          await queryRunner.manager.save(CaseRequirement, {
+            caseId: savedCase.id,
+            requirementKey,
+            met,
+          });
+        }
+      }
 
       // 10. Create ConsentLedger
       const consent = this.consentRepo.create({
@@ -636,15 +646,24 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
 
       let savedCase = null;
       if (!recentCase) {
-        const caseEntity = this.caseRepo.create({
+const caseEntity = this.caseRepo.create({
           controlNo,
           beneficiaryId: savedBeneficiary.id,
           status: CaseStatus.ENROLLED,
           serviceRequested: data.case.serviceRequested,
-          requirementsChecklist: data.case.requirementsChecklist,
-assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
+          assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
         });
         savedCase = await queryRunner.manager.save(caseEntity);
+
+        if (data.case?.requirementsChecklist) {
+          for (const [requirementKey, met] of Object.entries(data.case.requirementsChecklist)) {
+            await queryRunner.manager.save(CaseRequirement, {
+              caseId: savedCase.id,
+              requirementKey,
+              met,
+            });
+          }
+        }
       }
 
       const consent = this.consentRepo.create({

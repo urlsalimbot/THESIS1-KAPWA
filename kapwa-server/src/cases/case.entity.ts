@@ -1,7 +1,11 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Expose } from 'class-transformer';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { User } from '../auth/user.entity';
 import { BaseEntity } from '../common/base.entity';
+import { CaseRequirement } from './case-requirement.entity';
+import { CaseReferral } from './case-referral.entity';
+import { CaseAssistance } from './case-assistance.entity';
 
 export enum CaseStatus {
   ENROLLED = 'enrolled',
@@ -24,8 +28,75 @@ export class Case extends BaseEntity {
   @Column('text', { name: 'service_requested', array: true, nullable: true })
   serviceRequested?: string[];
 
-  @Column({ name: 'requirements_checklist', type: 'jsonb', nullable: true })
-  requirementsChecklist?: Record<string, boolean>;
+  @Column('text', { name: 'nature_of_service', array: true, nullable: true })
+  natureOfService?: string[];
+
+  @OneToMany(() => CaseRequirement, r => r.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  requirements!: CaseRequirement[];
+
+  @OneToMany(() => CaseReferral, r => r.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  referralRows!: CaseReferral[];
+
+  @OneToMany(() => CaseAssistance, a => a.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  assistances!: CaseAssistance[];
+
+  @Expose()
+  get requirementsChecklist(): Record<string, boolean> | undefined {
+    if (!this.requirements || this.requirements.length === 0) return undefined;
+    const out: Record<string, boolean> = {};
+    this.requirements.forEach(r => { out[r.requirementKey] = !!r.met; });
+    return out;
+  }
+
+  @Expose()
+  get financialSubsidies(): Record<string, unknown> | undefined {
+    return this.assistances?.find(a => a.assistanceType === 'financial')?.details;
+  }
+
+  @Expose()
+  get amountAssistance(): number | undefined {
+    const a = this.assistances?.find(a => a.assistanceType === 'financial');
+    return a?.amount != null ? Number(a.amount) : undefined;
+  }
+
+  @Expose()
+  get modeFinancialAssistance(): string | undefined {
+    return this.assistances?.find(a => a.assistanceType === 'financial')?.mode;
+  }
+
+  @Expose()
+  get sourceOfFund(): string | undefined {
+    return this.assistances?.find(a => a.assistanceType === 'financial')?.sourceOfFund;
+  }
+
+  @Expose()
+  get legislatorSpecify(): string | undefined {
+    return this.assistances?.find(a => a.assistanceType === 'financial')?.legislatorSpecify;
+  }
+
+  @Expose()
+  get otherAssistance(): Record<string, unknown> | undefined {
+    const others = this.assistances?.filter(a => a.assistanceType !== 'financial') ?? [];
+    if (others.length === 0) return undefined;
+    const out: Record<string, unknown> = {};
+    others.forEach(o => { out[o.assistanceType] = o.details ?? {}; });
+    return out;
+  }
+
+  @Expose()
+  get referrals(): Array<{ agencyName: string; status: string; notes?: string }> | undefined {
+    if (!this.referralRows || this.referralRows.length === 0) return undefined;
+    return this.referralRows.map(r => ({
+      agencyName: r.agency ?? '',
+      status: r.status ?? 'pending',
+      notes: r.notes,
+    }));
+  }
+
+  @Expose()
+  get followUpVisits(): undefined {
+    return undefined;
+  }
 
   @Column({ name: 'status', type: 'enum', enum: CaseStatus, default: CaseStatus.ENROLLED })
   status!: CaseStatus;
@@ -65,27 +136,6 @@ export class Case extends BaseEntity {
   @Column({ name: 'client_category', nullable: true })
   clientCategory?: string;
 
-  @Column('text', { name: 'nature_of_service', array: true, nullable: true })
-  natureOfService?: string[];
-
-  @Column({ name: 'financial_subsidies', type: 'jsonb', nullable: true })
-  financialSubsidies?: Record<string, unknown>;
-
-  @Column({ name: 'amount_assistance', type: 'decimal', precision: 12, scale: 2, nullable: true })
-  amountAssistance?: number;
-
-  @Column({ name: 'mode_financial_assistance', nullable: true })
-  modeFinancialAssistance?: string;
-
-  @Column({ name: 'source_of_fund', nullable: true })
-  sourceOfFund?: string;
-
-  @Column({ name: 'legislator_specify', nullable: true })
-  legislatorSpecify?: string;
-
-  @Column({ name: 'other_assistance', type: 'jsonb', nullable: true })
-  otherAssistance?: Record<string, unknown>;
-
   @Column({ name: 'interviewed_by', nullable: true })
   interviewedBy?: string;
 
@@ -94,15 +144,6 @@ export class Case extends BaseEntity {
 
   @Column({ name: 'self_reliance_plan', type: 'text', nullable: true })
   selfReliancePlan?: string;
-
-  @Column({ name: 'referrals', type: 'jsonb', nullable: true })
-  referrals?: Array<{
-    agencyName: string;
-    contactInfo?: string;
-    reason: string;
-    status: 'pending' | 'completed' | 'declined';
-    notes?: string;
-  }>;
 
   @Column({ name: 'follow_up_date', type: 'date', nullable: true })
   followUpDate?: string;
@@ -133,14 +174,6 @@ export class Case extends BaseEntity {
 
   @Column({ name: 'closure_date', type: 'date', nullable: true })
   closureDate?: string;
-
-  @Column({ name: 'follow_up_visits', type: 'jsonb', nullable: true })
-  followUpVisits?: Array<{
-    date: string;
-    type: string;
-    notes: string;
-    outcome: string;
-  }>;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

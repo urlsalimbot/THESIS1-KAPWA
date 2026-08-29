@@ -3,6 +3,9 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
+import { CaseRequirement } from './case-requirement.entity';
+import { CaseReferral } from './case-referral.entity';
+import { CaseAssistance } from './case-assistance.entity';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -65,10 +68,26 @@ export class CasesService {
           controlNo,
           status: CaseStatus.ENROLLED,
           serviceRequested: data.serviceRequested,
-          requirementsChecklist: data.requirementsChecklist,
           beneficiaryId: data.beneficiaryId,
           assignedWorkerId: data.assignedWorkerId,
         });
+        if ((data as any).requirementsChecklist && Object.keys((data as any).requirementsChecklist).length > 0) {
+          c.requirements = Object.entries((data as any).requirementsChecklist).map(([requirementKey, met]) =>
+            this.caseRepo.manager.create(CaseRequirement, { caseId: c.id, requirementKey, met: met as boolean }),
+          );
+        }
+        if ((data as any).amountAssistance != null || (data as any).financialSubsidies != null || (data as any).modeFinancialAssistance != null || (data as any).sourceOfFund != null || (data as any).legislatorSpecify != null) {
+          c.assistances = [
+            this.caseRepo.manager.create(CaseAssistance, {
+              assistanceType: 'financial',
+              amount: (data as any).amountAssistance,
+              mode: (data as any).modeFinancialAssistance,
+              sourceOfFund: (data as any).sourceOfFund,
+              legislatorSpecify: (data as any).legislatorSpecify,
+              details: (data as any).financialSubsidies,
+            }),
+          ];
+        }
         await this.caseRepo.save(c);
         return c;
       } catch (err: any) {
@@ -84,7 +103,10 @@ export class CasesService {
     const qb = this.caseRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'beneficiary')
       .leftJoinAndSelect('beneficiary.person', 'person')
-      .leftJoinAndSelect('c.assignedWorker', 'assignedWorker');
+      .leftJoinAndSelect('c.assignedWorker', 'assignedWorker')
+      .leftJoinAndSelect('c.requirements', 'case_requirements')
+      .leftJoinAndSelect('c.referralRows', 'case_referrals')
+      .leftJoinAndSelect('c.assistances', 'case_assistances');
 
     if (filters?.status) {
       qb.andWhere('c.status = :status', { status: filters.status });
@@ -112,15 +134,15 @@ export class CasesService {
 
     const [cases, total] = await qb.getManyAndCount();
 
-    let filtered = cases.map(c => ({
-      ...c,
-      slaOverdue: this.computeSlaOverdue(c),
-    }));
+    let filtered = cases.map(c => {
+      (c as any).slaOverdue = this.computeSlaOverdue(c);
+      return c;
+    });
 
     if (filters?.sla === 'overdue') {
-      filtered = filtered.filter(c => c.slaOverdue);
+      filtered = filtered.filter(c => (c as any).slaOverdue);
     } else if (filters?.sla === 'on_track') {
-      filtered = filtered.filter(c => !c.slaOverdue);
+      filtered = filtered.filter(c => !(c as any).slaOverdue);
     }
 
     // ageRange and category are client-calculated on beneficiary data, filter post-query
@@ -143,10 +165,8 @@ export class CasesService {
 
   async getCaseWithSla(id: string) {
     const c = await this.findById(id);
-    return {
-      ...c,
-      slaOverdue: this.computeSlaOverdue(c),
-    };
+    (c as any).slaOverdue = this.computeSlaOverdue(c);
+    return c;
   }
 
   async findById(id: string) {
@@ -359,12 +379,6 @@ export class CasesService {
       socialWorkerAssessment: data.socialWorkerAssessment,
       clientCategory: data.clientCategory,
       natureOfService: data.natureOfService,
-      financialSubsidies: data.financialSubsidies,
-      amountAssistance: data.amountAssistance,
-      modeFinancialAssistance: data.modeFinancialAssistance,
-      sourceOfFund: data.sourceOfFund,
-      legislatorSpecify: data.legislatorSpecify,
-      otherAssistance: data.otherAssistance,
       interviewedBy: data.interviewedBy,
       clientSignature: data.clientSignature,
       updatedAt: new Date(),
@@ -375,14 +389,22 @@ export class CasesService {
   async updateTransitionPlan(id: string, data: TransitionPlanInput) {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
-    Object.assign(caseEntity, data);
+    const { referrals, ...rest } = data;
+    Object.assign(caseEntity, rest);
+    if (referrals !== undefined && referrals !== null) {
+      caseEntity.referralRows = referrals.map(r =>
+        this.caseRepo.manager.create(CaseReferral, { caseId: caseEntity.id, agency: r.agencyName, status: r.status, notes: r.notes ?? undefined }),
+      );
+    }
     return this.caseRepo.save(caseEntity);
   }
 
   async updateRequirements(id: string, data: RequirementsInput) {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
-    caseEntity.requirementsChecklist = data.requirementsChecklist;
+    caseEntity.requirements = Object.entries(data.requirementsChecklist).map(([requirementKey, met]) =>
+      this.caseRepo.manager.create(CaseRequirement, { caseId: caseEntity.id, requirementKey, met }),
+    );
     return this.caseRepo.save(caseEntity);
   }
 
@@ -408,16 +430,31 @@ export class CasesService {
       swdiScore: data.swdiScore,
       familyDialogueNotes: data.familyDialogueNotes,
       natureOfService: data.natureOfService,
-      financialSubsidies: data.financialSubsidies,
-      amountAssistance: data.amountAssistance,
-      modeFinancialAssistance: data.modeFinancialAssistance,
-      sourceOfFund: data.sourceOfFund,
-      legislatorSpecify: data.legislatorSpecify,
-      otherAssistance: data.otherAssistance,
       interviewedBy: data.interviewedBy,
       clientSignature: data.clientSignature,
       updatedAt: new Date(),
     });
+
+    const assistances: CaseAssistance[] = [];
+    const fin = this.caseRepo.manager.create(CaseAssistance, {
+      assistanceType: 'financial',
+      amount: data.amountAssistance,
+      mode: data.modeFinancialAssistance,
+      sourceOfFund: data.sourceOfFund,
+      legislatorSpecify: data.legislatorSpecify ?? undefined,
+      details: data.financialSubsidies,
+    });
+    assistances.push(fin);
+    if (data.otherAssistance) {
+      for (const [key, value] of Object.entries(data.otherAssistance)) {
+        assistances.push(this.caseRepo.manager.create(CaseAssistance, {
+          assistanceType: key,
+          details: value && typeof value === 'object' ? value : {},
+        }));
+      }
+    }
+    c.assistances = assistances;
+
     return this.caseRepo.save(c);
   }
 

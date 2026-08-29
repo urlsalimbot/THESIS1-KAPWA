@@ -18,7 +18,7 @@ const ALLOWED_COLUMNS = new Set([
   "is_active","device_id","category","waiting_period_days","required_documents",
   "fund_sources","approval_workflow","form_template","created_at","updated_at","barangay",
   "estimated_income","verified_by","status","control_no","beneficiary_id",
-  "service_requested","requirements_checklist","certificate_url","petty_cash_voucher_url",
+  "service_requested","certificate_url","petty_cash_voucher_url",
   "assigned_worker_id","case_id","intervention_type","amount","fund_source","agency",
   "service_rendered","service_date","voucher_no","or_reference","worker_signature_url","worker_name_sign","logged_by","hash",
   "philsys_number","access_card_code","cost","search_vector","household_id",
@@ -515,6 +515,9 @@ export class SyncService implements OnApplicationShutdown {
       consent_ledger: 'consent_ledger',
       irf_cases: 'irf_cases',
       notifications: 'notifications',
+      case_requirements: 'case_requirements',
+      case_referrals: 'case_referrals',
+      case_assistances: 'case_assistances',
       sync_queue: 'sync_queue',
       sync_events: 'sync_events',
     };
