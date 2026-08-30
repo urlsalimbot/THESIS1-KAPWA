@@ -1,0 +1,48 @@
+import { MigrationInterface, QueryRunner } from 'typeorm';
+
+export class MoveAccessCardToHousehold0000000000032 implements MigrationInterface {
+  name = 'MoveAccessCardToHousehold0000000000032';
+
+  async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`ALTER TABLE IF EXISTS households ADD COLUMN IF NOT EXISTS access_card_code VARCHAR(20)`);
+    // Backfill is a no-op when the legacy column is absent (e.g. on a
+    // migrate.js bootstrap that already matches the post-migration schema).
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'beneficiaries' AND column_name = 'access_card_code') THEN
+          UPDATE households h
+          SET access_card_code = b.access_card_code
+          FROM beneficiaries b
+          WHERE b.household_id = h.id AND b.access_card_code IS NOT NULL;
+        END IF;
+      END $$;
+    `);
+    await queryRunner.query(`ALTER TABLE IF EXISTS access_card_services DROP CONSTRAINT IF EXISTS access_card_services_access_card_code_fkey`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP CONSTRAINT IF EXISTS beneficiaries_access_card_code_key`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_beneficiary_access_card`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries DROP COLUMN IF EXISTS access_card_code`);
+  }
+
+  async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`ALTER TABLE IF EXISTS beneficiaries ADD COLUMN IF NOT EXISTS access_card_code VARCHAR(20)`);
+    await queryRunner.query(`
+      UPDATE beneficiaries b
+      SET access_card_code = h.access_card_code
+      FROM households h
+      WHERE h.id = b.household_id AND h.access_card_code IS NOT NULL
+    `);
+    await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS beneficiaries_access_card_code_key ON beneficiaries(access_card_code)`);
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'access_card_services_access_card_code_fkey') THEN
+          ALTER TABLE IF EXISTS access_card_services ADD CONSTRAINT access_card_services_access_card_code_fkey FOREIGN KEY (access_card_code) REFERENCES beneficiaries(access_card_code);
+        END IF;
+      END $$;
+    `);
+
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_access_card ON beneficiaries(access_card_code)`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS households DROP COLUMN IF EXISTS access_card_code`);
+  }
+}
