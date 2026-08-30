@@ -53,7 +53,7 @@ describe('UsersPanel create dialog', () => {
 
   it('reveals the agency select when role agency_staff is selected', async () => {
     const user = await openCreateForm();
-    await user.click(screen.getByRole('combobox', { name: 'Role *' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Role *' }));
     await user.click(await screen.findByRole('option', { name: 'Agency Staff' }));
     expect(await screen.findByLabelText('Agency *')).toBeTruthy();
   });
