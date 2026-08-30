@@ -95,8 +95,36 @@ export async function migrate() {
   await q.query(`CREATE TABLE IF NOT EXISTS access_card_seq ( id SERIAL PRIMARY KEY, year INTEGER NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS otp_codes ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), phone TEXT NOT NULL, code TEXT NOT NULL, verified BOOLEAN DEFAULT FALSE, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT NOW() )`);
 
+  await q.query(`CREATE TABLE IF NOT EXISTS audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    action TEXT NOT NULL,
+    reference_id TEXT,
+    user_id TEXT,
+    details JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_reference ON audit_log(reference_id)`);
+
   await q.query(`CREATE TABLE IF NOT EXISTS irf_cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), blotter_entry_number TEXT UNIQUE NOT NULL, case_category TEXT NOT NULL, datetime_reported TIMESTAMP, datetime_incident TIMESTAMP, item_a_reporting_person JSONB, item_b_person_reported JSONB, encrypted_narration BYTEA, case_disposition TEXT, msdw_signature_url TEXT, reporting_signature_url TEXT, created_at TIMESTAMP DEFAULT NOW() )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, waiting_period_days INTEGER, required_documents JSONB, fund_sources TEXT[], approval_workflow TEXT[], form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, waiting_period_days INTEGER, required_documents JSONB, fund_sources TEXT[], approval_workflow JSONB, form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  // F12 (deployability): the entity maps approval_workflow as jsonb ApprovalStep[];
+  // a fresh boot must create it jsonb (not the legacy text[]) or POST /programs
+  // with an approvalWorkflow array fails with "malformed array literal". The
+  // CREATE above already uses JSONB, so this guard only converts a legacy
+  // text[] column (existing DBs) and is a no-op on fresh boots.
+  await q.query(`DO $$
+  DECLARE adata TEXT;
+  BEGIN
+    SELECT data_type INTO adata FROM information_schema.columns
+      WHERE table_name='programs' AND column_name='approval_workflow';
+    IF adata = 'ARRAY' THEN
+      UPDATE programs SET approval_workflow = NULL WHERE approval_workflow IS DISTINCT FROM NULL;
+      ALTER TABLE programs ALTER COLUMN approval_workflow TYPE jsonb;
+    END IF;
+  END $$`);
+  // Keep legacy required_documents/fund_sources columns (nullable) so upgrade
+  // backfills below can still read them; they are not read by the entity.
   await q.query(`CREATE TABLE IF NOT EXISTS consent_ledger ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), beneficiary_id UUID, purpose TEXT, channel TEXT, status TEXT DEFAULT 'active', granted_at TIMESTAMP DEFAULT NOW(), revoked_at TIMESTAMP )`);
   await q.query(`CREATE TABLE IF NOT EXISTS users ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'social_worker', full_name TEXT, phone TEXT, assigned_barangay TEXT, permitted_barangays TEXT[] DEFAULT '{}', is_active BOOLEAN DEFAULT TRUE, device_id TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS sync_queue ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), device_id TEXT NOT NULL, table_name TEXT NOT NULL, record_id TEXT NOT NULL, operation TEXT NOT NULL, payload JSONB, client_updated_at TIMESTAMP, status TEXT DEFAULT 'pending', idempotency_key TEXT, conflict_reason TEXT, resolved_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
@@ -168,6 +196,41 @@ export async function migrate() {
 
   await q.query(`ALTER TABLE persons ADD COLUMN IF NOT EXISTS extension TEXT`);
 
+  await q.query(`CREATE TABLE IF NOT EXISTS person_contacts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    person_id UUID NOT NULL,
+    contact_type VARCHAR(50) NOT NULL,
+    value TEXT NOT NULL,
+    is_primary BOOLEAN,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_person_contacts_person ON person_contacts(person_id)`);
+  await q.query(`INSERT INTO person_contacts (person_id, contact_type, value, is_primary)
+    SELECT id, 'phone', phone, true FROM persons WHERE phone IS NOT NULL AND phone <> ''`);
+  await q.query(`INSERT INTO person_contacts (person_id, contact_type, value, is_primary)
+    SELECT id, 'email', email, true FROM persons WHERE email IS NOT NULL AND email <> ''`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS person_addresses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    person_id UUID NOT NULL,
+    address_type VARCHAR(50) NOT NULL,
+    barangay VARCHAR(255),
+    city VARCHAR(255),
+    province VARCHAR(255),
+    postal VARCHAR(20),
+    is_primary BOOLEAN,
+    raw TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_person_addresses_person ON person_addresses(person_id)`);
+  await q.query(`INSERT INTO person_addresses (person_id, address_type, raw, is_primary)
+    SELECT id, 'current', address, true FROM persons WHERE address IS NOT NULL AND address <> ''`);
+  await q.query(`INSERT INTO person_addresses (person_id, address_type, barangay, city, province, is_primary)
+    SELECT id, 'current', current_address->>'barangay', current_address->>'city', current_address->>'province', true
+    FROM persons WHERE current_address IS NOT NULL`);
+
   // -- Supplementary columns (entity/migration reconciliation 2026-07-28)
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_signature TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_role VARCHAR`);
@@ -185,6 +248,65 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS closure_date DATE`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS follow_up_visits JSONB`);
 
+  await q.query(`CREATE TABLE IF NOT EXISTS case_requirements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL,
+    requirement_key VARCHAR(100) NOT NULL,
+    met BOOLEAN,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_requirements_case ON case_requirements(case_id)`);
+  await q.query(`INSERT INTO case_requirements (case_id, requirement_key, met)
+    SELECT c.id, e.key, e.value::boolean
+    FROM cases c, jsonb_each(c.requirements_checklist) AS e
+    WHERE c.requirements_checklist IS NOT NULL`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS case_referrals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL,
+    agency VARCHAR(255),
+    status VARCHAR(50),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_referrals_case ON case_referrals(case_id)`);
+  await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS reason TEXT`);
+  await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS contact_info TEXT`);
+  await q.query(`UPDATE case_referrals SET reason = '' WHERE reason IS NULL`);
+  await q.query(`ALTER TABLE case_referrals ALTER COLUMN reason SET NOT NULL`);
+  await q.query(`INSERT INTO case_referrals (case_id, agency, status, notes)
+    SELECT c.id, r->>'agencyName', r->>'status', r->>'notes'
+    FROM cases c, jsonb_array_elements(c.referrals) AS r
+    WHERE c.referrals IS NOT NULL`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS case_assistances (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL,
+    assistance_type VARCHAR(50) NOT NULL,
+    amount DECIMAL(12,2),
+    mode VARCHAR(50),
+    source_of_fund VARCHAR(100),
+    legislator_specify VARCHAR(255),
+    details JSONB,
+    approved_by_signature TEXT,
+    approved_by_role VARCHAR(50),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_assistances_case ON case_assistances(case_id)`);
+  await q.query(`INSERT INTO case_assistances
+    (case_id, assistance_type, amount, mode, source_of_fund, legislator_specify, details)
+    SELECT c.id, 'financial', c.amount_assistance, c.mode_financial_assistance,
+           c.source_of_fund, c.legislator_specify, c.financial_subsidies
+    FROM cases c
+    WHERE c.amount_assistance IS NOT NULL OR c.financial_subsidies IS NOT NULL`);
+  await q.query(`INSERT INTO case_assistances (case_id, assistance_type, details)
+    SELECT c.id, 'other', jsonb_build_object(e.key, e.value)
+    FROM cases c, jsonb_each(c.other_assistance) AS e
+    WHERE c.other_assistance IS NOT NULL`);
+
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_person_id UUID`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS person_link_code VARCHAR`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS person_link_code_expires_at TIMESTAMP`);
@@ -200,8 +322,72 @@ export async function migrate() {
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS new_email_token VARCHAR`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS new_email_token_expires_at TIMESTAMP`);
 
+  await q.query(`CREATE TABLE IF NOT EXISTS user_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    user_id UUID NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    token TEXT NOT NULL,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_user_tokens_user ON user_tokens(user_id)`);
+  await q.query(`ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS meta JSONB`);
+  await q.query(`INSERT INTO user_tokens (user_id, purpose, token, expires_at)
+    SELECT id, 'email_verification', verification_token, verification_token_expires_at
+    FROM users WHERE verification_token IS NOT NULL`);
+  await q.query(`INSERT INTO user_tokens (user_id, purpose, token, expires_at)
+    SELECT id, 'password_reset', reset_token, reset_token_expires_at
+    FROM users WHERE reset_token IS NOT NULL`);
+  await q.query(`INSERT INTO user_tokens (user_id, purpose, token, expires_at)
+    SELECT id, 'change_email', new_email_token, new_email_token_expires_at
+    FROM users WHERE new_email_token IS NOT NULL`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS user_barangay_assignments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    user_id UUID NOT NULL,
+    barangay VARCHAR(255) NOT NULL,
+    is_primary BOOLEAN,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_user_barangay_user ON user_barangay_assignments(user_id)`);
+  await q.query(`INSERT INTO user_barangay_assignments (user_id, barangay, is_primary)
+    SELECT id, assigned_barangay, true FROM users WHERE assigned_barangay IS NOT NULL AND assigned_barangay <> ''`);
+  await q.query(`INSERT INTO user_barangay_assignments (user_id, barangay, is_primary)
+    SELECT u.id, b.barangay, false
+    FROM users u, unnest(u.permitted_barangays) AS b(barangay)
+    WHERE array_length(u.permitted_barangays, 1) > 0`);
+
   await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS legal_basis TEXT`);
   await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS form_version INT DEFAULT 1`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS program_fund_sources (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    program_id UUID NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_funds_program ON program_fund_sources(program_id)`);
+  await q.query(`INSERT INTO program_fund_sources (program_id, name)
+    SELECT p.id, f.name
+    FROM programs p, unnest(p.fund_sources) AS f(name)
+    WHERE array_length(p.fund_sources, 1) > 0`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS program_required_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    program_id UUID NOT NULL,
+    document_key VARCHAR(100) NOT NULL,
+    mandatory BOOLEAN,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_docs_program ON program_required_documents(program_id)`);
+  await q.query(`INSERT INTO program_required_documents (program_id, document_key, mandatory)
+    SELECT p.id, doc, true
+    FROM programs p, jsonb_array_elements_text(p.required_documents) AS doc
+    WHERE p.required_documents IS NOT NULL`);
 
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_wraps JSONB`);
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_version INT DEFAULT 1`);
@@ -235,9 +421,16 @@ export async function migrate() {
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined')),
     decline_reason TEXT,
     case_id UUID REFERENCES cases(id),
+    person_id UUID REFERENCES persons(id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  // F13 (deployability): the Referral entity maps an eager person relation via
+  // person_id; without the column, GET /referrals/counts (and any repo.count
+  // touching the relation) fails with "column Referral.person_id does not
+  // exist". person_id is nullable — legacy rows keep inline person columns.
+  await q.query(`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_referral_person ON referrals(person_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_referral_coordinator ON referrals(coordinator_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_referral_status ON referrals(status)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_referral_barangay ON referrals(barangay)`);
@@ -271,6 +464,20 @@ export async function migrate() {
     ('DSWD', 'Department of Social Welfare and Development', 'social_services', true),
     ('DepEd', 'Department of Education', 'education', true)
     ON CONFLICT (code) DO NOTHING`);
+  await q.query(`CREATE TABLE IF NOT EXISTS agency_contacts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    agency_id UUID NOT NULL,
+    contact_type VARCHAR(50) NOT NULL,
+    value TEXT NOT NULL,
+    is_primary BOOLEAN,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_agency_contacts_agency ON agency_contacts(agency_id)`);
+  await q.query(`INSERT INTO agency_contacts (agency_id, contact_type, value, is_primary)
+    SELECT a.id, e.key, e.value::text, true
+    FROM agencies a, jsonb_each_text(a.contact_info) AS e
+    WHERE a.contact_info IS NOT NULL`);
   await q.query(`CREATE TABLE IF NOT EXISTS announcements (
     id UUID PRIMARY KEY,
     title TEXT NOT NULL,
@@ -306,24 +513,6 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS intervention_types (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    code VARCHAR(10) UNIQUE NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-  )`);
-  await q.query(`INSERT INTO intervention_types (code, name, description) VALUES
-    ('FA',   'Financial Assistance', 'Direct financial aid disbursement to beneficiaries'),
-    ('C',    'Cash Assistance',      'Cash-based assistance distribution'),
-    ('CSR',  'Case Study Report',    'Comprehensive Social Report – assessment documentation'),
-    ('R',    'Referral',             'Referral to external agency or service provider'),
-    ('H',    'Home Visit',           'Home visit for wellness check or monitoring'),
-    ('HV',   'Home Visit Variation', 'Home visit with additional services or distribution'),
-    ('Other','Other Intervention',   'Custom intervention type defined by admin')
-    ON CONFLICT (code) DO NOTHING`);
   await q.query(`CREATE TABLE IF NOT EXISTS notification_preferences (
     id uuid DEFAULT uuid_generate_v7() PRIMARY KEY,
     user_id varchar NOT NULL,
