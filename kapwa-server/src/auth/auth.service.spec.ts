@@ -5,6 +5,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { UserToken } from './user-token.entity';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { OtpService } from '../otp/otp.service';
@@ -18,6 +19,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let repoMock: Partial<Repository<User>>;
   let tokenRepoMock: Partial<Repository<UserToken>>;
+  let barangayRepoMock: Partial<Repository<UserBarangayAssignment>>;
   let jwtMock: Partial<JwtService>;
   let otpMock: Partial<OtpService>;
   let emailMock: { [k: string]: jest.Mock };
@@ -44,6 +46,7 @@ describe('AuthService', () => {
     };
     const personRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
     const benRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
+    barangayRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
     const smsMock = { sendSms: jest.fn().mockResolvedValue({ success: true, provider: 'log', messageId: 'm1' }) };
     emailMock = {
       sendEmail: jest.fn().mockResolvedValue({ success: true }),
@@ -60,6 +63,7 @@ describe('AuthService', () => {
         { provide: getRepositoryToken(UserToken), useValue: tokenRepoMock },
         { provide: getRepositoryToken(Person), useValue: personRepoMock },
         { provide: getRepositoryToken(Beneficiary), useValue: benRepoMock },
+        { provide: getRepositoryToken(UserBarangayAssignment), useValue: barangayRepoMock },
         { provide: JwtService, useValue: jwtMock },
         { provide: OtpService, useValue: otpMock },
         { provide: SmsGatewayService, useValue: smsMock },
@@ -83,7 +87,7 @@ describe('AuthService', () => {
     it('should hash password and save user', async () => {
       (repoMock.findOne as jest.Mock).mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-      const created = { email: 'test@test.com', password: 'hashed', role: 'social_worker', isActive: true };
+      const created = { id: 'u1', email: 'test@test.com', password: 'hashed', role: 'social_worker', isActive: true };
       (repoMock.create as jest.Mock).mockReturnValue(created);
       (repoMock.save as jest.Mock).mockResolvedValue(created);
       const result = await service.register({ email: 'test@test.com', password: 'pass' });
@@ -92,6 +96,29 @@ describe('AuthService', () => {
       expect(repoMock.save).toHaveBeenCalled();
       expect(result).toHaveProperty('message', 'Registration successful. Please check your email to verify your account.');
       expect(emailMock.sendVerificationEmail).toHaveBeenCalledWith('test@test.com', expect.any(String));
+    });
+
+    it('should create a primary barangay assignment when assignedBarangay is provided', async () => {
+      (repoMock.findOne as jest.Mock).mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      const created = { id: 'u1', email: 'test@test.com', password: 'hashed', role: 'social_worker', isActive: true };
+      (repoMock.create as jest.Mock).mockReturnValue(created);
+      (repoMock.save as jest.Mock).mockResolvedValue(created);
+      const assignment = { userId: 'u1', barangay: 'Bangkal', isPrimary: true };
+      (barangayRepoMock.create as jest.Mock).mockReturnValue(assignment);
+      (barangayRepoMock.save as jest.Mock).mockResolvedValue(assignment);
+      await service.register({ email: 'test@test.com', password: 'pass', assignedBarangay: 'Bangkal' });
+      expect(barangayRepoMock.create).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1', barangay: 'Bangkal', isPrimary: true }));
+      expect(barangayRepoMock.save).toHaveBeenCalled();
+    });
+
+    it('should not create a barangay assignment when none provided', async () => {
+      (repoMock.findOne as jest.Mock).mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      (repoMock.create as jest.Mock).mockReturnValue({ id: 'u1', email: 'x@x.com', role: 'claimant' });
+      (repoMock.save as jest.Mock).mockResolvedValue({});
+      await service.register({ email: 'x@x.com', password: 'pass' });
+      expect(barangayRepoMock.save).not.toHaveBeenCalled();
     });
   });
 

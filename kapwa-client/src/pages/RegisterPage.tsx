@@ -85,8 +85,8 @@ export function RegisterPage() {
         email: values.email,
         phone: values.phone,
         password: values.password,
-        barangay: values.barangay,
-        dateOfBirth: values.dateOfBirth,
+        assignedBarangay: values.barangay,
+        dob: values.dateOfBirth,
       });
       setRegisteredEmail(values.email);
     } catch {

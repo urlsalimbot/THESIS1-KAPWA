@@ -64,7 +64,11 @@ export class AbacGuard implements CanActivate {
       const legalBasis = query?.legalBasis || body?.legalBasis;
       if (resourceSensitivity === 'restricted' && !legalBasis) return false;
       const barangay = query?.barangay || params?.barangay || body?.barangay;
-      if (barangay && !user.permittedBarangays?.includes(barangay)) return false;
+      if (barangay) {
+        const inPermitted = user.permittedBarangays?.includes(barangay);
+        const isPrimary = barangay === user.assignedBarangay;
+        if (!inPermitted && !isPrimary) return false;
+      }
       return true;
     }
 

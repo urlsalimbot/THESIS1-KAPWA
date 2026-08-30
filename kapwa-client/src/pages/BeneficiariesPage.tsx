@@ -40,7 +40,7 @@ function mapBeneficiary(b: Record<string, unknown>): Beneficiary {
     id: b.id as string,
     name: `${(b.firstName as string) || ''} ${(b.surname as string) || ''}`.trim(),
     age: b.dob ? new Date().getFullYear() - new Date(b.dob as string).getFullYear() : 0,
-    barangay: ((b.address as string) || '').split(',').pop()?.trim() || '',
+    barangay: (((b.household as Record<string, unknown> | undefined)?.barangay as string) || ((b.currentAddress as Record<string, string> | undefined)?.barangay) || ((b.address as string) || '').split(',').pop()?.trim() || '').trim(),
     householdSize: ((b.household as Record<string, unknown>)?.familyMemberCount as number) || 1,
     category: (b.category as string) || '',
     status: (b.consentStatus as string) || 'active',

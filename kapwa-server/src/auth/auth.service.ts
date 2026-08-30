@@ -8,6 +8,7 @@ import * as crypto from 'crypto';
 import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp';
 import { User } from './user.entity';
 import { UserToken } from './user-token.entity';
+import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { OtpService } from '../otp/otp.service';
@@ -27,6 +28,8 @@ export class AuthService {
     private personRepo: Repository<Person>,
     @InjectRepository(Beneficiary)
     private benRepo: Repository<Beneficiary>,
+    @InjectRepository(UserBarangayAssignment)
+    private barangayRepo: Repository<UserBarangayAssignment>,
     private jwtService: JwtService,
     private otpService: OtpService,
     private smsGateway: SmsGatewayService,
@@ -43,7 +46,7 @@ export class AuthService {
     await this.tokenRepo.delete({ userId, purpose });
   }
 
-  async register(data: { email: string; password: string; role?: string; fullName?: string; phone?: string; dob?: string }) {
+  async register(data: { email: string; password: string; role?: string; fullName?: string; phone?: string; dob?: string; assignedBarangay?: string }) {
     const existing = await this.userRepo.findOne({ where: { email: data.email } });
     if (existing) throw new ConflictException('Email already registered');
 
@@ -61,6 +64,13 @@ export class AuthService {
       emailVerified: false,
     });
     await this.userRepo.save(user);
+    if (data.assignedBarangay) {
+      await this.barangayRepo.save(this.barangayRepo.create({
+        userId: user.id,
+        barangay: data.assignedBarangay,
+        isPrimary: true,
+      }));
+    }
     await this.tokenRepo.save(this.tokenRepo.create({
       userId: user.id,
       purpose: 'email_verification',
