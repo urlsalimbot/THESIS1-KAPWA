@@ -6,63 +6,67 @@ import { api } from './lib/api';
 import { ApiError } from './lib/api-error';
 import { AuthProvider, useAuth } from './lib/auth-context';
 import { ROLE_REDIRECT_MAP } from './lib/role-access';
-import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { IntakePage } from './pages/IntakePage';
-import { IntakeReviewPage } from './pages/IntakeReviewPage';
-import { CasesPage } from './pages/CasesPage';
-import { CaseViewPage } from './pages/CaseViewPage';
-import { SearchResultsPage } from './pages/SearchResultsPage';
-import { BeneficiariesPage } from './pages/BeneficiariesPage';
-import { BeneficiaryViewPage } from './pages/BeneficiaryViewPage';
-import { MessagesPage } from './pages/MessagesPage';
-import { NotificationsPage } from './pages/NotificationsPage';
-import { CaseTrackerPage } from './pages/CaseTrackerPage';
-import { AdminPage } from './pages/AdminPage';
-import { ClaimantDashboardPage } from './pages/ClaimantDashboardPage';
-import { ApprovalPipelinePage } from './pages/ApprovalPipelinePage';
-import { MfaSetupPage } from './pages/MfaSetupPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { CoordinatorDashboardPage } from './pages/CoordinatorDashboardPage';
-import { CoordinatorReferralFormPage } from './pages/CoordinatorReferralFormPage';
-import { CoordinatorReferralListPage } from './pages/CoordinatorReferralListPage';
-import { ReferralReviewPage } from './pages/ReferralReviewPage';
-import { ReferralsPage } from './pages/ReferralsPage';
-import { AgencyDashboardPage } from './pages/AgencyDashboardPage';
-import { AgencyReferralsPage } from './pages/AgencyReferralsPage';
-import { AgencyReferralDetailPage } from './pages/AgencyReferralDetailPage';
-import { AgencyCardActivitiesPage } from './pages/AgencyCardActivitiesPage';
-import { AgencyProfilePage } from './pages/AgencyProfilePage';
-import { AccessCardViewPage } from './pages/AccessCardViewPage';
-import { CoordinatorAccessCardsPage } from './pages/CoordinatorAccessCardsPage';
-import { AccessCardPrintView } from './pages/AccessCardPrintView';
-import { AnnouncementPage } from './pages/AnnouncementPage';
-import { AnnouncementsPage } from './components/announcements/AnnouncementsPage';
-import { AnnouncementEditPage } from './components/announcements/AnnouncementEditPage';
-import { CreateAnnouncementPage } from './components/announcements/CreateAnnouncementPage';
-import { AnnouncementDetailPage } from './components/announcements/AnnouncementDetailPage';
-import { ClaimantAccessCardPage } from './pages/ClaimantAccessCardPage';
-
-import { MayorReportsPage } from './pages/MayorReportsPage';
-import { AuditorPage } from './pages/AuditorPage';
-import { IrfPage } from './pages/IrfPage';
-import { IrfDetailPage } from './pages/IrfDetailPage';
-import { CreateIrfPage } from './pages/CreateIrfPage';
-import { CreateProgramPage } from './pages/CreateProgramPage';
-
-import { ProgramDetailPage } from './pages/ProgramDetailPage';
-import { ProgramsPage } from './pages/ProgramsPage';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicLayout } from './components/PublicLayout';
-import { LandingPage } from './pages/LandingPage';
-import { AboutPage } from './pages/AboutPage';
-import { ContactPage } from './pages/ContactPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { VerifyEmailPage } from './pages/VerifyEmailPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { Toaster } from '@/components/ui/sonner';
+import { lazy, Suspense } from 'react';
+
+// Route-level code splitting: heavy page modules are loaded lazily per-route
+// so the initial bundle stays small (the RouterProvider below is wrapped in a
+// Suspense fallback). Layout/ProtectedRoute/PublicLayout/Toaster stay static —
+// they are small and needed on the first paint.
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const IntakePage = lazy(() => import('./pages/IntakePage').then(m => ({ default: m.IntakePage })));
+const IntakeReviewPage = lazy(() => import('./pages/IntakeReviewPage').then(m => ({ default: m.IntakeReviewPage })));
+const CasesPage = lazy(() => import('./pages/CasesPage').then(m => ({ default: m.CasesPage })));
+const CaseViewPage = lazy(() => import('./pages/CaseViewPage').then(m => ({ default: m.CaseViewPage })));
+const SearchResultsPage = lazy(() => import('./pages/SearchResultsPage').then(m => ({ default: m.SearchResultsPage })));
+const BeneficiariesPage = lazy(() => import('./pages/BeneficiariesPage').then(m => ({ default: m.BeneficiariesPage })));
+const BeneficiaryViewPage = lazy(() => import('./pages/BeneficiaryViewPage').then(m => ({ default: m.BeneficiaryViewPage })));
+const MessagesPage = lazy(() => import('./pages/MessagesPage').then(m => ({ default: m.MessagesPage })));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
+const CaseTrackerPage = lazy(() => import('./pages/CaseTrackerPage').then(m => ({ default: m.CaseTrackerPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const ClaimantDashboardPage = lazy(() => import('./pages/ClaimantDashboardPage').then(m => ({ default: m.ClaimantDashboardPage })));
+const ApprovalPipelinePage = lazy(() => import('./pages/ApprovalPipelinePage').then(m => ({ default: m.ApprovalPipelinePage })));
+const MfaSetupPage = lazy(() => import('./pages/MfaSetupPage').then(m => ({ default: m.MfaSetupPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage').then(m => ({ default: m.CoordinatorDashboardPage })));
+const CoordinatorReferralFormPage = lazy(() => import('./pages/CoordinatorReferralFormPage').then(m => ({ default: m.CoordinatorReferralFormPage })));
+const CoordinatorReferralListPage = lazy(() => import('./pages/CoordinatorReferralListPage').then(m => ({ default: m.CoordinatorReferralListPage })));
+const ReferralReviewPage = lazy(() => import('./pages/ReferralReviewPage').then(m => ({ default: m.ReferralReviewPage })));
+const ReferralsPage = lazy(() => import('./pages/ReferralsPage').then(m => ({ default: m.ReferralsPage })));
+const AgencyDashboardPage = lazy(() => import('./pages/AgencyDashboardPage').then(m => ({ default: m.AgencyDashboardPage })));
+const AgencyReferralsPage = lazy(() => import('./pages/AgencyReferralsPage').then(m => ({ default: m.AgencyReferralsPage })));
+const AgencyReferralDetailPage = lazy(() => import('./pages/AgencyReferralDetailPage').then(m => ({ default: m.AgencyReferralDetailPage })));
+const AgencyCardActivitiesPage = lazy(() => import('./pages/AgencyCardActivitiesPage').then(m => ({ default: m.AgencyCardActivitiesPage })));
+const AgencyProfilePage = lazy(() => import('./pages/AgencyProfilePage').then(m => ({ default: m.AgencyProfilePage })));
+const AccessCardViewPage = lazy(() => import('./pages/AccessCardViewPage').then(m => ({ default: m.AccessCardViewPage })));
+const CoordinatorAccessCardsPage = lazy(() => import('./pages/CoordinatorAccessCardsPage').then(m => ({ default: m.CoordinatorAccessCardsPage })));
+const AccessCardPrintView = lazy(() => import('./pages/AccessCardPrintView').then(m => ({ default: m.AccessCardPrintView })));
+const AnnouncementPage = lazy(() => import('./pages/AnnouncementPage').then(m => ({ default: m.AnnouncementPage })));
+const AnnouncementsPage = lazy(() => import('./components/announcements/AnnouncementsPage').then(m => ({ default: m.AnnouncementsPage })));
+const AnnouncementEditPage = lazy(() => import('./components/announcements/AnnouncementEditPage').then(m => ({ default: m.AnnouncementEditPage })));
+const CreateAnnouncementPage = lazy(() => import('./components/announcements/CreateAnnouncementPage').then(m => ({ default: m.CreateAnnouncementPage })));
+const AnnouncementDetailPage = lazy(() => import('./components/announcements/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
+const ClaimantAccessCardPage = lazy(() => import('./pages/ClaimantAccessCardPage').then(m => ({ default: m.ClaimantAccessCardPage })));
+const MayorReportsPage = lazy(() => import('./pages/MayorReportsPage').then(m => ({ default: m.MayorReportsPage })));
+const AuditorPage = lazy(() => import('./pages/AuditorPage').then(m => ({ default: m.AuditorPage })));
+const IrfPage = lazy(() => import('./pages/IrfPage').then(m => ({ default: m.IrfPage })));
+const IrfDetailPage = lazy(() => import('./pages/IrfDetailPage').then(m => ({ default: m.IrfDetailPage })));
+const CreateIrfPage = lazy(() => import('./pages/CreateIrfPage').then(m => ({ default: m.CreateIrfPage })));
+const CreateProgramPage = lazy(() => import('./pages/CreateProgramPage').then(m => ({ default: m.CreateProgramPage })));
+const ProgramDetailPage = lazy(() => import('./pages/ProgramDetailPage').then(m => ({ default: m.ProgramDetailPage })));
+const ProgramsPage = lazy(() => import('./pages/ProgramsPage').then(m => ({ default: m.ProgramsPage })));
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   return <ProtectedRoute roles={roles}><Layout>{children}</Layout></ProtectedRoute>;
@@ -164,7 +168,9 @@ export function MainRoutes() {
             refreshInterval: 0,
           }}
         >
-          <RouterProvider router={router} />
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>}>
+            <RouterProvider router={router} />
+          </Suspense>
         </SWRConfig>
       </AuthProvider>
     </ThemeProvider>
