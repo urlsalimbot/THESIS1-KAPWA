@@ -60,7 +60,7 @@ describe('UsersPanel create dialog', () => {
 
   it('blocks submitting an agency_staff user without an agency', async () => {
     const user = await openCreateForm();
-    await user.click(screen.getByRole('combobox', { name: 'Role *' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Role *' }));
     await user.click(await screen.findByRole('option', { name: 'Agency Staff' }));
     await screen.findByLabelText('Agency *');
     expect(screen.getByRole('button', { name: 'Create User' })).toBeDisabled();
