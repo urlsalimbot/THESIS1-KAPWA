@@ -152,10 +152,11 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           {(isAdmin || isSocialWorker) && <GlobalSearch />}
         </div>
 
-        {/* Right action cluster — on small screens this can exceed the viewport
-            (New Intake → Approvals → Notifications → Messages → Help → user menu),
-            so it scrolls horizontally instead of clipping unreachable buttons. */}
-        <div className="flex items-center gap-2 min-w-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shrink">
+        {/* Right action cluster. On small screens only the essential actions stay
+            visible (New Intake, Notifications, Messages, user menu); Approvals
+            and Help are hidden below md — they stay reachable via the drawer
+            navigation — so the bar never overflows or needs a scroll area. */}
+        <div className="flex items-center gap-2 shrink-0">
 
           {canIntake && (
             <Tooltip>
@@ -176,7 +177,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="touch-sm relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
+                  className="hidden md:flex touch-sm relative w-9 h-9 rounded-full items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
                   onClick={() => navigate('/approvals')}
                   aria-label={t('topbar.approvalsQueue', 'Approvals Queue')}
                 >
@@ -193,7 +194,9 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           {canNotifications && <NotificationsDropdown />}
           {canChat && <MessagesPopover />}
 
-          <PageInfoPopover />
+          <div className="hidden md:block">
+            <PageInfoPopover />
+          </div>
 
           <Separator orientation="vertical" className="h-6" />
 
