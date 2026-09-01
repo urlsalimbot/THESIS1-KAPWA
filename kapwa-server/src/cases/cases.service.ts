@@ -1,5 +1,5 @@
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
@@ -13,6 +13,7 @@ import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entit
 import { Person } from '../beneficiaries/person.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory } from '../notifications/notification.entity';
+import { AuditLogService } from '../audit/audit-log.service';
 import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input } from './dto/cases.zod';
 import {
   SATURDAY, SUNDAY,
@@ -33,6 +34,7 @@ export class CasesService {
     @InjectRepository(BeneficiaryClaimant)
     private bcRepo: Repository<BeneficiaryClaimant>,
     private notifService: NotificationsService,
+    @Optional() private auditLog?: AuditLogService,
   ) {}
 
   async generateControlNo(): Promise<string> {
@@ -89,6 +91,7 @@ export class CasesService {
           ];
         }
         await this.caseRepo.save(c);
+        await this.auditLog?.log('case.create', c.id, undefined, { controlNo, beneficiaryId: c.beneficiaryId });
         return c;
       } catch (err: any) {
         lastError = err;
@@ -172,7 +175,7 @@ export class CasesService {
   async findById(id: string) {
     const c = await this.caseRepo.findOne({
       where: { id },
-      relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household', 'beneficiary.household.members', 'assignedWorker'],
+      relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household', 'beneficiary.household.members', 'assignedWorker', 'assistances'],
     });
     if (!c) throw new NotFoundException('Case not found');
 
@@ -310,6 +313,8 @@ export class CasesService {
 
     await this.logHistory(id, oldStatus, newStatus, opts?.userRole, undefined, opts?.reason || `Transitioned by ${opts?.userRole || 'system'}`, opts?.historyType);
 
+    await this.auditLog?.log('case.transition', id, undefined, { from: oldStatus, to: newStatus, by: opts?.userRole, controlNo: c.controlNo });
+
     if (c.assignedWorkerId) {
       await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.controlNo, newStatus);
     }
@@ -383,7 +388,9 @@ export class CasesService {
       clientSignature: data.clientSignature,
       updatedAt: new Date(),
     });
-    return this.caseRepo.save(c);
+    const saved = await this.caseRepo.save(c);
+    await this.auditLog?.log('case.assessment', id, undefined, { clientCategory: data.clientCategory, interviewedBy: data.interviewedBy });
+    return saved;
   }
 
   async updateTransitionPlan(id: string, data: TransitionPlanInput) {
@@ -436,18 +443,27 @@ export class CasesService {
     });
 
     const assistances: CaseAssistance[] = [];
-    const fin = this.caseRepo.manager.create(CaseAssistance, {
-      assistanceType: 'financial',
-      amount: data.amountAssistance,
-      mode: data.modeFinancialAssistance,
-      sourceOfFund: data.sourceOfFund,
-      legislatorSpecify: data.legislatorSpecify ?? undefined,
-      details: data.financialSubsidies,
-    });
-    assistances.push(fin);
+    const hasFinancial =
+      data.amountAssistance != null ||
+      data.modeFinancialAssistance != null ||
+      data.sourceOfFund != null ||
+      data.legislatorSpecify != null ||
+      data.financialSubsidies != null;
+    if (hasFinancial) {
+      assistances.push(this.caseRepo.manager.create(CaseAssistance, {
+        caseId: c.id,
+        assistanceType: 'financial',
+        amount: data.amountAssistance,
+        mode: data.modeFinancialAssistance,
+        sourceOfFund: data.sourceOfFund,
+        legislatorSpecify: data.legislatorSpecify ?? undefined,
+        details: data.financialSubsidies,
+      }));
+    }
     if (data.otherAssistance) {
       for (const [key, value] of Object.entries(data.otherAssistance)) {
         assistances.push(this.caseRepo.manager.create(CaseAssistance, {
+          caseId: c.id,
           assistanceType: key,
           details: value as Record<string, unknown>,
         }));
@@ -455,6 +471,7 @@ export class CasesService {
     }
     c.assistances = assistances;
 
+    await this.caseRepo.manager.delete(CaseAssistance, { caseId: id });
     return this.caseRepo.save(c);
   }
 

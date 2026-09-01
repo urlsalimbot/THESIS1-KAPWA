@@ -1,4 +1,5 @@
 import { Entity, Column, CreateDateColumn } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 
 @Entity('consent_ledger')
@@ -24,4 +25,12 @@ export class ConsentLedger extends BaseEntity {
 
   @Column({ name: 'revoked_reason', nullable: true })
   revokedReason?: string;
+
+  @Exclude()
+  @Column({ nullable: true })
+  hash?: string;
+
+  @Exclude()
+  @Column({ name: 'prev_hash', nullable: true })
+  prevHash?: string;
 }

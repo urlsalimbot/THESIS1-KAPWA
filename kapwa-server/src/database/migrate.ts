@@ -70,7 +70,7 @@ export async function migrate() {
     $$;
   `);
 
-  await q.query(`CREATE TABLE IF NOT EXISTS beneficiaries ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID, user_id UUID, consent_status TEXT DEFAULT 'active', household_id UUID, category TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS beneficiaries ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID, user_id UUID, household_id UUID, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, access_card_code TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`ALTER TABLE households ADD COLUMN IF NOT EXISTS access_card_code TEXT`);
   // family_members table removed — superseded by household_memberships (see below)
@@ -107,7 +107,7 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_reference ON audit_log(reference_id)`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS irf_cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), blotter_entry_number TEXT UNIQUE NOT NULL, case_category TEXT NOT NULL, datetime_reported TIMESTAMP, datetime_incident TIMESTAMP, item_a_reporting_person JSONB, item_b_person_reported JSONB, encrypted_narration BYTEA, case_disposition TEXT, msdw_signature_url TEXT, reporting_signature_url TEXT, created_at TIMESTAMP DEFAULT NOW() )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, waiting_period_days INTEGER, required_documents JSONB, fund_sources TEXT[], approval_workflow JSONB, form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, waiting_period_days INTEGER, approval_workflow JSONB, form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   // F12 (deployability): the entity maps approval_workflow as jsonb ApprovalStep[];
   // a fresh boot must create it jsonb (not the legacy text[]) or POST /programs
   // with an approvalWorkflow array fails with "malformed array literal". The
@@ -126,7 +126,7 @@ export async function migrate() {
   // Keep legacy required_documents/fund_sources columns (nullable) so upgrade
   // backfills below can still read them; they are not read by the entity.
   await q.query(`CREATE TABLE IF NOT EXISTS consent_ledger ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), beneficiary_id UUID, purpose TEXT, channel TEXT, status TEXT DEFAULT 'active', granted_at TIMESTAMP DEFAULT NOW(), revoked_at TIMESTAMP )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS users ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'social_worker', full_name TEXT, phone TEXT, assigned_barangay TEXT, permitted_barangays TEXT[] DEFAULT '{}', is_active BOOLEAN DEFAULT TRUE, device_id TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS users ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'social_worker', full_name TEXT, phone TEXT, is_active BOOLEAN DEFAULT TRUE, device_id TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS sync_queue ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), device_id TEXT NOT NULL, table_name TEXT NOT NULL, record_id TEXT NOT NULL, operation TEXT NOT NULL, payload JSONB, client_updated_at TIMESTAMP, status TEXT DEFAULT 'pending', idempotency_key TEXT, conflict_reason TEXT, resolved_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS version_vectors ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), device_id TEXT NOT NULL, table_name TEXT NOT NULL, local_version INTEGER DEFAULT 0, server_version INTEGER DEFAULT 0, last_synced_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW(), UNIQUE (device_id, table_name) )`);
   await q.query(`CREATE TABLE IF NOT EXISTS notifications ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), recipient_id TEXT NOT NULL, title TEXT NOT NULL, message TEXT NOT NULL, channel TEXT DEFAULT 'in_app', phone TEXT, sent BOOLEAN DEFAULT FALSE, sent_at TIMESTAMP, is_read BOOLEAN DEFAULT FALSE, category TEXT DEFAULT 'system', reference_id TEXT, created_at TIMESTAMP DEFAULT NOW() )`);
@@ -180,7 +180,7 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_chat_conversation ON chat_messages(conversation_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_chat_participants ON chat_messages(sender_id, recipient_id)`);
   // -- Person Schema Redesign (2026-07-21)
-  await q.query(`CREATE TABLE IF NOT EXISTS persons ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), surname TEXT NOT NULL, first_name TEXT NOT NULL, middle_name TEXT, gender TEXT CHECK (gender IN ('Male','Female')), dob DATE NOT NULL, address TEXT, phone TEXT, email TEXT, philsys_number TEXT UNIQUE, place_of_birth TEXT, civil_status TEXT, current_address JSONB, philhealth_number TEXT, occupation TEXT, estimated_monthly_income DECIMAL(12,2), age INTEGER, search_vector TSVECTOR, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS persons ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), surname TEXT NOT NULL, first_name TEXT NOT NULL, middle_name TEXT, gender TEXT CHECK (gender IN ('Male','Female')), dob DATE NOT NULL, philsys_number TEXT UNIQUE, place_of_birth TEXT, civil_status TEXT, philhealth_number TEXT, occupation TEXT, estimated_monthly_income DECIMAL(12,2), search_vector TSVECTOR, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_name_trgm ON persons USING gin (surname gin_trgm_ops, first_name gin_trgm_ops)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_search ON persons USING gin(search_vector)`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`);
@@ -206,10 +206,21 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_contacts_person ON person_contacts(person_id)`);
-  await q.query(`INSERT INTO person_contacts (person_id, contact_type, value, is_primary)
-    SELECT id, 'phone', phone, true FROM persons WHERE phone IS NOT NULL AND phone <> ''`);
-  await q.query(`INSERT INTO person_contacts (person_id, contact_type, value, is_primary)
-    SELECT id, 'email', email, true FROM persons WHERE email IS NOT NULL AND email <> ''`);
+  // Legacy-column backfills: only run on upgraded DBs that still carry the
+  // pre-normalization persons.phone/email/address columns (fresh boots never
+  // create them, so the guarded EXISTS keeps the bootstrap idempotent).
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='persons' AND column_name='phone') THEN
+      INSERT INTO person_contacts (person_id, contact_type, value, is_primary)
+        SELECT id, 'phone', phone, true FROM persons WHERE phone IS NOT NULL AND phone <> '';
+    END IF;
+  END $$;`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='persons' AND column_name='email') THEN
+      INSERT INTO person_contacts (person_id, contact_type, value, is_primary)
+        SELECT id, 'email', email, true FROM persons WHERE email IS NOT NULL AND email <> '';
+    END IF;
+  END $$;`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS person_addresses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
@@ -225,11 +236,19 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_addresses_person ON person_addresses(person_id)`);
-  await q.query(`INSERT INTO person_addresses (person_id, address_type, raw, is_primary)
-    SELECT id, 'current', address, true FROM persons WHERE address IS NOT NULL AND address <> ''`);
-  await q.query(`INSERT INTO person_addresses (person_id, address_type, barangay, city, province, is_primary)
-    SELECT id, 'current', current_address->>'barangay', current_address->>'city', current_address->>'province', true
-    FROM persons WHERE current_address IS NOT NULL`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='persons' AND column_name='address') THEN
+      INSERT INTO person_addresses (person_id, address_type, raw, is_primary)
+        SELECT id, 'current', address, true FROM persons WHERE address IS NOT NULL AND address <> '';
+    END IF;
+  END $$;`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='persons' AND column_name='current_address') THEN
+      INSERT INTO person_addresses (person_id, address_type, barangay, city, province, is_primary)
+        SELECT id, 'current', current_address->>'barangay', current_address->>'city', current_address->>'province', true
+        FROM persons WHERE current_address IS NOT NULL;
+    END IF;
+  END $$;`);
 
   // -- Supplementary columns (entity/migration reconciliation 2026-07-28)
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_signature TEXT`);
@@ -352,12 +371,20 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_user_barangay_user ON user_barangay_assignments(user_id)`);
-  await q.query(`INSERT INTO user_barangay_assignments (user_id, barangay, is_primary)
-    SELECT id, assigned_barangay, true FROM users WHERE assigned_barangay IS NOT NULL AND assigned_barangay <> ''`);
-  await q.query(`INSERT INTO user_barangay_assignments (user_id, barangay, is_primary)
-    SELECT u.id, b.barangay, false
-    FROM users u, unnest(u.permitted_barangays) AS b(barangay)
-    WHERE array_length(u.permitted_barangays, 1) > 0`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='assigned_barangay') THEN
+      INSERT INTO user_barangay_assignments (user_id, barangay, is_primary)
+        SELECT id, assigned_barangay, true FROM users WHERE assigned_barangay IS NOT NULL AND assigned_barangay <> '';
+    END IF;
+  END $$;`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='permitted_barangays') THEN
+      INSERT INTO user_barangay_assignments (user_id, barangay, is_primary)
+        SELECT u.id, b.barangay, false
+        FROM users u, unnest(u.permitted_barangays) AS b(barangay)
+        WHERE array_length(u.permitted_barangays, 1) > 0;
+    END IF;
+  END $$;`);
 
   await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS legal_basis TEXT`);
   await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS form_version INT DEFAULT 1`);
@@ -370,10 +397,14 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_program_funds_program ON program_fund_sources(program_id)`);
-  await q.query(`INSERT INTO program_fund_sources (program_id, name)
-    SELECT p.id, f.name
-    FROM programs p, unnest(p.fund_sources) AS f(name)
-    WHERE array_length(p.fund_sources, 1) > 0`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='programs' AND column_name='fund_sources') THEN
+      INSERT INTO program_fund_sources (program_id, name)
+        SELECT p.id, f.name
+        FROM programs p, unnest(p.fund_sources) AS f(name)
+        WHERE array_length(p.fund_sources, 1) > 0;
+    END IF;
+  END $$;`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS program_required_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
@@ -384,10 +415,14 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_program_docs_program ON program_required_documents(program_id)`);
-  await q.query(`INSERT INTO program_required_documents (program_id, document_key, mandatory)
-    SELECT p.id, doc, true
-    FROM programs p, jsonb_array_elements_text(p.required_documents) AS doc
-    WHERE p.required_documents IS NOT NULL`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='programs' AND column_name='required_documents') THEN
+      INSERT INTO program_required_documents (program_id, document_key, mandatory)
+        SELECT p.id, doc, true
+        FROM programs p, jsonb_array_elements_text(p.required_documents) AS doc
+        WHERE p.required_documents IS NOT NULL;
+    END IF;
+  END $$;`);
 
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_wraps JSONB`);
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_version INT DEFAULT 1`);
@@ -448,7 +483,6 @@ export async function migrate() {
     code VARCHAR(10) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
     type VARCHAR(50),
-    contact_info JSONB,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -474,10 +508,16 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_agency_contacts_agency ON agency_contacts(agency_id)`);
-  await q.query(`INSERT INTO agency_contacts (agency_id, contact_type, value, is_primary)
-    SELECT a.id, e.key, e.value::text, true
-    FROM agencies a, jsonb_each_text(a.contact_info) AS e
-    WHERE a.contact_info IS NOT NULL`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='agencies' AND column_name='contact_info') THEN
+      INSERT INTO agency_contacts (agency_id, contact_type, value, is_primary)
+        SELECT a.id, e.key, e.value::text, true
+        FROM agencies a, jsonb_each_text(a.contact_info) AS e
+        WHERE a.contact_info IS NOT NULL;
+    END IF;
+  END $$;`);
+  // Legacy contact_info column — superseded by agency_contacts (AgencyProgramDrop migration)
+  await q.query(`ALTER TABLE agencies DROP COLUMN IF EXISTS contact_info`);
   await q.query(`CREATE TABLE IF NOT EXISTS announcements (
     id UUID PRIMARY KEY,
     title TEXT NOT NULL,
@@ -592,6 +632,68 @@ export async function migrate() {
   await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS hash TEXT`);
   await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
 
+  // -- Hash chain: runtime writer so the auditor's verifyHashChain is not
+  //    vacuous. Chain semantics (must match audit.service.verifyHashChain):
+  //      hash[0] = sha256('genesis'); hash[i] = sha256('{"id":"<prev.id>","hash":"<prev.hash>"}')
+  //    Rows are ordered by (order_field, id); verifier checks hash[i] for i>=1.
+  //    The trigger only fires when the new row has no hash (INSERT + first
+  //    backfill UPDATE); updates to already-hashed rows leave the chain alone
+  //    so legitimate edits don't false-positive as tampering.
+  await q.query(`CREATE OR REPLACE FUNCTION hash_chain_prev(hash_table TEXT, order_field TEXT, new_id UUID)
+    RETURNS TABLE(prev_id UUID, prev_hash TEXT)
+    LANGUAGE plpgsql VOLATILE AS $$
+    DECLARE q TEXT;
+    BEGIN
+      q := format('SELECT id, hash FROM %I WHERE id <> $1 AND hash IS NOT NULL ORDER BY %I DESC, id DESC LIMIT 1', hash_table, order_field);
+      RETURN QUERY EXECUTE q USING new_id;
+    END $$;`);
+  for (const [table, orderField, fnName] of [
+    ['cases', 'created_at', 'hash_chain_tg_cases'],
+    ['beneficiaries', 'created_at', 'hash_chain_tg_beneficiaries'],
+    ['consent_ledger', 'granted_at', 'hash_chain_tg_consent_ledger'],
+  ] as const) {
+    await q.query(`CREATE OR REPLACE FUNCTION ${fnName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      DECLARE prev RECORD;
+      BEGIN
+        SELECT * INTO prev FROM hash_chain_prev('${table}', '${orderField}', NEW.id);
+        IF prev.prev_id IS NULL THEN
+          NEW.hash := encode(digest('genesis', 'sha256'), 'hex');
+          NEW.prev_hash := NULL;
+        ELSE
+          NEW.prev_hash := prev.prev_hash;
+          NEW.hash := encode(digest('{"id":"' || prev.prev_id::text || '","hash":"' || COALESCE(prev.prev_hash, '') || '"}', 'sha256'), 'hex');
+        END IF;
+        RETURN NEW;
+      END $$;`);
+    await q.query(`DROP TRIGGER IF EXISTS hash_chain_tg ON ${table}`);
+    await q.query(`CREATE TRIGGER hash_chain_tg BEFORE INSERT OR UPDATE ON ${table} FOR EACH ROW WHEN (NEW.hash IS NULL) EXECUTE FUNCTION ${fnName}()`);
+  }
+  // Backfill: recompute the whole chain in order for rows that predate the
+  // triggers. The trigger is disabled so the ordered walk sets the exact
+  // values (deterministic + idempotent, safe to re-run after tampering).
+  for (const [table, orderField] of [
+    ['cases', 'created_at'],
+    ['beneficiaries', 'created_at'],
+    ['consent_ledger', 'granted_at'],
+  ] as const) {
+    await q.query(`ALTER TABLE ${table} DISABLE TRIGGER hash_chain_tg`);
+    await q.query(`DO $$
+    DECLARE r RECORD; p_id UUID; p_hash TEXT;
+    BEGIN
+      p_id := NULL; p_hash := NULL;
+      FOR r IN SELECT id FROM ${table} ORDER BY ${orderField} ASC, id ASC LOOP
+        IF p_id IS NULL THEN
+          UPDATE ${table} SET hash = encode(digest('genesis', 'sha256'), 'hex'), prev_hash = NULL WHERE id = r.id;
+        ELSE
+          UPDATE ${table} SET hash = encode(digest('{"id":"' || p_id::text || '","hash":"' || COALESCE(p_hash, '') || '"}', 'sha256'), 'hex'), prev_hash = p_hash WHERE id = r.id;
+        END IF;
+        SELECT hash INTO p_hash FROM ${table} WHERE id = r.id;
+        p_id := r.id;
+      END LOOP;
+    END $$;`);
+    await q.query(`ALTER TABLE ${table} ENABLE TRIGGER hash_chain_tg`);
+  }
+
   await q.query(`ALTER TABLE beneficiaries ENABLE ROW LEVEL SECURITY`);
   await q.query(`ALTER TABLE cases ENABLE ROW LEVEL SECURITY`);
   await q.query(`ALTER TABLE consent_ledger ENABLE ROW LEVEL SECURITY`);
@@ -605,9 +707,9 @@ export async function migrate() {
   await q.query(`DROP POLICY IF EXISTS consent_self ON consent_ledger`);
 
   await q.query(`CREATE POLICY ben_admin_all ON beneficiaries FOR ALL USING (current_setting('app.current_role') = 'admin')`);
-  await q.query(`CREATE POLICY ben_barangay_scope ON beneficiaries FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND (current_setting('app.current_barangay') = '' OR EXISTS (SELECT 1 FROM persons p WHERE p.id = beneficiaries.person_id AND p.address ILIKE '%' || current_setting('app.current_barangay') || '%')) )`);
+  await q.query(`CREATE POLICY ben_barangay_scope ON beneficiaries FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND (current_setting('app.current_barangay') = '' OR EXISTS (SELECT 1 FROM person_addresses pa WHERE pa.person_id = beneficiaries.person_id AND (pa.barangay ILIKE '%' || current_setting('app.current_barangay') || '%' OR pa.raw ILIKE '%' || current_setting('app.current_barangay') || '%'))) )`);
   await q.query(`CREATE POLICY cases_admin_all ON cases FOR ALL USING (current_setting('app.current_role') = 'admin')`);
-  await q.query(`CREATE POLICY cases_barangay_scope ON cases FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND EXISTS ( SELECT 1 FROM beneficiaries b JOIN persons p ON p.id = b.person_id WHERE b.id = cases.beneficiary_id AND (current_setting('app.current_barangay') = '' OR p.address ILIKE '%' || current_setting('app.current_barangay') || '%') ) )`);
+  await q.query(`CREATE POLICY cases_barangay_scope ON cases FOR ALL USING ( current_setting('app.current_role') IN ('social_worker', 'coordinator') AND EXISTS ( SELECT 1 FROM beneficiaries b JOIN persons p ON p.id = b.person_id WHERE b.id = cases.beneficiary_id AND (current_setting('app.current_barangay') = '' OR EXISTS (SELECT 1 FROM person_addresses pa WHERE pa.person_id = p.id AND (pa.barangay ILIKE '%' || current_setting('app.current_barangay') || '%' OR pa.raw ILIKE '%' || current_setting('app.current_barangay') || '%'))) ) )`);
   await q.query(`CREATE POLICY consent_admin_all ON consent_ledger FOR ALL USING (current_setting('app.current_role') = 'admin')`);
   await q.query(`CREATE POLICY consent_self ON consent_ledger FOR SELECT USING (current_setting('app.current_role') = 'social_worker' AND beneficiary_id IS NOT NULL)`);
 
@@ -620,6 +722,48 @@ export async function migrate() {
   await q.query(`CREATE POLICY cases_mayor_auditor ON cases FOR SELECT USING (
     current_setting('app.current_role') IN ('mayor', 'auditor')
   )`);
+
+  // -- RLS for persons: barangay-scoped select (mirrors DropPersonLegacyColumns
+  //    migration; scoped to person_addresses, never the dropped persons.address).
+  await q.query(`DROP POLICY IF EXISTS rls_barangay_persons_select ON persons`);
+  await q.query(`CREATE POLICY rls_barangay_persons_select ON persons
+    FOR SELECT USING (EXISTS (
+      SELECT 1 FROM person_addresses pa
+      WHERE pa.person_id = persons.id
+        AND (pa.barangay ILIKE '%' || current_setting('app.current_barangay', true) || '%'
+             OR pa.raw ILIKE '%' || current_setting('app.current_barangay', true) || '%')
+    ))`);
+
+  // -- Drop legacy columns no longer mapped by entities (mirrors the
+  //    Drop*LegacyColumns / AgencyProgramDrop chain migrations). These are
+  //    only present on DBs that were bootstrapped before the normalization.
+  await q.query(`DROP INDEX IF EXISTS idx_beneficiary_category_trgm`);
+  await q.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS consent_status`);
+  await q.query(`ALTER TABLE beneficiaries DROP COLUMN IF EXISTS category`);
+  await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS address`);
+  await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS phone`);
+  await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS email`);
+  await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS current_address`);
+  await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS age`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS assigned_barangay`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS permitted_barangays`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS verification_token`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS verification_token_expires_at`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS reset_token`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS reset_token_expires_at`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS new_email`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS new_email_token`);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS new_email_token_expires_at`);
+  await q.query(`ALTER TABLE programs DROP COLUMN IF EXISTS fund_sources`);
+  await q.query(`ALTER TABLE programs DROP COLUMN IF EXISTS required_documents`);
+
+  // -- Drop legacy tables (dropped by chain migrations; guards upgraded DBs).
+  await q.query(`DROP TABLE IF EXISTS interventions CASCADE`);
+  await q.query(`DROP TABLE IF EXISTS case_tracker_log CASCADE`);
+  await q.query(`DROP TABLE IF EXISTS family_members CASCADE`);
+  await q.query(`DROP TABLE IF EXISTS program_assignments CASCADE`);
+  await q.query(`DROP TABLE IF EXISTS program_assignment_steps CASCADE`);
+  await q.query(`DROP TABLE IF EXISTS intervention_types CASCADE`);
 
   // -- case_history: drop enums, use TEXT (simpler than enum migration)
   //    (savepoint-guarded: each of these is best-effort and must not poison the txn)

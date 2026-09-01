@@ -185,4 +185,12 @@ export class Case extends BaseEntity {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  @Exclude()
+  @Column({ nullable: true })
+  hash?: string;
+
+  @Exclude()
+  @Column({ name: 'prev_hash', nullable: true })
+  prevHash?: string;
 }

@@ -10,6 +10,12 @@ export const CreateBeneficiarySchema = z.object({
   phone: z.string().optional(),
   philsysNumber: z.string().optional(),
   householdId: z.string().uuid().optional(),
+  occupation: z.string().optional(),
+  civilStatus: z.string().optional(),
+  placeOfBirth: z.string().optional(),
+  estimatedMonthlyIncome: z.number().optional(),
+  philhealthNumber: z.string().optional(),
+  category: z.string().optional(),
 });
 
 export const UpdateBeneficiarySchema = CreateBeneficiarySchema.partial();

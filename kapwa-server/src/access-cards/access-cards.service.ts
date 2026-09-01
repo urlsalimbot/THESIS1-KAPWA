@@ -32,6 +32,13 @@ export class AccessCardsService {
       const code = `NORZ-AC-${year}-${String(seqId).padStart(ACCESS_CARD_PAD_WIDTH, '0')}`;
 
       await queryRunner.manager.query(
+        `UPDATE beneficiary_roles SET access_card_code = $1 WHERE person_id = (SELECT person_id FROM beneficiaries WHERE id = $2)`,
+        [code, beneficiaryId]
+      );
+      // Best-effort secondary: keep the household column in sync when the
+      // beneficiary belongs to a household (beneficiaries.household_id may be
+      // NULL, in which case beneficiary_roles above is the persisted source).
+      await queryRunner.manager.query(
         `UPDATE households SET access_card_code = $1 WHERE id = (SELECT household_id FROM beneficiaries WHERE id = $2)`,
         [code, beneficiaryId]
       );
@@ -48,7 +55,7 @@ export class AccessCardsService {
 
   async getSummary(beneficiaryId: string) {
     const ben = await this.repo.query(
-      'SELECT b.id, h.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN households h ON h.id = b.household_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
+      'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
     );
     if (!ben?.[0]?.access_card_code) {
@@ -66,7 +73,7 @@ export class AccessCardsService {
 
   async findBeneficiaryCard(beneficiaryId: string) {
     const ben = await this.repo.query(
-      'SELECT b.id, h.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN households h ON h.id = b.household_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
+      'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
     );
     if (!ben?.[0]?.access_card_code) {
@@ -97,10 +104,11 @@ export class AccessCardsService {
   async getAgencySummary(cardCode: string, caller: User) {
     const rows = await this.repo.query(
       `SELECT b.id AS beneficiary_id, b.person_id, p.surname, p.first_name
-       FROM households h
-       JOIN beneficiaries b ON b.household_id = h.id
+       FROM beneficiaries b
+       LEFT JOIN households h ON h.id = b.household_id
+       LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
        JOIN persons p ON p.id = b.person_id
-       WHERE h.access_card_code = $1
+       WHERE COALESCE(h.access_card_code, br.access_card_code) = $1
        LIMIT 1`,
       [cardCode],
     );

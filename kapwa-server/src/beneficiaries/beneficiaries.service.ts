@@ -1,7 +1,8 @@
 import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { AuditLogService } from '../audit/audit-log.service';
 import { Person } from './person.entity';
 import { PersonContact } from './person-contact.entity';
 import { PersonAddress } from './person-address.entity';
@@ -29,12 +30,15 @@ export class BeneficiariesService {
     private hmRepo: Repository<HouseholdMembership>,
     @InjectRepository(Case)
     private caseRepo: Repository<Case>,
+    @Optional() private auditLog?: AuditLogService,
   ) {}
 
   async createBeneficiary(data: {
     surname: string; firstName: string; middleName?: string;
     gender: string; dob: Date; address?: string; phone?: string;
     philsysNumber?: string; householdId?: string;
+    occupation?: string; civilStatus?: string; placeOfBirth?: string;
+    estimatedMonthlyIncome?: number; philhealthNumber?: string; category?: string;
   }) {
     const buildPerson = (): Person => {
       const person = this.personRepo.create({
@@ -44,6 +48,11 @@ export class BeneficiariesService {
         gender: data.gender as 'Male' | 'Female',
         dob: data.dob,
         philsysNumber: data.philsysNumber,
+        occupation: data.occupation,
+        civilStatus: data.civilStatus,
+        placeOfBirth: data.placeOfBirth,
+        estimatedMonthlyIncome: data.estimatedMonthlyIncome,
+        philhealthNumber: data.philhealthNumber,
       });
       person.contacts = data.phone ? [{ personId: undefined as any, contactType: 'phone', value: data.phone, isPrimary: true } as PersonContact] : [];
       person.addresses = data.address ? [{ personId: undefined as any, addressType: 'current', raw: data.address, isPrimary: true } as PersonAddress] : [];
@@ -85,6 +94,13 @@ export class BeneficiariesService {
       purpose: 'registration',
       channel: 'web',
       status: 'active',
+    });
+
+    await this.auditLog?.log('beneficiary.create', ben.id, undefined, {
+      personId: savedPerson.id,
+      category: (data as any).category,
+      surname: data.surname,
+      firstName: data.firstName,
     });
 
     return ben;

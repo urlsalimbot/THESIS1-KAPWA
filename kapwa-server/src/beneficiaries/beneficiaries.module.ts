@@ -14,9 +14,10 @@ import { Case } from '../cases/case.entity';
 import { ConsentGuard } from '../auth/guards/consent.guard';
 import { PiiMaskingInterceptor } from './pii.interceptor';
 import { AuthModule } from '../auth/auth.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Person, BeneficiaryRole, HouseholdMembership, BeneficiaryClaimant, Beneficiary, ConsentLedger, Case, PersonContact, PersonAddress]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Person, BeneficiaryRole, HouseholdMembership, BeneficiaryClaimant, Beneficiary, ConsentLedger, Case, PersonContact, PersonAddress]), AuthModule, AuditModule],
   controllers: [BeneficiariesController],
   providers: [BeneficiariesService, ConsentGuard, PiiMaskingInterceptor],
   exports: [BeneficiariesService, PiiMaskingInterceptor, TypeOrmModule.forFeature([ConsentLedger, Person])],

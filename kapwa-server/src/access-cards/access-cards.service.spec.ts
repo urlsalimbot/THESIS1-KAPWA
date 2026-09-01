@@ -55,12 +55,21 @@ describe('AccessCardsService', () => {
     it('generates code and updates beneficiary in single call', async () => {
       queryRunnerMock.manager.query
         .mockResolvedValueOnce([{ id: 42 }])
+        .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
       const result = await service.generateAndAssign('beneficiary-uuid');
 
       expect(result).toMatch(/^NORZ-AC-\d{4}-\d{4}$/);
-      expect(queryRunnerMock.manager.query).toHaveBeenCalledTimes(2);
+      expect(queryRunnerMock.manager.query).toHaveBeenCalledTimes(3);
+      expect(queryRunnerMock.manager.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE beneficiary_roles SET access_card_code'),
+        expect.arrayContaining(['beneficiary-uuid'])
+      );
+      expect(queryRunnerMock.manager.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE households SET access_card_code'),
+        expect.arrayContaining(['beneficiary-uuid'])
+      );
       expect(queryRunnerMock.commitTransaction).toHaveBeenCalledTimes(1);
       expect(queryRunnerMock.rollbackTransaction).not.toHaveBeenCalled();
       expect(queryRunnerMock.release).toHaveBeenCalledTimes(1);
@@ -92,7 +101,7 @@ describe('AccessCardsService', () => {
         services: [],
       });
       expect(repoMock.query).toHaveBeenCalledWith(
-        'SELECT b.id, h.access_card_code, p.surname, p.first_name FROM beneficiaries b JOIN households h ON h.id = b.household_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
+        'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
         ['ben-id']
       );
     });
