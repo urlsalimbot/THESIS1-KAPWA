@@ -48,12 +48,12 @@ export function BottomNav() {
 
   return (
     <nav aria-label={t('a11y.mobileNavigation', 'Mobile navigation')} className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border h-16 lg:hidden">
-      <div className="flex items-center justify-around h-full px-2">
+      <div className="flex items-stretch h-full px-1">
         {quickPath && quickLabel && (
           <Link
             to={quickPath}
             aria-label={quickLabel}
-            className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center -mt-4 shadow-lg min-w-0 flex-shrink-0"
+            className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center self-center -mt-4 shadow-lg min-w-0 flex-shrink-0"
           >
             <Plus size={24} aria-hidden="true" />
           </Link>
@@ -67,12 +67,12 @@ export function BottomNav() {
               key={tab.path}
               to={tab.path}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-3 py-1 rounded-md transition-colors min-w-0 flex-shrink-0',
+                'flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-md transition-colors',
                 isActive ? 'bg-muted text-foreground' : 'text-muted-foreground'
               )}
             >
               {tab.icon}
-              <span className="text-[10px] font-medium">{tab.label}</span>
+              <span className="text-[10px] font-medium truncate w-full text-center leading-tight">{tab.label}</span>
             </Link>
           );
         })}

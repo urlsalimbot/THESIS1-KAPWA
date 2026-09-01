@@ -106,7 +106,7 @@ export function CreateReferralForm({
         </div>
       </div>
       <div className="space-y-1">
-        <label className="text-xs font-medium">{t('referrals.beneficiary', 'Beneficiary *')}</label>
+        <label className="text-xs font-medium" htmlFor="iar-beneficiary-search">{t('referrals.beneficiary', 'Beneficiary *')}</label>
         {selected ? (
           <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
             <span>{selected.label}</span>
@@ -119,6 +119,7 @@ export function CreateReferralForm({
         ) : (
           <>
             <input
+              id="iar-beneficiary-search"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder={t('referrals.searchBeneficiary', 'Search beneficiary by name...')}

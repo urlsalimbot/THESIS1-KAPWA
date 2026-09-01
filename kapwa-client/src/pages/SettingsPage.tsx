@@ -200,6 +200,7 @@ function ProfileTab() {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   className="pl-9 h-9"
+                  aria-label={t('settings.phoneNumber', 'Phone Number')}
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
@@ -271,8 +272,9 @@ function ProfileTab() {
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                  aria-label={showPw ? t('settings.hidePassword', 'Hide password') : t('settings.showPassword', 'Show password')}
+                  aria-pressed={showPw}
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>

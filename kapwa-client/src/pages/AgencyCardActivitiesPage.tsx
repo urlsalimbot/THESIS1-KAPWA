@@ -86,6 +86,7 @@ export function AgencyCardActivitiesPage() {
           onChange={e => setCode(e.target.value)}
           placeholder={t('agency.enterCardCode', 'Enter card code (e.g. NORZ-AC-2026-0001)')}
           className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          aria-label={t('agency.enterCardCode', 'Enter card code')}
         />
         <Button type="submit" disabled={loading || !code.trim()}>
           <Search size={14} className="mr-1" /> {loading ? t('agency.checking', 'Checking...') : t('agency.verify', 'Verify')}

@@ -320,6 +320,7 @@ export default function UsersPanel() {
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })); }}
                 className="h-9 pl-9 text-sm"
+                aria-label={t('usersPanel.searchPlaceholder', 'Search by email or name')}
               />
             </div>
             <div className="w-44">

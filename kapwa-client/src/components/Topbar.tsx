@@ -145,12 +145,17 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           </div>
         </div>
 
-        {/* Center: search — spacer when absent */}
-        <div className="flex-1 flex items-center justify-center px-4">
+        {/* Center: search — hidden on small screens so the action cluster fits
+            without a cramped scroll area; mobile search lives in the page
+            filter/search controls. */}
+        <div className="flex-1 flex items-center justify-center px-4 hidden md:flex">
           {(isAdmin || isSocialWorker) && <GlobalSearch />}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right action cluster — on small screens this can exceed the viewport
+            (New Intake → Approvals → Notifications → Messages → Help → user menu),
+            so it scrolls horizontally instead of clipping unreachable buttons. */}
+        <div className="flex items-center gap-2 min-w-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shrink">
 
           {canIntake && (
             <Tooltip>

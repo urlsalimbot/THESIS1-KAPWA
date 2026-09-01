@@ -84,6 +84,7 @@ export function ForgotPasswordPage() {
               required
               autoFocus
               className="h-11"
+              aria-label={t('auth.emailLabel', 'Email')}
             />
             <Button type="submit" className="w-full h-11" disabled={submitting || !email}>
               {submitting && <Loader2 size={16} className="mr-2 animate-spin" />}
