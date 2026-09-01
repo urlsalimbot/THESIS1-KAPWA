@@ -88,7 +88,7 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
       const serviceName = selectedProgram?.name || form.serviceName;
       const category = selectedProgram?.category || form.category || undefined;
       await api.post(`/cases/${caseId}/interventions`, {
-        programId: form.programId || null,
+        programId: form.programId?.startsWith('adhoc:') ? null : form.programId || null,
         serviceName,
         category,
         deliveryDate: form.deliveryDate || null,

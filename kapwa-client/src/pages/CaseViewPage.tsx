@@ -7,6 +7,7 @@ import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, F
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDate, formatDateTime } from '../lib/format';
+import { isAssessmentStepDone } from '../lib/case-progress';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +33,7 @@ const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destr
 
 function findFirstPendingStep(caseData: any, interventionCount: number): number {
   const checks = [
-    (d: any) => !!d?.problemsPresented && !!d?.clientCategory,
+    (d: any) => isAssessmentStepDone(d),
     () => interventionCount > 0,
     (d: any) => interventionCount > 0 || (d?.referrals?.length || 0) > 0,
     (d: any) => !!d?.selfRelianceLevel && !!d?.sustainabilityPlan,
@@ -130,7 +131,7 @@ export function CaseViewPage() {
 
   const caseClosed = caseData?.status === 'closed';
   const stepDone = useMemo(() => [
-    !!caseData?.problemsPresented && !!caseData?.clientCategory,
+    isAssessmentStepDone(caseData),
     interventions.length > 0,
     interventions.length > 0 || (caseData?.referrals?.length || 0) > 0,
     !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan,

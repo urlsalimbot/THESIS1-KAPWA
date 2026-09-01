@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { NotificationsService } from '../notifications/notifications.service';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
+import { CaseAssistance } from './case-assistance.entity';
 
 describe('CasesService', () => {
   let service: CasesService;
@@ -276,6 +277,53 @@ describe('FSM — backward transitions', () => {
     const existing = { id: '1', status: CaseStatus.ACTIVE, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
     await expect(service.updateStatus('1', CaseStatus.ASSESSED)).rejects.toThrow('Invalid transition');
+  });
+});
+
+describe('updateAssessmentV2 — case_assistances', () => {
+  let created: CaseAssistance[];
+
+  beforeEach(() => {
+    created = [];
+    repoMock.findOne.mockResolvedValue({
+      id: 'case-1',
+      status: CaseStatus.ASSESSED,
+      updatedAt: new Date(),
+      assistances: [],
+    } as any);
+    (repoMock.manager as any).create = (_entity: any, input: any) => {
+      const obj: any = { ...input };
+      created.push(obj);
+      return obj;
+    };
+    (repoMock.manager as any).delete = jest.fn().mockResolvedValue({ affected: 0 });
+    repoMock.save.mockImplementation((c: any) => {
+      c.id = c.id ?? 'case-1';
+      return Promise.resolve(c);
+    });
+  });
+
+  it('does NOT create a financial case_assistance when no financial data is provided', async () => {
+    await service.updateAssessmentV2('case-1', {
+      problemsPresented: 'need',
+      socialWorkerAssessment: 'assess',
+      clientCategory: 'Indigent',
+      frvaScore: 65,
+    } as any);
+    expect(created).toEqual([]);
+  });
+
+  it('sets caseId on case_assistance rows when financial data is provided', async () => {
+    await service.updateAssessmentV2('case-1', {
+      problemsPresented: 'need',
+      socialWorkerAssessment: 'assess',
+      clientCategory: 'Indigent',
+      amountAssistance: 5000,
+      modeFinancialAssistance: 'Cash',
+    } as any);
+    expect(created.length).toBe(1);
+    expect(created[0].assistanceType).toBe('financial');
+    expect(created[0].caseId).toBe('case-1');
   });
 });
 

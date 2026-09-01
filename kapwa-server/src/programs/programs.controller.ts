@@ -18,14 +18,14 @@ export class ProgramsController {
   constructor(private progService: ProgramsService) {}
 
   @Get()
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'List all programs' })
   async findAll(@Query('activeOnly') activeOnly?: string) {
     return this.progService.findAll(activeOnly !== 'false');
   }
 
   @Get(':id')
-  @Roles('admin')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Get program by ID' })
   async findOne(@Param('id') id: string) {
     return this.progService.findById(id);

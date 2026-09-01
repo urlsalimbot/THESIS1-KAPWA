@@ -88,7 +88,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
       const serviceName = selectedProgram?.name || form.serviceName;
       const category = selectedProgram?.category || form.category || undefined;
       await api.post(`/cases/${caseId}/interventions`, {
-        programId: form.programId || null,
+        programId: form.programId?.startsWith('adhoc:') ? null : form.programId || null,
         serviceName,
         category,
         deliveryDate: form.deliveryDate || null,
@@ -345,8 +345,9 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
         </div>
       )}
 
-      {/* Status transition */}
-      {!readOnly && interventions.length > 0 && caseData?.status === 'assessed' && userRole === 'social_worker' && (
+      {/* Status transition — visible even when readOnly so a worker who has already
+          logged interventions can still submit the assessed case for admin review. */}
+      {interventions.length > 0 && caseData?.status === 'assessed' && userRole === 'social_worker' && (
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
