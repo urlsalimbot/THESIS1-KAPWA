@@ -28,6 +28,14 @@ set -a; source infra/.env.production; set +a
 : "${JWT_SECRET:?JWT_SECRET must be set}"
 : "${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}"
 : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}"
+# The API refuses to boot in production without a valid IRF_ENCRYPTION_KEY
+# (fail-closed), so fail fast here instead of boot-looping the API container.
+: "${IRF_ENCRYPTION_KEY:?IRF_ENCRYPTION_KEY must be set - generate one with: openssl rand -hex 32}"
+if [ "${#IRF_ENCRYPTION_KEY}" -lt 64 ]; then
+    echo "ERROR: IRF_ENCRYPTION_KEY must be at least 64 hex chars (32 bytes). Got ${#IRF_ENCRYPTION_KEY}."
+    echo "  Generate one with: openssl rand -hex 32"
+    exit 1
+fi
 
 # 3. Build and start all services
 echo "[1/4] Building images..."
