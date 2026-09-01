@@ -120,7 +120,7 @@ export function DashboardPage() {
     { accessorKey: 'gender', header: t('dashboard.gender', 'Gender') },
     { accessorKey: 'category', header: t('dashboard.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{categoryLabel(t, row.original.category)}</Badge> },
     { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
-    { accessorKey: 'remarks', header: t('dashboard.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs">{row.original.remarks}</span> },
+    { accessorKey: 'remarks', header: t('dashboard.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks || '—'}</span> },
     { id: 'actions', header: t('dashboard.actions', 'Actions'), cell: ({ row }) => (
       <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label={t('dashboard.viewCase', 'View Case')}>
         <Eye size={14} className="mr-1" /> {t('dashboard.view', 'View')}

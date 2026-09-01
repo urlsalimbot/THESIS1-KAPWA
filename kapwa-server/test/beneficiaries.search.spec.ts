@@ -68,12 +68,12 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
   });
 
   // Test 2: Category filter — exact match filter
-  it('should add br.category = :category filter when category param provided', async () => {
+  it('should add roles.category = :category filter when category param provided', async () => {
     mockQb.getMany.mockResolvedValueOnce([]);
     await service.findAll(undefined, undefined, 1, 100, 'Senior');
 
     expect(mockQb.andWhere).toHaveBeenCalledWith(
-      expect.stringContaining('br.category = :category'),
+      expect.stringContaining('roles.category = :category'),
       expect.objectContaining({ category: 'Senior' }),
     );
   });
@@ -102,7 +102,7 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
 
     expect(allArgs).toContain('ILIKE :barangay');
     expect(allArgs).toContain('similarity(p.surname');
-    expect(allArgs).toContain('br.category = :category');
+    expect(allArgs).toContain('roles.category = :category');
   });
 
   // Test 5: Empty search — returns all beneficiaries

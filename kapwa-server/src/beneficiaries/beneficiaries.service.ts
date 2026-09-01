@@ -115,13 +115,13 @@ export class BeneficiariesService {
   ) {
     const qb = this.benRepo.createQueryBuilder('b')
       .leftJoinAndSelect('b.person', 'p')
-      .leftJoinAndSelect('b.household', 'h')
-      .leftJoin('beneficiary_roles', 'br', 'br.person_id = b.person_id');
+      .leftJoinAndSelect('p.roles', 'roles')
+      .leftJoinAndSelect('b.household', 'h');
     if (barangay) {
       qb.andWhere('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
     }
     if (category) {
-      qb.andWhere('br.category = :category', { category });
+      qb.andWhere('roles.category = :category', { category });
     }
     if (search && search.length >= 2) {
       if (search.length >= 3) {
@@ -129,7 +129,7 @@ export class BeneficiariesService {
           `(p.search_vector @@ plainto_tsquery('english', :search)
             OR similarity(p.surname, :search) > 0.3
             OR similarity(p.first_name, :search) > 0.3
-            OR br.category ILIKE :categoryMatch
+            OR roles.category ILIKE :categoryMatch
             OR EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :addressMatch OR pa2.raw ILIKE :addressMatch)))`,
           { search, categoryMatch: `%${search}%`, addressMatch: `%${search}%` },
         );

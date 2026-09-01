@@ -65,6 +65,7 @@ export class DashboardController {
           return {
             id: c.id,
             no: i + 1,
+            name: [person.firstName, person.middleName, person.surname].filter(Boolean).join(' '),
             surname: person.surname || '',
             first: person.firstName || '',
             middle: person.middleName || '',

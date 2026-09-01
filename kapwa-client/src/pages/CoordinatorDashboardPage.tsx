@@ -47,7 +47,7 @@ export function CoordinatorDashboardPage() {
     { id: 'name', header: t('dashboard.name', 'Name'), cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
     { accessorKey: 'category', header: t('dashboard.category', 'Category') },
     { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
-    { accessorKey: 'remarks', header: t('dashboard.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks}</span> },
+    { accessorKey: 'remarks', header: t('dashboard.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks || '—'}</span> },
     {
       id: 'actions', header: '',
       cell: ({ row }) => (

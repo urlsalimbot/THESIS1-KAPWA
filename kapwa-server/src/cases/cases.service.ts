@@ -106,6 +106,8 @@ export class CasesService {
     const qb = this.caseRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'beneficiary')
       .leftJoinAndSelect('beneficiary.person', 'person')
+      .leftJoinAndSelect('person.addresses', 'person_addresses')
+      .leftJoinAndSelect('person.contacts', 'person_contacts')
       .leftJoinAndSelect('c.assignedWorker', 'assignedWorker')
       .leftJoinAndSelect('c.requirements', 'case_requirements')
       .leftJoinAndSelect('c.referralRows', 'case_referrals')

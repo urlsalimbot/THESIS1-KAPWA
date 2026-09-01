@@ -102,6 +102,8 @@ export class DashboardService {
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'b')
       .leftJoinAndSelect('b.person', 'p')
+      .leftJoinAndSelect('p.addresses', 'p_addresses')
+      .leftJoinAndSelect('p.contacts', 'p_contacts')
       .orderBy('c.updated_at', 'DESC');
 
     if (barangay) {

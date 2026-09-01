@@ -43,14 +43,29 @@ export class UsersService {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data: data.map(({ password, ...u }) => u), total, page, limit };
+    // JSON serialization ignores class getters, so materialize the flattened
+    // barangay shape (assembled from user_barangay_assignments) explicitly —
+    // otherwise the admin Users panel shows an empty Barangay column.
+    return {
+      data: data.map((user) => {
+        const { password, ...u } = user;
+        return {
+          ...u,
+          assignedBarangay: user.assignedBarangay,
+          permittedBarangays: user.permittedBarangays,
+        };
+      }),
+      total,
+      page,
+      limit,
+    };
   }
 
   async findOne(id: string) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     const { password, ...safe } = user;
-    return safe;
+    return { ...safe, assignedBarangay: user.assignedBarangay, permittedBarangays: user.permittedBarangays };
   }
 
   async createUser(dto: CreateUserInput) {
