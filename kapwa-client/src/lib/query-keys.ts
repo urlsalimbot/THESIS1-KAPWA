@@ -42,7 +42,7 @@ export const queryKeys = {
     metrics: () => memo('dashboard.metrics', () => ['dashboard', 'metrics'] as const),
     dailyCounts: (year: number, month: number) =>
       memo(`dashboard.dailyCounts.${year}-${month}`, () => ['dashboard', 'daily-counts', { year, month }] as const),
-    mayorReports: () => memo('dashboard.mayorReports', () => ['dashboard', 'reports', 'mayor'] as const),
+    mayorReports: (start?: string, end?: string) => memo(`dashboard.mayorReports.${start ?? 'all'}.${end ?? 'all'}`, () => ['dashboard', 'reports', 'mayor', start ?? 'all', end ?? 'all'] as const),
   },
   notifications: {
     all: ['notifications'] as const,

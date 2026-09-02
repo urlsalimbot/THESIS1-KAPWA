@@ -43,15 +43,23 @@ export class DashboardService {
     this.cache?.invalidate('^dashboard:');
   }
 
-  async getMetrics(barangay?: string) {
-    const key = `dashboard:metrics:${barangay ?? 'all'}`;
+  async getMetrics(barangay?: string, startDate?: string, endDate?: string) {
+    const key = `dashboard:metrics:${barangay ?? 'all'}:${startDate ?? 'all'}:${endDate ?? 'all'}`;
     const compute = async () => {
+      // End is inclusive; treat it as [start, end+1day).
+      const endExclusive = endDate ? new Date(new Date(endDate).getTime() + 86_400_000).toISOString().slice(0, 10) : null;
       const caseQb = this.caseRepo.createQueryBuilder('c')
         .leftJoin('c.beneficiary', 'b')
         .leftJoin('b.person', 'p');
 
       if (barangay) {
         caseQb.where('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
+      }
+      if (startDate) {
+        caseQb.andWhere('c.created_at >= :start', { start: `${startDate}T00:00:00Z` });
+      }
+      if (endExclusive) {
+        caseQb.andWhere('c.created_at < :end', { end: `${endExclusive}T00:00:00Z` });
       }
 
       const totalCases = await caseQb.clone().getCount();
@@ -60,34 +68,48 @@ export class DashboardService {
       const transitioning = await caseQb.clone()
         .andWhere('c.status = :status', { status: CaseStatus.TRANSITIONING }).getCount();
 
-      const benQb = this.benRepo.createQueryBuilder('b')
-        .leftJoin('b.person', 'p');
-      if (barangay) {
-        benQb.where('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
-      }
-      const { count: uniqueHouseholds } = await benQb
-        .select('COUNT(DISTINCT b.household_id)', 'count')
-        .getRawOne() as { count: string };
-
-      const byStatus = await this.caseRepo
+      const byStatusQb = this.caseRepo
         .createQueryBuilder('c')
         .select('c.status', 'status')
         .addSelect('COUNT(*)', 'count')
-        .groupBy('c.status')
-        .getRawMany();
+        .groupBy('c.status');
+      if (startDate) byStatusQb.andWhere('c.created_at >= :start', { start: `${startDate}T00:00:00Z` });
+      if (endExclusive) byStatusQb.andWhere('c.created_at < :end', { end: `${endExclusive}T00:00:00Z` });
+      const byStatus = await byStatusQb.getRawMany();
 
       // Real disbursement + recent-intervention numbers (were hardcoded 0).
+      const intervWhere = startDate || endExclusive
+        ? `WHERE delivery_date >= $1 AND delivery_date < $2`
+        : '';
+      const intervParams = startDate || endExclusive
+        ? [startDate ?? '1970-01-01', endExclusive ?? '2999-12-31']
+        : [];
       const disbursed = await this.caseRepo.manager.query(
         `SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS interventions
-         FROM case_interventions`,
+         FROM case_interventions ${intervWhere}`,
+        intervParams,
       );
       const totalDisbursed = Number(disbursed[0]?.total ?? 0);
-      const recentInterventions = Number(
-        (await this.caseRepo.manager.query(
-          `SELECT COUNT(*) AS count FROM case_interventions
-           WHERE delivery_date >= CURRENT_DATE - INTERVAL '7 days'`,
-        ))[0]?.count ?? 0,
+      // Period-aware recent interventions: intersects the selected period with
+      // the rolling 7-day window.
+      const recentRows = await this.caseRepo.manager.query(
+        `SELECT COUNT(*) AS count FROM case_interventions
+         WHERE delivery_date >= GREATEST(CURRENT_DATE - INTERVAL '7 days', $1::date)
+           AND delivery_date < $2::date`,
+        [startDate ?? '1970-01-01', endExclusive ?? '2999-12-31'],
       );
+      const recentInterventions = Number(recentRows[0]?.count ?? 0);
+
+      // Unique households with a case opened in the period (period-aware).
+      const householdRows = await this.caseRepo.manager.query(
+        `SELECT COUNT(DISTINCT b.household_id) AS count
+         FROM cases c JOIN beneficiaries b ON b.id = c.beneficiary_id
+         WHERE b.household_id IS NOT NULL
+           AND c.created_at >= $1::timestamp AND c.created_at < $2::timestamp`,
+        [startDate ? `${startDate}T00:00:00Z` : '1970-01-01T00:00:00Z',
+         endExclusive ? `${endExclusive}T00:00:00Z` : '2999-12-31T00:00:00Z'],
+      );
+      const uniqueHouseholds = Number(householdRows[0]?.count ?? 0);
 
       return {
         totalCases,
@@ -108,16 +130,20 @@ export class DashboardService {
    * beneficiaries (age bracket, gender, barangay, client category), and
    * inter-agency referrals by receiving agency.
    */
-  async getReportBreakdowns() {
-    const q = (sql: string) => this.caseRepo.manager.query(sql);
-    // Beneficiaries that actually received an intervention.
-    const served = `FROM case_interventions ci
+  async getReportBreakdowns(startDate?: string, endDate?: string) {
+    const q = (sql: string, params: any[] = []) => this.caseRepo.manager.query(sql, params);
+    const endExclusive = endDate ? new Date(new Date(endDate).getTime() + 86_400_000).toISOString().slice(0, 10) : null;
+    const ivStart = startDate ?? '1970-01-01';
+    const ivEnd = endExclusive ?? '2999-12-31';
+    // Beneficiaries that actually received an intervention in the period.
+    const servedBase = `FROM case_interventions ci
       JOIN cases c ON c.id::text = ci.case_id
       JOIN beneficiaries b ON b.id = c.beneficiary_id
       JOIN persons p ON p.id = b.person_id`;
+    const ivFilter = `WHERE ci.delivery_date >= $1 AND ci.delivery_date < $2`;
 
     const [beneficiariesServed, byProgram, byFundSource, byGender, byAgeBracket, byBarangay, byCategory, referrals] = await Promise.all([
-      q(`SELECT COUNT(DISTINCT b.id) AS count ${served}`),
+      q(`SELECT COUNT(DISTINCT b.id) AS count ${servedBase} ${ivFilter}`, [ivStart, ivEnd]),
       q(`SELECT COALESCE(pg.name, 'Unassigned') AS program,
            COUNT(DISTINCT c.beneficiary_id) AS beneficiaries,
            COUNT(ci.id) AS interventions,
@@ -125,29 +151,31 @@ export class DashboardService {
          FROM case_interventions ci
          LEFT JOIN cases c ON c.id::text = ci.case_id
          LEFT JOIN programs pg ON pg.id = ci.program_id
-         GROUP BY 1 ORDER BY amount DESC`),
+         WHERE ci.delivery_date >= $1 AND ci.delivery_date < $2
+         GROUP BY 1 ORDER BY amount DESC`, [ivStart, ivEnd]),
       q(`SELECT COALESCE(ci.fund_source, 'Unspecified') AS fund_source,
            COUNT(*) AS interventions,
            COALESCE(SUM(ci.amount), 0) AS amount
          FROM case_interventions ci
-         GROUP BY 1 ORDER BY amount DESC`),
+         WHERE ci.delivery_date >= $1 AND ci.delivery_date < $2
+         GROUP BY 1 ORDER BY amount DESC`, [ivStart, ivEnd]),
       q(`SELECT COALESCE(p.gender, 'Unspecified') AS gender, COUNT(DISTINCT p.id) AS count
-         ${served} GROUP BY 1 ORDER BY count DESC`),
+         ${servedBase} ${ivFilter} GROUP BY 1 ORDER BY count DESC`, [ivStart, ivEnd]),
       q(`SELECT CASE
              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) < 18 THEN '0-17'
              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) <= 59 THEN '18-59'
              ELSE '60+' END AS bracket,
            COUNT(DISTINCT p.id) AS count
-         ${served} GROUP BY 1 ORDER BY count DESC`),
+         ${servedBase} ${ivFilter} GROUP BY 1 ORDER BY count DESC`, [ivStart, ivEnd]),
       q(`SELECT COALESCE(NULLIF(pa.barangay, ''), SPLIT_PART(pa.raw, ',', 1), 'Unspecified') AS barangay,
            COUNT(DISTINCT p.id) AS count
-         ${served}
+         ${servedBase}
          LEFT JOIN person_addresses pa ON pa.person_id = p.id AND pa.address_type = 'current'
-         GROUP BY 1 ORDER BY count DESC`),
+         ${ivFilter} GROUP BY 1 ORDER BY count DESC`, [ivStart, ivEnd]),
       q(`SELECT COALESCE(br.category, 'Uncategorized') AS category, COUNT(DISTINCT p.id) AS count
-         ${served}
+         ${servedBase}
          LEFT JOIN beneficiary_roles br ON br.person_id = p.id
-         GROUP BY 1 ORDER BY count DESC`),
+         ${ivFilter} GROUP BY 1 ORDER BY count DESC`, [ivStart, ivEnd]),
       q(`SELECT COALESCE(a.name, 'Unspecified Agency') AS agency,
            COUNT(ir.id) AS total,
            COUNT(ir.id) FILTER (WHERE ir.status = 'referred') AS referred,
@@ -156,7 +184,9 @@ export class DashboardService {
            COUNT(ir.id) FILTER (WHERE ir.status = 'completed') AS completed
          FROM inter_agency_referrals ir
          LEFT JOIN agencies a ON a.id = ir.to_agency_id
-         GROUP BY 1 ORDER BY total DESC`),
+         WHERE ir.created_at >= $1 AND ir.created_at < $2
+         GROUP BY 1 ORDER BY total DESC`,
+        [`${ivStart}T00:00:00Z`, `${ivEnd}T00:00:00Z`]),
     ]);
 
     return {

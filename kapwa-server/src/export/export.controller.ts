@@ -113,18 +113,28 @@ export class ExportController {
 
   @Get('monthly-funds')
   @Roles('admin', 'mayor', 'auditor')
-  @ApiOperation({ summary: 'Export monthly fund utilization as an Excel workbook' })
-  @ApiQuery({ name: 'month', required: true, example: '2026-08', description: 'Month in YYYY-MM format' })
+  @ApiOperation({ summary: 'Export fund utilization (monthly or date range) as an Excel workbook' })
+  @ApiQuery({ name: 'month', required: false, example: '2026-08', description: 'Month in YYYY-MM format (used when no explicit range)' })
+  @ApiQuery({ name: 'startDate', required: false, example: '2026-01-01' })
+  @ApiQuery({ name: 'endDate', required: false, example: '2026-12-31' })
   async exportMonthlyFunds(
     @Query('month') month: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
     @Res() res?: Response,
   ) {
     if (!res) return;
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || '')) {
-      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid month. Use YYYY-MM format.' });
+    const dateRe = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+    const monthOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(month || '');
+    if (!startDate && !endDate && !monthOk) {
+      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Provide a month (YYYY-MM) or a startDate/endDate range (YYYY-MM-DD).' });
       return;
     }
-    const { buffer, filename } = await this.exportService.monthlyFundUtilization(month);
+    if ((startDate && !dateRe.test(startDate)) || (endDate && !dateRe.test(endDate))) {
+      res.status(HttpStatus.BAD_REQUEST).json({ message: 'startDate/endDate must be YYYY-MM-DD.' });
+      return;
+    }
+    const { buffer, filename } = await this.exportService.monthlyFundUtilization(month, startDate, endDate);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${filename}"`,

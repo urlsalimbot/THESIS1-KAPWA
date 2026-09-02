@@ -1,5 +1,5 @@
-import { Controller, Get, Query, UseGuards, Request, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards, Request, Logger, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -102,15 +102,25 @@ export class DashboardController {
     @Get('reports/mayor')
   @Roles('mayor')
   @ApiOperation({ summary: 'Mayor aggregate reports - zero PII' })
-  async getMayorReports() {
+  @ApiQuery({ name: 'startDate', required: false, example: '2026-01-01' })
+  @ApiQuery({ name: 'endDate', required: false, example: '2026-12-31' })
+  async getMayorReports(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const dateRe = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+    if ((startDate && !dateRe.test(startDate)) || (endDate && !dateRe.test(endDate))) {
+      throw new BadRequestException('startDate/endDate must be YYYY-MM-DD');
+    }
     const [metrics, sla, servedToday, breakdowns, trends] = await Promise.all([
-      this.dashService.getMetrics(),
+      this.dashService.getMetrics(undefined, startDate, endDate),
       this.dashService.getSlaCompliance(),
       this.dashService.getServedToday(),
-      this.dashService.getReportBreakdowns(),
+      this.dashService.getReportBreakdowns(startDate, endDate),
       this.dashService.getTrends(),
     ]);
     return {
+      period: { startDate: startDate ?? null, endDate: endDate ?? null },
       fundUtilization: metrics.totalDisbursedAmount,
       uniqueHouseholds: metrics.uniqueHouseholds,
       caseStatusDistribution: metrics.byStatus,

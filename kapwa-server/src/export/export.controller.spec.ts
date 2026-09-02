@@ -30,27 +30,26 @@ describe('ExportController month validation', () => {
     } as any;
   }
 
-  it('rejects an out-of-range month like 2026-13 with 400', async () => {
+  it('rejects a missing month and range with 400', async () => {
     const res = mockRes();
-    await controller.exportMonthlyFunds('2026-13', res);
+    await controller.exportMonthlyFunds('', undefined, undefined, res);
     expect(res.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: expect.stringContaining('Invalid month') }),
-    );
     expect(service.monthlyFundUtilization).not.toHaveBeenCalled();
   });
 
-  it('rejects malformed months like 2026-1 with 400', async () => {
-    const res = mockRes();
-    await controller.exportMonthlyFunds('2026-1', res);
-    expect(res.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-    expect(service.monthlyFundUtilization).not.toHaveBeenCalled();
+  it('rejects malformed months like 2026-13/2026-1 with 400', async () => {
+    for (const m of ['2026-13', '2026-1']) {
+      const res = mockRes();
+      await controller.exportMonthlyFunds(m, undefined, undefined, res);
+      expect(res.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(service.monthlyFundUtilization).not.toHaveBeenCalled();
+    }
   });
 
   it('accepts a valid month like 2026-08', async () => {
     const res = mockRes();
-    await controller.exportMonthlyFunds('2026-08', res);
-    expect(service.monthlyFundUtilization).toHaveBeenCalledWith('2026-08');
+    await controller.exportMonthlyFunds('2026-08', undefined, undefined, res);
+    expect(service.monthlyFundUtilization).toHaveBeenCalledWith('2026-08', undefined, undefined);
     expect(res.status).not.toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(res.set).toHaveBeenCalled();
     expect(res.send).toHaveBeenCalled();
@@ -58,7 +57,21 @@ describe('ExportController month validation', () => {
 
   it('accepts December 2026-12', async () => {
     const res = mockRes();
-    await controller.exportMonthlyFunds('2026-12', res);
-    expect(service.monthlyFundUtilization).toHaveBeenCalledWith('2026-12');
+    await controller.exportMonthlyFunds('2026-12', undefined, undefined, res);
+    expect(service.monthlyFundUtilization).toHaveBeenCalledWith('2026-12', undefined, undefined);
+  });
+
+  it('accepts an explicit date range without a month', async () => {
+    const res = mockRes();
+    await controller.exportMonthlyFunds('', '2026-01-01', '2026-12-31', res);
+    expect(service.monthlyFundUtilization).toHaveBeenCalledWith('', '2026-01-01', '2026-12-31');
+    expect(res.status).not.toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+  });
+
+  it('rejects malformed range dates with 400', async () => {
+    const res = mockRes();
+    await controller.exportMonthlyFunds('', '2026-13-01', undefined, res);
+    expect(res.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(service.monthlyFundUtilization).not.toHaveBeenCalled();
   });
 });

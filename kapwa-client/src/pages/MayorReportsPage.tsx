@@ -3,24 +3,60 @@ import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import {
   TrendingUp, Users, DollarSign, Clock, CheckCircle, AlertTriangle, Download,
-  FileBarChart2, LayoutGrid, UserRound, Landmark, Send, CalendarRange,
+  FileBarChart2, LayoutGrid, UserRound, Send, CalendarRange, Filter, X, RefreshCw,
 } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DataTable } from '@/components/data-table';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
 import { queryKeys } from '../lib/query-keys';
+import { api } from '../lib/api';
 import { downloadMonthlyFunds } from '../lib/api';
 import { DataTableColumnHeader } from '@/components/data-table/DataTableColumnHeader';
+import { cn } from '@/lib/utils';
 
 const fmtPeso = (n: number | string | undefined | null) =>
   `₱${Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
 
+const isoDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const fmtLabel = (d?: string) =>
+  d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+type Preset = 'all' | 'ytd' | '6m' | '3m' | 'thisMonth' | 'lastMonth';
+
+const PRESETS: { key: Preset; label: string }[] = [
+  { key: 'all', label: 'All Time' },
+  { key: 'ytd', label: 'YTD' },
+  { key: '6m', label: '6 Months' },
+  { key: '3m', label: '3 Months' },
+  { key: 'thisMonth', label: 'This Month' },
+  { key: 'lastMonth', label: 'Last Month' },
+];
+
+function presetToRange(p: Preset): { from?: string; to?: string } {
+  const now = new Date();
+  switch (p) {
+    case 'ytd': return { from: isoDate(new Date(now.getFullYear(), 0, 1)), to: isoDate(now) };
+    case '6m': { const d = new Date(now); d.setMonth(d.getMonth() - 6); return { from: isoDate(d), to: isoDate(now) }; }
+    case '3m': { const d = new Date(now); d.setMonth(d.getMonth() - 3); return { from: isoDate(d), to: isoDate(now) }; }
+    case 'thisMonth': return { from: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: isoDate(now) };
+    case 'lastMonth': {
+      const f = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const e = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { from: isoDate(f), to: isoDate(e) };
+    }
+    default: return {};
+  }
+}
+
 const SORTABLE_COLUMN = (key: string, label: string): ColumnDef<any> => ({
   accessorKey: key,
   header: ({ column }) => <DataTableColumnHeader column={column} title={label} />,
-  cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? '')}</span>,
+  cell: ({ getValue }) => <span className="text-sm">{String((getValue() as string | number | null | undefined) ?? '')}</span>,
 });
 
 const AMOUNT_COLUMN = (key: string, label: string): ColumnDef<any> => ({
@@ -35,31 +71,54 @@ const COUNT_COLUMN = (key: string, label: string): ColumnDef<any> => ({
   cell: ({ getValue }) => <span className="text-sm tabular-nums">{String((getValue() as string | number | null | undefined) ?? 0)}</span>,
 });
 
-interface BreakdownRow {
-  program?: string; beneficiaries?: string | number; interventions?: string | number;
-  amount?: string | number; fund_source?: string; gender?: string; bracket?: string;
-  barangay?: string; category?: string; agency?: string; total?: string | number;
-  referred?: string | number; accepted?: string | number; declined?: string | number;
-  completed?: string | number; month?: string; casesCreated?: string | number;
+function EmptyHint({ label }: { label: string }) {
+  return (
+    <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+      {label}
+    </div>
+  );
 }
 
 export function MayorReportsPage() {
   const { t } = useTranslation();
-  const { data: metrics, isLoading: loading } = useSWR(queryKeys.dashboard.mayorReports());
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [preset, setPreset] = useState<Preset>('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const isCustom = Boolean(customFrom || customTo);
+  const range = isCustom
+    ? { from: customFrom || undefined, to: customTo || undefined }
+    : presetToRange(preset);
+
+  // SWR key carries the period for cache identity; the fetcher maps it to
+  // query params (array keys are otherwise joined into the URL path).
+  const { data: metrics, isLoading: loading, isValidating } = useSWR(
+    queryKeys.dashboard.mayorReports(range.from, range.to),
+    ([, , , start, end]: readonly string[]) => {
+      const params = new URLSearchParams();
+      if (start !== 'all') params.set('startDate', start);
+      if (end !== 'all') params.set('endDate', end);
+      const qs = params.toString();
+      return api.get<any>(`/dashboard/reports/mayor${qs ? `?${qs}` : ''}`);
+    },
+  );
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const periodLabel = range.from || range.to
+    ? `${fmtLabel(range.from)} – ${fmtLabel(range.to)}`
+    : t('reports.allTime', 'All time');
 
   async function handleExportFundUtilization() {
     if (exporting) return;
     setExporting(true);
     setExportError(null);
     try {
-      await downloadMonthlyFunds(currentMonth);
+      await downloadMonthlyFunds(currentMonth, range.from, range.to);
     } catch (err: any) {
       setExportError(err.message || t('dashboard.exportFailed', 'Export failed'));
       setTimeout(() => setExportError(null), 4000);
@@ -138,10 +197,56 @@ export function MayorReportsPage() {
 
   return (
     <PageShell title={t('dashboard.reportsTitle', 'Reports')} description={t('dashboard.reportsDescription', 'Municipal program and compliance overview')}>
+      {/* Period filter bar */}
+      <div className="no-print rounded-xl border bg-card p-3 mb-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">
+            <Filter size={13} /> {t('reports.period', 'Period')}
+          </span>
+          <div className="flex flex-wrap gap-1" role="group" aria-label={t('reports.periodPresets', 'Period presets')}>
+            {PRESETS.map(p => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => { setPreset(p.key); setCustomFrom(''); setCustomTo(''); }}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                  !isCustom && preset === p.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                )}
+                aria-pressed={!isCustom && preset === p.key}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5 ml-1" aria-label={t('reports.customRange', 'Custom date range')}>
+            <Input type="date" aria-label={t('reports.fromDate', 'From date')} className="h-8 w-36 text-xs"
+              value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPreset('all'); }} />
+            <span className="text-muted-foreground text-xs">–</span>
+            <Input type="date" aria-label={t('reports.toDate', 'To date')} className="h-8 w-36 text-xs"
+              value={customTo} onChange={e => { setCustomTo(e.target.value); setPreset('all'); }} />
+            {isCustom && (
+              <button type="button" onClick={() => { setCustomFrom(''); setCustomTo(''); setPreset('all'); }}
+                className="p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground" aria-label={t('reports.clearRange', 'Clear custom range')}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CalendarRange size={13} />
+            <span className="font-medium text-foreground">{periodLabel}</span>
+            {isValidating && <RefreshCw size={12} className="animate-spin" aria-label={t('reports.updating', 'Updating')} />}
+          </span>
+        </div>
+      </div>
+
       <div className="no-print flex items-center gap-2 mb-4">
         <Button size="sm" onClick={handleExportFundUtilization} disabled={exporting}>
           <Download size={14} className="mr-1" /> {exporting ? t('dashboard.generating', 'Generating...') : t('dashboard.exportFundUtilization', 'Export Fund Utilization')}
         </Button>
+        <span className="text-xs text-muted-foreground">{periodLabel}</span>
         {exportError && <span className="text-xs text-red-600">{exportError}</span>}
       </div>
 
@@ -175,13 +280,11 @@ export function MayorReportsPage() {
         <TabsContent value="overview" className="space-y-4">
           <div className="rounded-lg border bg-card p-4">
             <h2 className="font-semibold text-sm mb-3">{t('dashboard.caseStatusDistribution', 'Case Status Distribution')}</h2>
-            <DataTable
-              columns={statusCols}
-              data={metrics.caseStatusDistribution || []}
-              rowCount={(metrics.caseStatusDistribution || []).length}
-              pagination={pagination} onPaginationChange={setPagination}
-              sorting={sorting} onSortingChange={setSorting}
-            />
+            {metrics.caseStatusDistribution?.length ? (
+              <DataTable columns={statusCols} data={metrics.caseStatusDistribution}
+                rowCount={metrics.caseStatusDistribution.length} pagination={pagination} onPaginationChange={setPagination}
+                sorting={sorting} onSortingChange={setSorting} />
+            ) : <EmptyHint label={t('reports.noDataPeriod', 'No cases in this period.')} />}
           </div>
           <div className="rounded-lg border bg-card p-4">
             <h2 className="font-semibold text-sm mb-1">{t('dashboard.slaCompliance', 'SLA Compliance')}</h2>
@@ -193,60 +296,52 @@ export function MayorReportsPage() {
         </TabsContent>
 
         <TabsContent value="programs">
-          <DataTable
-            columns={byProgramCols}
-            data={metrics.byProgram || []}
-            rowCount={(metrics.byProgram || []).length}
-            pagination={pagination} onPaginationChange={setPagination}
-            sorting={sorting} onSortingChange={setSorting}
-          />
+          {metrics.byProgram?.length ? (
+            <DataTable columns={byProgramCols} data={metrics.byProgram} rowCount={metrics.byProgram.length}
+              pagination={pagination} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting} />
+          ) : <EmptyHint label={t('reports.noInterventionsPeriod', 'No interventions delivered in this period.')} />}
         </TabsContent>
 
         <TabsContent value="demographics" className="space-y-4">
-          <div className="grid lg:grid-cols-2 gap-4">
-            <div className="rounded-lg border bg-card p-4">
-              <h2 className="font-semibold text-sm mb-3">{t('reports.byAgeBracket', 'Age Bracket')}</h2>
-              <DataTable columns={simpleCountCols('bracket', t('reports.ageBracket', 'Age Bracket'))} data={metrics.byAgeBracket || []}
-                rowCount={(metrics.byAgeBracket || []).length} pagination={pagination} onPaginationChange={setPagination}
-                sorting={sorting} onSortingChange={setSorting} />
+          {metrics.byAgeBracket?.length || metrics.byGender?.length ? (
+            <div className="grid lg:grid-cols-2 gap-4">
+              {(['bracket', 'gender', 'barangay', 'category'] as const).map(dim => {
+                const data = metrics[`by${dim === 'bracket' ? 'AgeBracket' : dim === 'category' ? 'Category' : dim === 'barangay' ? 'Barangay' : 'Gender'}`] || [];
+                const title = dim === 'bracket' ? t('reports.byAgeBracket', 'Age Bracket')
+                  : dim === 'gender' ? t('reports.byGender', 'Gender')
+                  : dim === 'barangay' ? t('reports.byBarangay', 'Barangay')
+                  : t('reports.byCategory', 'Client Category');
+                return (
+                  <div key={dim} className="rounded-lg border bg-card p-4">
+                    <h2 className="font-semibold text-sm mb-3">{title}</h2>
+                    {data.length ? (
+                      <DataTable columns={simpleCountCols(dim, title)} data={data} rowCount={data.length}
+                        pagination={pagination} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting} />
+                    ) : <EmptyHint label={t('reports.noBeneficiariesPeriod', 'No beneficiaries served in this period.')} />}
+                  </div>
+                );
+              })}
             </div>
-            <div className="rounded-lg border bg-card p-4">
-              <h2 className="font-semibold text-sm mb-3">{t('reports.byGender', 'Gender')}</h2>
-              <DataTable columns={simpleCountCols('gender', t('reports.gender', 'Gender'))} data={metrics.byGender || []}
-                rowCount={(metrics.byGender || []).length} pagination={pagination} onPaginationChange={setPagination}
-                sorting={sorting} onSortingChange={setSorting} />
-            </div>
-            <div className="rounded-lg border bg-card p-4">
-              <h2 className="font-semibold text-sm mb-3">{t('reports.byBarangay', 'Barangay')}</h2>
-              <DataTable columns={simpleCountCols('barangay', t('reports.barangay', 'Barangay'))} data={metrics.byBarangay || []}
-                rowCount={(metrics.byBarangay || []).length} pagination={pagination} onPaginationChange={setPagination}
-                sorting={sorting} onSortingChange={setSorting} />
-            </div>
-            <div className="rounded-lg border bg-card p-4">
-              <h2 className="font-semibold text-sm mb-3">{t('reports.byCategory', 'Client Category')}</h2>
-              <DataTable columns={simpleCountCols('category', t('reports.category', 'Category'))} data={metrics.byCategory || []}
-                rowCount={(metrics.byCategory || []).length} pagination={pagination} onPaginationChange={setPagination}
-                sorting={sorting} onSortingChange={setSorting} />
-            </div>
-          </div>
+          ) : <EmptyHint label={t('reports.noBeneficiariesPeriod', 'No beneficiaries served in this period.')} />}
         </TabsContent>
 
         <TabsContent value="funds">
-          <DataTable columns={fundSourceCols} data={metrics.byFundSource || []}
-            rowCount={(metrics.byFundSource || []).length} pagination={pagination} onPaginationChange={setPagination}
-            sorting={sorting} onSortingChange={setSorting} />
+          {metrics.byFundSource?.length ? (
+            <DataTable columns={fundSourceCols} data={metrics.byFundSource} rowCount={metrics.byFundSource.length}
+              pagination={pagination} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting} />
+          ) : <EmptyHint label={t('reports.noFundsPeriod', 'No fund utilization in this period.')} />}
         </TabsContent>
 
         <TabsContent value="referrals">
-          <DataTable columns={referralCols} data={metrics.referrals || []}
-            rowCount={(metrics.referrals || []).length} pagination={pagination} onPaginationChange={setPagination}
-            sorting={sorting} onSortingChange={setSorting} />
+          {metrics.referrals?.length ? (
+            <DataTable columns={referralCols} data={metrics.referrals} rowCount={metrics.referrals.length}
+              pagination={pagination} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting} />
+          ) : <EmptyHint label={t('reports.noReferralsPeriod', 'No inter-agency referrals in this period.')} />}
         </TabsContent>
 
         <TabsContent value="trends">
-          <DataTable columns={trendCols} data={metrics.trends || []}
-            rowCount={(metrics.trends || []).length} pagination={pagination} onPaginationChange={setPagination}
-            sorting={sorting} onSortingChange={setSorting} />
+          <DataTable columns={trendCols} data={metrics.trends || []} rowCount={(metrics.trends || []).length}
+            pagination={pagination} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting} />
         </TabsContent>
       </Tabs>
     </PageShell>

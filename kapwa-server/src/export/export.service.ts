@@ -218,7 +218,7 @@ export class ExportService {
     return { buffer: Buffer.concat(chunks), filename: `certificate-${type}-${Date.now()}.pdf` };
   }
 
-  async monthlyFundUtilization(month: string): Promise<{ buffer: Buffer; filename: string }> {
+  async monthlyFundUtilization(month: string, startDate?: string, endDate?: string): Promise<{ buffer: Buffer; filename: string }> {
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Fund Utilization');
@@ -227,6 +227,11 @@ export class ExportService {
       { header: 'Fund Source', key: 'fundSource', width: 20 },
       { header: 'Amount', key: 'amount', width: 16 },
     ];
+    // Explicit date range wins over the monthly shortcut; end is inclusive.
+    const rangeStart = startDate ?? `${month}-01`;
+    const rangeEnd = endDate
+      ? new Date(new Date(endDate).getTime() + 86_400_000).toISOString().slice(0, 10)
+      : nextMonth(month);
     const rows = await this.caseRepo.query(
       `SELECT p.name AS program, ci.fund_source AS "fundSource", COALESCE(SUM(ci.amount), 0) AS amount
        FROM case_interventions ci
@@ -234,12 +239,13 @@ export class ExportService {
        LEFT JOIN programs p ON p.id = ci.program_id
        WHERE ci.delivery_date >= $1 AND ci.delivery_date < $2
        GROUP BY p.name, ci.fund_source ORDER BY p.name`,
-      [`${month}-01`, nextMonth(month)],
+      [rangeStart, rangeEnd],
     );
     (rows ?? []).forEach((r: any) => sheet.addRow({ ...r, amount: Number(r.amount) }));
     const buffer = await workbook.xlsx.writeBuffer();
-    this.logger.warn(`EXPORT: monthly fund utilization ${month}, ${(rows ?? []).length} rows`);
-    return { buffer: Buffer.from(buffer), filename: `fund-utilization-${month}.xlsx` };
+    const label = startDate ? `${startDate}-to-${endDate}` : month;
+    this.logger.warn(`EXPORT: fund utilization ${label}, ${(rows ?? []).length} rows`);
+    return { buffer: Buffer.from(buffer), filename: `fund-utilization-${label}.xlsx` };
   }
 
   async exportComplianceCsv(): Promise<{ buffer: Buffer; filename: string }> {

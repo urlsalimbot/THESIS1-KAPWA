@@ -355,16 +355,20 @@ export async function downloadCertificate(
   URL.revokeObjectURL(url);
 }
 
-export async function downloadMonthlyFunds(month: string) {
+export async function downloadMonthlyFunds(month: string, startDate?: string, endDate?: string) {
   const token = localStorage.getItem(TOKEN_KEY);
-  const res = await fetch(`${API_BASE}/export/monthly-funds?month=${month}`, {
+  const params = new URLSearchParams();
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  if (!startDate && !endDate) params.set('month', month);
+  const res = await fetch(`${API_BASE}/export/monthly-funds?${params.toString()}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error(`Fund export failed: ${res.status}`);
   const blob = await res.blob();
   const disposition = res.headers?.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/.exec(disposition);
-  const filename = match?.[1] || `fund-utilization-${month}.xlsx`;
+  const filename = match?.[1] || `fund-utilization-${startDate ?? month}.xlsx`;
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
