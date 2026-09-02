@@ -83,10 +83,12 @@ export function Layout({ children }: { children?: React.ReactNode }) {
           </SheetContent>
         </Sheet>
 
-        <main id="main-content" className="flex-1 min-h-0 p-4 lg:p-5 bg-background overflow-auto pb-16 lg:pb-5">
-          <ErrorBoundary>
-            {children || <Outlet />}
-          </ErrorBoundary>
+        <main id="main-content" className="flex-1 min-h-0 bg-background overflow-auto pb-16 lg:pb-5">
+          <div className="mx-auto w-full max-w-[1600px] p-4 lg:p-5">
+            <ErrorBoundary>
+              {children || <Outlet />}
+            </ErrorBoundary>
+          </div>
         </main>
       </div>
 
