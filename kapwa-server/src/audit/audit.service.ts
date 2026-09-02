@@ -54,16 +54,26 @@ export class AuditService {
     }, 60_000);
   }
 
-  async getAuditLog(table: string, recordId: string, limit = AUDIT_LOG_DEFAULT_LIMIT) {
+  async getAuditLog(table?: string, recordId?: string, limit = AUDIT_LOG_DEFAULT_LIMIT) {
     // audit_log.action carries an entity prefix (e.g. 'case.create',
     // 'beneficiary.create', 'IRF_DECRYPT'), so match by prefix + record id.
+    // Filters are optional — no table/recordId returns the whole trail.
+    const where: string[] = [];
+    const params: any[] = [];
+    if (table) { params.push(`${table}%`); where.push(`al.action ILIKE $${params.length}`); }
+    if (recordId) { params.push(recordId); where.push(`al.reference_id = $${params.length}`); }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    params.push(limit);
     return this.consentRepo.manager.query(
-      `SELECT id, action, reference_id, user_id, details, created_at
-       FROM audit_log
-       WHERE action ILIKE $1 || '%' AND ($2 = '' OR reference_id = $2)
-       ORDER BY created_at DESC
-       LIMIT $3`,
-      [table, recordId, limit],
+      `SELECT al.id, al.action, al.reference_id, al.user_id,
+              al.details, al.created_at,
+              u.email AS user_email, u.full_name AS user_name
+       FROM audit_log al
+       LEFT JOIN users u ON u.id::text = al.user_id
+       ${whereSql}
+       ORDER BY al.created_at DESC
+       LIMIT $${params.length}`,
+      params,
     );
   }
 

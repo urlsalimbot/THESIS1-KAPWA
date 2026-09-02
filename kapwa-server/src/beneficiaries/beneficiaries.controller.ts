@@ -93,7 +93,7 @@ export class BeneficiariesController {
 
   @Post()
   @Roles('admin', 'social_worker')
-  async create(@Body(new ZodPipe(CreateBeneficiarySchema)) body: CreateBeneficiaryInput) {
-    return this.benService.createBeneficiary(body as any);
+  async create(@Body(new ZodPipe(CreateBeneficiarySchema)) body: CreateBeneficiaryInput, @Request() req: AuthenticatedRequest) {
+    return this.benService.createBeneficiary(body as any, req.user?.id);
   }
 }

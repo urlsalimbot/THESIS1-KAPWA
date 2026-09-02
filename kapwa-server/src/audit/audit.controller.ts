@@ -23,8 +23,8 @@ export class AuditController {
   @Roles('admin', 'auditor')
   @ApiOperation({ summary: 'Get audit logs' })
   async getLogs(
-    @Query('table') table: string,
-    @Query('recordId') recordId: string,
+    @Query('table') table?: string,
+    @Query('recordId') recordId?: string,
     @Query('limit') limit?: number
   ) {
     return this.auditService.getAuditLog(table, recordId, limit);

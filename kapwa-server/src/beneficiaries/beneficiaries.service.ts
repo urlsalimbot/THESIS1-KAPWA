@@ -33,13 +33,16 @@ export class BeneficiariesService {
     @Optional() private auditLog?: AuditLogService,
   ) {}
 
-  async createBeneficiary(data: {
+  async createBeneficiary(
+    data: {
     surname: string; firstName: string; middleName?: string;
     gender: string; dob: Date; address?: string; phone?: string;
     philsysNumber?: string; householdId?: string;
     occupation?: string; civilStatus?: string; placeOfBirth?: string;
     estimatedMonthlyIncome?: number; philhealthNumber?: string; category?: string;
-  }) {
+  },
+    actorId?: string,
+  ) {
     const buildPerson = (): Person => {
       const person = this.personRepo.create({
         surname: data.surname,
@@ -96,7 +99,7 @@ export class BeneficiariesService {
       status: 'active',
     });
 
-    await this.auditLog?.log('beneficiary.create', ben.id, undefined, {
+    await this.auditLog?.log('beneficiary.create', ben.id, actorId, {
       personId: savedPerson.id,
       category: (data as any).category,
       surname: data.surname,

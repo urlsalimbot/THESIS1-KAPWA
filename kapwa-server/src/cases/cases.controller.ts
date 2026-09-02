@@ -99,8 +99,8 @@ export class CasesController {
 
   @Post()
   @Roles('admin', 'social_worker')
-  async create(@Body(new ZodPipe(CreateCaseSchema)) body: CreateCaseInput) {
-    return this.casesService.create(body);
+  async create(@Body(new ZodPipe(CreateCaseSchema)) body: CreateCaseInput, @Request() req: AuthenticatedRequest) {
+    return this.casesService.create(body, req.user?.id);
   }
 
   @Post('bulk-export')
@@ -129,31 +129,31 @@ export class CasesController {
   @Patch(':id/status')
   @Roles('admin', 'social_worker')
   async updateStatus(@Param('id') id: string, @Body(new ZodPipe(UpdateStatusSchema)) body: { status: CaseStatus }, @Request() req: AuthenticatedRequest) {
-    return this.casesService.updateStatus(id, mapStatus(body.status as string), req.user?.role);
+    return this.casesService.updateStatus(id, mapStatus(body.status as string), req.user?.role, req.user?.id);
   }
 
   @Patch(':id/approve')
   @Roles('admin')
   async approve(@Param('id') id: string, @Body(new ZodPipe(ApproveCaseSchema)) body: { status: CaseStatus; signature?: string }, @Request() req: AuthenticatedRequest) {
-    return this.casesService.approve(id, mapStatus(body.status as string), body.signature || '', req.user?.role || '');
+    return this.casesService.approve(id, mapStatus(body.status as string), body.signature || '', req.user?.role || '', req.user?.id);
   }
 
   @Patch(':id/request-review')
   @Roles('social_worker')
   async requestReview(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    return this.casesService.requestReview(id, req.user?.role);
+    return this.casesService.requestReview(id, req.user?.role, req.user?.id);
   }
 
   @Patch(':id/disburse')
   @Roles('admin')
   async disburse(@Param('id') id: string, @Body(new ZodPipe(DisburseSchema)) body: DisburseInput, @Request() req: AuthenticatedRequest) {
-    return this.casesService.disburse(id, mapStatus(body.status as string), req.user?.role);
+    return this.casesService.disburse(id, mapStatus(body.status as string), req.user?.role, req.user?.id);
   }
 
   @Patch(':id/close')
   @Roles('admin', 'social_worker')
   async close(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    return this.casesService.close(id, CaseStatus.CLOSED, req.user?.role);
+    return this.casesService.close(id, CaseStatus.CLOSED, req.user?.role, req.user?.id);
   }
 
   @Patch(':id/override-status')
@@ -173,8 +173,9 @@ export class CasesController {
   async updateAssessment(
     @Param('id') id: string,
     @Body(new ZodPipe(AssessmentV2Schema)) body: AssessmentV2Input,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.casesService.updateAssessmentV2(id, body);
+    return this.casesService.updateAssessmentV2(id, body, req.user?.id);
   }
 
   @Patch(':id/transition-plan')

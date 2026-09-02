@@ -59,6 +59,8 @@ export const queryKeys = {
           ? ['audit', 'consent-ledger', { beneficiaryId }] as const
           : ['audit', 'consent-ledger'] as const,
       ),
+    logs: (action?: string) =>
+      memo(`audit.logs.${action ?? 'all'}`, () => ['audit', 'logs', action ?? 'all'] as const),
   },
   admin: {
     all: ['admin'] as const,

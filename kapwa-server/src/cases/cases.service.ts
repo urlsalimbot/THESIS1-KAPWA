@@ -59,7 +59,7 @@ export class CasesService {
     }
   }
 
-  async create(data: Partial<Case>) {
+  async create(data: Partial<Case>, actorId?: string) {
     let lastError: any;
     for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
       try {
@@ -89,7 +89,7 @@ export class CasesService {
           ];
         }
         await this.caseRepo.save(c);
-        await this.auditLog?.log('case.create', c.id, undefined, { controlNo, beneficiaryId: c.beneficiaryId });
+        await this.auditLog?.log('case.create', c.id, actorId, { controlNo, beneficiaryId: c.beneficiaryId });
         return c;
       } catch (err: any) {
         lastError = err;
@@ -267,8 +267,8 @@ export class CasesService {
     });
   }
 
-  async updateStatus(id: string, newStatus: CaseStatus, userRole?: string) {
-    return this.transition(id, newStatus, { userRole });
+  async updateStatus(id: string, newStatus: CaseStatus, userRole?: string, actorId?: string) {
+    return this.transition(id, newStatus, { userRole, actorId });
   }
 
   private async validateTransition(c: Case, newStatus: CaseStatus) {
@@ -295,7 +295,7 @@ export class CasesService {
     }
   }
 
-  async transition(id: string, newStatus: CaseStatus, opts?: { signature?: string; userRole?: string; reason?: string; historyType?: 'standard' | 'override' }) {
+  async transition(id: string, newStatus: CaseStatus, opts?: { signature?: string; userRole?: string; reason?: string; historyType?: 'standard' | 'override'; actorId?: string }) {
     const c = await this.findById(id);
     const oldStatus = c.status;
     await this.validateTransition(c, newStatus);
@@ -313,7 +313,7 @@ export class CasesService {
 
     await this.logHistory(id, oldStatus, newStatus, opts?.userRole, undefined, opts?.reason || `Transitioned by ${opts?.userRole || 'system'}`, opts?.historyType);
 
-    await this.auditLog?.log('case.transition', id, undefined, { from: oldStatus, to: newStatus, by: opts?.userRole, controlNo: c.controlNo });
+    await this.auditLog?.log('case.transition', id, opts?.actorId, { from: oldStatus, to: newStatus, by: opts?.userRole, controlNo: c.controlNo });
 
     if (c.assignedWorkerId) {
       await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.controlNo, newStatus);
@@ -322,11 +322,11 @@ export class CasesService {
     return c;
   }
 
-  async approve(id: string, newStatus: CaseStatus, signature: string, userRole: string) {
-    return this.transition(id, newStatus, { signature, userRole, reason: `Approved by ${userRole}` });
+  async approve(id: string, newStatus: CaseStatus, signature: string, userRole: string, actorId?: string) {
+    return this.transition(id, newStatus, { signature, userRole, actorId, reason: `Approved by ${userRole}` });
   }
 
-  async requestReview(id: string, userRole?: string) {
+  async requestReview(id: string, userRole?: string, actorId?: string) {
     const c = await this.findById(id);
     if (c.status !== CaseStatus.ENROLLED) {
       throw new BadRequestException(`Cannot request review from ${c.status}`);
@@ -342,15 +342,16 @@ export class CasesService {
     c.updatedAt = new Date();
     await this.caseRepo.save(c);
     await this.logHistory(id, oldStatus, c.status, userRole, undefined, undefined, 'standard');
+    await this.auditLog?.log('case.request_review', id, actorId, { to: c.status, by: userRole, controlNo: c.controlNo });
     return c;
   }
 
-  async disburse(id: string, newStatus: CaseStatus, userRole?: string) {
-    return this.transition(id, newStatus, { userRole, reason: `Transitioned by ${userRole}` });
+  async disburse(id: string, newStatus: CaseStatus, userRole?: string, actorId?: string) {
+    return this.transition(id, newStatus, { userRole, actorId, reason: `Transitioned by ${userRole}` });
   }
 
-  async close(id: string, newStatus: CaseStatus, userRole?: string) {
-    return this.transition(id, newStatus, { userRole, reason: 'Case closed' });
+  async close(id: string, newStatus: CaseStatus, userRole?: string, actorId?: string) {
+    return this.transition(id, newStatus, { userRole, actorId, reason: 'Case closed' });
   }
 
   async overrideStatus(id: string, targetStatus: CaseStatus, reason: string, userRole?: string) {
@@ -377,7 +378,7 @@ export class CasesService {
     return this.caseRepo.save(c);
   }
 
-  async updateAssessment(id: string, data: AssessmentInput) {
+  async updateAssessment(id: string, data: AssessmentInput, actorId?: string) {
     const c = await this.findById(id);
     Object.assign(c, {
       problemsPresented: data.problemsPresented,
@@ -389,7 +390,7 @@ export class CasesService {
       updatedAt: new Date(),
     });
     const saved = await this.caseRepo.save(c);
-    await this.auditLog?.log('case.assessment', id, undefined, { clientCategory: data.clientCategory, interviewedBy: data.interviewedBy });
+    await this.auditLog?.log('case.assessment', id, actorId, { clientCategory: data.clientCategory, interviewedBy: data.interviewedBy });
     return saved;
   }
 
@@ -427,7 +428,7 @@ export class CasesService {
     return parseInt(result[0]?.count || '0', 10);
   }
 
-  async updateAssessmentV2(id: string, data: AssessmentV2Input) {
+  async updateAssessmentV2(id: string, data: AssessmentV2Input, actorId?: string) {
     const c = await this.findById(id);
     Object.assign(c, {
       problemsPresented: data.problemsPresented,
@@ -472,7 +473,9 @@ export class CasesService {
     c.assistances = assistances;
 
     await this.caseRepo.manager.delete(CaseAssistance, { caseId: id });
-    return this.caseRepo.save(c);
+    const saved = await this.caseRepo.save(c);
+    await this.auditLog?.log('case.assessment', id, actorId, { clientCategory: data.clientCategory, interviewedBy: data.interviewedBy, financial: data.amountAssistance ?? null });
+    return saved;
   }
 
   async updateClosure(id: string, data: ClosureInput, userRole?: string) {
