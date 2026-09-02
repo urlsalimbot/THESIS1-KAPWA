@@ -96,7 +96,7 @@ const router = createBrowserRouter([
   { path: 'forgot-password', element: <ForgotPasswordPage /> },
   { path: 'reset-password', element: <ResetPasswordPage /> },
   // === PROTECTED ROUTES ===
-  { path: 'dashboard', element: <Private roles={['admin','social_worker','mayor','auditor']}><DashboardPage /></Private> },
+  { path: 'dashboard', element: <Private roles={['admin','social_worker','auditor']}><DashboardPage /></Private> },
   { path: '/intake', element: <Private roles={['admin','social_worker']}><IntakePage /></Private> },
   { path: '/intake/review', element: <Private roles={['admin','social_worker']}><IntakeReviewPage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker']}><CasesPage /></Private> },
