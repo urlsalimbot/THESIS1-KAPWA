@@ -103,9 +103,13 @@ export class DashboardController {
   @Roles('mayor')
   @ApiOperation({ summary: 'Mayor aggregate reports - zero PII' })
   async getMayorReports() {
-    const metrics = await this.dashService.getMetrics();
-    const sla = await this.dashService.getSlaCompliance();
-    const servedToday = await this.dashService.getServedToday();
+    const [metrics, sla, servedToday, breakdowns, trends] = await Promise.all([
+      this.dashService.getMetrics(),
+      this.dashService.getSlaCompliance(),
+      this.dashService.getServedToday(),
+      this.dashService.getReportBreakdowns(),
+      this.dashService.getTrends(),
+    ]);
     return {
       fundUtilization: metrics.totalDisbursedAmount,
       uniqueHouseholds: metrics.uniqueHouseholds,
@@ -113,6 +117,16 @@ export class DashboardController {
       totalCases: metrics.totalCases,
       slaCompliance: sla,
       servedToday,
+      recentInterventions: metrics.recentInterventions,
+      beneficiariesServed: breakdowns.beneficiariesServed,
+      byProgram: breakdowns.byProgram,
+      byFundSource: breakdowns.byFundSource,
+      byGender: breakdowns.byGender,
+      byAgeBracket: breakdowns.byAgeBracket,
+      byBarangay: breakdowns.byBarangay,
+      byCategory: breakdowns.byCategory,
+      referrals: breakdowns.referrals,
+      trends,
     };
   }
 

@@ -111,12 +111,12 @@ describe('ExportService', () => {
       expect(result.filename).toBe('fund-utilization-2026-12.xlsx');
     });
 
-    it('only counts interventions on transitioning cases', async () => {
+    it('counts all interventions in the month (no case-status filter)', async () => {
       caseRepo.query.mockResolvedValue([]);
       await service.monthlyFundUtilization('2026-08');
       const [sql, params] = caseRepo.query.mock.calls[0];
       expect(sql).toContain('JOIN cases c ON c.id::text = ci.case_id');
-      expect(sql).toContain("c.status = 'transitioning'");
+      expect(sql).not.toContain('transitioning');
       expect(params).toEqual(['2026-08-01', '2026-09-01']);
     });
 

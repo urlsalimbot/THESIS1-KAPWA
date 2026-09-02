@@ -60,8 +60,6 @@ export class DashboardService {
       const transitioning = await caseQb.clone()
         .andWhere('c.status = :status', { status: CaseStatus.TRANSITIONING }).getCount();
 
-      const totalDisbursed = 0;
-
       const benQb = this.benRepo.createQueryBuilder('b')
         .leftJoin('b.person', 'p');
       if (barangay) {
@@ -78,7 +76,18 @@ export class DashboardService {
         .groupBy('c.status')
         .getRawMany();
 
-      const recentInterventions = 0;
+      // Real disbursement + recent-intervention numbers (were hardcoded 0).
+      const disbursed = await this.caseRepo.manager.query(
+        `SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS interventions
+         FROM case_interventions`,
+      );
+      const totalDisbursed = Number(disbursed[0]?.total ?? 0);
+      const recentInterventions = Number(
+        (await this.caseRepo.manager.query(
+          `SELECT COUNT(*) AS count FROM case_interventions
+           WHERE delivery_date >= CURRENT_DATE - INTERVAL '7 days'`,
+        ))[0]?.count ?? 0,
+      );
 
       return {
         totalCases,
@@ -91,6 +100,75 @@ export class DashboardService {
       };
     };
     return this.cache ? this.cache.wrap(key, compute, 30_000) : compute();
+  }
+
+  /**
+   * Mayor's-report dimension breakdowns (aggregates only — zero PII):
+   * interventions by program / fund source, demographics of served
+   * beneficiaries (age bracket, gender, barangay, client category), and
+   * inter-agency referrals by receiving agency.
+   */
+  async getReportBreakdowns() {
+    const q = (sql: string) => this.caseRepo.manager.query(sql);
+    // Beneficiaries that actually received an intervention.
+    const served = `FROM case_interventions ci
+      JOIN cases c ON c.id::text = ci.case_id
+      JOIN beneficiaries b ON b.id = c.beneficiary_id
+      JOIN persons p ON p.id = b.person_id`;
+
+    const [beneficiariesServed, byProgram, byFundSource, byGender, byAgeBracket, byBarangay, byCategory, referrals] = await Promise.all([
+      q(`SELECT COUNT(DISTINCT b.id) AS count ${served}`),
+      q(`SELECT COALESCE(pg.name, 'Unassigned') AS program,
+           COUNT(DISTINCT c.beneficiary_id) AS beneficiaries,
+           COUNT(ci.id) AS interventions,
+           COALESCE(SUM(ci.amount), 0) AS amount
+         FROM case_interventions ci
+         LEFT JOIN cases c ON c.id::text = ci.case_id
+         LEFT JOIN programs pg ON pg.id = ci.program_id
+         GROUP BY 1 ORDER BY amount DESC`),
+      q(`SELECT COALESCE(ci.fund_source, 'Unspecified') AS fund_source,
+           COUNT(*) AS interventions,
+           COALESCE(SUM(ci.amount), 0) AS amount
+         FROM case_interventions ci
+         GROUP BY 1 ORDER BY amount DESC`),
+      q(`SELECT COALESCE(p.gender, 'Unspecified') AS gender, COUNT(DISTINCT p.id) AS count
+         ${served} GROUP BY 1 ORDER BY count DESC`),
+      q(`SELECT CASE
+             WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) < 18 THEN '0-17'
+             WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) <= 59 THEN '18-59'
+             ELSE '60+' END AS bracket,
+           COUNT(DISTINCT p.id) AS count
+         ${served} GROUP BY 1 ORDER BY count DESC`),
+      q(`SELECT COALESCE(NULLIF(pa.barangay, ''), SPLIT_PART(pa.raw, ',', 1), 'Unspecified') AS barangay,
+           COUNT(DISTINCT p.id) AS count
+         ${served}
+         LEFT JOIN person_addresses pa ON pa.person_id = p.id AND pa.address_type = 'current'
+         GROUP BY 1 ORDER BY count DESC`),
+      q(`SELECT COALESCE(br.category, 'Uncategorized') AS category, COUNT(DISTINCT p.id) AS count
+         ${served}
+         LEFT JOIN beneficiary_roles br ON br.person_id = p.id
+         GROUP BY 1 ORDER BY count DESC`),
+      q(`SELECT COALESCE(a.name, 'Unspecified Agency') AS agency,
+           COUNT(ir.id) AS total,
+           COUNT(ir.id) FILTER (WHERE ir.status = 'referred') AS referred,
+           COUNT(ir.id) FILTER (WHERE ir.status = 'accepted') AS accepted,
+           COUNT(ir.id) FILTER (WHERE ir.status = 'declined') AS declined,
+           COUNT(ir.id) FILTER (WHERE ir.status = 'completed') AS completed
+         FROM inter_agency_referrals ir
+         LEFT JOIN agencies a ON a.id = ir.to_agency_id
+         GROUP BY 1 ORDER BY total DESC`),
+    ]);
+
+    return {
+      beneficiariesServed: Number(beneficiariesServed[0]?.count ?? 0),
+      byProgram,
+      byFundSource,
+      byGender,
+      byAgeBracket,
+      byBarangay,
+      byCategory,
+      referrals,
+    };
   }
 
   async getDailyTracker(_date: Date) {
@@ -177,12 +255,18 @@ export class DashboardService {
           .createQueryBuilder('c')
           .where('c.created_at >= :start AND c.created_at < :end', { start, end })
           .getCount();
-        const disbursedAmount = { total: '0' };
+        // Real monthly disbursement from case_interventions (was hardcoded 0).
+        const disbursedRows = await this.caseRepo.manager.query(
+          `SELECT COALESCE(SUM(amount), 0) AS total FROM case_interventions
+           WHERE delivery_date >= $1 AND delivery_date < $2`,
+          [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)],
+        );
+        const disbursedAmount = Number(disbursedRows[0]?.total ?? 0);
 
         return {
           month: m.label,
           casesCreated,
-          transitioning: Number((disbursedAmount as any)?.total || 0),
+          transitioning: disbursedAmount,
         };
       }));
 

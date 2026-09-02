@@ -13,6 +13,9 @@ describe('DashboardService', () => {
 
   beforeEach(async () => {
     caseRepoMock = {
+      manager: {
+        query: jest.fn().mockResolvedValue([{ total: '17500', count: '7' }]),
+      },
       createQueryBuilder: jest.fn(() => ({
         leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -71,7 +74,27 @@ describe('DashboardService', () => {
   it('returns metrics', async () => {
     const result = await service.getMetrics();
     expect(result).toHaveProperty('totalCases');
-    expect(result).toHaveProperty('totalDisbursedAmount');
+    expect(result.totalDisbursedAmount).toBe(17500);
+    expect(result.recentInterventions).toBe(7);
+  });
+
+  it('returns report breakdowns (zero-PII dimensions)', async () => {
+    caseRepoMock.manager.query
+      .mockResolvedValueOnce([{ count: '5' }])            // beneficiariesServed
+      .mockResolvedValueOnce([{ program: 'AICS', beneficiaries: '3', interventions: '4', amount: '12000' }])
+      .mockResolvedValueOnce([{ fund_source: 'LGU', interventions: '4', amount: '12000' }])
+      .mockResolvedValueOnce([{ gender: 'Female', count: '3' }])
+      .mockResolvedValueOnce([{ bracket: '60+', count: '2' }])
+      .mockResolvedValueOnce([{ barangay: 'Bigte', count: '2' }])
+      .mockResolvedValueOnce([{ category: 'Indigent', count: '3' }])
+      .mockResolvedValueOnce([{ agency: 'RHU', total: '1', referred: '1', accepted: '0', declined: '0', completed: '0' }]);
+    const result = await service.getReportBreakdowns();
+    expect(result.beneficiariesServed).toBe(5);
+    expect(result.byProgram).toHaveLength(1);
+    expect(result.byProgram[0]).toMatchObject({ program: 'AICS' });
+    expect(result.byFundSource).toHaveLength(1);
+    expect(result.byGender).toHaveLength(1);
+    expect(result.referrals).toHaveLength(1);
   });
 
   it('returns daily tracker', async () => {
