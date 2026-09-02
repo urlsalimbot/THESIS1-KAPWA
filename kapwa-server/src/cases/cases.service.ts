@@ -10,9 +10,7 @@ import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
-import { Person } from '../beneficiaries/person.entity';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationCategory } from '../notifications/notification.entity';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input } from './dto/cases.zod';
 import {

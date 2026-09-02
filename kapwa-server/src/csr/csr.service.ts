@@ -78,7 +78,6 @@ export class CsrService {
       doc.on('error', reject);
 
       const primaryColor = '#2E5C8A';
-      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
       doc.fontSize(8).fillColor('#666').text('Republic of the Philippines', { align: 'center' });
       doc.moveDown(0.3);

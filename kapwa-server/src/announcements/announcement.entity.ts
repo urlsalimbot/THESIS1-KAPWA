@@ -1,4 +1,4 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { BaseEntity } from '../common/base.entity';
 
 @Entity({ name: 'announcements' })

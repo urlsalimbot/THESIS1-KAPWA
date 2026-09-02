@@ -3,7 +3,7 @@ import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaSetupSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
+import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
 
 @Controller('auth')

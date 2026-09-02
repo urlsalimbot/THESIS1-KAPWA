@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { SyncRequestSchema, SyncRequestInput, ResolveConflictSchema } from './dto/sync.zod';
+import { SyncRequestSchema, ResolveConflictSchema } from './dto/sync.zod';
 import { PullRequestInput } from './dto/pull.zod';
 import { PullRequestSchema } from './dto/pull.zod';
 import { ZodPipe } from '../common/pipes/zod.pipe';

@@ -1,5 +1,5 @@
 import { RECENT_CASES_LIMIT, SLA_OVERDUE_DAYS } from './constants';
-import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
+import { paginate } from '../common/constants';
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';

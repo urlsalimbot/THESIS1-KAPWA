@@ -1,4 +1,4 @@
-import { HASH_CHAIN_BATCH_LIMIT, AUDIT_LOG_DEFAULT_LIMIT } from './constants';
+import { AUDIT_LOG_DEFAULT_LIMIT } from './constants';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -55,7 +55,16 @@ export class AuditService {
   }
 
   async getAuditLog(table: string, recordId: string, limit = AUDIT_LOG_DEFAULT_LIMIT) {
-    return [];
+    // audit_log.action carries an entity prefix (e.g. 'case.create',
+    // 'beneficiary.create', 'IRF_DECRYPT'), so match by prefix + record id.
+    return this.consentRepo.manager.query(
+      `SELECT id, action, reference_id, user_id, details, created_at
+       FROM audit_log
+       WHERE action ILIKE $1 || '%' AND ($2 = '' OR reference_id = $2)
+       ORDER BY created_at DESC
+       LIMIT $3`,
+      [table, recordId, limit],
+    );
   }
 
   async getConsentLedger(beneficiaryId?: string, limit = 50) {
@@ -69,11 +78,29 @@ export class AuditService {
   }
 
   async exportForCoa(startDate: Date, endDate: Date) {
+    const start = startDate.toISOString().slice(0, 10);
+    const end = endDate.toISOString().slice(0, 10);
+    const interventions = await this.consentRepo.manager.query(
+      `SELECT ci.service_name, ci.category, ci.delivery_date, ci.amount,
+              ci.fund_source, ci.notes, ci.mode_of_delivery,
+              c.control_no, p.surname, p.first_name
+       FROM case_interventions ci
+       LEFT JOIN cases c ON c.id = ci.case_id::uuid
+       LEFT JOIN beneficiaries b ON b.id = c.beneficiary_id
+       LEFT JOIN persons p ON p.id = b.person_id
+       WHERE ci.delivery_date BETWEEN $1 AND $2
+       ORDER BY ci.delivery_date`,
+      [start, end],
+    );
+    const totalAmount = interventions.reduce(
+      (sum: number, r: any) => sum + (Number(r.amount) || 0),
+      0,
+    );
     return {
       generatedAt: new Date(),
       period: { startDate, endDate },
-      interventions: [],
-      summary: { totalAmount: 0, count: 0 },
+      interventions,
+      summary: { totalAmount, count: interventions.length },
     };
   }
 }

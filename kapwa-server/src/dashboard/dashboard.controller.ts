@@ -102,7 +102,7 @@ export class DashboardController {
     @Get('reports/mayor')
   @Roles('mayor')
   @ApiOperation({ summary: 'Mayor aggregate reports - zero PII' })
-  async getMayorReports(@Request() req: AuthenticatedRequest) {
+  async getMayorReports() {
     const metrics = await this.dashService.getMetrics();
     const sla = await this.dashService.getSlaCompliance();
     const servedToday = await this.dashService.getServedToday();

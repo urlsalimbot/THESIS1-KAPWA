@@ -23,11 +23,9 @@ export class AbacGuard implements CanActivate {
     // Admin bypass
     if (user.role === 'admin') return true;
 
-    // Consent-gated ABAC: auto-evaluate consent_ledger for beneficiary routes only
-    // Skip for case routes and IRF routes — their :id is not a beneficiary UUID
+    // Consent-gated ABAC: auto-evaluate consent_ledger for beneficiary routes
+    // only — case/IRF route :id params are not beneficiary UUIDs.
     const routePath = request.route?.path || request.url || '';
-    const isCaseRoute = /\/cases(\/|$)/.test(routePath);
-    const isIrfRoute = /\/irf(\/|$)/.test(routePath);
     const isBeneficiaryRoute = /\/beneficiaries(\/|$)/.test(routePath);
     const beneficiaryId = params?.beneficiaryId || params?.id;
     if (isBeneficiaryRoute && beneficiaryId) {

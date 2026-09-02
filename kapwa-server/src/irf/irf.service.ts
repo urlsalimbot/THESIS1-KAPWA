@@ -199,7 +199,7 @@ export class IrfService {
       legalBasis,
     });
 
-    const irf = await this.findById(id);
+    await this.findById(id);  // 404 guard
     // Return full unmasked data by querying the raw record directly
     const raw = await this.irfRepo.findOne({ where: { id } });
     return {

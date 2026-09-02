@@ -2,7 +2,7 @@ import { BCRYPT_SALT_ROUNDS } from './constants';
 import { Logger, Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp';

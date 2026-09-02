@@ -1,6 +1,6 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
-import { Observable, from, isObservable } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Observable, from } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { ConsentLedger } from './consent-ledger.entity';

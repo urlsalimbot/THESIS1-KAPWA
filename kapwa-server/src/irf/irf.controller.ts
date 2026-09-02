@@ -6,7 +6,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
-import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { IrfService } from './irf.service';
 import { IrfExportService } from './irf-export.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
