@@ -17,7 +17,7 @@ export class SnakeNamingStrategy extends DefaultNamingStrategy implements Naming
     return this.snakeCase(relationName + '_' + referencedColumnName);
   }
 
-  joinTableName(firstTableName: string, secondTableName: string, firstPropertyName: string): string {
+  joinTableName(firstTableName: string, secondTableName: string, _firstPropertyName: string): string {
     return this.snakeCase(firstTableName + '_' + secondTableName);
   }
 

@@ -63,7 +63,7 @@ export class ConflictResolver {
   private resolveFinancial(
     tableName: string,
     serverRecord: Record<string, any>,
-    clientPayload: Record<string, any>,
+    _clientPayload: Record<string, any>,
   ): ConflictResult {
     return {
       action: 'server_wins',
@@ -75,7 +75,7 @@ export class ConflictResolver {
   private resolveNotes(
     serverRecord: Record<string, any>,
     clientPayload: Record<string, any>,
-    clientUpdatedAt: string,
+    _clientUpdatedAt: string,
   ): ConflictResult {
     const serverNotes = this.parseNotes(serverRecord.content || serverRecord.notes || '');
     const clientNotes = this.parseNotes(clientPayload.content || clientPayload.notes || '');

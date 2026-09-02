@@ -3,7 +3,6 @@ import { CasesService } from './cases.service';
 import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { NotificationsService } from '../notifications/notifications.service';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';

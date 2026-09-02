@@ -13,7 +13,7 @@ export class DedupBeneficiaryColumns0000000000044 implements MigrationInterface 
     // NO COLUMN DROPS in Wave 1.
   }
 
-  async down(queryRunner: QueryRunner): Promise<void> {
+  async down(_queryRunner: QueryRunner): Promise<void> {
     // Nothing to reverse in Wave 1.
   }
 }

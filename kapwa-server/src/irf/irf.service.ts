@@ -268,15 +268,15 @@ export class IrfService {
   // Disposition FSM — dedicated endpoints
   // ---------------------------------------------------------------------------
 
-  async referToPnp(id: string, userRole?: string) {
+  async referToPnp(id: string, _userRole?: string) {
     return this.transitionDisposition(id, IrfDisposition.REFERRED_TO_PNP);
   }
 
-  async referToWcpd(id: string, userRole?: string) {
+  async referToWcpd(id: string, _userRole?: string) {
     return this.transitionDisposition(id, IrfDisposition.REFERRED_TO_WCPD);
   }
 
-  async dismiss(id: string, reason: string, userRole?: string) {
+  async dismiss(id: string, reason: string, _userRole?: string) {
     const irf = await this.irfRepo.findOne({ where: { id } });
     if (!irf) throw new NotFoundException('IRF case not found');
     const current = irf.caseDisposition as IrfDisposition;
@@ -289,7 +289,7 @@ export class IrfService {
     return this.irfRepo.save(irf);
   }
 
-  async close(id: string, userRole?: string) {
+  async close(id: string, _userRole?: string) {
     return this.transitionDisposition(id, IrfDisposition.CLOSED);
   }
 

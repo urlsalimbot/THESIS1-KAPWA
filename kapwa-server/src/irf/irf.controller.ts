@@ -134,7 +134,6 @@ export class IrfController {
   async decrypt(
     @Param('id') id: string,
     @Body(new ZodPipe(DecryptNarrationSchema)) body: DecryptNarrationInput,
-    @Request() req: AuthenticatedRequest,
   ) {
     return this.irfService.getDecryptedNarr(id, body.legalBasis);
   }

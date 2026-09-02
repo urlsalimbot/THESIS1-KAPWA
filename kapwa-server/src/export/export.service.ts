@@ -71,7 +71,7 @@ export class ExportService {
     };
   }
 
-  async exportServiceSummaryPdf(startDate?: Date, endDate?: Date): Promise<Buffer> {
+  async exportServiceSummaryPdf(_startDate?: Date, _endDate?: Date): Promise<Buffer> {
     const PDFDocument = require('pdfkit');
     const doc = new PDFDocument({
       size: 'A4',
@@ -102,14 +102,14 @@ export class ExportService {
     });
   }
 
-  async exportServiceSummaryCsv(startDate?: Date, endDate?: Date): Promise<{ buffer: Buffer; filename: string }> {
+  async exportServiceSummaryCsv(_startDate?: Date, _endDate?: Date): Promise<{ buffer: Buffer; filename: string }> {
     const { stringify } = require('csv-stringify/sync');
     const csv = stringify([], { header: true });
     const dateStr = new Date().toISOString().slice(0, 10);
     return { buffer: Buffer.from(csv), filename: `service-summary-${dateStr}.csv` };
   }
 
-  async exportServiceSummaryXlsx(startDate?: Date, endDate?: Date): Promise<Buffer> {
+  async exportServiceSummaryXlsx(_startDate?: Date, _endDate?: Date): Promise<Buffer> {
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet('Service Summary');

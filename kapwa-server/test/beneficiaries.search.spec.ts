@@ -1,6 +1,5 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { BeneficiariesService } from '../src/beneficiaries/beneficiaries.service';
 import { Person } from '../src/beneficiaries/person.entity';
 import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';

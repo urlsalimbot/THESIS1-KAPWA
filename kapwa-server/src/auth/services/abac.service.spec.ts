@@ -1,20 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { AbacService } from './abac.service';
-import { REQUEST } from '@nestjs/core';
 
 describe('AbacService', () => {
-  let service: AbacService;
-
-  function createService(userRole: string) {
-    const mockRequest = { user: { role: userRole } };
-    return {
-      provide: AbacService,
-      useFactory: () => new (AbacService as any)(mockRequest),
-    };
-  }
-
-  beforeEach(async () => {});
-
   it('allows admin to access anything', () => {
     const svc = new AbacService({ user: { role: 'admin' } } as any);
     expect(svc.evaluate({

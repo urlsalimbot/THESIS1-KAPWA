@@ -40,7 +40,7 @@ describe('ChatService', () => {
   });
 
   it('sends a message', async () => {
-    const result = await service.sendMessage('u1', 'Alice', 'u2', 'Hello');
+    await service.sendMessage('u1', 'Alice', 'u2', 'Hello');
     expect(repoMock.create).toHaveBeenCalledWith(expect.objectContaining({
       senderId: 'u1',
       recipientId: 'u2',

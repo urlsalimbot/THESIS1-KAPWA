@@ -35,7 +35,7 @@ describe('Sync Integration: conflict scenarios', () => {
       commitTransaction: jest.fn(),
       rollbackTransaction: jest.fn(),
       release: jest.fn(),
-      query: jest.fn().mockImplementation((sql: string, params: any[]) => {
+      query: jest.fn().mockImplementation((sql: string, _params: any[]) => {
         if (sql.startsWith('SELECT')) {
           const tableMatch = sql.match(/FROM "(\w+)"/);
           const table = tableMatch?.[1] || '';
@@ -46,7 +46,7 @@ describe('Sync Integration: conflict scenarios', () => {
     };
     return {
       createQueryRunner: jest.fn().mockReturnValue(queryRunnerMock),
-      query: jest.fn().mockImplementation((sql: string, params: any[]) => {
+      query: jest.fn().mockImplementation((sql: string, _params: any[]) => {
         if (sql.startsWith('SELECT')) {
           const tableMatch = sql.match(/FROM "(\w+)"/);
           const table = tableMatch?.[1] || '';

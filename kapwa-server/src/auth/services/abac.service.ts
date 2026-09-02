@@ -64,7 +64,7 @@ export class AbacService {
     }
   }
 
-  getResourceSensitivity(path: string, method: string): ResourceSensitivity {
+  getResourceSensitivity(path: string, _method: string): ResourceSensitivity {
     if (path.includes('/interventions') || path.includes('/financial')) return 'sensitive';
     if (path.includes('/irf') || path.includes('/irf-cases')) return 'restricted';
     if (path.includes('/beneficiaries') || path.includes('/family')) return 'sensitive';

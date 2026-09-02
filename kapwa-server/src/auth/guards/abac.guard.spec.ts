@@ -1,11 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
-import { ForbiddenException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AbacGuard } from './abac.guard';
 import { AbacService } from '../services/abac.service';
 import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity';
-import { RESOURCE_SENSITIVITY_KEY } from '../decorators/resource-sensitivity.decorator';
 
 describe('AbacGuard (social worker barangay scoping)', () => {
   let guard: AbacGuard;
