@@ -241,5 +241,36 @@ describe('AnnouncementsService', () => {
 
       expect(result.pinned).toBe(true);
     });
+
+    it('throws NotFoundException when the announcement does not exist', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.togglePin('missing')).rejects.toThrow('Announcement not found');
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update excerpt recompute', () => {
+    it('recomputes excerpt from the new body when body changes without an explicit excerpt', async () => {
+      const item = createAnnouncement({ excerpt: 'OLD', bodyHtml: '<p>old</p>', bodyText: 'old' });
+      repo.findOne.mockResolvedValue(item);
+      const mockSave = jest.fn().mockImplementation(async (u: any) => u);
+      repo.save = mockSave;
+
+      const result = await service.update(item.id, { bodyHtml: '<p>A brand new longer body here.</p>' });
+
+      expect(result.excerpt).toBe('A brand new longer body here.');
+    });
+
+    it('keeps an explicit excerpt when both body and excerpt are provided', async () => {
+      const item = createAnnouncement({ excerpt: 'OLD', bodyHtml: '<p>old</p>', bodyText: 'old' });
+      repo.findOne.mockResolvedValue(item);
+      const mockSave = jest.fn().mockImplementation(async (u: any) => u);
+      repo.save = mockSave;
+
+      const result = await service.update(item.id, { bodyHtml: '<p>new body</p>', excerpt: 'EXPLICIT' });
+
+      expect(result.excerpt).toBe('EXPLICIT');
+    });
   });
 });

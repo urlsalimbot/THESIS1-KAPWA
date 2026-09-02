@@ -45,10 +45,12 @@ export class UsersService {
     });
     // JSON serialization ignores class getters, so materialize the flattened
     // barangay shape (assembled from user_barangay_assignments) explicitly —
-    // otherwise the admin Users panel shows an empty Barangay column.
+    // otherwise the admin Users panel shows an empty Barangay column. Also
+    // strip sensitive relations/properties (tokens, MFA secret) that the
+    // @Exclude() decorators would hide only under a ClassSerializerInterceptor.
     return {
       data: data.map((user) => {
-        const { password, ...u } = user;
+        const { password, tokens, mfaSecret, ...u } = user;
         return {
           ...u,
           assignedBarangay: user.assignedBarangay,
@@ -64,7 +66,7 @@ export class UsersService {
   async findOne(id: string) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
-    const { password, ...safe } = user;
+    const { password, tokens, mfaSecret, ...safe } = user;
     return { ...safe, assignedBarangay: user.assignedBarangay, permittedBarangays: user.permittedBarangays };
   }
 

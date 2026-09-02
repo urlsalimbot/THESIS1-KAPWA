@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as sanitizeHtml from 'sanitize-html';
@@ -52,6 +52,12 @@ function sanitizeHtmlContent(html: string): string {
       ...sanitizeHtml.defaults.allowedAttributes,
       img: ['src', 'alt', 'title'],
       a: ['href', 'target', 'rel'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+    allowedSchemesByTag: { img: ['http', 'https'] },
+    // Tabnabbing hardening: every link gets rel="noopener noreferrer".
+    transformTags: {
+      a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer' }, true),
     },
   });
 }
@@ -133,7 +139,7 @@ export class AnnouncementsService {
 
   async update(id: string, dto: UpdateDto): Promise<Announcement> {
     const announcement = await this.repo.findOne({ where: { id } });
-    if (!announcement) throw new Error('Announcement not found');
+    if (!announcement) throw new NotFoundException('Announcement not found');
 
     if (dto.title !== undefined) {
       announcement.title = dto.title;
@@ -142,6 +148,11 @@ export class AnnouncementsService {
     if (dto.bodyHtml !== undefined) {
       announcement.bodyHtml = sanitizeHtmlContent(dto.bodyHtml);
       announcement.bodyText = stripTags(announcement.bodyHtml);
+      // Recompute the excerpt from the new body when the caller did not
+      // provide one explicitly (keeps list cards in sync after edits).
+      if (dto.excerpt === undefined) {
+        announcement.excerpt = announcement.bodyText.slice(0, 200);
+      }
     }
     if (dto.excerpt !== undefined) {
       announcement.excerpt = dto.excerpt.replace(/<[^>]*>/g, '');
@@ -160,7 +171,7 @@ export class AnnouncementsService {
 
   async publish(id: string): Promise<Announcement> {
     const announcement = await this.repo.findOne({ where: { id } });
-    if (!announcement) throw new Error('Announcement not found');
+    if (!announcement) throw new NotFoundException('Announcement not found');
     announcement.status = 'published';
     if (!announcement.publishedAt) {
       announcement.publishedAt = new Date();
@@ -170,7 +181,7 @@ export class AnnouncementsService {
 
   async unpublish(id: string): Promise<Announcement> {
     const announcement = await this.repo.findOne({ where: { id } });
-    if (!announcement) throw new Error('Announcement not found');
+    if (!announcement) throw new NotFoundException('Announcement not found');
     announcement.status = 'draft';
     announcement.publishedAt = null;
     return this.repo.save(announcement);
@@ -178,7 +189,7 @@ export class AnnouncementsService {
 
   async togglePin(id: string): Promise<Announcement> {
     const announcement = await this.repo.findOne({ where: { id } });
-    if (!announcement) throw new Error('Announcement not found');
+    if (!announcement) throw new NotFoundException('Announcement not found');
     announcement.pinned = !announcement.pinned;
     return this.repo.save(announcement);
   }

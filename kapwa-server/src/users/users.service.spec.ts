@@ -133,6 +133,25 @@ describe('UsersService', () => {
       expect(result.data[0]).not.toHaveProperty('password');
       expect(result.data[1]).not.toHaveProperty('password');
     });
+
+    it('should strip sensitive tokens + mfaSecret from the list response', async () => {
+      const users = [
+        {
+          ...mockUser,
+          id: '1',
+          email: 'user1@test.com',
+          tokens: [{ purpose: 'email_verification', token: 'SECRET-TOKEN-VALUE', expiresAt: new Date() }],
+          mfaSecret: 'MFA-SECRET-VALUE',
+        },
+      ];
+      mockRepo.findAndCount.mockResolvedValue([users, 1]);
+
+      const result = await service.findAll(undefined, undefined, 1, 10);
+
+      expect(result.data[0]).not.toHaveProperty('tokens');
+      expect(result.data[0]).not.toHaveProperty('mfaSecret');
+      expect(result.data[0]).not.toHaveProperty('password');
+    });
   });
 
   describe('deactivateUser', () => {

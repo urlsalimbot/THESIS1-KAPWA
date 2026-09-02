@@ -13,17 +13,17 @@ const IDEMPOTENCY_TTL_MS = 86_400_000; // 24h
 const MAX_CACHE_SIZE = 10_000;
 
 const ALLOWED_COLUMNS = new Set([
-  "id","name","surname","first_name","middle_name","gender","dob","address","phone",
+  "id","name","surname","first_name","middle_name","gender","dob","phone",
   "email","password","role","full_name",
   "is_active","device_id","category","waiting_period_days",
   "consent_status",
   "approval_workflow","form_template","created_at","updated_at","barangay",
   "estimated_income","verified_by","status","control_no","beneficiary_id",
   "service_requested","certificate_url","petty_cash_voucher_url",
-  "assigned_worker_id","case_id","intervention_type","amount","fund_source","agency",
+  "assigned_worker_id","case_id","amount","fund_source","agency",
   "service_rendered","service_date","voucher_no","or_reference","worker_signature_url","worker_name_sign","logged_by","hash",
   "philsys_number","access_card_code","cost","search_vector","household_id",
-  "age","occupation","is_primary","blotter_entry_number","case_category",
+  "occupation","is_primary","blotter_entry_number","case_category",
   "datetime_reported","datetime_incident","item_a_reporting_person","item_b_person_reported",
   "encrypted_narration","case_disposition","msdw_signature_url","reporting_signature_url",
   "recipient_id","title","message","channel","phone","sent","sent_at","is_read","reference_id",
