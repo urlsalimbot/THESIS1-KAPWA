@@ -393,7 +393,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
                   <span
-                    class="text-xs"
+                    class="text-xs text-muted-foreground/70"
                   >
                     Monthly
                   </span>
@@ -445,7 +445,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
         <p
           class="text-sm text-muted-foreground"
         >
-          Page 1 of 1 (1 total)
+          Page 1 of 1 (1–1 of 1 total)
         </p>
         <div
           class="flex items-center gap-1"

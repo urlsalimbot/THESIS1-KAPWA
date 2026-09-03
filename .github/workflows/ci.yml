@@ -17,20 +17,6 @@ jobs:
     defaults:
       run:
         working-directory: kapwa-server
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: kapwa
-          POSTGRES_USER: kapwa
-          POSTGRES_PASSWORD: kapwa
-        options: >-
-          --health-cmd pg_isready -U kapwa
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,12 +34,6 @@ jobs:
         run: npm run build
       - name: Test
         run: npx jest --silent
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_USER: kapwa
-          DB_PASSWORD: kapwa
-          DB_NAME: kapwa
 
   client:
     runs-on: ubuntu-latest

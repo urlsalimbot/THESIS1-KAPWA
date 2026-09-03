@@ -976,7 +976,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                     class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                   >
                     <span
-                      class="text-xs"
+                      class="text-xs text-muted-foreground/70"
                     >
                       Monthly assistance
                     </span>
@@ -1025,7 +1025,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
           <p
             class="text-sm text-muted-foreground"
           >
-            Page 1 of 1 (1 total)
+            Page 1 of 1 (1–1 of 1 total)
           </p>
           <div
             class="flex items-center gap-1"
