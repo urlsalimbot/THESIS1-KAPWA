@@ -18,14 +18,14 @@ interface Notification {
   isRead: boolean; createdAt: string; referenceId?: string;
 }
 
-const navTarget = (n: Notification): string => {
+export const navTarget = (n: Notification): string => {
   const map: Record<string, string> = {
     case_update: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
     approval: '/approvals',
     disbursement: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
     chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
     sync_conflict: '/tracker',
-    sla_escalation: '/tracker',
+    sla_escalation: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
   };
   return map[n.category] || '/notifications';
 };

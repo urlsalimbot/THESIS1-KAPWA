@@ -26,7 +26,7 @@ const navTarget = (n: Notification): string => {
     disbursement: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
     chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
     sync_conflict: '/tracker',
-    sla_escalation: '/tracker',
+    sla_escalation: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
   };
   return map[n.category] || '/notifications';
 };
