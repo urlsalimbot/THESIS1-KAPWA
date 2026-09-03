@@ -8,6 +8,8 @@ import {
   flexRender,
   useReactTable,
   getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
 } from '@tanstack/react-table';
 
 import {
@@ -85,6 +87,11 @@ export function DataTable<TData, TValue>({
     return [selectColumn, ...columns];
   }, [columns, enableRowSelection]);
 
+  // When the caller hands us the complete dataset (rowCount === data.length),
+  // slice + sort client-side. Server-side tables pass only the current page's
+  // rows with a larger rowCount, so they stay manual.
+  const selfOwnsData = rowCount === data.length;
+
   const table = useReactTable({
     data,
     columns: tableColumns,
@@ -101,9 +108,13 @@ export function DataTable<TData, TValue>({
       : {}),
     ...(enableRowSelection && getRowId ? { getRowId } : {}),
     ...(enableRowSelection ? { enableRowSelection: true } : {}),
-    manualPagination: true,
-    manualSorting: true,
+    manualPagination: !selfOwnsData,
+    manualSorting: !selfOwnsData,
     getCoreRowModel: getCoreRowModel(),
+    ...(selfOwnsData ? {
+      getPaginationRowModel: getPaginationRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+    } : {}),
   });
 
   const columnCount = table.getVisibleFlatColumns().length;
