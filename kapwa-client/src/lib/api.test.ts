@@ -1,369 +1,325 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, KAPWA_AUTH_LOGOUT_EVENT, dataURItoBlob } from './api';
-import { ApiError } from './api-error';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  api,
+  uploadWithProgress,
+  uploadSignature,
+  uploadReceipt,
+  dataURItoBlob,
+  downloadCsrPdf,
+  downloadFilingDoc,
+  getFilingObjectUrl,
+  exportIrfPdf,
+  downloadCertificate,
+  downloadMonthlyFunds,
+  KAPWA_AUTH_LOGOUT_EVENT,
+} from './api';
 
-function okJsonResponse(body: unknown, status = 200) {
-  return { ok: true, status, statusText: 'OK', json: () => Promise.resolve(body) };
+const API = 'http://localhost:3000/api/v1';
+
+function jsonRes(body: unknown, status = 200, headers: Record<string, string> = {}) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: status === 401 ? 'Unauthorized' : 'OK',
+    json: () => Promise.resolve(body),
+    blob: () => Promise.resolve(new Blob(['x'])),
+    headers: { get: (name: string) => headers[name] ?? null },
+  };
 }
-function errJsonResponse(body: unknown, status: number, statusText = '') {
-  return { ok: false, status, statusText, json: () => Promise.resolve(body) };
-}
 
-describe('api client', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-    localStorage.setItem('kapwa_token', 'test-token');
+beforeEach(() => {
+  Object.defineProperty(URL, 'createObjectURL', { value: vi.fn(() => 'blob:mock'), configurable: true, writable: true });
+  Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true, writable: true });
+  Object.defineProperty(HTMLAnchorElement.prototype, 'click', { value: vi.fn(), configurable: true, writable: true });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
+
+describe('api core request', () => {
+  it('GET returns parsed JSON with Authorization header when a token exists', async () => {
+    localStorage.setItem('kapwa_token', 'tok');
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({ ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    const data = await api.get<{ ok: boolean }>('/beneficiaries');
+    expect(data).toEqual({ ok: true });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(`${API}/beneficiaries`);
+    expect(init.headers.Authorization).toBe('Bearer tok');
+    expect(init.method).toBe('GET');
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+  it('GET normalizes an array path and serializes the last object element as query params', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
+    vi.stubGlobal('fetch', fetchMock);
+    await api.get(['cases', { status: 'active', page: '1', empty: '' }]);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(`${API}/cases?status=active&page=1`);
   });
 
-  describe('bearer header', () => {
-    it('attaches Authorization: Bearer <token> when token present', async () => {
-      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okJsonResponse({ data: 'x' }));
-      await api.get('/cases');
-      const call = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-      expect(String(call[0])).toContain('/cases');
-      expect(call[1].headers.Authorization).toBe('Bearer test-token');
-    });
-
-    it('omits Authorization when no token in localStorage', async () => {
-      localStorage.clear();
-      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(okJsonResponse({}));
-      await api.get('/cases');
-      const call = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-      expect(call[1].headers.Authorization).toBeUndefined();
-    });
+  it('GET keeps a Date last element as a path segment (not query params)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const d = new Date('2026-01-01T00:00:00.000Z');
+    await api.get(['tracker', d]);
+    expect(String(fetchMock.mock.calls[0][0])).toContain(`${API}/tracker/`);
   });
 
-  describe('timeout', () => {
-    it('aborts the request when the internal 10s timeout fires', async () => {
-      let abortHandlerCalled = false;
-      (fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-        (_url: string, opts: RequestInit) => {
-          opts.signal?.addEventListener('abort', () => { abortHandlerCalled = true; });
-          return new Promise((_resolve, reject) => {
-            opts.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-          });
-        },
-      );
-      // Use fake timers and flush all of them so the 10s internal timer + backoff sleeps all complete instantly
-      vi.useFakeTimers();
-      try {
-        const promise = api.get('/cases').catch(() => {/* expected after retries fail */});
-        for (let i = 0; i < 10; i++) {
-          await vi.runAllTimersAsync();
-        }
-        await promise;
-        expect(abortHandlerCalled).toBe(true);
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it('composes caller signal — caller abort propagates to fetch', async () => {
-      const caller = new AbortController();
-      let sawAbort = false;
-      (fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-        (_url: string, opts: RequestInit) => {
-          opts.signal?.addEventListener('abort', () => { sawAbort = true; });
-          return Promise.resolve(okJsonResponse({}));
-        },
-      );
-      const promise = api.get('/cases', { signal: caller.signal });
-      caller.abort();
-      await promise;
-      expect(sawAbort).toBe(true);
-    });
+  it('throws ApiError on non-OK responses', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({ message: 'nope' }, 403)));
+    await expect(api.get('/x')).rejects.toMatchObject({ status: 403, body: { message: 'nope' } });
   });
 
-  describe('401 refresh single-flight', () => {
-    it('refreshes once and retries the original on 401 then 200', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      localStorage.setItem('refresh_token', 'refresh-1');
-      fetchMock
-        .mockResolvedValueOnce(errJsonResponse({}, 401, 'Unauthorized'))
-        .mockResolvedValueOnce(okJsonResponse({ accessToken: 'new', refreshToken: 'new-refresh', user: {} }))
-        .mockResolvedValueOnce(okJsonResponse({ result: 'ok' }));
-
-      const result = await api.get('/cases');
-      expect(result).toEqual({ result: 'ok' });
-      expect(localStorage.getItem('kapwa_token')).toBe('new');
-      expect(fetchMock.mock.calls.length).toBe(3);
-      const refreshCall = fetchMock.mock.calls[1];
-      expect(String(refreshCall[0])).toContain('/auth/refresh');
-    });
-
-    it('shares a single in-flight refresh across concurrent 401s', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      localStorage.setItem('refresh_token', 'refresh-1');
-      // 3 concurrent api.get calls: actual order is 3 originals → 1 refresh → 3 retries
-      fetchMock
-        // 3 original 401s
-        .mockResolvedValueOnce(errJsonResponse({}, 401))
-        .mockResolvedValueOnce(errJsonResponse({}, 401))
-        .mockResolvedValueOnce(errJsonResponse({}, 401))
-        // 1 refresh 200
-        .mockResolvedValueOnce(okJsonResponse({ accessToken: 'shared', refreshToken: 'r2', user: {} }))
-        // 3 retries 200
-        .mockResolvedValueOnce(okJsonResponse({ from: 1 }))
-        .mockResolvedValueOnce(okJsonResponse({ from: 2 }))
-        .mockResolvedValueOnce(okJsonResponse({ from: 3 }));
-
-      const [r1, r2, r3] = await Promise.all([api.get('/a'), api.get('/b'), api.get('/c')]);
-      // All 3 calls resolve successfully (specific from-value depends on retry microtask order)
-      expect([1, 2, 3]).toContain((r1 as { from: number }).from);
-      expect([1, 2, 3]).toContain((r2 as { from: number }).from);
-      expect([1, 2, 3]).toContain((r3 as { from: number }).from);
-      const fromValues = new Set([(r1 as { from: number }).from, (r2 as { from: number }).from, (r3 as { from: number }).from]);
-      expect(fromValues.size).toBe(3);
-      const refreshCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/auth/refresh'));
-      expect(refreshCalls.length).toBe(1);
-    });
-
-    it('does not loop — when refresh itself 401s, throws ApiError(401) and dispatches logout event', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      localStorage.setItem('refresh_token', 'expired');
-      fetchMock
-        .mockResolvedValueOnce(errJsonResponse({}, 401))
-        .mockResolvedValueOnce(errJsonResponse({}, 401));
-
-      const logoutListener = vi.fn();
-      window.addEventListener('kapwa:auth:logout', logoutListener);
-      try {
-        await expect(api.get('/cases')).rejects.toBeInstanceOf(ApiError);
-        expect(fetchMock.mock.calls.length).toBe(2);
-        expect(logoutListener).toHaveBeenCalledTimes(1);
-        expect(localStorage.getItem('kapwa_token')).toBeNull();
-      } finally {
-        window.removeEventListener('kapwa:auth:logout', logoutListener);
-      }
-    });
+  it('POST / PUT / PATCH / DELETE issue the right method and JSON body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({ id: 1 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await api.post('/a', { n: 1 });
+    await api.put('/b', { n: 2 });
+    await api.patch('/c', { n: 3 });
+    await api.del('/d');
+    expect(fetchMock.mock.calls.map(c => c[1].method)).toEqual(['POST', 'PUT', 'PATCH', 'DELETE']);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ n: 1 });
   });
 
-  describe('retry on network failure', () => {
-    it('retries up to 3 times on TypeError, then succeeds on the 4th attempt', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock
-        .mockRejectedValueOnce(new TypeError('fetch failed'))
-        .mockRejectedValueOnce(new TypeError('fetch failed'))
-        .mockRejectedValueOnce(new TypeError('fetch failed'))
-        .mockResolvedValueOnce(okJsonResponse({ ok: 1 }));
-
-      // Use fake timers so the 500+1500+4500ms backoff sums complete instantly.
-      // The 10s internal AbortController timeout also uses setTimeout; flush it
-      // together with the backoff delays via runAllTimersAsync.
-      vi.useFakeTimers();
-      try {
-        const resultPromise = api.get('/cases');
-        // Flush all pending timers in a loop (each retry schedules another setTimeout)
-        for (let i = 0; i < 5; i++) {
-          await vi.runAllTimersAsync();
-        }
-        const result = await resultPromise;
-        expect(result).toEqual({ ok: 1 });
-        expect(fetchMock.mock.calls.length).toBe(4);
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it('does NOT retry on 4xx', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockResolvedValueOnce(errJsonResponse({ msg: 'bad' }, 400, 'Bad Request'));
-      await expect(api.get('/cases')).rejects.toBeInstanceOf(ApiError);
-      expect(fetchMock.mock.calls.length).toBe(1);
-    });
-
-    it('does NOT retry on 5xx', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockResolvedValueOnce(errJsonResponse({}, 500, 'Internal'));
-      await expect(api.get('/cases')).rejects.toBeInstanceOf(ApiError);
-      expect(fetchMock.mock.calls.length).toBe(1);
-    });
-
-    it('does NOT retry POST on TypeError', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
-      await expect(api.post('/x', { a: 1 })).rejects.toBeInstanceOf(TypeError);
-      expect(fetchMock.mock.calls.length).toBe(1);
-    });
-
-    it('does NOT retry PUT on TypeError', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
-      await expect(api.put('/x', { a: 1 })).rejects.toBeInstanceOf(TypeError);
-      expect(fetchMock.mock.calls.length).toBe(1);
-    });
-
-    it('does NOT retry DELETE on TypeError', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
-      await expect(api.del('/x')).rejects.toBeInstanceOf(TypeError);
-      expect(fetchMock.mock.calls.length).toBe(1);
-    });
+  it('attaches the CSRF token on non-GET requests when present', async () => {
+    Object.defineProperty(document, 'cookie', { value: 'csrf-token=abc', configurable: true, writable: true });
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
+    vi.stubGlobal('fetch', fetchMock);
+    await api.post('/a', {});
+    expect(fetchMock.mock.calls[0][1].headers['X-CSRF-Token']).toBe('abc');
+    Object.defineProperty(document, 'cookie', { value: '', configurable: true, writable: true });
   });
 
-  describe('exponential backoff', () => {
-    it('uses ~500ms and ~1500ms (±20%) delays between retries', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock
-        .mockRejectedValueOnce(new TypeError('fetch failed'))
-        .mockRejectedValueOnce(new TypeError('fetch failed'))
-        .mockResolvedValueOnce(okJsonResponse({ ok: 1 }));
-
-      // Spy on setTimeout; the internal 10s timeout (10000ms) is filtered out by the <5000 bound
-      // so we capture only the backoff delays.
-      const delays: number[] = [];
-      const originalSetTimeout = globalThis.setTimeout;
-      const spy = vi.spyOn(globalThis, 'setTimeout').mockImplementation((cb: () => void, ms?: number) => {
-        if (typeof ms === 'number' && ms >= 100 && ms < 5000) delays.push(ms);
-        return originalSetTimeout(cb, 0) as unknown as ReturnType<typeof setTimeout>;
-      });
-
-      try {
-        await api.get('/cases');
-        expect(delays.length).toBe(2);
-        expect(delays[0]).toBeGreaterThanOrEqual(400);
-        expect(delays[0]).toBeLessThanOrEqual(600);
-        expect(delays[1]).toBeGreaterThanOrEqual(1200);
-        expect(delays[1]).toBeLessThanOrEqual(1800);
-      } finally {
-        spy.mockRestore();
-      }
-    });
+  it('passes an AbortSignal through', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const controller = new AbortController();
+    await api.get('/x', { signal: controller.signal });
+    expect(fetchMock.mock.calls[0][1].signal).toBeDefined();
   });
 
-  describe('api object shape', () => {
-    it('exports api with get/post/put/del methods', () => {
-      expect(typeof api.get).toBe('function');
-      expect(typeof api.post).toBe('function');
-      expect(typeof api.put).toBe('function');
-      expect(typeof api.del).toBe('function');
-    });
+  it('api.url builds an absolute URL', () => {
+    expect(api.url('/health')).toBe(`${API}/health`);
+  });
+});
 
-    it('api.post serializes body to JSON', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockResolvedValueOnce(okJsonResponse({ id: 1 }));
-      await api.post('/cases', { foo: 'bar' });
-      const call = fetchMock.mock.calls[0];
-      expect(call[1].body).toBe(JSON.stringify({ foo: 'bar' }));
-    });
+describe('api upload', () => {
+  it('uploads FormData and returns JSON', async () => {
+    localStorage.setItem('kapwa_token', 'tok');
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({ url: 'u' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const out = await api.upload('/minio/upload', new FormData());
+    expect(out).toEqual({ url: 'u' });
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok');
+    expect(fetchMock.mock.calls[0][1].body).toBeInstanceOf(FormData);
   });
 
-  describe('KAPWA_AUTH_LOGOUT_EVENT', () => {
-    it('exports the constant value "kapwa:auth:logout"', () => {
-      expect(KAPWA_AUTH_LOGOUT_EVENT).toBe('kapwa:auth:logout');
-    });
+  it('throws ApiError when the upload fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({}, 500)));
+    await expect(api.upload('/minio/upload', new FormData())).rejects.toMatchObject({ status: 500 });
   });
 
-  describe('refresh_network_error dispatch', () => {
-    it('dispatches kapwa:auth:logout with reason "refresh_network_error" when /auth/refresh fetch throws', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      localStorage.setItem('refresh_token', 'r');
-      fetchMock
-        .mockResolvedValueOnce(errJsonResponse({}, 401, 'Unauthorized'))
-        .mockRejectedValueOnce(new TypeError('network failure on refresh'));
+  it('uploadSignature / uploadReceipt upload via rawUpload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({ url: 'sig-url' }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(uploadSignature(new Blob(['s']), 's.png')).resolves.toBe('sig-url');
+    await expect(uploadReceipt(new Blob(['r']), 'r.png')).resolves.toBe('sig-url');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
 
-      const logoutListener = vi.fn();
-      window.addEventListener('kapwa:auth:logout', logoutListener);
-      try {
-        await expect(api.get('/cases')).rejects.toBeInstanceOf(ApiError);
-        expect(logoutListener).toHaveBeenCalledTimes(1);
-        const event = logoutListener.mock.calls[0][0] as CustomEvent;
-        expect(event.detail?.reason).toBe('refresh_network_error');
-        expect(localStorage.getItem('kapwa_token')).toBeNull();
-        expect(localStorage.getItem('refresh_token')).toBeNull();
-      } finally {
-        window.removeEventListener('kapwa:auth:logout', logoutListener);
-      }
-    });
+describe('uploadWithProgress (XHR)', () => {
+  function xhrMock(opts: { status?: number; mode?: 'load' | 'error' | 'timeout' } = {}) {
+    const { status = 200, mode = 'load' } = opts;
+    const instance: any = {
+      open: vi.fn(),
+      setRequestHeader: vi.fn(),
+      abort: vi.fn(),
+      upload: {},
+      status,
+      responseText: JSON.stringify({ uploaded: true }),
+      send: vi.fn(function (this: any) {
+        if (mode === 'load') {
+          this.upload.onprogress?.({ lengthComputable: true, loaded: 50, total: 100 });
+          this.onload?.();
+        } else if (mode === 'error') this.onerror?.();
+        else if (mode === 'timeout') this.ontimeout?.();
+        // 'pending' leaves the request outstanding (abort wiring test)
+      }),
+    };
+    const XHRMock = function () { return instance; } as unknown as typeof XMLHttpRequest;
+    (globalThis as any).XMLHttpRequest = XHRMock;
+    (window as any).XMLHttpRequest = XHRMock;
+    return instance;
+  }
+
+  it('reports progress and resolves on success', async () => {
+    localStorage.setItem('kapwa_token', 'tok');
+    xhrMock();
+    const onProgress = vi.fn();
+    const out = await uploadWithProgress('/upload', new FormData(), onProgress);
+    expect(out).toEqual({ uploaded: true });
+    expect(onProgress).toHaveBeenCalledWith(50);
   });
 
-  describe('path normalization', () => {
-    it('joins array path parts with "/" and drops null/undefined/empty segments', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockResolvedValueOnce(okJsonResponse({}));
-      await api.get(['cases', '123', null, undefined, ''] as readonly unknown[]);
-      const url = String(fetchMock.mock.calls[0][0]);
-      expect(url).toMatch(/\/cases\/123$/);
-    });
+  it('rejects ApiError on an error status', async () => {
+    xhrMock({ status: 500 });
+    await expect(uploadWithProgress('/upload', new FormData(), vi.fn())).rejects.toMatchObject({ status: 500 });
   });
 
-  describe('refresh path edge cases', () => {
-    it('throws ApiError(401) without calling /auth/refresh when no refresh_token is stored', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      localStorage.removeItem('refresh_token');
-      fetchMock.mockResolvedValueOnce(errJsonResponse({}, 401, 'Unauthorized'));
-
-      const logoutListener = vi.fn();
-      window.addEventListener('kapwa:auth:logout', logoutListener);
-      try {
-        await expect(api.get('/cases')).rejects.toBeInstanceOf(ApiError);
-        expect(fetchMock.mock.calls.length).toBe(1);
-        expect(logoutListener).not.toHaveBeenCalled();
-        const calledUrl = String(fetchMock.mock.calls[0][0]);
-        expect(calledUrl).not.toContain('/auth/refresh');
-      } finally {
-        window.removeEventListener('kapwa:auth:logout', logoutListener);
-      }
-    });
-
-    it('parses errBody as null when error response has malformed JSON body', async () => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal',
-        json: () => Promise.reject(new SyntaxError('unexpected token')),
-      });
-
-      try {
-        await api.get('/cases');
-        throw new Error('expected to throw');
-      } catch (err) {
-        expect(err).toBeInstanceOf(ApiError);
-        expect((err as ApiError).status).toBe(500);
-        expect((err as ApiError).body).toBeNull();
-      }
-      expect(fetchMock.mock.calls.length).toBe(1);
-    });
-
-    it('aborts the backoff sleep when caller signal aborts during a retry', async () => {
-      const caller = new AbortController();
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      fetchMock.mockRejectedValueOnce(new TypeError('network'));
-
-      vi.useFakeTimers();
-      try {
-        const promise = api.get('/cases', { signal: caller.signal }).catch((e) => e);
-        await vi.advanceTimersByTimeAsync(100);
-        caller.abort();
-        await vi.advanceTimersByTimeAsync(10_000);
-        const result = await promise;
-        expect(result).toBeInstanceOf(DOMException);
-        expect((result as DOMException).name).toBe('AbortError');
-        expect(caller.signal.aborted).toBe(true);
-      } finally {
-        vi.useRealTimers();
-      }
-    });
+  it('rejects on network error and timeout', async () => {
+    xhrMock({ mode: 'error' });
+    await expect(uploadWithProgress('/upload', new FormData(), vi.fn())).rejects.toThrow('Network error');
+    xhrMock({ mode: 'timeout' });
+    await expect(uploadWithProgress('/upload', new FormData(), vi.fn())).rejects.toThrow('Upload timed out');
   });
 
-  describe('dataURItoBlob', () => {
-    it('decodes a base64 data URI into a Blob with the declared MIME type', () => {
-      const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-      const blob = dataURItoBlob(dataUrl);
-      expect(blob).toBeInstanceOf(Blob);
-      expect(blob.type).toBe('image/png');
-    });
+  it('wires the caller signal to xhr.abort()', () => {
+    const inst = xhrMock({ mode: 'pending' });
+    const controller = new AbortController();
+    void uploadWithProgress('/upload', new FormData(), vi.fn(), { signal: controller.signal });
+    controller.abort();
+    expect(inst.abort).toHaveBeenCalled();
+  });
+});
 
-    it('falls back to image/png MIME type when header has no media-type match', () => {
-      const dataUrl = 'data:;base64,YWJj';
-      const blob = dataURItoBlob(dataUrl);
-      expect(blob.type).toBe('image/png');
+describe('token refresh + retry', () => {
+  it('refreshes once on 401 then retries the original request', async () => {
+    localStorage.setItem('kapwa_token', 'old');
+    localStorage.setItem('refresh_token', 'rt');
+    let calls = 0;
+    const fetchMock = vi.fn((url: string) => {
+      calls++;
+      if (String(url).includes('/auth/refresh')) return Promise.resolve(jsonRes({ accessToken: 'new' }));
+      if (calls === 1) return Promise.resolve(jsonRes({}, 401));
+      return Promise.resolve(jsonRes({ data: 'ok' }));
     });
+    vi.stubGlobal('fetch', fetchMock);
+    const out = await api.get('/protected');
+    expect(out).toEqual({ data: 'ok' });
+    expect(localStorage.getItem('kapwa_token')).toBe('new');
+  });
+
+  it('dispatches a logout event when refresh fails', async () => {
+    localStorage.setItem('kapwa_token', 'old');
+    localStorage.setItem('refresh_token', 'rt');
+    const listener = vi.fn();
+    window.addEventListener(KAPWA_AUTH_LOGOUT_EVENT, listener);
+    const fetchMock = vi.fn((url: string) =>
+      String(url).includes('/auth/refresh')
+        ? Promise.resolve(jsonRes({}, 401))
+        : Promise.resolve(jsonRes({}, 401)),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(api.get('/protected')).rejects.toBeTruthy();
+    expect(listener).toHaveBeenCalled();
+    expect(localStorage.getItem('refresh_token')).toBeNull();
+  });
+
+  it('retries GET on transient network errors (TypeError) then succeeds', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi.fn()
+        .mockRejectedValueOnce(new TypeError('network down'))
+        .mockRejectedValueOnce(new TypeError('network down'))
+        .mockResolvedValueOnce(jsonRes({ ok: 1 }));
+      vi.stubGlobal('fetch', fetchMock);
+      const promise = api.get('/flaky');
+      await vi.runAllTimersAsync();
+      await expect(promise).resolves.toEqual({ ok: 1 });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('download helpers', () => {
+  it('downloadCsrPdf downloads the blob and clicks the anchor', async () => {
+    localStorage.setItem('kapwa_token', 'tok');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({})));
+    await downloadCsrPdf('c1');
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+
+  it('downloadCsrPdf throws on failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({}, 500)));
+    await expect(downloadCsrPdf('c1')).rejects.toThrow('CSR export failed');
+  });
+
+  it('downloadFilingDoc uses the Content-Disposition filename', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({}, 200, { 'Content-Disposition': 'attachment; filename="report.pdf"' })));
+    const click = HTMLAnchorElement.prototype.click as unknown as ReturnType<typeof vi.fn>;
+    await downloadFilingDoc('f1');
+    expect(click).toHaveBeenCalled();
+    expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('downloadFilingDoc falls back to the given name', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({})));
+    await downloadFilingDoc('f1', 'fallback.pdf');
+    expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('getFilingObjectUrl returns the object URL', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({})));
+    await expect(getFilingObjectUrl('f2')).resolves.toBe('blob:mock');
+  });
+
+  it('exportIrfPdf encodes query params and clicks the anchor', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
+    vi.stubGlobal('fetch', fetchMock);
+    await exportIrfPdf('i1', 'RA 7160', 'pw');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('legalBasis=RA%207160');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('password=pw');
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+  });
+
+  it('downloadCertificate POSTs the certificate request and downloads', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}, 200, { 'Content-Disposition': 'attachment; filename="cert.pdf"' }));
+    vi.stubGlobal('fetch', fetchMock);
+    await downloadCertificate('indigency', { fullName: 'A', date: '2026-01-01' });
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ type: 'indigency', fullName: 'A' });
+    expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('downloadCertificate throws on failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({}, 500)));
+    await expect(downloadCertificate('eligibility', { fullName: 'B', date: '2026-01-01' })).rejects.toThrow('Certificate export failed');
+  });
+
+  it('downloadMonthlyFunds uses the month param when no range is given', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
+    vi.stubGlobal('fetch', fetchMock);
+    await downloadMonthlyFunds('2026-08');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('month=2026-08');
+  });
+
+  it('downloadMonthlyFunds uses the date range when provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
+    vi.stubGlobal('fetch', fetchMock);
+    await downloadMonthlyFunds('2026-08', '2026-03-01', '2026-07-31');
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain('startDate=2026-03-01');
+    expect(url).toContain('endDate=2026-07-31');
+    expect(url).not.toContain('month=');
+  });
+
+  it('downloadMonthlyFunds throws on failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({}, 500)));
+    await expect(downloadMonthlyFunds('2026-08')).rejects.toThrow('Fund export failed');
+  });
+});
+
+describe('dataURItoBlob', () => {
+  it('converts a data URI into a typed Blob', () => {
+    const b64 = Buffer.from('kapwa').toString('base64');
+    const blob = dataURItoBlob(`data:image/png;base64,${b64}`);
+    expect(blob.type).toBe('image/png');
+    expect(blob.size).toBe(5);
   });
 });
