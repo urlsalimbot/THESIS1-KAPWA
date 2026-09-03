@@ -67,7 +67,7 @@ export function CreateProgramPage() {
       await api.post('/programs', payload);
       toast.success(t('programs.created', 'Program created'), { description: t('programs.createdDesc', 'New program has been added.') });
       globalMutate(queryKeys.programs.list());
-      navigate('/programs');
+      navigate('/admin/programs');
     } catch (err: any) {
       toast.error(t('programs.createFailed', 'Failed to create program'), { description: err.message || t('programs.checkInput', 'Please check your input and try again.') });
     } finally {
@@ -79,7 +79,7 @@ export function CreateProgramPage() {
     <PageShell
       title={t('programs.newTitle', 'New Program')}
       description={t('programs.newDescription', 'Define a support program implemented under law')}
-      backTo={{ label: t('programs.title', 'Programs'), onClick: () => navigate('/programs') }}
+      backTo={{ label: t('programs.title', 'Programs'), onClick: () => navigate('/admin/programs') }}
     >
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Program identity + legal basis */}
@@ -214,7 +214,7 @@ export function CreateProgramPage() {
           <Button type="submit" disabled={submitting} aria-label={t('programs.createProgram', 'Create Program')}>
             {submitting ? t('programs.creating', 'Creating...') : t('programs.createProgram', 'Create Program')}
           </Button>
-          <Button variant="outline" onClick={() => navigate('/programs')}>{t('programs.cancel', 'Cancel')}</Button>
+          <Button variant="outline" onClick={() => navigate('/admin/programs')}>{t('programs.cancel', 'Cancel')}</Button>
         </div>
       </form>
     </PageShell>

@@ -10,7 +10,7 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   '/beneficiaries': 'Beneficiaries',
   '/interventions': 'Interventions',
   '/approvals': 'Approvals',
-  '/programs': 'Programs',
+  '/admin/programs': 'Programs',
   '/tracker': 'Daily Tracker',
   '/reports': 'Reports',
   '/audit-logs': 'Audit Logs',

@@ -75,11 +75,14 @@ export function PublicFooter() {
             &copy; {new Date().getFullYear()} {t('public.copyright', 'MSWDO Norzagaray. All rights reserved.')}
           </p>
           <div className="flex gap-6">
-            <Link to="/about" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/privacy-policy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t('public.privacyPolicy', 'Privacy Policy')}
             </Link>
-            <Link to="/contact" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/accessibility" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {t('public.accessibility', 'Accessibility')}
+            </Link>
+            <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {t('public.terms', 'Terms of Use')}
             </Link>
           </div>
         </div>

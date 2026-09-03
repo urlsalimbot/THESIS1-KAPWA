@@ -43,7 +43,6 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Operations',
     items: [
       { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
-      { path: '/irf', label: 'Incident Reports', icon: <FileWarning size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/approvals', label: 'Approvals', icon: <Stamp size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/announcements/manage', label: 'Announcements', icon: <Megaphone size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
     ],
@@ -52,7 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Admin',
     items: [
       { path: '/admin', label: 'Admin Panel', icon: <Shield size={20} />, roles: ['admin'] },
-      { path: '/programs', label: 'Programs', icon: <ScrollText size={20} />, roles: ['admin'] },
+      { path: '/admin/programs', label: 'Programs', icon: <ScrollText size={20} />, roles: ['admin'] },
     ],
   },
 

@@ -902,6 +902,7 @@ const fil: EnLocale = {
   },
   "referral": {
     "accept": "Tanggapin",
+    "acceptAria": "Tanggapin ang referral para kay {{name}}",
     "accepted": "Tinanggap ang referral",
     "acceptFailed": "Nabigo ang pagtanggap ng referral",
     "actions": "Mga Aksyon",
@@ -911,6 +912,7 @@ const fil: EnLocale = {
     "confirmDecline": "Kumpirmahin ang Pagtanggi",
     "date": "Petsa",
     "decline": "Tanggihan",
+    "declineAria": "Tanggihan ang referral para kay {{name}}",
     "declined": "Tinanggihan ang referral",
     "declineFailed": "Nabigo ang pagtanggi ng referral",
     "declineReason": "Dahilan ng Pagtanggi",
@@ -932,7 +934,8 @@ const fil: EnLocale = {
     "reviewTitle": "Pagsusuri ng Referral",
     "status": "Katayuan",
     "title": "Mga Referral",
-    "view": "Tingnan"
+    "view": "Tingnan",
+    "viewAria": "Tingnan ang referral para kay {{name}}"
   },
   "tracker": {
     "actions": "Mga Aksyon",
@@ -1069,15 +1072,18 @@ const fil: EnLocale = {
     "workerName": "Pangalan ng Worker"
   },
   "admin": {
+    "allActions": "Lahat ng aksyon",
     "auditLog": "Tala ng Audit",
     "auditLogTitle": "Tala ng Audit (RA 10173 / COA)",
     "description": "Configuration ng system, mga user, at monitoring",
     "device": "Device: {{id}}…",
     "entryCount_one": "{{count}} entr{{suffix}}",
     "entryCount_other": "{{count}} entr{{suffix}}",
+    "filterAudit": "Salain ayon sa aksyon",
     "lcrImport": "LCR Import",
     "loadingAudit": "Naglo-load ng data ng audit...",
     "on": "sa",
+    "refresh": "I-refresh",
     "syncQueue": "Pila ng Sync",
     "syncQueueMonitor": "Monitor ng Pila ng Sync",
     "title": "Panel ng Admin",
@@ -1186,6 +1192,8 @@ const fil: EnLocale = {
     "nothingToPreview": "Wala pang maipapakita sa preview.",
     "notPinned": "Hindi naka-pin",
     "numberedList": "Listahang may numero",
+    "open": "Buksan",
+    "openAria": "Buksan ang {{title}}",
     "photoCover": "Larawan ng pabalat",
     "photos": "Mga Larawan",
     "photosEmpty": "Walang naka-attach na larawan.",
@@ -1840,10 +1848,15 @@ const fil: EnLocale = {
     "fullName": "Buong Pangalan",
     "hide": "Itago",
     "inactive": "Hindi aktibo",
+    "firstNameRequired": "Pakilagay ang unang pangalan.",
+    "lastNameRequired": "Pakilagay ang apelyido.",
     "minChars": "Minimum na 8 karakter",
     "name": "Pangalan",
     "newUser": "Bagong User",
+    "newUserDesc": "Magdagdag ng user sa system. Ang mga bahagi ng pangalan ay tumutugma sa users schema.",
+    "newUserTitle": "Gumawa ng Bagong User",
     "password": "Password",
+    "passwordMin": "Ang password ay dapat may hindi bababa sa 8 karakter.",
     "permittedBarangays": "Mga Pinapayagang Barangay (pinaghihiwalay ng kuwit)",
     "phone": "Telepono",
     "reset": "I-reset",
@@ -1853,7 +1866,7 @@ const fil: EnLocale = {
     "searchPlaceholder": "Maghanap sa pamamagitan ng email o pangalan...",
     "selectAgency": "Pumili ng ahensya...",
     "status": "Katayuan",
-    "userCreated": "Matagumpay na nagawa ang user na {{email}}"
+    "userCreated": "Matagumpay na nagawa ang user"
   },
   "chain": {
     "hash": "Hash:",
@@ -1961,6 +1974,8 @@ const fil: EnLocale = {
   "public": {
     "about": "Tungkol sa Amin",
     "accessibility": "Accessibilidad",
+    "announcements": "Mga Anunsyo",
+    "backToHome": "Bumalik sa tahanan",
     "closeMenu": "Isara ang menu",
     "contact": "Kontak",
     "contactUs": "Kontakin Kami",
@@ -1971,10 +1986,41 @@ const fil: EnLocale = {
     "login": "Mag-log in",
     "mainNavigation": "Pangunahing nabigasyon",
     "mswdoAddress": "Municipal Social Welfare and Development Office, Norzagaray, Bulacan",
+    "news": "Balita",
     "openMenu": "Buksan ang menu",
     "privacyPolicy": "Patakaran sa Privacy",
+    "programs": "Mga Programa",
     "quickLinks": "Mga Mabilisang Link",
-    "services": "Mga Serbisyo"
+    "services": "Mga Serbisyo",
+    "terms": "Mga Tuntunin ng Paggamit"
+  },
+  "programsPublic": {
+    "description": "Mga available na programa at serbisyong panlipunan na inaalok ng MSWDO ng Norzagaray.",
+    "empty": "Wala pang nakalistang programa.",
+    "fundSources": "Mga Pinagkukunan ng Pondo",
+    "inquire": "Magtanong tungkol sa programang ito",
+    "legalBasis": "Legal na Batayan",
+    "loadFailed": "Nabigo ang pag-load ng mga programa.",
+    "title": "Mga Programa ng Social Assistance",
+    "waitingPeriod": "Panahon ng paghihintay: {{days}} araw"
+  },
+  "announcementsPublic": {
+    "description": "Mga update, paunawa, at impormasyon mula sa MSWDO ng Norzagaray.",
+    "empty": "Wala pang anunsyo.",
+    "loadFailed": "Nabigo ang pag-load ng mga anunsyo.",
+    "title": "Balita at Mga Anunsyo"
+  },
+  "terms": {
+    "eyebrow": "Pambatas",
+    "title": "Mga Tuntunin ng Paggamit"
+  },
+  "accessibility": {
+    "eyebrow": "Accessibilidad",
+    "title": "Accessibilidad"
+  },
+  "privacy": {
+    "eyebrow": "Pribado",
+    "title": "Patakaran sa Privacy"
   },
   "quickScan": {
     "cardNotFound": "Hindi nahanap ang card. Suriin ang kodigo at subukang muli.",

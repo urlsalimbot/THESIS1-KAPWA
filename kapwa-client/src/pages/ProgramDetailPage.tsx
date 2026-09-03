@@ -49,7 +49,7 @@ export function ProgramDetailPage() {
 
   if (!program) {
     return (
-      <PageShell title={t('programs.notFoundTitle', 'Program Not Found')} description="" backTo={{ label: t('programs.backToPrograms', 'Back to Programs'), onClick: () => navigate('/programs') }}>
+      <PageShell title={t('programs.notFoundTitle', 'Program Not Found')} description="" backTo={{ label: t('programs.backToPrograms', 'Back to Programs'), onClick: () => navigate('/admin/programs') }}>
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <FileText size={40} className="mb-3 opacity-30" />
           <p className="text-sm">{t('programs.notFound', 'Program not found.')}</p>
@@ -62,7 +62,7 @@ export function ProgramDetailPage() {
     <PageShell
       title={program.name}
       description={program.category || t('programs.interventionProgram', 'Intervention Program')}
-      backTo={{ label: t('programs.backToPrograms', 'Back to Programs'), onClick: () => navigate('/programs') }}
+      backTo={{ label: t('programs.backToPrograms', 'Back to Programs'), onClick: () => navigate('/admin/programs') }}
       actions={
         <Badge variant={program.isActive ? 'default' : 'secondary'} className={`${program.isActive ? 'bg-emerald-500' : ''}`}>
           {program.isActive ? t('programs.active', 'Active') : t('programs.inactive', 'Inactive')}

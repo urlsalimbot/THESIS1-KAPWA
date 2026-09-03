@@ -78,7 +78,7 @@ export function ProgramsPage() {
       )}
 
       <div className="flex items-center justify-between gap-3 mb-4">
-        <Button onClick={() => navigate('/programs/new')} aria-label={t('programs.newProgram', 'New Program')} className="gap-1.5">
+        <Button onClick={() => navigate('/admin/programs/new')} aria-label={t('programs.newProgram', 'New Program')} className="gap-1.5">
           <Plus size={16} /> {t('programs.newProgram', 'New Program')}
         </Button>
         <Input type="text" placeholder={t('programs.searchPlaceholder', 'Search programs...')} className="max-w-xs h-9"
@@ -118,7 +118,7 @@ export function ProgramsPage() {
                 {r.approvalWorkflow?.length ? <span>{t('programs.stepsCount', 'Steps: {{count}}', { count: r.approvalWorkflow.length })}</span> : null}
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => navigate(`/programs/${r.id}`)}
+                <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/programs/${r.id}`)}
                   aria-label={t('programs.viewDetails', 'View details')} className="h-8">
                   <ExternalLink size={14} className="mr-1" /> {t('programs.viewDetails', 'View Details')}
                 </Button>

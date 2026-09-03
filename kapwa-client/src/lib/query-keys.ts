@@ -99,6 +99,8 @@ export const queryKeys = {
     all: ['programs'] as const,
     list: () => memo('programs.list', () => ['programs'] as const),
     detail: (id: string) => memo(`programs.detail.${id}`, () => ['programs', id] as const),
+    publicList: () => memo('programs.public.list', () => ['programs', 'public'] as const),
+    publicDetail: (id: string) => memo(`programs.public.${id}`, () => ['programs', 'public', id] as const),
   },
   tracker: {
     all: ['tracker'] as const,

@@ -37,6 +37,8 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
   const navLinks = [
     { to: '/', label: t('public.home', 'Home') },
     { to: '/about', label: t('public.about', 'About') },
+    { to: '/programs', label: t('public.programs', 'Programs') },
+    { to: '/announcements', label: t('public.announcements', 'Announcements') },
     { to: '/contact', label: t('public.contact', 'Contact') },
   ];
 

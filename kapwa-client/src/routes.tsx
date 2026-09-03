@@ -29,6 +29,7 @@ const MessagesPage = lazy(() => import('./pages/MessagesPage').then(m => ({ defa
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const CaseTrackerPage = lazy(() => import('./pages/CaseTrackerPage').then(m => ({ default: m.CaseTrackerPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const NewUserPage = lazy(() => import('./pages/NewUserPage').then(m => ({ default: m.NewUserPage })));
 const ClaimantDashboardPage = lazy(() => import('./pages/ClaimantDashboardPage').then(m => ({ default: m.ClaimantDashboardPage })));
 const ApprovalPipelinePage = lazy(() => import('./pages/ApprovalPipelinePage').then(m => ({ default: m.ApprovalPipelinePage })));
 const MfaSetupPage = lazy(() => import('./pages/MfaSetupPage').then(m => ({ default: m.MfaSetupPage })));
@@ -61,6 +62,11 @@ const CreateProgramPage = lazy(() => import('./pages/CreateProgramPage').then(m 
 const ProgramDetailPage = lazy(() => import('./pages/ProgramDetailPage').then(m => ({ default: m.ProgramDetailPage })));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage').then(m => ({ default: m.ProgramsPage })));
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const PublicProgramsPage = lazy(() => import('./pages/PublicProgramsPage').then(m => ({ default: m.PublicProgramsPage })));
+const PublicAnnouncementsPage = lazy(() => import('./pages/PublicAnnouncementsPage').then(m => ({ default: m.PublicAnnouncementsPage })));
+const TermsPage = lazy(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
+const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage').then(m => ({ default: m.AccessibilityPage })));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
@@ -87,7 +93,12 @@ const router = createBrowserRouter([
       { index: true, element: <LandingPageRedirect /> },
       { path: 'about', element: <AboutPage /> },
       { path: 'contact', element: <ContactPage /> },
+      { path: 'announcements', element: <PublicAnnouncementsPage /> },
       { path: 'announcements/:slug', element: <AnnouncementPage /> },
+      { path: 'programs', element: <PublicProgramsPage /> },
+      { path: 'terms', element: <TermsPage /> },
+      { path: 'accessibility', element: <AccessibilityPage /> },
+      { path: 'privacy-policy', element: <PrivacyPolicyPage /> },
     ],
   },
   { path: 'login', element: <LoginPage /> },
@@ -105,6 +116,7 @@ const router = createBrowserRouter([
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker','mayor','auditor']}><CaseTrackerPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
+  { path: '/admin/users/new', element: <Private roles={['admin']}><NewUserPage /></Private> },
   { path: '/approvals', element: <Private roles={['admin','social_worker']}><ApprovalPipelinePage /></Private> },
   { path: '/settings/mfa', element: <Navigate to="/settings" replace /> },
   { path: '/settings', element: <Private><SettingsPage /></Private> },
@@ -112,9 +124,9 @@ const router = createBrowserRouter([
   { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
   { path: '/irf/:id', element: <Private roles={['admin','social_worker']}><IrfDetailPage /></Private> },
 
-  { path: '/programs/new', element: <Private roles={['admin']}><CreateProgramPage /></Private> },
-  { path: '/programs/:id', element: <Private roles={['admin']}><ProgramDetailPage /></Private> },
-  { path: '/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
+  { path: '/admin/programs/new', element: <Private roles={['admin']}><CreateProgramPage /></Private> },
+  { path: '/admin/programs/:id', element: <Private roles={['admin']}><ProgramDetailPage /></Private> },
+  { path: '/admin/programs', element: <Private roles={['admin']}><ProgramsPage /></Private> },
   { path: '/coordinator', element: <Navigate to="/coordinator/dashboard" replace /> },
   { path: '/coordinator/dashboard', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
   { path: '/coordinator/referrals', element: <Private roles={['coordinator']}><CoordinatorReferralListPage /></Private> },

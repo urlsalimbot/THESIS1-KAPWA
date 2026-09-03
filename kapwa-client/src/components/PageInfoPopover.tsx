@@ -164,7 +164,7 @@ const ROUTE_HELP: Record<string, RouteHelp> = {
     ],
   },
 
-  '/programs': {
+  '/admin/programs': {
     title: 'Programs & Assignments',
     tips: [
       'Configure assistance programs and their eligibility criteria.',
