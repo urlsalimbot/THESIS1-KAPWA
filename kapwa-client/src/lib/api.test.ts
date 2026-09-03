@@ -130,7 +130,7 @@ describe('api upload', () => {
 });
 
 describe('uploadWithProgress (XHR)', () => {
-  function xhrMock(opts: { status?: number; mode?: 'load' | 'error' | 'timeout' } = {}) {
+  function xhrMock(opts: { status?: number; mode?: 'load' | 'error' | 'timeout' | 'pending' } = {}) {
     const { status = 200, mode = 'load' } = opts;
     const instance: any = {
       open: vi.fn(),
