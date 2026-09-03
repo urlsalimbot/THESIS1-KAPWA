@@ -134,7 +134,7 @@ export class ChatService {
       if (workerIds.length === 0) return [];
       const users = await this.userRepo.find({
         where: { id: In(workerIds) },
-        select: ['id', 'fullName', 'role'],
+        select: ['id', 'firstName', 'middleName', 'lastName', 'nameExtension', 'role'],
       });
       return users.map(u => ({
         id: u.id,
@@ -144,7 +144,7 @@ export class ChatService {
     }
     const users = await this.userRepo.find({
       where: { isActive: true },
-      select: ['id', 'fullName', 'role'],
+      select: ['id', 'firstName', 'middleName', 'lastName', 'nameExtension', 'role'],
     });
     return users.filter(u => u.id !== currentUserId).map(u => ({
       id: u.id,

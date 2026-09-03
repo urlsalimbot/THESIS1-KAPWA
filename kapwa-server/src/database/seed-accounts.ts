@@ -20,23 +20,23 @@ const BARANGAYS: { slug: string; name: string }[] = [
   { slug: 'baraka', name: 'Baraka' },
 ];
 
-const AGENCIES: { code: string; email: string; password: string; fullName: string; phone: string }[] = [
-  { code: 'RHU', email: 'rhu.staff@norzagaray.test', password: 'rhu123', fullName: 'RHU Staff', phone: '09179999001' },
-  { code: 'WCPD', email: 'wcpd.staff@norzagaray.test', password: 'wcpd123', fullName: 'WCPD Staff', phone: '09179999002' },
-  { code: 'PESO', email: 'peso.staff@norzagaray.test', password: 'peso123', fullName: 'PESO Staff', phone: '09179999003' },
-  { code: 'DILG', email: 'dilg.staff@norzagaray.test', password: 'dilg123', fullName: 'DILG Staff', phone: '09179999004' },
-  { code: 'DSWD', email: 'dswd.staff@norzagaray.test', password: 'dswd123', fullName: 'DSWD Staff', phone: '09179999005' },
-  { code: 'DepEd', email: 'deped.staff@norzagaray.test', password: 'deped123', fullName: 'DepEd Staff', phone: '09179999006' },
+const AGENCIES: { code: string; email: string; password: string; firstName: string; lastName: string; phone: string }[] = [
+  { code: 'RHU', email: 'rhu.staff@norzagaray.test', password: 'rhu123', firstName: 'RHU', lastName: 'Staff', phone: '09179999001' },
+  { code: 'WCPD', email: 'wcpd.staff@norzagaray.test', password: 'wcpd123', firstName: 'WCPD', lastName: 'Staff', phone: '09179999002' },
+  { code: 'PESO', email: 'peso.staff@norzagaray.test', password: 'peso123', firstName: 'PESO', lastName: 'Staff', phone: '09179999003' },
+  { code: 'DILG', email: 'dilg.staff@norzagaray.test', password: 'dilg123', firstName: 'DILG', lastName: 'Staff', phone: '09179999004' },
+  { code: 'DSWD', email: 'dswd.staff@norzagaray.test', password: 'dswd123', firstName: 'DSWD', lastName: 'Staff', phone: '09179999005' },
+  { code: 'DepEd', email: 'deped.staff@norzagaray.test', password: 'deped123', firstName: 'DepEd', lastName: 'Staff', phone: '09179999006' },
 ];
 
-const BASE_ACCOUNTS: { key: string; email: string; role: string; fullName: string; phone: string }[] = [
-  { key: 'admin', email: 'admin@mswdo.test', role: 'admin', fullName: 'Rosario G. Mendoza', phone: '09171000001' },
-  { key: 'worker1', email: 'worker1@mswdo.test', role: 'social_worker', fullName: 'Juan Dela Cruz', phone: '09171000002' },
-  { key: 'worker2', email: 'worker2@mswdo.test', role: 'social_worker', fullName: 'Lorna B. Santos', phone: '09171000003' },
-  { key: 'claimant1', email: 'pedro.claimant@test.com', role: 'claimant', fullName: 'Pedro P. Reyes', phone: '09171000005' },
-  { key: 'claimant2', email: 'ana.claimant@test.com', role: 'claimant', fullName: 'Ana Marie L. Fernandez', phone: '09171000006' },
-  { key: 'mayor', email: 'mayor@mswdo.test', role: 'mayor', fullName: 'Felicisimo I. Santiago', phone: '09171000007' },
-  { key: 'auditor', email: 'auditor@mswdo.test', role: 'auditor', fullName: 'Teresita Q. Valdez', phone: '09171000008' },
+const BASE_ACCOUNTS: { key: string; email: string; role: string; firstName: string; middleName?: string; lastName: string; nameExtension?: string; phone: string }[] = [
+  { key: 'admin', email: 'admin@mswdo.test', role: 'admin', firstName: 'Rosario', middleName: 'G.', lastName: 'Mendoza', phone: '09171000001' },
+  { key: 'worker1', email: 'worker1@mswdo.test', role: 'social_worker', firstName: 'Juan', lastName: 'Dela Cruz', phone: '09171000002' },
+  { key: 'worker2', email: 'worker2@mswdo.test', role: 'social_worker', firstName: 'Lorna', middleName: 'B.', lastName: 'Santos', phone: '09171000003' },
+  { key: 'claimant1', email: 'pedro.claimant@test.com', role: 'claimant', firstName: 'Pedro', middleName: 'P.', lastName: 'Reyes', phone: '09171000005' },
+  { key: 'claimant2', email: 'ana.claimant@test.com', role: 'claimant', firstName: 'Ana Marie', middleName: 'L.', lastName: 'Fernandez', phone: '09171000006' },
+  { key: 'mayor', email: 'mayor@mswdo.test', role: 'mayor', firstName: 'Felicisimo', middleName: 'I.', lastName: 'Santiago', nameExtension: 'Jr.', phone: '09171000007' },
+  { key: 'auditor', email: 'auditor@mswdo.test', role: 'auditor', firstName: 'Teresita', middleName: 'Q.', lastName: 'Valdez', phone: '09171000008' },
 ];
 
 const BASE_CREDENTIALS: Record<string, string> = {
@@ -53,7 +53,10 @@ interface SeedAccount {
   email: string;
   password: string;
   role: string;
-  fullName: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  nameExtension?: string;
   phone: string;
   assignedBarangay?: string;
   permittedBarangays?: string[];
@@ -67,7 +70,10 @@ function buildAccounts(): SeedAccount[] {
       email: a.email,
       password: BASE_CREDENTIALS[a.key],
       role: a.role,
-      fullName: a.fullName,
+      firstName: a.firstName,
+      middleName: a.middleName,
+      lastName: a.lastName,
+      nameExtension: a.nameExtension,
       phone: a.phone,
     });
   }
@@ -77,7 +83,8 @@ function buildAccounts(): SeedAccount[] {
       email: `coordinator.${b.slug}@mswdo.test`,
       password: 'coordinator123',
       role: 'coordinator',
-      fullName: `${b.name} Coordinator`,
+      firstName: b.name,
+      lastName: 'Coordinator',
       phone: `09171001${String(BARANGAYS.indexOf(b) + 1).padStart(2, '0')}`,
       assignedBarangay: b.name,
       permittedBarangays: [b.name],
@@ -89,7 +96,8 @@ function buildAccounts(): SeedAccount[] {
       email: a.email,
       password: a.password,
       role: 'agency_staff',
-      fullName: a.fullName,
+      firstName: a.firstName,
+      lastName: a.lastName,
       phone: a.phone,
     });
   }
@@ -123,10 +131,10 @@ async function seedAccounts(dataSource: DataSource) {
 
     for (const { acct, hash } of hashed) {
       await q.query(
-        `INSERT INTO users (email, password, role, full_name, phone, is_active, email_verified)
-         VALUES ($1,$2,$3,$4,$5,true,true)
+        `INSERT INTO users (email, password, role, first_name, middle_name, last_name, name_extension, phone, is_active, email_verified)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,true)
          ON CONFLICT (email) DO NOTHING`,
-        [acct.email, hash, acct.role, acct.fullName, acct.phone],
+        [acct.email, hash, acct.role, acct.firstName, acct.middleName ?? null, acct.lastName, acct.nameExtension ?? null, acct.phone],
       );
     }
 

@@ -42,9 +42,24 @@ describe('RegisterPage', () => {
     expect(screen.getByText('Claimant Registration')).toBeTruthy();
   });
 
-  it('renders Full Name field', () => {
+  it('renders First Name field', () => {
     render(<BrowserRouter><RegisterPage /></BrowserRouter>);
-    expect(screen.getByText('Full Name')).toBeTruthy();
+    expect(screen.getByText('First Name')).toBeTruthy();
+  });
+
+  it('renders Last Name field', () => {
+    render(<BrowserRouter><RegisterPage /></BrowserRouter>);
+    expect(screen.getByText('Last Name')).toBeTruthy();
+  });
+
+  it('renders Middle Name field', () => {
+    render(<BrowserRouter><RegisterPage /></BrowserRouter>);
+    expect(screen.getByText('Middle Name')).toBeTruthy();
+  });
+
+  it('renders Name Extension field', () => {
+    render(<BrowserRouter><RegisterPage /></BrowserRouter>);
+    expect(screen.getByText('Name Extension')).toBeTruthy();
   });
 
   it('renders Email field', () => {

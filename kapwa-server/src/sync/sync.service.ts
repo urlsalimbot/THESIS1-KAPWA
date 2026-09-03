@@ -13,7 +13,7 @@ const IDEMPOTENCY_TTL_MS = 86_400_000; // 24h
 const MAX_CACHE_SIZE = 10_000;
 
 const ALLOWED_COLUMNS = new Set([
-  "id","name","surname","first_name","middle_name","gender","dob","phone",
+  "id","name","surname","first_name","middle_name","last_name","name_extension","gender","dob","phone",
   "email","password","role","full_name",
   "is_active","device_id","category","waiting_period_days",
   "consent_status",
@@ -56,6 +56,10 @@ const REFERRAL_EMBEDDED_PERSON_COLUMNS = new Set([
 // (phone/email on users, notifications, otp).
 const PERSONS_GETTER_ONLY_COLUMNS = new Set(["address", "age", "phone", "email"]);
 
+// users.full_name was dropped (Wave 3 name-part decomposition); it is now a
+// getter-only shape on the User entity, so stale clients cannot write it.
+const USERS_GETTER_ONLY_COLUMNS = new Set(["full_name"]);
+
 const FSM_CONTROL_FIELDS = new Set(['_fsmTransition', '_clientUpdatedAt']);
 
 // S-06: reject unknown underscore-prefixed meta fields instead of silently stripping them.
@@ -74,6 +78,7 @@ function sanitizePayload(payload: Record<string, any>, tableName: string): Recor
     if (FSM_CONTROL_FIELDS.has(k)) continue; // strip FSM control fields
     if (tableName === 'referrals' && REFERRAL_EMBEDDED_PERSON_COLUMNS.has(k)) continue;
     if (tableName === 'persons' && PERSONS_GETTER_ONLY_COLUMNS.has(k)) continue;
+    if (tableName === 'users' && USERS_GETTER_ONLY_COLUMNS.has(k)) continue;
     if (ALLOWED_COLUMNS.has(k)) sanitized[k] = v;
   }
   return sanitized;

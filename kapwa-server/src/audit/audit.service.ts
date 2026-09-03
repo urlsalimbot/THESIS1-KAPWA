@@ -67,7 +67,9 @@ export class AuditService {
     return this.consentRepo.manager.query(
       `SELECT al.id, al.action, al.reference_id, al.user_id,
               al.details, al.created_at,
-              u.email AS user_email, u.full_name AS user_name
+              u.email AS user_email,
+              TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name,
+                CASE WHEN u.name_extension IS NOT NULL AND u.name_extension <> '' THEN u.name_extension ELSE NULL END)) AS user_name
        FROM audit_log al
        LEFT JOIN users u ON u.id::text = al.user_id
        ${whereSql}

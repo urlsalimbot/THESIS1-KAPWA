@@ -8,7 +8,10 @@ export const CreateUserInputSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: UserRoleEnum,
-  full_name: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional(),
+  middleName: z.string().optional(),
+  lastName: z.string().min(1).optional(),
+  nameExtension: z.string().optional(),
   phone: z.string().optional(),
   assigned_barangay: z.string().optional(),
   permitted_barangays: z.array(z.string()).optional(),
@@ -26,7 +29,10 @@ export const CreateUserInputSchema = z.object({
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
 
 export const UpdateUserSchema = z.object({
-  fullName: z.string().optional(),
+  firstName: z.string().optional(),
+  middleName: z.string().optional(),
+  lastName: z.string().optional(),
+  nameExtension: z.string().optional(),
   role: z.string().optional(),
   isActive: z.boolean().optional(),
   assignedBarangay: z.string().optional(),

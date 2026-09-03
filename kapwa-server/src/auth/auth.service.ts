@@ -15,6 +15,20 @@ import { OtpService } from '../otp/otp.service';
 import { SmsGatewayService } from '../otp/sms-gateway.service';
 import { EmailService } from '../email/email.service';
 
+// Split a legacy single-string name into atomic parts. Heuristic: the first
+// token is the first name, the last token is the last name, and everything in
+// between is the middle name. No extension is derivable from a flat string.
+function splitFullName(name: string): { firstName?: string; middleName?: string; lastName?: string; nameExtension?: string } {
+  const tokens = name.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return {};
+  if (tokens.length === 1) return { firstName: tokens[0] };
+  return {
+    firstName: tokens[0],
+    middleName: tokens.slice(1, -1).join(' ') || undefined,
+    lastName: tokens[tokens.length - 1],
+  };
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -46,9 +60,18 @@ export class AuthService {
     await this.tokenRepo.delete({ userId, purpose });
   }
 
-  async register(data: { email: string; password: string; role?: string; fullName?: string; phone?: string; dob?: string; assignedBarangay?: string }) {
+  async register(data: { email: string; password: string; role?: string; fullName?: string; firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; phone?: string; dob?: string; assignedBarangay?: string }) {
     const existing = await this.userRepo.findOne({ where: { email: data.email } });
     if (existing) throw new ConflictException('Email already registered');
+
+    // 3NF: store atomic name parts. Legacy `fullName` callers are split as a
+    // fallback so the single-string shape still works.
+    const nameParts = splitFullName(data.fullName ?? '');
+    const firstName = data.firstName ?? nameParts.firstName;
+    const middleName = data.middleName ?? nameParts.middleName;
+    const lastName = data.lastName ?? nameParts.lastName;
+    const nameExtension = data.nameExtension ?? nameParts.nameExtension;
+    const fullName = [firstName, middleName, lastName, nameExtension].filter(Boolean).join(' ').trim() || undefined;
 
     const hashed = await bcrypt.hash(data.password, BCRYPT_SALT_ROUNDS);
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -58,7 +81,10 @@ export class AuthService {
       email: data.email,
       password: hashed,
       role: data.role || ('claimant' as any),
-      fullName: data.fullName,
+      firstName,
+      middleName,
+      lastName,
+      nameExtension,
       phone: data.phone,
       isActive: true,
       emailVerified: false,
@@ -81,9 +107,9 @@ export class AuthService {
     let personFound = false;
     let contactType: 'sms' | 'email' | null = null;
 
-    if (data.fullName && data.dob && data.phone) {
+    if (fullName && data.dob && data.phone) {
       const inputDob = data.dob.replace(/-/g, '');
-      const inputName = data.fullName!.toLowerCase().replace(/\s+/g, ' ').trim();
+      const inputName = fullName!.toLowerCase().replace(/\s+/g, ' ').trim();
       const rawPhone = data.phone.replace(/\D/g, '');
       const candidates = await this.personRepo
         .createQueryBuilder('p')
@@ -171,7 +197,7 @@ export class AuthService {
   }
 
   async findByIdWithSecret(id: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'fullName', 'mfaSecret', 'mfaEnabled', 'password', 'tokenVersion', 'emailVerified'] });
+    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'firstName', 'middleName', 'lastName', 'nameExtension', 'mfaSecret', 'mfaEnabled', 'password', 'tokenVersion', 'emailVerified'] });
   }
 
   async refresh(refreshToken: string) {

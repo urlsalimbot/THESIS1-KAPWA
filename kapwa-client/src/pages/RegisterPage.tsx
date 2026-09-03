@@ -31,10 +31,22 @@ const barangays = [
 ];
 
 const makeRegisterSchema = (t: TFunction) => z.object({
-  fullName: z
+  firstName: z
     .string()
-    .min(2, t('auth.fullNameRequired', 'Please enter your full name.'))
+    .min(1, t('auth.firstNameRequired', 'Please enter your first name.'))
     .regex(/^[A-Za-z\s]+$/, t('auth.lettersOnly', 'Letters and spaces only.')),
+  middleName: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[A-Za-z\s]+$/.test(v), t('auth.lettersOnly', 'Letters and spaces only.')),
+  lastName: z
+    .string()
+    .min(1, t('auth.lastNameRequired', 'Please enter your last name.'))
+    .regex(/^[A-Za-z\s]+$/, t('auth.lettersOnly', 'Letters and spaces only.')),
+  nameExtension: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[A-Za-z.\s]*$/.test(v), t('auth.lettersOnly', 'Letters and spaces only.')),
   email: z.string().email(t('auth.emailInvalid', 'Please enter a valid email address.')),
   phone: z
     .string()
@@ -66,7 +78,10 @@ export function RegisterPage() {
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      fullName: '',
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      nameExtension: '',
       email: '',
       phone: '',
       password: '',
@@ -81,7 +96,10 @@ export function RegisterPage() {
     setSubmitting(true);
     try {
       await api.post('/auth/register', {
-        fullName: values.fullName,
+        firstName: values.firstName,
+        middleName: values.middleName,
+        lastName: values.lastName,
+        nameExtension: values.nameExtension,
         email: values.email,
         phone: values.phone,
         password: values.password,
@@ -177,12 +195,51 @@ export function RegisterPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="fullName"
+                  name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('auth.fullName', 'Full Name')}</FormLabel>
+                      <FormLabel>{t('auth.firstName', 'First Name')}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('auth.fullName', 'Full Name')} className="h-11 md:h-10" {...field} />
+                        <Input placeholder={t('auth.firstName', 'First Name')} className="h-11 md:h-10" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="middleName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.middleName', 'Middle Name')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t('auth.middleName', 'Middle Name')} className="h-11 md:h-10" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.lastName', 'Last Name')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t('auth.lastName', 'Last Name')} className="h-11 md:h-10" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nameExtension"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.nameExtension', 'Name Extension')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t('auth.nameExtension', 'e.g. Jr., Sr., III')} className="h-11 md:h-10" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

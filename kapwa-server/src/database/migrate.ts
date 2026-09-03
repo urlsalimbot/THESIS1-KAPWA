@@ -126,7 +126,7 @@ export async function migrate() {
   // Keep legacy required_documents/fund_sources columns (nullable) so upgrade
   // backfills below can still read them; they are not read by the entity.
   await q.query(`CREATE TABLE IF NOT EXISTS consent_ledger ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), beneficiary_id UUID, purpose TEXT, channel TEXT, status TEXT DEFAULT 'active', granted_at TIMESTAMP DEFAULT NOW(), revoked_at TIMESTAMP )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS users ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'social_worker', full_name TEXT, phone TEXT, is_active BOOLEAN DEFAULT TRUE, device_id TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS users ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'social_worker', first_name TEXT, middle_name TEXT, last_name TEXT, name_extension TEXT, phone TEXT, is_active BOOLEAN DEFAULT TRUE, device_id TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS sync_queue ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), device_id TEXT NOT NULL, table_name TEXT NOT NULL, record_id TEXT NOT NULL, operation TEXT NOT NULL, payload JSONB, client_updated_at TIMESTAMP, status TEXT DEFAULT 'pending', idempotency_key TEXT, conflict_reason TEXT, resolved_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS version_vectors ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), device_id TEXT NOT NULL, table_name TEXT NOT NULL, local_version INTEGER DEFAULT 0, server_version INTEGER DEFAULT 0, last_synced_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW(), UNIQUE (device_id, table_name) )`);
   await q.query(`CREATE TABLE IF NOT EXISTS notifications ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), recipient_id TEXT NOT NULL, title TEXT NOT NULL, message TEXT NOT NULL, channel TEXT DEFAULT 'in_app', phone TEXT, sent BOOLEAN DEFAULT FALSE, sent_at TIMESTAMP, is_read BOOLEAN DEFAULT FALSE, category TEXT DEFAULT 'system', reference_id TEXT, created_at TIMESTAMP DEFAULT NOW() )`);
@@ -184,6 +184,10 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_name_trgm ON persons USING gin (surname gin_trgm_ops, first_name gin_trgm_ops)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_search ON persons USING gin(search_vector)`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`);
+  await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT`);
+  await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name TEXT`);
+  await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT`);
+  await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS name_extension TEXT`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_user_person ON users(person_id)`);
   await q.query(`CREATE TABLE IF NOT EXISTS household_memberships ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID NOT NULL REFERENCES persons(id), household_id UUID REFERENCES households(id), relationship TEXT NOT NULL, is_primary BOOLEAN DEFAULT FALSE, status TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
@@ -745,6 +749,23 @@ export async function migrate() {
   await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS email`);
   await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS current_address`);
   await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS age`);
+  // 3NF: users.full_name was decomposed into first/middle/last/extension columns.
+  // Backfill upgraded DBs (split heuristic: first token = first name, last token =
+  // last name, tokens in between = middle name) before dropping the legacy column.
+  await q.query(`
+    UPDATE users SET
+      first_name = COALESCE(first_name, split_part(full_name, ' ', 1)),
+      last_name = COALESCE(last_name,
+        CASE WHEN array_length(string_to_array(full_name, ' '), 1) >= 2
+             THEN (string_to_array(full_name, ' '))[array_length(string_to_array(full_name, ' '), 1)]
+             ELSE NULL END),
+      middle_name = COALESCE(middle_name,
+        CASE WHEN array_length(string_to_array(full_name, ' '), 1) > 2
+             THEN array_to_string((string_to_array(full_name, ' '))[2:array_length(string_to_array(full_name, ' '), 1) - 1], ' ')
+             ELSE NULL END)
+    WHERE full_name IS NOT NULL AND full_name <> ''
+  `);
+  await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS full_name`);
   await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS assigned_barangay`);
   await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS permitted_barangays`);
   await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS verification_token`);

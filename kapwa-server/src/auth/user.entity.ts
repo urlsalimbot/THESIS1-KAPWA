@@ -27,8 +27,17 @@ export class User extends BaseEntity {
   @Column({ name: 'role', type: 'text', default: UserRole.SW })
   role!: UserRole;
 
-  @Column({ name: 'full_name', nullable: true })
-  fullName?: string;
+  @Column({ name: 'first_name', nullable: true })
+  firstName?: string;
+
+  @Column({ name: 'middle_name', nullable: true })
+  middleName?: string;
+
+  @Column({ name: 'last_name', nullable: true })
+  lastName?: string;
+
+  @Column({ name: 'name_extension', nullable: true })
+  nameExtension?: string;
 
   @Column({ name: 'phone', nullable: true })
   phone?: string;
@@ -81,7 +90,14 @@ export class User extends BaseEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
-  // --- Legacy flattened shape, now assembled from child rows ---
+  // --- Legacy flattened shape, now assembled from name-part columns ---
+  @Expose() get fullName(): string | undefined {
+    const parts = [this.firstName, this.middleName, this.lastName].filter(Boolean);
+    const name = parts.join(' ').trim();
+    if (!name) return undefined;
+    return this.nameExtension ? `${name} ${this.nameExtension}` : name;
+  }
+
   @Expose() get assignedBarangay(): string | undefined {
     return this.barangayAssignments?.find(b => b.isPrimary)?.barangay ?? this.barangayAssignments?.[0]?.barangay;
   }

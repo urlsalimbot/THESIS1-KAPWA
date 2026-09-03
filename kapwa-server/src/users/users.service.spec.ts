@@ -13,6 +13,8 @@ describe('UsersService', () => {
     email: 'worker@test.com',
     password: '$2b$10$hashedpassword123456789',
     role: UserRole.SW,
+    firstName: 'Test',
+    lastName: 'Worker',
     fullName: 'Test Worker',
     phone: '09171234567',
     isActive: true,
@@ -46,7 +48,8 @@ describe('UsersService', () => {
         email: 'new@test.com',
         password: 'securePassword123',
         role: UserRole.SW,
-        full_name: 'New Worker',
+        first_name: 'New',
+        last_name: 'Worker',
         phone: '09170000000',
       };
 
@@ -54,7 +57,8 @@ describe('UsersService', () => {
       const savedUser = {
         ...mockUser,
         email: dto.email,
-        fullName: dto.full_name,
+        firstName: dto.first_name,
+        lastName: dto.last_name,
         phone: dto.phone,
         password: '$2b$12$differentHashedValue',
       };

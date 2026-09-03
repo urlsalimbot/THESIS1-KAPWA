@@ -10,7 +10,10 @@ export interface CreateUserInput {
   email: string;
   password: string;
   role: string;
-  full_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  name_extension?: string;
   phone?: string;
   assigned_barangay?: string;
   permitted_barangays?: string[];
@@ -53,6 +56,7 @@ export class UsersService {
         const { password, tokens, mfaSecret, ...u } = user;
         return {
           ...u,
+          fullName: user.fullName,
           assignedBarangay: user.assignedBarangay,
           permittedBarangays: user.permittedBarangays,
         };
@@ -67,7 +71,7 @@ export class UsersService {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     const { password, tokens, mfaSecret, ...safe } = user;
-    return { ...safe, assignedBarangay: user.assignedBarangay, permittedBarangays: user.permittedBarangays };
+    return { ...safe, fullName: user.fullName, assignedBarangay: user.assignedBarangay, permittedBarangays: user.permittedBarangays };
   }
 
   async createUser(dto: CreateUserInput) {
@@ -88,7 +92,10 @@ export class UsersService {
       email: dto.email,
       password: hashedPassword,
       role: dto.role as UserRole,
-      fullName: dto.full_name,
+      firstName: dto.first_name,
+      middleName: dto.middle_name,
+      lastName: dto.last_name,
+      nameExtension: dto.name_extension,
       phone: dto.phone,
       agencyId: dto.agency_id,
       barangayAssignments: this.buildAssignments(dto.assigned_barangay, dto.permitted_barangays || []),
@@ -96,7 +103,7 @@ export class UsersService {
 
     const saved = await this.userRepo.save(user);
     const { password, ...safe } = saved;
-    return safe;
+    return { ...safe, fullName: saved.fullName };
   }
 
   async deactivateUser(id: string) {
@@ -108,11 +115,14 @@ export class UsersService {
     return safe;
   }
 
-  async update(id: string, data: { fullName?: string; role?: string; isActive?: boolean; assignedBarangay?: string; permittedBarangays?: string[]; agencyId?: string }) {
+  async update(id: string, data: { firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; role?: string; isActive?: boolean; assignedBarangay?: string; permittedBarangays?: string[]; agencyId?: string }) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     if (data.role) user.role = data.role as UserRole;
-    if (data.fullName !== undefined) user.fullName = data.fullName;
+    if (data.firstName !== undefined) user.firstName = data.firstName;
+    if (data.middleName !== undefined) user.middleName = data.middleName;
+    if (data.lastName !== undefined) user.lastName = data.lastName;
+    if (data.nameExtension !== undefined) user.nameExtension = data.nameExtension;
     if (data.isActive !== undefined) user.isActive = data.isActive;
     if (data.agencyId !== undefined) user.agencyId = data.agencyId;
     if (data.assignedBarangay !== undefined || data.permittedBarangays !== undefined) {
@@ -122,7 +132,7 @@ export class UsersService {
     }
     await this.userRepo.save(user);
     const { password, ...safe } = user;
-    return safe;
+    return { ...safe, fullName: user.fullName };
   }
 
   async remove(id: string) {
