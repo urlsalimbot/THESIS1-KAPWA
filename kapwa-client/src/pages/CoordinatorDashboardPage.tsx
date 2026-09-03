@@ -8,7 +8,7 @@ import { QuickScanCard } from '@/components/QuickScanCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '../lib/api';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 export function CoordinatorDashboardPage() {
   const { t } = useTranslation();
@@ -16,6 +16,7 @@ export function CoordinatorDashboardPage() {
   const [stats, setStats] = useState<any[]>([]);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   useEffect(() => {
     loadData();
@@ -113,8 +114,8 @@ export function CoordinatorDashboardPage() {
             columns={entryColumns}
             data={recentEntries}
             rowCount={recentEntries.length}
-            pagination={{ pageIndex: 0, pageSize: 10 }}
-            onPaginationChange={() => {}}
+            pagination={pagination}
+            onPaginationChange={setPagination}
             sorting={[]}
           />
         )}

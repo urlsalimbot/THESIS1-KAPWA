@@ -1883,8 +1883,8 @@ const fil: EnLocale = {
     "title": "Makipag-ugnayan sa Amin"
   },
   "dataTable": {
-    "pageInfo_one": "Pahina {{current}} ng {{total}} ({{count}} sa kabuuan)",
-    "pageInfo_other": "Pahina {{current}} ng {{total}} ({{count}} sa kabuuan)",
+    "pageInfo_one": "Pahina {{current}} ng {{total}} ({{from}}–{{to}} ng {{count}} sa kabuuan)",
+    "pageInfo_other": "Pahina {{current}} ng {{total}} ({{from}}–{{to}} ng {{count}} sa kabuuan)",
     "searchPlaceholder": "Maghanap ng mga record..."
   },
   "forms": {
