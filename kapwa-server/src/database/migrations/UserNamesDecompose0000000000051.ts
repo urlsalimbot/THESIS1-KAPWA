@@ -8,24 +8,29 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class UserNamesDecompose0000000000051 implements MigrationInterface {
   name = 'UserNamesDecompose0000000000051';
 
-  public async up(queryRunner: QueryRunner): Promise<void> {
+public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS middle_name TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS name_extension TEXT;
 
-      UPDATE users SET
-        first_name = COALESCE(first_name, split_part(full_name, ' ', 1)),
-        last_name = COALESCE(last_name,
-          CASE WHEN array_length(string_to_array(full_name, ' '), 1) >= 2
-               THEN (string_to_array(full_name, ' '))[array_length(string_to_array(full_name, ' '), 1)]
-               ELSE NULL END),
-        middle_name = COALESCE(middle_name,
-          CASE WHEN array_length(string_to_array(full_name, ' '), 1) > 2
-               THEN array_to_string((string_to_array(full_name, ' '))[2:array_length(string_to_array(full_name, ' '), 1) - 1], ' ')
-               ELSE NULL END)
-      WHERE full_name IS NOT NULL AND full_name <> '';
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='full_name') THEN
+          UPDATE users SET
+            first_name = COALESCE(first_name, split_part(full_name, ' ', 1)),
+            last_name = COALESCE(last_name,
+              CASE WHEN array_length(string_to_array(full_name, ' '), 1) >= 2
+                   THEN (string_to_array(full_name, ' '))[array_length(string_to_array(full_name, ' '), 1)]
+                   ELSE NULL END),
+            middle_name = COALESCE(middle_name,
+              CASE WHEN array_length(string_to_array(full_name, ' '), 1) > 2
+                   THEN array_to_string((string_to_array(full_name, ' '))[2:array_length(string_to_array(full_name, ' '), 1) - 1], ' ')
+                   ELSE NULL END)
+          WHERE full_name IS NOT NULL AND full_name <> '';
+        END IF;
+      END $$;
 
       ALTER TABLE users DROP COLUMN IF EXISTS full_name;
     `);

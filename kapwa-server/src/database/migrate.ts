@@ -749,21 +749,27 @@ export async function migrate() {
   await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS email`);
   await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS current_address`);
   await q.query(`ALTER TABLE persons DROP COLUMN IF EXISTS age`);
-  // 3NF: users.full_name was decomposed into first/middle/last/extension columns.
-  // Backfill upgraded DBs (split heuristic: first token = first name, last token =
-  // last name, tokens in between = middle name) before dropping the legacy column.
-  await q.query(`
-    UPDATE users SET
-      first_name = COALESCE(first_name, split_part(full_name, ' ', 1)),
-      last_name = COALESCE(last_name,
-        CASE WHEN array_length(string_to_array(full_name, ' '), 1) >= 2
-             THEN (string_to_array(full_name, ' '))[array_length(string_to_array(full_name, ' '), 1)]
-             ELSE NULL END),
-      middle_name = COALESCE(middle_name,
-        CASE WHEN array_length(string_to_array(full_name, ' '), 1) > 2
-             THEN array_to_string((string_to_array(full_name, ' '))[2:array_length(string_to_array(full_name, ' '), 1) - 1], ' ')
-             ELSE NULL END)
-    WHERE full_name IS NOT NULL AND full_name <> ''
+// 3NF: users.full_name was decomposed into first/middle/last/extension columns.
+// Backfill upgraded DBs (split heuristic: first token = first name, last token =
+// last name, tokens in between = middle name) before dropping the legacy column.
+// Guarded so a fresh boot (users created without full_name) skips the backfill.
+await q.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='full_name') THEN
+        UPDATE users SET
+          first_name = COALESCE(first_name, split_part(full_name, ' ', 1)),
+          last_name = COALESCE(last_name,
+            CASE WHEN array_length(string_to_array(full_name, ' '), 1) >= 2
+                 THEN (string_to_array(full_name, ' '))[array_length(string_to_array(full_name, ' '), 1)]
+                 ELSE NULL END),
+          middle_name = COALESCE(middle_name,
+            CASE WHEN array_length(string_to_array(full_name, ' '), 1) > 2
+                 THEN array_to_string((string_to_array(full_name, ' '))[2:array_length(string_to_array(full_name, ' '), 1) - 1], ' ')
+                 ELSE NULL END)
+        WHERE full_name IS NOT NULL AND full_name <> '';
+      END IF;
+    END $$;
   `);
   await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS full_name`);
   await q.query(`ALTER TABLE users DROP COLUMN IF EXISTS assigned_barangay`);
