@@ -130,6 +130,43 @@ export function AuditorPage() {
 
       {activeTab === 'hash' && (
         <div>
+          {/* Auditor overview strip — a compact dashboard on the landing tab */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            {[
+              {
+                label: t('audit.chainsVerified', 'Chains Verified'),
+                value: hashChain ? `${Object.values(hashChain).filter((v: any) => v.valid).length}/${Object.values(hashChain).length}` : '—',
+                color: 'bg-green-50 text-green-700', icon: Shield,
+              },
+              {
+                label: t('audit.integrity', 'Integrity'),
+                value: allValid ? t('dashboard.compliant', 'Intact') : t('audit.tampered', 'Tampered'),
+                color: allValid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700', icon: allValid ? CheckCircle : XCircle,
+              },
+              {
+                label: t('audit.auditEntries', 'Audit Entries'),
+                value: String(auditTrail?.length ?? 0),
+                color: 'bg-blue-50 text-blue-700', icon: ListChecks,
+              },
+              {
+                label: t('audit.consentRecords', 'Consent Records'),
+                value: String(consentLedger?.length ?? 0),
+                color: 'bg-indigo-50 text-indigo-700', icon: Shield,
+              },
+            ].map(s => {
+              const Icon = s.icon;
+              return (
+                <div key={s.label} className="rounded-xl border bg-card p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-muted-foreground text-xs uppercase tracking-wide">{s.label}</span>
+                    <div className={`ml-auto rounded-full w-8 h-8 flex items-center justify-center ${s.color}`}><Icon size={15} /></div>
+                  </div>
+                  <div className="text-2xl font-bold text-foreground">{s.value}</div>
+                </div>
+              );
+            })}
+          </div>
+
           <div className={`rounded-lg p-4 mb-4 flex items-center gap-3 ${allValid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
             {allValid ? <CheckCircle className="text-green-600" size={24} /> : <XCircle className="text-red-600" size={24} />}
             <div>
