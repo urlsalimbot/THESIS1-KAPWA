@@ -439,7 +439,7 @@ export function IrfDetailPage() {
             exportPassword={ops.exportPassword} onExportPasswordChange={ops.setExportPassword}
             onExportPdf={ops.handleExportPdf} onExportJson={ops.handleExportJson} />
 
-          {isAdmin && (
+          {canUploadPhotos && (
             <div className="rounded-lg border bg-card">
               <div className="px-4 py-3 flex items-center gap-2">
                 <ImageIcon size={16} className="text-primary" />
@@ -448,12 +448,12 @@ export function IrfDetailPage() {
               <Separator />
               <div className="px-4 py-4">
                 <FileUploadList
-                  docs={photos}
+                  docs={isAdmin ? photos : []}
                   canUpload={canUploadPhotos}
-                  onChanged={loadPhotos}
+                  onChanged={isAdmin ? loadPhotos : () => {}}
                   formExtras={{ category: 'irf_photo', irfId: id! }}
                 />
-                {photos.length === 0 && (
+                {isAdmin && photos.length === 0 && (
                   <p className="text-sm text-muted-foreground">{t('irf.photosEmpty', 'No evidence photos attached.')}</p>
                 )}
               </div>

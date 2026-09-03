@@ -92,7 +92,7 @@ describe('IrfDetailPage', () => {
     expect(mockApiGet).toHaveBeenCalledWith('/filing/irf/IRF-001/photos');
   });
 
-  it('hides the Evidence Photos section for non-admin roles', async () => {
+  it('shows the Evidence Photos upload control to a social_worker without loading the photo list', async () => {
     mockUseAuth.mockReturnValue({ user: { role: 'social_worker' } });
     render(
       <MemoryRouter initialEntries={['/irf/IRF-001']}>
@@ -101,8 +101,8 @@ describe('IrfDetailPage', () => {
         </Routes>
       </MemoryRouter>
     );
-    await screen.findByText('IRF List');
-    expect(screen.queryByText('Evidence Photos')).toBeNull();
+    expect(await screen.findByRole('heading', { name: 'Evidence Photos' }, { timeout: 3000 })).toBeTruthy();
+    expect(await screen.findByText('Click to browse or drop files')).toBeTruthy();
     expect(mockApiGet).not.toHaveBeenCalledWith('/filing/irf/IRF-001/photos');
   });
 });

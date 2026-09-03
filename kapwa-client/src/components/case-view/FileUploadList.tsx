@@ -202,15 +202,18 @@ export function FileUploadList({
         >
           <Upload size={14} className="shrink-0 text-muted-foreground" />
           <span className="text-muted-foreground">{t('caseView.documents.dropzone', 'Click to browse or drop files')}</span>
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            accept={accept}
-            className="hidden"
-            onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = ''; }}
-          />
         </div>
+      )}
+      {canUpload && (
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={accept}
+          className="hidden"
+          aria-label={t('caseView.documents.dropzone', 'Click to browse or drop files')}
+          onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = ''; }}
+        />
       )}
 
       {inFlight && (
