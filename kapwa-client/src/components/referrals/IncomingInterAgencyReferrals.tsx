@@ -26,19 +26,18 @@ export function IncomingInterAgencyReferrals() {
   const incoming = (data || []).filter(r => r.toAgencyId === myAgencyId);
 
   return (
-    <div className="mt-6">
-      <div className="flex items-center gap-2 mb-3">
+    <Card className="shadow-sm border-border/60">
+      <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
         <Send size={16} className="text-muted-foreground" />
         <h2 className="text-sm font-semibold text-foreground">{t('agency.incomingReferrals', 'Incoming Inter-Agency Referrals')}</h2>
+        <Badge variant="secondary" className="text-[10px]">{incoming.length}</Badge>
       </div>
       {incoming.length === 0 ? (
-        <Card>
-          <CardContent className="py-6 text-center text-sm text-muted-foreground">
-            {t('agency.noIncomingReferrals', 'No incoming inter-agency referrals')}
-          </CardContent>
-        </Card>
+        <CardContent className="py-6 text-center text-sm text-muted-foreground">
+          {t('agency.noIncomingReferrals', 'No incoming inter-agency referrals')}
+        </CardContent>
       ) : (
-        <div className="space-y-2">
+        <div className="p-3 space-y-2">
           {incoming.map(r => (
             <button
               key={r.id}
@@ -65,6 +64,6 @@ export function IncomingInterAgencyReferrals() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

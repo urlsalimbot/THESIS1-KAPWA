@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { DataTable } from '@/components/data-table';
 import { IncomingInterAgencyReferrals } from '@/components/referrals/IncomingInterAgencyReferrals';
-import { Plus, Send, Check, X, Inbox, Loader2 } from 'lucide-react';
-import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import { Plus, Send, Check, X, Inbox, Loader2, ArrowUpRight } from 'lucide-react';
+import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
 import { toast } from 'sonner';
 
 interface Referral {
@@ -37,6 +37,46 @@ const variantMap: Record<string, 'secondary' | 'default' | 'destructive'> = {
   accepted: 'default',
   declined: 'destructive',
 };
+
+function SectionHeader({ icon: Icon, title, count, actions }: {
+  icon: typeof Send; title: string; count?: number; actions?: React.ReactNode;
+}) {
+  return (
+    <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+      <Icon size={16} className="text-muted-foreground" />
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      {count !== undefined && (
+        <Badge variant="secondary" className="text-[10px]">{count}</Badge>
+      )}
+      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+    </div>
+  );
+}
+
+function EmptyReferrals({ icon: Icon, text }: { icon: typeof Send; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+      <Icon size={40} className="mb-3 opacity-30" />
+      <p className="text-sm">{text}</p>
+    </div>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <div className="p-4 space-y-3">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="flex items-center gap-4">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-1/6" />
+          <Skeleton className="h-4 w-1/6" />
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-8 w-16 ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function ReferralsPage() {
   const { t } = useTranslation();
@@ -60,6 +100,7 @@ function CoordinatorReferralView() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Referral | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   useEffect(() => {
     loadReferrals();
@@ -74,65 +115,52 @@ function CoordinatorReferralView() {
   }
 
   const columns: ColumnDef<Referral>[] = [
-    { id: 'name', header: t('referral.name', 'Name'), cell: ({ row }) => `${row.original.surname}, ${row.original.firstName}` },
+    {
+      accessorKey: 'createdAt', header: t('referral.date', 'Date'),
+      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+    },
+    {
+      id: 'name', header: t('referral.name', 'Name'),
+      cell: ({ row }) => <span className="font-medium">{row.original.surname}, {row.original.firstName}</span>,
+    },
     { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
     {
       accessorKey: 'status', header: t('referral.status', 'Status'),
       cell: ({ row }) => <Badge variant={variantMap[row.original.status] || 'secondary'}>{referralStatusLabel(t, row.original.status)}</Badge>,
     },
-    { accessorKey: 'reason', header: t('referral.reason', 'Reason'), cell: ({ row }) => <span className="text-xs line-clamp-2 max-w-xs">{row.original.reason}</span> },
-    { accessorKey: 'createdAt', header: t('referral.date', 'Date'), cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString() },
+    {
+      accessorKey: 'reason', header: t('referral.reason', 'Reason'),
+      cell: ({ row }) => <span className="text-xs text-muted-foreground line-clamp-2 max-w-xs">{row.original.reason}</span>,
+    },
     {
       id: 'actions', header: '',
-      cell: ({ row }) => <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)}>{t('referral.view', 'View')}</Button>,
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)} aria-label={t('referral.viewAria', 'View referral for {{name}}', { name: row.original.firstName })}>
+          {t('referral.view', 'View')} <ArrowUpRight size={14} className="ml-1" />
+        </Button>
+      ),
     },
   ];
 
-  if (loading) {
-    return (
-      <>
-        <Button onClick={() => navigate('/coordinator/referrals/new')}>
-          <Plus size={14} className="mr-1" /> {t('referral.newReferral', 'New Referral')}
-        </Button>
-        <Card>
-          <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
-            <Send size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">{t('referral.myReferrals', 'My Referrals')}</h2>
-          </div>
-          <div className="p-4 space-y-3">
-            {[1,2,3].map(i => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-4 w-1/6" />
-                <Skeleton className="h-4 w-1/6" />
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-8 w-16 ml-auto" />
-              </div>
-            ))}
-          </div>
-        </Card>
-      </>
-    );
-  }
-
   return (
-    <>
-      <Button onClick={() => navigate('/coordinator/referrals/new')}>
-        <Plus size={14} className="mr-1" /> {t('referral.newReferral', 'New Referral')}
-      </Button>
-
-      {referrals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <Send size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">{t('referral.noReferrals', 'No referrals yet.')}</p>
-        </div>
+    <Card className="shadow-sm border-border/60">
+      <SectionHeader
+        icon={Send}
+        title={t('referral.myReferrals', 'My Referrals')}
+        count={referrals.length}
+        actions={
+          <Button size="sm" onClick={() => navigate('/coordinator/referrals/new')}>
+            <Plus size={14} className="mr-1" /> {t('referral.newReferral', 'New Referral')}
+          </Button>
+        }
+      />
+      {loading ? (
+        <ListSkeleton />
+      ) : referrals.length === 0 ? (
+        <EmptyReferrals icon={Send} text={t('referral.noReferrals', 'No referrals yet.')} />
       ) : (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Send size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">{t('referral.myReferrals', 'My Referrals')}</h2>
-          </div>
-          <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
+        <div className="p-4">
+          <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting} />
         </div>
       )}
 
@@ -180,7 +208,7 @@ function CoordinatorReferralView() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </Card>
   );
 }
 
@@ -192,6 +220,7 @@ function WorkerReferralView() {
   const [declineModal, setDeclineModal] = useState<Referral | null>(null);
   const [declineReason, setDeclineReason] = useState('');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   useEffect(() => {
     loadReferrals();
@@ -233,19 +262,39 @@ function WorkerReferralView() {
   }
 
   const columns: ColumnDef<Referral>[] = [
-    { id: 'name', header: t('referral.name', 'Name'), cell: ({ row }) => `${row.original.surname}, ${row.original.firstName}` },
+    {
+      accessorKey: 'createdAt', header: t('referral.date', 'Date'),
+      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+    },
+    {
+      id: 'name', header: t('referral.name', 'Name'),
+      cell: ({ row }) => <span className="font-medium">{row.original.surname}, {row.original.firstName}</span>,
+    },
     { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
-    { id: 'coordinator', header: t('referral.referredBy', 'Referred By'), cell: ({ row }) => row.original.coordinator?.fullName || '—' },
-    { accessorKey: 'reason', header: t('referral.reason', 'Reason'), cell: ({ row }) => <span className="text-xs line-clamp-2 max-w-xs">{row.original.reason}</span> },
-    { accessorKey: 'createdAt', header: t('referral.date', 'Date'), cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString() },
+    {
+      id: 'coordinator', header: t('referral.referredBy', 'Referred By'),
+      cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.coordinator?.fullName || '—'}</span>,
+    },
+    {
+      accessorKey: 'reason', header: t('referral.reason', 'Reason'),
+      cell: ({ row }) => <span className="text-xs text-muted-foreground line-clamp-2 max-w-xs">{row.original.reason}</span>,
+    },
     {
       id: 'actions', header: t('referral.actions', 'Actions'),
       cell: ({ row }) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" className="text-green-600" onClick={() => handleAccept(row.original.id)} disabled={actionId === row.original.id}>
+          <Button
+            variant="outline" size="sm" className="text-green-700 border-green-300/60 hover:bg-green-50"
+            onClick={() => handleAccept(row.original.id)} disabled={actionId === row.original.id}
+            aria-label={t('referral.acceptAria', 'Accept referral for {{name}}', { name: row.original.firstName })}
+          >
             {actionId === row.original.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {t('referral.accept', 'Accept')}
           </Button>
-          <Button variant="ghost" size="sm" className="text-red-600" onClick={() => setDeclineModal(row.original)} disabled={actionId === row.original.id}>
+          <Button
+            variant="outline" size="sm" className="text-red-600 border-red-300/60 hover:bg-red-50"
+            onClick={() => setDeclineModal(row.original)} disabled={actionId === row.original.id}
+            aria-label={t('referral.declineAria', 'Decline referral for {{name}}', { name: row.original.firstName })}
+          >
             <X size={14} className="mr-1" /> {t('referral.decline', 'Decline')}
           </Button>
         </div>
@@ -253,44 +302,24 @@ function WorkerReferralView() {
     },
   ];
 
-  if (loading) {
-    return (
-      <Card>
-        <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
-          <Inbox size={16} className="text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">{t('referral.pendingReferrals', 'Pending Referrals')}</h2>
-        </div>
-        <div className="p-4 space-y-3">
-          {[1,2,3].map(i => (
-            <div key={i} className="flex items-center gap-4">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-4 w-1/6" />
-              <Skeleton className="h-4 w-1/6" />
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-8 w-24 ml-auto" />
-            </div>
-          ))}
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <>
-      {referrals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <Inbox size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">{t('referral.noPending', 'No pending referrals.')}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Inbox size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">{t('referral.pendingReferrals', 'Pending Referrals')}</h2>
+    <div className="space-y-4">
+      <Card className="shadow-sm border-border/60">
+        <SectionHeader
+          icon={Inbox}
+          title={t('referral.pendingReferrals', 'Pending Referrals')}
+          count={referrals.length}
+        />
+        {loading ? (
+          <ListSkeleton />
+        ) : referrals.length === 0 ? (
+          <EmptyReferrals icon={Inbox} text={t('referral.noPending', 'No pending referrals.')} />
+        ) : (
+          <div className="p-4">
+            <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting} />
           </div>
-          <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
-        </div>
-      )}
+        )}
+      </Card>
 
       <IncomingInterAgencyReferrals />
 
@@ -324,6 +353,6 @@ function WorkerReferralView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
