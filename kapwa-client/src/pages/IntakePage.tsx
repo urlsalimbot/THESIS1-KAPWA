@@ -13,7 +13,10 @@ import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
 import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { setPendingIdPhoto, getPendingIdPhoto, clearPendingIdPhoto, uploadIntakeIdPhoto } from '@/lib/intake-id-photo';
+import {
+  setPendingBeneficiaryIdPhoto, getPendingBeneficiaryIdPhoto, setPendingClaimantIdPhoto, getPendingClaimantIdPhoto,
+  clearPendingIdPhoto, uploadIntakeIdPhotos,
+} from '@/lib/intake-id-photo';
 import { validatePerson, type PersonFormValues, type ValidationErrors } from '@/hooks/useIntakeValidation';
 
 function computeAge(dob: string): number {
@@ -219,26 +222,41 @@ export function IntakePage() {
   const [submittedCase, setSubmittedCase] = useState<{ caseId: string } | null>(null);
   const [batchSubmitting, setBatchSubmitting] = useState(false);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const previewUrlRef = useRef<string | null>(null);
+  const [claimPreview, setClaimPreview] = useState<string | null>(null);
+  const benPhotoRef = useRef<HTMLInputElement>(null);
+  const claimPhotoRef = useRef<HTMLInputElement>(null);
+  const benPreviewRef = useRef<string | null>(null);
+  const claimPreviewRef = useRef<string | null>(null);
 
-  function showPreview(url: string) {
-    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-    previewUrlRef.current = url;
+  function showBenPreview(url: string) {
+    if (benPreviewRef.current) URL.revokeObjectURL(benPreviewRef.current);
+    benPreviewRef.current = url;
     setPendingPreview(url);
   }
-
-  function clearPreview() {
-    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-    previewUrlRef.current = null;
+  function clearBenPreview() {
+    if (benPreviewRef.current) URL.revokeObjectURL(benPreviewRef.current);
+    benPreviewRef.current = null;
     setPendingPreview(null);
+  }
+  function showClaimPreview(url: string) {
+    if (claimPreviewRef.current) URL.revokeObjectURL(claimPreviewRef.current);
+    claimPreviewRef.current = url;
+    setClaimPreview(url);
+  }
+  function clearClaimPreview() {
+    if (claimPreviewRef.current) URL.revokeObjectURL(claimPreviewRef.current);
+    claimPreviewRef.current = null;
+    setClaimPreview(null);
   }
 
   useEffect(() => {
-    const pending = getPendingIdPhoto();
-    if (pending) showPreview(URL.createObjectURL(pending));
+    const ben = getPendingBeneficiaryIdPhoto();
+    if (ben) showBenPreview(URL.createObjectURL(ben));
+    const claim = getPendingClaimantIdPhoto();
+    if (claim) showClaimPreview(URL.createObjectURL(claim));
     return () => {
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      if (benPreviewRef.current) URL.revokeObjectURL(benPreviewRef.current);
+      if (claimPreviewRef.current) URL.revokeObjectURL(claimPreviewRef.current);
     };
   }, []);
 
@@ -275,7 +293,7 @@ export function IntakePage() {
   }, [userId]);
 
   useEffect(() => {
-    const prefill = (location.state as { prefill?: Record<string, string> })?.prefill;
+    const prefill = (location.state as { prefill?: Record<string, string> & { familyMembers?: FamilyMember[] } })?.prefill;
     if (prefill) {
       setBeneficiary(prev => ({
         ...prev,
@@ -291,6 +309,9 @@ export function IntakePage() {
         estimatedMonthlyIncome: prefill.estimatedMonthlyIncome ?? prev.estimatedMonthlyIncome,
         philhealthNumber: prefill.philhealthNumber ?? prev.philhealthNumber,
       }));
+      if (Array.isArray(prefill.familyMembers) && prefill.familyMembers.length > 0) {
+        setFamily(prefill.familyMembers);
+      }
     }
   }, [location.state]);
 
@@ -396,7 +417,7 @@ export function IntakePage() {
   }
 
   function completeIntake(caseId: string) {
-    void uploadIntakeIdPhoto(caseId).then((ok) => {
+    void uploadIntakeIdPhotos(caseId).then((ok) => {
       if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
     });
     if (family.some(m => m.surname.trim())) {
@@ -526,7 +547,7 @@ export function IntakePage() {
           {t('intake.addingCaseFor', 'Adding a case for')} <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>{t('intake.addingCaseForSuffix', '. Review and modify details before submitting.')}
         </div>
       )}
-      <form onSubmit={handleSubmit} noValidate className="w-full space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6">
         {/* Section I: Beneficiary */}
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
@@ -675,31 +696,59 @@ export function IntakePage() {
           </div>
         </div>
 
-        {/* ID Photo (optional) */}
+        {/* ID Photos (optional) */}
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <Camera size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold">{t('intake.idPhoto.title', 'ID Photo (optional)')}</h2>
+            <h2 className="text-sm font-semibold">{t('intake.idPhoto.title', 'ID Photos (optional)')}</h2>
           </div>
-          <div className="p-6">
-            <p className="text-sm text-muted-foreground">{t('intake.idPhoto.optional', 'Optional photo of the beneficiary government ID.')}</p>
-            <div className="mt-3 flex items-center gap-3">
-              {pendingPreview ? (
-                <img src={pendingPreview} className="h-24 w-24 rounded border object-cover" alt={t('intake.idPhoto.previewAlt', 'Government ID preview')} />
-              ) : (
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded border px-3 py-2 text-xs">
-                  {t('intake.idPhoto.pick', 'Choose ID photo')}
-                </button>
-              )}
-              {pendingPreview && (
-                <button type="button" onClick={() => { clearPendingIdPhoto(); clearPreview(); }} className="text-xs text-red-500">
-                  {t('intake.idPhoto.remove', 'Remove')}
-                </button>
-              )}
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" aria-label={t('intake.idPhoto.pick', 'Choose ID photo')} onChange={(e) => {
-                const file = e.target.files?.[0] ?? null;
-                if (file) { setPendingIdPhoto(file); showPreview(URL.createObjectURL(file)); }
-              }} />
+          <div className="p-6 space-y-5">
+            <p className="text-sm text-muted-foreground">{t('intake.idPhoto.optional', 'Optional photos of the beneficiary and claimant government IDs.')}</p>
+
+            {/* Beneficiary ID */}
+            <div>
+              <p className="text-sm font-medium mb-2">{t('intake.idPhoto.beneficiary', 'Beneficiary ID')}</p>
+              <div className="flex items-center gap-3">
+                {pendingPreview ? (
+                  <img src={pendingPreview} className="h-24 w-24 rounded border object-cover" alt={t('intake.idPhoto.benPreviewAlt', 'Beneficiary ID preview')} />
+                ) : (
+                  <button type="button" onClick={() => benPhotoRef.current?.click()} className="rounded border px-3 py-2 text-xs">
+                    {t('intake.idPhoto.pickBeneficiary', 'Choose beneficiary ID photo')}
+                  </button>
+                )}
+                {pendingPreview && (
+                  <button type="button" onClick={() => { setPendingBeneficiaryIdPhoto(null); clearBenPreview(); }} className="text-xs text-red-500">
+                    {t('intake.idPhoto.remove', 'Remove')}
+                  </button>
+                )}
+                <input ref={benPhotoRef} type="file" accept="image/*" className="hidden" aria-label={t('intake.idPhoto.pickBeneficiary', 'Choose beneficiary ID photo')} onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file) { setPendingBeneficiaryIdPhoto(file); showBenPreview(URL.createObjectURL(file)); }
+                }} />
+              </div>
+            </div>
+
+            {/* Claimant ID */}
+            <div>
+              <p className="text-sm font-medium mb-2">{t('intake.idPhoto.claimant', 'Claimant ID')}</p>
+              <div className="flex items-center gap-3">
+                {claimPreview ? (
+                  <img src={claimPreview} className="h-24 w-24 rounded border object-cover" alt={t('intake.idPhoto.claimPreviewAlt', 'Claimant ID preview')} />
+                ) : (
+                  <button type="button" onClick={() => claimPhotoRef.current?.click()} className="rounded border px-3 py-2 text-xs">
+                    {t('intake.idPhoto.pickClaimant', 'Choose claimant ID photo')}
+                  </button>
+                )}
+                {claimPreview && (
+                  <button type="button" onClick={() => { setPendingClaimantIdPhoto(null); clearClaimPreview(); }} className="text-xs text-red-500">
+                    {t('intake.idPhoto.remove', 'Remove')}
+                  </button>
+                )}
+                <input ref={claimPhotoRef} type="file" accept="image/*" className="hidden" aria-label={t('intake.idPhoto.pickClaimant', 'Choose claimant ID photo')} onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file) { setPendingClaimantIdPhoto(file); showClaimPreview(URL.createObjectURL(file)); }
+                }} />
+              </div>
             </div>
           </div>
         </div>

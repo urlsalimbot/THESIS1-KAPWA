@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { IntakePage } from './IntakePage';
 import { api } from '../lib/api';
-import { setPendingIdPhoto } from '../lib/intake-id-photo';
+import { setPendingBeneficiaryIdPhoto, setPendingClaimantIdPhoto, clearPendingIdPhoto } from '../lib/intake-id-photo';
 
 const queueCalls: unknown[][] = [];
 const mockQueueChange = vi.fn((...args: unknown[]) => {
@@ -454,16 +454,17 @@ describe('IntakePage — optional government ID photo', () => {
     localStorage.clear();
   });
 
-  it('renders the optional ID photo picker section with a choose button', async () => {
+  it('renders the optional ID photo picker section with beneficiary and claimant fields', async () => {
     render(
       <MemoryRouter>
         <IntakePage />
       </MemoryRouter>
     );
 
-    await screen.findByRole('heading', { name: /ID Photo/i });
-    expect(screen.getByText(/Optional photo of the beneficiary government ID/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Choose ID photo/i })).toBeInTheDocument();
+    await screen.findByRole('heading', { name: /ID Photos/i });
+    expect(screen.getByText(/beneficiary and claimant government IDs/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Choose beneficiary ID photo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Choose claimant ID photo/i })).toBeInTheDocument();
   });
 });
 
@@ -473,7 +474,7 @@ describe('IntakePage — ID photo preview lifecycle', () => {
     queueCalls.length = 0;
     onlineStatus = true;
     localStorage.clear();
-    setPendingIdPhoto(null);
+    clearPendingIdPhoto();
     // jsdom may not implement blob URLs; stub them so preview + revocation are assertable.
     if (typeof URL.createObjectURL !== 'function') {
       Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:guarded') });
@@ -483,8 +484,9 @@ describe('IntakePage — ID photo preview lifecycle', () => {
     }
   });
 
-  it('re-initializes the preview from the pending holder on mount', async () => {
-    setPendingIdPhoto(new File(['id'], 'id.png', { type: 'image/png' }));
+  it('re-initializes both previews from the pending holders on mount', async () => {
+    setPendingBeneficiaryIdPhoto(new File(['id'], 'id.png', { type: 'image/png' }));
+    setPendingClaimantIdPhoto(new File(['id'], 'id.png', { type: 'image/png' }));
     const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:id-preview');
 
     render(
@@ -493,12 +495,13 @@ describe('IntakePage — ID photo preview lifecycle', () => {
       </MemoryRouter>
     );
 
-    const img = await screen.findByAltText('Government ID preview');
-    expect(img).toHaveAttribute('src', 'blob:id-preview');
-    expect(create).toHaveBeenCalled();
+    const benImg = await screen.findByAltText('Beneficiary ID preview');
+    expect(benImg).toHaveAttribute('src', 'blob:id-preview');
+    expect(screen.getByAltText('Claimant ID preview')).toBeInTheDocument();
+    expect(create).toHaveBeenCalledTimes(2);
   });
 
-  it('revokes the object URL when the picked photo is removed', async () => {
+  it('revokes the object URL when a picked beneficiary photo is removed', async () => {
     const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:id-preview');
 
@@ -507,18 +510,64 @@ describe('IntakePage — ID photo preview lifecycle', () => {
         <IntakePage />
       </MemoryRouter>
     );
-    await screen.findByRole('heading', { name: /ID Photo/i });
+    await screen.findByRole('heading', { name: /ID Photos/i });
 
-    fireEvent.change(screen.getByLabelText('Choose ID photo'), {
+    fireEvent.change(screen.getByLabelText('Choose beneficiary ID photo'), {
       target: { files: [new File(['id'], 'id.png', { type: 'image/png' })] },
     });
 
-    const img = await screen.findByAltText('Government ID preview');
+    const img = await screen.findByAltText('Beneficiary ID preview');
     expect(img).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(revoke).toHaveBeenCalledWith('blob:id-preview');
-    expect(screen.queryByAltText('Government ID preview')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Beneficiary ID preview')).not.toBeInTheDocument();
+  });
+});
+
+describe('IntakePage — prefill from BeneficiaryViewPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
+  it('populates beneficiary fields and the family composition, editable', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[{
+          pathname: '/intake',
+          state: {
+            prefill: {
+              surname: 'Dela Cruz',
+              firstName: 'Juan',
+              gender: 'Male',
+              dob: '1980-01-15',
+              familyMembers: [
+                {
+                  id: 'm1', surname: 'Dela Cruz', firstName: 'Elena', middleName: 'R', extension: '',
+                  gender: 'Female', dob: '1956-08-11', relationship: 'Spouse', occupation: '', income: '', status: '', done: false,
+                },
+              ],
+            },
+          },
+        }]}
+      >
+        <IntakePage />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    // Family composition populated from the prefill (was previously empty).
+    const fmSurnames = screen.getAllByLabelText('FM surname');
+    expect(fmSurnames.length).toBeGreaterThan(0);
+    expect((fmSurnames[0] as HTMLInputElement).value).toBe('Dela Cruz');
+    expect(screen.getByLabelText('FM first name')).toHaveValue('Elena');
+
+    // Fields are editable, not locked.
+    expect((fmSurnames[0] as HTMLInputElement).disabled).toBe(false);
   });
 });

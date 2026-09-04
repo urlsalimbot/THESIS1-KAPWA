@@ -224,6 +224,12 @@ export class BeneficiariesService {
     const primaryMember = person ? {
       id: `primary-${ben.id}`,
       fullName: `${person.firstName} ${person.middleName ? person.middleName + ' ' : ''}${person.surname}`.trim(),
+      surname: person.surname,
+      firstName: person.firstName,
+      middleName: person.middleName ?? null,
+      extension: person.extension ?? null,
+      gender: person.gender ?? null,
+      dob: person.dob instanceof Date ? person.dob.toISOString().slice(0, 10) : null,
       relationship: 'Self',
       age: person.age ?? 0,
       occupation: person.occupation ?? null,
@@ -236,6 +242,8 @@ export class BeneficiariesService {
     const members = await this.hmRepo.query(
       `SELECT hm.id,
               TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
+              p.surname, p.first_name, p.middle_name, p.extension, p.gender,
+              p.dob::date AS dob,
               hm.relationship, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.occupation, p.estimated_monthly_income AS income,
               hm.status, hm.is_primary
        FROM household_memberships hm
@@ -249,6 +257,12 @@ export class BeneficiariesService {
     const camelCase = (m: any) => ({
       id: m.id,
       fullName: m.full_name,
+      surname: m.surname,
+      firstName: m.first_name,
+      middleName: m.middle_name,
+      extension: m.extension,
+      gender: m.gender,
+      dob: m.dob ? String(m.dob).slice(0, 10) : null,
       relationship: m.relationship,
       age: m.age,
       occupation: m.occupation,

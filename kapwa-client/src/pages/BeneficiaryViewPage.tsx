@@ -73,6 +73,14 @@ interface FamilyMember {
   income?: number;
   status?: string;
   isPrimary: boolean;
+  // Detailed person fields returned by the family-graph endpoint — used to
+  // prefill the intake form's family composition when adding a case.
+  surname?: string;
+  firstName?: string;
+  middleName?: string;
+  extension?: string;
+  gender?: string;
+  dob?: string;
 }
 
 
@@ -447,6 +455,20 @@ export function BeneficiaryViewPage() {
                     civilStatus: (ben.civilStatus as string) || "", cellularNumber: (ben.phone as string) || "",
                     occupation: (ben.occupation as string) || "", estimatedMonthlyIncome: (ben.estimatedMonthlyIncome as number)?.toString() || "",
                     philhealthNumber: (ben.philhealthNumber as string) || "",
+                    familyMembers: family.map(m => ({
+                      id: m.id,
+                      surname: m.surname ?? "",
+                      firstName: m.firstName ?? "",
+                      middleName: m.middleName ?? "",
+                      extension: m.extension ?? "",
+                      gender: m.gender ?? "",
+                      dob: m.dob ?? "",
+                      relationship: m.relationship ?? "",
+                      occupation: m.occupation ?? "",
+                      income: m.income != null ? String(m.income) : "",
+                      status: m.status ?? "",
+                      done: false,
+                    })),
                   }}});
                 }}>
                   <Plus size={14} />

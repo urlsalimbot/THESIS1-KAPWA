@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { setPendingIdPhoto, getPendingIdPhoto, uploadIntakeIdPhoto } from './intake-id-photo';
+import {
+  setPendingBeneficiaryIdPhoto, getPendingBeneficiaryIdPhoto,
+  setPendingClaimantIdPhoto, getPendingClaimantIdPhoto,
+  clearPendingIdPhoto, uploadIntakeIdPhotos,
+} from './intake-id-photo';
 import { uploadWithProgress } from './api';
 import { mutate } from 'swr';
 import { queryKeys } from './query-keys';
@@ -17,55 +21,71 @@ const stubFile = () => new File(['id'], 'id.png', { type: 'image/png' });
 describe('intake-id-photo holder lifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setPendingIdPhoto(stubFile());
+    setPendingBeneficiaryIdPhoto(stubFile());
+    setPendingClaimantIdPhoto(stubFile());
   });
 
   afterEach(() => {
-    setPendingIdPhoto(null);
+    clearPendingIdPhoto();
   });
 
-  it('uploads the pending photo and clears the holder on success', async () => {
+  it('uploads both pending photos tagged by subject and clears the holders on success', async () => {
     (uploadWithProgress as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
-    const ok = await uploadIntakeIdPhoto('case-1');
+    const ok = await uploadIntakeIdPhotos('case-1');
 
     expect(ok).toBe(true);
-    expect(uploadWithProgress).toHaveBeenCalledWith(
-      '/filing/upload',
-      expect.any(FormData),
-      expect.any(Function),
-    );
-    const formData = (uploadWithProgress as ReturnType<typeof vi.fn>).mock.calls[0][1] as FormData;
-    expect(formData.get('file')).toBeInstanceOf(File);
-    expect(formData.get('category')).toBe('id_photo');
-    expect(formData.get('caseId')).toBe('case-1');
-    expect(getPendingIdPhoto()).toBeNull();
+    expect(uploadWithProgress).toHaveBeenCalledTimes(2);
+
+    const calls = (uploadWithProgress as ReturnType<typeof vi.fn>).mock.calls;
+    const categories = calls.map((c) => (c[1] as FormData).get('category'));
+    const notes = calls.map((c) => (c[1] as FormData).get('notes'));
+    const caseIds = calls.map((c) => (c[1] as FormData).get('caseId'));
+    expect(categories).toEqual(['id_photo', 'id_photo']);
+    expect(notes).toEqual(['beneficiary', 'claimant']);
+    expect(caseIds).toEqual(['case-1', 'case-1']);
+    expect(getPendingBeneficiaryIdPhoto()).toBeNull();
+    expect(getPendingClaimantIdPhoto()).toBeNull();
   });
 
   it('invalidates the case photo SWR keys after a successful upload', async () => {
     (uploadWithProgress as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
-    await uploadIntakeIdPhoto('case-1');
+    await uploadIntakeIdPhotos('case-1');
 
     expect(mutate).toHaveBeenCalledWith(queryKeys.filing.byCase('case-1'));
     expect(mutate).toHaveBeenCalledWith(queryKeys.filing.caseIdPhoto('case-1'));
   });
 
-  it('clears the holder even when the upload fails', async () => {
+  it('clears the holders even when an upload fails', async () => {
     (uploadWithProgress as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
 
-    const ok = await uploadIntakeIdPhoto('case-1');
+    const ok = await uploadIntakeIdPhotos('case-1');
 
     expect(ok).toBe(false);
-    expect(getPendingIdPhoto()).toBeNull();
+    expect(getPendingBeneficiaryIdPhoto()).toBeNull();
+    expect(getPendingClaimantIdPhoto()).toBeNull();
     expect(mutate).not.toHaveBeenCalled();
   });
 
-  it('is a no-op when no photo is pending', async () => {
-    setPendingIdPhoto(null);
+  it('is a no-op when no photos are pending', async () => {
+    clearPendingIdPhoto();
+    expect(getPendingBeneficiaryIdPhoto()).toBeNull();
+    expect(getPendingClaimantIdPhoto()).toBeNull();
 
-    await expect(uploadIntakeIdPhoto('case-1')).resolves.toBe(true);
+    await expect(uploadIntakeIdPhotos('case-1')).resolves.toBe(true);
     expect(uploadWithProgress).not.toHaveBeenCalled();
     expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('uploads only the beneficiary photo when only that one is pending', async () => {
+    setPendingClaimantIdPhoto(null);
+    (uploadWithProgress as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const ok = await uploadIntakeIdPhotos('case-1');
+
+    expect(ok).toBe(true);
+    expect(uploadWithProgress).toHaveBeenCalledTimes(1);
+    expect((uploadWithProgress as ReturnType<typeof vi.fn>).mock.calls[0][1].get('notes')).toBe('beneficiary');
   });
 });

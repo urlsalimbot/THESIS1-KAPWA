@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
-import { uploadIntakeIdPhoto } from '@/lib/intake-id-photo';
+import { uploadIntakeIdPhotos } from '@/lib/intake-id-photo';
 
 interface MatchCandidate {
   householdId: string;
@@ -102,7 +102,7 @@ export function IntakeReviewPage() {
       if (result.caseCreated) {
         toast.success(t('intake.clientRegistered', 'Client registered'), { description: result.message });
         if (result.caseId) {
-          void uploadIntakeIdPhoto(result.caseId).then((ok) => {
+          void uploadIntakeIdPhotos(result.caseId).then((ok) => {
             if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
           });
         }
@@ -122,7 +122,7 @@ export function IntakeReviewPage() {
     setCreatingNew(true);
     try {
       const result = await api.post<{ caseId: string; controlNo: string }>('/intake', intakeData);
-      void uploadIntakeIdPhoto(result.caseId).then((ok) => {
+      void uploadIntakeIdPhotos(result.caseId).then((ok) => {
         if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
       });
       navigate(`/cases/${result.caseId}`);
