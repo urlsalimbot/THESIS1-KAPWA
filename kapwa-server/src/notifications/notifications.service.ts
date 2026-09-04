@@ -1,5 +1,5 @@
 import { DEFAULT_NOTIF_LIMIT } from './constants';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification, NotificationCategory } from './notification.entity';
@@ -60,6 +60,7 @@ export class NotificationsService {
     return this.notifRepo.find({
       where: { recipientId },
       order: { createdAt: 'DESC' },
+      take: DEFAULT_NOTIF_LIMIT,
     });
   }
 
@@ -77,13 +78,15 @@ export class NotificationsService {
     });
   }
 
-  async markAsRead(id: string, recipientId?: string) {
-    await this.notifRepo.update(id, { isRead: true });
-    if (recipientId) {
-      this.notifGateway.emitToUser(recipientId, 'notification:updated', { id, isRead: true });
-      const count = await this.getUnreadCount(recipientId);
-      this.notifGateway.emitToUser(recipientId, 'unread:count', { count });
+  // Ownership-scoped: a user may only mark their OWN notifications as read.
+  async markAsRead(id: string, recipientId: string) {
+    const result = await this.notifRepo.update({ id, recipientId }, { isRead: true });
+    if (!result.affected) {
+      throw new NotFoundException('Notification not found');
     }
+    this.notifGateway.emitToUser(recipientId, 'notification:updated', { id, isRead: true });
+    const count = await this.getUnreadCount(recipientId);
+    this.notifGateway.emitToUser(recipientId, 'unread:count', { count });
     return { message: 'Marked as read' };
   }
 

@@ -83,9 +83,17 @@ describe('NotificationsService', () => {
     expect(count).toBe(3);
   });
 
-  it('marks as read', async () => {
-    const result = await service.markAsRead('n1');
+  it('marks a notification as read when it belongs to the user', async () => {
+    repoMock.update.mockResolvedValue({ affected: 1 });
+    const result = await service.markAsRead('n1', 'u1');
     expect(result.message).toBe('Marked as read');
+    expect(repoMock.update).toHaveBeenCalledWith({ id: 'n1', recipientId: 'u1' }, { isRead: true });
+  });
+
+  it('rejects marking another user\'s notification as read', async () => {
+    repoMock.update.mockResolvedValue({ affected: 0 });
+    await expect(service.markAsRead('n1', 'u2')).rejects.toThrow('Notification not found');
+    expect(repoMock.update).toHaveBeenCalledWith({ id: 'n1', recipientId: 'u2' }, { isRead: true });
   });
 
   it('marks all as read', async () => {
