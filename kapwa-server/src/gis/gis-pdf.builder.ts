@@ -38,14 +38,15 @@ function fmtMoney(v?: number): string {
   return Number(v).toLocaleString('en-PH');
 }
 
-function sectionHeader(doc: any, text: string, subtext: string): void {
-  doc.rect(LEFT, doc.y - 4, WIDTH, 14).fillColor('#d9d9d9').fill();
+function sectionHeader(doc: any, text: string, subtext: string, atY?: number): void {
+  const yPos = atY ?? doc.y;
+  doc.rect(LEFT, yPos - 4, WIDTH, 14).fillColor('#d9d9d9').fill();
   doc
     .font('Helvetica-Bold').fontSize(8).fillColor('#111')
-    .text(text, LEFT + 5, doc.y - 2, { continued: true })
+    .text(text, LEFT + 5, yPos - 2, { continued: true })
     .font('Helvetica').fontSize(7)
     .text(`  ${subtext}`, { align: 'right', width: WIDTH - 10 });
-  doc.y += 6;
+  doc.y = yPos + 6;
 }
 
 function boxField(
@@ -114,8 +115,10 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
     try {
       doc.image(logoPath, LEFT + 8, 40, { fit: [70, 30] });
     } catch {
-      doc.font('Helvetica-Bold').fontSize(11).text('DSWD', LEFT, 40);
+      console.warn('[gis] DSWD logo asset missing; rendering text-only header');
     }
+  } else {
+    console.warn('[gis] DSWD logo asset missing; rendering text-only header');
   }
   doc.font('Helvetica-Bold').fontSize(10.5).fillColor('#111')
     .text('PROTECTIVE SERVICES DIVISION', LEFT + 145, 40, { align: 'right', width: WIDTH - 145 });
@@ -159,76 +162,76 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   doc.moveTo(LEFT, y - 10).lineTo(RIGHT, y - 10).lineWidth(0.5).strokeColor('#999').stroke();
 
   // ---- Beneficiary identifying info ----
-  sectionHeader(doc, 'IMPORMASYON NG BENEPISYARYO', 'Beneficiary\'s Identifying Information');
+  sectionHeader(doc, 'IMPORMASYON NG BENEPISYARYO', 'Beneficiary\'s Identifying Information', y - 10);
   const ben = data.beneficiary;
   lineField(doc, LEFT, y, 200, 'Apelyido (Last Name)', ben.surname);
   lineField(doc, LEFT + 205, y, 155, 'Unang Pangalan (First Name)', ben.firstName);
   lineField(doc, LEFT + 365, y, 70, 'Gitnang Pangalan (Middle Name)', ben.middleName ?? '');
   lineField(doc, LEFT + 440, y, 55, 'Ext. (Jr./Sr.)', ben.extension ?? '');
 
-  lineField(doc, LEFT, y + 20, 150, 'House No./Street/Purok', ben.address.street);
-  lineField(doc, LEFT + 155, y + 20, 130, 'Barangay', ben.address.barangay);
-  lineField(doc, LEFT + 290, y + 20, 135, 'City/Municipality', ben.address.city);
-  lineField(doc, LEFT + 430, y + 20, 65, 'Province/District', ben.address.province);
-  lineField(doc, LEFT + 440, y + 38, 55, 'Region', ben.address.region || 'III');
+  lineField(doc, LEFT, y + 20, 135, 'House No./Street/Purok', ben.address.street);
+  lineField(doc, LEFT + 140, y + 20, 115, 'Barangay', ben.address.barangay);
+  lineField(doc, LEFT + 260, y + 20, 115, 'City/Municipality', ben.address.city);
+  lineField(doc, LEFT + 380, y + 20, 55, 'Province/District', ben.address.province);
+  lineField(doc, LEFT + 440, y + 20, 55, 'Region', ben.address.region || 'III');
 
   const benRow3: Array<[string, unknown]> = [
-    ['Numero ng Telepono', ben.phone],
-    ['Kapanganakan (Birthdate)', ben.dob ? fmtDate(ben.dob) : ''],
-    ['Edad (Age)', ben.age],
-    ['Kasarian (Sex)', ben.sex],
-    ['Katayuan sa Buhay (Civil Status)', ben.civilStatus],
-    ['Trabaho (Occupation)', ben.occupation],
-    ['Buwanang Kita (Monthly Income)', ben.income],
-    ['Estado ng Kalusugan (Health Status)', ''],
+    ['Telepono', ben.phone],
+    ['Birthdate', ben.dob ? fmtDate(ben.dob) : ''],
+    ['Edad', ben.age],
+    ['Sex', ben.sex],
+    ['Katayuan', ben.civilStatus],
+    ['Trabaho', ben.occupation],
+    ['Buwanang Kita', ben.income],
+    ['Health Status', ''],
   ];
   const colW = WIDTH / 8;
   benRow3.forEach(([label, value], i) => {
     lineField(doc, LEFT + i * colW, y + 38, colW - 4, label, value != null ? String(value) : '');
   });
-  lineField(doc, LEFT, y + 56, 162, 'Unang Bisita (First Visit)', fmtDate(data.createdAt));
-  lineField(doc, LEFT + 170, y + 56, 145, 'PhilHealth No.', ben.philhealthNumber ?? '');
-  lineField(doc, LEFT + 325, y + 56, 120, 'Place of Birth', ben.placeOfBirth ?? '');
+  lineField(doc, LEFT, y + 58, 162, 'Unang Bisita (First Visit)', fmtDate(data.createdAt));
+  lineField(doc, LEFT + 170, y + 58, 145, 'PhilHealth No.', ben.philhealthNumber ?? '');
+  lineField(doc, LEFT + 325, y + 58, 120, 'Place of Birth', ben.placeOfBirth ?? '');
 
   doc.moveTo(LEFT, y + 80).lineTo(RIGHT, y + 80).lineWidth(0.5).strokeColor('#999').stroke();
 
   // ---- Representative info ----
   y += 90;
-  sectionHeader(doc, 'IMPORMASYON NG KINATAWAN', 'Representative\'s Identifying Information');
+  sectionHeader(doc, 'IMPORMASYON NG KINATAWAN', 'Representative\'s Identifying Information', y - 10);
   const clm = data.claimant;
   lineField(doc, LEFT, y, 200, 'Apelyido (Last Name)', clm.surname);
   lineField(doc, LEFT + 205, y, 155, 'Unang Pangalan (First Name)', clm.firstName);
   lineField(doc, LEFT + 365, y, 70, 'Gitnang Pangalan (Middle Name)', clm.middleName ?? '');
   lineField(doc, LEFT + 440, y, 55, 'Ext. (Jr./Sr.)', clm.extension ?? '');
 
-  lineField(doc, LEFT, y + 20, 150, 'House No./Street/Purok', clm.address.street);
-  lineField(doc, LEFT + 155, y + 20, 130, 'Barangay', clm.address.barangay);
-  lineField(doc, LEFT + 290, y + 20, 135, 'City/Municipality', clm.address.city);
-  lineField(doc, LEFT + 430, y + 20, 65, 'Province/District', clm.address.province);
-  lineField(doc, LEFT + 440, y + 38, 55, 'Region', clm.address.region || 'III');
+  lineField(doc, LEFT, y + 20, 135, 'House No./Street/Purok', clm.address.street);
+  lineField(doc, LEFT + 140, y + 20, 115, 'Barangay', clm.address.barangay);
+  lineField(doc, LEFT + 260, y + 20, 115, 'City/Municipality', clm.address.city);
+  lineField(doc, LEFT + 380, y + 20, 55, 'Province/District', clm.address.province);
+  lineField(doc, LEFT + 440, y + 20, 55, 'Region', clm.address.region || 'III');
 
   const clmRow3: Array<[string, unknown]> = [
-    ['Numero ng Telepono', clm.phone],
-    ['Kapanganakan (Birthdate)', clm.dob ? fmtDate(clm.dob) : ''],
-    ['Edad (Age)', clm.age],
-    ['Kasarian (Sex)', clm.sex],
-    ['Katayuan sa Buhay (Civil Status)', clm.civilStatus],
-    ['Trabaho (Occupation)', clm.occupation],
-    ['Buwanang Kita (Monthly Income)', clm.income],
-    ['Relasyon sa Benepisyaryo', clm.relationshipToBeneficiary],
+    ['Telepono', clm.phone],
+    ['Birthdate', clm.dob ? fmtDate(clm.dob) : ''],
+    ['Edad', clm.age],
+    ['Sex', clm.sex],
+    ['Katayuan', clm.civilStatus],
+    ['Trabaho', clm.occupation],
+    ['Buwanang Kita', clm.income],
+    ['Relasyon', clm.relationshipToBeneficiary],
   ];
   clmRow3.forEach(([label, value], i) => {
     lineField(doc, LEFT + i * colW, y + 38, colW - 4, label, value != null ? String(value) : '');
   });
-  lineField(doc, LEFT, y + 56, 150, 'Relasyon sa Benepisyaryo', clm.relationshipToBeneficiary ?? '');
-  lineField(doc, LEFT + 160, y + 56, 120, 'Time End', '');
+  lineField(doc, LEFT, y + 58, 150, 'Relasyon sa Benepisyaryo', clm.relationshipToBeneficiary ?? '');
+  lineField(doc, LEFT + 160, y + 58, 120, 'Time End', '');
 
   doc.moveTo(LEFT, y + 80).lineTo(RIGHT, y + 80).lineWidth(0.5).strokeColor('#999').stroke();
 
   // ---- Beneficiary category + assessment ----
   y += 90;
   ensureSpace(160);
-  sectionHeader(doc, 'Beneficiary Category', 'Nakasaad sa / Sama-samang ... ');
+  sectionHeader(doc, 'Beneficiary Category', 'Nakasaad sa / Sama-samang ... ', y - 10);
   const catBoxTop = y;
   doc.rect(LEFT, catBoxTop, 240, 120).lineWidth(0.5).strokeColor('#111').stroke();
   const catLabel = data.clientCategory || '';
@@ -249,7 +252,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- Family composition ----
   ensureSpace(60);
-  sectionHeader(doc, 'KOMPOSISYON NG PAMILYA', 'Family Composition');
+  sectionHeader(doc, 'KOMPOSISYON NG PAMILYA', 'Family Composition', y - 10);
   const famCols = [
     { label: 'Buong Pangalan (Complete Name)', w: 200 },
     { label: 'Relasyon sa Benepisyaryo', w: 95 },
@@ -294,7 +297,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   doc.addPage();
   y = doc.y;
 
-  sectionHeader(doc, 'Needs Assessment', '');
+  sectionHeader(doc, 'Needs Assessment', '', y - 10);
   const needsCols: Array<[string, string[]]> = [
     ['Financial Assistance', ['Medical', 'Funeral', 'Transportation', 'Educational', 'Cash Assistance for']],
     ['Material Assistance', ['Food Assistance', 'Family Food Packs', 'Other Food Items', 'Hygiene & Sleeping Kits', 'Assistive Device & Technologies']],
@@ -366,7 +369,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('Reviewed & Approved by', LEFT + 270, y);
   doc.moveTo(LEFT + 220, y + 16).lineTo(LEFT + 450, y + 16).lineWidth(0.5).strokeColor('#111').stroke();
   doc.font('Helvetica').fontSize(7).fillColor('#555')
-    .text(data.assignedWorkerName || '', LEFT + 300, y - 8, { width: 140, align: 'right' });
+    .text(data.approvedByRole ?? '', LEFT + 300, y - 8, { width: 140, align: 'right' });
 
   // ---- Footer ----
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
@@ -375,8 +378,13 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
     .text('Complete Name & Signature', LEFT + 190, y + 24, { width: 110 });
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
     .text('Approving Authority', LEFT + 300, y + 22, { width: 120 });
-  doc.font('Helvetica').fontSize(6.5).fillColor('#555')
-    .text('Signature over Printed Name', LEFT + 300, y + 32, { width: 130 });
+  if (data.approvedByRole) {
+    doc.font('Helvetica').fontSize(7).fillColor('#555')
+      .text(data.approvedByRole, LEFT + 300, y + 32, { width: 130 });
+  } else {
+    doc.font('Helvetica').fontSize(6.5).fillColor('#555')
+      .text('Signature over Printed Name', LEFT + 300, y + 32, { width: 130 });
+  }
 
   doc.font('Helvetica').fontSize(5.5).fillColor('#888')
     .text(

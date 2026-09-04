@@ -9,6 +9,7 @@ const fullData: GisPdfData = {
   clientCategory: 'Indigent People',
   referrals: [{ reason: 'Medical' }],
   assignedWorkerName: 'Maria Santos',
+  approvedByRole: 'social_worker',
   beneficiary: {
     surname: 'Dela Cruz', firstName: 'Juan', middleName: 'M', extension: 'Jr.',
     sex: 'Male', dob: new Date('1990-05-15'), placeOfBirth: 'Norzagaray',

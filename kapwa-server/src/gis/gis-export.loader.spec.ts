@@ -11,6 +11,7 @@ describe('loadGisData', () => {
     renewalOfCaseId: null,
     referralRows: [{ reason: 'Medical' }],
     assignedWorkerName: 'Maria Santos',
+    approvedByRole: 'social_worker',
     createdAt: new Date('2026-09-01T10:00:00Z'),
     beneficiary: {
       id: 'b1',
@@ -66,6 +67,7 @@ describe('loadGisData', () => {
     expect(data.referrals).toHaveLength(1);
     expect(data.hasRenewal).toBe(false);
     expect(data.assignedWorkerName).toBe('Maria Santos');
+    expect(data.approvedByRole).toBe('social_worker');
   });
 
   it('throws NotFoundException when the case is missing', async () => {
