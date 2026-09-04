@@ -51,6 +51,19 @@ export class InterAgencyReferralsController {
     return this.svc.findByPerson(personId, req.user);
   }
 
+  @Get('person/:personId/benefit-ledger')
+  @Roles('admin', 'social_worker', 'agency_staff')
+  @ApiOperation({
+    summary:
+      'Inter-facility aide ledger for a person: aggregates MSWDO interventions, cross-agency access-card services, and referrals grouped by office, with duplicate-aide flags',
+  })
+  async benefitLedger(
+    @Param('personId', new ParseUUIDPipe()) personId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.svc.getPersonBenefitLedger(personId, req.user);
+  }
+
   @Get('case/:caseId')
   @Roles('admin', 'social_worker', 'agency_staff')
   @ApiOperation({ summary: 'List referrals for a case (case workflow)' })

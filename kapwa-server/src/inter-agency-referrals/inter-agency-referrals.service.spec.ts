@@ -26,7 +26,7 @@ describe('InterAgencyReferralsService', () => {
   beforeEach(async () => {
     repoMock = { create: jest.fn(), save: jest.fn(), findOne: jest.fn(), find: jest.fn(), createQueryBuilder: jest.fn() };
     agencyRepoMock = { findOne: jest.fn() };
-    benRepoMock = { findOne: jest.fn() };
+    benRepoMock = { findOne: jest.fn(), manager: { query: jest.fn() } };
     caseRepoMock = { findOne: jest.fn() };
     casesServiceMock = { create: jest.fn() };
     userRepoMock = { find: jest.fn().mockResolvedValue([]) };
@@ -314,6 +314,114 @@ describe('InterAgencyReferralsService', () => {
       await service.create({ toAgencyId: 'agency-to', reason: 'medical', legalBasisCode: 'LB-1' } as any, { id: 'sw-1', agencyId: 'agency-from' } as any);
 
       expect(notifyMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('getPersonBenefitLedger', () => {
+    const query = () => benRepoMock.manager.query as jest.Mock;
+
+    function seedPerson(cards: string[], interventions: any[], referrals: any[]) {
+      query().mockImplementation(async (sql: string) => {
+        if (/FROM persons/.test(sql)) return [{ id: 'p1' }];
+        if (/access_card_services/.test(sql)) return [];
+        if (/access_card_code/.test(sql)) return cards.map((c) => ({ code: c }));
+        if (/case_interventions/.test(sql)) return interventions;
+        if (/inter_agency_referrals/.test(sql)) return referrals;
+        return [];
+      });
+    }
+
+    it('throws NotFound when the person does not exist', async () => {
+      query().mockResolvedValue([]);
+      await expect(service.getPersonBenefitLedger('p1', { id: 'u1', role: 'admin' } as any))
+        .rejects.toThrow('Person not found');
+    });
+
+    it('rejects a caller with no agency and no MSWDO role', async () => {
+      query().mockResolvedValue([{ id: 'p1' }]);
+      await expect(
+        service.getPersonBenefitLedger('p1', { id: 'u1', role: 'coordinator', agencyId: '' } as any),
+      ).rejects.toThrow('Your account is not linked to an agency');
+    });
+
+    it('groups benefits by facility and flags multi-facility receipt for admin', async () => {
+      seedPerson(
+        ['NORZ-AC-2026-0001'],
+        [
+          { id: 'iv1', service: 'Financial Aid', date: '2026-08-01', amount: '5000', fundSource: 'LGU - Municipal' },
+        ],
+        [],
+      );
+      query().mockImplementation(async (sql: string) => {
+        if (/FROM persons/.test(sql)) return [{ id: 'p1' }];
+        if (/access_card_services/.test(sql)) return [
+          { cardCode: 'NORZ-AC-2026-0001', service: 'LTO Gas Subsidy', date: '2026-08-10', amount: '3000', agencyId: 'ag-lto', agencyCode: 'LTO', agencyName: 'LTO Norzagaray', category: 'fuel' },
+        ];
+        if (/access_card_code/.test(sql)) return [{ code: 'NORZ-AC-2026-0001' }];
+        if (/case_interventions/.test(sql)) return [
+          { id: 'iv1', service: 'Financial Aid', date: '2026-08-01', amount: '5000', fundSource: 'LGU - Municipal', agencyId: 'MSWDO', agencyCode: 'MSWDO', agencyName: 'MSWDO Norzagaray' },
+        ];
+        if (/inter_agency_referrals/.test(sql)) return [];
+        return [];
+      });
+
+      const result = await service.getPersonBenefitLedger('p1', { id: 'u-admin', role: 'admin' } as any);
+
+      expect(result.person.id).toBe('p1');
+      expect(result.totalAidAmount).toBe(8000);
+      expect(result.distinctFacilities).toBe(2);
+      expect(result.multiFacilityDetected).toBe(true);
+      expect(result.byAgency.map((a: any) => a.agencyCode).sort()).toEqual(['LTO', 'MSWDO']);
+      const lto = result.byAgency.find((a: any) => a.agencyCode === 'LTO')!;
+      expect(lto.totalAmount).toBe(3000);
+      const mswdo = result.byAgency.find((a: any) => a.agencyCode === 'MSWDO')!;
+      expect(mswdo.totalAmount).toBe(5000);
+    });
+
+    it('does not flag multi-facility when aid comes from a single office', async () => {
+      seedPerson(
+        ['NORZ-AC-2026-0001'],
+        [
+          { id: 'iv1', service: 'Financial Aid', date: '2026-08-01', amount: '5000', fundSource: 'LGU - Municipal', agencyId: 'MSWDO', agencyCode: 'MSWDO', agencyName: 'MSWDO Norzagaray' },
+        ],
+        [],
+      );
+      query().mockImplementation(async (sql: string) => {
+        if (/FROM persons/.test(sql)) return [{ id: 'p1' }];
+        if (/access_card_services/.test(sql)) return [];
+        if (/access_card_code/.test(sql)) return [{ code: 'NORZ-AC-2026-0001' }];
+        if (/case_interventions/.test(sql)) return [
+          { id: 'iv1', service: 'Financial Aid', date: '2026-08-01', amount: '5000', fundSource: 'LGU - Municipal', agencyId: 'MSWDO', agencyCode: 'MSWDO', agencyName: 'MSWDO Norzagaray' },
+        ];
+        if (/inter_agency_referrals/.test(sql)) return [];
+        return [];
+      });
+
+      const result = await service.getPersonBenefitLedger('p1', { id: 'u-admin', role: 'admin' } as any);
+      expect(result.multiFacilityDetected).toBe(false);
+      expect(result.distinctFacilities).toBe(1);
+      expect(result.totalAidAmount).toBe(5000);
+    });
+
+    it('scopes agency_staff to their own facility and treats unassigned as visible', async () => {
+      seedPerson(['NORZ-AC-2026-0001'], [], []);
+      query().mockImplementation(async (sql: string) => {
+        if (/FROM persons/.test(sql)) return [{ id: 'p1' }];
+        if (/access_card_services/.test(sql)) return [
+          { cardCode: 'NORZ-AC-2026-0001', service: 'GAS', date: '2026-08-10', amount: '1000', agencyId: 'ag-lto', agencyCode: 'LTO', agencyName: 'LTO Norzagaray', category: 'fuel' },
+          { cardCode: 'NORZ-AC-2026-0001', service: 'Meds', date: '2026-08-11', amount: '500', agencyId: null, agencyCode: null, agencyName: null, category: 'med' },
+        ];
+        if (/access_card_code/.test(sql)) return [{ code: 'NORZ-AC-2026-0001' }];
+        if (/case_interventions/.test(sql)) return [];
+        if (/inter_agency_referrals/.test(sql)) return [];
+        return [];
+      });
+
+      const result = await service.getPersonBenefitLedger('p1', { id: 'u-lto', role: 'agency_staff', agencyId: 'ag-lto' } as any);
+
+      expect(result.byAgency.length).toBe(2);
+      expect(result.services.some((s: any) => s.agencyId === 'ag-lto')).toBe(true);
+      expect(result.services.some((s: any) => s.agencyName === 'Unassigned office')).toBe(true);
     });
   });
 });

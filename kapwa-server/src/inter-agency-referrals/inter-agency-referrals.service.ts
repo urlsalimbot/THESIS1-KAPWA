@@ -128,6 +128,161 @@ export class InterAgencyReferralsService {
     return scoped.filter(r => r.personId === personId);
   }
 
+  /**
+   * Inter-facility aide ledger: aggregates every benefit/service a person has
+   * received across all municipal offices/agencies (MSWDO interventions, access
+   * card services logged by any agency, and inter-agency referrals). Groups by
+   * facility so a social worker or admin can see — at a glance — whether the
+   * same person is drawing aid from multiple offices (e.g. Municipal LTO gas
+   * subsidy + MSWDO financial aid) and flag potential duplicate receipt.
+   */
+  async getPersonBenefitLedger(personId: string, caller: User) {
+    const person = await this.benRepo.manager.query('SELECT id FROM persons WHERE id = $1', [personId]);
+    if (!person || person.length === 0) {
+      throw new NotFoundException('Person not found');
+    }
+    const isAdmin = caller.role === 'admin';
+    const isMswdo = isAdmin || caller.role === 'social_worker';
+    const callerAgency = caller.agencyId;
+    if (!isMswdo && !callerAgency) {
+      throw new ForbiddenException('Your account is not linked to an agency');
+    }
+
+    // Resolve all access card codes for this person (household + role keys).
+    const cards = await this.benRepo.manager.query(
+      `SELECT DISTINCT COALESCE(h.access_card_code, br.access_card_code) AS code
+       FROM beneficiaries b
+       LEFT JOIN households h ON h.id = b.household_id
+       LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
+       WHERE b.person_id = $1
+         AND COALESCE(h.access_card_code, br.access_card_code) IS NOT NULL`,
+      [personId],
+    );
+    const cardCodes = (cards as Array<{ code: string }>).map(c => c.code);
+
+    // 1. Access card services (logged by any agency/office) → "who got what, from which office".
+    const cardServices = cardCodes.length
+      ? await this.benRepo.manager.query(
+          `SELECT acs.access_card_code AS "cardCode",
+                  acs.service_rendered AS service,
+                  acs.service_date AS date,
+                  COALESCE(acs.cost, 0) AS amount,
+                  a.id AS "agencyId", a.code AS "agencyCode", a.name AS "agencyName",
+                  acs.category
+           FROM access_card_services acs
+           LEFT JOIN agencies a ON a.id = acs.agency_id
+           WHERE acs.access_card_code = ANY($1)
+           ORDER BY acs.service_date DESC`,
+          [cardCodes],
+        )
+      : [];
+
+    // 2. MSWDO case interventions (financial aid / relief) — default facility = MSWDO.
+    const interventions = await this.benRepo.manager.query(
+      `SELECT ci.id, ci.service_name AS service,
+              ci.delivery_date AS date,
+              COALESCE(ci.amount, 0) AS amount,
+              ci.fund_source AS "fundSource",
+              'MSWDO' AS "agencyCode", 'MSWDO Norzagaray' AS "agencyName",
+              'MSWDO' AS "agencyId"
+       FROM case_interventions ci
+       JOIN cases c ON c.id::text = ci.case_id
+       JOIN beneficiaries b ON b.id = c.beneficiary_id
+       WHERE b.person_id = $1
+       ORDER BY ci.delivery_date DESC NULLS LAST`,
+      [personId],
+    );
+
+    // 3. Inter-agency referrals involving this person (activity across offices).
+    const referrals = await this.benRepo.manager.query(
+      `SELECT ir.id, ir.status,
+              ir.reason, ir.outcome,
+              ir.created_at AS date,
+              f.id AS "fromAgencyId", f.code AS "fromAgencyCode", f.name AS "fromAgencyName",
+              t.id AS "toAgencyId", t.code AS "toAgencyCode", t.name AS "toAgencyName"
+       FROM inter_agency_referrals ir
+       LEFT JOIN agencies f ON f.id = ir.from_agency_id
+       LEFT JOIN agencies t ON t.id = ir.to_agency_id
+       WHERE ir.person_id = $1
+       ORDER BY ir.created_at DESC`,
+      [personId],
+    );
+
+    // Build per-facility records, then apply the agency scope.
+    const rows: Array<{
+      date: string | null;
+      type: string;
+      service: string;
+      amount: number;
+      agencyId: string;
+      agencyCode: string;
+      agencyName: string;
+      category?: string;
+    }> = [];
+    for (const s of cardServices as any[]) {
+      rows.push({
+        date: s.date ? new Date(s.date).toISOString().slice(0, 10) : null,
+        type: 'service',
+        service: s.service,
+        amount: Number(s.amount) || 0,
+        agencyId: s.agencyId || 'UNASSIGNED',
+        agencyCode: s.agencyCode || '—',
+        agencyName: s.agencyName || 'Unassigned office',
+        category: s.category,
+      });
+    }
+    for (const i of interventions as any[]) {
+      rows.push({
+        date: i.date ? String(i.date).slice(0, 10) : null,
+        type: 'intervention',
+        service: i.service,
+        amount: Number(i.amount) || 0,
+        agencyId: i.agencyId,
+        agencyCode: i.agencyCode,
+        agencyName: i.agencyName,
+        category: i.fundSource,
+      });
+    }
+
+    const scopedRows = isMswdo
+      ? rows
+      : rows.filter(r => r.agencyId === callerAgency || r.agencyId === 'UNASSIGNED');
+
+    const byAgency = new Map<string, { agency: string; agencyCode: string; type: string; serviceCount: number; totalAmount: number; services: typeof rows }>();
+    for (const r of scopedRows) {
+      const key = `${r.agencyId}|${r.agencyName}`;
+      let bucket = byAgency.get(key);
+      if (!bucket) {
+        bucket = {
+          agency: r.agencyName,
+          agencyCode: r.agencyCode,
+          type: 'facility',
+          serviceCount: 0,
+          totalAmount: 0,
+          services: [],
+        };
+        byAgency.set(key, bucket);
+      }
+      bucket.serviceCount += 1;
+      bucket.totalAmount += r.amount;
+      bucket.services.push(r);
+    }
+
+    const totalAidAmount = scopedRows.reduce((sum, r) => sum + r.amount, 0);
+    const facilityList = Array.from(byAgency.values());
+    const multiFacilityDetected = facilityList.length > 1;
+
+    return {
+      person: { id: personId },
+      totalAidAmount,
+      distinctFacilities: facilityList.length,
+      multiFacilityDetected,
+      byAgency: facilityList,
+      services: scopedRows,
+      referrals,
+    };
+  }
+
   async findForCase(caseId: string, caller: User) {
     if (caller.role === 'admin') {
       return this.repo.find({
