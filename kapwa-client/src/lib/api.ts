@@ -284,6 +284,22 @@ export async function downloadCsrPdf(caseId: string) {
   URL.revokeObjectURL(url);
 }
 
+export async function downloadGisPdf(caseId: string) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(
+    `${API_BASE}/cases/${caseId}/gis-pdf`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  if (!res.ok) throw new Error(`GIS export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = `GIS-${caseId}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function downloadFilingDoc(id: string, fallbackName = 'document'): Promise<void> {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE}/filing/${id}/download`, {

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock, Send, ExternalLink } from 'lucide-react';
-import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl } from '../lib/api';
+import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDate, formatDateTime } from '../lib/format';
 import { isAssessmentStepDone } from '../lib/case-progress';
@@ -299,6 +299,14 @@ export function CaseViewPage() {
                   })}
                 >
                   <Plus size={14} /> {t('cases.renewCase', 'Renew Case')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => downloadGisPdf(id!)}
+                >
+                  <Download size={14} /> {t('cases.gisPdf', 'GIS (PDF)')}
                 </Button>
                 {caseData.status === 'closed' && (
                   <Button

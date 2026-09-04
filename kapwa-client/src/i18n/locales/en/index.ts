@@ -993,6 +993,7 @@ const en = {
     "byRole": " · by {{role}}",
     "caseHistory": "Case History",
     "caseStudyReport": "Case Study Report",
+    "gisPdf": "GIS (PDF)",
     "caseTitle": "Case {{controlNo}}",
     "category": "Category",
     "certEligibility": "Certificate of Eligibility",

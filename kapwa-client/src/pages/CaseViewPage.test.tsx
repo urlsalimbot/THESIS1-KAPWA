@@ -4,10 +4,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { CaseViewPage } from './CaseViewPage';
 
-const { mockApiGet, mockGetFilingObjectUrl, mockUseAuth } = vi.hoisted(() => ({
+const { mockApiGet, mockGetFilingObjectUrl, mockUseAuth, mockDownloadGisPdf } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockGetFilingObjectUrl: vi.fn(),
   mockUseAuth: vi.fn(),
+  mockDownloadGisPdf: vi.fn(),
 }));
 
 vi.mock('../components/family/FamilyGraph', () => ({
@@ -25,6 +26,7 @@ vi.mock('../lib/api', () => ({
   getFilingObjectUrl: (...args: unknown[]) => mockGetFilingObjectUrl(...args),
   downloadCsrPdf: vi.fn(),
   downloadFilingDoc: vi.fn(),
+  downloadGisPdf: (...args: unknown[]) => mockDownloadGisPdf(...args),
 }));
 
 vi.mock('../lib/auth-context', () => ({
@@ -123,5 +125,15 @@ describe('CaseViewPage — government ID photo', () => {
     expect(mockGetFilingObjectUrl).not.toHaveBeenCalled();
     const idPhotoCall = mockApiGet.mock.calls.find((args) => String(args[0]).includes('id-photo'));
     expect(idPhotoCall).toBeUndefined();
+  });
+});
+
+describe('CaseViewPage — GIS PDF', () => {
+  it('downloads the GIS PDF when the button is clicked', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    renderWithSWR(<CaseViewPage />);
+    const btn = await screen.findByRole('button', { name: /gis \(pdf\)/i });
+    btn.click();
+    expect(mockDownloadGisPdf).toHaveBeenCalledWith('C-001');
   });
 });

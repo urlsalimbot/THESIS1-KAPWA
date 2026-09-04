@@ -616,6 +616,7 @@ const fil: EnLocale = {
     "byRole": " · ayon kay {{role}}",
     "caseHistory": "Kasaysayan ng Kaso",
     "caseStudyReport": "Case Study Report",
+    "gisPdf": "GIS (PDF)",
     "caseTitle": "Kaso {{controlNo}}",
     "category": "Kategorya",
     "certEligibility": "Sertipiko ng Eligibility",
