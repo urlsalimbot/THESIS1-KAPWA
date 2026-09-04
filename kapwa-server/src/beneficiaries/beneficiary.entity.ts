@@ -42,7 +42,7 @@ export class Beneficiary extends BaseEntity {
 
   @Expose() get category(): string | undefined { return this.person?.roles?.[0]?.category; }
   @Expose() get consentStatus(): string { return this.person?.roles?.[0]?.consentStatus ?? 'active'; }
-  @Expose() get accessCardCode(): string | undefined { return this.person?.roles?.[0]?.accessCardCode; }
+  @Expose() get accessCardCode(): string | undefined { return this.household?.accessCardCode ?? this.person?.roles?.[0]?.accessCardCode; }
   @Expose() get surname(): string { return this.person?.surname || ''; }
   @Expose() get firstName(): string { return this.person?.firstName || ''; }
   @Expose() get middleName(): string | undefined { return this.person?.middleName; }

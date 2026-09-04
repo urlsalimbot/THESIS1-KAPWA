@@ -10,12 +10,14 @@ import { Case } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesModule } from '../cases/cases.module';
 import { AuthModule } from '../auth/auth.module';
+import { AccessCardsModule } from '../access-cards/access-cards.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Person, HouseholdMembership, Beneficiary, Household, Case, ConsentLedger]),
     CasesModule,
     AuthModule,
+    AccessCardsModule,
   ],
   controllers: [IntakeController],
   providers: [IntakeService],

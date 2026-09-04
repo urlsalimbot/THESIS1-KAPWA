@@ -25,6 +25,12 @@ export class Case extends BaseEntity {
   @Column({ name: 'beneficiary_id', nullable: true })
   beneficiaryId?: string;
 
+  // Recurring-program cycles: points at the previous case this one renews
+  // (e.g. a new 4Ps cycle). Soft link — the case history per beneficiary is
+  // the authoritative chain.
+  @Column({ name: 'renewal_of_case_id', nullable: true })
+  renewalOfCaseId?: string;
+
   @Column('text', { name: 'service_requested', array: true, nullable: true })
   serviceRequested?: string[];
 

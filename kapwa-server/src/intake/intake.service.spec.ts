@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { IntakeService } from './intake.service';
+import { AccessCardsService } from '../access-cards/access-cards.service';
 import { Person } from '../beneficiaries/person.entity';
 import { PersonContact } from '../beneficiaries/person-contact.entity';
 import { PersonAddress } from '../beneficiaries/person-address.entity';
@@ -89,6 +90,10 @@ describe('IntakeService', () => {
         {
           provide: CasesService,
           useValue: { generateControlNo: jest.fn().mockResolvedValue('KAPWA-2026-00001') },
+        },
+        {
+          provide: AccessCardsService,
+          useValue: { ensureHouseholdCard: jest.fn().mockResolvedValue('NORZ-AC-2026-0001') },
         },
       ],
     }).compile();
@@ -202,6 +207,28 @@ describe('IntakeService', () => {
           controlNo: 'KAPWA-2026-00001',
           status: CaseStatus.ENROLLED,
         }),
+      );
+    });
+
+    it('links the new case to the renewed case when renewalOfCaseId is provided', async () => {
+      const saveMock = mockSaveSequence();
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid-1' })
+        .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz', consentStatus: 'active' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: claimUuid })
+        .mockResolvedValueOnce({ id: bcUuid })
+        .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
+        .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001', status: CaseStatus.ENROLLED })
+        .mockResolvedValueOnce({ id: clUuid, status: 'active' });
+      stubCreates();
+      const input = { ...validIntakeInput, renewalOfCaseId: '11111111-1111-4111-8111-111111111111' };
+      await service.submitIntake(input, { id: 'caller-1', role: UserRole.SW });
+      expect(caseRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ renewalOfCaseId: '11111111-1111-4111-8111-111111111111' }),
       );
     });
 

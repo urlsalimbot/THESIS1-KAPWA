@@ -84,18 +84,24 @@ export function ProgramDetailPage() {
             </div>
             <Separator />
             <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <div>
-                <span className="text-muted-foreground text-xs">{t('programs.category', 'Category')}</span>
-                <p className="font-medium">{program.category || '—'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">{t('programs.legalBasis', 'Legal Basis')}</span>
-                <p className="font-medium">{program.legalBasis || '—'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">{t('programs.waitingPeriod', 'Waiting Period')}</span>
-                <p className="font-medium">{program.waitingPeriodDays != null ? t('programs.days', '{{count}} days', { count: program.waitingPeriodDays }) : '—'}</p>
-              </div>
+              {program.category && (
+                <div>
+                  <span className="text-muted-foreground text-xs">{t('programs.category', 'Category')}</span>
+                  <p className="font-medium">{program.category}</p>
+                </div>
+              )}
+              {program.legalBasis && (
+                <div>
+                  <span className="text-muted-foreground text-xs">{t('programs.legalBasis', 'Legal Basis')}</span>
+                  <p className="font-medium">{program.legalBasis}</p>
+                </div>
+              )}
+              {program.waitingPeriodDays != null && (
+                <div>
+                  <span className="text-muted-foreground text-xs">{t('programs.waitingPeriod', 'Waiting Period')}</span>
+                  <p className="font-medium">{t('programs.days', '{{count}} days', { count: program.waitingPeriodDays })}</p>
+                </div>
+              )}
               <div>
                 <span className="text-muted-foreground text-xs">{t('programs.formVersion', 'Form Version')}</span>
                 <p className="font-medium">{program.formVersion}</p>

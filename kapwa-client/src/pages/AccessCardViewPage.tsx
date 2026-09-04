@@ -25,13 +25,15 @@ interface AccessCardService {
   category?: string;
 }
 
-const CATEGORY_TABS = ['', 'case_service', 'referral', 'community_service', 'seminar'];
+const CATEGORY_TABS = ['', 'case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'];
 const CATEGORY_TAB_LABELS: Record<string, { key: string; label: string }> = {
   '': { key: 'accessCard.tabAll', label: 'All' },
   case_service: { key: 'accessCard.tabCaseServices', label: 'Case Services' },
   referral: { key: 'accessCard.tabReferrals', label: 'Referrals' },
   community_service: { key: 'accessCard.tabCommunity', label: 'Community' },
   seminar: { key: 'accessCard.tabSeminars', label: 'Seminars' },
+  payout: { key: 'accessCard.tabPayouts', label: 'Payouts' },
+  compliance: { key: 'accessCard.tabCompliance', label: 'Compliance' },
 };
 
 interface ReferralSummary {
@@ -68,6 +70,8 @@ function CategoryBadge({ category }: { category?: string }) {
     referral: 'secondary',
     community_service: 'outline',
     seminar: 'secondary',
+    payout: 'default',
+    compliance: 'outline',
   };
   return (
     <Badge variant={variants[category || ''] || 'outline'} className="text-[10px]">

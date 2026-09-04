@@ -497,6 +497,7 @@ export function IntakePage() {
         ? { ...personToPayload(beneficiary), relationshipToBeneficiary: 'Self' }
         : { ...personToPayload(claimant), relationshipToBeneficiary },
       familyMembers: familyMembersPayload(),
+      renewalOfCaseId: (location.state as { renewalOfCaseId?: string })?.renewalOfCaseId || undefined,
       case: {},
     };
 

@@ -232,7 +232,7 @@ export function CasesPage() {
     { accessorKey: 'gender', header: t('cases.gender', 'Gender') },
     { accessorKey: 'category', header: t('cases.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{row.original.category.split(', ').map(c => categoryLabel(t, c)).join(', ')}</Badge> },
     { accessorKey: 'barangay', header: t('cases.barangay', 'Barangay') },
-    { accessorKey: 'remarks', header: t('cases.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks || '—'}</span> },
+    { accessorKey: 'remarks', header: t('cases.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks || ''}</span> },
     { id: 'actions', header: t('cases.actions', 'Actions'), cell: ({ row }) => <ActionsCell c={row.original} actionLoading={actionLoading} onAction={handleAction} /> },
   ], [actionLoading, handleAction, t]);
 

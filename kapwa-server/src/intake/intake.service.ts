@@ -11,6 +11,7 @@ import { Case, CaseStatus } from '../cases/case.entity';
 import { CaseRequirement } from '../cases/case-requirement.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
+import { AccessCardsService } from '../access-cards/access-cards.service';
 import { memberToPerson } from './member-person';
 import { User, UserRole } from '../auth/user.entity';
 import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse, BatchFamilyInput } from './dto/intake.zod';
@@ -38,6 +39,7 @@ export class IntakeService {
     @InjectRepository(ConsentLedger)
     private consentRepo: Repository<ConsentLedger>,
     private casesService: CasesService,
+    private accessCards: AccessCardsService,
   ) {}
 
   private async findOrCreatePerson(
@@ -334,6 +336,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       const caseEntity = this.caseRepo.create({
         controlNo,
         beneficiaryId: savedBeneficiary.id,
+        renewalOfCaseId: data.renewalOfCaseId,
         status: CaseStatus.ENROLLED,
         serviceRequested: data.case.serviceRequested,
         assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
@@ -360,6 +363,15 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       await queryRunner.manager.save(consent);
 
       await queryRunner.commitTransaction();
+
+      // Auto-assign the household access card (best-effort — a card failure
+      // must never fail the intake itself; the card can be assigned later
+      // from the beneficiary page).
+      try {
+        await this.accessCards.ensureHouseholdCard(savedBeneficiary.id);
+      } catch (e) {
+        this.logger.warn(`Access card auto-assign failed for beneficiary ${savedBeneficiary.id}: ${(e as Error)?.message ?? e}`);
+      }
 
       return {
         beneficiaryId: savedBeneficiary.id,

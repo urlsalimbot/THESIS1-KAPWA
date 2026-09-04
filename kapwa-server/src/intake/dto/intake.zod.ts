@@ -56,6 +56,7 @@ export const IntakeInputSchema = z.object({
     relationshipToBeneficiary: z.string().min(1, 'Relationship to beneficiary is required'),
   }),
   familyMembers: z.array(FamilyMemberSchema).optional(),
+  renewalOfCaseId: z.string().uuid().optional(),
   case: z.object({
     serviceRequested: z.array(z.string()).optional(),
     requirementsChecklist: z.record(z.boolean()).optional(),

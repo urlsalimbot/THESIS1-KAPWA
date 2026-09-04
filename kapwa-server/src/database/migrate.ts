@@ -74,7 +74,8 @@ export async function migrate() {
   await q.query(`CREATE TABLE IF NOT EXISTS households ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), primary_beneficiary_id UUID REFERENCES beneficiaries(id), barangay TEXT, estimated_income DECIMAL(12,2), verified_by TEXT, access_card_code TEXT, verified_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`ALTER TABLE households ADD COLUMN IF NOT EXISTS access_card_code TEXT`);
   // family_members table removed — superseded by household_memberships (see below)
-  await q.query(`CREATE TABLE IF NOT EXISTS cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), control_no TEXT UNIQUE NOT NULL, beneficiary_id UUID REFERENCES beneficiaries(id), service_requested TEXT[], requirements_checklist JSONB, status TEXT CHECK (status IN ('enrolled','assessed','in_review','active','transitioning','closed')) DEFAULT 'enrolled', certificate_url TEXT, petty_cash_voucher_url TEXT, assigned_worker_id UUID, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), control_no TEXT UNIQUE NOT NULL, beneficiary_id UUID REFERENCES beneficiaries(id), renewal_of_case_id UUID, service_requested TEXT[], requirements_checklist JSONB, status TEXT CHECK (status IN ('enrolled','assessed','in_review','active','transitioning','closed')) DEFAULT 'enrolled', certificate_url TEXT, petty_cash_voucher_url TEXT, assigned_worker_id UUID, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS renewal_of_case_id UUID`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS problems_presented TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS social_worker_assessment TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS client_category TEXT`);

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper } from '@/components/case-view/CaseStepper';
+import { CaseAccessCardPanel } from '@/components/case-view/CaseAccessCardPanel';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
 import { StepImplementHIP } from '@/components/case-view/StepImplementHIP';
 import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDelivery';
@@ -259,11 +260,46 @@ export function CaseViewPage() {
                 <p className="text-sm text-muted-foreground">
                   {t('cases.createdUpdated', 'Created {{created}} · Updated {{updated}}', { created: formatDate(caseData.createdAt), updated: formatDate(caseData.updatedAt) })}
                 </p>
+                {caseData.renewalOfCaseId && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t('cases.renewalOf', 'Renewal of case')}{' '}
+                    <button className="text-primary underline underline-offset-2" onClick={() => navigate(`/cases/${caseData.renewalOfCaseId}`)}>
+                      {String(caseData.renewalOfCaseId).slice(0, 8)}…
+                    </button>
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant={STATUS_BADGES[caseData.status] || 'outline'} className="text-sm px-3 py-1">
                   {statusLabel(t, caseData.status)}
                 </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => navigate('/intake', {
+                    state: {
+                      renewalOfCaseId: id,
+                      prefill: {
+                        surname: (ben?.surname as string) || '', firstName: (ben?.firstName as string) || '',
+                        middleName: (ben?.middleName as string) || '', gender: (ben?.gender as string) || '',
+                        dob: (ben?.dob as string) || '', placeOfBirth: (ben?.placeOfBirth as string) || '',
+                        civilStatus: (ben?.civilStatus as string) || '', cellularNumber: (ben?.phone as string) || '',
+                        occupation: (ben?.occupation as string) || '',
+                        estimatedMonthlyIncome: (ben?.estimatedMonthlyIncome as number)?.toString() || '',
+                        philhealthNumber: (ben?.philhealthNumber as string) || '',
+                        familyMembers: (famGraph?.members || []).map((m: any) => ({
+                          id: m.id, surname: m.surname ?? '', firstName: m.firstName ?? '',
+                          middleName: m.middleName ?? '', extension: m.extension ?? '', gender: m.gender ?? '',
+                          dob: m.dob ?? '', relationship: m.relationship ?? '', occupation: m.occupation ?? '',
+                          income: m.income != null ? String(m.income) : '', status: m.status ?? '', done: false,
+                        })),
+                      },
+                    },
+                  })}
+                >
+                  <Plus size={14} /> {t('cases.renewCase', 'Renew Case')}
+                </Button>
                 {caseData.status === 'closed' && (
                   <Button
                     variant="outline"
@@ -328,44 +364,62 @@ export function CaseViewPage() {
                   <span className="text-muted-foreground text-xs">{t('cases.fullName', 'Full Name')}</span>
                   <p className="font-medium">{ben.firstName} {ben.middleName || ''} {ben.surname}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.gender', 'Gender')}</span>
-                    <p>{ben.gender || '—'}</p>
+                {(ben.gender || ageRange) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {ben.gender && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">{t('cases.gender', 'Gender')}</span>
+                        <p>{ben.gender}</p>
+                      </div>
+                    )}
+                    {ageRange && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">{t('cases.age', 'Age')}</span>
+                        <p>{ageRange}</p>
+                      </div>
+                    )}
                   </div>
+                )}
+                {dob && (
                   <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.age', 'Age')}</span>
-                    <p>{ageRange || '—'}</p>
+                    <span className="text-muted-foreground text-xs">{t('cases.dateOfBirth', 'Date of Birth')}</span>
+                    <p>{formatDate(dob)}</p>
                   </div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">{t('cases.dateOfBirth', 'Date of Birth')}</span>
-                  <p>{dob ? formatDate(dob) : '—'}</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
-                    <p>{ben.address || '—'}</p>
+                )}
+                {ben.address && (
+                  <div className="flex items-start gap-2">
+                    <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+                    <div>
+                      <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
+                      <p>{ben.address}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone size={14} className="shrink-0 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.phone', 'Phone')}</span>
-                    <p>{ben.phone || '—'}</p>
+                )}
+                {ben.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone size={14} className="shrink-0 text-muted-foreground" />
+                    <div>
+                      <span className="text-muted-foreground text-xs">{t('cases.phone', 'Phone')}</span>
+                      <p>{ben.phone}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.philsysNumber', 'Philsys #')}</span>
-                    <p>{ben.philsysNumber || '—'}</p>
+                )}
+                {(ben.philsysNumber || ben.accessCardCode) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {ben.philsysNumber && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">{t('cases.philsysNumber', 'Philsys #')}</span>
+                        <p>{ben.philsysNumber}</p>
+                      </div>
+                    )}
+                    {ben.accessCardCode && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">{t('cases.accessCard', 'Access Card')}</span>
+                        <p>{ben.accessCardCode}</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.accessCard', 'Access Card')}</span>
-                    <p>{ben.accessCardCode || '—'}</p>
-                  </div>
-                </div>
+                )}
               </div>
               <Separator />
               <div className="px-5 py-3">
@@ -380,6 +434,9 @@ export function CaseViewPage() {
               </div>
             </div>
           )}
+
+          {/* Access Card Ledger — payouts & compliance accounted on the card */}
+          <CaseAccessCardPanel beneficiaryId={ben?.id ?? ''} cardCode={ben?.accessCardCode} />
 
           {/* Documents card */}
           {ben && (
@@ -515,10 +572,12 @@ export function CaseViewPage() {
               </div>
               <Separator />
               <div className="px-4 py-3 space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} className="shrink-0 text-muted-foreground" />
-                  <span>{household.barangay || '—'}</span>
-                </div>
+                {household.barangay && (
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} className="shrink-0 text-muted-foreground" />
+                    <span>{household.barangay}</span>
+                  </div>
+                )}
                 {household.estimatedIncome && (
                   <div>
                     <span className="text-muted-foreground text-xs">{t('cases.estimatedIncome', 'Estimated Income')}</span>
