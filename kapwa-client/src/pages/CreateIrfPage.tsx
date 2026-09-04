@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
 import { api } from '../lib/api';
@@ -27,6 +27,14 @@ export function CreateIrfPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // IRFs are only created within a case — a missing caseId means the page
+  // was reached without one, so bounce back to the case list.
+  if (!caseId) {
+    return <Navigate to="/cases" replace />;
+  }
+
+  const backToCase = { label: t('cases.viewCase', 'Back to Case'), onClick: () => navigate(`/cases/${caseId}`) };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -35,7 +43,7 @@ export function CreateIrfPage() {
         caseCategory: form.caseCategory,
         narration: form.narration,
         datetimeIncident: form.incidentDate || undefined,
-        caseId: caseId || undefined,
+        caseId,
         itemAReportingPerson: { name: form.reporterName, contact: form.reporterContact },
         itemBPersonReported: form.reportedPersonName
           ? { name: form.reportedPersonName, contact: form.reportedPersonContact || undefined }
@@ -43,7 +51,7 @@ export function CreateIrfPage() {
       });
       toast.success(t('irf.created', 'IRF created'), { description: t('irf.createdDesc', 'Incident report has been filed.') });
       globalMutate(queryKeys.irf.list());
-      navigate('/irf');
+      navigate(`/cases/${caseId}`);
     } catch (err) {
       console.error(err);
       toast.error(t('irf.createFailed', 'Failed to create IRF'), { description: t('irf.checkInput', 'Please check your input and try again.') });
@@ -56,7 +64,7 @@ export function CreateIrfPage() {
     <PageShell
       title={t('irf.newTitle', 'New Incident Report')}
       description={t('irf.newDescription', 'VAWC / RA 9262 case — MSWDO Norzagaray')}
-      backTo={{ label: t('irf.irfList', 'IRF List'), onClick: () => navigate('/irf') }}
+      backTo={backToCase}
     >
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Case Category + Incident Date */}
@@ -151,7 +159,7 @@ export function CreateIrfPage() {
           <Button type="submit" disabled={submitting} aria-label={t('irf.createIrf', 'Create IRF')} className="gap-2">
             {submitting ? t('irf.creating', 'Creating...') : t('irf.createIrf', 'Create IRF')}
           </Button>
-          <Button variant="outline" onClick={() => navigate('/irf')}>{t('irf.cancel', 'Cancel')}</Button>
+          <Button variant="outline" onClick={backToCase.onClick}>{t('irf.cancel', 'Cancel')}</Button>
         </div>
       </form>
     </PageShell>

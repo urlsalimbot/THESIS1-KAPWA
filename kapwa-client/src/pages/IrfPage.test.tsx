@@ -70,9 +70,10 @@ describe('IrfPage', () => {
     expect(await screen.findByText('Maria Santos')).toBeTruthy();
   });
 
-  it('renders + New IRF button', async () => {
+  it('does not render a standalone New IRF button (creation happens inside cases)', async () => {
     renderWithSWR(<IrfPage />);
-    expect(await screen.findByRole("button", { name: /new irf/i })).toBeTruthy();
+    await screen.findByText('Maria Santos');
+    expect(screen.queryByRole('button', { name: /new irf/i })).toBeNull();
   });
 
   it('has no a11y violations', async () => {

@@ -148,12 +148,7 @@ export function IrfPage() {
       description={t('irf.description', 'VAWC/RA 9262 cases — MSWDO Norzagaray')}
       cachedAt={lastSync ?? undefined}
     >
-      {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <Button variant="default" onClick={() => navigate('/irf/new')} aria-label={t('irf.newIrf', '+ New IRF')}>
-          {t('irf.newIrf', '+ New IRF')}
-        </Button>
-      </div>
+      {/* IRF creation happens within a case — no standalone entry point. */}
 
       {/* Data table / Empty state */}
       {!loading && irfs.length === 0 ? (
