@@ -45,6 +45,8 @@ describe('buildGisPdf', () => {
     expect(text).toContain('It is evident that the family is in dire need');
     expect(text).toContain('Maria Santos');
     expect(text).toContain('GENERAL INTAKE SHEET');
+    const pageCount = (text.match(/\/Type \/Page\b/g) ?? []).length;
+    expect(pageCount).toBeLessThanOrEqual(3);
   });
 
   it('never crashes on minimal data (blanks)', async () => {

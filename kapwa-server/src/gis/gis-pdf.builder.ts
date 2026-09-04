@@ -24,7 +24,7 @@ const LEFT = 50;
 const RIGHT = 545;
 const WIDTH = RIGHT - LEFT; // 495
 
-function fmtDate(v?: Date | string): string {
+export function fmtDate(v?: Date | string): string {
   if (!v) return '';
   const d = v instanceof Date ? v : new Date(v);
   if (Number.isNaN(d.getTime())) return '';
@@ -76,10 +76,6 @@ function lineField(doc: any, x: number, y: number, w: number, label: string, val
   doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555').text(label, x, y + 1, { width: w, ellipsis: true });
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
     .text(value || '', x + 1, y - 8, { width: w - 2, ellipsis: true });
-}
-
-function ensureSpace(doc: any, needed: number): void {
-  if (doc.y + needed > PAGE_BOTTOM) doc.addPage();
 }
 
 export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
@@ -138,6 +134,12 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- ID strip ----
   let y = 114;
+  const ensureSpace = (needed: number): void => {
+    if (doc.y + needed > PAGE_BOTTOM) {
+      doc.addPage();
+      y = doc.y;
+    }
+  };
   boxField(doc, LEFT, y, 95, 22, 'QN', '');
   boxField(doc, LEFT + 100, y, 120, 22, 'PCN', data.controlNo);
   boxField(doc, LEFT + 225, y, 70, 22, 'Time Start', '');
@@ -225,7 +227,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- Beneficiary category + assessment ----
   y += 90;
-  ensureSpace(doc, 160);
+  ensureSpace(160);
   sectionHeader(doc, 'Beneficiary Category', 'Nakasaad sa / Sama-samang ... ');
   const catBoxTop = y;
   doc.rect(LEFT, catBoxTop, 240, 120).lineWidth(0.5).strokeColor('#111').stroke();
@@ -246,7 +248,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   y = catBoxTop + 126;
 
   // ---- Family composition ----
-  ensureSpace(doc, 60);
+  ensureSpace(60);
   sectionHeader(doc, 'KOMPOSISYON NG PAMILYA', 'Family Composition');
   const famCols = [
     { label: 'Buong Pangalan (Complete Name)', w: 200 },
@@ -271,7 +273,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
     y += 18;
   }
   data.familyMembers.forEach(m => {
-    ensureSpace(doc, 18);
+    ensureSpace(18);
     let x = LEFT;
     const vals = [
       m.fullName, m.relationship ?? '', m.age != null ? String(m.age) : '',
@@ -290,6 +292,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- Page 2: needs assessment + assistance ----
   doc.addPage();
+  y = doc.y;
 
   sectionHeader(doc, 'Needs Assessment', '');
   const needsCols: Array<[string, string[]]> = [
@@ -311,18 +314,19 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- Assistance table ----
   y = nY + 90;
-  ensureSpace(doc, 40);
+  ensureSpace(40);
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('Assistance Rendered', LEFT, y);
   y += 12;
+  const assistCols = [
+    { label: 'No.', w: 24 },
+    { label: 'Provided', w: (WIDTH - 24) * 0.5 },
+    { label: 'Amount', w: (WIDTH - 24) * 0.25 },
+    { label: 'Fund Source', w: (WIDTH - 24) * 0.25 },
+  ];
   const drawAssistHeader = () => {
-    const aCols = [
-      { label: 'Provided', w: 0.5 * WIDTH },
-      { label: 'Amount', w: 0.25 * WIDTH },
-      { label: 'Fund Source', w: 0.25 * WIDTH },
-    ];
     let x = LEFT;
     doc.rect(LEFT, y, WIDTH, 12).fillColor('#e6e6e6').fill();
-    aCols.forEach(c => {
+    assistCols.forEach(c => {
       doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text(c.label, x + 2, y + 2.5, { width: c.w - 4 });
       doc.rect(x, y, c.w, 12).lineWidth(0.5).strokeColor('#999').stroke();
       x += c.w;
@@ -332,29 +336,28 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   drawAssistHeader();
   const assistRows = Math.max(3, data.interventions.length);
   for (let i = 0; i < assistRows; i++) {
-    ensureSpace(doc, 18);
+    ensureSpace(18);
     let x = LEFT;
     const row = data.interventions[i];
-    const vals = [row?.provided ?? '', row?.amount != null ? fmtMoney(row.amount) : '', row?.fundSource ?? ''];
-    const aCols = [0.5 * WIDTH, 0.25 * WIDTH, 0.25 * WIDTH];
-    aCols.forEach((w, bi) => {
-      doc.rect(x, y, w, 18).lineWidth(0.5).strokeColor('#999').stroke();
+    const vals = [String(i + 1), row?.provided ?? '', row?.amount != null ? fmtMoney(row.amount) : '', row?.fundSource ?? ''];
+    assistCols.forEach((c, bi) => {
+      doc.rect(x, y, c.w, 18).lineWidth(0.5).strokeColor('#999').stroke();
       doc.font('Helvetica').fontSize(8).fillColor('#111')
-        .text(vals[bi] || '', x + 2, y + 5, { width: w - 4, ellipsis: true });
-      x += w;
+        .text(vals[bi] || '', x + 2, y + 5, { width: c.w - 4, ellipsis: true });
+      x += c.w;
     });
     y += 18;
   }
 
   // ---- Declaration ----
   y += 10;
-  ensureSpace(doc, 80);
+  ensureSpace(80);
   doc.font('Helvetica-Oblique').fontSize(7.5).fillColor('#222')
     .text(DECLARATION_TEXT, LEFT, y, { width: WIDTH, lineGap: 3, align: 'justify' });
   y = doc.y + 14;
 
   // ---- Signatures ----
-  ensureSpace(doc, 90);
+  ensureSpace(90);
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('Interviewed by', LEFT + 100, y);
   doc.moveTo(LEFT, y + 16).lineTo(LEFT + 200, y + 16).lineWidth(0.5).strokeColor('#111').stroke();
   doc.font('Helvetica').fontSize(7).fillColor('#555')
@@ -378,7 +381,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   doc.font('Helvetica').fontSize(5.5).fillColor('#888')
     .text(
       'DSWD Field Office III, Municipal Social Welfare and Development Office | Norzagaray, Bulacan | Tel. (044) 963-2141 | www.dswd.gov.ph',
-      LEFT, 810, { align: 'center', width: WIDTH },
+      LEFT, 792, { align: 'center', width: WIDTH },
     );
 
   doc.end();
