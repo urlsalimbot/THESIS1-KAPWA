@@ -1,0 +1,8 @@
+# Local-only override for rootless Podman integration runs.
+# Rootless podman cannot bind host ports < 1024 (net.ipv4.ip_unprivileged_port_start=1024),
+# so drop the privileged 443:443 mapping; the app is reachable on http://localhost:8090.
+# Never commit — not tracked, and not part of the deployment path (deploy.sh targets the base compose).
+services:
+  caddy:
+    ports: !override
+      - "8090:80"
