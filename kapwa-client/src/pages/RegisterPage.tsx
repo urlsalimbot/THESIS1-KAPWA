@@ -73,6 +73,7 @@ export function RegisterPage() {
   const registerSchema = useMemo(() => makeRegisterSchema(t), [t]);
   const [serverError, setServerError] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [emailDelivered, setEmailDelivered] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<RegisterValues>({
@@ -95,7 +96,7 @@ export function RegisterPage() {
     setServerError('');
     setSubmitting(true);
     try {
-      await api.post('/auth/register', {
+      const res = await api.post<{ email: string; emailDelivered?: boolean }>('/auth/register', {
         firstName: values.firstName,
         middleName: values.middleName,
         lastName: values.lastName,
@@ -106,6 +107,7 @@ export function RegisterPage() {
         assignedBarangay: values.barangay,
         dob: values.dateOfBirth,
       });
+      setEmailDelivered(res?.emailDelivered !== false);
       setRegisteredEmail(values.email);
     } catch {
       toast.error(t('auth.registrationFailed', 'Registration failed'), { description: t('auth.registrationFailedDesc', 'Please check your information and try again.') });
@@ -131,6 +133,11 @@ export function RegisterPage() {
               <br />
               {t('auth.checkInboxToActivate', 'Please check your inbox and click the link to activate your account.')}
             </CardDescription>
+            {!emailDelivered && (
+              <div className="mt-3 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+                {t('auth.emailNotDelivered', 'The verification email could not be sent right now. Please contact the MSWDO office to activate your account.')}
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">

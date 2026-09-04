@@ -115,6 +115,29 @@ ssh <deploy-user>@<host> 'cd <DEPLOY_PATH> && ./deploy.sh'
 
 ---
 
+## Email / SMTP readiness (required before going live)
+
+Without SMTP the API runs in **log-only mode** — verification, password-reset and
+OTP emails are printed to logs and **never delivered**, so residents cannot
+activate accounts or reset passwords. The API warns loudly at boot in
+production when either value is missing.
+
+| Variable | Required | Notes |
+|---|---|---|
+| `EMAIL_HOST` | yes (live) | e.g. `smtp.your-provider.com` |
+| `EMAIL_PORT` | no | defaults to `587` (465 → TLS) |
+| `EMAIL_USER` / `EMAIL_PASS` | yes (live) | SMTP credentials |
+| `EMAIL_FROM` | no | e.g. `KAPWA MSWDO <noreply@your-domain.gov.ph>` |
+| `APP_URL` | **yes** | public origin, e.g. `https://kapwa.mswdo-norzagaray.gov.ph` — email links are built from it; without it links point to `http://localhost:5173` |
+| `NOTIF_WS_ORIGIN` | no | comma-separated allowed origins for the notifications WebSocket (defaults to localhost dev origins) |
+
+Set them in `/opt/kapwa/infra/.env.production` (rsync never touches it) and
+redeploy. On boot the API logs `SMTP transporter verified — email delivery
+enabled` when the connection check passes. A failed `transporter.verify()`
+appears as an error log immediately, not on the first send.
+
+---
+
 ## What deploy.sh actually does
 
 1. Validates `infra/.env.production` (JWT, MinIO, IRF key fail-fast).

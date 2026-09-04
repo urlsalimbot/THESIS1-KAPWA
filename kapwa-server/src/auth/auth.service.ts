@@ -150,9 +150,9 @@ export class AuthService {
       }
     }
 
-    await this.emailService.sendVerificationEmail(user.email, verificationToken);
+    const emailDelivered = await this.emailService.sendVerificationEmail(user.email, verificationToken);
 
-    const result: any = { message: 'Registration successful. Please check your email to verify your account.', email: user.email };
+    const result: any = { message: 'Registration successful. Please check your email to verify your account.', email: user.email, emailDelivered };
     if (personFound) {
       result.personMatched = true;
       result.contactType = contactType;
@@ -329,8 +329,8 @@ export class AuthService {
     const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await this.upsertToken(user.id, 'email_verification', { token: verificationToken, expiresAt: verificationTokenExpiresAt });
 
-    await this.emailService.sendVerificationEmail(user.email, verificationToken);
-    return { message: 'Verification email sent. Please check your inbox.' };
+    const emailDelivered = await this.emailService.sendVerificationEmail(user.email, verificationToken);
+    return { message: 'Verification email sent. Please check your inbox.', emailDelivered };
   }
 
   async forgotPassword(email: string) {
@@ -343,8 +343,8 @@ export class AuthService {
     const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await this.upsertToken(user.id, 'password_reset', { token: resetToken, expiresAt: resetTokenExpiresAt });
 
-    await this.emailService.sendForgotPasswordEmail(user.email, resetToken);
-    return { message: 'If an account with that email exists, a password reset link has been sent.' };
+    const emailDelivered = await this.emailService.sendForgotPasswordEmail(user.email, resetToken);
+    return { message: 'If an account with that email exists, a password reset link has been sent.', emailDelivered };
   }
 
   async resetPassword(token: string, newPassword: string) {

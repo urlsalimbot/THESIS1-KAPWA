@@ -36,6 +36,18 @@ async function bootstrap() {
         'IRF_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)'
       );
     }
+    if (!process.env.EMAIL_HOST) {
+      console.warn(
+        'PRODUCTION WARNING: EMAIL_HOST is not set — verification/reset/OTP emails are LOGGED ONLY and never delivered. ' +
+        'Set EMAIL_HOST/EMAIL_USER/EMAIL_PASS/EMAIL_FROM in infra/.env.production before going live.'
+      );
+    }
+    if (!process.env.APP_URL) {
+      console.warn(
+        'PRODUCTION WARNING: APP_URL is not set — email links will default to http://localhost:5173 and will be broken for users. ' +
+        'Set APP_URL to the public origin (e.g. https://kapwa.mswdo-norzagaray.gov.ph).'
+      );
+    }
   }
 
   await runMigrations();
