@@ -16,9 +16,10 @@ import { Person } from '../beneficiaries/person.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
+import { GisModule } from '../gis/gis.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseIntervention, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule],
+  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseIntervention, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule],
   controllers: [CasesController],
   providers: [CasesService, CasesExportService],
   exports: [CasesService]

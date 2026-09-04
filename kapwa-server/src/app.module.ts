@@ -25,6 +25,7 @@ import { SlaModule } from './sla/sla.module';
 import { OtpModule } from './otp/otp.module';
 import { MinioModule } from './minio/minio.module';
 import { IntakeModule } from './intake/intake.module';
+import { GisModule } from './gis/gis.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AgenciesModule } from './agencies/agencies.module';
@@ -90,6 +91,7 @@ import { AppController } from './app.controller';
     OtpModule,
     MinioModule,
     IntakeModule,
+    GisModule,
     ReferralsModule,
     AnnouncementsModule,
     AgenciesModule,

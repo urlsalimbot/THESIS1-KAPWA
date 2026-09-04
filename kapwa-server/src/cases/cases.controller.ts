@@ -4,6 +4,7 @@ import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
+import { GisExportService } from '../gis/gis-export.service';
 import { CaseStatus } from './case.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedRequest } from '../auth/types';
@@ -41,6 +42,7 @@ export class CasesController {
   constructor(
     private casesService: CasesService,
     private casesExportService: CasesExportService,
+    private gisExportService: GisExportService,
   ) {}
 
   @Get()
@@ -213,6 +215,18 @@ export class CasesController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="CSR-${id}.pdf"`,
+      'Content-Length': pdf.length,
+    });
+    res.end(pdf);
+  }
+
+  @Get(':id/gis-pdf')
+  @Roles('admin', 'social_worker')
+  async downloadGisPdf(@Param('id') id: string, @Res() res: any) {
+    const pdf = await this.gisExportService.generateGisPdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="GIS-${id}.pdf"`,
       'Content-Length': pdf.length,
     });
     res.end(pdf);
