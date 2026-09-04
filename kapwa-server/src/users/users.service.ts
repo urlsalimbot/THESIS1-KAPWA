@@ -36,10 +36,11 @@ export class UsersService {
     return assignments;
   }
 
-  async findAll(search?: string, role?: string, page = 1, limit = DEFAULT_PAGE_SIZE) {
+  async findAll(search?: string, role?: string, isActive?: boolean, page = 1, limit = DEFAULT_PAGE_SIZE) {
     const where: FindOptionsWhere<User> = {};
     if (search) where.email = ILike(`%${search}%`);
     if (role) where.role = role as UserRole;
+    if (isActive !== undefined) where.isActive = isActive;
     const [data, total] = await this.userRepo.findAndCount({
       where,
       order: { createdAt: 'DESC' },

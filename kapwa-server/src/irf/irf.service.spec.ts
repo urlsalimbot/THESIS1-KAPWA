@@ -59,7 +59,7 @@ describe('IrfService', () => {
       repoMock.findOne.mockResolvedValueOnce({ id: 'irf-1', encryptedNarration: Buffer.from([1, 2, 3]), caseDisposition: IrfDisposition.UNDER_INVESTIGATION });
       repoMock.query.mockResolvedValueOnce(undefined); // pgcrypto encrypt UPDATE
 
-      const input = { caseCategory: 'Abuse' as any, narration: 'Victim statement' };
+      const input = { caseCategory: 'Abuse' as any, narration: 'Victim statement', caseId: 'case-1' };
       const result = await service.create(input);
 
       expect(result).toBeDefined();

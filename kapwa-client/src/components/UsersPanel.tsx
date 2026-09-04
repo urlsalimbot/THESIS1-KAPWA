@@ -2,7 +2,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { mutate } from 'swr';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
-import { Search, Plus, RotateCcw, Pencil, Trash2 } from 'lucide-react';
+import { Search, RotateCcw, Pencil, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
@@ -28,6 +28,7 @@ import type { TFunction } from 'i18next';
 interface AppUser {
   id: string; email: string; fullName: string; role: string;
   assignedBarangay: string; isActive: boolean; createdAt: string;
+  firstName?: string; middleName?: string; lastName?: string; nameExtension?: string;
   phone?: string; permittedBarangays?: string[]; agencyId?: string;
 }
 
@@ -97,37 +98,28 @@ export default function UsersPanel() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Edit form state
-  const [editFullName, setEditFullName] = useState('');
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editMiddleName, setEditMiddleName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editNameExtension, setEditNameExtension] = useState('');
   const [editRole, setEditRole] = useState('');
   const [editBarangay, setEditBarangay] = useState('');
   const [editPermittedBarangays, setEditPermittedBarangays] = useState('');
   const [editAgencyId, setEditAgencyId] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  // Create form state
-  const [showCreate, setShowCreate] = useState(false);
-  const [formEmail, setFormEmail] = useState('');
-  const [formPassword, setFormPassword] = useState('');
-  const [formFullName, setFormFullName] = useState('');
-  const [formRole, setFormRole] = useState('social_worker');
-  const [formPhone, setFormPhone] = useState('');
-  const [formBarangay, setFormBarangay] = useState('');
-  const [formPermittedBarangays, setFormPermittedBarangays] = useState('');
-  const [createAgencyId, setCreateAgencyId] = useState('');
-  const [formSubmitting, setFormSubmitting] = useState(false);
-  const [formSuccess, setFormSuccess] = useState('');
-  const [formError, setFormError] = useState('');
-
   const effectiveRole = roleFilter === 'all' ? undefined : roleFilter;
+  const effectiveStatus = statusFilter === 'all' ? undefined : statusFilter;
 
   const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(queryKeys.agencies.list());
 
   const { data: response, isLoading } = useSWR<UsersResponse>(
-    ['users', search, effectiveRole, pagination.pageIndex + 1, pagination.pageSize] as const,
-    ([_key, s, r, p, l]: readonly [string, string, string | undefined, number, number]) => {
+    ['users', search, effectiveRole, effectiveStatus, pagination.pageIndex + 1, pagination.pageSize] as const,
+    ([_key, s, r, st, p, l]: readonly [string, string, string | undefined, string | undefined, number, number]) => {
       const params = new URLSearchParams();
       if (s) params.set('search', s);
       if (r) params.set('role', r);
+      if (st) params.set('status', st);
       params.set('page', String(p));
       params.set('limit', String(l));
       return api.get(`/users?${params.toString()}`);
@@ -153,7 +145,10 @@ export default function UsersPanel() {
 
   function openEdit(user: AppUser) {
     setEditUser(user);
-    setEditFullName(user.fullName || '');
+    setEditFirstName(user.firstName || '');
+    setEditMiddleName(user.middleName || '');
+    setEditLastName(user.lastName || '');
+    setEditNameExtension(user.nameExtension || '');
     setEditRole(user.role);
     setEditBarangay(user.assignedBarangay || '');
     setEditPermittedBarangays((user.permittedBarangays || []).join(', '));
@@ -165,7 +160,10 @@ export default function UsersPanel() {
     setEditSaving(true);
     try {
       const body: Record<string, unknown> = {
-        fullName: editFullName,
+        firstName: editFirstName,
+        middleName: editMiddleName,
+        lastName: editLastName,
+        nameExtension: editNameExtension,
         role: editRole,
       };
       if (editBarangay) body.assignedBarangay = editBarangay;
@@ -200,42 +198,6 @@ export default function UsersPanel() {
       undefined,
       { revalidate: true },
     );
-  }
-
-  async function createUser(e: React.FormEvent) {
-    e.preventDefault();
-    setFormSubmitting(true);
-    setFormSuccess('');
-    setFormError('');
-    try {
-      const body: Record<string, unknown> = {
-        email: formEmail,
-        password: formPassword,
-        role: formRole,
-      };
-      if (formFullName) body.full_name = formFullName;
-      if (formPhone) body.phone = formPhone;
-      if (formBarangay) body.assigned_barangay = formBarangay;
-      if (formPermittedBarangays.trim()) {
-        body.permitted_barangays = formPermittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
-      }
-      if (createAgencyId) body.agency_id = createAgencyId;
-      const data = await api.post<{ user?: { email?: string } }>('/users', body);
-      setFormSuccess(t('usersPanel.userCreated', 'User {{email}} created successfully', { email: data.user?.email || formEmail }));
-      setFormEmail('');
-      setFormPassword('');
-      setFormFullName('');
-      setFormRole('social_worker');
-      setFormPhone('');
-      setFormBarangay('');
-      setFormPermittedBarangays('');
-      setCreateAgencyId('');
-      await revalidate();
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : t('usersPanel.createFailed', 'Failed to create user'));
-    } finally {
-      setFormSubmitting(false);
-    }
   }
 
   const columns: ColumnDef<AppUser>[] = [
@@ -362,88 +324,6 @@ export default function UsersPanel() {
         </CardContent>
       </Card>
 
-      {/* Create / New User */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm">{t('usersPanel.createNewUser', 'Create New User')}</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => setShowCreate(!showCreate)}>
-            {showCreate ? t('usersPanel.hide', 'Hide') : <><Plus size={14} className="mr-1" /> {t('usersPanel.newUser', 'New User')}</>}
-          </Button>
-        </CardHeader>
-        {showCreate && (
-          <CardContent>
-            {formSuccess && (
-              <div className="mb-4 rounded bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{formSuccess}</div>
-            )}
-            {formError && (
-              <div className="mb-4 rounded bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{formError}</div>
-            )}
-            <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="panel-email">{t('usersPanel.email', 'Email')} *</Label>
-                <Input id="panel-email" type="email" required value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="user@example.com" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="panel-password">{t('usersPanel.password', 'Password')} *</Label>
-                <Input id="panel-password" type="password" required minLength={8} value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder={t('usersPanel.minChars', 'Min 8 characters')} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="panel-name">{t('usersPanel.fullName', 'Full Name')}</Label>
-                <Input id="panel-name" value={formFullName} onChange={e => setFormFullName(e.target.value)} placeholder="Juan Dela Cruz" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="panel-role">{t('usersPanel.roleCol', 'Role')} *</Label>
-                <Select value={formRole} onValueChange={setFormRole}>
-                  <SelectTrigger id="panel-role" className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLE_OPTIONS.map((r) => (
-                      <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {formRole === 'agency_staff' && (
-                <div className="space-y-1">
-                  <Label htmlFor="panel-agency">{t('usersPanel.agency', 'Agency')} *</Label>
-                  <Select value={createAgencyId} onValueChange={setCreateAgencyId}>
-                    <SelectTrigger id="panel-agency" className="h-10">
-                      <SelectValue placeholder={t('usersPanel.selectAgency', 'Select agency...')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(agencies || []).map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className="space-y-1">
-                <Label htmlFor="panel-phone">{t('usersPanel.phone', 'Phone')}</Label>
-                <Input id="panel-phone" value={formPhone} onChange={e => setFormPhone(e.target.value)} placeholder="09171234567" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="panel-barangay">{t('usersPanel.assignedBarangay', 'Assigned Barangay')}</Label>
-                <Input id="panel-barangay" value={formBarangay} onChange={e => setFormBarangay(e.target.value)} placeholder="Norzagaray" />
-              </div>
-              <div className="md:col-span-2 space-y-1">
-                <Label htmlFor="panel-barangays">{t('usersPanel.permittedBarangays', 'Permitted Barangays (comma-separated)')}</Label>
-                <Input id="panel-barangays" value={formPermittedBarangays} onChange={e => setFormPermittedBarangays(e.target.value)} placeholder="Norzagaray, Angat, San Jose" />
-              </div>
-              <div className="md:col-span-2 flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={formSubmitting || (formRole === 'agency_staff' && !createAgencyId)}
-                >
-                  {formSubmitting ? t('usersPanel.creating', 'Creating...') : t('usersPanel.createUser', 'Create User')}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        )}
-      </Card>
-
       {/* User Table */}
       <DataTable
         columns={columns}
@@ -466,9 +346,23 @@ export default function UsersPanel() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label htmlFor="edit-name">{t('usersPanel.fullName', 'Full Name')}</Label>
-              <Input id="edit-name" value={editFullName} onChange={e => setEditFullName(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="edit-first">{t('auth.firstName', 'First Name')}</Label>
+                <Input id="edit-first" value={editFirstName} onChange={e => setEditFirstName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-middle">{t('auth.middleName', 'Middle Name')}</Label>
+                <Input id="edit-middle" value={editMiddleName} onChange={e => setEditMiddleName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-last">{t('auth.lastName', 'Last Name')}</Label>
+                <Input id="edit-last" value={editLastName} onChange={e => setEditLastName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-ext">{t('auth.nameExtension', 'Name Extension')}</Label>
+                <Input id="edit-ext" value={editNameExtension} onChange={e => setEditNameExtension(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-1">
               <Label htmlFor="edit-role">{t('usersPanel.roleCol', 'Role')}</Label>

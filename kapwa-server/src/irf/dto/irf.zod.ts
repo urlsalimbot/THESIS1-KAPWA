@@ -5,7 +5,7 @@ export const CreateIrfSchema = z.object({
   caseCategory: z.nativeEnum(IrfCategory),
   datetimeReported: z.string().optional(),
   datetimeIncident: z.string().optional(),
-  caseId: z.string().optional(),
+  caseId: z.string().min(1, 'IRF must be created within a case'),
   itemAReportingPerson: z.record(z.any()).optional(),
   itemBPersonReported: z.record(z.any()).optional(),
   narration: z.string().optional(),

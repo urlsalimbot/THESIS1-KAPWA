@@ -29,8 +29,9 @@ export class UsersController {
   @Get()
   @Roles('admin')
   @ApiOperation({ summary: 'List all users' })
-  async findAll(@Query('search') search?: string, @Query('role') role?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
-    return this.usersService.findAll(search, role, page ? parseInt(page) : 1, limit ? parseInt(limit) : DEFAULT_PAGE_SIZE);
+  async findAll(@Query('search') search?: string, @Query('role') role?: string, @Query('status') status?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
+    const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
+    return this.usersService.findAll(search, role, isActive, page ? parseInt(page) : 1, limit ? parseInt(limit) : DEFAULT_PAGE_SIZE);
   }
 
   @Get(':id')

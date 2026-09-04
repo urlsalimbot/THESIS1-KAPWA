@@ -127,7 +127,7 @@ describe('UsersService', () => {
       ];
       mockRepo.findAndCount.mockResolvedValue([users, 2]);
 
-      const result = await service.findAll(undefined, undefined, 1, 10);
+      const result = await service.findAll(undefined, undefined, undefined, 1, 10);
 
       expect(mockRepo.findAndCount).toHaveBeenCalled();
       expect(result.data).toHaveLength(2);
@@ -150,7 +150,7 @@ describe('UsersService', () => {
       ];
       mockRepo.findAndCount.mockResolvedValue([users, 1]);
 
-      const result = await service.findAll(undefined, undefined, 1, 10);
+      const result = await service.findAll(undefined, undefined, undefined, 1, 10);
 
       expect(result.data[0]).not.toHaveProperty('tokens');
       expect(result.data[0]).not.toHaveProperty('mfaSecret');
