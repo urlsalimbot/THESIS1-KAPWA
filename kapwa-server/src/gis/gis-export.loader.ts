@@ -58,7 +58,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
   });
 
   const mapPerson = (p: any): { sex: string; dob?: Date; address: GisAddressData } => ({
-    sex: asText(p?.gender) || 'Male',
+    sex: asText(p?.gender),
     dob: p?.dob ? new Date(p.dob) : undefined,
     address: addressOf(p),
   });

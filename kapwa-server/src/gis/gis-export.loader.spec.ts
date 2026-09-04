@@ -79,6 +79,7 @@ describe('loadGisData', () => {
     const data = await loadGisData(deps, 'c1');
     expect(data.controlNo).toBe('KAPWA-2026-0001');
     expect(data.beneficiary.surname).toBe('');
+    expect(data.beneficiary.sex).toBe('');
   });
 
   it('flags renewal when renewalOfCaseId is set', async () => {
