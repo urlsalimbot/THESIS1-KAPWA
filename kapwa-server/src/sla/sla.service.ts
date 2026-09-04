@@ -31,7 +31,6 @@ export class SlaService {
       where: { status: CaseStatus.ENROLLED },
     });
     for (const c of pendingOverdue) {
-      if (c.status !== CaseStatus.ENROLLED) continue;
       const age = this.workingDays(c.createdAt, new Date());
       if (age >= PENDING_ESCALATION_DAYS && c.assignedWorkerId) {
         await this.createAlert(c, 'pending_assessment', 'Coordinator review required — case pending assessment > 3 days');
@@ -46,7 +45,6 @@ export class SlaService {
       where: { status: CaseStatus.IN_REVIEW },
     });
     for (const c of reviewOverdue) {
-      if (c.status !== CaseStatus.IN_REVIEW) continue;
       const age = this.workingDays(c.createdAt, new Date());
       if (age >= REVIEW_ESCALATION_DAYS) {
         await this.createAlert(c, 'in_review', 'MSWDO Head review required — case in review > 3 days');
@@ -116,14 +114,15 @@ export class SlaService {
     const admins = await this.caseRepo.query(
       `SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE`
     );
-    const recipientId = (admins[0] as { id?: string } | undefined)?.id ?? '';
-    await this.notifRepo.save({
-      recipientId,
-      title: `SLA Escalation: ${c.controlNo}`,
-      message: `${message} — Case ${c.controlNo} (${this.statusLabel(stage)})`,
-      category: NotificationCategory.SLA_ESCALATION,
-      referenceId: c.id,
-    } as any);
+    for (const admin of admins) {
+      await this.notifRepo.save({
+        recipientId: admin.id,
+        title: `SLA Escalation: ${c.controlNo}`,
+        message: `${message} — Case ${c.controlNo} (${this.statusLabel(stage)})`,
+        category: NotificationCategory.SLA_ESCALATION,
+        referenceId: c.id,
+      } as any);
+    }
   }
 
   private workingDays(start: Date, end: Date): number {

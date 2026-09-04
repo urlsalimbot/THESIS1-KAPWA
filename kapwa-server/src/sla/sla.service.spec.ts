@@ -40,16 +40,21 @@ describe('SlaService', () => {
   const date = (d: string) => new Date(`${d}T00:00:00Z`);
 
   it('escalates an active case at the program waiting period and warns one day earlier', async () => {
-    caseRepo.find.mockResolvedValue([
-      activeCase('c-esc', date('2026-08-31')), // 5 working days
-      activeCase('c-warn', date('2026-09-01')), // 4 working days
-      activeCase('c-ok', date('2026-09-02')),   // 3 working days
-    ]);
-    caseRepo.query.mockResolvedValue([
-      { case_id: 'c-esc', waiting_period_days: '5' },
-      { case_id: 'c-warn', waiting_period_days: '5' },
-      { case_id: 'c-ok', waiting_period_days: '5' },
-    ]);
+    caseRepo.find
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        activeCase('c-esc', date('2026-08-31')), // 5 working days
+        activeCase('c-warn', date('2026-09-01')), // 4 working days
+        activeCase('c-ok', date('2026-09-02')),   // 3 working days
+      ]);
+    caseRepo.query
+      .mockResolvedValueOnce([
+        { case_id: 'c-esc', waiting_period_days: '5' },
+        { case_id: 'c-warn', waiting_period_days: '5' },
+        { case_id: 'c-ok', waiting_period_days: '5' },
+      ])
+      .mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
 
@@ -57,14 +62,19 @@ describe('SlaService', () => {
     expect(result.warnings).toBe(1);
     expect(notifRepo.save).toHaveBeenCalledTimes(2);
     const titles = (notifRepo.save as jest.Mock).mock.calls.map((c: any[]) => c[0].title);
-    expect(titles.some((t: string) => t.includes('c-esc'.length ? 'SLA Escalation' : ''))).toBe(true);
+    expect(titles.some((t: string) => t.includes('SLA Escalation'))).toBe(true);
   });
 
   it('falls back to global thresholds when the program has no waiting period', async () => {
-    caseRepo.find.mockResolvedValue([
-      activeCase('c-esc', date('2026-09-01')), // 4 working days — above global escalation of 3
-    ]);
-    caseRepo.query.mockResolvedValue([{ case_id: 'c-esc', waiting_period_days: null }]);
+    caseRepo.find
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        activeCase('c-esc', date('2026-09-01')), // 4 working days — above global escalation of 3
+      ]);
+    caseRepo.query
+      .mockResolvedValueOnce([{ case_id: 'c-esc', waiting_period_days: null }])
+      .mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
 
@@ -75,10 +85,15 @@ describe('SlaService', () => {
   });
 
   it('warns at the global threshold when the case has no program at all', async () => {
-    caseRepo.find.mockResolvedValue([
-      activeCase('c-warn', date('2026-09-02')), // 3 working days → global warning is 2, escalation 3
-    ]);
-    caseRepo.query.mockResolvedValue([]);
+    caseRepo.find
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        activeCase('c-warn', date('2026-09-02')), // 3 working days → global warning is 2, escalation 3
+      ]);
+    caseRepo.query
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
 
@@ -91,6 +106,7 @@ describe('SlaService', () => {
       .mockResolvedValueOnce([{ id: 'c-enrolled', status: CaseStatus.ENROLLED, assignedWorkerId: 'w1', createdAt: date('2026-09-01') }])
       .mockResolvedValueOnce([{ id: 'c-review', status: CaseStatus.IN_REVIEW, createdAt: date('2026-09-01') }])
       .mockResolvedValueOnce([]);
+    caseRepo.query.mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
 
