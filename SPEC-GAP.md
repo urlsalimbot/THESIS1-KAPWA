@@ -38,7 +38,7 @@
 | FR-25 | Immutable audit log (hash chain) | ⚠️ PARTIAL | SHA-256 hash chains on 3 tables (cases, beneficiaries, consent_ledger). No trigger preventing hash overwrite |
 | FR-26 | Remote data wipe on lost/stolen device | ❌ FAIL | No remote wipe endpoint or mechanism |
 | FR-27 | Admin tools: user mgmt, backup, sync queue monitoring | ⚠️ PARTIAL | Users CRUD + sync conflict management. No backup admin UI or sync monitoring dashboard |
-| FR-28 | Admin creates/edits intervention types with JSON metadata | ✅ PASS | intervention_types table created, seeded with FA/C/CSR/R/H/HV/Other |
+| FR-28 | Admin creates/edits intervention types with JSON metadata | ❌ FAIL | intervention_types table created but deprecated/removed (no entity, controller, or route; its backing `interventions` table was dropped in favor of `case_interventions`) |
 | FR-29 | Required documents via predefined code dictionary | ✅ PASS | DocumentVault.requirementKey, Program.requiredDocuments, requirementsChecklist JSONB |
 | FR-30 | Enforce document checklist before submission | ⚠️ PARTIAL | requirementsChecklist tracked. No enforcement preventing status transition when incomplete |
 | FR-31 | Config sync server-first; devices cache with version invalidation | ⚠️ PARTIAL | Generic sync via version vectors. No dedicated config sync mechanism |

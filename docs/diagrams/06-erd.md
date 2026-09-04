@@ -478,15 +478,6 @@ erDiagram
         jsonb details
         timestamp created_at
     }
-    intervention_types {
-        uuid id PK
-        varchar(10) code UK
-        varchar(100) name
-        text description
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
     irf_blotter_seq {
         serial id PK
         int year
@@ -510,13 +501,13 @@ Cross-cluster relationships that are not drawn (to keep each diagram page-sized)
 
 **Messaging (FR-08) — C8.** `chat_messages` and `notifications` address recipients by ID (`recipient_id` TEXT, logical reference to `users` / `persons`). `notification_preferences` controls per-user opt-in per channel/category, unique on `(user_id, channel, category)` — the index behind FR-08.
 
-**Audit & Sequences (FR-10, FR-15, FR-16) — C9.** `consent_ledger` is append-only: consent grants and revocations accumulate as rows, with `hash` / `prev_hash` forming an audit hash chain (FR-10); `otp_codes` and `audit_log` are supporting audit/verification tables. `intervention_types` is a code reference table (FA/C/CSR/R/H/HV/Other). `access_card_seq` and `irf_blotter_seq` are SERIAL-per-year counters (FR-16) used to mint unique `access_card_code` and `blotter_entry_number` values (FR-15).
+**Audit & Sequences (FR-10, FR-15, FR-16) — C9.** `consent_ledger` is append-only: consent grants and revocations accumulate as rows, with `hash` / `prev_hash` forming an audit hash chain (FR-10); `otp_codes` and `audit_log` are supporting audit/verification tables. `access_card_seq` and `irf_blotter_seq` are SERIAL-per-year counters (FR-16) used to mint unique `access_card_code` and `blotter_entry_number` values (FR-15).
 
 ## 5. Cross-References
 
 | Item | Location |
 |---|---|
-| All 29 active tables, columns, CHECK constraints, indexes | `DB-SCHEMA.md` (repo root) |
+| All 28 active tables, columns, CHECK constraints, indexes | `DB-SCHEMA.md` (repo root) |
 | Partial unique index `UQ_household_memberships_person_household` | `kapwa-server/src/database/migrations/20260805000001-AddUniqueHouseholdMembership.ts` |
 | `persons` | `kapwa-server/src/beneficiaries/person.entity.ts` |
 | `users` | `kapwa-server/src/auth/user.entity.ts` |
@@ -542,5 +533,4 @@ Cross-cluster relationships that are not drawn (to keep each diagram page-sized)
 | `sync_queue`, `version_vectors` | `kapwa-server/src/sync/sync-queue.entity.ts`, `version-vector.entity.ts` |
 | `idempotency_keys` | `kapwa-server/src/database/migrations/20260619000001-audit-hash-chain.ts` |
 | `audit_log` | `kapwa-server/src/database/migrations/20260622000005-IRFDispositionEncryption.ts` |
-| `intervention_types` | `kapwa-server/src/database/migrations/20260712000001-CreateInterventionTypesTable.ts` |
 | `access_card_seq`, `irf_blotter_seq` | `kapwa-server/src/database/migrations/0000000000002-AaaInitialSchema.ts` |

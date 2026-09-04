@@ -226,7 +226,7 @@ Catch-all `*` → `/`.
 `beneficiary_roles`, `cases`, `case_history`, `case_interventions`, `programs`,
 `form_version_history`, `referrals`, `irf_cases`, `access_card_services`, `csr_reports`,
 `document_vault`, `chat_messages`, `notifications`, `notification_preferences`, `consent_ledger`,
-`otp_codes`, `sync_queue`, `version_vectors`, `idempotency_keys`, `audit_log`, `intervention_types`,
+`otp_codes`, `sync_queue`, `version_vectors`, `idempotency_keys`, `audit_log`,
 `access_card_seq`, `irf_blotter_seq`, **`agencies`**, **`inter_agency_referrals`**,
 **`physical_files`**.
 

@@ -59,8 +59,6 @@ built on KAPWA's existing identity, consent, and audit foundations.
   coordinator + client identity fields. **This is intake referral, not inter-agency.**
 - `cases.referrals` JSONB: freeform `{agencyName, contactInfo, reason, status}` —
   the closest existing analog to inter-agency referral, but unstructured.
-- `intervention_types` includes `('R','Referral','Referral to external agency or
-  service provider')` (`20260712000001-CreateInterventionTypesTable.ts`).
 - `access_card_services.agency` — **freeform TEXT** agency name on service logs.
 - `irf-export.service.ts` (lines ~115, 144) and `irf.service.ts:246` — hardcode
   `'Agency: MSWDO Norzagaray'` for the IRF → WCPD/PNP export.

@@ -596,24 +596,7 @@
 
 ---
 
-### 27. `intervention_types` — Intervention type reference/lookup table
-*Created by: 20260712000001-CreateInterventionTypesTable*
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | UUID | PK, DEFAULT uuid_generate_v7() |
-| `code` | VARCHAR(10) | UNIQUE, NOT NULL |
-| `name` | VARCHAR(100) | NOT NULL |
-| `description` | TEXT | |
-| `is_active` | BOOLEAN | DEFAULT TRUE |
-| `created_at` | TIMESTAMP | DEFAULT NOW() |
-| `updated_at` | TIMESTAMP | DEFAULT NOW() |
-
-**Seed data**: 'FA' (Financial Assistance), 'C' (Cash Assistance), 'CSR' (Case Study Report), 'R' (Referral), 'H' (Home Visit), 'HV' (Home Visit Variation), 'Other' (Other Intervention)
-
----
-
-### 28. `access_card_seq` — Access card serial number sequence
+### 27. `access_card_seq` — Access card serial number sequence
 *Created by: 1740000000000-AaaInitialSchema*
 
 | Column | Type | Constraints |
@@ -624,7 +607,7 @@
 
 ---
 
-### 29. `irf_blotter_seq` — IRF blotter number sequence
+### 28. `irf_blotter_seq` — IRF blotter number sequence
 *Created by: 1740000000000-AaaInitialSchema*
 
 | Column | Type | Constraints |

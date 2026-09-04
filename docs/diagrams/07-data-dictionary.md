@@ -32,7 +32,7 @@ The functional requirements below cover all active tables:
 | FR-07 | Barangay coordinator referrals SHALL be stored in `referrals`; inter-agency referrals in `inter_agency_referrals` (linking person, case, from/to `agencies`) with a CHECK-constrained status lifecycle (`referred`, `received`, `actioned`, `closed`, `declined`). |
 | FR-08 | Access card services SHALL be logged in `access_card_services` referencing `beneficiaries.access_card_code` and optionally an `agencies` row via `agency_id`; unique codes SHALL be minted from `access_card_seq`. |
 | FR-09 | Documents SHALL be stored in `document_vault`, physical file locations in `physical_files` (one-to-one with an intervention), and Case Study Reports in `csr_reports` (unique `control_no`). |
-| FR-10 | Messaging SHALL be stored in `chat_messages`, notifications and per-user preferences in `notifications` / `notification_preferences`; consent events in `consent_ledger`; offline changes in `sync_queue`/`version_vectors`/`idempotency_keys`; verification and audit in `otp_codes`, `audit_log`, and `intervention_types`; blotter numbers SHALL be minted from `irf_blotter_seq` (`irf_cases` unique `blotter_entry_number`). |
+| FR-10 | Messaging SHALL be stored in `chat_messages`, notifications and per-user preferences in `notifications` / `notification_preferences`; consent events in `consent_ledger`; offline changes in `sync_queue`/`version_vectors`/`idempotency_keys`; verification and audit in `otp_codes`, `audit_log`; blotter numbers SHALL be minted from `irf_blotter_seq` (`irf_cases` unique `blotter_entry_number`). |
 
 ## 3. Tables
 
@@ -653,25 +653,7 @@ Generic audit trail of actions.
 | `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
 
 
-### 27. intervention_types — Intervention type reference/lookup table
-
-Reference table of intervention type codes.
-
-| Table Name: | `intervention_types` |
-| Primary Key: | `id` (UUID) |
-
-| Column Name | Data Type | Storage | Sample Data |
-|---|---|---|---|
-| `id` | UUID | 16 bytes | 019f1c77-296d-7ffc-9892-1acd27c4347f |
-| `code` | VARCHAR(10) | variable | 123456 |
-| `name` | VARCHAR(100) | variable | Medical Assistance |
-| `description` | TEXT | variable | Medical assistance program |
-| `is_active` | BOOLEAN | 1 byte | true |
-| `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
-| `updated_at` | TIMESTAMP | 8 bytes | 2026-08-04 09:00:00 |
-
-
-### 28. access_card_seq — Access card serial number sequence
+### 27. access_card_seq — Access card serial number sequence
 
 Per-year serial counter used to mint unique access card codes.
 
@@ -685,7 +667,7 @@ Per-year serial counter used to mint unique access card codes.
 | `created_at` | TIMESTAMP | 8 bytes | 2026-08-04 08:30:00 |
 
 
-### 29. irf_blotter_seq — IRF blotter number sequence
+### 28. irf_blotter_seq — IRF blotter number sequence
 
 Per-year serial counter used to mint unique blotter entry numbers.
 
