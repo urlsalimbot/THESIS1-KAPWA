@@ -4,6 +4,7 @@ import { AccessCardsService } from './access-cards.service';
 import { AccessCardService } from './access-card-service.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
+import { Agency } from '../agencies/agency.entity';
 
 describe('AccessCardsService', () => {
   let service: AccessCardsService;
@@ -11,6 +12,7 @@ describe('AccessCardsService', () => {
   let queryRunnerMock: any;
   let consentRepoMock: any;
   let referralRepoMock: any;
+  let agencyRepoMock: any;
 
   beforeEach(async () => {
     queryRunnerMock = {
@@ -36,12 +38,14 @@ describe('AccessCardsService', () => {
     };
     consentRepoMock = { findOne: jest.fn() };
     referralRepoMock = { find: jest.fn() };
+    agencyRepoMock = { findOne: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccessCardsService,
         { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
         { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepoMock },
+        { provide: getRepositoryToken(Agency), useValue: agencyRepoMock },
       ],
     }).compile();
     service = module.get<AccessCardsService>(AccessCardsService);
@@ -282,5 +286,95 @@ describe('AccessCardsService', () => {
       expect(result.servicesRendered).toEqual([]);
       expect(result.servicesFromOtherAgencies).toEqual([]);
     });
+  });
+
+  describe('autoLogFromIntervention', () => {
+    it('tags the service to the MSWDO office so the aide ledger can attribute it', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([{ id: 'c1', beneficiary_id: 'b1' }])
+        .mockResolvedValueOnce([{ id: 'b1', access_card_code: 'NORZ-AC-2026-0001' }]);
+      agencyRepoMock.findOne.mockResolvedValue({ id: 'ag-mswdo', code: 'MSWDO' });
+      repoMock.create.mockImplementation((dto: any) => dto);
+      repoMock.save.mockImplementation(async (dto: any) => ({ id: 'ac-1', ...dto }));
+
+      await service.autoLogFromIntervention({
+        caseId: 'c1',
+        serviceName: 'Financial Aid',
+        deliveryDate: '2026-08-01',
+        amount: 5000,
+      });
+
+      expect(repoMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accessCardCode: 'NORZ-AC-2026-0001',
+          serviceRendered: 'Financial Aid',
+          agencyId: 'ag-mswdo',
+          cost: 5000,
+          category: 'case_service',
+        }),
+      );
+      expect(repoMock.save).toHaveBeenCalled();
+    });
+
+    it('leaves agency id null when no active MSWDO agency exists', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([{ id: 'c1', beneficiary_id: 'b1' }])
+        .mockResolvedValueOnce([{ id: 'b1', access_card_code: 'NORZ-AC-2026-0001' }]);
+      agencyRepoMock.findOne.mockResolvedValue(undefined);
+      repoMock.create.mockImplementation((dto: any) => dto);
+      repoMock.save.mockImplementation(async (dto: any) => dto);
+
+      await service.autoLogFromIntervention({ caseId: 'c1', serviceName: 'Relief', amount: 1000 });
+
+      expect(repoMock.create).toHaveBeenCalledWith(expect.objectContaining({ agencyId: undefined }));
+    });
+
+    it('does nothing when the case or access card code is missing', async () => {
+      repoMock.query.mockResolvedValueOnce([]);
+      await service.autoLogFromIntervention({ caseId: 'nope', serviceName: 'X' });
+      expect(repoMock.save).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('AccessCardsService — ensureHouseholdCard', () => {
+  let service: AccessCardsService;
+  let repoMock: any;
+  let qrMock: any;
+
+  beforeEach(async () => {
+    qrMock = {
+      connect: jest.fn(), startTransaction: jest.fn(), commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(), release: jest.fn(), manager: { query: jest.fn() },
+    };
+    repoMock = {
+      query: jest.fn(),
+      manager: { connection: { createQueryRunner: jest.fn().mockReturnValue(qrMock) } },
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AccessCardsService,
+        { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
+        { provide: getRepositoryToken(ConsentLedger), useValue: { findOne: jest.fn() } },
+        { provide: getRepositoryToken(InterAgencyReferral), useValue: { find: jest.fn() } },
+        { provide: getRepositoryToken(Agency), useValue: { findOne: jest.fn() } },
+      ],
+    }).compile();
+    service = module.get(AccessCardsService);
+  });
+
+  it('returns the existing household card without generating a new one', async () => {
+    repoMock.query.mockResolvedValue([{ code: 'NORZ-AC-2026-0007' }]);
+    const code = await service.ensureHouseholdCard('b1');
+    expect(code).toBe('NORZ-AC-2026-0007');
+    expect(repoMock.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('generates and assigns a new card when none exists', async () => {
+    repoMock.query.mockResolvedValue([{ code: null }]);
+    qrMock.manager.query.mockResolvedValue([{ id: 42 }]);
+    const code = await service.ensureHouseholdCard('b1');
+    expect(code).toMatch(/^NORZ-AC-\d{4}-\d{4}$/);
+    expect(qrMock.manager.query).toHaveBeenCalledTimes(3);
   });
 });

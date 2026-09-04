@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { AccessCardService } from './access-card-service.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
+import { Agency } from '../agencies/agency.entity';
 import { User } from '../auth/user.entity';
 
 const ACCESS_CARD_PAD_WIDTH = 4;
@@ -16,6 +17,8 @@ export class AccessCardsService {
     private consentRepo: Repository<ConsentLedger>,
     @InjectRepository(InterAgencyReferral)
     private referralRepo: Repository<InterAgencyReferral>,
+    @InjectRepository(Agency)
+    private agencyRepo: Repository<Agency>,
   ) {}
 
   async generateAndAssign(beneficiaryId: string): Promise<string> {
@@ -51,6 +54,23 @@ export class AccessCardsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // Idempotent household-level assignment: returns the existing household (or
+  // person-role) card code when one exists, otherwise generates and assigns a
+  // new one. Used by intake so every household gets a card automatically.
+  async ensureHouseholdCard(beneficiaryId: string): Promise<string> {
+    const rows = await this.repo.query(
+      `SELECT COALESCE(h.access_card_code, br.access_card_code) AS code
+       FROM beneficiaries b
+       LEFT JOIN households h ON h.id = b.household_id
+       LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
+       WHERE b.id = $1
+       LIMIT 1`,
+      [beneficiaryId],
+    );
+    if (rows?.[0]?.code) return rows[0].code as string;
+    return this.generateAndAssign(beneficiaryId);
   }
 
   async getSummary(beneficiaryId: string) {
@@ -191,11 +211,15 @@ export class AccessCardsService {
       [caseRow[0].beneficiary_id]
     );
     if (!ben?.[0]?.access_card_code) return;
+    // Tag the auto-logged service to the MSWDO office so the inter-facility
+    // aide ledger can attribute financial/relief aid to the right facility.
+    const mswdo = await this.agencyRepo.findOne({ where: { code: 'MSWDO', isActive: true } });
     const entry = this.repo.create({
       accessCardCode: ben[0].access_card_code,
       serviceRendered: intervention.serviceName,
       serviceDate: intervention.deliveryDate ? new Date(intervention.deliveryDate) : new Date(),
       cost: intervention.amount,
+      agencyId: mswdo?.id,
       category: 'case_service',
     });
     await this.repo.save(entry);
