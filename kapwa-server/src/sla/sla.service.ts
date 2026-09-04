@@ -66,11 +66,12 @@ export class SlaService {
     let wpdByCase = new Map<string, number>();
     if (activeOverdue.length > 0) {
       const rows = await this.caseRepo.query(
-        `SELECT ci.case_id, p.waiting_period_days
+        `SELECT DISTINCT ON (ci.case_id) ci.case_id, p.waiting_period_days
          FROM case_interventions ci
          JOIN programs p ON p.id = ci.program_id
          WHERE ci.case_id = ANY($1)
-           AND p.waiting_period_days IS NOT NULL`,
+           AND p.waiting_period_days IS NOT NULL
+         ORDER BY ci.case_id, ci.created_at DESC`,
         [activeOverdue.map(c => c.id)],
       );
       wpdByCase = new Map(

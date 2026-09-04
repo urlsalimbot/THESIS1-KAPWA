@@ -63,6 +63,8 @@ describe('SlaService', () => {
     expect(notifRepo.save).toHaveBeenCalledTimes(2);
     const titles = (notifRepo.save as jest.Mock).mock.calls.map((c: any[]) => c[0].title);
     expect(titles.some((t: string) => t.includes('SLA Escalation'))).toBe(true);
+    const messages = (notifRepo.save as jest.Mock).mock.calls.map((c: any[]) => c[0].message);
+    expect(messages.some((m: string) => m.includes('> 5 days'))).toBe(true);
   });
 
   it('falls back to global thresholds when the program has no waiting period', async () => {
@@ -73,7 +75,7 @@ describe('SlaService', () => {
         activeCase('c-esc', date('2026-09-01')), // 4 working days — above global escalation of 3
       ]);
     caseRepo.query
-      .mockResolvedValueOnce([{ case_id: 'c-esc', waiting_period_days: null }])
+      .mockResolvedValueOnce([])
       .mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
@@ -84,7 +86,7 @@ describe('SlaService', () => {
     );
   });
 
-  it('warns at the global threshold when the case has no program at all', async () => {
+  it('escalates at the global threshold when the case has no program at all', async () => {
     caseRepo.find
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
