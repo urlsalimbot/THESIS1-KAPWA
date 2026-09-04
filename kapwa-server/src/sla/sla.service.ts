@@ -31,6 +31,7 @@ export class SlaService {
       where: { status: CaseStatus.ENROLLED },
     });
     for (const c of pendingOverdue) {
+      if (c.status !== CaseStatus.ENROLLED) continue;
       const age = this.workingDays(c.createdAt, new Date());
       if (age >= PENDING_ESCALATION_DAYS && c.assignedWorkerId) {
         await this.createAlert(c, 'pending_assessment', 'Coordinator review required — case pending assessment > 3 days');
@@ -45,6 +46,7 @@ export class SlaService {
       where: { status: CaseStatus.IN_REVIEW },
     });
     for (const c of reviewOverdue) {
+      if (c.status !== CaseStatus.IN_REVIEW) continue;
       const age = this.workingDays(c.createdAt, new Date());
       if (age >= REVIEW_ESCALATION_DAYS) {
         await this.createAlert(c, 'in_review', 'MSWDO Head review required — case in review > 3 days');
@@ -55,16 +57,41 @@ export class SlaService {
       }
     }
 
+    // ACTIVE cases carry ≥1 intervention (FSM gate), so the program is resolved
+    // via case_interventions.program_id. SLA thresholds then come from the
+    // program's waiting_period_days (escalation = waiting period, warning = one
+    // working day earlier); programs without it fall back to the global
+    // APPROVED_* constants.
     const activeOverdue = await this.caseRepo.find({
       where: { status: CaseStatus.ACTIVE },
     });
+    let wpdByCase = new Map<string, number>();
+    if (activeOverdue.length > 0) {
+      const rows = await this.caseRepo.query(
+        `SELECT ci.case_id, p.waiting_period_days
+         FROM case_interventions ci
+         JOIN programs p ON p.id = ci.program_id
+         WHERE ci.case_id = ANY($1)
+           AND p.waiting_period_days IS NOT NULL`,
+        [activeOverdue.map(c => c.id)],
+      );
+      wpdByCase = new Map(
+        (rows as Array<{ case_id: string; waiting_period_days: string | number }>).map(r => [
+          r.case_id,
+          Number(r.waiting_period_days),
+        ]),
+      );
+    }
     for (const c of activeOverdue) {
       const age = this.workingDays(c.createdAt, new Date());
-      if (age >= APPROVED_ESCALATION_DAYS) {
-        await this.createAlert(c, 'active', 'Admin attention required — case active > 3 days without transition');
+      const wpd = wpdByCase.get(c.id);
+      const escDays = wpd ?? APPROVED_ESCALATION_DAYS;
+      const warnDays = wpd != null ? Math.max(1, wpd - 1) : APPROVED_WARNING_DAYS;
+      if (age >= escDays) {
+        await this.createAlert(c, 'active', `Admin attention required — case active > ${escDays} days without transition`);
         escalated++;
-      } else if (age >= APPROVED_WARNING_DAYS) {
-        await this.createAlert(c, 'active', 'Warning: case active > 2 days without transition');
+      } else if (age >= warnDays) {
+        await this.createAlert(c, 'active', `Warning: case active > ${warnDays} days without transition`);
         warnings++;
       }
     }
@@ -89,15 +116,14 @@ export class SlaService {
     const admins = await this.caseRepo.query(
       `SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE`
     );
-    for (const admin of admins) {
-      await this.notifRepo.save({
-        recipientId: admin.id,
-        title: `SLA Escalation: ${c.controlNo}`,
-        message: `${message} — Case ${c.controlNo} (${this.statusLabel(stage)})`,
-        category: NotificationCategory.SLA_ESCALATION,
-        referenceId: c.id,
-      } as any);
-    }
+    const recipientId = (admins[0] as { id?: string } | undefined)?.id ?? '';
+    await this.notifRepo.save({
+      recipientId,
+      title: `SLA Escalation: ${c.controlNo}`,
+      message: `${message} — Case ${c.controlNo} (${this.statusLabel(stage)})`,
+      category: NotificationCategory.SLA_ESCALATION,
+      referenceId: c.id,
+    } as any);
   }
 
   private workingDays(start: Date, end: Date): number {
