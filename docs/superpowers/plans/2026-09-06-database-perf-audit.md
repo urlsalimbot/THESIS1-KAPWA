@@ -15,7 +15,7 @@
 - Run `npm run typecheck` and `npm run lint` before claiming a task done.
 - Dirty pre-existing files (auth/cases/programs/notifications services, `migrate.ts` is WORK AREA but `git status` also lists other dirty files, `ReferralColumnsNullable…53` migration, `user-stories-tests.md`) — **NEVER stage or commit anything outside each task's own files**; stage explicit paths only, never `git add -A`.
 - Commit style: conventional commits (`perf(indexes): …`, `perf(chat): …`).
-- `migrate.ts` already has dirty local edits from other work — treat that file as a WORK AREA: append your index block, do NOT restructure or reformat existing lines, and stage it deliberately only in Task 1.
+- `migrate.ts` already has dirty local edits from other work and is a NEVER-STAGE file (AGENTS.md). Treat it as a WORK AREA only: append your index block in Task 1, do NOT restructure or reformat existing lines, and NEVER `git add` it. Only the migration file is committed.
 - Every index must be created with `CREATE INDEX IF NOT EXISTS` and mirrored in BOTH the new migration file and `migrate.ts`.
 
 ---
@@ -138,7 +138,7 @@ Expected: all green (no behavior changed yet — Task 1 is schema-only).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/database/migrations/DatabasePerfIndexes0000000000054.ts src/database/migrate.ts
+git add src/database/migrations/DatabasePerfIndexes0000000000054.ts
 git commit -m "perf(indexes): add hot-path index migration for referrals, cases, sync, irf, access-card"
 ```
 
