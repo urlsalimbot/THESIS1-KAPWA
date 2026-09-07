@@ -449,12 +449,12 @@ export async function migrate() {
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     coordinator_id UUID NOT NULL REFERENCES users(id),
     barangay TEXT NOT NULL,
-    surname TEXT NOT NULL,
-    first_name TEXT NOT NULL,
+    surname TEXT,
+    first_name TEXT,
     middle_name TEXT,
     extension TEXT,
-    gender TEXT NOT NULL,
-    dob DATE NOT NULL,
+    gender TEXT,
+    dob DATE,
     address JSONB,
     phone TEXT,
     reason TEXT NOT NULL,
@@ -465,6 +465,10 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  await q.query(`ALTER TABLE referrals ALTER COLUMN surname DROP NOT NULL`);
+  await q.query(`ALTER TABLE referrals ALTER COLUMN first_name DROP NOT NULL`);
+  await q.query(`ALTER TABLE referrals ALTER COLUMN gender DROP NOT NULL`);
+  await q.query(`ALTER TABLE referrals ALTER COLUMN dob DROP NOT NULL`);
   // F13 (deployability): the Referral entity maps an eager person relation via
   // person_id; without the column, GET /referrals/counts (and any repo.count
   // touching the relation) fails with "column Referral.person_id does not
@@ -593,6 +597,21 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_idempotency_key ON idempotency_keys(key)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_from ON inter_agency_referrals(from_agency_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_to ON inter_agency_referrals(to_agency_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_status ON inter_agency_referrals(status)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_person ON inter_agency_referrals(person_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_case ON inter_agency_referrals(case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_history_case ON case_history(case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_worker ON cases(assigned_worker_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_beneficiary ON cases(beneficiary_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_status_created ON cases(status, created_at)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_sync_device_idemp ON sync_queue(device_id, idempotency_key)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_sync_device ON sync_queue(device_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_irf_created ON irf_cases(created_at)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_acs_agency_date ON access_card_services(agency_id, service_date)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_acs_intervention ON access_card_services(intervention_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_acs_code ON access_card_services(access_card_code)`);
   await q.query(`CREATE TABLE IF NOT EXISTS beneficiary_roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     person_id UUID NOT NULL REFERENCES persons(id),
