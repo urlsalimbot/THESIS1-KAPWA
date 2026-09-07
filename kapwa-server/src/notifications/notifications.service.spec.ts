@@ -11,6 +11,7 @@ describe('NotificationsService', () => {
   let service: NotificationsService;
   let repoMock: any;
   let prefRepoMock: any;
+  let gatewayMock: any;
 
   const smsMock = {
     sendSms: jest.fn().mockResolvedValue({ success: true, provider: 'log', messageId: 'm1' }),
@@ -35,7 +36,7 @@ describe('NotificationsService', () => {
       save: jest.fn().mockResolvedValue({}),
     };
 
-    const gatewayMock = {
+    gatewayMock = {
       emitToUser: jest.fn(),
       emitToAgencyStaff: jest.fn(),
       emitToRole: jest.fn(),
@@ -191,6 +192,7 @@ describe('NotificationsService', () => {
 
     expect(prefRepoMock.findOne).not.toHaveBeenCalled();
     expect(prefRepoMock.save).toHaveBeenCalledTimes(1);
+    expect((prefRepoMock.save as jest.Mock).mock.calls[0][0]).toHaveLength(2);
     expect(results).toHaveLength(2);
     expect(results[0].optedIn).toBe(true);
   });
@@ -212,6 +214,9 @@ describe('NotificationsService', () => {
     expect(out).toHaveLength(2);
     expect((repoMock.save as jest.Mock).mock.calls[0][0]).toHaveLength(2);
     expect((repoMock.create as jest.Mock).mock.calls).toHaveLength(2);
+    expect(gatewayMock.emitToUser).toHaveBeenCalledTimes(2);
+    expect(gatewayMock.emitToUser).toHaveBeenNthCalledWith(1, 'u2', 'notification:new', saved[0]);
+    expect(gatewayMock.emitToUser).toHaveBeenNthCalledWith(2, 'u3', 'notification:new', saved[1]);
   });
 
   it('createMany returns [] and does not save for empty input', async () => {

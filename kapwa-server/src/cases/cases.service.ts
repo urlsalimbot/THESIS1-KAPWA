@@ -155,8 +155,11 @@ export class CasesService {
     qb.orderBy('c.createdAt', 'DESC');
 
     if (filters?.sla) {
+      // Matches statuses computeSlaOverdue evaluates; ASSESSED cases are flagged
+      // overdue at REVIEW_ESCALATION_DAYS. Intentionally excludes TRANSITIONING/CLOSED
+      // which computeSlaOverdue marks not-overdue (default case).
       qb.andWhere('c.status IN (:...slaStatuses)', {
-        slaStatuses: [CaseStatus.ENROLLED, CaseStatus.IN_REVIEW, CaseStatus.ACTIVE],
+        slaStatuses: [CaseStatus.ENROLLED, CaseStatus.IN_REVIEW, CaseStatus.ACTIVE, CaseStatus.ASSESSED],
       });
       const candidate = await qb.getMany();
       let mapped = candidate.map(c => ({
@@ -551,7 +554,7 @@ export class CasesService {
         CASE
           WHEN p.dob IS NULL THEN 'Unknown'
           WHEN p.dob > NOW() - INTERVAL '18 years' THEN '0-17'
-          WHEN p.dob < NOW() - INTERVAL '60 years' THEN '60+'
+          WHEN p.dob <= NOW() - INTERVAL '60 years' THEN '60+'
           ELSE '18-59'
         END AS "ageRange",
         c.client_category AS "clientCategory",

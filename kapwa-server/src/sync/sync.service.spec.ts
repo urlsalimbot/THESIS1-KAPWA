@@ -255,6 +255,7 @@ describe('SyncService', () => {
 
     expect(versionRepoMock.query).toHaveBeenCalledTimes(1);
     expect(versionRepoMock.query.mock.calls[0][0]).toContain('ON CONFLICT');
+    expect(versionRepoMock.query.mock.calls[0][0]).toContain('GREATEST');
     expect(versionRepoMock.find).toHaveBeenCalledWith({ where: { deviceId: 'dev-a' }, order: { tableName: 'ASC' } });
     expect(result).toHaveLength(2);
   });

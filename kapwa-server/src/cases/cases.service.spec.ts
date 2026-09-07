@@ -147,23 +147,36 @@ describe('CasesService', () => {
       const ageSql = andWhereCalls.find(s => s.includes('18 years'));
       const catSql = andWhereCalls.find(s => s.includes('unnest(c.service_requested)'));
       expect(ageSql).toBeDefined();
+      expect(ageSql).toContain('IS NULL OR');
       expect(catSql).toBeDefined();
       expect(qbMock.getManyAndCount).toHaveBeenCalledTimes(1);
+
+      await service.findAll(1, 10, { ageRange: '60+' });
+      const seniorSql = (qbMock.andWhere as jest.Mock).mock.calls
+        .map((c: [string, unknown]) => c[0])
+        .find(s => s.includes("INTERVAL '60 years'"));
+      expect(seniorSql).toBe("person.dob <= NOW() - INTERVAL '60 years'");
     });
 
     it('computes sla filter over a candidate set and paginates in memory', async () => {
-      const qbMock = repoMock.createQueryBuilder();
-      qbMock.getMany.mockResolvedValue([
-        { id: 'c-old', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001', createdAt: new Date('2026-01-01T00:00:00Z') },
-        { id: 'c-new', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00002', createdAt: new Date() },
-      ]);
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-09-04T00:00:00Z'));
+      try {
+        const qbMock = repoMock.createQueryBuilder();
+        qbMock.getMany.mockResolvedValue([
+          { id: 'c-old', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001', createdAt: new Date('2026-01-01T00:00:00Z') },
+          { id: 'c-new', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00002', createdAt: new Date('2026-09-02T00:00:00Z') },
+        ]);
 
-      const result = await service.findAll(1, 10, { sla: 'overdue' });
+        const result = await service.findAll(1, 10, { sla: 'overdue' });
 
-      expect(result.total).toBe(1);
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].id).toBe('c-old');
-      expect(qbMock.getManyAndCount).not.toHaveBeenCalled();
+        expect(result.total).toBe(1);
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].id).toBe('c-old');
+        expect(qbMock.getManyAndCount).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

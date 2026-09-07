@@ -166,6 +166,7 @@ export class SyncService implements OnApplicationShutdown {
             idempotencyKey: change.id,
           });
           await this.queueRepo.save(queueEntry);
+          existingByKey.set(change.id, queueEntry);
 
           results.push({
             changeId: change.id,
@@ -201,6 +202,7 @@ export class SyncService implements OnApplicationShutdown {
             conflictReason: conflict.reason,
           });
           await this.queueRepo.save(queueEntry);
+          existingByKey.set(change.id, queueEntry);
 
           results.push({
             changeId: change.id,
@@ -223,6 +225,7 @@ export class SyncService implements OnApplicationShutdown {
             idempotencyKey: change.id,
           });
           await this.queueRepo.save(queueEntry);
+          existingByKey.set(change.id, queueEntry);
 
           results.push({
             changeId: change.id,
