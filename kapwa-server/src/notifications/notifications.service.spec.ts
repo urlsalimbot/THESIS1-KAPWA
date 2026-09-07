@@ -176,4 +176,46 @@ describe('NotificationsService', () => {
     const result = await service.delete('n1');
     expect(result.message).toBe('Notification deleted');
   });
+
+  it('bulk sets preferences with one lookup and one save', async () => {
+    prefRepoMock.find.mockResolvedValue([
+      { id: 'p1', userId: 'u1', channel: 'in_app', category: NotificationCategory.CASE_UPDATE, optedIn: false },
+    ]);
+    prefRepoMock.create.mockImplementation((x: any) => x);
+    prefRepoMock.save.mockImplementation((xs: unknown[]) => Promise.resolve(xs));
+
+    const results = await service.bulkSetPreferences('u1', [
+      { channel: 'in_app', category: NotificationCategory.CASE_UPDATE, optedIn: true },
+      { channel: 'sms', category: NotificationCategory.SYSTEM, optedIn: true },
+    ]);
+
+    expect(prefRepoMock.findOne).not.toHaveBeenCalled();
+    expect(prefRepoMock.save).toHaveBeenCalledTimes(1);
+    expect(results).toHaveLength(2);
+    expect(results[0].optedIn).toBe(true);
+  });
+
+  it('createMany saves all rows in one call and emits per recipient', async () => {
+    const saved = [
+      { id: 'n1', recipientId: 'u2', title: 'T1', message: 'M1' },
+      { id: 'n2', recipientId: 'u3', title: 'T2', message: 'M2' },
+    ];
+    repoMock.create.mockImplementation((x: any) => ({ ...x }));
+    repoMock.save.mockResolvedValue(saved);
+
+    const out = await service.createMany([
+      { recipientId: 'u2', title: 'T1', message: 'M1' },
+      { recipientId: 'u3', title: 'T2', message: 'M2' },
+    ]);
+
+    expect(repoMock.save).toHaveBeenCalledTimes(1);
+    expect(out).toHaveLength(2);
+    expect((repoMock.save as jest.Mock).mock.calls[0][0]).toHaveLength(2);
+    expect((repoMock.create as jest.Mock).mock.calls).toHaveLength(2);
+  });
+
+  it('createMany returns [] and does not save for empty input', async () => {
+    await expect(service.createMany([])).resolves.toEqual([]);
+    expect(repoMock.save).not.toHaveBeenCalled();
+  });
 });

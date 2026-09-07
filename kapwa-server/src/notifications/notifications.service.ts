@@ -27,6 +27,16 @@ export class NotificationsService {
     return saved;
   }
 
+  async createMany(notifs: Array<Partial<Notification>>): Promise<Notification[]> {
+    if (notifs.length === 0) return [];
+    const entities = notifs.map(n => this.notifRepo.create(n));
+    const saved = await this.notifRepo.save(entities);
+    for (const n of saved) {
+      this.notifGateway.emitToUser(n.recipientId, 'notification:new', n);
+    }
+    return saved;
+  }
+
   async send(notifId: string) {
     const notif = await this.notifRepo.findOne({ where: { id: notifId } });
     if (!notif) {
@@ -175,10 +185,30 @@ export class NotificationsService {
   }
 
   async bulkSetPreferences(userId: string, prefs: UpdatePreferenceInput[]) {
-    const results = [];
+    const existing = await this.notifPrefRepo.find({ where: { userId } });
+    const byKey = new Map(existing.map(p => [`${p.channel}:${p.category}`, p]));
+    const results: NotificationPreference[] = [];
+    const toSave: Array<Partial<NotificationPreference>> = [];
     for (const pref of prefs) {
-      const result = await this.setPreference(userId, pref);
-      results.push(result);
+      const key = `${pref.channel}:${pref.category}`;
+      const found = byKey.get(key);
+      if (found) {
+        found.optedIn = pref.optedIn;
+        toSave.push(found);
+        results.push(found);
+      } else {
+        const created = this.notifPrefRepo.create({
+          userId,
+          channel: pref.channel,
+          category: pref.category,
+          optedIn: pref.optedIn,
+        });
+        toSave.push(created);
+        results.push(created as NotificationPreference);
+      }
+    }
+    if (toSave.length > 0) {
+      await this.notifPrefRepo.save(toSave as NotificationPreference[]);
     }
     return results;
   }
