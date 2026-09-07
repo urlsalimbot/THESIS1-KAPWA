@@ -53,6 +53,7 @@ describe('CasesService', () => {
       create: jest.fn(),
       save: jest.fn(),
       count: jest.fn().mockResolvedValue(0),
+      query: jest.fn().mockResolvedValue([]),
       createQueryBuilder: jest.fn().mockReturnValue(qbMock),
       manager: {
         connection: {
@@ -204,6 +205,21 @@ describe('CasesService', () => {
       const result = await service.updateStatus('1', CaseStatus.ASSESSED);
       expect(result.status).toBe(CaseStatus.ASSESSED);
       expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('w1', 'KAPWA-001', CaseStatus.ASSESSED);
+    });
+
+    it('should notify the linked claimant account on transition', async () => {
+      const existing = { id: '1', beneficiaryId: 'ben-1', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', status: CaseStatus.ENROLLED, problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', updatedAt: new Date() } as Case;
+      repoMock.findOne.mockResolvedValue(existing);
+      repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.ASSESSED });
+      repoMock.query.mockResolvedValue([{ id: 'claimant-user-1' }]);
+
+      await service.updateStatus('1', CaseStatus.ASSESSED);
+
+      expect(repoMock.query).toHaveBeenCalledWith(
+        expect.stringContaining('users u'),
+        ['ben-1'],
+      );
+      expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('claimant-user-1', 'KAPWA-001', CaseStatus.ASSESSED);
     });
 
     it('should throw on invalid transition', async () => {

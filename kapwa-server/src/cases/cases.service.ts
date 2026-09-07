@@ -342,6 +342,22 @@ export class CasesService {
       await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.controlNo, newStatus);
     }
 
+    // The beneficiary's linked claimant account should also be notified of
+    // case updates so walk-in clients can monitor their case status.
+    if (c.beneficiaryId) {
+      const claimantRows = await this.caseRepo.query(
+        `SELECT u.id FROM users u
+         JOIN beneficiaries b ON b.person_id = u.person_id
+         WHERE b.id = $1 AND u.is_active = TRUE
+         LIMIT 1`,
+        [c.beneficiaryId],
+      );
+      const claimantUserId = claimantRows?.[0]?.id as string | undefined;
+      if (claimantUserId) {
+        await this.notifService.notifyCaseUpdate(claimantUserId, c.controlNo, newStatus);
+      }
+    }
+
     return c;
   }
 
