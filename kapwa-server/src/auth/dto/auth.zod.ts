@@ -4,7 +4,11 @@ import { z } from 'zod';
 export const UserCreateSchema = z.object({
   email: z.string().email(),
   password: z.string().min(MIN_PASSWORD_LENGTH),
-  role: z.enum(['social_worker', 'admin', 'coordinator', 'claimant', 'mayor', 'auditor']).default('social_worker'),
+  // NO default role here: public registrations must fall back to 'claimant'
+  // (auth.service.register does `data.role || 'claimant'`). A schema default
+  // would override that fallback and grant every public registrant a staff
+  // role. Staff accounts are created only through the admin /users endpoints.
+  role: z.enum(['social_worker', 'admin', 'coordinator', 'claimant', 'mayor', 'auditor']).optional(),
   firstName: z.string().min(1).optional(),
   middleName: z.string().optional(),
   lastName: z.string().min(1).optional(),

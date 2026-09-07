@@ -98,6 +98,18 @@ describe('AuthService', () => {
       expect(emailMock.sendVerificationEmail).toHaveBeenCalledWith('test@test.com', expect.any(String));
     });
 
+    it('should default the role to claimant when none is provided (public registration)', async () => {
+      (repoMock.findOne as jest.Mock).mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      const created = { id: 'u1', email: 'test@test.com', password: 'hashed', isActive: true };
+      (repoMock.create as jest.Mock).mockReturnValue(created);
+      (repoMock.save as jest.Mock).mockResolvedValue(created);
+
+      await service.register({ email: 'test@test.com', password: 'pass' });
+
+      expect(repoMock.create).toHaveBeenCalledWith(expect.objectContaining({ role: 'claimant' }));
+    });
+
     it('should create a primary barangay assignment when assignedBarangay is provided', async () => {
       (repoMock.findOne as jest.Mock).mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');

@@ -109,7 +109,10 @@ export class AuthService {
 
     if (fullName && data.dob && data.phone) {
       const inputDob = data.dob.replace(/-/g, '');
-      const inputName = fullName!.toLowerCase().replace(/\s+/g, ' ').trim();
+      // Match on first + last name only: the person record stores the middle
+      // name separately, so including the claimant's typed middle name in the
+      // word bag would defeat the match.
+      const inputName = [firstName, lastName].filter(Boolean).join(' ').toLowerCase().replace(/\s+/g, ' ').trim();
       const rawPhone = data.phone.replace(/\D/g, '');
       const candidates = await this.personRepo
         .createQueryBuilder('p')
