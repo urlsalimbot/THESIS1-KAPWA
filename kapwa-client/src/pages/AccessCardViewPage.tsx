@@ -237,9 +237,12 @@ export function AccessCardViewPage() {
                   value={addForm.category}
                   onChange={e => setAddForm(f => ({ ...f, category: e.target.value }))}
                 >
+                  <option value="case_service">{t('accessCard.catCaseService', 'Case Service')}</option>
                   <option value="referral">{t('accessCard.catReferral', 'Referral')}</option>
                   <option value="community_service">{t('accessCard.catCommunity', 'Community Service')}</option>
                   <option value="seminar">{t('accessCard.catSeminar', 'Seminar')}</option>
+                  <option value="payout">{t('accessCard.catPayout', 'Payout')}</option>
+                  <option value="compliance">{t('accessCard.catCompliance', 'Compliance')}</option>
                 </select>
               </div>
               <div className="space-y-1">
