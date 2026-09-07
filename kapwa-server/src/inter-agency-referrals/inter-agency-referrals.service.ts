@@ -450,15 +450,16 @@ export class InterAgencyReferralsService {
 
   private async notifyAgency(agencyId: string, title: string, message: string) {
     const staff = await this.userRepo.find({ where: { agencyId, role: UserRole.AGENCY_STAFF } });
-    for (const s of staff) {
-      await this.notifService.create({
+    if (staff.length === 0) return;
+    await this.notifService.createMany(
+      staff.map(s => ({
         recipientId: s.id,
         title,
         message,
         category: NotificationCategory.CASE_UPDATE,
         channel: NotificationType.IN_APP,
-      });
-    }
+      })),
+    );
   }
 
   private async resolvePersonId(dto: CreateInterAgencyReferralInput): Promise<string> {
