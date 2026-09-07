@@ -12,7 +12,7 @@ import { FormVersionHistory } from './form-version-history.entity';
   imports: [
     TypeOrmModule.forFeature([Program, ProgramFundSource, ProgramRequiredDocument, FormVersionHistory]),
   ],
-  controllers: [ProgramsController, ProgramsPublicController],
+  controllers: [ProgramsPublicController, ProgramsController],
   providers: [ProgramsService],
   exports: [TypeOrmModule],
 })
