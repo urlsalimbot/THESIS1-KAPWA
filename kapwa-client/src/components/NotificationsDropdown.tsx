@@ -12,15 +12,18 @@ import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { connectNotificationSocket, disconnectNotificationSocket } from '../lib/notification-socket';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/lib/auth-context';
 
 interface Notification {
   id: string; title: string; message: string; category: string;
   isRead: boolean; createdAt: string; referenceId?: string;
 }
 
-export const navTarget = (n: Notification): string => {
+export // Claimants cannot open /cases/:id (staff-only), so case-update notifications
+// route them to their dashboard instead.
+const navTarget = (n: Notification, role?: string): string => {
   const map: Record<string, string> = {
-    case_update: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    case_update: role === 'claimant' ? '/my-dashboard' : n.referenceId ? `/cases/${n.referenceId}` : '/cases',
     approval: '/approvals',
     disbursement: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
     chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
@@ -62,6 +65,7 @@ function markAllRead() {
 export default function NotificationsDropdown() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [open, setOpen] = useState(false);
   const authed = hasToken();
 
@@ -87,7 +91,7 @@ export default function NotificationsDropdown() {
         description: notif.message,
         action: {
           label: t('notifications.view', 'View'),
-          onClick: () => navigate(navTarget(notif)),
+          onClick: () => navigate(navTarget(notif, authUser?.role)),
         },
         duration: 5000,
       });
@@ -119,7 +123,7 @@ export default function NotificationsDropdown() {
       sock.off('notifications:read-all', onReadAll);
       sock.off('unread:count', onUnreadCount);
     };
-  }, [t]);
+  }, [t, authUser?.role]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -164,7 +168,7 @@ export default function NotificationsDropdown() {
               )}
             >
               <button
-                onClick={() => { markOneRead(n.id, navTarget(n), navigate); setOpen(false); }}
+                onClick={() => { markOneRead(n.id, navTarget(n, authUser?.role), navigate); setOpen(false); }}
                 className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
               >
                 <div className="flex items-center justify-between gap-2">
