@@ -66,7 +66,12 @@ export class AbacService {
 
   getResourceSensitivity(path: string, _method: string): ResourceSensitivity {
     if (path.includes('/interventions') || path.includes('/financial')) return 'sensitive';
-    if (path.includes('/irf') || path.includes('/irf-cases')) return 'restricted';
+    // IRF filing is a worker workflow — only the legal-basis-gated operations
+    // (narration decrypt, name unmask) are restricted. Everything else on the
+    // IRF surface (create/list/detail/update/exports) is sensitive so social
+    // workers can file and manage incident reports.
+    if ((path.includes('/irf') || path.includes('/irf-cases')) && (path.includes('decrypt') || path.includes('unmask-names'))) return 'restricted';
+    if (path.includes('/irf') || path.includes('/irf-cases')) return 'sensitive';
     if (path.includes('/beneficiaries') || path.includes('/family')) return 'sensitive';
     if (path.includes('/cases')) return 'internal';
     if (path.includes('/programs') || path.includes('/tracker') || path.includes('/dashboard')) return 'public';

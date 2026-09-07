@@ -81,7 +81,9 @@ describe('AbacService', () => {
   it('maps resource sensitivity from path', () => {
     const svc = new AbacService({} as any);
     expect(svc.getResourceSensitivity('/interventions', 'GET')).toBe('sensitive');
-    expect(svc.getResourceSensitivity('/irf', 'POST')).toBe('restricted');
+    expect(svc.getResourceSensitivity('/irf', 'POST')).toBe('sensitive');
+    expect(svc.getResourceSensitivity('/irf/abc/decrypt', 'POST')).toBe('restricted');
+    expect(svc.getResourceSensitivity('/irf/abc/unmask-names', 'GET')).toBe('restricted');
     expect(svc.getResourceSensitivity('/beneficiaries', 'GET')).toBe('sensitive');
     expect(svc.getResourceSensitivity('/cases', 'GET')).toBe('internal');
     expect(svc.getResourceSensitivity('/programs', 'GET')).toBe('public');
