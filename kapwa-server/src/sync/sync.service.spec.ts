@@ -26,7 +26,7 @@ describe('SyncService', () => {
   beforeEach(async () => {
     queueRepoMock = {
       findOne: jest.fn(),
-      find: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockReturnValue({}),
       save: jest.fn().mockResolvedValue({}),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -37,6 +37,7 @@ describe('SyncService', () => {
       find: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockReturnValue({}),
       save: jest.fn().mockResolvedValue({}),
+      query: jest.fn().mockResolvedValue([]),
     };
 
     conflictResolverMock = {
@@ -216,5 +217,51 @@ describe('SyncService', () => {
       versionVectors: [], idempotencyKey: 'k1', signature: 'sig',
     };
     await expect(service.processDelta(input)).rejects.toThrow('Unknown meta fields');
+  });
+
+  it('dedupes the delta batch with a single In() lookup, not per-change findOne', async () => {
+    queueRepoMock.find.mockResolvedValue([
+      { idempotencyKey: 'change-1', status: 'applied' },
+    ]);
+    queueRepoMock.findOne = jest.fn();
+    const changes = [
+      { id: 'change-1', tableName: 'persons', operation: 'UPDATE' as const, recordId: 'p1', payload: { id: 'p1' }, clientUpdatedAt: '2026-09-04T00:00:00Z' },
+      { id: 'change-2', tableName: 'cases', operation: 'INSERT' as const, recordId: 'c2', payload: { id: 'c2' }, clientUpdatedAt: '2026-09-04T00:00:00Z' },
+    ];
+    const result: any = await service.processDelta({
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-dedupe',
+      signature: signMsg(pubKeyRaw, changes),
+    } as any);
+
+    expect(queueRepoMock.findOne).not.toHaveBeenCalled();
+    expect(queueRepoMock.find).toHaveBeenCalled();
+    expect(result.results.find((r: any) => r.changeId === 'change-1')!.status).toBe('applied');
+  });
+
+  it('upserts all version vectors in a single ON CONFLICT statement', async () => {
+    versionRepoMock.query.mockResolvedValue([]);
+    versionRepoMock.find.mockResolvedValue([
+      { id: 'v1', deviceId: 'dev-a', tableName: 'cases', localVersion: 1, serverVersion: 4 },
+      { id: 'v2', deviceId: 'dev-a', tableName: 'persons', localVersion: 2, serverVersion: 2 },
+    ]);
+
+    const result = await (service as any).updateVersionVectors('dev-a', [
+      { tableName: 'cases', localVersion: 1, serverVersion: 4 },
+      { tableName: 'persons', localVersion: 2, serverVersion: 1 },
+    ]);
+
+    expect(versionRepoMock.query).toHaveBeenCalledTimes(1);
+    expect(versionRepoMock.query.mock.calls[0][0]).toContain('ON CONFLICT');
+    expect(versionRepoMock.find).toHaveBeenCalledWith({ where: { deviceId: 'dev-a' }, order: { tableName: 'ASC' } });
+    expect(result).toHaveLength(2);
+  });
+
+  it('returns an empty list for empty version vectors without querying', async () => {
+    const result = await (service as any).updateVersionVectors('dev-a', []);
+    expect(versionRepoMock.query).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
   });
 });

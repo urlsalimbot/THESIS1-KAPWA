@@ -56,7 +56,7 @@ describe('SyncService — Offline Intake Sync', () => {
   beforeEach(async () => {
     queueRepoMock = {
       findOne: jest.fn(),
-      find: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockReturnValue({}),
       save: jest.fn().mockResolvedValue({}),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -67,6 +67,7 @@ describe('SyncService — Offline Intake Sync', () => {
       find: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockReturnValue({}),
       save: jest.fn().mockResolvedValue({}),
+      query: jest.fn().mockResolvedValue([]),
     };
 
     conflictResolverMock = {

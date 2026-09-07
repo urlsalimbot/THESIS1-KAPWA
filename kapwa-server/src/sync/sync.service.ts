@@ -1,6 +1,6 @@
 import { Logger, Injectable, BadRequestException, ForbiddenException, OnApplicationShutdown } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
 import { ConflictResolver } from './conflict-resolver';
@@ -132,11 +132,15 @@ export class SyncService implements OnApplicationShutdown {
       requestedState?: string;
     }> = [];
 
+    const queueLookupKeys = changes.map(c => c.id).filter((id): id is string => !!id);
+    const existingQueue = queueLookupKeys.length > 0
+      ? await this.queueRepo.find({ where: { deviceId, idempotencyKey: In(queueLookupKeys) } })
+      : [];
+    const existingByKey = new Map(existingQueue.map(e => [e.idempotencyKey, e]));
+
     for (const change of changes) {
       try {
-        const existing = await this.queueRepo.findOne({
-          where: { idempotencyKey: change.id, deviceId },
-        });
+        const existing = existingByKey.get(change.id);
 
         if (existing && existing.status === 'applied') {
           results.push({
@@ -563,32 +567,27 @@ export class SyncService implements OnApplicationShutdown {
     deviceId: string,
     clientVectors: Array<{ tableName: string; localVersion: number; serverVersion: number }>,
   ): Promise<VersionVector[]> {
-    const updated: VersionVector[] = [];
+    if (clientVectors.length === 0) return [];
 
-    for (const cv of clientVectors) {
-      const existing = await this.versionRepo.findOne({
-        where: { deviceId, tableName: cv.tableName },
-      });
+    const now = new Date().toISOString();
+    const tableNames = clientVectors.map(v => v.tableName);
+    const localVersions = clientVectors.map(v => v.localVersion);
+    const serverVersions = clientVectors.map(v => v.serverVersion);
 
-      if (existing) {
-        existing.serverVersion = Math.max(existing.serverVersion, cv.serverVersion);
-        existing.lastSyncedAt = new Date();
-        await this.versionRepo.save(existing);
-        updated.push(existing);
-      } else {
-        const created = this.versionRepo.create({
-          deviceId,
-          tableName: cv.tableName,
-          localVersion: cv.localVersion,
-          serverVersion: cv.serverVersion,
-          lastSyncedAt: new Date(),
-        });
-        await this.versionRepo.save(created);
-        updated.push(created);
-      }
-    }
+    await this.versionRepo.query(
+      `INSERT INTO version_vectors (device_id, table_name, local_version, server_version, last_synced_at)
+       SELECT $1, t.table_name, t.local_version, t.server_version, $2::timestamp
+       FROM unnest($3::text[], $4::int[], $5::int[]) AS t(table_name, local_version, server_version)
+       ON CONFLICT (device_id, table_name)
+       DO UPDATE SET
+         local_version = GREATEST(version_vectors.local_version, EXCLUDED.local_version),
+         server_version = GREATEST(version_vectors.server_version, EXCLUDED.server_version),
+         last_synced_at = EXCLUDED.last_synced_at,
+         updated_at = NOW()`,
+      [deviceId, now, tableNames, localVersions, serverVersions],
+    );
 
-    return updated;
+    return this.versionRepo.find({ where: { deviceId }, order: { tableName: 'ASC' } });
   }
 
   private async getChangesSince(

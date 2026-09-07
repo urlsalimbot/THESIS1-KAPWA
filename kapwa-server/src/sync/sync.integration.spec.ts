@@ -70,6 +70,7 @@ describe('Sync Integration: conflict scenarios', () => {
       find: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockReturnValue({}),
       save: jest.fn().mockResolvedValue({}),
+      query: jest.fn().mockResolvedValue([]),
     };
     dataSourceMock = setupDataSource();
     conflictResolver = new ConflictResolver(queueRepo as any);
