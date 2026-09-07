@@ -79,4 +79,23 @@ describe('ChatService', () => {
     const count = await service.getUnreadCount('u1');
     expect(count).toBe(2);
   });
+
+  it('batches user lookups in getConversations instead of per-conversation findOne', async () => {
+    repoMock.find.mockResolvedValue([
+      { senderId: 'u1', recipientId: 'u2', content: 'Hello', createdAt: new Date(), isRead: true, conversationId: 'u1_u2' },
+      { senderId: 'u1', recipientId: 'u3', content: 'Hi', createdAt: new Date(), isRead: true, conversationId: 'u1_u3' },
+    ]);
+    userRepoMock.find.mockResolvedValue([
+      { id: 'u2', firstName: 'Bob', lastName: 'B', nameExtension: null, role: 'social_worker', fullName: 'Bob B' },
+      { id: 'u3', firstName: 'Carol', lastName: 'C', nameExtension: null, role: 'social_worker', fullName: 'Carol C' },
+    ]);
+    const result = await service.getConversations('u1');
+    expect(result).toHaveLength(2);
+    expect(userRepoMock.findOne).not.toHaveBeenCalled();
+    expect(userRepoMock.find).toHaveBeenCalledTimes(1);
+    expect(userRepoMock.find).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: expect.objectContaining({ _value: expect.arrayContaining(['u2', 'u3']) }) }) }),
+    );
+    expect(result.map(r => r.name).sort()).toEqual(['Bob B', 'Carol C']);
+  });
 });

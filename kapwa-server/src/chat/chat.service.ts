@@ -81,28 +81,36 @@ export class ChatService {
     }
 
     const seen = new Set<string>();
-    const result: Array<{ userId: string; name: string; role: string; lastMessage: string; lastTime: Date; unread: number }> = [];
-
+    const rows: Array<{ otherId: string; msg: ChatMessage }> = [];
     for (const msg of messages) {
       const otherId = msg.senderId === userId ? msg.recipientId : msg.senderId;
       if (allowedUserIds && !allowedUserIds.has(otherId)) continue;
-
       const convId = [msg.senderId, msg.recipientId].sort().join('_');
       if (seen.has(convId)) continue;
       seen.add(convId);
+      rows.push({ otherId, msg });
+    }
 
-      const user = await this.userRepo.findOne({ where: { id: otherId } });
-      result.push({
+    const userMap = new Map<string, User>();
+    if (rows.length > 0) {
+      const users = await this.userRepo.find({
+        where: { id: In(rows.map(r => r.otherId)) },
+        select: ['id', 'firstName', 'middleName', 'lastName', 'nameExtension', 'role'],
+      });
+      for (const u of users) userMap.set(u.id, u);
+    }
+
+    return rows.map(({ otherId, msg }) => {
+      const user = userMap.get(otherId);
+      return {
         userId: otherId,
         name: user?.fullName || otherId.slice(0, 8),
         role: user?.role || '',
         lastMessage: msg.content,
         lastTime: msg.createdAt,
         unread: (!msg.isRead && msg.recipientId === userId) ? 1 : 0,
-      });
-    }
-
-    return result;
+      };
+    });
   }
 
   async markAsRead(messageId: string) {
