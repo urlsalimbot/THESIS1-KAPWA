@@ -133,37 +133,57 @@ export class CasesService {
       qb.andWhere('c.createdAt <= :dateTo', { dateTo: new Date(filters.dateTo + 'T23:59:59Z') });
     }
 
-    qb.skip((page - 1) * limit).take(limit).orderBy('c.createdAt', 'DESC');
+    if (filters?.ageRange) {
+      switch (filters.ageRange) {
+        case '0-17':
+          qb.andWhere("(person.dob IS NULL OR person.dob > NOW() - INTERVAL '18 years')");
+          break;
+        case '60+':
+          qb.andWhere("person.dob <= NOW() - INTERVAL '60 years'");
+          break;
+        case '18-59':
+          qb.andWhere("person.dob <= NOW() - INTERVAL '18 years' AND person.dob > NOW() - INTERVAL '60 years'");
+          break;
+      }
+    }
+    if (filters?.category) {
+      qb.andWhere('EXISTS (SELECT 1 FROM unnest(c.service_requested) AS sreq WHERE sreq ILIKE :category)', {
+        category: `%${filters.category}%`,
+      });
+    }
 
+    qb.orderBy('c.createdAt', 'DESC');
+
+    if (filters?.sla) {
+      qb.andWhere('c.status IN (:...slaStatuses)', {
+        slaStatuses: [CaseStatus.ENROLLED, CaseStatus.IN_REVIEW, CaseStatus.ACTIVE],
+      });
+      const candidate = await qb.getMany();
+      let mapped = candidate.map(c => ({
+        c,
+        slaOverdue: this.computeSlaOverdue(c),
+      }));
+      if (filters.sla === 'overdue') {
+        mapped = mapped.filter(m => m.slaOverdue);
+      } else if (filters.sla === 'on_track') {
+        mapped = mapped.filter(m => !m.slaOverdue);
+      }
+      const sTotal = mapped.length;
+      return {
+        data: mapped
+          .slice((page - 1) * limit, page * limit)
+          .map(m => Object.assign(m.c, { slaOverdue: m.slaOverdue })),
+        total: sTotal,
+      };
+    }
+
+    qb.skip((page - 1) * limit).take(limit);
     const [cases, total] = await qb.getManyAndCount();
-
-    let filtered = cases.map(c => {
+    const data = cases.map(c => {
       (c as any).slaOverdue = this.computeSlaOverdue(c);
       return c;
     });
-
-    if (filters?.sla === 'overdue') {
-      filtered = filtered.filter(c => (c as any).slaOverdue);
-    } else if (filters?.sla === 'on_track') {
-      filtered = filtered.filter(c => !(c as any).slaOverdue);
-    }
-
-    // ageRange and category are client-calculated on beneficiary data, filter post-query
-    if (filters?.ageRange) {
-      filtered = filtered.filter(c => {
-        const age = c.beneficiary?.age || 0;
-        const range = age < 18 ? '0-17' : age > 59 ? '60+' : '18-59';
-        return range === filters.ageRange;
-      });
-    }
-    if (filters?.category) {
-      filtered = filtered.filter(c => {
-        const cats = (c.serviceRequested as string[]) || [];
-        return cats.some(cat => cat.toLowerCase().includes(filters.category!.toLowerCase()));
-      });
-    }
-
-    return { data: filtered, total };
+    return { data, total };
   }
 
   async getCaseWithSla(id: string) {
