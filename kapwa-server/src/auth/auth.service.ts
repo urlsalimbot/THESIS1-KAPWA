@@ -295,6 +295,9 @@ export class AuthService {
 
     const hashed = await bcrypt.hash(body.newPassword, BCRYPT_SALT_ROUNDS);
     user.password = hashed;
+    // Revoke all existing sessions: refresh tokens carry tokenVersion, so a
+    // bump forces old refresh tokens to be rejected (US-007).
+    user.tokenVersion += 1;
     await this.userRepo.save(user);
 
     return { message: 'Password changed successfully' };
@@ -407,6 +410,8 @@ export class AuthService {
 
     user.email = newEmail;
     user.emailVerified = true;
+    // Email is part of the identity — revoke sessions minted for the old email.
+    user.tokenVersion += 1;
     await this.userRepo.save(user);
     await this.deleteTokens(user.id, 'change_email');
 
