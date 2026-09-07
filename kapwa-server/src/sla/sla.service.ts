@@ -26,6 +26,7 @@ export class SlaService {
   async checkAndEscalate(): Promise<{ escalated: number; warnings: number }> {
     let escalated = 0;
     let warnings = 0;
+    const alerts: Array<{ c: Case; stage: string; message: string }> = [];
 
     const pendingOverdue = await this.caseRepo.find({
       where: { status: CaseStatus.ENROLLED },
@@ -33,10 +34,10 @@ export class SlaService {
     for (const c of pendingOverdue) {
       const age = this.workingDays(c.createdAt, new Date());
       if (age >= PENDING_ESCALATION_DAYS && c.assignedWorkerId) {
-        await this.createAlert(c, 'pending_assessment', 'Coordinator review required — case pending assessment > 3 days');
+        this.stageAlert(alerts, c, 'pending_assessment', 'Coordinator review required — case pending assessment > 3 days');
         escalated++;
       } else if (age >= PENDING_WARNING_DAYS && c.assignedWorkerId) {
-        await this.createAlert(c, 'pending_assessment', 'Warning: case pending assessment > 2 days');
+        this.stageAlert(alerts, c, 'pending_assessment', 'Warning: case pending assessment > 2 days');
         warnings++;
       }
     }
@@ -47,10 +48,10 @@ export class SlaService {
     for (const c of reviewOverdue) {
       const age = this.workingDays(c.createdAt, new Date());
       if (age >= REVIEW_ESCALATION_DAYS) {
-        await this.createAlert(c, 'in_review', 'MSWDO Head review required — case in review > 3 days');
+        this.stageAlert(alerts, c, 'in_review', 'MSWDO Head review required — case in review > 3 days');
         escalated++;
       } else if (age >= REVIEW_WARNING_DAYS) {
-        await this.createAlert(c, 'in_review', 'Warning: case in review > 2 days');
+        this.stageAlert(alerts, c, 'in_review', 'Warning: case in review > 2 days');
         warnings++;
       }
     }
@@ -87,12 +88,16 @@ export class SlaService {
       const escDays = wpd ?? APPROVED_ESCALATION_DAYS;
       const warnDays = wpd != null ? Math.max(1, wpd - 1) : APPROVED_WARNING_DAYS;
       if (age >= escDays) {
-        await this.createAlert(c, 'active', `Admin attention required — case active > ${escDays} days without transition`);
+        this.stageAlert(alerts, c, 'active', `Admin attention required — case active > ${escDays} days without transition`);
         escalated++;
       } else if (age >= warnDays) {
-        await this.createAlert(c, 'active', `Warning: case active > ${warnDays} days without transition`);
+        this.stageAlert(alerts, c, 'active', `Warning: case active > ${warnDays} days without transition`);
         warnings++;
       }
+    }
+
+    if (alerts.length > 0) {
+      await this.bulkCreateAlerts(alerts);
     }
 
     this.logger.log(`SLA check: ${escalated} escalated, ${warnings} warnings`);
@@ -111,18 +116,33 @@ export class SlaService {
     return labels[status] || status;
   }
 
-  private async createAlert(c: Case, stage: string, message: string) {
+  private stageAlert(
+    alerts: Array<{ c: Case; stage: string; message: string }>,
+    c: Case,
+    stage: string,
+    message: string,
+  ) {
+    alerts.push({ c, stage, message });
+  }
+
+  private async bulkCreateAlerts(alerts: Array<{ c: Case; stage: string; message: string }>) {
     const admins = await this.caseRepo.query(
-      `SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE`
+      `SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE`,
     );
-    for (const admin of admins) {
-      await this.notifRepo.save({
-        recipientId: admin.id,
-        title: `SLA Escalation: ${c.controlNo}`,
-        message: `${message} — Case ${c.controlNo} (${this.statusLabel(stage)})`,
-        category: NotificationCategory.SLA_ESCALATION,
-        referenceId: c.id,
-      } as any);
+    const rows: Notification[] = [];
+    for (const a of alerts) {
+      for (const admin of admins) {
+        rows.push(this.notifRepo.create({
+          recipientId: admin.id,
+          title: `SLA Escalation: ${a.c.controlNo}`,
+          message: `${a.message} — Case ${a.c.controlNo} (${this.statusLabel(a.stage)})`,
+          category: NotificationCategory.SLA_ESCALATION,
+          referenceId: a.c.id,
+        }));
+      }
+    }
+    if (rows.length > 0) {
+      await this.notifRepo.save(rows);
     }
   }
 

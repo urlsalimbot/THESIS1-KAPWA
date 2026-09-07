@@ -15,7 +15,10 @@ describe('SlaService', () => {
       find: jest.fn().mockResolvedValue([]),
       query: jest.fn().mockResolvedValue([]),
     };
-    notifRepo = { save: jest.fn().mockResolvedValue({}) };
+    notifRepo = {
+      save: jest.fn().mockResolvedValue({}),
+      create: jest.fn().mockImplementation((entity: any) => entity),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SlaService,
@@ -60,11 +63,13 @@ describe('SlaService', () => {
 
     expect(result.escalated).toBe(1);
     expect(result.warnings).toBe(1);
-    expect(notifRepo.save).toHaveBeenCalledTimes(2);
-    const titles = (notifRepo.save as jest.Mock).mock.calls.map((c: any[]) => c[0].title);
-    expect(titles.some((t: string) => t.includes('SLA Escalation'))).toBe(true);
-    const messages = (notifRepo.save as jest.Mock).mock.calls.map((c: any[]) => c[0].message);
-    expect(messages.some((m: string) => m.includes('> 5 days'))).toBe(true);
+    expect(notifRepo.save).toHaveBeenCalledTimes(1);
+    const rows = (notifRepo.save as jest.Mock).mock.calls[0][0] as Array<{
+      title: string; message: string; referenceId: string;
+    }>;
+    expect(rows).toHaveLength(2); // one escalation + one warning, one admin
+    expect(rows.some(r => r.title.includes('SLA Escalation'))).toBe(true);
+    expect(rows.some(r => r.message.includes('> 5 days'))).toBe(true);
   });
 
   it('falls back to global thresholds when the program has no waiting period', async () => {
@@ -81,9 +86,9 @@ describe('SlaService', () => {
     const result = await service.checkAndEscalate();
 
     expect(result.escalated).toBe(1);
-    expect(notifRepo.save).toHaveBeenCalledWith(
-      expect.objectContaining({ referenceId: 'c-esc' }),
-    );
+    const rows = (notifRepo.save as jest.Mock).mock.calls[0][0] as Array<{ referenceId: string }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual(expect.objectContaining({ referenceId: 'c-esc' }));
   });
 
   it('escalates at the global threshold when the case has no program at all', async () => {
@@ -99,7 +104,7 @@ describe('SlaService', () => {
 
     const result = await service.checkAndEscalate();
 
-    expect(result.escalated).toBe(1); // 3 >= 3 → escalation per global constants
+    expect(result.escalated).toBe(1);
     expect(notifRepo.save).toHaveBeenCalledTimes(1);
   });
 
@@ -114,5 +119,24 @@ describe('SlaService', () => {
 
     // 4 working days: enrolled escalates at 3; in_review escalates at 3.
     expect(result.escalated).toBe(2);
+    expect(notifRepo.save).toHaveBeenCalledTimes(1);
+    const rows = (notifRepo.save as jest.Mock).mock.calls[0][0] as unknown[];
+    expect(rows).toHaveLength(2); // two escalated cases × 1 admin
+  });
+
+  it('queries admins only once across a full escalation run', async () => {
+    caseRepo.find
+      .mockResolvedValueOnce([{ id: 'c-2', status: CaseStatus.ENROLLED, assignedWorkerId: 'w1', createdAt: date('2026-09-01') }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'c-3', status: CaseStatus.IN_REVIEW, createdAt: date('2026-09-01') }]);
+    caseRepo.query.mockResolvedValue([{ id: 'admin-1' }]);
+
+    const result = await service.checkAndEscalate();
+
+    expect(result.escalated).toBe(2);
+    const adminQueries = (caseRepo.query as jest.Mock).mock.calls.filter(
+      (c: string[]) => c[0].includes('role = \'admin\''),
+    );
+    expect(adminQueries).toHaveLength(1);
   });
 });
