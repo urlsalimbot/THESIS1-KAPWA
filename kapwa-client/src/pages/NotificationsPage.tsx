@@ -42,13 +42,13 @@ const categoryLabels: Record<string, { key: string; label: string }> = {
 };
 
 const categoryColors: Record<string, string> = {
-  case_update: 'bg-blue-100 text-blue-700',
-  approval: 'bg-green-100 text-green-700',
-  disbursement: 'bg-purple-100 text-purple-700',
+  case_update: 'bg-primary/10 text-primary',
+  approval: 'bgemerald-100 textemerald-700',
+  disbursement: 'bg-primary/10 text-primary',
   chat: 'bg-amber-100 text-amber-700',
-  sync_conflict: 'bg-red-100 text-red-700',
+  sync_conflict: 'bg-destructive/10 text-destructive',
   system: 'bg-slate-100 text-slate-700',
-  sla_escalation: 'bg-orange-100 text-orange-700',
+  sla_escalation: 'bg-amber-100 text-amber-700',
 };
 
 export function NotificationsPage() {

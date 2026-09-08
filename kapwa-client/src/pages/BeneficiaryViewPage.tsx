@@ -343,7 +343,7 @@ export function BeneficiaryViewPage() {
       backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate(-1) }}
     >
       {assignSuccess && (
-        <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm font-medium text-green-700 mb-3">
+        <div className="rounded-lg bgemerald-50 border borderemerald-200 p-3 text-sm font-medium textemerald-700 mb-3">
           {assignSuccess}
         </div>
       )}

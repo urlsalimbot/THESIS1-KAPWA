@@ -86,7 +86,7 @@ export function ForgotPasswordPage() {
               className="h-11"
               aria-label={t('auth.emailLabel', 'Email')}
             />
-            <Button type="submit" className="w-full h-11" disabled={submitting || !email}>
+            <Button type="submit" className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90" disabled={submitting || !email}>
               {submitting && <Loader2 size={16} className="mr-2 animate-spin" />}
               {t('auth.sendResetLink', 'Send Reset Link')}
             </Button>

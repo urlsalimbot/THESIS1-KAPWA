@@ -73,9 +73,9 @@ export function DashboardPage() {
   const role = user?.role || '';
 
   const offlineStats: Stat[] = [
-    { label: t('dashboard.servedToday', 'Served Today'), value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-blue-50 text-blue-700' },
+    { label: t('dashboard.servedToday', 'Served Today'), value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-primary/5 text-primary' },
     { label: t('dashboard.pendingReview', 'Pending Review'), value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-    { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-green-100 text-green-800' },
+    { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bgemerald-100 textemerald-800' },
   ];
 
   const swrKey = WORKER_ROLES.includes(role) ? queryKeys.dashboard.stats() : null;
@@ -162,7 +162,7 @@ export function DashboardPage() {
           ['mayor', 'auditor'].includes(role) ? (
             <div className="flex gap-2">
               {fundUtilizationButton}
-              {exportError && <span className="text-xs text-red-600 self-center">{exportError}</span>}
+              {exportError && <span className="text-xs text-destructive self-center">{exportError}</span>}
             </div>
           ) : undefined
         }>
@@ -182,7 +182,7 @@ export function DashboardPage() {
           {role === 'admin' && (
             <>
               {fundUtilizationButton}
-              {exportError && <span className="text-xs text-red-600 self-center">{exportError}</span>}
+              {exportError && <span className="text-xs text-destructive self-center">{exportError}</span>}
             </>
           )}
           <Button size="sm" variant="outline" onClick={() => navigate('/intake/referrals')}>

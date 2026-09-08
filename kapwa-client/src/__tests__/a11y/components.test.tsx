@@ -54,8 +54,8 @@ vi.mock('@/hooks/useSlaTimer', () => ({
 }));
 
 vi.mock('@/lib/sla-utils', () => ({
-  getThresholdColor: (s: string) => s === 'compliant' ? 'text-green-500' : 'text-amber-500',
-  getThresholdBgColor: (s: string) => s === 'compliant' ? 'bg-green-500/10' : 'bg-amber-500/10',
+  getThresholdColor: (s: string) => s === 'compliant' ? 'textemerald-500' : 'text-amber-500',
+  getThresholdBgColor: (s: string) => s === 'compliant' ? 'bgemerald-500/10' : 'bg-amber-500/10',
 }));
 
 function ThrowingChild(): React.ReactNode {

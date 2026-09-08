@@ -134,8 +134,8 @@ export function AdminPage() {
         <TabsContent value="users" className="mt-6 space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="rounded-full bg-blue-500/10 p-2">
-                <Users size={18} className="text-blue-600" />
+              <div className="rounded-full bg-primary/50/10 p-2">
+                <Users size={18} className="text-primary" />
               </div>
               <h2 className="text-sm font-semibold">{t('admin.userManagement', 'User Management')}</h2>
             </div>

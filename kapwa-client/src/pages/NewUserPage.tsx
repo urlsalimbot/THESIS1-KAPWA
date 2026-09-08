@@ -117,8 +117,8 @@ export function NewUserPage() {
       <Card className="max-w-2xl shadow-sm border-border/60">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
-            <div className="rounded-full bg-blue-500/10 p-2">
-              <UserPlus size={18} className="text-blue-600" />
+            <div className="rounded-full bg-primary/50/10 p-2">
+              <UserPlus size={18} className="text-primary" />
             </div>
             <div>
               <CardTitle className="text-base">{t('usersPanel.newUserTitle', 'Create New User')}</CardTitle>

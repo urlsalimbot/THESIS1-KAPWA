@@ -14,7 +14,7 @@ export default function VictimNarrationField({ value, onChange, readOnly, isEncr
     <div className="mb-4">
       <label className="mb-1 block text-sm font-medium text-gray-700">
         {t('irf.victimNarration', 'Victim Narration')}
-        {isEncrypted && <span className="ml-2 text-xs text-green-600">🔒 {t('irf.aesEncrypted', 'AES-256 Encrypted')}</span>}
+        {isEncrypted && <span className="ml-2 text-xs textemerald-600">🔒 {t('irf.aesEncrypted', 'AES-256 Encrypted')}</span>}
       </label>
       <textarea
         className="w-full rounded border border-gray-300 p-2 text-sm"

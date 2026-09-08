@@ -391,8 +391,8 @@ function SecurityTab() {
         <div className="p-4">
           {canSetup && step === 'idle' && !mfaEnabled && (
             <div className="flex flex-col items-center gap-4 py-4">
-              <div className="rounded-full bg-purple-100 p-5">
-                <Shield className="text-purple-600" size={36} />
+              <div className="rounded-full bg-primary/10 p-5">
+                <Shield className="text-primary" size={36} />
               </div>
               <div className="text-center">
                 <p className="font-medium text-foreground">{t('settings.mfaNotEnabled', 'MFA not enabled')}</p>
@@ -429,9 +429,9 @@ function SecurityTab() {
               </div>
 
               {otpauth && (
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 space-y-1">
+                <div className="rounded-lg border borderemerald-200 bgemerald-50 p-4 text-sm textemerald-700 space-y-1">
                   <p className="font-medium">{t('settings.mfaStep2', 'Step 2: Verify setup')}</p>
-                  <p className="text-green-600">{t('settings.mfaEnterCode', 'Enter the 6-digit code from your authenticator app below.')}</p>
+                  <p className="textemerald-600">{t('settings.mfaEnterCode', 'Enter the 6-digit code from your authenticator app below.')}</p>
                 </div>
               )}
 
@@ -459,12 +459,12 @@ function SecurityTab() {
 
           {step === 'done' && mfaEnabled && (
             <div className="flex flex-col items-center gap-4 py-4">
-              <div className="rounded-full bg-green-100 p-5">
-                <CheckCircle className="text-green-600" size={36} />
+              <div className="rounded-full bgemerald-100 p-5">
+                <CheckCircle className="textemerald-600" size={36} />
               </div>
               <div className="text-center">
-                <p className="font-medium text-green-800">{t('settings.mfaEnabled', 'MFA is enabled')}</p>
-                <p className="text-sm text-green-600 mt-1">{t('settings.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
+                <p className="font-medium textemerald-800">{t('settings.mfaEnabled', 'MFA is enabled')}</p>
+                <p className="text-sm textemerald-600 mt-1">{t('settings.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
               </div>
               <Button variant="outline" onClick={() => { setStep('idle'); setCode(''); }}>
                 {t('settings.done', 'Done')}

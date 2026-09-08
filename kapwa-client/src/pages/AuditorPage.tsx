@@ -72,7 +72,7 @@ export function AuditorPage() {
       accessorKey: 'status',
       header: t('dashboard.statusLabel', 'Status'),
       cell: ({ row }) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${row.original.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${row.original.status === 'active' ? 'bgemerald-100 textemerald-700' : 'bg-destructive/10 text-destructive'}`}>
           {row.original.status}
         </span>
       ),
@@ -136,22 +136,22 @@ export function AuditorPage() {
               {
                 label: t('audit.chainsVerified', 'Chains Verified'),
                 value: hashChain ? `${Object.values(hashChain).filter((v: any) => v.valid).length}/${Object.values(hashChain).length}` : '—',
-                color: 'bg-green-50 text-green-700', icon: Shield,
+                color: 'bgemerald-50 textemerald-700', icon: Shield,
               },
               {
                 label: t('audit.integrity', 'Integrity'),
                 value: allValid ? t('dashboard.compliant', 'Intact') : t('audit.tampered', 'Tampered'),
-                color: allValid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700', icon: allValid ? CheckCircle : XCircle,
+                color: allValid ? 'bgemerald-50 textemerald-700' : 'bg-destructive/10 text-destructive', icon: allValid ? CheckCircle : XCircle,
               },
               {
                 label: t('audit.auditEntries', 'Audit Entries'),
                 value: String(auditTrail?.length ?? 0),
-                color: 'bg-blue-50 text-blue-700', icon: ListChecks,
+                color: 'bg-primary/5 text-primary', icon: ListChecks,
               },
               {
                 label: t('audit.consentRecords', 'Consent Records'),
                 value: String(consentLedger?.length ?? 0),
-                color: 'bg-indigo-50 text-indigo-700', icon: Shield,
+                color: 'bg-primary/5 text-primary', icon: Shield,
               },
             ].map(s => {
               const Icon = s.icon;
@@ -167,10 +167,10 @@ export function AuditorPage() {
             })}
           </div>
 
-          <div className={`rounded-lg p-4 mb-4 flex items-center gap-3 ${allValid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-            {allValid ? <CheckCircle className="text-green-600" size={24} /> : <XCircle className="text-red-600" size={24} />}
+          <div className={`rounded-lg p-4 mb-4 flex items-center gap-3 ${allValid ? 'bgemerald-50 border borderemerald-200' : 'bg-destructive/10 border border-destructive/20'}`}>
+            {allValid ? <CheckCircle className="textemerald-600" size={24} /> : <XCircle className="text-destructive" size={24} />}
             <div>
-              <p className={`font-semibold ${allValid ? 'text-green-800' : 'text-red-800'}`}>
+              <p className={`font-semibold ${allValid ? 'textemerald-800' : 'text-destructive'}`}>
                 {allValid ? t('dashboard.chainsVerified', 'All chains verified — integrity confirmed') : t('dashboard.chainsFailed', 'Chain integrity check failed — see details below')}
               </p>
               <p className="text-xs text-gray-500">{t('dashboard.tablesChecked', 'Tables checked: interventions, cases, beneficiaries, consent_ledger')}</p>
@@ -192,10 +192,10 @@ export function AuditorPage() {
                 {Object.entries(hashChain).map(([table, status]: [string, any]) => (
                   <div key={table} className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {status.valid ? <CheckCircle size={16} className="text-green-600" /> : <XCircle size={16} className="text-red-600" />}
+                      {status.valid ? <CheckCircle size={16} className="textemerald-600" /> : <XCircle size={16} className="text-destructive" />}
                       <span className="text-sm font-medium capitalize">{table.replace(/([A-Z])/g, ' $1')}</span>
                     </div>
-                    <span className={`text-xs ${status.valid ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-xs ${status.valid ? 'textemerald-600' : 'text-destructive'}`}>
                       {status.valid ? t('dashboard.valid', 'Valid') : t('dashboard.brokenAt', 'Broken at: {{where}}', { where: status.brokenAt || 'unknown' })}
                     </span>
                   </div>

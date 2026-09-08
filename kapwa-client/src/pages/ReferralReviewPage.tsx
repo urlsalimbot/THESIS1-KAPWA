@@ -120,7 +120,7 @@ export function ReferralReviewPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-green-600"
+            className="textemerald-600"
             onClick={() => handleAccept(row.original.id)}
             disabled={actionId === row.original.id}
           >
@@ -130,7 +130,7 @@ export function ReferralReviewPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-red-600"
+            className="text-destructive"
             onClick={() => setDeclineModal(row.original)}
             disabled={actionId === row.original.id}
           >

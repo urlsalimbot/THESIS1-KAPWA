@@ -188,7 +188,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
               Overdue SLA
             </span>
             <div
-              class="ml-auto rounded-full w-8 h-8 flex items-center justify-center shadow-sm bg-red-100 text-red-700"
+              class="ml-auto rounded-full w-8 h-8 flex items-center justify-center shadow-sm bg-destructive/10 text-destructive"
             >
               <svg
                 aria-hidden="true"

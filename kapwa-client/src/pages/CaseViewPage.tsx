@@ -241,7 +241,7 @@ export function CaseViewPage() {
       description={t('cases.beneficiaryOf', 'Beneficiary: {{name}}', { name: `${ben?.firstName || ''} ${ben?.surname || ''}` })}
       backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}
       actions={caseData.slaOverdue ? (
-        <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+        <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
           <AlertTriangle size={12} /> {t('cases.overdueBadge', 'OVERDUE')}
         </span>
       ) : undefined}

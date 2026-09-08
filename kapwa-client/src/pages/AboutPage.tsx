@@ -18,15 +18,17 @@ export function AboutPage() {
       {/* Hero Header - Asymmetric layout */}
       <section className="relative py-20 md:py-28 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent/5 rounded-full blur-3xl opacity-60" />
-          <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
         </div>
         
         <div className="relative grid md:grid-cols-12 gap-8 items-center max-w-7xl mx-auto">
           <div className="md:col-span-7">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-6">
-              <span className="text-xs font-medium text-accent tracking-wide">About Us</span>
+            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
+              <Heart size={28} className="text-accent" />
             </div>
+            <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">About Us</p>
             <h1 className="font-heading text-4xl md:text-5xl font-bold leading-tight mb-4 tracking-tight text-balance">
               About MSWDO Norzagaray
             </h1>

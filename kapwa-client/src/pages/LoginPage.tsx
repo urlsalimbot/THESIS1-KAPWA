@@ -156,7 +156,7 @@ export function LoginPage() {
               </div>
               <Button
                 type="submit"
-                className="w-full h-11"
+                className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90"
                 disabled={mfaValue.length !== 6 || mfaSubmitting}
               >
                 {mfaSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}
@@ -268,7 +268,7 @@ export function LoginPage() {
               </div>
               <Button
                 type="submit"
-                className="w-full h-11"
+                className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting && <Loader2 size={16} className="mr-2 animate-spin" />}

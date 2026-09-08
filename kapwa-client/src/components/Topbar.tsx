@@ -205,7 +205,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             </Badge>
           )}
           {pending > 0 && online && (
-            <Badge variant="outline" className="border-blue-400 text-blue-600 bg-blue-50" aria-label={t('topbar.pendingSyncCount', 'Pending sync count')}>
+            <Badge variant="outline" className="border-primary/40 text-primary bg-primary/5" aria-label={t('topbar.pendingSyncCount', 'Pending sync count')}>
               {t('topbar.pendingSync', '{{count}} pending', { count: pending })}
             </Badge>
           )}

@@ -100,7 +100,7 @@ export function ClaimantWidgets() {
                   {s.amount > 0 && (
                     <p className="text-sm font-semibold">₱{s.amount.toLocaleString()}</p>
                   )}
-                  <span className={`text-xs ${s.status === 'completed' ? 'text-green-600' : 'text-amber-600'}`}>
+                  <span className={`text-xs ${s.status === 'completed' ? 'textemerald-600' : 'text-amber-600'}`}>
                     {s.status}
                   </span>
                 </div>

@@ -133,7 +133,7 @@ export function CreateProgramPage() {
                 <div key={i} className="rounded-md border bg-muted/20 p-2 flex items-center gap-2">
                   <Input value={f} onChange={e => updateList(setFundSources, fundSources, i, e.target.value)} placeholder={t('programs.fundSourcePlaceholder', 'e.g. DSWD - AICS, LGU - Municipal')} className="h-8 text-xs" aria-label={t('programs.fundSourceAria', 'Fund source {{n}}', { n: i + 1 })} />
                   {fundSources.length > 1 && (
-                    <button type="button" onClick={() => removeList(setFundSources, fundSources, i)} className="text-muted-foreground hover:text-red-500 shrink-0" aria-label={t('programs.removeFundSource', 'Remove fund source {{n}}', { n: i + 1 })}>
+                    <button type="button" onClick={() => removeList(setFundSources, fundSources, i)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label={t('programs.removeFundSource', 'Remove fund source {{n}}', { n: i + 1 })}>
                       <Trash2 size={14} />
                     </button>
                   )}
@@ -156,7 +156,7 @@ export function CreateProgramPage() {
                 <div key={i} className="rounded-md border bg-muted/20 p-2 flex items-center gap-2">
                   <Input value={d} onChange={e => updateList(setRequiredDocuments, requiredDocuments, i, e.target.value)} placeholder={t('programs.documentPlaceholder', 'e.g. Barangay Certificate of Indigency')} className="h-8 text-xs" aria-label={t('programs.documentAria', 'Required document {{n}}', { n: i + 1 })} />
                   {requiredDocuments.length > 1 && (
-                    <button type="button" onClick={() => removeList(setRequiredDocuments, requiredDocuments, i)} className="text-muted-foreground hover:text-red-500 shrink-0" aria-label={t('programs.removeDocument', 'Remove document {{n}}', { n: i + 1 })}>
+                    <button type="button" onClick={() => removeList(setRequiredDocuments, requiredDocuments, i)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label={t('programs.removeDocument', 'Remove document {{n}}', { n: i + 1 })}>
                       <Trash2 size={14} />
                     </button>
                   )}
@@ -182,7 +182,7 @@ export function CreateProgramPage() {
                   <ArrowRight size={12} className="text-muted-foreground shrink-0" />
                   <Input required value={s.stepName} onChange={e => updateStep(i, 'stepName', e.target.value)} placeholder={t('programs.stepTitle', 'Step title (e.g. Approve)')} className="h-8 text-xs" aria-label={t('programs.stepTitleAria', 'Step {{n}} title', { n: i + 1 })} />
                   {workflowSteps.length > 1 && (
-                    <button type="button" onClick={() => removeStep(i)} className="text-muted-foreground hover:text-red-500 shrink-0" aria-label={t('programs.removeStepAria', 'Remove step {{n}}', { n: i + 1 })}>
+                    <button type="button" onClick={() => removeStep(i)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label={t('programs.removeStepAria', 'Remove step {{n}}', { n: i + 1 })}>
                       <Trash2 size={14} />
                     </button>
                   )}

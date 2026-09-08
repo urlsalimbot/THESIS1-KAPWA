@@ -7,17 +7,17 @@ export const THRESHOLDS = {
 
 export function getThresholdColor(status: SlaStatus): string {
   switch (status) {
-    case 'compliant': return 'text-green-500';
+    case 'compliant': return 'textemerald-500';
     case 'warning': return 'text-amber-500';
-    case 'breached': return 'text-red-500';
+    case 'breached': return 'text-destructive';
   }
 }
 
 export function getThresholdBgColor(status: SlaStatus): string {
   switch (status) {
-    case 'compliant': return 'bg-green-500/10';
+    case 'compliant': return 'bgemerald-500/10';
     case 'warning': return 'bg-amber-500/10';
-    case 'breached': return 'bg-red-500/10';
+    case 'breached': return 'bg-destructive/100/10';
   }
 }
 

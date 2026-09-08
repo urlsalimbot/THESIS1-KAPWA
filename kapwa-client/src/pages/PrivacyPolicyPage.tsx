@@ -5,14 +5,20 @@ import { ShieldCheck, ArrowLeft } from 'lucide-react';
 export function PrivacyPolicyPage() {
   const { t } = useTranslation();
   return (
-    <div className="max-w-3xl mx-auto px-4 py-16">
+    <div className="relative max-w-3xl mx-auto px-4 py-16">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
+      </div>
+      <div className="relative">
       <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline mb-6">
         <ArrowLeft size={16} /> {t('public.backToHome', 'Back to home')}
       </Link>
-      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
-        <ShieldCheck size={16} className="text-accent" />
-        <span className="text-xs font-medium text-accent tracking-wide">{t('privacy.eyebrow', 'Privacy')}</span>
+      <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
+        <ShieldCheck size={28} className="text-accent" />
       </div>
+      <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">{t('privacy.eyebrow', 'Privacy')}</p>
       <h1 className="font-heading text-4xl font-bold tracking-tight mb-6">{t('privacy.title', 'Privacy Policy')}</h1>
       <div className="prose prose-slate max-w-none prose-headings:font-heading dark:prose-invert">
         <p>
@@ -49,6 +55,7 @@ export function PrivacyPolicyPage() {
           For privacy concerns or to exercise your rights, contact the MSWDO office through the{' '}
           <Link to="/contact" className="text-primary">contact page</Link> or at mswdo@norzagaray.gov.ph.
         </p>
+      </div>
       </div>
     </div>
   );

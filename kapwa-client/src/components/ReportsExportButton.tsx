@@ -68,7 +68,7 @@ export default function ReportsExportButton({
         {loading ? t('reports.generating', 'Generating...') : label}
       </button>
       {error && (
-        <p className="mt-1 text-xs text-red-600">{error}</p>
+        <p className="mt-1 text-xs text-destructive">{error}</p>
       )}
     </div>
   );

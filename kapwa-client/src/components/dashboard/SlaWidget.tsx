@@ -24,10 +24,10 @@ export function SlaWidget({ overdueCount }: SlaWidgetProps) {
       <CardContent>
         <div className="flex items-center gap-2 mb-3">
           {compliant
-            ? <CheckCircle size={20} className="text-green-600" />
+            ? <CheckCircle size={20} className="textemerald-600" />
             : <AlertTriangle size={20} className="text-destructive" />
           }
-          <span className={`font-semibold ${compliant ? 'text-green-700' : 'text-destructive'}`}>
+          <span className={`font-semibold ${compliant ? 'textemerald-700' : 'text-destructive'}`}>
             {compliant ? t('dashboard.compliant', 'Compliant') : t('dashboard.overdue', '{{count}} Overdue', { count: overdueCount })}
           </span>
         </div>

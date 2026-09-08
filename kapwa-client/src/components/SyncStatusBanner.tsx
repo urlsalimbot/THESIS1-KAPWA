@@ -16,7 +16,7 @@ export function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncSt
     : t('sync.offlinePendingChanges', 'You are offline — {{count}} change(s) pending sync', { count: pendingCount });
 
   const bgClass = isOnline
-    ? 'bg-blue-500 text-white'
+    ? 'bg-primary/50 text-white'
     : 'bg-amber-500 text-white';
 
   return (

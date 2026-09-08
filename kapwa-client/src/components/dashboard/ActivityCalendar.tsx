@@ -40,7 +40,7 @@ export function ActivityCalendar({ data, year, month }: ActivityCalendarProps) {
 
   const maxCount = Math.max(1, ...Object.values(data).flatMap(d => d.cases + d.interventions));
   const monthName = new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const colors = ['bg-muted', 'bg-blue-100', 'bg-blue-200', 'bg-blue-300', 'bg-blue-500'];
+  const colors = ['bg-muted', 'bg-primary/10', 'bg-primary/20', 'bg-primary/30', 'bg-primary/50'];
 
   return (
     <Card>

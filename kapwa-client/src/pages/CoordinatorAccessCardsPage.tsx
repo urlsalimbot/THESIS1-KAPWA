@@ -299,10 +299,10 @@ function AssignTab() {
       </Card>
 
       {assignedCode && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="borderemerald-200 bgemerald-50">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-green-800">{t('accessCard.cardAssigned', 'Card assigned!')}</p>
-            <p className="text-xs text-green-700 mt-1">{t('accessCard.codeLabel', 'Code: {{code}}', { code: assignedCode })}</p>
+            <p className="text-sm font-medium textemerald-800">{t('accessCard.cardAssigned', 'Card assigned!')}</p>
+            <p className="text-xs textemerald-700 mt-1">{t('accessCard.codeLabel', 'Code: {{code}}', { code: assignedCode })}</p>
           </CardContent>
         </Card>
       )}

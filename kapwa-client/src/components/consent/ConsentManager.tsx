@@ -22,13 +22,13 @@ interface ConsentManagerProps {
 function StatusBadge({ status, t }: { status: string; t: TFunction }) {
   if (status === 'active') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+      <span className="inline-flex items-center gap-1 rounded-full bgemerald-100 px-3 py-1 text-sm font-medium textemerald-700">
         <Check size={14} /> {t('consent.active', 'Active')}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
+    <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-3 py-1 text-sm font-medium text-destructive">
       <ShieldOff size={14} /> {t('consent.revoked', 'Revoked')}
     </span>
   );
@@ -76,9 +76,9 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
       <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
         <div className="flex items-center gap-3">
           {status === 'active' ? (
-            <Shield size={32} className="text-green-500" />
+            <Shield size={32} className="textemerald-500" />
           ) : (
-            <ShieldOff size={32} className="text-red-500" />
+            <ShieldOff size={32} className="text-destructive" />
           )}
           <div>
             <p className="text-sm font-medium text-gray-800">{t('consent.status', 'Consent Status')}</p>
@@ -88,7 +88,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
         {status === 'active' && (
           <button
             onClick={() => setShowRevokeDialog(true)}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90"
           >
             {t('consent.revoke', 'Revoke Consent')}
           </button>
@@ -114,7 +114,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-red-600">
+              <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle size={20} />
                 <h3 className="text-lg font-semibold">{t('consent.revokeTitle', 'Revoke Consent')}</h3>
               </div>
@@ -138,13 +138,13 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
                 placeholder={t('consent.revokeReasonPlaceholder', 'e.g., No longer receiving services, Withdrawn request...')}
-                className="w-full rounded-lg border border-gray-300 p-3 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"
+                className="w-full rounded-lg border border-gray-300 p-3 text-sm outline-none focus:border-destructive/40 focus:ring-1 focus:ring-destructive/60"
                 rows={3}
               />
             </div>
 
             {error && (
-              <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
+              <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
             )}
 
             <div className="flex justify-end gap-3">
@@ -157,7 +157,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
               <button
                 onClick={handleRevoke}
                 disabled={revoking}
-                className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {revoking && <Loader2 className="h-4 w-4 animate-spin" />}
                 {t('consent.confirmRevoke', 'Confirm Revoke')}
@@ -201,8 +201,8 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                           entry.status === 'active'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                            ? 'bgemerald-100 textemerald-700'
+                            : 'bg-destructive/10 text-destructive'
                         }`}
                       >
                         {entry.status === 'active' ? t('consent.active', 'Active') : t('consent.revoked', 'Revoked')}

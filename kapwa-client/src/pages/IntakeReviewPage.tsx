@@ -33,7 +33,7 @@ interface LocationState {
 }
 
 function confidenceLabel(score: number, t: TFunction): { label: string; className: string } {
-  if (score >= 0.8) return { label: t('intake.confidenceVeryLikely', 'Very likely the same person'), className: 'bg-green-100 text-green-800 border-green-300' };
+  if (score >= 0.8) return { label: t('intake.confidenceVeryLikely', 'Very likely the same person'), className: 'bgemerald-100 textemerald-800 borderemerald-300' };
   if (score >= 0.5) return { label: t('intake.confidenceSome', 'Some similarities'), className: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
   return { label: t('intake.confidenceSameSurname', 'Same surname only'), className: 'bg-gray-100 text-gray-600 border-gray-300' };
 }
@@ -56,7 +56,7 @@ function MatchRow({ label, newVal, existingVal }: { label: string; newVal: strin
       <span className="text-right text-muted-foreground">{newVal || '—'}</span>
       <span className="text-xs text-muted-foreground mx-2">{label}</span>
       <span className="text-left font-medium">{existingVal || '—'}</span>
-      <span className={match ? 'text-green-600' : 'text-gray-300'}>{match ? '✅' : '○'}</span>
+      <span className={match ? 'textemerald-600' : 'text-gray-300'}>{match ? '✅' : '○'}</span>
     </div>
   );
 }
@@ -179,7 +179,7 @@ export function IntakeReviewPage() {
                   )}
                 </div>
 
-                <div className={`flex items-start gap-2 text-sm p-3 rounded-lg ${elig.icon === 'info' ? 'bg-blue-50 text-blue-800' : 'bg-green-50 text-green-800'}`}>
+                <div className={`flex items-start gap-2 text-sm p-3 rounded-lg ${elig.icon === 'info' ? 'bg-primary/5 text-primary' : 'bgemerald-50 textemerald-800'}`}>
                   {elig.icon === 'info' ? <Info size={16} className="mt-0.5 shrink-0" /> : <CheckCircle size={16} className="mt-0.5 shrink-0" />}
                   <span>{elig.text}</span>
                 </div>

@@ -177,12 +177,12 @@ export function MayorReportsPage() {
   ], [t]);
 
   const statCards = metrics ? [
-    { label: t('dashboard.totalCases', 'Total Cases'), value: String(metrics.totalCases || 0), icon: TrendingUp, color: 'bg-blue-50 text-blue-700' },
-    { label: t('dashboard.uniqueHouseholds', 'Unique Households'), value: String(metrics.uniqueHouseholds || 0), icon: Users, color: 'bg-green-100 text-green-800' },
-    { label: t('dashboard.fundUtilization', 'Fund Utilization'), value: fmtPeso(metrics.fundUtilization), icon: DollarSign, color: 'bg-blue-50 text-cyan-600' },
-    { label: t('reports.beneficiariesServed', 'Beneficiaries Served'), value: String(metrics.beneficiariesServed ?? 0), icon: UserRound, color: 'bg-indigo-50 text-indigo-700' },
+    { label: t('dashboard.totalCases', 'Total Cases'), value: String(metrics.totalCases || 0), icon: TrendingUp, color: 'bg-primary/5 text-primary' },
+    { label: t('dashboard.uniqueHouseholds', 'Unique Households'), value: String(metrics.uniqueHouseholds || 0), icon: Users, color: 'bgemerald-100 textemerald-800' },
+    { label: t('dashboard.fundUtilization', 'Fund Utilization'), value: fmtPeso(metrics.fundUtilization), icon: DollarSign, color: 'bg-primary/5 text-primary' },
+    { label: t('reports.beneficiariesServed', 'Beneficiaries Served'), value: String(metrics.beneficiariesServed ?? 0), icon: UserRound, color: 'bg-primary/5 text-primary' },
     { label: t('dashboard.servedToday', 'Served Today'), value: String(metrics.servedToday || 0), icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
-    { label: t('reports.recentInterventions', 'Interventions (7d)'), value: String(metrics.recentInterventions || 0), icon: FileBarChart2, color: 'bg-orange-50 text-orange-700' },
+    { label: t('reports.recentInterventions', 'Interventions (7d)'), value: String(metrics.recentInterventions || 0), icon: FileBarChart2, color: 'bg-amber-50 text-amber-700' },
   ] : [];
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">{t('dashboard.loadingReports', 'Loading reports...')}</div>;
@@ -247,7 +247,7 @@ export function MayorReportsPage() {
           <Download size={14} className="mr-1" /> {exporting ? t('dashboard.generating', 'Generating...') : t('dashboard.exportFundUtilization', 'Export Fund Utilization')}
         </Button>
         <span className="text-xs text-muted-foreground">{periodLabel}</span>
-        {exportError && <span className="text-xs text-red-600">{exportError}</span>}
+        {exportError && <span className="text-xs text-destructive">{exportError}</span>}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
@@ -288,7 +288,7 @@ export function MayorReportsPage() {
           </div>
           <div className="rounded-lg border bg-card p-4">
             <h2 className="font-semibold text-sm mb-1">{t('dashboard.slaCompliance', 'SLA Compliance')}</h2>
-            <p className={`text-sm ${metrics.slaCompliance?.slaStatus === 'compliant' ? 'text-emerald-600' : 'text-red-600'}`}>
+            <p className={`text-sm ${metrics.slaCompliance?.slaStatus === 'compliant' ? 'text-emerald-600' : 'text-destructive'}`}>
               {metrics.slaCompliance?.slaStatus === 'compliant' ? t('dashboard.compliant', 'Compliant') : t('dashboard.violated', 'Violated')}
               {' — '}{metrics.slaCompliance?.overdueCount ?? 0} {t('reports.overdueCases', 'overdue case(s)')}
             </p>

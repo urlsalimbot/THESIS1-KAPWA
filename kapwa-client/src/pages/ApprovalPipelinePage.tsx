@@ -202,7 +202,7 @@ export function ApprovalPipelinePage() {
               <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-base">
                 <span className={`w-2 h-2 rounded-full ${
                   group.status === 'in_review' ? 'bg-amber-400' :
-                   group.status === 'active' ? 'bg-green-400' : 'bg-blue-400'
+                   group.status === 'active' ? 'bg-emerald-400' : 'bg-primary/40'
                 }`} />
                 {group.label}
                 <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.items.length}</span>
@@ -252,7 +252,7 @@ export function ApprovalPipelinePage() {
                             }} />
                           </label>
                         ) : (
-                          <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600 hover:text-green-700">
+                          <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600 hover:textemerald-700">
                             <FileText size={14} /> {t('approvals.viewCertificate', 'View Certificate')}
                           </a>
                         )}
@@ -264,7 +264,7 @@ export function ApprovalPipelinePage() {
                             }} />
                           </label>
                         ) : (
-                          <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600 hover:text-green-700">
+                          <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600 hover:textemerald-700">
                             <FileText size={14} /> {t('approvals.viewVoucher', 'View Voucher')}
                           </a>
                         )}
@@ -279,12 +279,12 @@ export function ApprovalPipelinePage() {
                     {(group.status === 'active' || group.status === 'transitioning') && (
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
                         {c.certificateUrl && (
-                          <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600">
+                          <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600">
                             <FileText size={14} /> {t('approvals.viewCertificate', 'View Certificate')}
                           </a>
                         )}
                         {c.pettyCashVoucherUrl && (
-                          <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-green-600">
+                          <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600">
                             <FileText size={14} /> {t('approvals.viewVoucher', 'View Voucher')}
                           </a>
                         )}

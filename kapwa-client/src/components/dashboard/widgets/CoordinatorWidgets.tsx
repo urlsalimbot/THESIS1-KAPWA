@@ -68,7 +68,7 @@ export function CoordinatorWidgets() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.barangayCases', 'Barangay Cases')}</span>
-              <TrendingUp className="ml-auto text-blue-600" size={16} />
+              <TrendingUp className="ml-auto text-primary" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{caseCount}</div>
           </CardContent>
@@ -86,7 +86,7 @@ export function CoordinatorWidgets() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.pendingReview', 'Pending Review')}</span>
-              <ClipboardList className="ml-auto text-green-600" size={16} />
+              <ClipboardList className="ml-auto textemerald-600" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{pendingReview}</div>
           </CardContent>
@@ -95,7 +95,7 @@ export function CoordinatorWidgets() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('dashboard.myReferrals', 'My Referrals')}</span>
-              <Send className="ml-auto text-purple-600" size={16} />
+              <Send className="ml-auto text-primary" size={16} />
             </div>
             <div className="text-2xl font-bold text-foreground font-heading">{referralTotal}</div>
             <div className="text-xs mt-1 text-muted-foreground">{t('dashboard.pending', '{{count}} pending', { count: referralPending })}</div>

@@ -17,10 +17,10 @@ const DISPOSITION_STATES = ['Under Investigation', 'Referred to PNP', 'Referred 
 
 const DISPOSITION_COLORS: Record<string, string> = {
   'Under Investigation': 'bg-amber-100 text-amber-800 border-amber-300',
-  'Referred to PNP': 'bg-blue-100 text-blue-800 border-blue-300',
+  'Referred to PNP': 'bg-primary/10 text-primary border-primary/30',
   'Referred to WCPD': 'bg-violet-100 text-violet-800 border-violet-300',
-  'Dismissed': 'bg-red-100 text-red-800 border-red-300',
-  'Closed': 'bg-green-100 text-green-800 border-green-300',
+  'Dismissed': 'bg-destructive/10 text-destructive border-destructive/30',
+  'Closed': 'bgemerald-100 textemerald-800 borderemerald-300',
 };
 
 const LEGAL_BASIS_OPTIONS = [
@@ -153,18 +153,18 @@ function DispositionStepper({ states, currentIndex, currentState }: {
             <div className="flex flex-col items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2
                 ${isCurrent ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/30'
-                  : isPast ? 'bg-green-500 text-white border-green-500'
+                  : isPast ? 'bgemerald-500 text-white borderemerald-500'
                   : 'bg-muted text-muted-foreground border-border'}`}>
                 {isPast && !isCurrent ? '✓' : i + 1}
               </div>
               <span className={`text-xs font-medium whitespace-nowrap px-2 py-0.5 rounded
                 ${isCurrent ? 'bg-primary/10 text-primary font-semibold'
-                  : isPast ? 'text-green-700'
+                  : isPast ? 'textemerald-700'
                   : 'text-muted-foreground'}`}>{state}</span>
             </div>
             {i < states.length - 1 && (
               <div className={`w-8 md:w-10 h-0.5 mx-1 mt-[-1.25rem]
-                ${isPast && !isCurrent ? 'bg-green-400' : isCurrent ? 'bg-primary/40' : 'bg-border'}`} />
+                ${isPast && !isCurrent ? 'bg-emerald-400' : isCurrent ? 'bg-primary/40' : 'bg-border'}`} />
             )}
           </div>
         );

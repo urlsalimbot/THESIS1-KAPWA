@@ -544,7 +544,7 @@ export function IntakePage() {
         </div>
       )}
       {(location.state as { prefill?: Record<string, string> })?.prefill && (
-        <div className="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+        <div className="mb-4 rounded border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
           {t('intake.addingCaseFor', 'Adding a case for')} <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>{t('intake.addingCaseForSuffix', '. Review and modify details before submitting.')}
         </div>
       )}
@@ -619,7 +619,7 @@ export function IntakePage() {
             {family.map(m => {
               const dobError = m.dob && (!/^\d{4}-\d{2}-\d{2}$/.test(m.dob) || computeAge(m.dob) < 0 || computeAge(m.dob) > 120) ? t('intake.invalidDob', 'Invalid date of birth') : '';
               return (
-                <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bg-green-50 border-green-300' : 'bg-muted/30'}`}>
+                <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bgemerald-50 borderemerald-300' : 'bg-muted/30'}`}>
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.surname', 'Surname *')}</label>
@@ -718,7 +718,7 @@ export function IntakePage() {
                   </button>
                 )}
                 {pendingPreview && (
-                  <button type="button" onClick={() => { setPendingBeneficiaryIdPhoto(null); clearBenPreview(); }} className="text-xs text-red-500">
+                  <button type="button" onClick={() => { setPendingBeneficiaryIdPhoto(null); clearBenPreview(); }} className="text-xs text-destructive">
                     {t('intake.idPhoto.remove', 'Remove')}
                   </button>
                 )}
@@ -741,7 +741,7 @@ export function IntakePage() {
                   </button>
                 )}
                 {claimPreview && (
-                  <button type="button" onClick={() => { setPendingClaimantIdPhoto(null); clearClaimPreview(); }} className="text-xs text-red-500">
+                  <button type="button" onClick={() => { setPendingClaimantIdPhoto(null); clearClaimPreview(); }} className="text-xs text-destructive">
                     {t('intake.idPhoto.remove', 'Remove')}
                   </button>
                 )}

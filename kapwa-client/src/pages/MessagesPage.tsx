@@ -41,7 +41,7 @@ interface ChatUser {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: 'bg-blue-500', social_worker: 'bg-emerald-500', coordinator: 'bg-purple-500',
+  admin: 'bg-primary/50', social_worker: 'bg-emerald-500', coordinator: 'bg-primary/50',
   claimant: 'bg-amber-500', mayor: 'bg-rose-500', auditor: 'bg-slate-500',
 };
 

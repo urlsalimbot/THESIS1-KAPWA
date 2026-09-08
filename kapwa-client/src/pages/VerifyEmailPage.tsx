@@ -49,8 +49,8 @@ export function VerifyEmailPage() {
           )}
           {status === 'success' && (
             <div className="flex flex-col items-center gap-3 py-4">
-              <CheckCircle size={48} className="text-green-500" />
-              <p className="text-green-700 font-medium">{message}</p>
+              <CheckCircle size={48} className="textemerald-500" />
+              <p className="textemerald-700 font-medium">{message}</p>
             </div>
           )}
           {status === 'error' && (

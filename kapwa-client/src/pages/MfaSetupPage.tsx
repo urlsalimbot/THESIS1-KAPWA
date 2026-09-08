@@ -95,7 +95,7 @@ export function MfaSetupPage() {
 
           {step === 'setup' && (
             <div className="space-y-4">
-              <div className="rounded bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700">
+              <div className="rounded bg-primary/5 border border-primary/20 p-3 text-sm text-primary">
                 <strong>{t('auth.mfaStep1', 'Step 1:')}</strong> {t('auth.mfaStep1Body', 'Open your authenticator app (Google Authenticator, Authy, etc.)')}
               </div>
 
@@ -140,10 +140,10 @@ export function MfaSetupPage() {
           {step === 'done' && mfaEnabled && (
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <CheckCircle className="text-green-600" size={32} />
+                <CheckCircle className="textemerald-600" size={32} />
                 <div>
-                  <p className="font-medium text-green-800">{t('auth.mfaEnabled', 'MFA is enabled')}</p>
-                  <p className="text-xs text-green-600">{t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
+                  <p className="font-medium textemerald-800">{t('auth.mfaEnabled', 'MFA is enabled')}</p>
+                  <p className="text-xs textemerald-600">{t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
                 </div>
               </div>
               <Button variant="outline" onClick={() => { setStep('idle'); setCode(''); }} aria-label={t('auth.done', 'Done')}>

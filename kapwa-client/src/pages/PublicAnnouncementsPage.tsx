@@ -35,12 +35,18 @@ export function PublicAnnouncementsPage() {
   const sorted = [...announcements].sort((a, b) => Number(b.pinned) - Number(a.pinned));
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-16">
+    <div className="relative max-w-5xl mx-auto px-4 py-16">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
+      </div>
+      <div className="relative">
       <div className="mb-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
-          <Megaphone size={16} className="text-accent" />
-          <span className="text-xs font-medium text-accent tracking-wide">{t('public.news', 'News')}</span>
+        <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
+          <Megaphone size={28} className="text-accent" />
         </div>
+        <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">{t('public.news', 'News')}</p>
         <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-balance mb-4">
           {t('announcementsPublic.title', 'News & Announcements')}
         </h1>
@@ -103,6 +109,7 @@ export function PublicAnnouncementsPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

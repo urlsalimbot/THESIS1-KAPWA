@@ -61,7 +61,7 @@ export function QuickScanCard({ onLogged }: QuickScanCardProps) {
           onKeyDown={e => { if (e.key === 'Enter') verify(); }}
         />
         <Button onClick={verify} disabled={!code.trim() || verifying}>{t('quickScan.verifyCard', 'Verify Card')}</Button>
-        {result && <p className="text-sm text-green-700">{personName || t('quickScan.cardValid', 'Card valid')}</p>}
+        {result && <p className="text-sm textemerald-700">{personName || t('quickScan.cardValid', 'Card valid')}</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
         {result && (
           <Button variant="outline" size="sm" onClick={() => { setCode(''); setResult(null); onLogged?.(); }}>

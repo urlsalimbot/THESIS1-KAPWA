@@ -117,14 +117,14 @@ export default function JsonSchemaForm({
     const label = field.title || key;
     const required = schema.required?.includes(key);
 
-    const errorClass = error ? 'border-red-500' : 'border-gray-300';
-    const baseClass = `w-full rounded border px-3 py-2 text-sm ${errorClass} focus:border-blue-500 focus:outline-none`;
+    const errorClass = error ? 'border-destructive' : 'border-gray-300';
+    const baseClass = `w-full rounded border px-3 py-2 text-sm ${errorClass} focus:border-primary/50 focus:outline-none`;
 
     if (field.enum) {
       return (
         <div key={key} className="mb-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            {label}{required && <span className="text-red-500 ml-1">*</span>}
+            {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
           <select
             className={baseClass}
@@ -140,7 +140,7 @@ export default function JsonSchemaForm({
             ))}
           </select>
           {field.description && <p className="mt-1 text-xs text-gray-500">{field.description}</p>}
-          {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
         </div>
       );
     }
@@ -150,16 +150,16 @@ export default function JsonSchemaForm({
         <div key={key} className="mb-4 flex items-center gap-2">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-blue-600"
+            className="h-4 w-4 rounded border-gray-300 text-primary"
             checked={!!value}
             onChange={e => handleChange(key, e.target.checked)}
             disabled={readOnly}
             id={`field-${key}`}
           />
           <label htmlFor={`field-${key}`} className="text-sm font-medium text-gray-700">
-            {label}{required && <span className="text-red-500 ml-1">*</span>}
+            {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
       );
     }
@@ -168,7 +168,7 @@ export default function JsonSchemaForm({
       return (
         <div key={key} className="mb-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            {label}{required && <span className="text-red-500 ml-1">*</span>}
+            {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
           <input
             type="number"
@@ -180,7 +180,7 @@ export default function JsonSchemaForm({
             max={field.maximum}
           />
           {field.description && <p className="mt-1 text-xs text-gray-500">{field.description}</p>}
-          {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
         </div>
       );
     }
@@ -189,7 +189,7 @@ export default function JsonSchemaForm({
       return (
         <div key={key} className="mb-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            {label}{required && <span className="text-red-500 ml-1">*</span>}
+            {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
           <input
             type="date"
@@ -198,7 +198,7 @@ export default function JsonSchemaForm({
             onChange={e => handleChange(key, e.target.value)}
             disabled={readOnly}
           />
-          {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
         </div>
       );
     }
@@ -207,7 +207,7 @@ export default function JsonSchemaForm({
       return (
         <div key={key} className="mb-4">
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            {label}{required && <span className="text-red-500 ml-1">*</span>}
+            {label}{required && <span className="text-destructive ml-1">*</span>}
           </label>
           <textarea
             className={baseClass}
@@ -216,7 +216,7 @@ export default function JsonSchemaForm({
             disabled={readOnly}
             rows={4}
           />
-          {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
         </div>
       );
     }
@@ -235,7 +235,7 @@ export default function JsonSchemaForm({
     return (
       <div key={key} className="mb-4">
         <label className="mb-1 block text-sm font-medium text-gray-700">
-          {label}{required && <span className="text-red-500 ml-1">*</span>}
+          {label}{required && <span className="text-destructive ml-1">*</span>}
         </label>
         <input
           type={field.format === 'email' ? 'email' : field.format === 'tel' ? 'tel' : 'text'}
@@ -245,7 +245,7 @@ export default function JsonSchemaForm({
           disabled={readOnly}
           placeholder={field.description || ''}
         />
-        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+        {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
       </div>
     );
   }

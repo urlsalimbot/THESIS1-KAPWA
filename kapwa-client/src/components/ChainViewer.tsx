@@ -41,7 +41,7 @@ export function ChainViewer({ caseId }: { caseId: string }) {
   }
 
   if (loading) return <div className="p-4 text-center text-sm">{t('chain.loading', 'Loading chain...')}</div>;
-  if (error) return <div className="p-4 text-red-600 text-sm">{error}</div>;
+  if (error) return <div className="p-4 text-destructive text-sm">{error}</div>;
   if (chain.length === 0) return <div className="p-4 text-gray-500 text-sm">{t('chain.noInterventions', 'No interventions recorded')}</div>;
 
   const isValid = verifyIntegrity();
@@ -49,13 +49,13 @@ export function ChainViewer({ caseId }: { caseId: string }) {
   return (
     <div className="border rounded-lg p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Shield size={16} className={isValid ? 'text-green-600' : 'text-red-600'} />
+        <Shield size={16} className={isValid ? 'textemerald-600' : 'text-destructive'} />
         <span className="font-semibold text-sm">{t('chain.title', 'Intervention Hash Chain')}</span>
         {isValid
-          ? <CheckCircle size={16} className="text-green-600" />
-          : <XCircle size={16} className="text-red-600" />
+          ? <CheckCircle size={16} className="textemerald-600" />
+          : <XCircle size={16} className="text-destructive" />
         }
-        <span className={`text-xs ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+        <span className={`text-xs ${isValid ? 'textemerald-600' : 'text-destructive'}`}>
           {isValid ? t('chain.integrityVerified', 'Chain Integrity Verified') : t('chain.integrityFailed', 'Chain Integrity Failed')}
         </span>
       </div>

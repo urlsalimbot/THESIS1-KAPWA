@@ -35,15 +35,15 @@ export function MayorWidgets() {
 
   const dataOrEmpty: MayorData = data || { totalCases: 0, uniqueHouseholds: 0, fundUtilization: 0, servedToday: 0, caseStatusDistribution: [] };
   const stats: { label: string; value: string; icon: typeof CheckCircle; color: string }[] = [
-    { label: t('dashboard.totalCases', 'Total Cases'), value: String(dataOrEmpty.totalCases || 0), icon: TrendingUp, color: 'bg-blue-50 text-blue-700' },
-    { label: t('dashboard.uniqueHouseholds', 'Unique Households'), value: String(dataOrEmpty.uniqueHouseholds || 0), icon: Users, color: 'bg-green-100 text-green-800' },
-    { label: t('dashboard.fundUtilization', 'Fund Utilization'), value: `₱${(dataOrEmpty.fundUtilization || 0).toLocaleString()}`, icon: DollarSign, color: 'bg-blue-50 text-cyan-600' },
+    { label: t('dashboard.totalCases', 'Total Cases'), value: String(dataOrEmpty.totalCases || 0), icon: TrendingUp, color: 'bg-primary/5 text-primary' },
+    { label: t('dashboard.uniqueHouseholds', 'Unique Households'), value: String(dataOrEmpty.uniqueHouseholds || 0), icon: Users, color: 'bgemerald-100 textemerald-800' },
+    { label: t('dashboard.fundUtilization', 'Fund Utilization'), value: `₱${(dataOrEmpty.fundUtilization || 0).toLocaleString()}`, icon: DollarSign, color: 'bg-primary/5 text-primary' },
     { label: t('dashboard.servedToday', 'Served Today'), value: String(dataOrEmpty.servedToday || 0), icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
-    { label: t('dashboard.slaCompliance', 'SLA Compliance'), icon: CheckCircle, color: 'bg-green-100 text-green-800', value: t('dashboard.compliant', 'Compliant') },
+    { label: t('dashboard.slaCompliance', 'SLA Compliance'), icon: CheckCircle, color: 'bgemerald-100 textemerald-800', value: t('dashboard.compliant', 'Compliant') },
   ];
 
   const slaIcon = dataOrEmpty.slaCompliance?.slaStatus === 'compliant' ? CheckCircle : AlertTriangle;
-  const slaColor = dataOrEmpty.slaCompliance?.slaStatus === 'compliant' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+  const slaColor = dataOrEmpty.slaCompliance?.slaStatus === 'compliant' ? 'bgemerald-100 textemerald-800' : 'bg-destructive/10 text-destructive';
   stats[stats.length - 1] = {
     label: t('dashboard.slaCompliance', 'SLA Compliance'),
     value: dataOrEmpty.slaCompliance?.slaStatus === 'compliant' ? t('dashboard.compliant', 'Compliant') : t('dashboard.violated', 'Violated'),

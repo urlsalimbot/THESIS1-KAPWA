@@ -59,13 +59,19 @@ export function ContactPage() {
   }
 
   return (
-    <div className="w-full px-4 py-16 md:py-24">
+    <div className="relative w-full px-4 py-16 md:py-24">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
+      </div>
+      <div className="relative">
       {/* Header */}
       <div className="mb-12 max-w-7xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
-          <Mail size={16} className="text-accent" />
-          <span className="text-xs font-medium text-accent tracking-wide">{t('public.contactUs', 'Contact Us')}</span>
+        <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
+          <Mail size={28} className="text-accent" />
         </div>
+        <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">{t('public.contactUs', 'Contact Us')}</p>
         <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-balance mb-4">
           {t('contact.title', 'Get in Touch')}
         </h1>
@@ -151,5 +157,6 @@ export function ContactPage() {
         </div>
       </div>
     </div>
+      </div>
   );
 }

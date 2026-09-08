@@ -92,7 +92,7 @@ const statusBadgeClass: Record<string, string> = {
   pending: '',
   syncing: '',
   failed: '',
-  conflict: 'border-orange-500 text-orange-600',
+  conflict: 'border-amber-500 text-amber-600',
 };
 
 export function SyncQueuePanel({ open, onClose }: SyncQueuePanelProps) {
@@ -307,11 +307,11 @@ function QueueItemCard({ item, onRetry, onRemove, onViewConflict, onSyncNow }: Q
   const isPending = item.status === 'pending';
 
   const statusIcon = isSyncing ? (
-    <RefreshCw size={16} className="text-blue-500 animate-spin" />
+    <RefreshCw size={16} className="text-primary animate-spin" />
   ) : isFailed ? (
     <XCircle size={16} className="text-destructive shrink-0" />
   ) : isConflict ? (
-    <AlertTriangle size={16} className="text-orange-500 shrink-0" />
+    <AlertTriangle size={16} className="text-amber-500 shrink-0" />
   ) : (
     <Clock size={16} className="text-muted-foreground shrink-0" />
   );

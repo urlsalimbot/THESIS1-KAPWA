@@ -14,17 +14,18 @@ export function LandingPage() {
         {/* Background imagery and gradients */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-muted/20" />
-          <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-accent/5 rounded-full blur-3xl opacity-60" />
-          <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-accent/3 rounded-full blur-3xl opacity-40" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
         </div>
         
         <div className="relative grid md:grid-cols-12 gap-8 items-center max-w-7xl mx-auto">
           {/* Left content - spans 7 columns */}
           <div className="md:col-span-7 text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-6">
-              <HandHeart size={16} className="text-accent" />
-              <span className="text-xs font-medium text-accent tracking-wide">MSWDO Norzagaray</span>
+            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
+              <HandHeart size={28} className="text-accent" />
             </div>
+            <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">MSWDO Norzagaray</p>
             
             <h1 className="font-heading text-5xl md:text-6xl font-bold leading-tight text-foreground mb-6 tracking-tight text-balance">
               Compassionate social welfare services for every resident

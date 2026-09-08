@@ -17,7 +17,7 @@ function StatCardItem({ stat }: { stat: StatCardData }) {
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{stat.label}</span>
-          <div className={`ml-auto rounded-full w-8 h-8 flex items-center justify-center shadow-sm ${stat.urgent ? 'bg-red-100 text-red-700' : 'bg-muted'}`}>
+          <div className={`ml-auto rounded-full w-8 h-8 flex items-center justify-center shadow-sm ${stat.urgent ? 'bg-destructive/10 text-destructive' : 'bg-muted'}`}>
             <Icon size={16} />
           </div>
         </div>

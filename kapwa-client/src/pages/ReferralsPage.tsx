@@ -284,14 +284,14 @@ function WorkerReferralView() {
       cell: ({ row }) => (
         <div className="flex gap-1">
           <Button
-            variant="outline" size="sm" className="text-green-700 border-green-300/60 hover:bg-green-50"
+            variant="outline" size="sm" className="textemerald-700 borderemerald-300/60 hover:bgemerald-50"
             onClick={() => handleAccept(row.original.id)} disabled={actionId === row.original.id}
             aria-label={t('referral.acceptAria', 'Accept referral for {{name}}', { name: row.original.firstName })}
           >
             {actionId === row.original.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {t('referral.accept', 'Accept')}
           </Button>
           <Button
-            variant="outline" size="sm" className="text-red-600 border-red-300/60 hover:bg-red-50"
+            variant="outline" size="sm" className="text-destructive border-destructive/30/60 hover:bg-destructive/10"
             onClick={() => setDeclineModal(row.original)} disabled={actionId === row.original.id}
             aria-label={t('referral.declineAria', 'Decline referral for {{name}}', { name: row.original.firstName })}
           >

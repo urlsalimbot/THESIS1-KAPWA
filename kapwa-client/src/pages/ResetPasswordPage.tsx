@@ -53,7 +53,7 @@ export function ResetPasswordPage() {
       <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
         <CardHeader className="text-center pb-6">
           {status === 'success' ? (
-            <CheckCircle size={48} className="text-green-500 mx-auto mb-2" />
+            <CheckCircle size={48} className="textemerald-500 mx-auto mb-2" />
           ) : (
             <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
               <Lock size={28} className="text-accent" />
@@ -103,7 +103,7 @@ export function ResetPasswordPage() {
                 minLength={8}
                 className="h-11"
               />
-              <Button type="submit" className="w-full h-11" disabled={submitting || !password || !confirm}>
+              <Button type="submit" className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90" disabled={submitting || !password || !confirm}>
                 {submitting && <Loader2 size={16} className="mr-2 animate-spin" />}
                 {t('auth.resetPassword', 'Reset Password')}
               </Button>

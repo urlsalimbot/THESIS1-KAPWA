@@ -162,7 +162,7 @@ export function ClaimantDashboardPage() {
                 </div>
                 <div className="text-right">
                   {s.amount > 0 && <p className="text-sm font-semibold">₱{s.amount.toLocaleString()}</p>}
-                  <span className={`text-xs ${s.status === 'completed' ? 'text-green-600' : 'text-amber-600'}`}>{s.status}</span>
+                  <span className={`text-xs ${s.status === 'completed' ? 'textemerald-600' : 'text-amber-600'}`}>{s.status}</span>
                 </div>
               </div>
             ))}
@@ -211,7 +211,7 @@ export function ClaimantDashboardPage() {
           </Button>
         </div>
         {prefSaved && (
-          <div className="mx-4 mt-2 rounded bg-green-50 px-3 py-2 text-xs text-green-700">
+          <div className="mx-4 mt-2 rounded bgemerald-50 px-3 py-2 text-xs textemerald-700">
             {t('notifications.preferencesSaved', 'Preferences saved')}
           </div>
         )}
