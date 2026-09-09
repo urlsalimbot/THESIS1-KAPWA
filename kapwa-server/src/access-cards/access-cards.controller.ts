@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, ParseUUIDPipe, DefaultValuePipe, ParseIntPipe, Request, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, ParseUUIDPipe, DefaultValuePipe, ParseIntPipe, Request, Res, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { LogServiceSchema } from './dto/access-cards.zod';
@@ -39,6 +39,20 @@ export class AccessCardsController {
   @ApiOperation({ summary: 'Get beneficiary card details' })
   async findBeneficiaryCard(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.svc.findBeneficiaryCard(id);
+  }
+
+  @Get('beneficiary/:id/gis-pdf')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @ApiOperation({ summary: 'Download family access card PDF' })
+  async downloadAccessCardPdf(@Param('id', new ParseUUIDPipe()) id: string, @Res() res: any) {
+    const pdf = await this.svc.generateAccessCardPdf(id);
+    const code = await this.svc.accessCardCodeFor(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${code}-access-card.pdf"`,
+      'Content-Length': pdf.length,
+    });
+    res.end(pdf);
   }
 
   @Post('log')
