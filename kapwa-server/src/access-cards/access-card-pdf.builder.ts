@@ -27,7 +27,7 @@ const PAALALA_LINES = [
 ];
 
 const SERVICES_HEADER = ['DATE', 'SERVICES RENDERED\n(Including Cost if any)', 'BY AGENCY', "WORKER'S NAME\n& SIGNATURE"];
-const SERVICES_COLS = [70, 180, 125, 120]; // sums to 495
+const SERVICES_COLS = [37, 94, 67, 49.5]; // sums to WIDTH/2 = 247.5
 
 function fmtDate(v?: Date | string): string {
   if (!v) return '';
@@ -40,7 +40,7 @@ function fmtDate(v?: Date | string): string {
 
 function drawServicesHeader(doc: any, x: number, y: number): number {
   let cx = x;
-  doc.rect(x, y, WIDTH, 14).fillColor('#e6e6e6').fill();
+  doc.rect(x, y, SERVICES_COLS.reduce((a, b) => a + b, 0), 14).fillColor('#e6e6e6').fill();
   SERVICES_HEADER.forEach((label, i) => {
     doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111')
       .text(label, cx + 2, y + 2, { width: SERVICES_COLS[i] - 4, ellipsis: true });
@@ -56,7 +56,7 @@ function drawServiceRows(doc: any, x: number, y: number, rows: AccessCardPdfData
     if (y + 18 > PAGE_BOTTOM) {
       doc.addPage();
       y = 60;
-      y = drawServicesHeader(doc, LEFT, y);
+      y = drawServicesHeader(doc, x, y);
     }
     const row = rows[i];
     const vals = [
@@ -155,9 +155,9 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
       .text(value || '', x + 2, y - 8, { width: w - 2, ellipsis: true });
   };
 
-  fieldRow(rx + 10, cy, 100, 'Surname', data.client.surname);
-  fieldRow(rx + 115, cy, 120, 'First Name', data.client.firstName);
-  fieldRow(rx + 240, cy, 90, 'Middle Name', data.client.middleName ?? '');
+  fieldRow(rx + 10, cy, 80, 'Surname', data.client.surname);
+  fieldRow(rx + 95, cy, 90, 'First Name', data.client.firstName);
+  fieldRow(rx + 190, cy, 60, 'Middle Name', data.client.middleName ?? '');
   cy += 24;
 
   doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555').text('Gender:', rx + 10, cy, { width: 60 });
@@ -183,13 +183,13 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('FAMILY COMPOSITION', rx + 10, cy);
   cy += 12;
   const famCols = [
-    { label: 'Family Members', w: 110 },
-    { label: 'Relationship', w: 70 },
-    { label: 'Age', w: 30 },
-    { label: 'Status / Income', w: 90 },
+    { label: 'Family Members', w: 90 },
+    { label: 'Relationship', w: 55 },
+    { label: 'Age', w: 20 },
+    { label: 'Status / Income', w: 60 },
   ];
   let fx = rx + 10;
-  doc.rect(rx + 10, cy, 300, 12).fillColor('#e6e6e6').fill();
+  doc.rect(rx + 10, cy, 225, 12).fillColor('#e6e6e6').fill();
   famCols.forEach(c => {
     doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text(c.label, fx + 2, cy + 2.5, { width: c.w - 4, ellipsis: true });
     doc.rect(fx, cy, c.w, 12).lineWidth(0.5).strokeColor('#999').stroke();
