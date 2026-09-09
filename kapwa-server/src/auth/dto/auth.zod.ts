@@ -1,4 +1,4 @@
-import { MIN_PASSWORD_LENGTH } from '../constants';
+import { MIN_PASSWORD_LENGTH } from '../../common/constants';
 import { z } from 'zod';
 
 export const UserCreateSchema = z.object({

@@ -16,7 +16,7 @@ import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, 
 import {
   SATURDAY, SUNDAY,
   PENDING_ESCALATION_DAYS, REVIEW_ESCALATION_DAYS, APPROVED_ESCALATION_DAYS,
-} from '../sla/constants';
+} from '../common/constants';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const CONTROL_NO_PAD_WIDTH = 5;

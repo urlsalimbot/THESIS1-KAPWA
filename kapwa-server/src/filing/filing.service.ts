@@ -1,4 +1,4 @@
-import { MAX_FILE_SIZE, DEFAULT_DOC_LIMIT } from './constants';
+import { MAX_FILE_SIZE, DEFAULT_DOC_LIMIT } from '../common/constants';
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, LessThan, Not, In } from 'typeorm';

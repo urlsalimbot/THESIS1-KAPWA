@@ -1,4 +1,4 @@
-import { DEFAULT_MESSAGE_LIMIT } from './constants';
+import { DEFAULT_MESSAGE_LIMIT } from '../common/constants';
 import { Controller, Get, Post, Param, Body, UseGuards, Request, Query } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';

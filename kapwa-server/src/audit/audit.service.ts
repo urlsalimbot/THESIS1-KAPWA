@@ -1,4 +1,4 @@
-import { AUDIT_LOG_DEFAULT_LIMIT } from './constants';
+import { AUDIT_LOG_DEFAULT_LIMIT } from '../common/constants';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

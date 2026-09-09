@@ -5,7 +5,7 @@ import { In, Not } from 'typeorm';
 import { FilingService } from './filing.service';
 import { DocumentVault } from './filing.entity';
 import { Case } from '../cases/case.entity';
-import { DEFAULT_DOC_LIMIT } from './constants';
+import { DEFAULT_DOC_LIMIT } from '../common/constants';
 
 describe('FilingService', () => {
   let service: FilingService;

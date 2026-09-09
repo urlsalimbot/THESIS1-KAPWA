@@ -1,4 +1,4 @@
-import { DEFAULT_MESSAGE_LIMIT } from './constants';
+import { DEFAULT_MESSAGE_LIMIT } from '../common/constants';
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';

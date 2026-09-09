@@ -1,3 +1,0 @@
-export const DEFAULT_MESSAGE_LIMIT = 50;
-export const RATE_LIMIT_WINDOW_MS = 60000;
-export const RATE_LIMIT_MAX_MESSAGES = 30;

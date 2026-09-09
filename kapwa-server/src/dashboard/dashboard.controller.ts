@@ -6,7 +6,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { DashboardService } from './dashboard.service';
 import { CaseStatus } from '../cases/case.entity';
 import { AuthenticatedRequest } from '../auth/types';
-import { SLA_OVERDUE_DAYS } from './constants';
+import { SLA_OVERDUE_DAYS } from '../common/constants';
 
 @ApiTags('Dashboard')
 @Controller('dashboard')

@@ -1,4 +1,4 @@
-import { BCRYPT_SALT_ROUNDS } from './constants';
+import { BCRYPT_SALT_ROUNDS } from '../common/constants';
 import { Logger, Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';

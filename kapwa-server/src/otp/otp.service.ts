@@ -1,4 +1,4 @@
-import { OTP_MIN, OTP_RANGE, OTP_EXPIRY_MINUTES, OTP_RATE_LIMIT_SECONDS, SECONDS_PER_MINUTE, MS_PER_SECOND } from './constants';
+import { OTP_MIN, OTP_RANGE, OTP_EXPIRY_MINUTES, OTP_RATE_LIMIT_SECONDS, SECONDS_PER_MINUTE, MS_PER_SECOND } from '../common/constants';
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';

@@ -1,2 +1,0 @@
-export const HASH_CHAIN_BATCH_LIMIT = 1000;
-export const AUDIT_LOG_DEFAULT_LIMIT = 100;

@@ -1,4 +1,4 @@
-import { DEFAULT_NOTIF_LIMIT } from './constants';
+import { DEFAULT_NOTIF_LIMIT } from '../common/constants';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
