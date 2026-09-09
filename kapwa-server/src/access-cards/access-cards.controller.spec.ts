@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { AccessCardsController } from './access-cards.controller';
 import { AccessCardsService } from './access-cards.service';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { exportFileName } from '../common/constants';
 
 describe('AccessCardsController', () => {
   let controller: AccessCardsController;
@@ -33,7 +34,7 @@ describe('AccessCardsController', () => {
     await controller.downloadAccessCardPdf('b1', res);
     expect(res.set).toHaveBeenCalledWith(expect.objectContaining({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': 'attachment; filename="NORZ-AC-2026-0001-access-card.pdf"',
+      'Content-Disposition': `attachment; filename="${exportFileName('ACCESS CARD', 'NORZ-AC-2026-0001')}"`,
     }));
     expect(res.end).toHaveBeenCalledWith(expect.any(Buffer));
   });

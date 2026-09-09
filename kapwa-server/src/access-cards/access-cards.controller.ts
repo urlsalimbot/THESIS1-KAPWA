@@ -9,6 +9,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AccessCardsService } from './access-cards.service';
 import { AuthenticatedRequest } from '../auth/types';
+import { exportFileName } from '../common/constants';
 
 @ApiTags('Access Cards')
 @Controller('access-cards')
@@ -49,7 +50,7 @@ export class AccessCardsController {
     const code = await this.svc.accessCardCodeFor(id);
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${code}-access-card.pdf"`,
+      'Content-Disposition': `attachment; filename="${exportFileName('ACCESS CARD', code)}"`,
       'Content-Length': pdf.length,
     });
     res.end(pdf);

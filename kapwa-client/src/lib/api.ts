@@ -311,7 +311,7 @@ export async function downloadAccessCardPdf(beneficiaryId: string) {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = dispositionFilename(res, `access-card-${beneficiaryId}.pdf`);
+  a.download = dispositionFilename(res, `ACCESS CARD ${beneficiaryId}.pdf`);
   a.click();
   URL.revokeObjectURL(url);
 }
