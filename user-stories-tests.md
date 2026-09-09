@@ -303,6 +303,10 @@ coordinator · **CLM** claimant · **MAY** mayor · **AUD** auditor · **AGY** a
 
 ---
 
+### US-152 — GIS export (case document PDF)
+- **As a** worker/admin, **I want** to export a case as a GIS document PDF **so that** I have an official case document for filing and records.
+- **AC:** `GET /cases/:id/gis-pdf` (admin/social_worker) returns an `application/pdf` attachment (`GIS-<caseId>.pdf`); the PDF is populated from case + beneficiary data (control no, client fields, services); renewal cases flag the renewal source; a missing case returns 404; blank beneficiary/person data still renders (blanks, never crashes). Verified live: case page GIS (PDF) button downloads a valid `%PDF` (93 KB) on the running stack.
+
 ## 16. Public Website
 
 ### US-150 — Public pages
