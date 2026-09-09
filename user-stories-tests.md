@@ -158,6 +158,10 @@ coordinator · **CLM** claimant · **MAY** mayor · **AUD** auditor · **AGY** a
 - **As an** agency staff, **I want** to see services rendered by my agency and by others **so that** I coordinate assistance.
 - **AC:** agency summary endpoint returns services split by origin; consent gating respected.
 
+### US-044 — Access Card PDF export
+- **As a** worker/admin/coordinator, **I want** to export the Family Access Card form as a PDF with the live client record **so that** I have an official, printable card for filing.
+- **AC:** `GET /access-cards/beneficiary/:id/gis-pdf` (admin/social_worker/coordinator) returns an `application/pdf` attachment named `ACCESS CARD <code>-<YYYY>-<MM>-<DD>.pdf`; the PDF is 2 pages A4 — page 1 PAALALA AT GABAY (left) + Client's Record of Services Avaited table start (right); page 2 services continuation (left) + Republic header/Code#/Barangay/Contact# + Client (surname/first/middle, gender checkbox, DOB, address) + FAMILY COMPOSITION + signature blocks (right); services rows come from the access card service log (date, rendered + cost, agency, worker); a beneficiary with no card returns 404; blank client/family/services data still renders (blanks, never crashes); button (claimant hidden) on `/beneficiary/:id/access-card` downloads the PDF.
+
 ---
 
 ## 6. IRF (Incident Report Forms)
@@ -290,6 +294,34 @@ coordinator · **CLM** claimant · **MAY** mayor · **AUD** auditor · **AGY** a
 - **As a** worker/mayor/auditor, **I want** a daily tracker with SLA status **so that** stale cases are visible.
 - **AC:** `/tracker` lists cases with SLA state; SLA endpoint exposes per-case status.
 
+### US-132 — CSR export (case study report PDF)
+- **As a** worker, **I want** to export a closed case as a Case Study Report (CSR) PDF **so that** the case is documented for records.
+- **AC:** `GET /csr/:controlNo/pdf` (admin/social_worker/coordinator) returns `application/pdf` named `CSR <controlNo>-<YYYY>-<MM>-<DD>.pdf`; `GET /cases/:id/csr-pdf` (admin/social_worker) streams the same document; unknown case returns 404. Verified live: case page Case Study Report button (closed cases) downloads a valid `%PDF`.
+
+### US-133 — Cases bulk export (CSV)
+- **As a** worker/admin, **I want** to bulk-export a set of cases as CSV **so that** I can process reports offline.
+- **AC:** `POST /cases/bulk-export` (admin/social_worker) with selected case ids returns `text/csv` attachment `cases-bulk-export.csv` with a header row + one row per case (controlNo, status, beneficiary, dates); empty selection is handled client-side (button disabled).
+
+### US-134 — Audit logs export
+- **As an** admin/auditor, **I want** to export the audit log as PDF or CSV **so that** I can submit compliance attachments.
+- **AC:** `GET /export/audit-logs?format=pdf|csv` (admin/auditor) returns the requested content type with `Content-Disposition` attachment `audit-logs.pdf` / `audit-logs.csv`; rows include action, table, entity, actor, timestamp.
+
+### US-135 — Service summary export
+- **As a** mayor/admin/auditor, **I want** to export the service summary as PDF, CSV, or XLSX **so that** I can present utilization figures.
+- **AC:** `GET /export/service-summary?format=pdf|csv|xlsx` (admin/mayor/auditor) returns the matching `Content-Type` (pdf/csv/xlsx) attachment `service-summary.<ext>`; range filters startDate/endDate respected.
+
+### US-136 — Monthly funds export
+- **As a** mayor/admin/auditor, **I want** to export fund utilization as an Excel workbook **so that** I can review spending per month/range.
+- **AC:** `GET /export/monthly-funds?month=YYYY-MM` or `?startDate&endDate` (admin/mayor/auditor) returns `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` attachment; bad or missing date params return 400 with a descriptive message.
+
+### US-137 — Compliance report export
+- **As a** mayor/admin/auditor, **I want** to export the compliance report as PDF or CSV **so that** I can verify statutory compliance.
+- **AC:** `GET /export/compliance?format=pdf|csv` (admin/auditor/mayor) returns attachment `compliance.pdf` / `compliance.csv`.
+
+### US-138 — Certificate of indigency/eligibility/referral
+- **As a** worker/admin/coordinator, **I want** to generate a certificate (indigency, eligibility, or referral) as a PDF **so that** the client gets an official certification.
+- **AC:** `POST /export/certificate {type, fullName, address, date, details}` (admin/social_worker/coordinator) returns `application/pdf` attachment with a client-named filename; invalid type/body rejected 400.
+
 ---
 
 ## 15. Admin Panel
@@ -305,7 +337,7 @@ coordinator · **CLM** claimant · **MAY** mayor · **AUD** auditor · **AGY** a
 
 ### US-152 — GIS export (case document PDF)
 - **As a** worker/admin, **I want** to export a case as a GIS document PDF **so that** I have an official case document for filing and records.
-- **AC:** `GET /cases/:id/gis-pdf` (admin/social_worker) returns an `application/pdf` attachment (`GIS-<caseId>.pdf`); the PDF is populated from case + beneficiary data (control no, client fields, services); renewal cases flag the renewal source; a missing case returns 404; blank beneficiary/person data still renders (blanks, never crashes). Verified live: case page GIS (PDF) button downloads a valid `%PDF` (93 KB) on the running stack.
+- **AC:** `GET /cases/:id/gis-pdf` (admin/social_worker) returns an `application/pdf` attachment (`GIS <controlNo>-<YYYY>-<MM>-<DD>.pdf`); the PDF is populated from case + beneficiary data (control no, client fields, services); renewal cases flag the renewal source; a missing case returns 404; blank beneficiary/person data still renders (blanks, never crashes). Verified live: case page GIS (PDF) button downloads a valid `%PDF` (93 KB) on the running stack.
 
 ## 16. Public Website
 
