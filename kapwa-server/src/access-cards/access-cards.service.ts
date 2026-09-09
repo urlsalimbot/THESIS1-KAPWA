@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { buildAccessCardPdf } from './access-card-pdf.builder';
+import { AccessCardPdfData } from './access-card-pdf.types';
 import { AccessCardService } from './access-card-service.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
@@ -239,5 +241,81 @@ export class AccessCardsService {
       take: limit,
     });
     return { data, total };
+  }
+
+  async accessCardCodeFor(beneficiaryId: string): Promise<string> {
+    const ben = await this.repo.query(
+      'SELECT COALESCE(h.access_card_code, br.access_card_code) AS access_card_code FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id WHERE b.id = $1 LIMIT 1',
+      [beneficiaryId],
+    );
+    const code = ben?.[0]?.access_card_code as string | undefined;
+    if (!code) throw new NotFoundException('Beneficiary has no Access Card');
+    return code;
+  }
+
+  async generateAccessCardPdf(beneficiaryId: string): Promise<Buffer> {
+    const code = await this.accessCardCodeFor(beneficiaryId);
+    const person = await this.repo.query(
+      `SELECT p.surname, p.first_name, p.middle_name, p.gender,
+              p.dob::date AS dob,
+              (SELECT raw FROM person_addresses pa WHERE pa.person_id = p.id AND pa.address_type = 'current' LIMIT 1) AS address_raw,
+              (SELECT value FROM person_contacts pc WHERE pc.person_id = p.id AND pc.contact_type = 'phone' LIMIT 1) AS phone
+       FROM beneficiaries b
+       JOIN persons p ON p.id = b.person_id
+       WHERE b.id = $1
+       LIMIT 1`,
+      [beneficiaryId],
+    );
+    const p = person?.[0];
+    if (!p) throw new NotFoundException('Beneficiary not found');
+
+    const fam = await this.repo.query(
+      `SELECT TRIM(CONCAT(pm.first_name, ' ', COALESCE(pm.middle_name || ' ', ''), pm.surname)) AS full_name,
+              hm.relationship,
+              EXTRACT(YEAR FROM AGE(NOW(), pm.dob))::integer AS age,
+              pm.estimated_monthly_income AS income,
+              hm.status
+       FROM household_memberships hm
+       JOIN persons pm ON pm.id = hm.person_id
+       WHERE hm.household_id = (SELECT household_id FROM beneficiaries WHERE id = $1)
+       ORDER BY hm.is_primary DESC, pm.surname, pm.first_name`,
+      [beneficiaryId],
+    );
+
+    const services = await this.repo.find({
+      where: { accessCardCode: code },
+      order: { serviceDate: 'ASC' },
+      relations: ['agencyRef'],
+    });
+
+    const barangay = p.address_raw?.includes(',') ? (p.address_raw as string).split(',').slice(0, 2).join(',').trim() : (p.address_raw ?? '');
+
+    const data: AccessCardPdfData = {
+      code,
+      barangay,
+      contact: p.phone ?? '',
+      client: {
+        surname: p.surname ?? '',
+        firstName: p.first_name ?? '',
+        middleName: p.middle_name ?? undefined,
+        gender: p.gender ?? '',
+        dob: p.dob ?? undefined,
+        address: p.address_raw ?? '',
+      },
+      familyMembers: (fam ?? []).map((m: any) => ({
+        fullName: m.full_name ?? '',
+        relationship: m.relationship ?? '',
+        age: m.age ?? undefined,
+        status: m.status ?? '',
+        income: m.income != null ? Number(m.income) : undefined,
+      })),
+      services: (services ?? []).map((s: any) => ({
+        date: s.serviceDate ? new Date(s.serviceDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '',
+        rendered: [s.serviceRendered, s.cost != null ? `(${Number(s.cost).toLocaleString('en-PH')})` : ''].filter(Boolean).join(' '),
+        agency: s.agencyRef?.name ?? s.agency ?? '',
+        worker: s.workerNameSign ?? '',
+      })),
+    };
+    return buildAccessCardPdf(data);
   }
 }

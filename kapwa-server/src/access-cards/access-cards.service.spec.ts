@@ -378,3 +378,52 @@ describe('AccessCardsService — ensureHouseholdCard', () => {
     expect(qrMock.manager.query).toHaveBeenCalledTimes(3);
   });
 });
+
+describe('AccessCardsService.generateAccessCardPdf', () => {
+  let service: AccessCardsService;
+  let repoMock: any;
+  let consentRepoMock: any;
+  let referralRepoMock: any;
+  let agencyRepoMock: any;
+
+  beforeEach(async () => {
+    repoMock = {
+      query: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      find: jest.fn(),
+      manager: { connection: { createQueryRunner: jest.fn() } },
+    };
+    consentRepoMock = { findOne: jest.fn() };
+    referralRepoMock = { find: jest.fn() };
+    agencyRepoMock = { findOne: jest.fn() };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AccessCardsService,
+        { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
+        { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
+        { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepoMock },
+        { provide: getRepositoryToken(Agency), useValue: agencyRepoMock },
+      ],
+    }).compile();
+    service = module.get<AccessCardsService>(AccessCardsService);
+  });
+
+  it('builds a PDF for a beneficiary with a card', async () => {
+    repoMock.query
+      .mockResolvedValueOnce([
+        { id: 'b1', access_card_code: 'NORZ-AC-2026-0001', surname: 'Dela Cruz', first_name: 'Juan' },
+      ])
+      .mockResolvedValueOnce([
+        { surname: 'Dela Cruz', first_name: 'Juan', middle_name: 'B', gender: 'Male', dob: new Date('1990-01-01'), address_raw: 'Brgy. San Mateo, Norzagaray, Bulacan; 123', phone: '0917-000-0000' },
+      ])
+      .mockResolvedValueOnce([
+        { full_name: 'Maria Dela Cruz', relationship: 'Spouse', age: 35, status: 'Employed', income: 15000 },
+      ]);
+    repoMock.find.mockResolvedValueOnce([
+      { accessCardCode: 'NORZ-AC-2026-0001', serviceDate: new Date('2026-07-01'), serviceRendered: 'Financial Assistance', cost: 5000, agencyId: 'ag-1', agencyRef: { name: 'MSWDO' }, workerNameSign: 'R. Santos' },
+    ]);
+    const pdf = await service.generateAccessCardPdf('b1');
+    expect(pdf.toString('latin1')).toContain('%PDF');
+  });
+});
