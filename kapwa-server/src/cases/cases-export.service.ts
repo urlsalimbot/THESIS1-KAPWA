@@ -399,4 +399,11 @@ export class CasesExportService {
 
     return Buffer.from('\uFEFF' + lines.join('\n'), 'utf8');
   }
+
+  // Case number for export filenames (`${CaseType} ${controlNo}-${date}.pdf`).
+  async controlNo(caseId: string): Promise<string> {
+    const c = await this.caseRepo.findOne({ where: { id: caseId } });
+    if (!c) throw new NotFoundException('Case not found');
+    return c.controlNo || caseId;
+  }
 }

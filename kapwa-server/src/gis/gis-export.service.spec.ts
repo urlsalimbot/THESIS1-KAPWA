@@ -50,4 +50,18 @@ describe('GisExportService', () => {
     caseRepoMock.findOne.mockResolvedValue(null);
     await expect(service.generateGisPdf('missing')).rejects.toThrow(NotFoundException);
   });
+
+  it('returns the case controlNo for export filenames', async () => {
+    await expect(service.controlNo('c1')).resolves.toBe('KAPWA-2026-0001');
+  });
+
+  it('falls back to the caseId when controlNo is missing', async () => {
+    caseRepoMock.findOne.mockResolvedValue({ id: 'c1', controlNo: null });
+    await expect(service.controlNo('c1')).resolves.toBe('c1');
+  });
+
+  it('throws NotFoundException for a missing case in controlNo', async () => {
+    caseRepoMock.findOne.mockResolvedValue(null);
+    await expect(service.controlNo('missing')).rejects.toThrow(NotFoundException);
+  });
 });

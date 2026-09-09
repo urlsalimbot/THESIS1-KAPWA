@@ -9,6 +9,7 @@ import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
 import { IrfService } from './irf.service';
 import { IrfExportService } from './irf-export.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
+import { exportFileName } from '../common/constants';
 import {
   CreateIrfSchema,
   DismissIrfSchema,
@@ -172,10 +173,11 @@ export class IrfController {
     @Res() res: Response,
   ) {
     const pdf = await this.irfExportService.exportPdf(id, legalBasis, password || 'default', req.user?.id || 'system');
+    const controlNo = await this.irfExportService.controlNo(id);
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="IRF-${id}.pdf"`,
+      'Content-Disposition': `attachment; filename="${exportFileName('IRF', controlNo)}"`,
       'Content-Length': pdf.length,
     });
     res.end(pdf);

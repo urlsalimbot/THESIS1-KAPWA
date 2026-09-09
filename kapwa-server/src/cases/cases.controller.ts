@@ -12,6 +12,7 @@ import { AbacGuard } from '../auth/guards/abac.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
+import { exportFileName } from '../common/constants';
 
 
 const STATUS_ALIASES: Record<string, CaseStatus> = {
@@ -212,9 +213,10 @@ export class CasesController {
   @Roles('admin', 'social_worker')
   async downloadCsrPdf(@Param('id') id: string, @Res() res: any) {
     const pdf = await this.casesExportService.generateCsrPdf(id);
+    const controlNo = await this.casesExportService.controlNo(id);
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="CSR-${id}.pdf"`,
+      'Content-Disposition': `attachment; filename="${exportFileName('CSR', controlNo)}"`,
       'Content-Length': pdf.length,
     });
     res.end(pdf);
@@ -224,9 +226,10 @@ export class CasesController {
   @Roles('admin', 'social_worker')
   async downloadGisPdf(@Param('id') id: string, @Res() res: any) {
     const pdf = await this.gisExportService.generateGisPdf(id);
+    const controlNo = await this.gisExportService.controlNo(id);
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="GIS-${id}.pdf"`,
+      'Content-Disposition': `attachment; filename="${exportFileName('GIS', controlNo)}"`,
       'Content-Length': pdf.length,
     });
     res.end(pdf);

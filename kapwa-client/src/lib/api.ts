@@ -279,7 +279,7 @@ export async function downloadCsrPdf(caseId: string) {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = `CSR-${caseId}.pdf`;
+  a.download = dispositionFilename(res, `CSR-${caseId}.pdf`);
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -295,9 +295,15 @@ export async function downloadGisPdf(caseId: string) {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = `GIS-${caseId}.pdf`;
+  a.download = dispositionFilename(res, `GIS-${caseId}.pdf`);
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export function dispositionFilename(res: Response, fallback: string): string {
+  const disposition = res.headers?.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  return match?.[1] || fallback;
 }
 
 export async function downloadFilingDoc(id: string, fallbackName = 'document'): Promise<void> {
@@ -307,9 +313,7 @@ export async function downloadFilingDoc(id: string, fallbackName = 'document'): 
   });
   if (!res.ok) throw new Error(`Document download failed: ${res.status}`);
   const blob = await res.blob();
-  const disposition = res.headers?.get('Content-Disposition') || '';
-  const match = /filename="([^"]+)"/.exec(disposition);
-  const filename = match?.[1] || fallbackName;
+  const filename = dispositionFilename(res, fallbackName);
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
@@ -338,7 +342,7 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = `IRF-${id}.pdf`;
+  a.download = dispositionFilename(res, `IRF-${id}.pdf`);
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -360,9 +364,7 @@ export async function downloadCertificate(
   });
   if (!res.ok) throw new Error(`Certificate export failed: ${res.status}`);
   const blob = await res.blob();
-  const disposition = res.headers.get('Content-Disposition') || '';
-  const match = /filename="([^"]+)"/.exec(disposition);
-  const filename = match?.[1] || `certificate-${type}.pdf`;
+  const filename = dispositionFilename(res, `certificate-${type}.pdf`);
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
@@ -382,9 +384,7 @@ export async function downloadMonthlyFunds(month: string, startDate?: string, en
   });
   if (!res.ok) throw new Error(`Fund export failed: ${res.status}`);
   const blob = await res.blob();
-  const disposition = res.headers?.get('Content-Disposition') || '';
-  const match = /filename="([^"]+)"/.exec(disposition);
-  const filename = match?.[1] || `fund-utilization-${startDate ?? month}.xlsx`;
+  const filename = dispositionFilename(res, `fund-utilization-${startDate ?? month}.xlsx`);
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;

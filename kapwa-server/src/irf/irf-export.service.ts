@@ -161,4 +161,11 @@ export class IrfExportService {
       signatures: irfData.signatures,
     };
   }
+
+  // IRF case number for export filenames (`IRF ${blotterEntryNumber}-${date}.pdf`).
+  async controlNo(irfId: string): Promise<string> {
+    const irf = await this.irfRepo.findOne({ where: { id: irfId } });
+    if (!irf) throw new NotFoundException('IRF not found');
+    return irf.blotterEntryNumber || irfId;
+  }
 }

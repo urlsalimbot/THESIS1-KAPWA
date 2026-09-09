@@ -16,6 +16,17 @@ export function paginate<T extends import('typeorm').ObjectLiteral>(qb: import('
   return qb.skip((page - 1) * limit).take(limit);
 }
 
+// Export filenames follow `${CaseType} ${caseNumber}-${YYYY}-${MM}-${DD}.pdf`
+// (e.g. "GIS KAPWA-2026-00006-2026-09-09.pdf") — used by every case-document
+// export endpoint (GIS, CSR, IRF). The date is the export date in server-local
+// time (containers run TZ=Asia/Manila).
+export function exportFileName(caseType: string, caseNumber: string, date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${caseType} ${caseNumber}-${y}-${m}-${d}.pdf`;
+}
+
 // --- Auth / security ---
 export const BCRYPT_SALT_ROUNDS = 12;
 export const MIN_PASSWORD_LENGTH = 8;

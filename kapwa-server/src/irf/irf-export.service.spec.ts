@@ -138,4 +138,21 @@ describe('IrfExportService', () => {
       ).rejects.toThrow('IRF case not found');
     });
   });
+
+  describe('controlNo', () => {
+    it('returns the blotter entry number for export filenames', async () => {
+      irfRepoMock.findOne.mockResolvedValue({ id: 'irf-1', blotterEntryNumber: 'BLT-2026-0001' });
+      await expect(service.controlNo('irf-1')).resolves.toBe('BLT-2026-0001');
+    });
+
+    it('falls back to the irf id when blotterEntryNumber is missing', async () => {
+      irfRepoMock.findOne.mockResolvedValue({ id: 'irf-1', blotterEntryNumber: null });
+      await expect(service.controlNo('irf-1')).resolves.toBe('irf-1');
+    });
+
+    it('throws NotFoundException for a missing IRF', async () => {
+      irfRepoMock.findOne.mockResolvedValue(null);
+      await expect(service.controlNo('irf-999')).rejects.toThrow('IRF not found');
+    });
+  });
 });

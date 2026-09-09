@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case } from '../cases/case.entity';
@@ -25,5 +25,12 @@ export class GisExportService {
     const pdf = await buildGisPdf(data);
     this.logger.warn(`GIS export: case ${caseId} (${data.controlNo}), ${pdf.length} bytes`);
     return pdf;
+  }
+
+  // Case number for export filenames (`${CaseType} ${controlNo}-${date}.pdf`).
+  async controlNo(caseId: string): Promise<string> {
+    const c = await this.caseRepo.findOne({ where: { id: caseId } });
+    if (!c) throw new NotFoundException('Case not found');
+    return c.controlNo || caseId;
   }
 }
