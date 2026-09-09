@@ -89,9 +89,10 @@ export class AuditService {
     });
   }
 
-  async exportForCoa(startDate: Date, endDate: Date) {
-    const start = startDate.toISOString().slice(0, 10);
-    const end = endDate.toISOString().slice(0, 10);
+  async exportForCoa(startDate?: Date, endDate?: Date) {
+    // Dates are optional — omit for the full trail.
+    const start = (startDate ?? new Date('1970-01-01')).toISOString().slice(0, 10);
+    const end = (endDate ?? new Date()).toISOString().slice(0, 10);
     const interventions = await this.consentRepo.manager.query(
       `SELECT ci.service_name, ci.category, ci.delivery_date, ci.amount,
               ci.fund_source, ci.notes, ci.mode_of_delivery,

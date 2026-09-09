@@ -13,6 +13,7 @@ describe('ExportService', () => {
   beforeEach(async () => {
     auditService = {
       exportForCoa: jest.fn(),
+      getAuditLog: jest.fn(),
     } as any;
 
     caseRepo = {
@@ -60,10 +61,15 @@ describe('ExportService', () => {
         summary: { totalAmount: 0, count: 0 },
         interventions: [],
       } as any);
+      auditService.getAuditLog.mockResolvedValue([
+        { action: 'case.create', reference_id: 'c1', user_name: 'Rosario Mendoza', created_at: new Date('2026-09-09T00:00:00Z') },
+      ] as any);
 
       const result = await service.exportAuditLogCsv();
-      expect(result.buffer).toBeInstanceOf(Buffer);
-      expect(result.filename).toMatch(/audit-logs-\d{4}-\d{2}-\d{2}\.csv/);
+      const text = result.buffer.toString('utf8');
+      expect(result.filename).toBe('audit-logs.csv');
+      expect(text).toContain('action,table,entity,actor,timestamp');
+      expect(text).toContain('case.create,case,c1,Rosario Mendoza,');
     });
   });
 

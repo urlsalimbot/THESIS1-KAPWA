@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CasesExportService } from './cases-export.service';
 import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
@@ -37,7 +37,7 @@ describe('CasesExportService', () => {
   };
 
   beforeEach(async () => {
-    caseRepoMock = { find: jest.fn().mockResolvedValue([baseCase]) };
+    caseRepoMock = { find: jest.fn().mockResolvedValue([baseCase]), findOne: jest.fn() };
     historyRepoMock = {
       create: jest.fn((h: Partial<CaseHistory>) => h),
       save: jest.fn().mockResolvedValue([]),
@@ -85,5 +85,15 @@ describe('CasesExportService', () => {
         remarks: expect.stringContaining('COA audit request'),
       }),
     ]);
+  });
+
+  it('findIdByControlNo resolves a case id from a control number', async () => {
+    caseRepoMock.findOne.mockResolvedValue({ id: 'c1', controlNo: 'KAPWA-2026-00008' });
+    await expect(service.findIdByControlNo('KAPWA-2026-00008')).resolves.toBe('c1');
+  });
+
+  it('findIdByControlNo throws NotFound for unknown control numbers', async () => {
+    caseRepoMock.findOne.mockResolvedValue(null);
+    await expect(service.findIdByControlNo('KAPWA-9999')).rejects.toThrow(NotFoundException);
   });
 });

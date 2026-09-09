@@ -209,6 +209,19 @@ export class CasesController {
     return this.casesService.updateClosure(id, body, req.user?.role);
   }
 
+  @Get('csr/:controlNo/pdf')
+  @Roles('admin', 'social_worker', 'coordinator')
+  async downloadCsrByControlNo(@Param('controlNo') controlNo: string, @Res() res: any) {
+    const caseId = await this.casesExportService.findIdByControlNo(controlNo);
+    const pdf = await this.casesExportService.generateCsrPdf(caseId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${exportFileName('CSR', controlNo)}"`,
+      'Content-Length': pdf.length,
+    });
+    res.end(pdf);
+  }
+
   @Get(':id/csr-pdf')
   @Roles('admin', 'social_worker')
   async downloadCsrPdf(@Param('id') id: string, @Res() res: any) {

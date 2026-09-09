@@ -59,15 +59,24 @@ export class ExportService {
   }
 
   async exportAuditLogCsv(startDate?: Date, endDate?: Date): Promise<{ buffer: Buffer; filename: string }> {
-    const data = await this.auditService.exportForCoa(startDate as any, endDate as any);
-    this.logger.warn(`EXPORT: audit-log CSV, ${data.summary.count} records`);
+    const data = await this.auditService.exportForCoa(startDate, endDate);
+    const rows = await this.auditService.getAuditLog(undefined, undefined, 10000);
+    this.logger.warn(`EXPORT: audit-log CSV, ${data.summary.count} interventions, ${rows.length} log rows`);
 
     const { stringify } = require('csv-stringify/sync');
-    const csv = stringify([], { header: true });
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const csv = stringify(
+      rows.map((r: any) => ({
+        action: r.action ?? '',
+        table: (r.action ?? '').split('.')[0],
+        entity: r.reference_id ?? '',
+        actor: r.user_name || r.user_email || '',
+        timestamp: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at ?? ''),
+      })),
+      { header: true, columns: ['action', 'table', 'entity', 'actor', 'timestamp'] },
+    );
     return {
       buffer: Buffer.from(csv),
-      filename: `audit-logs-${dateStr}.csv`,
+      filename: 'audit-logs.csv',
     };
   }
 

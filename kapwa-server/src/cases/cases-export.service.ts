@@ -406,4 +406,11 @@ export class CasesExportService {
     if (!c) throw new NotFoundException('Case not found');
     return c.controlNo || caseId;
   }
+
+  // Resolve a case id from its human-readable control number (for `/csr/:controlNo/pdf`).
+  async findIdByControlNo(controlNo: string): Promise<string> {
+    const c = await this.caseRepo.findOne({ where: { controlNo } });
+    if (!c) throw new NotFoundException('Case not found');
+    return c.id;
+  }
 }
