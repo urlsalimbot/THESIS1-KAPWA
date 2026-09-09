@@ -157,7 +157,7 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
 
   fieldRow(rx + 10, cy, 80, 'Surname', data.client.surname);
   fieldRow(rx + 95, cy, 90, 'First Name', data.client.firstName);
-  fieldRow(rx + 190, cy, 60, 'Middle Name', data.client.middleName ?? '');
+  fieldRow(rx + 190, cy, 55, 'Middle Name', data.client.middleName ?? '');
   cy += 24;
 
   doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555').text('Gender:', rx + 10, cy, { width: 60 });
@@ -225,8 +225,8 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
     .text('Signature of Applicant\nor Thumbmark', rx + 10, sigY - 30, { width: 110 });
   sigLine(rx + 10, sigY, 110, 'Barangay Captain');
   doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
-    .text('Name and Signature of\nSocial Worker', rx + 200, sigY - 30, { width: 130 });
-  sigLine(rx + 200, sigY, 130, 'Municipal Mayor');
+    .text('Name and Signature of\nSocial Worker', rx + 140, sigY - 30, { width: 105 });
+  sigLine(rx + 140, sigY, 105, 'Municipal Mayor');
 
   doc.font('Helvetica').fontSize(5.5).fillColor('#888')
     .text(
