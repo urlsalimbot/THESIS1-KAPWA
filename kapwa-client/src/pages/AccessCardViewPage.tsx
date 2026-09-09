@@ -3,14 +3,14 @@ import useSWR, { useSWRConfig } from 'swr';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { categoryLabel, referralStatusLabel } from '@/i18n/display';
-import { api } from '../lib/api';
+import { api, downloadAccessCardPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight } from 'lucide-react';
+import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
 
 interface AccessCardService {
   id: string;
@@ -172,7 +172,17 @@ export function AccessCardViewPage() {
                 <h2 className="text-lg font-bold text-foreground truncate">{fullName}</h2>
                 <p className="font-mono text-sm text-primary">{cardData.code}</p>
               </div>
-              <Badge variant="default" className="text-[10px]">{t('accessCard.totalCount', '{{count}} total', { count: cardData.services.length })}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="text-[10px]">{t('accessCard.totalCount', '{{count}} total', { count: cardData.services.length })}</Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => downloadAccessCardPdf(id!)}
+                >
+                  <Download size={14} /> {t('accessCard.exportGisPdf', 'GIS (PDF)')}
+                </Button>
+              </div>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><User size={13} /> {benInfo.gender || ben?.gender || '—'}</span>

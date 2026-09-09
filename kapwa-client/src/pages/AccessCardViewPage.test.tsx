@@ -4,8 +4,9 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { AccessCardViewPage } from './AccessCardViewPage';
 
-const { mockApiGet } = vi.hoisted(() => ({
+const { mockApiGet, mockDownloadAccessCardPdf } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
+  mockDownloadAccessCardPdf: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -16,6 +17,7 @@ vi.mock('../lib/api', () => ({
     put: vi.fn(),
     del: vi.fn(),
   },
+  downloadAccessCardPdf: (...args: unknown[]) => mockDownloadAccessCardPdf(...args),
 }));
 
 function renderWithSWR(ui: React.ReactNode) {
@@ -104,5 +106,14 @@ describe('AccessCardViewPage', () => {
     // jsdom does not implement showModal; click is enough to open the form markup below.
     addEntryButton.click();
     expect(await screen.findByLabelText('Agency *')).toBeTruthy();
+  });
+});
+
+describe('AccessCardViewPage — GIS PDF export', () => {
+  it('downloads the access card PDF when the button is clicked', async () => {
+    renderWithSWR(<AccessCardViewPage />);
+    const btn = await screen.findByRole('button', { name: /gis \(pdf\)/i });
+    btn.click();
+    expect(mockDownloadAccessCardPdf).toHaveBeenCalledWith('ben1');
   });
 });
