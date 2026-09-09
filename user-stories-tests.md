@@ -144,7 +144,7 @@ coordinator · **CLM** claimant · **MAY** mayor · **AUD** auditor · **AGY** a
 
 ### US-040 — Household card lifecycle
 - **As a** worker, **I want** every household to have one access card (auto-assigned) with manual assign/reprint fallback **so that** card-based accounting is consistent.
-- **AC:** `ensureHouseholdCard` idempotent; `POST /access-cards/assign/:beneficiaryId` generates + syncs `households.access_card_code` and the person role; reprint keeps the same code.
+- **AC:** `ensureHouseholdCard` idempotent; `POST /access-cards/assign/:beneficiaryId` generates + syncs `households.access_card_code` and the person role; reprint keeps the same code. **Cards are household-tied and persist across case life cycles:** the code lives on the household/person role, not the case — opening, renewing, or reopening a case reuses the same card and ledger (new cases never mint a new card); closing a case does not remove the card or its service log.
 
 ### US-041 — Service logging & accounting (incl. 4Ps payouts/compliance)
 - **As a** worker/agency staff, **I want** to log services (case services, referrals, community, seminars, **payouts**, **compliance**) against a card **so that** the card is the accounting ledger.
@@ -160,7 +160,7 @@ coordinator · **CLM** claimant · **MAY** mayor · **AUD** auditor · **AGY** a
 
 ### US-044 — Access Card PDF export
 - **As a** worker/admin/coordinator, **I want** to export the Family Access Card form as a PDF with the live client record **so that** I have an official, printable card for filing.
-- **AC:** `GET /access-cards/beneficiary/:id/gis-pdf` (admin/social_worker/coordinator) returns an `application/pdf` attachment named `ACCESS CARD <code>-<YYYY>-<MM>-<DD>.pdf`; the PDF is 2 pages A4 — page 1 PAALALA AT GABAY (left) + Client's Record of Services Avaited table start (right); page 2 services continuation (left) + Republic header/Code#/Barangay/Contact# + Client (surname/first/middle, gender checkbox, DOB, address) + FAMILY COMPOSITION + signature blocks (right); services rows come from the access card service log (date, rendered + cost, agency, worker); a beneficiary with no card returns 404; blank client/family/services data still renders (blanks, never crashes); button (claimant hidden) on `/beneficiary/:id/access-card` downloads the PDF.
+- **AC:** `GET /access-cards/beneficiary/:id/gis-pdf` (admin/social_worker/coordinator) returns an `application/pdf` attachment named `ACCESS CARD <code>-<YYYY>-<MM>-<DD>.pdf`; the card is resolved by beneficiary/household (not case), so printing works for any case status across the household's case history (persists through intake → renewal → closure); the PDF is 2 pages A4 — page 1 PAALALA AT GABAY (left) + Client's Record of Services Avaited table start (right); page 2 services continuation (left) + Republic header/Code#/Barangay/Contact# + Client (surname/first/middle, gender checkbox, DOB, address) + FAMILY COMPOSITION + signature blocks (right); services rows come from the access card service log (date, rendered + cost, agency, worker); a beneficiary with no card returns 404; blank client/family/services data still renders (blanks, never crashes); button (claimant hidden) on `/beneficiary/:id/access-card` downloads the PDF.
 
 ---
 
