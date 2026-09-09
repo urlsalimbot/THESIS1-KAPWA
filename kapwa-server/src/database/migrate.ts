@@ -498,6 +498,18 @@ export async function migrate() {
   )`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_user_agency ON users(agency_id)`);
+  // Contact messages inbox (ContactMessagesTable migration) — in-app inbox for
+  // the public website contact form; staff are notified via notifications.
+  await q.query(`CREATE TABLE IF NOT EXISTS contact_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    subject VARCHAR(200),
+    message TEXT NOT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'new',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_contact_messages_created_at ON contact_messages (created_at DESC)`);
   await q.query(`INSERT INTO agencies (code, name, type, is_active) VALUES
     ('MSWDO', 'Municipal Social Welfare and Development Office', 'social_services', true),
     ('RHU', 'Rural Health Unit - Norzagaray', 'health', true),

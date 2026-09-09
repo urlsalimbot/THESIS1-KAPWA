@@ -63,3 +63,11 @@ intake-empty-submit.png
 
 # Generated diagram PDFs
 docs/diagrams/print/
+
+# Python (server scripts)
+__pycache__/
+*.pyc
+
+# Local test artifacts
+*.png
+!docs/**/*.png

@@ -8,7 +8,7 @@ Root `package.json` is a stub; each app has its own `package.json`. CI is `.gith
 
 ## Commands (run from `kapwa-server/` unless noted)
 
-- **Server full suite:** `npx jest --silent` (currently **51 suites / 411 tests PASS**). Do NOT use `npm test` — it adds `--coverage` and is slow.
+- **Server full suite:** `npx jest --silent` (currently **58 suites / 478 tests PASS**). Do NOT use `npm test` — it adds `--coverage` and is slow.
 - **Single spec:** `npx jest <file>` e.g. `npx jest user-wave2`.
 - **Server typecheck:** `npm run typecheck` (`tsc --noEmit`). **Run this before claiming work done.**
 - **Server lint:** `npm run lint` (ESLint with `--fix`).
@@ -20,16 +20,15 @@ Root `package.json` is a stub; each app has its own `package.json`. CI is `.gith
 
 Two parallel mechanisms exist and are NOT equivalent:
 - **`src/database/migrate.ts`** is the **canonical fresh-boot bootstrap** (`dist/database/migrate.js` at startup). On an empty DB it builds the whole schema with idempotent `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` statements, then **marks all TypeORM migrations as already-applied**.
-- **`src/database/migrations/*.ts`** (50 files, TypeORM chain) is now **fresh-boot-safe** (Wave 3 fix): all classes carry sequential 13-digit keys (`…0000000000001`–`…0000000000050`) so TypeORM's `parseInt(className.substr(-13))` ordering matches the intended file order, and `DropPersonLegacyColumns0000000000045` drops the `ben_barangay_scope`/`cases_barangay_scope` RLS policies *before* dropping `persons.address`. From-scratch `npm run migration:run` replays all 50 cleanly (verified). **Existing-DB caveat:** on a DB where an old chain run already recorded the pre-rename class names, a fresh `migration:run` would treat the renamed migrations as new — the supported upgrade path for existing DBs remains `migrate.ts`, and `migrate.ts` records names via `INSERT … WHERE NOT EXISTS` so renames are transparent to fresh/migrate-booted DBs.
+- **`src/database/migrations/*.ts`** (55 files, TypeORM chain) is now **fresh-boot-safe** (Wave 3 fix): all classes carry sequential 13-digit keys (`…0000000000001`–`…0000000000055`) so TypeORM's `parseInt(className.substr(-13))` ordering matches the intended file order, and `DropPersonLegacyColumns0000000000045` drops the `ben_barangay_scope`/`cases_barangay_scope` RLS policies *before* dropping `persons.address`. From-scratch `npm run migration:run` replays all 55 cleanly (verified). **Existing-DB caveat:** on a DB where an old chain run already recorded the pre-rename class names, a fresh `migration:run` would treat the renamed migrations as new — the supported upgrade path for existing DBs remains `migrate.ts`, and `migrate.ts` records names via `INSERT … WHERE NOT EXISTS` so renames are transparent to fresh/migrate-booted DBs.
+
+**Adding a new table — BOTH files required:** `migrate.ts` is a normal tracked file (it was added to git in `chore: track migrate.ts`). Any new table needs (1) a TypeORM migration in `src/database/migrations/` with the next sequential key (`…0000000000056` etc.) AND (2) an idempotent `CREATE TABLE IF NOT EXISTS` + index statement inside `migrate.ts` next to the other history-created tables, so fresh boots get the complete schema. Commit both together.
 
 **Latest schema change working convention:** schema columns are decomposed to child tables in [Wave 1 + Wave 2] of the current normalization effort. When a "getter" column (`address`, `age`, `phone`, `email`, `contactInfo`, etc.) is assembled from child rows, the **API shape is preserved via `@Expose()` getters + `@UseInterceptors(ClassSerializerInterceptor)` + `@SerializeOptions({ strategy: 'exposeAll' })`** on the controller, AND **`@Exclude()` on eager `@OneToMany` child relations**. Both must be present: without the interceptor the getters vanish from responses; without `@Exclude()` the raw child arrays leak. If you add a decomposed entity, mirror this trio exactly.
 
-## Workspace state — do NOT touch these
+## Workspace state — clean
 
-The following are **uncommitted, pre-existing dirty files**. Never stage or commit them (do not use `git add -A`; stage explicit paths only):
-- Root docs: `DB-SCHEMA.md`, `EVALUATION.MD`, `SPEC-GAP.md`, `docs/diagrams/06-erd.md`, `docs/diagrams/07-data-dictionary.md`, `docs/inter-agency-beneficiary-tracking.md`, `docs/superpowers/plans/2026-08-05-system-diagrams-docs.md`
-- `kapwa-server/src/common/constants.ts`, `kapwa-server/src/database/migrate.ts`
-- Deleted: `kapwa-server/src/database/migrations/20260712000001-CreateInterventionTypesTable.ts`
+The old "pre-existing dirty files" list (root docs, `src/common/constants.ts`, `src/database/migrate.ts`, the deleted `CreateInterventionTypesTable` migration) is **resolved — everything is committed and the working tree is clean**. No do-not-touch files remain. `migrate.ts` is tracked and evolves in lockstep with schema changes (see "Adding a new table" above). As always, stage explicit paths rather than `git add -A`, and never commit secrets.
 
 Branch is `main`. Commit style: conventional commits, e.g. `feat(schema): wave2 ...`, `fix(schema): ...`.
 
