@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom';
+import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api';
+import { queryKeys } from '@/lib/query-keys';
 import { HandHeart, ArrowRight } from 'lucide-react';
 import { ServicesGrid } from '@/components/ServicesGrid';
 import { ApplicationSteps } from '@/components/ApplicationSteps';
@@ -7,6 +10,11 @@ import { ContactInfo } from '@/components/ContactInfo';
 import { LatestAnnouncements } from '@/components/announcements/LatestAnnouncements';
 
 export function LandingPage() {
+  const { data: publicPrograms } = useSWR(
+    queryKeys.programs.publicList(),
+    (key) => api.get<unknown[]>(key),
+  );
+
   return (
     <div className="w-full px-4">
       {/* 1. Hero Section - Asymmetric layout with visual depth */}
@@ -64,7 +72,7 @@ export function LandingPage() {
               {/* Floating stat card */}
               <div className="absolute -bottom-4 -left-4 bg-card border border-border rounded-xl shadow-lg p-4">
                 <p className="text-xs text-muted-foreground mb-1">Active Programs</p>
-                <p className="text-2xl font-bold font-heading tracking-tight">24</p>
+                <p className="text-2xl font-bold font-heading tracking-tight">{publicPrograms ? publicPrograms.length : '…'}</p>
               </div>
             </div>
           </div>
