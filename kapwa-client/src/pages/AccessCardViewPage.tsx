@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { categoryLabel, referralStatusLabel } from '@/i18n/display';
 import { api, downloadAccessCardPdf } from '../lib/api';
+import { useAuth } from '../lib/auth-context';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
@@ -84,6 +85,8 @@ export function AccessCardViewPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canExportGisPdf = ['admin', 'social_worker', 'coordinator'].includes(user?.role ?? '');
   const [activeTab, setActiveTab] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({ serviceRendered: '', serviceDate: '', cost: '', agencyId: '', workerNameSign: '', category: 'referral' });
@@ -174,14 +177,16 @@ export function AccessCardViewPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="default" className="text-[10px]">{t('accessCard.totalCount', '{{count}} total', { count: cardData.services.length })}</Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => downloadAccessCardPdf(id!)}
-                >
-                  <Download size={14} /> {t('accessCard.exportGisPdf', 'GIS (PDF)')}
-                </Button>
+                {canExportGisPdf && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => downloadAccessCardPdf(id!)}
+                  >
+                    <Download size={14} /> {t('accessCard.exportGisPdf', 'GIS (PDF)')}
+                  </Button>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">

@@ -4,9 +4,14 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { AccessCardViewPage } from './AccessCardViewPage';
 
-const { mockApiGet, mockDownloadAccessCardPdf } = vi.hoisted(() => ({
+const { mockApiGet, mockDownloadAccessCardPdf, mockUseAuth } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockDownloadAccessCardPdf: vi.fn(),
+  mockUseAuth: vi.fn(),
+}));
+
+vi.mock('../lib/auth-context', () => ({
+  useAuth: (...args: unknown[]) => mockUseAuth(...args),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -35,6 +40,8 @@ function renderWithSWR(ui: React.ReactNode) {
 describe('AccessCardViewPage', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();
+    mockUseAuth.mockReset();
+    mockUseAuth.mockReturnValue({ user: { id: '1', role: 'admin' }, loading: false });
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('access-cards') && k.includes('summary')) {
@@ -115,5 +122,12 @@ describe('AccessCardViewPage — GIS PDF export', () => {
     const btn = await screen.findByRole('button', { name: /gis \(pdf\)/i });
     btn.click();
     expect(mockDownloadAccessCardPdf).toHaveBeenCalledWith('ben1');
+  });
+
+  it('hides the GIS PDF button from claimants', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', role: 'claimant' }, loading: false });
+    renderWithSWR(<AccessCardViewPage />);
+    await screen.findByText('Services Rendered');
+    expect(screen.queryByRole('button', { name: /gis \(pdf\)/i })).toBeNull();
   });
 });
