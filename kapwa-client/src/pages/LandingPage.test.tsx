@@ -31,9 +31,9 @@ describe('LandingPage', () => {
     expect(screen.getByText('Our Services')).toBeTruthy();
   });
 
-  it('renders application steps heading', () => {
+  it('does not render the getting started steps section', () => {
     render(<BrowserRouter><LandingPage /></BrowserRouter>);
-    expect(screen.getByText('How to Avail Services')).toBeTruthy();
+    expect(screen.queryByText('How to Avail Services')).toBeNull();
   });
 
   it('renders about section heading', () => {
