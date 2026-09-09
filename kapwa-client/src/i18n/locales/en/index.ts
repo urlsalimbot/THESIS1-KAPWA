@@ -543,6 +543,7 @@ const en = {
     "cost": "Cost (₱)",
     "date": "Date",
     "enterCode": "Enter card code (e.g. NORZ-AC-2026-0001)",
+    "exportGisPdf": "GIS (PDF)",
     "familyMembers_one": "Family Members ({{count}})",
     "familyMembers_other": "Family Members ({{count}})",
     "hasCard": "Has Card",

@@ -1042,6 +1042,7 @@ const fil: EnLocale = {
     "cost": "Halaga (₱)",
     "date": "Petsa",
     "enterCode": "Ilagay ang kodigo ng card (hal. NORZ-AC-2026-0001)",
+    "exportGisPdf": "GIS (PDF)",
     "familyMembers_one": "Mga Miyembro ng Pamilya ({{count}})",
     "familyMembers_other": "Mga Miyembro ng Pamilya ({{count}})",
     "hasCard": "May Card",

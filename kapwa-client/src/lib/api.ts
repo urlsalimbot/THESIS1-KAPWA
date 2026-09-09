@@ -300,6 +300,22 @@ export async function downloadGisPdf(caseId: string) {
   URL.revokeObjectURL(url);
 }
 
+export async function downloadAccessCardPdf(beneficiaryId: string) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(
+    `${API_BASE}/access-cards/beneficiary/${beneficiaryId}/gis-pdf`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  if (!res.ok) throw new Error(`Access Card export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = dispositionFilename(res, `access-card-${beneficiaryId}.pdf`);
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function dispositionFilename(res: Response, fallback: string): string {
   const disposition = res.headers?.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/.exec(disposition);
