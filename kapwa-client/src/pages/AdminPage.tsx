@@ -17,11 +17,16 @@ import {
 import { DataTable } from '@/components/data-table/DataTable';
 import { api } from '../lib/api';
 import UsersPanel from '@/components/UsersPanel';
-import { Activity, Database, Users, Clock, AlertCircle, CheckCircle2, XCircle, UserPlus, RefreshCw } from 'lucide-react';
+import { Activity, Database, Users, Clock, AlertCircle, CheckCircle2, XCircle, UserPlus, RefreshCw, Mail } from 'lucide-react';
 
 interface SyncEntry {
   id: string; deviceId: string; tableName: string; operation: string;
   status: string; conflictReason: string; createdAt: string;
+}
+
+interface ContactMessage {
+  id: string; name: string; email: string; subject: string | null;
+  message: string; status: 'new' | 'read'; createdAt: string;
 }
 
 const STATUS_MAP: Record<string, { labelKey: string; label: string; icon: typeof CheckCircle2; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -61,9 +66,15 @@ export function AdminPage() {
   const syncEntries = syncEntriesRaw ?? [];
   const auditLogsArr = auditLogs ?? [];
 
+  const { data: contactMessages, isLoading: loadingContact, mutate: revalidateContact } = useSWR<ContactMessage[]>(
+    ['contact-messages'],
+  );
+  const contactUnread = (contactMessages ?? []).filter((m) => m.status === 'new').length;
+
   const loading =
     (activeTab === 'sync' && loadingSync) ||
-    (activeTab === 'audit' && loadingAudit);
+    (activeTab === 'audit' && loadingAudit) ||
+    (activeTab === 'contact' && loadingContact);
 
   const lastSync = Date.now();
 
@@ -128,6 +139,12 @@ export function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="audit" className="flex items-center gap-2">
             <TabIcon icon={Database} active={activeTab === 'audit'} /> {t('admin.auditLog', 'Audit Log')}
+          </TabsTrigger>
+          <TabsTrigger value="contact" className="flex items-center gap-2">
+            <TabIcon icon={Mail} active={activeTab === 'contact'} /> {t('admin.contactMessages', 'Contact Messages')}
+            {contactUnread > 0 && (
+              <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-foreground">{contactUnread}</span>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -237,6 +254,67 @@ export function AdminPage() {
                 </div>
               ) : (
                 <DataTable columns={auditColumns} data={auditLogsArr} rowCount={auditLogsArr.length} pagination={auditPagination} sorting={auditSorting} onPaginationChange={setAuditPagination} onSortingChange={setAuditSorting} />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contact" className="space-y-4 mt-6">
+          <Card className="shadow-sm border-border/60">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-primary/10 p-2">
+                    <Mail size={18} className="text-primary" />
+                  </div>
+                  <CardTitle className="text-sm">{t('admin.contactInboxTitle', 'Contact Inbox')}</CardTitle>
+                </div>
+                <Button variant="outline" size="sm" className="h-8" onClick={() => revalidateContact()} aria-label={t('admin.refresh', 'Refresh')}>
+                  <RefreshCw size={13} />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingContact ? (
+                <TableSkeleton rows={4} />
+              ) : (contactMessages ?? []).length === 0 ? (
+                <div className="py-8">
+                  <EmptyState variant="no-data" />
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {(contactMessages ?? []).map((m) => (
+                    <li key={m.id} className={`rounded-lg border p-4 ${m.status === 'new' ? 'border-accent/40 bg-accent/5' : 'border-border/60'}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate">
+                            {m.name} <span className="font-normal text-muted-foreground">&lt;{m.email}&gt;</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {new Date(m.createdAt).toLocaleString()}
+                            {m.status === 'new' && (
+                              <Badge variant="secondary" className="ml-2 text-[10px]">{t('admin.contactNew', 'New')}</Badge>
+                            )}
+                          </p>
+                        </div>
+                        {m.status === 'new' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 shrink-0"
+                            onClick={async () => {
+                              await api.patch(`/contact-messages/${m.id}/read`);
+                              revalidateContact();
+                            }}
+                          >
+                            {t('admin.contactMarkRead', 'Mark read')}
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm mt-2 whitespace-pre-wrap break-words">{m.message}</p>
+                    </li>
+                  ))}
+                </ul>
               )}
             </CardContent>
           </Card>

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, Mail } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface FormErrors {
   name?: string;
@@ -44,8 +45,11 @@ export function ContactPage() {
 
     setSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.post<{ id: string }>('/contact-messages', {
+        name: name.trim(),
+        email: email.trim(),
+        message: message.trim(),
+      });
       toast.success(t('contact.sendSuccess', 'Message sent'), { description: t('contact.sendSuccessDesc', 'We will respond within 1-2 business days.') });
       setName('');
       setEmail('');

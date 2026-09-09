@@ -31,6 +31,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { AgenciesModule } from './agencies/agencies.module';
 import { InterAgencyReferralsModule } from './inter-agency-referrals/inter-agency-referrals.module';
 import { AgencyPortalModule } from './agency-portal/agency-portal.module';
+import { ContactMessagesModule } from './contact-messages/contact-messages.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { CsrfGuard } from './common/csrf.guard';
@@ -97,6 +98,7 @@ import { AppController } from './app.controller';
     AgenciesModule,
     InterAgencyReferralsModule,
     AgencyPortalModule,
+    ContactMessagesModule,
   ],
   controllers: [AppController],
   providers: [
