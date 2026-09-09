@@ -107,15 +107,17 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
   });
 
   // Right column: services table start
-  drawServicesHeader(doc, LEFT + WIDTH / 2, 48);
-  drawServiceRows(doc, LEFT + WIDTH / 2, 48, data.services, 8);
+  let sy = 48;
+  sy = drawServicesHeader(doc, LEFT + WIDTH / 2, sy);
+  sy = drawServiceRows(doc, LEFT + WIDTH / 2, sy, data.services, 8);
 
   // ================= PAGE 2: services continuation (left) + client info (right) =================
   doc.addPage();
 
   // Left column: continue services table
-  drawServicesHeader(doc, LEFT, 48);
-  drawServiceRows(doc, LEFT, 48, data.services, 12);
+  let sy2 = 48;
+  sy2 = drawServicesHeader(doc, LEFT, sy2);
+  sy2 = drawServiceRows(doc, LEFT, sy2, data.services, 12);
 
   // Right column: header + client + family composition + signatures
   const rx = LEFT + WIDTH / 2;
