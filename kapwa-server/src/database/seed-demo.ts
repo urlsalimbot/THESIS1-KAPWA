@@ -39,7 +39,7 @@ async function call(
   const text = await r.text();
   let json: any;
   try { json = JSON.parse(text); } catch { json = text; }
-  if (r.status >= 400) console.warn(`  WARN ${label || method} ${path} -> ${r.status}: ${String(text).slice(0, 90)}`);
+  if (r.status >= 400) console.warn(`  WARN ${label || method} ${path} -> ${r.status}: ${String(text).slice(0, 400)}`);
   return { status: r.status, json };
 }
 
@@ -162,21 +162,33 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const ben = await call(worker, 'POST', '/beneficiaries', {
+    // Enroll through the REAL intake endpoint so the demo exercises the
+    // actual flow — including the auto-generated household access card
+    // (intake.service submitIntake → ensureHouseholdCard).
+    const barangay = p.address.split(',')[0].trim();
+    const personInput = {
       surname: p.surname, firstName: p.firstName, middleName: p.middleName,
-      gender: p.gender, dob: p.dob, address: p.address, phone: p.phone, philsysNumber: p.philsysNumber,
-      occupation: p.occupation, civilStatus: p.civilStatus, placeOfBirth: p.placeOfBirth,
-      estimatedMonthlyIncome: p.estimatedMonthlyIncome, philhealthNumber: p.philhealthNumber,
-      category: p.category,
-    }, 'beneficiary');
-    if (ben.status >= 400) { console.log(`beneficiary ${p.firstName} FAILED ${ben.status}`); continue; }
-    const benId = ben.json.id;
-    console.log(`created beneficiary ${p.firstName} ${p.surname} (${benId.slice(0, 8)})`);
-
-    const c = await call(worker, 'POST', '/cases', { beneficiaryId: benId, serviceRequested: SERVICES[p.stage], assignedWorkerId: workerId }, 'case');
-    if (c.status >= 400) { console.log(`case for ${p.firstName} FAILED ${c.status}`); continue; }
-    const caseId = c.json.id;
-    console.log(`  case ${caseId.slice(0, 8)} stage=${p.stage}`);
+      gender: p.gender, dob: p.dob, placeOfBirth: p.placeOfBirth, civilStatus: p.civilStatus,
+      cellularNumber: p.phone, email: `${p.firstName.toLowerCase()}.${p.surname.toLowerCase().replace(/\s+/g, '')}@demo.test`,
+      currentAddress: { street: p.address, barangay, city: 'Norzagaray', province: 'Bulacan', region: 'Region III (Central Luzon)', postalCode: '3013' },
+      philhealthNumber: p.philhealthNumber, occupation: p.occupation, estimatedMonthlyIncome: p.estimatedMonthlyIncome,
+    };
+    const fam = FAMILY[p.surname];
+    const intake = await call(worker, 'POST', '/intake', {
+      beneficiary: personInput,
+      claimant: { ...personInput, relationshipToBeneficiary: 'Self' },
+      familyMembers: fam ? [fam] : [],
+      case: { serviceRequested: SERVICES[p.stage], assignedWorkerId: workerId },
+    }, 'intake');
+    if (intake.status >= 400) { console.log(`intake ${p.firstName} FAILED ${intake.status}`); continue; }
+    const caseId = intake.json.caseId;
+    const benId = intake.json.beneficiaryId;
+    const personRow = await AppDataSource.query(
+      `SELECT person_id FROM beneficiaries WHERE id = $1`,
+      [benId],
+    );
+    const personId = personRow[0]?.person_id;
+    console.log(`intake enrolled ${p.firstName} ${p.surname} (${caseId.slice(0, 8)}) stage=${p.stage} — access card auto-generated`);
 
     if (['assessed', 'in_review', 'active', 'transitioning', 'closed'].includes(p.stage)) {
       await call(worker, 'PATCH', `/cases/${caseId}/assessment`, { ...ASSESSMENT, clientCategory: CATEGORIES[p.stage] }, 'assessment');
@@ -207,44 +219,7 @@ async function main(): Promise<void> {
       await call(admin, 'PATCH', `/cases/${caseId}/close`, undefined, 'close');
     }
 
-    // Household + family composition (direct DB write — no household API).
-    const barangay = p.address.split(',')[0].trim();
-    const hh = await AppDataSource.query(
-      `INSERT INTO households (primary_beneficiary_id, barangay, estimated_income, verified_by)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [benId, barangay, p.estimatedMonthlyIncome, 'MSWDO Social Worker'],
-    );
-    const householdId = hh[0]?.id;
-    // One real family member per household (primary is linked via
-    // beneficiaries.household_id / households.primary_beneficiary_id and is
-    // surfaced as the "primary" node by getFamilyGraph — no Self membership
-    // row, which would duplicate the primary in the composition view).
-    const fam = FAMILY[p.surname];
-    if (fam) {
-      const m = await AppDataSource.query(
-        `INSERT INTO persons (surname, first_name, middle_name, gender, dob)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [fam.surname, fam.firstName, fam.middleName, fam.gender, fam.dob],
-      );
-      await AppDataSource.query(
-        `INSERT INTO household_memberships (person_id, household_id, relationship, is_primary, status)
-         VALUES ($1, $2, $3, false, 'active')`,
-        [m[0].id, householdId, fam.relationship],
-      );
-    }
-    await AppDataSource.query(
-      `UPDATE beneficiaries SET household_id = $1 WHERE id = $2`,
-      [householdId, benId],
-    );
-    // Structured address fields (barangay/city/province) — the API only
-    // accepts a raw address string, so decompose it here.
-    await AppDataSource.query(
-      `UPDATE person_addresses SET barangay = $1, city = 'Norzagaray', province = 'Bulacan'
-       WHERE person_id = $2 AND address_type = 'current'`,
-      [barangay, ben.json.personId],
-    );
-
-    cases.push({ caseId, stage: p.stage, benId, personId: ben.json.personId, name: `${p.firstName} ${p.surname}` });
+    cases.push({ caseId, stage: p.stage, benId, personId, name: `${p.firstName} ${p.surname}` });
     await sleep(150);
   }
 
@@ -262,15 +237,11 @@ async function main(): Promise<void> {
     status: 'draft',
   }, 'announcement');
 
-  // Access cards: every household gets one (household-tied, persists across
-  // case life cycles per US-040), then the active card gets the full six-category
-  // service ledger (case_service/referral/community_service/seminar/payout/
-  // compliance per US-041) so the ledger, QuickScan (US-042), agency summaries
-  // (US-043) and the printable card (US-044) all have demo data.
-  for (const c of cases) {
-    const card = await call(admin, 'POST', `/access-cards/assign/${c.benId}`, undefined, `card-${c.stage}`);
-    if (card.status >= 400) console.warn(`  WARN card assign ${c.name}: ${card.status}`);
-  }
+  // Access cards were AUTO-GENERATED at enrollment (intake →
+  // ensureHouseholdCard, US-040). Now give the active card the full
+  // six-category service ledger (case_service/referral/community_service/
+  // seminar/payout/compliance per US-041) so the ledger, QuickScan (US-042),
+  // agency summaries (US-043) and the printable card (US-044) have demo data.
   const active = cases.find(c => c.stage === 'active');
   if (active) {
     const cardInfo = await call(admin, 'GET', `/access-cards/beneficiary/${active.benId}/card`);
@@ -289,7 +260,9 @@ async function main(): Promise<void> {
         { accessCardCode: code, serviceRendered: '4Ps payout — August cycle', serviceDate: '2026-08-15', cost: 2400, category: 'payout', agencyId: dswd?.id },
         { accessCardCode: code, serviceRendered: 'Compliance — health center checkup checkoff', serviceDate: '2026-08-20', cost: 0, category: 'compliance' },
       ];
-      if (existingServices.length === 0) {
+      // Skip only if the manual six-category demo entries already landed
+      // (auto-logged case_service entries from interventions are expected).
+      if (!existingServices.some((s: any) => s.category === 'payout')) {
         for (const entry of ledger) {
           const r = await call(admin, 'POST', '/access-cards/log', entry, `card-log-${entry.category}`);
           if (r.status >= 400) console.warn(`  WARN card log ${entry.category}: ${r.status}`);
