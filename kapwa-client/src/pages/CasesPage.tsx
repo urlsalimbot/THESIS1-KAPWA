@@ -7,7 +7,6 @@ import { queryKeys } from '../lib/query-keys';
 import { formatDateTime } from '../lib/format';
 import { statusLabel, categoryLabel } from '@/i18n/display';
 import { Search, Download, AlertTriangle, Eye } from 'lucide-react';
-import { useCaseActions } from '../hooks/useCaseActions';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -29,7 +28,6 @@ interface CaseRow {
   ageRange: string;
   category: string;
   barangay: string;
-  remarks: string;
   date: string;
   status: string;
   controlNo: string;
@@ -67,9 +65,8 @@ function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
     middle: (ben.middleName as string) || '',
     gender: ((ben.gender as string) || '').trim(),
     ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
-    category: ((c.serviceRequested as string[]) || []).join(', '),
+    category: ((c.clientCategory as string) || '').trim(),
     barangay: ((ben.currentAddress as Record<string, string> | undefined)?.barangay || '').trim() || ((ben.address as string) || '').split(',').pop()?.trim() || '',
-    remarks: (c.remarks as string) || '',
     date: c.updatedAt ? formatDateTime(c.updatedAt as string) : '',
     createdAt: (c.createdAt as string) || '',
     status: (c.status as string) || 'enrolled',
@@ -93,37 +90,14 @@ function FilterSelect({ label, value, onChange, options, className }: {
   );
 }
 
-function ActionsCell({ c, actionLoading, onAction }: {
-  c: CaseRow; actionLoading: string | null; onAction: (action: string, id: string) => void;
-}) {
+function ActionsCell({ c }: { c: CaseRow }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const role = user?.role || '';
-  const buttons: { action: string; label: string }[] = [];
-
-  if (c.status === 'enrolled' && role === 'social_worker') {
-    buttons.push({ action: 'request-review', label: t('cases.requestReview', 'Request Review') });
-  }
-  if (c.status === 'active' && role === 'admin') {
-    buttons.push({ action: 'transition', label: t('cases.transition', 'Transition') });
-  }
-  if (c.status === 'transitioning' && (role === 'admin' || role === 'social_worker')) {
-    buttons.push({ action: 'close', label: t('cases.close', 'Close') });
-  }
-
   return (
     <div className="flex gap-1">
       <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${c.id}`)}>
         <Eye size={14} className="mr-1" /> {t('cases.view', 'View')}
       </Button>
-      {buttons.map(b => (
-        <Button key={b.action} variant="outline" size="sm"
-          disabled={actionLoading === c.id}
-          onClick={() => onAction(b.action, c.id)}>
-          {actionLoading === c.id ? '...' : b.label}
-        </Button>
-      ))}
     </div>
   );
 }
@@ -142,7 +116,7 @@ function ActionsCell({ c, actionLoading, onAction }: {
 export function CasesPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { actionLoading, handleAction } = useCaseActions();
+
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -230,11 +204,11 @@ export function CasesPage() {
     { accessorKey: 'first', header: t('cases.firstName', 'First') },
     { accessorKey: 'middle', header: t('cases.middleName', 'Middle') },
     { accessorKey: 'gender', header: t('cases.gender', 'Gender') },
-    { accessorKey: 'category', header: t('cases.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{row.original.category.split(', ').map(c => categoryLabel(t, c)).join(', ')}</Badge> },
+    { accessorKey: 'category', header: t('cases.category', 'Client Category'), cell: ({ row }) => <Badge variant="secondary">{row.original.category ? categoryLabel(t, row.original.category) : ''}</Badge> },
     { accessorKey: 'barangay', header: t('cases.barangay', 'Barangay') },
-    { accessorKey: 'remarks', header: t('cases.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks || ''}</span> },
-    { id: 'actions', header: t('cases.actions', 'Actions'), cell: ({ row }) => <ActionsCell c={row.original} actionLoading={actionLoading} onAction={handleAction} /> },
-  ], [actionLoading, handleAction, t]);
+    { accessorKey: 'status', header: t('cases.status', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
+    { id: 'actions', header: t('cases.actions', 'Actions'), cell: ({ row }) => <ActionsCell c={row.original} /> },
+  ], [t]);
 
   const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
 

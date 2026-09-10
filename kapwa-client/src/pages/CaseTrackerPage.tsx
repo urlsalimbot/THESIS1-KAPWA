@@ -2,6 +2,17 @@ import React, { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { statusLabel } from '@/i18n/display';
+
+const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  enrolled: 'outline',
+  assessed: 'secondary',
+  in_review: 'secondary',
+  active: 'default',
+  transitioning: 'secondary',
+  closed: 'outline',
+};
+
 import { Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
@@ -11,28 +22,29 @@ import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { queryKeys } from '../lib/query-keys';
-import { formatDate } from '../lib/format';
+import { formatDateTime } from '../lib/format';
+import { Badge } from '@/components/ui/badge';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
 interface TrackerEntry {
   id: string;
   controlNo: string;
-  dailySeqNum: number;
+  status: string;
   transactionDate: string;
   surname: string;
   firstName: string;
   middleName: string;
   gender: string;
-  ageRange: string;
   clientCategory: string;
   barangay: string;
-  interventionRemarks: string;
 }
 
 interface TrackerStats {
-  totalCasesLogged: number;
+  thisWeekCases: number;
   todayEntries: number;
 }
+
+const TRACKER_STATUSES = ['enrolled', 'assessed', 'in_review', 'active', 'transitioning'] as const;
 
 export function CaseTrackerPage() {
   const { t } = useTranslation();
@@ -67,9 +79,10 @@ export function CaseTrackerPage() {
   const [dateTo, setDateTo] = useState(today);
 
   const hasRange = dateFrom !== dateTo;
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const swrKey = hasRange
-    ? queryKeys.tracker.range({ start: dateFrom + 'T00:00:00Z', end: dateTo + 'T23:59:59Z' })
-    : queryKeys.tracker.daily({ date: dateFrom + 'T00:00:00Z' });
+    ? queryKeys.tracker.range({ start: dateFrom + 'T00:00:00Z', end: dateTo + 'T23:59:59Z', status: statusFilter === 'all' ? undefined : statusFilter })
+    : queryKeys.tracker.daily({ date: dateFrom + 'T00:00:00Z', status: statusFilter === 'all' ? undefined : statusFilter });
   const { data, isLoading: loading, error, mutate } = useSWR<TrackerEntry[]>(swrKey, {
     keepPreviousData: true,
   });
@@ -78,17 +91,15 @@ export function CaseTrackerPage() {
   const lastSync = entries ? Date.now() : null;
 
   const columns: ColumnDef<TrackerEntry>[] = [
-    { accessorKey: 'dailySeqNum', header: '#', cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.dailySeqNum}</span> },
-    { accessorKey: 'transactionDate', header: t('tracker.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDate(row.original.transactionDate)}</span> },
+    { accessorKey: 'transactionDate', header: t('tracker.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDateTime(row.original.transactionDate)}</span> },
     { accessorKey: 'controlNo', header: t('tracker.controlNo', 'Control No.'), cell: ({ row }) => <span className="font-mono text-xs">{row.original.controlNo}</span> },
     { accessorKey: 'surname', header: t('tracker.surname', 'Surname') },
     { accessorKey: 'firstName', header: t('tracker.firstName', 'First Name') },
-    { accessorKey: 'middleName', header: t('tracker.middleName', 'Middle Name') },
+    { accessorKey: 'middleName', header: t('tracker.middleName', 'M.I.'), cell: ({ row }) => <span className="text-xs">{row.original.middleName ? `${row.original.middleName[0]}.` : ''}</span> },
     { accessorKey: 'gender', header: t('tracker.gender', 'Gender') },
-    { accessorKey: 'ageRange', header: t('tracker.ageRange', 'Age Range') },
     { accessorKey: 'clientCategory', header: t('tracker.category', 'Category') },
     { accessorKey: 'barangay', header: t('tracker.barangay', 'Barangay') },
-    { accessorKey: 'interventionRemarks', header: t('tracker.intervention', 'Intervention'), cell: ({ row }) => <span className="font-mono text-xs max-w-[200px] truncate block" title={row.original.interventionRemarks}>{row.original.interventionRemarks}</span> },
+    { accessorKey: 'status', header: t('tracker.status', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
     {
       id: 'actions',
       header: t('tracker.actions', 'Actions'),
@@ -126,8 +137,8 @@ export function CaseTrackerPage() {
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">{t('tracker.totalCases', 'Total Cases')}</p>
-            <p className="text-2xl font-bold text-primary">{stats?.totalCasesLogged ?? 0}</p>
+            <p className="text-xs text-muted-foreground">{t('tracker.thisWeekCases', 'Cases This Week')}</p>
+            <p className="text-2xl font-bold text-primary">{stats?.thisWeekCases ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -136,6 +147,32 @@ export function CaseTrackerPage() {
             <p className="text-2xl font-bold text-primary">{stats?.todayEntries ?? 0}</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Status Segregation */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium text-foreground">{t('tracker.status', 'Status')}</span>
+        <div className="flex items-center rounded-md border border-border p-0.5 bg-muted/30" role="group" aria-label={t('tracker.statusFilter', 'Filter by status')}>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            aria-pressed={statusFilter === 'all'}
+            className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${statusFilter === 'all' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {t('tracker.allStatuses', 'All')}
+          </button>
+          {TRACKER_STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              aria-pressed={statusFilter === s}
+              className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${statusFilter === s ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              {statusLabel(t, s)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Date Range Selectors */}

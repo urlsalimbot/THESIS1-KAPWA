@@ -15,8 +15,15 @@ export function formatDate(d: string | Date | null | undefined): string {
 
 export function formatDateTime(d: string | Date | null | undefined): string {
   if (!d) return '—';
-  return new Date(d).toLocaleString(activeLocale(), {
+  // Fixed format: MMM DD, YYYY, HH:mm AM/PM (e.g. "Sep 10, 2026, 10:30 AM").
+  return new Date(d).toLocaleString('en-US', {
     timeZone: 'Asia/Manila',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
   });
 }
 

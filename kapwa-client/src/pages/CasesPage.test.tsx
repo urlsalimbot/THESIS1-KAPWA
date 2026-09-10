@@ -112,22 +112,13 @@ describe('CasesPage', () => {
     expect(JSON.stringify(lastCallArg)).toContain('cases');
   });
 
-  it('a successful requestReview trigger calls api.patch with /request-review', async () => {
-    // Set role to social_worker + status to enrolled so the Request Review button shows
+  it('only exposes the View action (workflow actions moved off the list)', async () => {
     mockApiGet.mockResolvedValue({ data: [{ ...mockCases[0], status: 'enrolled' }], total: 1 });
 
     renderWithSWR(<CasesPage />);
-    // Wait for the button to appear
-    const button = await screen.findByRole('button', { name: /Request Review/i });
-    fireEvent.click(button);
-
-    // Wait for the mutation to fire
-    await vi.waitFor(() => {
-      expect(mockApiPatch).toHaveBeenCalled();
-    });
-    // The first call to api.patch should be to /request-review
-    const patchCall = mockApiPatch.mock.calls[0];
-    expect(String(patchCall[0])).toContain('/request-review');
+    await screen.findByRole('button', { name: /View/i });
+    expect(screen.queryByRole('button', { name: /Request Review/i })).toBeNull();
+    expect(mockApiPatch).not.toHaveBeenCalled();
   });
 
   it('has no a11y violations', async () => {

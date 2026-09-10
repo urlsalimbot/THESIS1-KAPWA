@@ -71,12 +71,12 @@ export class DashboardController {
             middle: person.middleName || '',
             gender: (person.gender || '').trim(),
             ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
-            category: (c.serviceRequested ?? []).join(', '),
+            category: (c.clientCategory || '').trim(),
             status: c.status || 'enrolled',
             slaOverdue,
             barangay: (person.currentAddress?.barangay || '').trim() || (person.address || '').split(',').pop()?.trim() || '',
             remarks: c.remarks || '',
-            date: c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : '',
+            date: c.updatedAt?.toISOString?.() ?? c.updatedAt ?? '',
             controlNo: c.controlNo || '',
             createdAt: c.createdAt?.toISOString?.() ?? c.createdAt ?? '',
           };
@@ -142,9 +142,11 @@ export class DashboardController {
 
   @Get('trends')
   @Roles('admin', 'social_worker', 'coordinator')
-  @ApiOperation({ summary: 'Get monthly case/disbursement trends for past 6 months' })
-  async getTrends() {
-    return this.dashService.getTrends();
+  @ApiOperation({ summary: 'Get case/disbursement trends for a range (1w | 1m | 3m | 6m)' })
+  @ApiQuery({ name: 'range', required: false, enum: ['1w', '1m', '3m', '6m'] })
+  async getTrends(@Query('range') range = '6m') {
+    if (!['1w', '1m', '3m', '6m'].includes(range)) range = '6m';
+    return this.dashService.getTrends(range);
   }
 
   @Get('daily-counts')

@@ -74,11 +74,6 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
             >
               All Categories
             </option>
-            <option
-              value="Senior"
-            >
-              Senior
-            </option>
           </select>
         </div>
         <div
@@ -330,7 +325,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                 <th
                   class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                 >
-                  Remarks
+                  Status
                 </th>
                 <th
                   class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
@@ -352,7 +347,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                   <span
                     class="text-xs text-muted-foreground tabular-nums"
                   >
-                    6/28/2026, 8:00:00 AM
+                    Jun 28, 2026, 8:00 AM
                   </span>
                 </td>
                 <td
@@ -380,9 +375,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                 >
                   <div
                     class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  >
-                    Senior
-                  </div>
+                  />
                 </td>
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
@@ -392,11 +385,11 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
-                  <span
-                    class="text-xs text-muted-foreground/70"
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
                   >
-                    Monthly
-                  </span>
+                    Active
+                  </div>
                 </td>
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"

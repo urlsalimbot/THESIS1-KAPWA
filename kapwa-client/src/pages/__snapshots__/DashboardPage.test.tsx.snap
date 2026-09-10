@@ -690,21 +690,81 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
             class="flex flex-col space-y-1.5 p-6 pb-2"
           >
             <div
-              class="tracking-tight text-sm font-semibold"
+              class="flex items-center justify-between gap-2 flex-wrap"
             >
-              Monthly Trends (6mo)
+              <div
+                class="tracking-tight text-sm font-semibold"
+              >
+                Trends
+              </div>
+              <div
+                aria-label="Trend range"
+                class="flex items-center rounded-md border border-border p-0.5 bg-muted/30"
+                role="group"
+              >
+                <button
+                  aria-pressed="false"
+                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+                  type="button"
+                >
+                  1 Week
+                </button>
+                <button
+                  aria-pressed="false"
+                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+                  type="button"
+                >
+                  1 Month
+                </button>
+                <button
+                  aria-pressed="false"
+                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+                  type="button"
+                >
+                  3 Months
+                </button>
+                <button
+                  aria-pressed="true"
+                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors bg-primary text-primary-foreground shadow-sm"
+                  type="button"
+                >
+                  6 Months
+                </button>
+              </div>
             </div>
           </div>
           <div
-            class="p-6 pt-0 pb-3"
+            class="p-6 pt-0 pb-3 space-y-4"
           >
-            <div
-              class="recharts-responsive-container"
-              style="width: 100%; height: 200px; min-width: 0;"
-            >
+            <div>
+              <p
+                class="text-xs font-medium text-muted-foreground mb-1"
+              >
+                Cases
+              </p>
               <div
-                style="width: 0px; overflow-x: visible;"
-              />
+                class="recharts-responsive-container"
+                style="width: 100%; height: 150px; min-width: 0;"
+              >
+                <div
+                  style="width: 0px; overflow-x: visible;"
+                />
+              </div>
+            </div>
+            <div>
+              <p
+                class="text-xs font-medium text-muted-foreground mb-1"
+              >
+                Disbursed (₱)
+              </p>
+              <div
+                class="recharts-responsive-container"
+                style="width: 100%; height: 150px; min-width: 0;"
+              >
+                <div
+                  style="width: 0px; overflow-x: visible;"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -862,11 +922,50 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
     <div
       class="mt-4"
     >
-      <h2
-        class="text-lg font-semibold tracking-tight mb-3"
+      <div
+        class="flex items-center justify-between mb-3"
       >
-        Recent Cases
-      </h2>
+        <h2
+          class="text-lg font-semibold tracking-tight"
+        >
+          Recent Cases
+        </h2>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-list-checks mr-1.5"
+            fill="none"
+            height="14"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="14"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M13 5h8"
+            />
+            <path
+              d="M13 12h8"
+            />
+            <path
+              d="M13 19h8"
+            />
+            <path
+              d="m3 17 2 2 4-4"
+            />
+            <path
+              d="m3 7 2 2 4-4"
+            />
+          </svg>
+           
+          Open Tracker
+        </button>
+      </div>
       <div>
         <div
           class="rounded-md border bg-card shadow-sm overflow-x-auto"
@@ -943,7 +1042,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                     <span
                       class="text-xs text-muted-foreground tabular-nums"
                     >
-                      2026-06-28
+                      Jun 28, 2026, 8:00 AM
                     </span>
                   </td>
                   <td

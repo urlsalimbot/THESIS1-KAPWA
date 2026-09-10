@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, Clock, DollarSign, Plus, Eye, AlertTriangle, Search, Download } from 'lucide-react';
+import { TrendingUp, Clock, DollarSign, Plus, Eye, AlertTriangle, Search, Download , ListChecks
+} from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 import { categoryLabel } from '@/i18n/display';
+import { formatDateTime } from '@/lib/format';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -80,7 +82,6 @@ export function DashboardPage() {
 
   const swrKey = WORKER_ROLES.includes(role) ? queryKeys.dashboard.stats() : null;
   const { data, isLoading } = useSWR<DashboardData>(swrKey);
-  const { data: trends } = useSWR<TrendData[]>(WORKER_ROLES.includes(role) ? queryKeys.dashboard.trends() : null);
   const now = new Date();
   const { data: dailyCounts } = useSWR<DailyCounts>(
     WORKER_ROLES.includes(role) ? queryKeys.dashboard.dailyCounts(now.getFullYear(), now.getMonth() + 1) : null,
@@ -113,7 +114,7 @@ export function DashboardPage() {
   );
 
   const columns: ColumnDef<CaseRow>[] = [
-    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
+    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDateTime(row.original.date)}</span> },
     { accessorKey: 'surname', header: t('dashboard.surname', 'Surname') },
     { accessorKey: 'first', header: t('dashboard.firstName', 'First') },
     { accessorKey: 'middle', header: t('dashboard.middleName', 'Middle') },
@@ -208,14 +209,19 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <div className="lg:col-span-2"><CaseStatusChart data={data?.byStatus || []} /></div>
         <div className="lg:col-span-1"><ActivityCalendar data={dailyCounts ?? null} year={now.getFullYear()} month={now.getMonth() + 1} /></div>
-        <div className="lg:col-span-2"><TrendsChart data={trends || []} /></div>
+        <div className="lg:col-span-2"><TrendsChart /></div>
         <div className="lg:row-span-2 lg:col-span-1"><BarangayBreakdown cases={barangayData} /></div>
         <div className="lg:col-span-1"><div className="h-full overflow-y-auto" style={{ maxHeight: '300px' }}><SlaWidget overdueCount={data?.urgentCount ?? 0} /></div></div>
         <div className="lg:col-span-1"><div className="h-full"><NeedsAttention cases={cases.map(c => ({ id: c.id, name: `${c.surname}, ${c.first}`.trim(), status: c.status }))} /></div></div>
       </div>
 
       <div className="mt-4">
-        <h2 className="text-lg font-semibold tracking-tight mb-3">{t('dashboard.recentCases', 'Recent Cases')}</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold tracking-tight">{t('dashboard.recentCases', 'Recent Cases')}</h2>
+          <Button variant="outline" size="sm" onClick={() => navigate('/tracker')}>
+            <ListChecks size={14} className="mr-1.5" /> {t('dashboard.openTracker', 'Open Tracker')}
+          </Button>
+        </div>
         <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
       </div>
     </PageShell>

@@ -38,7 +38,7 @@ export const queryKeys = {
   dashboard: {
     all: ['dashboard'] as const,
     stats: () => memo('dashboard.stats', () => ['dashboard'] as const),
-    trends: () => memo('dashboard.trends', () => ['dashboard', 'trends'] as const),
+    trends: (range: string) => memo(`dashboard.trends.${range}`, () => ['dashboard', 'trends', { range }] as const),
     metrics: () => memo('dashboard.metrics', () => ['dashboard', 'metrics'] as const),
     dailyCounts: (year: number, month: number) =>
       memo(`dashboard.dailyCounts.${year}-${month}`, () => ['dashboard', 'daily-counts', { year, month }] as const),
@@ -104,14 +104,14 @@ export const queryKeys = {
   },
   tracker: {
     all: ['tracker'] as const,
-    daily: (params: { date: string }) =>
-      memo(`tracker.daily.${params.date}`, () => {
+    daily: (params: { date: string; status?: string }) =>
+      memo(`tracker.daily.${params.date}.${params.status ?? 'all'}`, () => {
         const key: unknown[] = ['cases', 'tracker', 'daily'];
         key.push(params);
         return key as readonly unknown[];
       }),
-    range: (params: { start: string; end: string }) =>
-      memo(`tracker.range.${params.start}.${params.end}`, () => {
+    range: (params: { start: string; end: string; status?: string }) =>
+      memo(`tracker.range.${params.start}.${params.end}.${params.status ?? 'all'}`, () => {
         const key: unknown[] = ['cases', 'tracker', 'range'];
         key.push(params);
         return key as readonly unknown[];

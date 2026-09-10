@@ -264,45 +264,85 @@ export class DashboardService {
     };
   }
 
-  async getTrends() {
+  async getTrends(range = '6m') {
     const compute = async () => {
-      const months: { label: string; offset: number }[] = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-        months.push({ label, offset: i });
+      const now = new Date();
+      const buckets: { label: string; start: Date; end: Date }[] = [];
+
+      const pushMonthly = (count: number) => {
+        for (let i = count - 1; i >= 0; i--) {
+          const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const end = new Date(start);
+          end.setMonth(end.getMonth() + 1);
+          // Label with the 1st of each month so the window reads as whole
+          // months (e.g. 3m = "Jul 1, Aug 1, Sep 1" → Jul 1–Sep 30).
+          buckets.push({
+            label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            start,
+            end,
+          });
+        }
+      };
+      if (range === '1w') {
+        // Current calendar week, Monday-first (Mon–Sun) — never a rolling
+        // 7-day window.
+        const diffToMonday = (now.getDay() + 6) % 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diffToMonday);
+        monday.setHours(0, 0, 0, 0);
+        for (let i = 0; i < 7; i++) {
+          const start = new Date(monday);
+          start.setDate(monday.getDate() + i);
+          const end = new Date(start);
+          end.setDate(end.getDate() + 1);
+          buckets.push({
+            label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            start,
+            end,
+          });
+        }
+      } else if (range === '1m') {
+        // Whole current calendar month (1st → last day), daily buckets — no
+        // interloping dates across month boundaries.
+        const first = new Date(now.getFullYear(), now.getMonth(), 1);
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        for (let d = new Date(first); d.getTime() <= last.getTime(); d.setDate(d.getDate() + 1)) {
+          const start = new Date(d);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(start);
+          end.setDate(end.getDate() + 1);
+          buckets.push({
+            label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            start,
+            end,
+          });
+        }
+      } else if (range === '3m') {
+        pushMonthly(3);
+      } else {
+        pushMonthly(6);
       }
 
-      const results = await Promise.all(months.map(async (m) => {
-        const start = new Date();
-        start.setMonth(start.getMonth() - m.offset);
-        start.setDate(1); start.setHours(0, 0, 0, 0);
-        const end = new Date(start);
-        end.setMonth(end.getMonth() + 1);
-
+      const results = await Promise.all(buckets.map(async (b) => {
         const casesCreated = await this.caseRepo
           .createQueryBuilder('c')
-          .where('c.created_at >= :start AND c.created_at < :end', { start, end })
+          .where('c.created_at >= :start AND c.created_at < :end', { start: b.start, end: b.end })
           .getCount();
-        // Real monthly disbursement from case_interventions (was hardcoded 0).
         const disbursedRows = await this.caseRepo.manager.query(
           `SELECT COALESCE(SUM(amount), 0) AS total FROM case_interventions
            WHERE delivery_date >= $1 AND delivery_date < $2`,
-          [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)],
+          [b.start.toISOString().slice(0, 10), b.end.toISOString().slice(0, 10)],
         );
-        const disbursedAmount = Number(disbursedRows[0]?.total ?? 0);
-
         return {
-          month: m.label,
+          month: b.label,
           casesCreated,
-          transitioning: disbursedAmount,
+          transitioning: Number(disbursedRows[0]?.total ?? 0),
         };
       }));
 
       return results;
     };
-    return this.cache ? this.cache.wrap('dashboard:trends', compute, 300_000) : compute();
+    return this.cache ? this.cache.wrap(`dashboard:trends:${range}`, compute, 300_000) : compute();
   }
 
   async getDailyCounts(year: number, month: number) {
