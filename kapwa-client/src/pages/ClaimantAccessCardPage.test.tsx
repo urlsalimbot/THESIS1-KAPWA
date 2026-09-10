@@ -24,6 +24,13 @@ function renderWithSWR(ui: React.ReactNode) {
   );
 }
 
+// jsdom lacks canvas — axe probes canvas for icon ligatures when inspecting
+// the rendered card, so stub getContext for the a11y run.
+HTMLCanvasElement.prototype.getContext = (() => ({
+  measureText: () => ({ width: 0 }),
+  getImageData: () => ({ data: [] }),
+})) as any;
+
 describe('ClaimantAccessCardPage', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();

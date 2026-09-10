@@ -15,6 +15,14 @@ interface ServiceRecord {
   id: string; type: string; date: string; amount: number; status: string;
 }
 
+interface MyCaseDetail {
+  id: string; controlNo: string; status: string;
+  serviceRequested: string[];
+  createdAt: string; updatedAt?: string;
+  amountAssistance: number | null;
+  assignedWorkerName: string | null;
+}
+
 interface ConsentRecord {
   id: string; purpose: string; channel: string; status: string; grantedAt: string;
 }
@@ -44,7 +52,7 @@ const DEFAULT_CATEGORIES = ['case_update', 'approval', 'disbursement', 'sync_con
 
 export function ClaimantDashboardPage() {
   const { t } = useTranslation();
-  const { data: servicesData } = useSWR<{ services?: ServiceRecord[]; caseStatus?: string }>(
+  const { data: servicesData } = useSWR<{ services?: ServiceRecord[]; caseStatus?: string; case?: MyCaseDetail | null }>(
     queryKeys.beneficiaries.myServices(),
   );
   const { data: consents = [] } = useSWR<ConsentRecord[]>(queryKeys.beneficiaries.myConsent());
@@ -52,6 +60,7 @@ export function ClaimantDashboardPage() {
   const loading = !servicesData && !consents.length;
 
   const services = servicesData?.services || [];
+  const myCase = servicesData?.case || null;
   const rawStatus = servicesData?.caseStatus;
   const normalized = (rawStatus || '').toLowerCase().replace(/\s+/g, '_');
   const caseStatus =
@@ -142,6 +151,50 @@ export function ClaimantDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Case Details */}
+      {myCase && (
+        <Card>
+          <div className="border-b px-4 py-3 flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-primary">{t('claims.caseDetails', 'Case Details')}</h2>
+            <span className="text-xs font-mono text-muted-foreground">{myCase.controlNo}</span>
+          </div>
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">{t('claims.dateFiled', 'Date Filed')}</p>
+                <p className="text-sm font-medium">{new Date(myCase.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{t('claims.assignedWorker', 'Assigned Worker')}</p>
+                <p className="text-sm font-medium">{myCase.assignedWorkerName || t('claims.notAssigned', 'Not assigned')}</p>
+              </div>
+              {myCase.amountAssistance != null && (
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('claims.amountAssistance', 'Assistance Amount')}</p>
+                  <p className="text-sm font-semibold">₱{myCase.amountAssistance.toLocaleString()}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground">{t('claims.lastUpdated', 'Last Updated')}</p>
+                <p className="text-sm font-medium">{myCase.updatedAt ? new Date(myCase.updatedAt).toLocaleDateString() : '—'}</p>
+              </div>
+            </div>
+            {myCase.serviceRequested.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">{t('claims.serviceRequested', 'Services Requested')}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {myCase.serviceRequested.map((s) => (
+                    <span key={s} className="rounded-md bg-primary/5 border border-primary/15 px-2 py-0.5 text-xs text-primary">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Service History */}
       <Card>

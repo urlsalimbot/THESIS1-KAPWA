@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth-context';
-import { api } from '../lib/api';
+import { api, LOGOUT_REASON_KEY } from '../lib/api';
 import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -27,7 +27,18 @@ export function LoginPage() {
   const { t } = useTranslation();
   const loginSchema = useMemo(() => makeLoginSchema(t), [t]);
   const [error, setError] = useState('');
+  const [sessionNotice, setSessionNotice] = useState<'' | 'expired' | 'network'>('');
   const [emailNotVerified, setEmailNotVerified] = useState('');
+
+  // Surface why the user landed back on the login screen (session expiry /
+  // connection drop) instead of silently redirecting — removes the ambiguity
+  // of a session that "just logged out".
+  useEffect(() => {
+    const reason = localStorage.getItem(LOGOUT_REASON_KEY);
+    if (reason === 'session_expired') setSessionNotice('expired');
+    else if (reason === 'network_error') setSessionNotice('network');
+    localStorage.removeItem(LOGOUT_REASON_KEY);
+  }, []);
   const [mfaValue, setMfaValue] = useState('');
   const [mfaSubmitting, setMfaSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -216,6 +227,13 @@ export function LoginPage() {
               >
                 {t('auth.resendVerificationEmail', 'Resend verification email')}
               </button>
+            </div>
+          )}
+          {sessionNotice && (
+            <div className="bg-primary/5 border border-primary/20 text-primary text-sm p-3 rounded-md mb-4" role="status">
+              {sessionNotice === 'expired'
+                ? t('auth.sessionExpired', 'Your session expired. Please sign in again.')
+                : t('auth.sessionNetworkError', 'A connection problem interrupted your session. Please sign in again.')}
             </div>
           )}
           {error && !emailNotVerified && (

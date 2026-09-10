@@ -3,6 +3,7 @@ import { ApiError } from './api-error';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'kapwa_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+export const LOGOUT_REASON_KEY = 'kapwa:logout-reason';
 const TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 3;
 const BASE_DELAYS_MS = [500, 1500, 4500] as const;
@@ -116,6 +117,7 @@ async function refreshToken(): Promise<boolean> {
       if (!res.ok) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
+        localStorage.setItem(LOGOUT_REASON_KEY, 'session_expired');
         window.dispatchEvent(
           new CustomEvent(KAPWA_AUTH_LOGOUT_EVENT, { detail: { reason: 'refresh_failed' } }),
         );
@@ -128,6 +130,7 @@ async function refreshToken(): Promise<boolean> {
     } catch {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.setItem(LOGOUT_REASON_KEY, 'network_error');
       window.dispatchEvent(
         new CustomEvent(KAPWA_AUTH_LOGOUT_EVENT, { detail: { reason: 'refresh_network_error' } }),
       );

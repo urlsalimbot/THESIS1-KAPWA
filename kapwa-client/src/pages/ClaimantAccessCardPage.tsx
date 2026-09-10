@@ -23,16 +23,24 @@ export function ClaimantAccessCardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="font-mono text-lg">{data.code}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {data.beneficiary?.name ?? ''}
+              {data.beneficiary?.barangay ? ` · ${data.beneficiary.barangay}` : ''}
+            </p>
           </CardHeader>
           <CardContent>
+            <h2 className="text-sm font-semibold mb-3">{t('claims.serviceHistory', 'Service History')}</h2>
             {(data.services?.length ?? 0) === 0 && (
               <p className="text-sm text-muted-foreground">{t('claims.noServices', 'No services recorded yet.')}</p>
             )}
             <ul className="space-y-2">
               {(data.services ?? []).map((s, i) => (
-                <li key={i} className="flex justify-between text-sm border-b py-2">
+                <li key={i} className="flex items-center justify-between text-sm border-b py-2 last:border-0">
                   <span>{s.service_rendered ?? s.serviceRendered}</span>
-                  <span>{s.service_date ?? s.serviceDate}</span>
+                  <span className="flex items-center gap-3 text-muted-foreground">
+                    {s.cost != null && s.cost > 0 && <span className="font-semibold text-foreground">₱{Number(s.cost).toLocaleString()}</span>}
+                    <span className="text-xs">{s.service_date ?? s.serviceDate}</span>
+                  </span>
                 </li>
               ))}
             </ul>

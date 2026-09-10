@@ -302,12 +302,45 @@ export class BeneficiariesService {
 
   async getMyServices(userId: string) {
     const ben = await this.benRepo.findOne({ where: { userId } });
-    if (!ben) return { services: [], caseStatus: 'No active case' };
-    const cases = await this.caseRepo.find({ where: { beneficiaryId: ben.id } });
-    const latestCase = cases[cases.length - 1];
+    if (!ben) return { services: [], caseStatus: 'No active case', case: null };
+    const cases = await this.caseRepo.find({
+      where: { beneficiaryId: ben.id },
+      relations: ['assignedWorker'],
+      order: { createdAt: 'DESC' },
+    });
+    const latestCase = cases[0];
+    if (!latestCase) return { services: [], caseStatus: 'No active case', case: null };
+
+    const interventions = await this.caseRepo.manager.query(
+      `SELECT id, service_name AS "serviceName", delivery_date AS "deliveryDate", amount
+       FROM case_interventions WHERE case_id = $1
+       ORDER BY delivery_date DESC`,
+      [latestCase.id],
+    );
+    const services = interventions.map((iv: any) => ({
+      id: iv.id,
+      type: iv.serviceName,
+      date: iv.deliveryDate ? new Date(iv.deliveryDate).toISOString() : latestCase.createdAt.toISOString(),
+      amount: Number(iv.amount) || 0,
+      status: 'completed',
+    }));
+
+    const worker = latestCase.assignedWorker;
     return {
-      services: [],
-      caseStatus: latestCase ? latestCase.status.replace('_', ' ') : 'No active case',
+      services,
+      caseStatus: latestCase.status.replace('_', ' '),
+      case: {
+        id: latestCase.id,
+        controlNo: latestCase.controlNo,
+        status: latestCase.status,
+        serviceRequested: latestCase.serviceRequested || [],
+        createdAt: latestCase.createdAt,
+        updatedAt: latestCase.updatedAt,
+        amountAssistance: latestCase.amountAssistance != null ? Number(latestCase.amountAssistance) : null,
+        assignedWorkerName: worker
+          ? worker.fullName || [worker.firstName, worker.lastName].filter(Boolean).join(' ')
+          : latestCase.assignedWorkerName || null,
+      },
     };
   }
 
@@ -322,14 +355,29 @@ export class BeneficiariesService {
     if (!ben || !ben.household?.accessCardCode) {
       throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
     }
+    // The card is the household's accounting ledger — surface its entries so
+    // the claimant's /my-access-card view is populated, not empty.
+    const rows = await this.caseRepo.manager.query(
+      `SELECT service_rendered, service_date, cost, category
+       FROM access_card_services
+       WHERE access_card_code = $1
+       ORDER BY service_date DESC`,
+      [ben.household.accessCardCode],
+    );
+    const services = rows.map((r: any) => ({
+      serviceRendered: r.service_rendered,
+      serviceDate: r.service_date ? new Date(r.service_date).toISOString().slice(0, 10) : null,
+      cost: r.cost != null ? Number(r.cost) : null,
+      category: r.category,
+    }));
     return {
       code: ben.household.accessCardCode,
       beneficiary: {
-        name: (ben.person?.firstName || '') + ' ' + (ben.person?.surname || ''),
-        barangay: (ben.person?.address || '').split(',').pop()?.trim(),
+        name: [ben.person?.firstName, ben.person?.surname].filter(Boolean).join(' '),
+        barangay: ben.household?.barangay || (ben.person?.address || '').split(',').pop()?.trim() || '',
       },
-      services: [],
-      remainingSlots: 18,
+      services,
+      remainingSlots: Math.max(0, 18 - services.length),
     };
   }
 

@@ -88,6 +88,28 @@ describe('LoginPage', () => {
   });
 });
 
+describe('session notice', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('shows the session-expired notice when the logout reason is stored', () => {
+    localStorage.setItem('kapwa:logout-reason', 'session_expired');
+    render(<BrowserRouter><LoginPage /></BrowserRouter>);
+    expect(screen.getByText(/session expired/i)).toBeTruthy();
+  });
+
+  it('shows the network notice for refresh_network_error', () => {
+    localStorage.setItem('kapwa:logout-reason', 'network_error');
+    render(<BrowserRouter><LoginPage /></BrowserRouter>);
+    expect(screen.getByText(/connection problem/i)).toBeTruthy();
+  });
+
+  it('clears the stored reason and shows nothing without one', () => {
+    render(<BrowserRouter><LoginPage /></BrowserRouter>);
+    expect(screen.queryByText(/session expired/i)).toBeNull();
+    expect(localStorage.getItem('kapwa:logout-reason')).toBeNull();
+  });
+});
+
 describe('role-access constants', () => {
   it('redirect map covers every known role', () => {
     const roles = ['social_worker', 'admin', 'coordinator', 'claimant', 'mayor', 'auditor', 'agency_staff'];

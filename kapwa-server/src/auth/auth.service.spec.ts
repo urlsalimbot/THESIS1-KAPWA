@@ -203,4 +203,21 @@ describe('AuthService', () => {
       await expect(service.verifySmsOtp('bad-token', '123456')).rejects.toThrow('Invalid challenge token');
     });
   });
+
+  describe('refresh', () => {
+    it('does not bump tokenVersion on refresh (multi-session stability)', async () => {
+      (jwtMock.verify as jest.Mock).mockReturnValue({ sub: '1', tokenVersion: 1 });
+      (repoMock.findOne as jest.Mock).mockResolvedValue({ id: '1', email: 'a@a.com', role: 'admin', tokenVersion: 1 });
+      const result = await service.refresh('valid-refresh') as { accessToken: string };
+      expect(result.accessToken).toBe('signed-token');
+      // No tokenVersion write — a refresh in one session must not revoke others.
+      expect(repoMock.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects a refresh token whose tokenVersion was revoked', async () => {
+      (jwtMock.verify as jest.Mock).mockReturnValue({ sub: '1', tokenVersion: 1 });
+      (repoMock.findOne as jest.Mock).mockResolvedValue({ id: '1', email: 'a@a.com', role: 'admin', tokenVersion: 2 });
+      await expect(service.refresh('stale-refresh')).rejects.toThrow('Refresh token has been revoked');
+    });
+  });
 });

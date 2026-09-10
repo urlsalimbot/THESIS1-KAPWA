@@ -213,9 +213,11 @@ export class AuthService {
         throw new UnauthorizedException('Refresh token has been revoked — please log in again');
       }
 
-      user.tokenVersion += 1;
-      await this.userRepo.save(user);
-
+      // NOTE: tokenVersion is deliberately NOT bumped on refresh. Bumping here
+      // revoked the refresh tokens of every OTHER session of the same user
+      // (a second tab/device was silently logged out at its next access-token
+      // expiry). tokenVersion now changes only on explicit revocation
+      // (password/email change), so all sessions refresh independently.
       return this.issueTokens(user);
     } catch (e) {
       this.logger.error('Refresh token validation error:', e);
