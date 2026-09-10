@@ -29,12 +29,31 @@ export class AccessCardsService {
     await queryRunner.connect();
     await queryRunner.startTransaction('SERIALIZABLE');
     try {
-      const result = await queryRunner.manager.query(
-        `INSERT INTO access_card_seq (year, created_at) VALUES ($1, NOW()) RETURNING id`,
-        [year]
-      );
-      const seqId = result[0]?.id || 1;
-      const code = `NORZ-AC-${year}-${String(seqId).padStart(ACCESS_CARD_PAD_WIDTH, '0')}`;
+      // The code derives from access_card_seq.id, but that sequence is not
+      // guaranteed to be ahead of codes already handed out (older rows may
+      // predate the table). Skip taken codes so every card is unique — the
+      // QuickScan lookup (GET /access-cards/:code) stays unambiguous.
+      let code = '';
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const result = await queryRunner.manager.query(
+          `INSERT INTO access_card_seq (year, created_at) VALUES ($1, NOW()) RETURNING id`,
+          [year]
+        );
+        const seqId = result[0]?.id || 1;
+        const candidate = `NORZ-AC-${year}-${String(seqId).padStart(ACCESS_CARD_PAD_WIDTH, '0')}`;
+        const taken = await queryRunner.manager.query(
+          `SELECT 1 FROM beneficiary_roles WHERE access_card_code = $1
+           UNION
+           SELECT 1 FROM households WHERE access_card_code = $1
+           LIMIT 1`,
+          [candidate]
+        );
+        if (taken.length === 0) {
+          code = candidate;
+          break;
+        }
+      }
+      if (!code) throw new Error('Unable to allocate a unique access card code');
 
       await queryRunner.manager.query(
         `UPDATE beneficiary_roles SET access_card_code = $1 WHERE person_id = (SELECT person_id FROM beneficiaries WHERE id = $2)`,

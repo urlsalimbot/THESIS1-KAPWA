@@ -173,12 +173,22 @@ async function seedAccounts(dataSource: DataSource) {
       );
     }
 
+    // MFA demo account: ana.claimant@test.com logs in with a one-time code
+    // from any TOTP authenticator app enrolled with the fixed secret below
+    // (base32 of "Hello!" — documented demo secret, not used in production).
+    await q.query(
+      `UPDATE users SET mfa_enabled = true, mfa_secret = $2 WHERE email = $1`,
+      ['ana.claimant@test.com', 'JBSWY3DPEHPK3PXP'],
+    );
+
     console.log('Accounts seeded: ' + accounts.length);
     console.log('');
     console.log('  Credentials:');
     for (const acct of accounts) {
       console.log(`    ${acct.email.padEnd(42)} → ${acct.password}`);
     }
+    console.log('');
+    console.log('  MFA: ana.claimant@test.com → TOTP secret JBSWY3DPEHPK3PXP (enroll in any authenticator app)');
   } finally {
     await q.release();
   }

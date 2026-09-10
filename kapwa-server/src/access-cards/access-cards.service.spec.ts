@@ -58,14 +58,15 @@ describe('AccessCardsService', () => {
   describe('generateAndAssign', () => {
     it('generates code and updates beneficiary in single call', async () => {
       queryRunnerMock.manager.query
-        .mockResolvedValueOnce([{ id: 42 }])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+        .mockResolvedValueOnce([{ id: 42 }])   // seq insert
+        .mockResolvedValueOnce([])             // collision check (free)
+        .mockResolvedValueOnce([])             // UPDATE beneficiary_roles
+        .mockResolvedValueOnce([]);            // UPDATE households
 
       const result = await service.generateAndAssign('beneficiary-uuid');
 
       expect(result).toMatch(/^NORZ-AC-\d{4}-\d{4}$/);
-      expect(queryRunnerMock.manager.query).toHaveBeenCalledTimes(3);
+      expect(queryRunnerMock.manager.query).toHaveBeenCalledTimes(4);
       expect(queryRunnerMock.manager.query).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE beneficiary_roles SET access_card_code'),
         expect.arrayContaining(['beneficiary-uuid'])
@@ -372,10 +373,28 @@ describe('AccessCardsService — ensureHouseholdCard', () => {
 
   it('generates and assigns a new card when none exists', async () => {
     repoMock.query.mockResolvedValue([{ code: null }]);
-    qrMock.manager.query.mockResolvedValue([{ id: 42 }]);
+    qrMock.manager.query
+      .mockResolvedValueOnce([{ id: 42 }])  // seq insert
+      .mockResolvedValueOnce([])            // collision check (free)
+      .mockResolvedValueOnce([])            // UPDATE beneficiary_roles
+      .mockResolvedValueOnce([]);           // UPDATE households
     const code = await service.ensureHouseholdCard('b1');
     expect(code).toMatch(/^NORZ-AC-\d{4}-\d{4}$/);
-    expect(qrMock.manager.query).toHaveBeenCalledTimes(3);
+    expect(qrMock.manager.query).toHaveBeenCalledTimes(4);
+  });
+
+  it('skips taken codes and allocates a free one', async () => {
+    repoMock.query.mockResolvedValue([{ code: null }]);
+    qrMock.manager.query
+      .mockResolvedValueOnce([{ id: 42 }])  // first seq insert
+      .mockResolvedValueOnce([{ id: 1 }])   // code 0042 taken
+      .mockResolvedValueOnce([{ id: 43 }])  // second seq insert
+      .mockResolvedValueOnce([])            // code 0043 free
+      .mockResolvedValueOnce([])            // UPDATE beneficiary_roles
+      .mockResolvedValueOnce([]);           // UPDATE households
+    const code = await service.ensureHouseholdCard('b1');
+    expect(code).toBe('NORZ-AC-2026-0043');
+    expect(qrMock.manager.query).toHaveBeenCalledTimes(6);
   });
 });
 

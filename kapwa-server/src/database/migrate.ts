@@ -498,6 +498,12 @@ export async function migrate() {
   )`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_user_agency ON users(agency_id)`);
+  // Access card codes must be unique (AccessCardCodeUnique migration) — the
+  // QuickScan lookup relies on unambiguous codes. NULLs stay allowed.
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_beneficiary_roles_access_card_code
+    ON beneficiary_roles (access_card_code) WHERE access_card_code IS NOT NULL`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_households_access_card_code
+    ON households (access_card_code) WHERE access_card_code IS NOT NULL`);
   // Contact messages inbox (ContactMessagesTable migration) — in-app inbox for
   // the public website contact form; staff are notified via notifications.
   await q.query(`CREATE TABLE IF NOT EXISTS contact_messages (
