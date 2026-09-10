@@ -3,11 +3,13 @@ import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
+import { stepperStatus } from '@/components/case-view/CaseStepper';
 import { api } from '../lib/api';
+import { useNavigate } from 'react-router-dom';
 import { queryKeys } from '../lib/query-keys';
 import { getCurrentUser } from '../lib/auth-context';
 import SignaturePad from '../components/forms/SignaturePad';
-import { CheckCircle, Upload, FileText, ArrowRight, ListChecks } from 'lucide-react';
+import { CheckCircle, Upload, FileText, ArrowRight, ListChecks, Check } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -30,9 +32,18 @@ interface ApprovalCase {
   beneficiary?: { firstName?: string; surname?: string };
   assignedWorkerId?: string;
   updatedAt: string;
+  problemsPresented?: string;
+  clientCategory?: string;
+  interventionCount?: number;
+  referrals?: unknown[];
+  selfRelianceLevel?: number;
+  sustainabilityPlan?: string;
+  clientSignature?: string;
+  closureOutcome?: string;
 }
 
 export function ApprovalPipelinePage() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: rawCases, isLoading: loading } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list());
@@ -73,50 +84,19 @@ export function ApprovalPipelinePage() {
     setSelectedIds(new Set());
   }, []);
 
-  const pipelineStatus = ['in_review', 'active', 'transitioning'];
-  const grouped = pipelineStatus.map(status => ({
-    status,
-    label: statusLabel(t, status),
-    items: cases.filter(c => c.status === status),
+  // Aligned with the case stepper: Phase-In (Assessment) → Implementation
+  // (Implement HIP + Service Delivery) → Phase-Out (Transition + Closure).
+  const pipelinePhases = [
+    { key: 'phase-in', label: t('approvals.phaseIn', 'Phase-In'), statuses: ['in_review'], steps: [0], dot: 'bg-amber-400' },
+    { key: 'implementation', label: t('approvals.phaseImplementation', 'Implementation'), statuses: ['active'], steps: [1, 2], dot: 'bg-emerald-400' },
+    { key: 'phase-out', label: t('approvals.phaseOut', 'Phase-Out'), statuses: ['transitioning'], steps: [3, 4], dot: 'bg-primary/40' },
+  ];
+  const grouped = pipelinePhases.map(phase => ({
+    ...phase,
+    items: cases.filter(c => phase.statuses.includes(c.status)),
   }));
 
   // FormData uploads stay on raw fetch (D-10 deferred — JSON-only api client).
-  async function handleCertificateUpload(caseId: string, file: File) {
-    const token = localStorage.getItem('kapwa_token');
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('category', 'certificate_of_eligibility');
-    formData.append('caseId', caseId);
-    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/filing/upload`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    if (res.ok) {
-      const doc = await res.json();
-      await api.patch(`/cases/${caseId}/documents`, { certificateUrl: `/filing/${doc.id}/download` });
-      globalMutate(queryKeys.cases.all);
-    }
-  }
-
-  async function handleVoucherUpload(caseId: string, file: File) {
-    const token = localStorage.getItem('kapwa_token');
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('category', 'petty_cash_voucher');
-    formData.append('caseId', caseId);
-    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/filing/upload`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    if (res.ok) {
-      const doc = await res.json();
-      await api.patch(`/cases/${caseId}/documents`, { pettyCashVoucherUrl: `/filing/${doc.id}/download` });
-      globalMutate(queryKeys.cases.all);
-    }
-  }
-
   async function handleApprove(caseId: string) {
     setSaving(true);
     try {
@@ -198,18 +178,19 @@ export function ApprovalPipelinePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {grouped.map(group => (
-            <div key={group.status} className="bg-card rounded-lg border border-border p-4">
+            <div key={group.key} className="bg-card rounded-lg border border-border p-4">
               <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2 text-base">
-                <span className={`w-2 h-2 rounded-full ${
-                  group.status === 'in_review' ? 'bg-amber-400' :
-                   group.status === 'active' ? 'bg-emerald-400' : 'bg-primary/40'
-                }`} />
+                <span className={`w-2 h-2 rounded-full ${group.dot}`} />
                 {group.label}
                 <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.items.length}</span>
               </h2>
               <div className="space-y-3">
                 {group.items.map(c => (
-                  <div key={c.id} className="border border-border rounded-lg p-3 hover:shadow-sm transition-shadow">
+                  <div
+                    key={c.id}
+                    className="border border-border rounded-lg p-3 hover:shadow-sm transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/cases/${c.id}`)}
+                  >
                     {selectMode && (
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
                         <Checkbox
@@ -232,7 +213,7 @@ export function ApprovalPipelinePage() {
                       <Badge variant={
                         c.status === 'in_review' ? 'secondary' :
                         c.status === 'active' ? 'default' : 'secondary'
-                      }>{group.label}</Badge>
+                      }>{statusLabel(t, c.status)}</Badge>
                     </div>
                     {c.serviceRequested && (
                       <div className="flex flex-wrap gap-1 mb-2">
@@ -242,33 +223,28 @@ export function ApprovalPipelinePage() {
                       </div>
                     )}
 
-                    {group.status === 'in_review' && (
+                    {/* Case stepper progress — mirrors the case view stepper */}
+                    <div className="flex items-center gap-1 mb-2 flex-wrap">
+                      {stepperStatus(c, c.interventionCount ?? 0).map((done, si) => (
+                        <span
+                          key={si}
+                          title={done ? t('approvals.stepDone', 'Step done') : t('approvals.stepPending', 'Step pending')}
+                          className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
+                            done ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {done ? <Check size={11} /> : si + 1}
+                        </span>
+                      ))}
+                      <span className="text-[10px] text-muted-foreground ml-1">{t('approvals.caseProgress', 'Case progress')}</span>
+                    </div>
+
+                    {group.key === 'phase-in' && (
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
-                        {!c.certificateUrl ? (
-                          <label className="flex items-center gap-2 text-xs text-amber-600 cursor-pointer hover:text-amber-700">
-                            <Upload size={14} /> {t('approvals.uploadCertificate', 'Upload Certificate of Eligibility')}
-                            <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={e => {
-                              const f = e.target.files?.[0]; if (f) handleCertificateUpload(c.id, f);
-                            }} />
-                          </label>
-                        ) : (
-                          <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600 hover:textemerald-700">
-                            <FileText size={14} /> {t('approvals.viewCertificate', 'View Certificate')}
-                          </a>
-                        )}
-                        {!c.pettyCashVoucherUrl ? (
-                          <label className="flex items-center gap-2 text-xs text-amber-600 cursor-pointer hover:text-amber-700">
-                            <Upload size={14} /> {t('approvals.uploadVoucher', 'Upload Petty Cash Voucher')}
-                            <input type="file" className="hidden" accept=".pdf,.jpg,.png" onChange={e => {
-                              const f = e.target.files?.[0]; if (f) handleVoucherUpload(c.id, f);
-                            }} />
-                          </label>
-                        ) : (
-                          <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600 hover:textemerald-700">
-                            <FileText size={14} /> {t('approvals.viewVoucher', 'View Voucher')}
-                          </a>
-                        )}
-                        {c.certificateUrl && c.pettyCashVoucherUrl && user?.role === 'admin' && (
+                        <p className="text-xs text-muted-foreground">
+                          {t('approvals.docsGeneratedNote', 'Certificate of Eligibility and Petty Cash Voucher are generated automatically upon approval.')}
+                        </p>
+                        {user?.role === 'admin' && (
                           <Button onClick={() => openApproval(c, 'approve')} size="sm" className="w-full mt-1">
                             <CheckCircle size={14} /> {t('approvals.approveAndSign', 'Approve & Sign')}
                           </Button>
@@ -276,7 +252,7 @@ export function ApprovalPipelinePage() {
                       </div>
                     )}
 
-                    {(group.status === 'active' || group.status === 'transitioning') && (
+                    {group.key !== 'phase-in' && (
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
                         {c.certificateUrl && (
                           <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600">
@@ -288,7 +264,7 @@ export function ApprovalPipelinePage() {
                             <FileText size={14} /> {t('approvals.viewVoucher', 'View Voucher')}
                           </a>
                         )}
-                        {group.status === 'active' && user?.role === 'admin' && (
+                        {c.status === 'active' && user?.role === 'admin' && (
                           <Button onClick={() => openApproval(c, 'disburse')} size="sm" variant="secondary" className="w-full mt-1">
                             <ArrowRight size={14} /> {t('approvals.markTransitioned', 'Mark Transitioned')}
                           </Button>

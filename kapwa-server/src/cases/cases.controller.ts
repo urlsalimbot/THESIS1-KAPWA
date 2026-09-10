@@ -72,14 +72,14 @@ export class CasesController {
 
   @Get('tracker/daily')
   @Roles('admin', 'social_worker', 'mayor', 'auditor')
-  async getTrackerDaily(@Query('date') date?: string) {
-    return this.casesService.getTrackerDaily(date);
+  async getTrackerDaily(@Query('date') date?: string, @Query('status') status?: string) {
+    return this.casesService.getTrackerDaily(date, status);
   }
 
   @Get('tracker/range')
   @Roles('admin', 'social_worker', 'mayor', 'auditor')
-  async getTrackerRange(@Query('start') start: string, @Query('end') end: string) {
-    return this.casesService.getTrackerRange(start, end);
+  async getTrackerRange(@Query('start') start: string, @Query('end') end: string, @Query('status') status?: string) {
+    return this.casesService.getTrackerRange(start, end, status);
   }
 
   @Get('tracker/stats')

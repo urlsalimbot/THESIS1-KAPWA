@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CasesService } from './cases.service';
+import { CasesExportService } from './cases-export.service';
 import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -59,6 +60,7 @@ describe('CasesService', () => {
         connection: {
           createQueryRunner: jest.fn().mockReturnValue(queryRunnerMock),
         },
+        query: jest.fn().mockResolvedValue([]),
       },
     };
 
@@ -85,6 +87,7 @@ describe('CasesService', () => {
         { provide: getRepositoryToken(HouseholdMembership), useValue: familyRepoMock },
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: bcRepoMock },
         { provide: NotificationsService, useValue: notifMock },
+        { provide: CasesExportService, useValue: { generateApprovalDocuments: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
 
@@ -146,7 +149,7 @@ describe('CasesService', () => {
       const andWhereCalls = (qbMock.andWhere as jest.Mock).mock.calls
         .map((c: [string, unknown]) => c[0]);
       const ageSql = andWhereCalls.find(s => s.includes('18 years'));
-      const catSql = andWhereCalls.find(s => s.includes('unnest(c.service_requested)'));
+      const catSql = andWhereCalls.find(s => s.includes('c.client_category ILIKE'));
       expect(ageSql).toBeDefined();
       expect(ageSql).toContain('IS NULL OR');
       expect(catSql).toBeDefined();

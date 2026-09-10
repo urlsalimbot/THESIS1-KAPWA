@@ -350,6 +350,24 @@ export function CaseViewPage() {
             <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} />
           </div>
 
+          {/* Generated approval documents — COE + PCV produced at approval,
+              always available once the case is approved */}
+          {(caseData?.certificateUrl || caseData?.pettyCashVoucherUrl) && (
+            <div className="rounded-lg border bg-card px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+              <span className="text-sm font-semibold">{t('caseView.generatedDocs', 'Generated Documents')}</span>
+              {caseData.certificateUrl && (
+                <a href={caseData.certificateUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                  <FileText size={14} /> {t('caseView.viewCertificate', 'View Certificate of Eligibility')}
+                </a>
+              )}
+              {caseData.pettyCashVoucherUrl && (
+                <a href={caseData.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                  <FileText size={14} /> {t('caseView.viewVoucher', 'View Petty Cash Voucher')}
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Active Step Content */}
           <div>
             {stepComponents[currentStep]}

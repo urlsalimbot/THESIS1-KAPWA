@@ -78,13 +78,16 @@ describe('ApprovalPipelinePage', () => {
     expect(await screen.findByText('NORZ-2026-0002')).toBeTruthy();
   });
 
-  it('renders pipeline column headers', async () => {
+  it('renders pipeline column headers aligned with the case stepper phases', async () => {
     renderWithSWR(<ApprovalPipelinePage />);
+    expect((await screen.findAllByText('Phase-In')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Implementation')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Phase-Out')).length).toBeGreaterThan(0);
+    // Status badges still present inside the cards
     const inReviewElements = await screen.findAllByText('In Review');
     expect(inReviewElements.length).toBeGreaterThan(0);
     const activeElements = await screen.findAllByText('Active');
     expect(activeElements.length).toBeGreaterThan(0);
-    expect(await screen.findByText('Transitioning')).toBeTruthy();
   });
 
   it('has no a11y violations', async () => {

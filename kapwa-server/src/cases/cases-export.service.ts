@@ -4,6 +4,7 @@ import { Repository, In } from 'typeorm';
 import { Case } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { FilingService } from '../filing/filing.service';
 
 @Injectable()
 export class CasesExportService {
@@ -16,6 +17,7 @@ export class CasesExportService {
     private historyRepo: Repository<CaseHistory>,
     @InjectRepository(CaseIntervention)
     private interventionRepo: Repository<CaseIntervention>,
+    private filing: FilingService,
   ) {}
 
   async generateCsrPdf(caseId: string): Promise<Buffer> {
@@ -412,5 +414,119 @@ export class CasesExportService {
     const c = await this.caseRepo.findOne({ where: { controlNo } });
     if (!c) throw new NotFoundException('Case not found');
     return c.id;
+  }
+
+  // ---------------------------------------------------------------- approval
+  // Certificate of Eligibility + Petty Cash Voucher are PRODUCED by the system
+  // when the disbursement is approved (in_review -> active) — they are outputs
+  // of the approval, not pre-uploaded prerequisites.
+
+  private beneficiaryName(c: Case): string {
+    const p = (c.beneficiary as any)?.person;
+    return [p?.firstName, p?.middleName, p?.surname].filter(Boolean).join(' ') || 'N/A';
+  }
+
+  private buildCertificateOfEligibility(c: Case): Promise<Buffer> {
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    const chunks: Buffer[] = [];
+    doc.on('data', (ch: Buffer) => chunks.push(ch));
+    const done = new Promise<void>((resolve) => doc.on('end', resolve));
+
+    const services = Array.isArray(c.serviceRequested) ? c.serviceRequested.join(', ') : '';
+    const barangay = ((c.beneficiary as any)?.person?.address || '').split(',').pop()?.trim() || '';
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    doc.fontSize(14).font('Helvetica-Bold').text('Republic of the Philippines', { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text('Municipal Social Welfare and Development Office', { align: 'center' });
+    doc.fontSize(10).text('Norzagaray, Bulacan', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(16).font('Helvetica-Bold').text('CERTIFICATE OF ELIGIBILITY', { align: 'center' });
+    doc.moveDown(2);
+
+    doc.fontSize(11).font('Helvetica').text(`This certifies that ${this.beneficiaryName(c)} of ${barangay}, Norzagaray, Bulacan has been assessed and found ELIGIBLE for the following assistance under Case No. ${c.controlNo}:`);
+    doc.moveDown();
+    doc.fontSize(11).font('Helvetica').text(`Services: ${services || 'N/A'}`, { align: 'center' });
+    if (c.amountAssistance != null) {
+      doc.fontSize(11).text(`Assistance Amount: Php ${Number(c.amountAssistance).toLocaleString()}`, { align: 'center' });
+    }
+    doc.moveDown();
+    doc.fontSize(10).font('Helvetica').text(`This certification is issued upon the recommendation of the Social Worker and approval of the Municipal Social Welfare and Development Officer, in accordance with prevailing DSWD and LGU guidelines.`);
+    doc.moveDown(3);
+    doc.fontSize(10).font('Helvetica').text('____________________________', { align: 'center' });
+    doc.fontSize(10).text('MSWDO Officer / Social Worker', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(9).text(`Issued on ${dateStr}`, { align: 'right' });
+
+    doc.end();
+    return done.then(() => Buffer.concat(chunks));
+  }
+
+  private buildPettyCashVoucher(c: Case): Promise<Buffer> {
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    const chunks: Buffer[] = [];
+    doc.on('data', (ch: Buffer) => chunks.push(ch));
+    const done = new Promise<void>((resolve) => doc.on('end', resolve));
+
+    const amount = c.amountAssistance != null ? Number(c.amountAssistance) : 0;
+    const fundSource = c.sourceOfFund || 'LGU - Municipal';
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    doc.fontSize(14).font('Helvetica-Bold').text('Republic of the Philippines', { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text('Municipal Social Welfare and Development Office', { align: 'center' });
+    doc.fontSize(10).text('Norzagaray, Bulacan', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(16).font('Helvetica-Bold').text('PETTY CASH VOUCHER', { align: 'center' });
+    doc.moveDown(2);
+
+    doc.fontSize(11).font('Helvetica').text(`PAYEE: ${this.beneficiaryName(c)}`);
+    doc.text(`Case No.: ${c.controlNo}`);
+    doc.text(`Date: ${dateStr}`);
+    doc.moveDown();
+    doc.fontSize(11).text(`AMOUNT: Php ${amount.toLocaleString()}`, { align: 'center' });
+    doc.moveDown();
+    doc.text(`Fund Source: ${fundSource}`);
+    doc.moveDown(2);
+    doc.fontSize(9).text('Approved for payment:');
+    doc.moveDown(2);
+    doc.fontSize(10).text('____________________________', { align: 'left' });
+    doc.fontSize(9).text('MSWDO Officer', { align: 'left' });
+    doc.moveDown(2);
+    doc.fontSize(9).text('Received the above amount in full.');
+    doc.moveDown(2);
+    doc.fontSize(10).text('____________________________', { align: 'left' });
+    doc.fontSize(9).text('Signature of Payee', { align: 'left' });
+
+    doc.end();
+    return done.then(() => Buffer.concat(chunks));
+  }
+
+  // Generates + files both documents for an approved case; returns their
+  // download URLs. Best-effort: callers should not fail the transition on a
+  // generation error.
+  async generateApprovalDocuments(caseId: string, actorId?: string): Promise<{ certificateUrl?: string; pettyCashVoucherUrl?: string }> {
+    const c = await this.caseRepo.findOne({
+      where: { id: caseId },
+      relations: ['beneficiary', 'beneficiary.person', 'assistances'],
+    });
+    if (!c) throw new NotFoundException('Case not found');
+
+    const coe = await this.buildCertificateOfEligibility(c);
+    const pcv = await this.buildPettyCashVoucher(c);
+
+    const coeDoc = await this.filing.upload(
+      { originalname: `COE-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: coe.length, buffer: coe },
+      { caseId: c.id, category: 'approval_document', notes: `Certificate of Eligibility — generated on approval of ${c.controlNo}`, uploadedBy: actorId },
+    );
+    const pcvDoc = await this.filing.upload(
+      { originalname: `PCV-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: pcv.length, buffer: pcv },
+      { caseId: c.id, category: 'approval_document', notes: `Petty Cash Voucher — generated on approval of ${c.controlNo}`, uploadedBy: actorId },
+    );
+
+    return {
+      certificateUrl: `/filing/${coeDoc.id}/download`,
+      pettyCashVoucherUrl: `/filing/${pcvDoc.id}/download`,
+    };
   }
 }

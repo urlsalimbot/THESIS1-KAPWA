@@ -5,6 +5,7 @@ import { CasesExportService } from './cases-export.service';
 import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { FilingService } from '../filing/filing.service';
 
 describe('CasesExportService', () => {
   let service: CasesExportService;
@@ -49,6 +50,7 @@ describe('CasesExportService', () => {
         { provide: getRepositoryToken(Case), useValue: caseRepoMock },
         { provide: getRepositoryToken(CaseHistory), useValue: historyRepoMock },
         { provide: getRepositoryToken(CaseIntervention), useValue: { find: jest.fn().mockResolvedValue([]) } },
+        { provide: FilingService, useValue: { upload: jest.fn().mockResolvedValue({ id: 'doc-1' }) } },
       ],
     }).compile();
 

@@ -2,7 +2,9 @@ import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
-function isStepDone(i: number, caseData: any, interventionCount: number): boolean {
+// Shared done-status per stepper step — reused by the case view stepper and
+// the approval pipeline cards so both surfaces show identical progress.
+export function stepperStepDone(i: number, caseData: any, interventionCount: number): boolean {
   switch (i) {
     case 0: return !!caseData?.problemsPresented && !!caseData?.clientCategory;
     case 1: return interventionCount > 0;
@@ -11,6 +13,10 @@ function isStepDone(i: number, caseData: any, interventionCount: number): boolea
     case 4: return !!caseData?.clientSignature && !!caseData?.closureOutcome;
     default: return false;
   }
+}
+
+export function stepperStatus(caseData: any, interventionCount: number): boolean[] {
+  return [0, 1, 2, 3, 4].map((i) => stepperStepDone(i, caseData, interventionCount));
 }
 
 interface CaseStepperProps {
@@ -31,13 +37,13 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
   ];
   const highestReachable = (() => {
     for (let i = STEPS.length - 1; i >= 0; i--) {
-      if (isStepDone(i, caseData, interventionCount)) return i;
+      if (stepperStepDone(i, caseData, interventionCount)) return i;
     }
     return -1;
   })();
 
   function handleClick(i: number) {
-    const done = isStepDone(i, caseData, interventionCount);
+    const done = stepperStepDone(i, caseData, interventionCount);
     if (done || i <= highestReachable + 1) {
       onStepClick(i);
     } else {
@@ -67,7 +73,7 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
               <div className="flex items-center gap-1">
                 {phase.steps.map(stepIdx => {
                   const step = STEPS[stepIdx];
-                  const done = isStepDone(stepIdx, caseData, interventionCount);
+                  const done = stepperStepDone(stepIdx, caseData, interventionCount);
                   const isActive = stepIdx === currentStep;
                   const isClickable = done || stepIdx <= highestReachable + 1;
                   return (

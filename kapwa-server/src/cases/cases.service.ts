@@ -1,5 +1,5 @@
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
@@ -8,6 +8,7 @@ import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
+import { CasesExportService } from './cases-export.service';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -22,6 +23,7 @@ const MAX_RETRY_ATTEMPTS = 3;
 const CONTROL_NO_PAD_WIDTH = 5;
 @Injectable()
 export class CasesService {
+  private readonly logger = new Logger(CasesService.name);
   constructor(
     @InjectRepository(Case)
     private caseRepo: Repository<Case>,
@@ -32,6 +34,7 @@ export class CasesService {
     @InjectRepository(BeneficiaryClaimant)
     private bcRepo: Repository<BeneficiaryClaimant>,
     private notifService: NotificationsService,
+    private casesExport: CasesExportService,
     @Optional() private auditLog?: AuditLogService,
   ) {}
 
@@ -100,6 +103,23 @@ export class CasesService {
     throw lastError;
   }
 
+  // Attach per-case intervention counts (one grouped query) so the approval
+  // pipeline can show the case stepper's Implement HIP / Service Delivery
+  // progress without N+1 fetches.
+  private async attachInterventionCounts(cases: Case[]): Promise<Case[]> {
+    if (cases.length === 0) return cases;
+    const rows = await this.caseRepo.manager.query(
+      `SELECT case_id, COUNT(*)::int AS count FROM case_interventions
+       WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
+      [cases.map((c) => c.id)],
+    );
+    const counts = new Map(rows.map((r: any) => [r.case_id, Number(r.count)]));
+    for (const c of cases) {
+      (c as any).interventionCount = counts.get(c.id) ?? 0;
+    }
+    return cases;
+  }
+
   async findAll(page = 1, limit = 10, filters?: { status?: CaseStatus; search?: string; barangay?: string; category?: string; gender?: string; ageRange?: string; sla?: string; dateFrom?: string; dateTo?: string }) {
     const qb = this.caseRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'beneficiary')
@@ -147,9 +167,7 @@ export class CasesService {
       }
     }
     if (filters?.category) {
-      qb.andWhere('EXISTS (SELECT 1 FROM unnest(c.service_requested) AS sreq WHERE sreq ILIKE :category)', {
-        category: `%${filters.category}%`,
-      });
+      qb.andWhere('c.client_category ILIKE :category', { category: `%${filters.category}%` });
     }
 
     qb.orderBy('c.createdAt', 'DESC');
@@ -182,10 +200,10 @@ export class CasesService {
 
     qb.skip((page - 1) * limit).take(limit);
     const [cases, total] = await qb.getManyAndCount();
-    const data = cases.map(c => {
+    const data = await this.attachInterventionCounts(cases);
+    for (const c of data) {
       (c as any).slaOverdue = this.computeSlaOverdue(c);
-      return c;
-    });
+    }
     return { data, total };
   }
 
@@ -333,6 +351,22 @@ export class CasesService {
     if (newStatus === CaseStatus.CLOSED) c.closureDate = new Date().toISOString().split('T')[0];
     c.updatedAt = new Date();
     await this.caseRepo.save(c);
+
+    // The Certificate of Eligibility + Petty Cash Voucher are PRODUCED at the
+    // point the disbursement is approved (in_review -> active). Best-effort —
+    // a generation failure must never block the approval itself.
+    if (newStatus === CaseStatus.ACTIVE && oldStatus !== CaseStatus.ACTIVE) {
+      try {
+        const docs = await this.casesExport.generateApprovalDocuments(id, opts?.actorId);
+        if (docs.certificateUrl || docs.pettyCashVoucherUrl) {
+          c.certificateUrl = docs.certificateUrl ?? c.certificateUrl;
+          c.pettyCashVoucherUrl = docs.pettyCashVoucherUrl ?? c.pettyCashVoucherUrl;
+          await this.caseRepo.save(c);
+        }
+      } catch (e) {
+        this.logger.error(`Approval document generation failed for case ${id}: ${(e as Error)?.message ?? e}`);
+      }
+    }
 
     await this.logHistory(id, oldStatus, newStatus, opts?.userRole, undefined, opts?.reason || `Transitioned by ${opts?.userRole || 'system'}`, opts?.historyType);
 
@@ -540,28 +574,29 @@ export class CasesService {
     return c;
   }
 
-  async getTrackerDaily(date?: string) {
+  async getTrackerDaily(date?: string, status?: string) {
     const target = date ? new Date(date) : new Date();
     const start = new Date(target);
     start.setHours(0, 0, 0, 0);
     const end = new Date(target);
     end.setHours(23, 59, 59, 999);
-    return this.getTrackerEntries(start, end);
+    return this.getTrackerEntries(start, end, status);
   }
 
-  async getTrackerRange(startDate: string, endDate: string) {
+  async getTrackerRange(startDate: string, endDate: string, status?: string) {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
-    return this.getTrackerEntries(start, end);
+    return this.getTrackerEntries(start, end, status);
   }
 
-  private async getTrackerEntries(start: Date, end: Date) {
+  private async getTrackerEntries(start: Date, end: Date, status?: string) {
     const rows = await this.caseRepo.query(
       `SELECT
         c.id,
         c.control_no AS "controlNo",
+        c.status,
         c.created_at AS "transactionDate",
         p.surname,
         p.first_name AS "firstName",
@@ -580,13 +615,15 @@ export class CasesService {
       FROM cases c
       LEFT JOIN beneficiaries b ON b.id = c.beneficiary_id
       LEFT JOIN persons p ON p.id = b.person_id
-      WHERE c.created_at >= $1 AND c.created_at <= $2
+      WHERE c.created_at >= $1 AND c.created_at <= $2 AND c.status <> 'closed'
+        ${status ? `AND c.status = '${status}'` : ''}
       ORDER BY c.created_at DESC, "dailySeqNum" ASC`,
       [start, end],
     );
     return rows.map((r: any) => ({
       id: r.id,
       controlNo: r.controlNo,
+      status: r.status,
       transactionDate: r.transactionDate,
       surname: r.surname || '',
       firstName: r.firstName || '',
@@ -601,8 +638,18 @@ export class CasesService {
   }
 
   async getTrackerStats() {
-    const totalResult = await this.caseRepo.query(`SELECT COUNT(*) AS count FROM cases`);
-    const total = parseInt(totalResult[0]?.count || '0', 10);
+    // Cases created since the Monday of the current calendar week (Mon–Sun).
+    const now = new Date();
+    const diffToMonday = (now.getDay() + 6) % 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const weekResult = await this.caseRepo.query(
+      `SELECT COUNT(*) AS count FROM cases WHERE created_at >= $1`,
+      [monday],
+    );
+    const thisWeekCases = parseInt(weekResult[0]?.count || '0', 10);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -612,6 +659,6 @@ export class CasesService {
     );
     const todayEntries = parseInt(todayResult[0]?.count || '0', 10);
 
-    return { totalCasesLogged: total, todayEntries };
+    return { thisWeekCases, todayEntries };
   }
 }
