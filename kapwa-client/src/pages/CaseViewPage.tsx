@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock, Send, ExternalLink } from 'lucide-react';
+import { useCaseActions } from '../hooks/useCaseActions';
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDate, formatDateTime } from '../lib/format';
@@ -63,6 +64,7 @@ export function CaseViewPage() {
   const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
+  const { actionLoading, handleAction } = useCaseActions();
   const initialNavDone = useRef(false);
 
   const { data: caseData, isLoading } = useSWR<any>(
@@ -308,6 +310,17 @@ export function CaseViewPage() {
                 >
                   <Download size={14} /> {t('cases.gisPdf', 'GIS (PDF)')}
                 </Button>
+                {caseData.status === 'enrolled' && caseData.problemsPresented && caseData.socialWorkerAssessment && caseData.clientCategory && (user?.role === 'social_worker' || user?.role === 'admin') && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={actionLoading === id}
+                    onClick={() => handleAction('request-review', id!)}
+                  >
+                    <Send size={14} /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('cases.requestReview', 'Request Review')}
+                  </Button>
+                )}
                 {caseData.status === 'closed' && (
                   <Button
                     variant="outline"

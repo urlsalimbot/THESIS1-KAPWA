@@ -94,6 +94,7 @@ const en = {
     },
     "approving": "Approving...",
     "assessment": {
+    "queuedOffline": "Assessment queued — will sync when online.",
       "assessmentCompleted": "✓ Assessment completed",
       "assessmentDiagnosis": "Assessment & Diagnosis",
       "clientCategory": "Client Category *",

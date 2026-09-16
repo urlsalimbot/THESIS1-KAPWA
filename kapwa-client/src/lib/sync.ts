@@ -1,4 +1,5 @@
 import { getPendingChanges, loadQueue, QueuedChange, markSynced, markConflict, markFailed, getAllVersionVectors, queueChange } from './offline-queue';
+import { ApiError } from './api-error';
 import { api } from './api';
 
 const PRIVATE_KEY_STORAGE = 'kapwa_ed25519_private';
@@ -129,8 +130,17 @@ export async function processDeltaSync() {
         }
       }
     } catch (err: unknown) {
-      for (const c of batch) {
-        await markFailed(c.id, err instanceof Error ? err.message : String(err));
+      // Transient transport or server (5xx) failures must NOT permanently
+      // fail the batch — leave the entries pending so the next sync retries
+      // them. Only definitive client errors (4xx) are marked failed.
+      const status = err instanceof ApiError ? err.status : null;
+      const isTransient = err instanceof TypeError || (status !== null && status >= 500);
+      if (isTransient) {
+        console.warn('Sync transport failure — changes will retry on the next sync:', err instanceof Error ? err.message : err);
+      } else {
+        for (const c of batch) {
+          await markFailed(c.id, err instanceof Error ? err.message : String(err));
+        }
       }
     }
   }
@@ -172,6 +182,25 @@ export function getPendingCount(): number {
 
 export function isOnline(): boolean {
   return navigator.onLine;
+}
+
+let retryTimer: ReturnType<typeof setInterval> | null = null;
+
+// Periodic auto-retry: while the device is online with pending changes, keep
+// retrying the sync (handles transient network blips that left entries pending).
+export function startPendingSyncWatcher(intervalMs = 30000): () => void {
+  if (retryTimer) clearInterval(retryTimer);
+  retryTimer = setInterval(() => {
+    if (isOnline() && getPendingCount() > 0) {
+      processDeltaSync().catch((e) => console.warn('Periodic sync failed:', e));
+    }
+  }, intervalMs);
+  return () => {
+    if (retryTimer) {
+      clearInterval(retryTimer);
+      retryTimer = null;
+    }
+  };
 }
 
 export async function syncOnReconnect() {

@@ -3,6 +3,7 @@ import { mutate } from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
+import { toast } from 'sonner';
 import { isOnline } from '../lib/sync';
 import { queueFsmTransition } from '../lib/offline-queue';
 
@@ -35,8 +36,11 @@ export function useCaseActions() {
           if (isOnline()) {
             await requestReview({ id: caseId });
           } else {
-            await queueFsmTransition(caseId, 'in_review');
-            alert('Review request queued — will sync when online.');
+            // request-review moves enrolled -> assessed (the review request is
+            // the assessed transition); queue the matching target state so the
+            // sync applies a valid FSM step.
+            await queueFsmTransition(caseId, 'assessed');
+            toast.success('Review request queued — will sync when online.');
           }
           break;
         case 'disburse':

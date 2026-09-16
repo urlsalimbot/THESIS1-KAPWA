@@ -1495,6 +1495,7 @@ const fil: EnLocale = {
     "cardWorkerLabel": "Pangalan ng Worker / Lagda",
     "approving": "Inaaprubahan...",
     "assessment": {
+    "queuedOffline": "Nakapila ang assessment — mag-sy-sync kapag online na.",
       "assessmentCompleted": "✓ Nakumpleto ang assessment",
       "assessmentDiagnosis": "Assessment at Diagnosis",
       "clientCategory": "Kategorya ng Kliyente *",

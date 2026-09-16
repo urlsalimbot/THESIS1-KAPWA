@@ -75,7 +75,9 @@ export class AbacService {
     if (path.includes('/beneficiaries') || path.includes('/family')) return 'sensitive';
     if (path.includes('/cases')) return 'internal';
     if (path.includes('/programs') || path.includes('/tracker') || path.includes('/dashboard')) return 'public';
-    if (path.includes('/sync') || path.includes('/audit')) return 'restricted';
+    // Sync is a worker's own-device delta exchange — internal, not legal-basis-gated.
+    if (path.includes('/sync')) return 'internal';
+    if (path.includes('/audit')) return 'restricted';
     return 'internal';
   }
 }

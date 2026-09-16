@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/BottomNav';
 import { SyncStatusBanner } from '@/components/SyncStatusBanner';
 import { SyncQueuePanel } from '@/components/SyncQueuePanel';
+import { startPendingSyncWatcher } from '@/lib/sync';
 import { SkipToContent } from '@/components/a11y/SkipToContent';
 import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 
@@ -45,6 +46,8 @@ export function Layout({ children }: { children?: React.ReactNode }) {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  useEffect(() => startPendingSyncWatcher(), []);
 
   useEffect(() => {
     setSheetOpen(false);

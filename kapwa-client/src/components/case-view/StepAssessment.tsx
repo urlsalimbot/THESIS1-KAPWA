@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { isOnline } from '@/lib/sync';
+import { queueFsmTransition } from '@/lib/offline-queue';
+import { toast } from 'sonner';
 import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
@@ -31,6 +34,12 @@ export function StepAssessment({
   async function markAssessmentComplete() {
     setTransitioning(true);
     try {
+      if (!isOnline()) {
+        // Offline: queue the FSM transition — it syncs when connectivity returns.
+        await queueFsmTransition(caseId, 'assessed');
+        toast.success(t('caseView.assessment.queuedOffline', 'Assessment queued — will sync when online.'));
+        return;
+      }
       await api.patch(`/cases/${caseId}/status`, { status: 'assessed' });
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
