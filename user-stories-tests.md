@@ -266,6 +266,18 @@ coordinator · **CLM** claimant · **MAY** mayor · **AUD** auditor · **AGY** a
 - **As a** system, **I want** sync conflicts surfaced to the admin Sync Queue monitor **so that** they are resolved.
 - **AC:** conflicts appear in `/admin` sync tab; resolution writes `conflict_reason`/`resolved_at`.
 
+### US-112 — Offline FSM transition queueing
+- **As a** field worker, **I want** to trigger case transitions (e.g. Request Review) while offline **so that** the change syncs when connectivity returns.
+- **AC:** offline `Request Review` queues a `cases` UPDATE targeting `assessed` with the `_fsmTransition` flag; the toast confirms "queued — will sync when online"; the offline banner shows "You are offline — N change(s) pending sync"; the queue entry carries the correct target state (regression: queued `in_review` from `enrolled` would be FSM-rejected on sync — fixed to `assessed`).
+
+### US-113 — Transient failure retry
+- **As a** field worker on a flaky connection, **I want** sync failures not to permanently lose queued changes **so that** the queue self-heals.
+- **AC:** a transport failure (`TypeError`) or server 5xx during `POST /sync` leaves entries **pending** (not `failed`); a 30s auto-retry watcher re-syncs while online with pending changes; only definitive 4xx errors mark entries `failed` (manually retryable in the queue panel). Verified live: aborting the first sync POST kept all entries pending and retries flowed through.
+
+### US-114 — Sync endpoint accessibility (ABAC)
+- **As a** social worker, **I want** the delta-sync endpoints reachable with a normal worker session **so that** offline changes upload without a legal-basis code.
+- **AC:** `POST /sync` and `POST /sync/pull` are `internal` sensitivity (regression: they were `restricted`, 403-ing every sync for non-admins); syncs succeed with a worker JWT; queued changes apply through the server FSM pre-check with conflict detection.
+
 ---
 
 ## 13. Audit & Compliance
