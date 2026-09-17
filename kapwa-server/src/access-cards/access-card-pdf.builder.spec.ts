@@ -25,6 +25,7 @@ const fullData: AccessCardPdfData = {
   code: 'NORZ-AC-2026-0001',
   barangay: 'Poblacion',
   contact: '09171234567',
+  nhtsPrId: 'NHTS-2024-000123',
   client: {
     surname: 'Dela Cruz', firstName: 'Juan', middleName: 'M',
     gender: 'Male', dob: new Date('1990-05-15'),
@@ -53,6 +54,8 @@ describe('buildAccessCardPdf', () => {
     expect(text).toContain('FAMILY COMPOSITION');
     expect(text).toContain('Financial Assistance');
     expect(text).toContain('MSWDO');
+    expect(text).toContain('NHTS-PR');
+    expect(text).toContain('NHTS-2024-000123');
     const pageCount = (text.match(/\/Type \/Page\b/g) ?? []).length;
     expect(pageCount).toBe(2);
   });

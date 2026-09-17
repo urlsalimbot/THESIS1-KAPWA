@@ -176,8 +176,12 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
     .text('Address:', rx + 10, cy + 28, { width: 60 });
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
     .text(data.client.address || '', rx + 60, cy + 28, { width: WIDTH / 2 - 70, ellipsis: true });
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
+    .text('NHTS-PR / Listahanan ID:', rx + 10, cy + 40, { width: 95 });
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
+    .text(data.nhtsPrId || '', rx + 95, cy + 40, { width: WIDTH / 2 - 105, ellipsis: true });
 
-  cy += 52;
+  cy += 64;
 
   // Family Composition
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('FAMILY COMPOSITION', rx + 10, cy);

@@ -278,7 +278,8 @@ export class AccessCardsService {
       `SELECT p.surname, p.first_name, p.middle_name, p.gender,
               p.dob::date AS dob,
               (SELECT raw FROM person_addresses pa WHERE pa.person_id = p.id AND pa.address_type = 'current' LIMIT 1) AS address_raw,
-              (SELECT value FROM person_contacts pc WHERE pc.person_id = p.id AND pc.contact_type = 'phone' LIMIT 1) AS phone
+              (SELECT value FROM person_contacts pc WHERE pc.person_id = p.id AND pc.contact_type = 'phone' LIMIT 1) AS phone,
+              (SELECT nhts_pr_id FROM households WHERE id = b.household_id) AS nhts_pr_id
        FROM beneficiaries b
        JOIN persons p ON p.id = b.person_id
        WHERE b.id = $1
@@ -313,6 +314,7 @@ export class AccessCardsService {
       code,
       barangay,
       contact: p.phone ?? '',
+      nhtsPrId: p.nhts_pr_id ?? undefined,
       client: {
         surname: p.surname ?? '',
         firstName: p.first_name ?? '',
