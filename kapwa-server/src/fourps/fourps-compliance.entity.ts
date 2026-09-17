@@ -26,7 +26,7 @@ export class CaseComplianceItem extends BaseEntity {
   @Column({ name: 'met_at', type: 'timestamp', nullable: true })
   metAt?: Date | null;
 
-  @Column({ name: 'met_by', nullable: true })
+  @Column({ name: 'met_by', type: 'uuid', nullable: true })
   metBy?: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

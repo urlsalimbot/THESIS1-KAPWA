@@ -74,8 +74,8 @@ export class ReferralsController {
   @Patch(':id/accept')
   @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Accept referral' })
-  async accept(@Param('id') id: string) {
-    return this.svc.accept(id);
+  async accept(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.accept(id, req.user!.id);
   }
 
   @Patch(':id/decline')
