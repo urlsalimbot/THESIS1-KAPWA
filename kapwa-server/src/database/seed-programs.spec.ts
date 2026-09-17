@@ -17,19 +17,22 @@ describe('program seed data', () => {
     expect(kalahi).toBeDefined();
     expect(kalahi.fundSources).toContain('DSWD - KALAHI-CIDSS');
     expect(kalahi.legalBasis).toContain('RA 7160');
+    expect(kalahi.legalBasis).toContain('NCDDP');
   });
 
   it('includes Walang Gutom with its fund source', () => {
     const [walangGutom] = byName(/Walang Gutom/i);
     expect(walangGutom).toBeDefined();
     expect(walangGutom.fundSources).toContain('DSWD - Walang Gutom Food Stamp');
-    expect(walangGutom.legalBasis).toContain('EO 44');
+    expect(walangGutom.legalBasis).toContain('EO 44 s. 2023');
+    expect(walangGutom.legalBasis).toContain('Walang Gutom 2027');
   });
 
   it('includes UPLIFT with its fund source', () => {
     const [uplift] = byName(/UPLIFT/i);
     expect(uplift).toBeDefined();
     expect(uplift.fundSources).toContain('DSWD - UPLIFT');
+    expect(uplift.legalBasis).toContain('EO 110');
   });
 
   it('keeps every program id unique', () => {

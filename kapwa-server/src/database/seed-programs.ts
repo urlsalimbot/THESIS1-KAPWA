@@ -315,7 +315,7 @@ export const PROGRAMS: ProgramSeed[] = [
       'Barangay Certificate of Indigency (for household grantees)',
     ],
     fundSources: ['DSWD - KALAHI-CIDSS'],
-    legalBasis: 'RA 7160 (Local Government Code); DSWD Administrative Order No. 2011-016 (KALAHI-CIDSS NCDDP)',
+    legalBasis: 'RA 7160 (Local Government Code); DSWD KALAHI-CIDSS NCDDP Program Guidelines (NEDA Board-approved, 2013)',
     isActive: true,
   },
   {
@@ -330,7 +330,7 @@ export const PROGRAMS: ProgramSeed[] = [
       'Household composition certification',
     ],
     fundSources: ['DSWD - Walang Gutom Food Stamp'],
-    legalBasis: 'EO 44 s. 2021 (Walang Gutom: Food Provision through Community Participation Program)',
+    legalBasis: 'EO 44 s. 2023 (Walang Gutom 2027: Food Stamp Program)',
     isActive: true,
   },
   {
@@ -345,7 +345,7 @@ export const PROGRAMS: ProgramSeed[] = [
       'Household savings-group or association endorsement',
     ],
     fundSources: ['DSWD - UPLIFT'],
-    legalBasis: 'DSWD UPLIFT Program Guidelines; RA 8425 (Social Reform and Poverty Alleviation Act)',
+    legalBasis: 'EO 110 s. 2026 (Unified Package for Livelihoods, Industry, Food, and Transport)',
     isActive: true,
   },
 ];
