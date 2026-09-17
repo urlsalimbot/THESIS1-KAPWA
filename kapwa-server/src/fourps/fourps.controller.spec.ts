@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { FourPsController } from './fourps.controller';
 import { FourPsService } from './fourps.service';
 import { AbacGuard } from '../auth/guards/abac.guard';
+import { RESOURCE_SENSITIVITY_KEY } from '../auth/decorators/resource-sensitivity.decorator';
 
 describe('FourPsController', () => {
   let controller: FourPsController;
@@ -52,6 +53,10 @@ describe('FourPsController', () => {
     await controller.schedulePayout('case-1', { scheduledAt: '2026-10-01', amount: 1200 });
     expect(svc.schedulePayout).toHaveBeenCalledWith('case-1', { scheduledAt: '2026-10-01', amount: 1200 });
     await expect(controller.listPayouts('case-1')).resolves.toEqual([]);
+  });
+
+  it('marks compliance status as public sensitivity for claimant read access', () => {
+    expect(Reflect.getMetadata(RESOURCE_SENSITIVITY_KEY, FourPsController.prototype.getCompliance)).toBe('public');
   });
 
   it('updates payout status and records notification', async () => {

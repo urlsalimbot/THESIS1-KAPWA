@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { FourPsService } from './fourps.service';
 import { SchedulePayoutSchema, SchedulePayoutInput, PayoutStatusSchema, PayoutStatusInput } from './dto/fourps.zod';
@@ -31,6 +32,7 @@ export class FourPsController {
 
   @Get(':caseId/compliance')
   @Roles('admin', 'social_worker', 'coordinator', 'claimant')
+  @Sensitivity('public')
   @ApiOperation({ summary: 'Get 4Ps compliance status for a case' })
   async getCompliance(@Param('caseId', new ParseUUIDPipe()) caseId: string) {
     return this.svc.getComplianceStatus(caseId);
