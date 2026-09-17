@@ -35,8 +35,9 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   });
 }
 
-// jsdom lacks window.scrollTo; Radix and app shell call it on navigation
-if (typeof window !== 'undefined' && typeof window.scrollTo !== 'function') {
+// jsdom's scrollTo is a not-implemented stub that logs a virtual-console error
+// on every call; Radix and the app shell call it on navigation, so always override it.
+if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'scrollTo', {
     writable: true,
     configurable: true,
@@ -44,8 +45,9 @@ if (typeof window !== 'undefined' && typeof window.scrollTo !== 'function') {
   });
 }
 
-// jsdom lacks canvas 2d context; chart libs call getContext during render
-if (typeof HTMLCanvasElement !== 'undefined' && typeof HTMLCanvasElement.prototype.getContext !== 'function') {
+// jsdom's getContext is a not-implemented stub that logs a virtual-console error
+// on every call; chart libs call it during render, so always override it.
+if (typeof HTMLCanvasElement !== 'undefined') {
   HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
     const ctx = {
       fillRect: vi.fn(),
