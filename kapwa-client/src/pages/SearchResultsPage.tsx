@@ -70,7 +70,7 @@ export function SearchResultsPage() {
     keepPreviousData: true,
   });
 
-  const results = useMemo(() => (data?.data || []).map(mapResult), [data]);
+  const results = useMemo(() => (Array.isArray(data?.data) ? data.data : []).map(mapResult), [data]);
 
   return (
     <PageShell title={t('search.title', 'Search Results')} description={debounced ? t('search.resultsFor', 'Results for "{{query}}"', { query: debounced }) : ''}>
