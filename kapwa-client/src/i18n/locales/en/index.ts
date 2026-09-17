@@ -2230,6 +2230,18 @@ const en = {
       "other": "Other"
     }
   },
+  "nhts": {
+    "label": "NHTS-PR / Listahanan ID",
+    "placeholder": "Enter NHTS-PR / Listahanan ID",
+    "saved": "NHTS-PR ID saved.",
+    "saveFailed": "Unable to save NHTS-PR ID.",
+    "edit": "Edit",
+    "editLabel": "Edit NHTS-PR ID",
+    "save": "Save",
+    "saveLabel": "Save NHTS-PR ID",
+    "cancel": "Cancel",
+    "notSet": "Not set"
+  },
 } as const;
 
 export default en;

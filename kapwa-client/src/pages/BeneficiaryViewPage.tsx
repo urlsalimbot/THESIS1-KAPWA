@@ -32,6 +32,7 @@ import { CardGridSkeleton } from "@/components/skeletons/CardGridSkeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface BeneficiaryDetail {
   id: string;
@@ -48,6 +49,7 @@ interface BeneficiaryDetail {
   householdSize: number;
   status: string;
   accessCardCode?: string;
+  nhtsPrId?: string;
   cases: {
     id: string;
     program: string;
@@ -166,6 +168,10 @@ export function BeneficiaryViewPage() {
   const [beneficiary, setBeneficiary] = useState<BeneficiaryDetail | null>(
     null,
   );
+  const [editingNhts, setEditingNhts] = useState(false);
+  const [nhtsDraft, setNhtsDraft] = useState('');
+  const [nhtsSaving, setNhtsSaving] = useState(false);
+  const [nhtsMsg, setNhtsMsg] = useState('');
 
   const { data: cardSummary } = useSWR<{ cardCode: string; total: number; byCategory: Record<string, number> }>(
     id && beneficiary?.accessCardCode ? queryKeys.accessCards.summary(id) : null,
@@ -217,6 +223,7 @@ export function BeneficiaryViewPage() {
         householdSize: famGraph?.totalCount || 1,
         status: (b.consentStatus as string) || "active",
         accessCardCode: (b.accessCardCode as string) || undefined,
+        nhtsPrId: ((b.household as Record<string, unknown>)?.nhtsPrId as string) || undefined,
         cases: beneficiaryCases.map((c: Record<string, unknown>) => {
           const sr = c.serviceRequested;
           return {
@@ -278,6 +285,23 @@ export function BeneficiaryViewPage() {
       setIntError(err.message || t("beneficiaries.logInterventionFailed", "Failed to log intervention"));
     }
     setIntSubmitting(false);
+  }
+
+  async function saveNhtsPr() {
+    if (!beneficiary?.id) return;
+    setNhtsSaving(true);
+    setNhtsMsg('');
+    try {
+      const value = nhtsDraft.trim() || null;
+      await api.patch(`/beneficiaries/${beneficiary.id}/household/nhts-pr`, { nhtsPrId: value });
+      setBeneficiary(prev => (prev ? { ...prev, nhtsPrId: value || undefined } : prev));
+      setEditingNhts(false);
+      setNhtsMsg(t('nhts.saved', 'NHTS-PR ID saved.'));
+    } catch {
+      setNhtsMsg(t('nhts.saveFailed', 'Unable to save NHTS-PR ID.'));
+    } finally {
+      setNhtsSaving(false);
+    }
   }
 
   async function handleAssignCard() {
@@ -589,6 +613,43 @@ export function BeneficiaryViewPage() {
               <InfoRow icon={Phone} label={t("beneficiaries.contact", "Contact")} value={beneficiary.contact || "N/A"} />
               <InfoRow icon={Tag} label={t("beneficiaries.category", "Category")} value={beneficiary.category || "N/A"} />
               <InfoRow icon={Home} label={t("beneficiaries.household", "Household")} value={t("beneficiaries.membersCount", "{{count}} member", { count: beneficiary.householdSize })} />
+              <div className="flex items-start justify-between gap-2">
+                <InfoRow
+                  icon={Tag}
+                  label={t('nhts.label', 'NHTS-PR / Listahanan ID')}
+                  value={beneficiary.nhtsPrId || t('nhts.notSet', 'Not set')}
+                />
+                {!editingNhts && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('nhts.editLabel', 'Edit NHTS-PR ID')}
+                    onClick={() => {
+                      setNhtsDraft(beneficiary.nhtsPrId || '');
+                      setEditingNhts(true);
+                    }}
+                  >
+                    {t('nhts.edit', 'Edit')}
+                  </Button>
+                )}
+              </div>
+              {editingNhts && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    aria-label={t('nhts.label', 'NHTS-PR / Listahanan ID')}
+                    placeholder={t('nhts.placeholder', 'Enter NHTS-PR / Listahanan ID')}
+                    value={nhtsDraft}
+                    onChange={e => setNhtsDraft(e.target.value)}
+                  />
+                  <Button size="sm" disabled={nhtsSaving} aria-label={t('nhts.saveLabel', 'Save NHTS-PR ID')} onClick={saveNhtsPr}>
+                    {t('nhts.save', 'Save')}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingNhts(false)}>
+                    {t('nhts.cancel', 'Cancel')}
+                  </Button>
+                </div>
+              )}
+              {nhtsMsg && <p className="text-xs text-muted-foreground">{nhtsMsg}</p>}
             </div>
           </div>
 

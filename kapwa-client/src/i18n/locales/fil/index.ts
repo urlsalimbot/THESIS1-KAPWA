@@ -2232,6 +2232,18 @@ const fil: EnLocale = {
       "fds": "Sesyon sa Pagpapaunlad ng Pamilya",
       "other": "Iba pa"
     }
+  },
+  "nhts": {
+    "label": "ID ng Listahanan (NHTS-PR)",
+    "placeholder": "Ilagay ang ID ng Listahanan (NHTS-PR)",
+    "saved": "Nai-save ang ID ng Listahanan.",
+    "saveFailed": "Hindi na-save ang ID ng Listahanan.",
+    "edit": "I-edit",
+    "editLabel": "I-edit ang ID ng Listahanan",
+    "save": "I-save",
+    "saveLabel": "I-save ang ID ng Listahanan",
+    "cancel": "Kanselahin",
+    "notSet": "Hindi nakatakda"
   }
 };
 

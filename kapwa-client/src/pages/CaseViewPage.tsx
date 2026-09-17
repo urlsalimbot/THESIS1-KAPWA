@@ -629,6 +629,12 @@ export function CaseViewPage() {
                     <p>₱{Number(household.estimatedIncome).toLocaleString()}/mo</p>
                   </div>
                 )}
+                {household.nhtsPrId && (
+                  <div>
+                    <span className="text-muted-foreground text-xs">{t('nhts.label', 'NHTS-PR / Listahanan ID')}</span>
+                    <p>{household.nhtsPrId}</p>
+                  </div>
+                )}
                 {(famGraph?.members?.length || 0) > 0 && (
                   <div className="mt-2">
                     <span className="text-muted-foreground text-xs flex items-center gap-1 mb-2">

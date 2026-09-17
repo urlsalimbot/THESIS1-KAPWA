@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
@@ -9,10 +9,11 @@ vi.mock('../components/family/FamilyGraph', () => ({
   FamilyGraph: () => <div data-testid="family-graph-mock">Family Graph</div>,
 }));
 
-const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockApiPut, mockApiPatch, mockBeneficiary, mockCases, mockFamilyGraph, mockTrackerEntries } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPost: vi.fn(),
   mockApiPut: vi.fn(),
+  mockApiPatch: vi.fn(),
   mockBeneficiary: {
     id: 'BEN-001',
     firstName: 'Juan',
@@ -25,6 +26,7 @@ const { mockApiGet, mockApiPost, mockApiPut, mockBeneficiary, mockCases, mockFam
     category: 'Senior',
     consentStatus: 'active',
     accessCardCode: 'NORZ-AC-2026-0001',
+    household: { nhtsPrId: 'NHTS-2024-000123' },
   },
   mockCases: [
     {
@@ -53,6 +55,7 @@ vi.mock('../lib/api', () => ({
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
     put: (...args: unknown[]) => mockApiPut(...args),
+    patch: (...args: unknown[]) => mockApiPatch(...args),
     del: vi.fn(),
     uploadSignature: vi.fn(),
     uploadReceipt: vi.fn(),
@@ -77,6 +80,7 @@ describe('BeneficiaryViewPage', () => {
     mockApiGet.mockReset();
     mockApiPost.mockReset();
     mockApiPut.mockReset();
+    mockApiPatch.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
@@ -119,6 +123,30 @@ describe('BeneficiaryViewPage', () => {
       </MemoryRouter>
     );
     expect(await screen.findByText('NORZ-AC-2026-0001', {}, { timeout: 5000 })).toBeTruthy();
+  });
+
+  it('shows and edits the NHTS-PR / Listahanan ID', async () => {
+    mockApiPatch.mockResolvedValue({ householdId: 'h1', nhtsPrId: 'NHTS-2024-999999' });
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('NHTS-2024-000123')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit NHTS-PR ID' }));
+    const input = screen.getByLabelText('NHTS-PR / Listahanan ID');
+    fireEvent.change(input, { target: { value: 'NHTS-2024-999999' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save NHTS-PR ID' }));
+
+    await waitFor(() =>
+      expect(mockApiPatch).toHaveBeenCalledWith('/beneficiaries/BEN-001/household/nhts-pr', {
+        nhtsPrId: 'NHTS-2024-999999',
+      }),
+    );
   });
 
   it('has no a11y violations', async () => {
