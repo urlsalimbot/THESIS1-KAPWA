@@ -134,9 +134,56 @@ describe('CaseViewPage — government ID photo', () => {
 
     expect(await screen.findByText('Purok 1, Barangay 1')).toBeTruthy();
   });
+
+  it('renders PSGC codes in the beneficiary address as names', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('id-photo')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('caseIdPhoto')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) {
+        return Promise.resolve({
+          ...mockCase,
+          beneficiary: {
+            ...mockCase.beneficiary,
+            currentAddress: { barangay: 'Poblacion', city: '0301413000', province: '0301400000' },
+          },
+        });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+
+    expect(await screen.findByText('Poblacion, Norzagaray, Bulacan')).toBeTruthy();
+  });
 });
 
 describe('CaseViewPage — GIS PDF', () => {
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockUseAuth.mockReset();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('id-photo')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('caseIdPhoto')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve(mockCase);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
   it('downloads the GIS PDF when the button is clicked', async () => {
     mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
     renderWithSWR(<CaseViewPage />);

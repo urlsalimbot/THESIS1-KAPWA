@@ -7,6 +7,7 @@ import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, F
 import { useCaseActions } from '../hooks/useCaseActions';
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
+import { addressNames } from '@/lib/psgc';
 import { formatDate, formatDateTime } from '../lib/format';
 import { isAssessmentStepDone, interventionRequirementsMet } from '../lib/case-progress';
 import { useAuth } from '../lib/auth-context';
@@ -152,6 +153,8 @@ export function CaseViewPage() {
   }, [caseData, interventions, progressOpts]);
 
   const ben = caseData?.beneficiary;
+  const benAddress = addressNames(ben?.currentAddress) || ben?.address;
+  const claimantAddress = addressNames(caseData?.claimant?.currentAddress) || caseData?.claimant?.address;
   const dob = ben?.dob;
   const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 0;
   const ageRange = dob ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '';
@@ -435,12 +438,12 @@ export function CaseViewPage() {
                     <p>{formatDate(dob)}</p>
                   </div>
                 )}
-                {ben.address && (
+                {benAddress && (
                   <div className="flex items-start gap-2">
                     <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
                     <div>
                       <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
-                      <p>{ben.address}</p>
+                      <p>{benAddress}</p>
                     </div>
                   </div>
                 )}
@@ -604,12 +607,12 @@ export function CaseViewPage() {
                     </div>
                   </div>
                 )}
-                {caseData.claimant.address && (
+                {claimantAddress && (
                   <div className="flex items-start gap-2">
                     <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
                     <div>
                       <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
-                      <p>{caseData.claimant.address}</p>
+                      <p>{claimantAddress}</p>
                     </div>
                   </div>
                 )}

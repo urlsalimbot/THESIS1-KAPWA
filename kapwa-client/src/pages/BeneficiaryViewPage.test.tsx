@@ -136,6 +136,31 @@ describe('BeneficiaryViewPage', () => {
     expect(await screen.findByText('Purok 1, Barangay 1', {}, { timeout: 5000 })).toBeTruthy();
   });
 
+  it('renders PSGC codes in the stored address as names', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && !k.includes('family')) {
+        return Promise.resolve({
+          ...mockBeneficiary,
+          currentAddress: { barangay: 'Poblacion', city: '0301413000', province: '0301400000' },
+        });
+      }
+      if (k.includes('cases') && k.includes('list')) return Promise.resolve({ data: mockCases, total: mockCases.length });
+      if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
+      if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('Poblacion, Norzagaray, Bulacan', {}, { timeout: 5000 })).toBeTruthy();
+  });
+
   it('shows and edits the NHTS-PR / Listahanan ID', async () => {
     mockApiPatch.mockResolvedValue({ householdId: 'h1', nhtsPrId: 'NHTS-2024-999999' });
     renderWithSWR(

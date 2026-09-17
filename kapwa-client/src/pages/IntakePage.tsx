@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { psgcNameFor } from '@/lib/psgc';
 import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
@@ -394,7 +395,11 @@ export function IntakePage() {
       civilStatus: form.civilStatus,
       cellularNumber: form.cellularNumber,
       email: form.email || undefined,
-      currentAddress: form.currentAddress,
+      currentAddress: {
+        ...form.currentAddress,
+        city: psgcNameFor(form.currentAddress.city),
+        province: psgcNameFor(form.currentAddress.province),
+      },
       philhealthNumber: form.philhealthNumber || undefined,
       occupation: form.occupation,
       estimatedMonthlyIncome: parseFloat(form.estimatedMonthlyIncome.replace(/,/g, '')) || 0,

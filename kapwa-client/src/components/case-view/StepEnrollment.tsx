@@ -1,6 +1,7 @@
 import { Separator } from '@/components/ui/separator';
 import { User, Calendar, Briefcase, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { addressNames } from '@/lib/psgc';
 
 interface StepEnrollmentProps {
   caseData: any;
@@ -102,7 +103,7 @@ export function StepEnrollment({ caseData }: StepEnrollmentProps) {
             </div>
             <div>
               <span className="text-muted-foreground text-xs">{t('caseView.enrollment.address', 'Address')}</span>
-              <p>{ben.address || '—'}</p>
+              <p>{addressNames(ben.currentAddress) || ben.address || '—'}</p>
             </div>
           </div>
         </div>

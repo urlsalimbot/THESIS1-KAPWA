@@ -254,6 +254,7 @@ export class CasesService {
           relationship: bc.relationship,
           phone: bc.claimant.phone,
           address: bc.claimant.address,
+          currentAddress: bc.claimant.currentAddress,
         };
       }
     }

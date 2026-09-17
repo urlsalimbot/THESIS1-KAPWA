@@ -346,7 +346,7 @@ describe('IntakePage — batch family submit', () => {
       expect(batchCall).toBeDefined();
       expect(batchCall?.[1].caseId).toBe('case-id-1');
       expect(batchCall?.[1].primary).toMatchObject({
-        currentAddress: expect.objectContaining({ barangay: 'Bangkal' }),
+        currentAddress: expect.objectContaining({ barangay: 'Bangkal', city: 'Norzagaray', province: 'Bulacan' }),
       });
       expect(batchCall?.[1].members[0]).toMatchObject({
         surname: 'Dela Cruz',

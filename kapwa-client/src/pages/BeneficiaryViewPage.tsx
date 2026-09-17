@@ -33,6 +33,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { addressNames } from "@/lib/psgc";
 
 interface BeneficiaryDetail {
   id: string;
@@ -218,7 +219,7 @@ export function BeneficiaryViewPage() {
         contact: (b.phone as string) || "",
         barangay: addrParts[addrParts.length - 1] || "",
         purok: addrParts.length > 1 ? addrParts[0] : "",
-        addressLine: (b.address as string) || "",
+        addressLine: addressNames(b.currentAddress as Record<string, string> | undefined) || (b.address as string) || "",
         category: (b.category as string) || "",
         placeOfBirth: (b.placeOfBirth as string) || "",
         civilStatus: (b.civilStatus as string) || "",
