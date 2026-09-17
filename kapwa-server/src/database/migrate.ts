@@ -500,8 +500,8 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_user_agency ON users(agency_id)`);
   // Access card codes must be unique (AccessCardCodeUnique migration) — the
   // QuickScan lookup relies on unambiguous codes. NULLs stay allowed.
-  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_beneficiary_roles_access_card_code
-    ON beneficiary_roles (access_card_code) WHERE access_card_code IS NOT NULL`);
+  // NOTE: the beneficiary_roles access-card index is created below, after that
+  // table's CREATE TABLE (it is defined later in this bootstrap).
   await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_households_access_card_code
     ON households (access_card_code) WHERE access_card_code IS NOT NULL`);
   // Contact messages inbox (ContactMessagesTable migration) — in-app inbox for
@@ -601,6 +601,45 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  // 4Ps conditionality + payout tracking (CreateFourPsTables migration)
+  await q.query(`CREATE TABLE IF NOT EXISTS case_compliance_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL REFERENCES cases(id),
+    household_member_id UUID REFERENCES persons(id),
+    compliance_type VARCHAR CHECK (compliance_type IN ('school_attendance','health_checkup','fds')),
+    due_date DATE NOT NULL,
+    month_label VARCHAR,
+    met BOOLEAN DEFAULT FALSE,
+    met_at TIMESTAMP,
+    met_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_compliance_dedupe
+    ON case_compliance_items(case_id, household_member_id, compliance_type, due_date)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_compliance_case ON case_compliance_items(case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_compliance_due ON case_compliance_items(due_date)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS case_payouts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL REFERENCES cases(id),
+    cycle_no VARCHAR,
+    scheduled_at DATE NOT NULL,
+    amount DECIMAL(12,2),
+    status VARCHAR(20) DEFAULT 'scheduled'
+      CHECK (status IN ('scheduled','completed','missed','cancelled')),
+    notified_at TIMESTAMP,
+    notified_by UUID REFERENCES users(id),
+    remarks TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_payout_case ON case_payouts(case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_payout_date ON case_payouts(scheduled_at)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_payout_status ON case_payouts(status)`);
+  // Listahanan / NHTS-PR reference id (AddNhtsPrIdToHouseholds migration)
+  await q.query(`ALTER TABLE households ADD COLUMN IF NOT EXISTS nhts_pr_id TEXT`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_household_nhts
+    ON households(nhts_pr_id) WHERE nhts_pr_id IS NOT NULL`);
   await q.query(`CREATE TABLE IF NOT EXISTS form_version_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
@@ -620,7 +659,6 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_status ON inter_agency_referrals(status)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_person ON inter_agency_referrals(person_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_inter_referral_case ON inter_agency_referrals(case_id)`);
-  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_history_case ON case_history(case_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_worker ON cases(assigned_worker_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_beneficiary ON cases(beneficiary_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_cases_status_created ON cases(status, created_at)`);
@@ -641,6 +679,8 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_beneficiary_roles_access_card_code
+    ON beneficiary_roles (access_card_code) WHERE access_card_code IS NOT NULL`);
   // case_history uses Postgres enums defined by AddCaseHistory migration
   await q.query(`
     DO $$ BEGIN
@@ -667,6 +707,7 @@ export async function migrate() {
     override_reason character varying,
     CONSTRAINT "PK_case_history" PRIMARY KEY (id)
   )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_history_case ON case_history(case_id)`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS hash TEXT`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS hash TEXT`);
@@ -856,6 +897,12 @@ await q.query(`
   )`);
   if (wasFresh) {
     const { AppDataSource } = await import('./data-source');
+    // Extensions are installed explicitly above; leaving TypeORM's implicit
+    // install enabled makes initialize() run `CREATE EXTENSION` on a second
+    // connection, which deadlocks against this still-open transaction (the
+    // uncommitted uuid-ossp is invisible to that connection, so the CREATE
+    // blocks on this transaction's id and initialize() never resolves).
+    (AppDataSource.options as { installExtensions?: boolean }).installExtensions = false;
     await AppDataSource.initialize();
     appDataSource = AppDataSource;
     for (const m of AppDataSource.migrations) {
