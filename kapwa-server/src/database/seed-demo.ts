@@ -10,6 +10,7 @@
  *   or from the repo: npm run seed:demo
  */
 import { AppDataSource } from './data-source';
+import { seedPrograms } from './seed-programs';
 
 const API = process.env.API_BASE || 'http://localhost:3000/api/v1';
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -138,13 +139,20 @@ async function main(): Promise<void> {
   const admin = await login('admin@mswdo.test', 'admin123');
   console.log('logged in: worker + admin');
 
-  // Assigned worker for seeded cases + program map for intervention linkage.
+  // Assigned worker for seeded cases.
   const me = await call(worker, 'GET', '/auth/me');
   const workerId = me.json?.user?.id || me.json?.id;
-  const programsResp = await call(admin, 'GET', '/programs?limit=50');
-  const programs = (Array.isArray(programsResp.json) ? programsResp.json : (programsResp.json?.items || programsResp.json?.data || [])) as any[];
 
   await AppDataSource.initialize();
+
+  // Seed programs (with required documents) first so intervention linkage and
+  // the step-2 requirements uploader populate for the demo.
+  await seedPrograms(AppDataSource);
+
+  // Program map for intervention linkage — fetch AFTER seeding so the live API
+  // returns the just-inserted programs.
+  const programsResp = await call(admin, 'GET', '/programs?limit=50');
+  const programs = (Array.isArray(programsResp.json) ? programsResp.json : (programsResp.json?.items || programsResp.json?.data || [])) as any[];
 
   const cases: { caseId: string; stage: string; benId: string; personId?: string; name: string }[] = [];
   for (const p of people) {

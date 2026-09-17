@@ -350,7 +350,7 @@ export const PROGRAMS: ProgramSeed[] = [
   },
 ];
 
-async function seedPrograms(dataSource: DataSource) {
+export async function seedPrograms(dataSource: DataSource) {
   const q = dataSource.createQueryRunner();
   await q.connect();
 
