@@ -66,6 +66,22 @@ describe('FourPsComplianceSection', () => {
     await waitFor(() => expect(mockApiPost).toHaveBeenCalledWith('/fourps/C-1/generate-compliance'));
   });
 
+  it('surfaces generate failures', async () => {
+    mockApiPost.mockRejectedValueOnce(new Error('boom'));
+    renderSection();
+    await screen.findByText('1/2 complied · 50% rate');
+    fireEvent.click(screen.getByRole('button', { name: /Generate 12-Month Items/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Action failed. Please try again.');
+  });
+
+  it('surfaces mark failures', async () => {
+    mockApiPatch.mockRejectedValueOnce(new Error('boom'));
+    renderSection();
+    await screen.findByText('School Attendance');
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as complied' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Action failed. Please try again.');
+  });
+
   it('detects 4Ps cases from service requests and category', () => {
     expect(isFourPsCase({ serviceRequested: ['4Ps — Pantawid Pamilyang Pilipino Program'] })).toBe(true);
     expect(isFourPsCase({ clientCategory: '4Ps' })).toBe(true);

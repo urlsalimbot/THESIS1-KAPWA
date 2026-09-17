@@ -2199,6 +2199,7 @@ const fil: EnLocale = {
     "empty": "Walang aytem ng pagsunod. Bumuo para sa sambahayang ito.",
     "due": "Takdang petsa: {{date}}",
     "markMet": "Markahan bilang natupad",
+    "actionFailed": "Nabigo ang aksyon. Subukang muli.",
     "loading": "Naglo-load…",
     "type": {
       "school_attendance": "Pagpasok sa Paaralan",

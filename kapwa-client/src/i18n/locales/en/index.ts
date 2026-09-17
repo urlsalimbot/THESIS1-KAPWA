@@ -2196,6 +2196,7 @@ const en = {
     "empty": "No compliance items. Generate for this household.",
     "due": "Due: {{date}}",
     "markMet": "Mark as complied",
+    "actionFailed": "Action failed. Please try again.",
     "loading": "Loading…",
     "type": {
       "school_attendance": "School Attendance",

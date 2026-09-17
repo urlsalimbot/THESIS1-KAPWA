@@ -39,20 +39,33 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
     caseId ? queryKeys.fourps.compliance(caseId) : null,
   );
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState('');
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function generate() {
+    setError('');
     setGenerating(true);
     try {
       await api.post(`/fourps/${caseId}/generate-compliance`);
       await mutate();
+    } catch {
+      setError(t('fourps.actionFailed', 'Action failed. Please try again.'));
     } finally {
       setGenerating(false);
     }
   }
 
   async function markMet(id: string) {
-    await api.patch(`/fourps/compliance/${id}/meet`);
-    await mutate();
+    setPendingId(id);
+    setError('');
+    try {
+      await api.patch(`/fourps/compliance/${id}/meet`);
+      await mutate();
+    } catch {
+      setError(t('fourps.actionFailed', 'Action failed. Please try again.'));
+    } finally {
+      setPendingId(null);
+    }
   }
 
   const entries = data?.entries ?? [];
@@ -80,6 +93,8 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
       <div className="w-full bg-secondary rounded-full h-2 mb-4">
         <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${rate}%` }} />
       </div>
+
+      {error && <p role="alert" className="mb-2 text-xs text-destructive">{error}</p>}
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">{t('fourps.loading', 'Loading…')}</p>
@@ -109,6 +124,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
                     variant="ghost"
                     className="h-6 px-2"
                     aria-label={t('fourps.markMet', 'Mark as complied')}
+                    disabled={pendingId === entry.id}
                     onClick={() => markMet(entry.id)}
                   >
                     <Circle size={14} className="text-amber-600" />
