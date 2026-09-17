@@ -82,7 +82,10 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
   }
   const caseDocs = docs.filter((d: any) => !d.requirementKey);
 
-  const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole) && !readOnly);
+  // Document uploads stay available for eligible roles regardless of step
+  // completion or closure — recording an intervention (readOnly) or closing the
+  // case must not remove the ability to attach supporting evidence.
+  const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole));
 
   async function handleAdd() {
     setSaving(true);

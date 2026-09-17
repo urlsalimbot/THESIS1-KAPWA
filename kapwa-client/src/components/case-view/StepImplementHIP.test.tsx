@@ -90,6 +90,24 @@ describe('StepImplementHIP adhoc intervention', () => {
     expect(payload.serviceName).toBe('Medical Assistance Subsidy');
   });
 
+  it('still prompts to upload documents when the step is readOnly (interventions logged)', async () => {
+    // Uploading must not be tied to step completion: once an intervention is
+    // logged the step flips readOnly, but the worker still needs to attach
+    // receipts/evidence. The pick-a-file prompt must remain visible.
+    mockApiGet.mockImplementation(async (key: string) => {
+      if (Array.isArray(key) && key.includes('interventions')) {
+        return [{ id: 'iv-1', caseId: 'case-1', serviceName: 'Medical Assistance', amount: 500 }];
+      }
+      if (Array.isArray(key) && key.includes('programs')) return [];
+      return [];
+    });
+
+    renderHIPReadOnly();
+
+    expect(await screen.findByText(/Case Documents/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Click to browse or drop files/ })).toBeTruthy();
+  });
+
   it('keeps the Submit-for-Review affordance visible even when the step is readOnly (interventions already logged)', async () => {
     // F10: once an intervention is logged, stepDone[1] flips true => StepImplementHIP
     // becomes readOnly. The assessed->in_review submit affordance must still render,
