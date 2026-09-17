@@ -118,16 +118,13 @@ checkoffs (health/education), and scheduled payouts.
 
 ### What 4Ps needs that does NOT exist yet
 
-- **No compliance/payout tracking.** The 2026-07-30 spec-gap plan intended a
-  `FourPsCompliancePage` at `cases/:caseId/in-compliance` with per-item
-  checkoff and a payout-schedule tracker, but **none of it was implemented** —
-  no compliance entity, no routes, no pages.
-- **No cycle linkage** (`renewal_of_case_id` / `program_cycle`), so the
-  "4Ps Cycle 2024 → 2025" relationship is implicit (via beneficiary/household),
-  not explicit.
-- **No program-driven workflow** — the case FSM is fixed; a program's
-  `approvalWorkflow` is never applied, so 4Ps-specific approval chains can't be
-  configured per program.
+> Addressed 2026-09-17: conditionality checkoffs (`case_compliance_items`), payout
+> schedule tracking (`case_payouts`), the 4Ps program seed, and the compliance UI
+> (case-detail section + `cases/:caseId/4ps-compliance` + `cases/:caseId/payouts`)
+> now exist. Cycle linkage (`cases.renewal_of_case_id`) shipped earlier with
+> `CaseRenewalLink`. Applying `Program.approvalWorkflow` per program remains open
+> (tracked as a follow-up). See
+> docs/superpowers/specs/2026-09-17-4ps-and-comanaged-programs-design.md.
 
 ### Recommended design if 4Ps compliance is required
 

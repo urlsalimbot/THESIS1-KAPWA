@@ -112,6 +112,11 @@ matching/deduplication service, and (f) an "all services received" read view wit
 ### Social registries
 - **DSWD Listahanan / NHTS-PR**: the national reference for poverty targeting. LGUs and
   agencies sign DSAs to use Listahanan data; **don't duplicate it** — reference it.
+
+> Implemented 2026-09-17: `households.nhts_pr_id` (nullable, partial-unique) is the
+> single reference field for Listahanan/NHTS-PR. KAPWA stores the identifier only —
+> it never duplicates Listahanan data.
+
 - DILG's **LGUSS** encourages barangay **BIMS** and municipal **CMIMS** profiling —
   KAPWA's household/person model is the natural municipal counterpart.
 - **Barangay-level**: LGUs already collect resident profiles; an inter-agency tracking
