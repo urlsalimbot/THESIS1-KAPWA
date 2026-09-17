@@ -66,11 +66,11 @@ export function SearchResultsPage() {
     ? queryKeys.beneficiaries.list({ search: debounced, limit: 50 })
     : null;
 
-  const { data, isLoading } = useSWR<Record<string, unknown>[]>(swrKey, {
+  const { data, isLoading } = useSWR<{ data: Record<string, unknown>[]; total: number }>(swrKey, {
     keepPreviousData: true,
   });
 
-  const results = useMemo(() => (data || []).map(mapResult), [data]);
+  const results = useMemo(() => (data?.data || []).map(mapResult), [data]);
 
   return (
     <PageShell title={t('search.title', 'Search Results')} description={debounced ? t('search.resultsFor', 'Results for "{{query}}"', { query: debounced }) : ''}>
