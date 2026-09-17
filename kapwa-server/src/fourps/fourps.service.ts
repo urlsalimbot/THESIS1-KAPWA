@@ -80,4 +80,48 @@ export class FourPsService {
 
     return count;
   }
+
+  async getComplianceStatus(caseId: string): Promise<{
+    total: number;
+    complied: number;
+    rate: number;
+    byType: Record<string, { total: number; complied: number; rate: number }>;
+    entries: CaseComplianceItem[];
+  }> {
+    const entries = await this.complianceRepo.find({
+      where: { caseId },
+      order: { dueDate: 'ASC' },
+    });
+    const total = entries.length;
+    const complied = entries.filter(e => e.met).length;
+    const byType: Record<string, { total: number; complied: number; rate: number }> = {};
+    for (const entry of entries) {
+      const type = entry.complianceType || 'other';
+      if (!byType[type]) byType[type] = { total: 0, complied: 0, rate: 0 };
+      byType[type].total++;
+      if (entry.met) byType[type].complied++;
+    }
+    for (const value of Object.values(byType)) {
+      value.rate = value.total > 0 ? value.complied / value.total : 0;
+    }
+    return { total, complied, rate: total > 0 ? complied / total : 0, byType, entries };
+  }
+
+  async markComplied(id: string, userId: string): Promise<void> {
+    const entry = await this.complianceRepo.findOne({ where: { id } });
+    if (!entry) throw new NotFoundException('Compliance entry not found');
+    entry.met = true;
+    entry.metAt = new Date();
+    entry.metBy = userId;
+    await this.complianceRepo.save(entry);
+  }
+
+  async unmarkComplied(id: string): Promise<void> {
+    const entry = await this.complianceRepo.findOne({ where: { id } });
+    if (!entry) throw new NotFoundException('Compliance entry not found');
+    entry.met = false;
+    entry.metAt = undefined;
+    entry.metBy = undefined;
+    await this.complianceRepo.save(entry);
+  }
 }

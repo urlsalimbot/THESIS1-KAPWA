@@ -91,3 +91,62 @@ describe('FourPsService.generateComplianceItems', () => {
     await expect(service.generateComplianceItems('case-1')).rejects.toThrow(NotFoundException);
   });
 });
+
+describe('FourPsService compliance status', () => {
+  let service: FourPsService;
+  let repoMock: any;
+
+  beforeEach(async () => {
+    repoMock = { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FourPsService,
+        { provide: getRepositoryToken(CaseComplianceItem), useValue: repoMock },
+        { provide: getRepositoryToken(CasePayout), useValue: { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) } },
+      ],
+    }).compile();
+    service = module.get(FourPsService);
+  });
+
+  it('computes totals, rate, and per-type breakdown', async () => {
+    repoMock.find.mockResolvedValue([
+      { id: 'c1', complianceType: 'school_attendance', met: true },
+      { id: 'c2', complianceType: 'school_attendance', met: false },
+      { id: 'c3', complianceType: 'fds', met: true },
+    ]);
+    const status = await service.getComplianceStatus('case-1');
+    expect(status.total).toBe(3);
+    expect(status.complied).toBe(2);
+    expect(status.rate).toBeCloseTo(2 / 3);
+    expect(status.byType['school_attendance']).toEqual({ total: 2, complied: 1, rate: 0.5 });
+    expect(status.byType['fds']).toEqual({ total: 1, complied: 1, rate: 1 });
+    expect(repoMock.find).toHaveBeenCalledWith({ where: { caseId: 'case-1' }, order: { dueDate: 'ASC' } });
+  });
+
+  it('marks an item met with the actor and timestamp', async () => {
+    const entry = { id: 'c1', met: false, metAt: undefined, metBy: undefined };
+    repoMock.findOne.mockResolvedValue(entry);
+    repoMock.save.mockImplementation(async (e: any) => e);
+    await service.markComplied('c1', 'user-1');
+    expect(entry.met).toBe(true);
+    expect(entry.metBy).toBe('user-1');
+    expect(entry.metAt).toBeInstanceOf(Date);
+    expect(repoMock.save).toHaveBeenCalledWith(entry);
+  });
+
+  it('unmarks an item', async () => {
+    const entry = { id: 'c1', met: true, metAt: new Date(), metBy: 'user-1' };
+    repoMock.findOne.mockResolvedValue(entry);
+    repoMock.save.mockImplementation(async (e: any) => e);
+    await service.unmarkComplied('c1');
+    expect(entry.met).toBe(false);
+    expect(entry.metAt).toBeUndefined();
+    expect(entry.metBy).toBeUndefined();
+  });
+
+  it('throws for an unknown compliance id', async () => {
+    repoMock.findOne.mockResolvedValue(null);
+    await expect(service.markComplied('missing', 'user-1')).rejects.toThrow(NotFoundException);
+    await expect(service.unmarkComplied('missing')).rejects.toThrow(NotFoundException);
+  });
+});
