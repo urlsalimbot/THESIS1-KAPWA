@@ -28,11 +28,14 @@ export function PayoutSchedulePage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ scheduledAt: '', cycleNo: '', amount: '' });
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const payouts = data ?? [];
 
   async function handleSchedule() {
     if (!caseId || !form.scheduledAt) return;
+    setSaving(true);
+    setError('');
     try {
       await api.post(`/fourps/${caseId}/payouts`, {
         scheduledAt: form.scheduledAt,
@@ -45,6 +48,8 @@ export function PayoutSchedulePage() {
       await mutate();
     } catch {
       setError(t('payouts.actionFailed', 'Action failed. Please try again.'));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -121,7 +126,8 @@ export function PayoutSchedulePage() {
               value={form.amount}
               onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
             />
-            <Button className="w-full" onClick={handleSchedule}>
+            {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+            <Button className="w-full" onClick={handleSchedule} disabled={saving}>
               {t('payouts.save', 'Save')}
             </Button>
           </div>

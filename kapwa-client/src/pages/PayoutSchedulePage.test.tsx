@@ -68,4 +68,20 @@ describe('PayoutSchedulePage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Mark Completed/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Action failed. Please try again.');
   });
+
+  it('shows schedule failures inside the dialog and disables Save while sending', async () => {
+    mockApiGet.mockResolvedValue([]);
+    let rejectPost: (err: Error) => void = () => {};
+    mockApiPost.mockImplementationOnce(
+      () => new Promise((_resolve, reject) => { rejectPost = reject; }),
+    );
+    renderPage();
+    await screen.findByText('No payout schedules yet.');
+    fireEvent.click(screen.getByRole('button', { name: /Schedule Payout/ }));
+    fireEvent.change(screen.getByLabelText('Payout Date'), { target: { value: '2026-10-01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled());
+    rejectPost(new Error('boom'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Action failed. Please try again.');
+  });
 });
