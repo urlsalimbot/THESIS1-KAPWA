@@ -41,4 +41,38 @@ describe('ProgramsPage', () => {
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
+
+  it('lists every required document per program', async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        id: 'p1',
+        name: 'Medical Assistance',
+        category: 'Health',
+        isActive: true,
+        requiredDocuments: ['Certificate of Indigency', 'Valid ID', 'Medical Abstract'],
+      },
+      {
+        id: 'p2',
+        name: 'Burial Assistance',
+        category: 'Crisis',
+        isActive: false,
+        requiredDocuments: ['Death Certificate', 'Burial Invoice'],
+      },
+      {
+        id: 'p3',
+        name: 'No Docs Program',
+        isActive: true,
+        requiredDocuments: [],
+      },
+    ]);
+
+    render(<MemoryRouter><ProgramsPage /></MemoryRouter>);
+    expect(await screen.findByText('Medical Assistance')).toBeTruthy();
+    expect(screen.getByText('Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('Medical Abstract')).toBeTruthy();
+    expect(screen.getByText('Death Certificate')).toBeTruthy();
+    expect(screen.getByText('Burial Invoice')).toBeTruthy();
+    expect(screen.queryByText(/Docs:/)).toBeNull();
+    expect(screen.getAllByText(/Required Documents/).length).toBe(2);
+  });
 });

@@ -113,10 +113,19 @@ export function ProgramsPage() {
               </div>
               <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                 {r.waitingPeriodDays != null && <span>{t('programs.wait', 'Wait: {{days}}d', { days: r.waitingPeriodDays })}</span>}
-                {r.requiredDocuments?.length ? <span>{t('programs.docsCount', 'Docs: {{count}}', { count: r.requiredDocuments.length })}</span> : null}
                 {r.fundSources?.length ? <span>{t('programs.funds', 'Funds: {{sources}}', { sources: r.fundSources.join(', ') })}</span> : null}
                 {r.approvalWorkflow?.length ? <span>{t('programs.stepsCount', 'Steps: {{count}}', { count: r.approvalWorkflow.length })}</span> : null}
               </div>
+              {r.requiredDocuments && r.requiredDocuments.length > 0 && (
+                <div className="mt-3 border-t pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">{t('programs.requiredDocuments', 'Required Documents')}</p>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {r.requiredDocuments.map((doc, i) => (
+                      <li key={i}><Badge variant="outline" className="text-xs font-normal">{doc}</Badge></li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="mt-3 flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/programs/${r.id}`)}
                   aria-label={t('programs.viewDetails', 'View details')} className="h-8">

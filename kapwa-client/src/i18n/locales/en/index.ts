@@ -1832,6 +1832,7 @@ const en = {
     "inquire": "Inquire about this program",
     "legalBasis": "Legal Basis",
     "loadFailed": "Failed to load programs.",
+    "requiredDocuments": "Required Documents",
     "title": "Social Assistance Programs",
     "waitingPeriod": "Waiting period: {{days}} days",
   },

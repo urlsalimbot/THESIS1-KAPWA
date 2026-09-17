@@ -33,6 +33,28 @@ describe('PublicProgramsPage', () => {
     expect(screen.getByText(/Waiting period: 5 days/)).toBeTruthy();
   });
 
+  it('lists every required document per program', async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        id: 'p1', name: 'Medical Assistance', category: 'Health',
+        waitingPeriodDays: 15, fundSources: ['LGU'],
+        requiredDocuments: ['Barangay Certificate of Indigency', 'Valid ID', 'Medical Abstract'],
+      },
+      {
+        id: 'p2', name: 'Burial Assistance', category: 'Burial',
+        requiredDocuments: ['Death Certificate'],
+      },
+      { id: 'p3', name: 'No Docs Program', category: 'Other' },
+    ]);
+    renderPage();
+    expect(await screen.findByText('Medical Assistance')).toBeTruthy();
+    expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('Medical Abstract')).toBeTruthy();
+    expect(screen.getByText('Burial Assistance')).toBeTruthy();
+    expect(screen.getByText('Death Certificate')).toBeTruthy();
+    expect(screen.getAllByText(/Required Documents/).length).toBe(2);
+  });
+
   it('shows empty state when no programs', async () => {
     mockApiGet.mockResolvedValue([]);
     renderPage();

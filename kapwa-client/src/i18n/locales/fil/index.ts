@@ -2072,6 +2072,7 @@ const fil: EnLocale = {
     "inquire": "Magtanong tungkol sa programang ito",
     "legalBasis": "Legal na Batayan",
     "loadFailed": "Nabigo ang pag-load ng mga programa.",
+    "requiredDocuments": "Mga Kinakailangang Dokumento",
     "title": "Mga Programa ng Social Assistance",
     "waitingPeriod": "Panahon ng paghihintay: {{days}} araw"
   },

@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { ScrollText, HandHeart, ArrowRight, Clock } from 'lucide-react';
+import { ScrollText, HandHeart, ArrowRight, Clock, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface PublicProgram {
@@ -87,6 +87,18 @@ export function PublicProgramsPage() {
                       <span key={f} className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{f}</span>
                     ))}
                   </div>
+                </div>
+              )}
+              {p.requiredDocuments && p.requiredDocuments.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                    <FileText size={12} /> {t('programsPublic.requiredDocuments', 'Required Documents')}
+                  </p>
+                  <ul className="flex flex-wrap gap-1">
+                    {p.requiredDocuments.map((doc, i) => (
+                      <li key={i}><span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{doc}</span></li>
+                    ))}
+                  </ul>
                 </div>
               )}
               {p.legalBasis && (
