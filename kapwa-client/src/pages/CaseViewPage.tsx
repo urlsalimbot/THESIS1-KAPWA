@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper } from '@/components/case-view/CaseStepper';
 import { CaseAccessCardPanel } from '@/components/case-view/CaseAccessCardPanel';
+import { FourPsComplianceSection, isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
 import { StepImplementHIP } from '@/components/case-view/StepImplementHIP';
 import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDelivery';
@@ -476,6 +477,11 @@ export function CaseViewPage() {
 
           {/* Access Card Ledger — payouts & compliance accounted on the card */}
           <CaseAccessCardPanel beneficiaryId={ben?.id ?? ''} cardCode={ben?.accessCardCode} />
+
+          {/* 4Ps conditionality tracking — visible for Pantawid households */}
+          {isFourPsCase(caseData) && id && (
+            <FourPsComplianceSection caseId={id} />
+          )}
 
           {/* Documents card */}
           {ben && (

@@ -35,6 +35,12 @@ export const queryKeys = {
     myServices: () => memo('beneficiaries.myServices', () => ['beneficiaries', 'me', 'services'] as const),
     myConsent: () => memo('beneficiaries.myConsent', () => ['beneficiaries', 'me', 'consent'] as const),
   },
+  fourps: {
+    compliance: (caseId: string) =>
+      memo(`fourps.compliance.${caseId}`, () => ['fourps', caseId, 'compliance'] as const),
+    payouts: (caseId: string) =>
+      memo(`fourps.payouts.${caseId}`, () => ['fourps', caseId, 'payouts'] as const),
+  },
   dashboard: {
     all: ['dashboard'] as const,
     stats: () => memo('dashboard.stats', () => ['dashboard'] as const),

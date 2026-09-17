@@ -58,7 +58,7 @@ const mockIdPhoto = { id: 'FILE-IDPHOTO-1', originalName: 'id-photo.jpeg', categ
 
 function renderWithSWR(ui: React.ReactNode) {
   return render(
-    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
       <MemoryRouter initialEntries={['/cases/C-001']}>
         <Routes>
           <Route path="/cases/:id" element={ui} />
@@ -135,5 +135,29 @@ describe('CaseViewPage — GIS PDF', () => {
     const btn = await screen.findByRole('button', { name: /gis \(pdf\)/i });
     btn.click();
     expect(mockDownloadGisPdf).toHaveBeenCalledWith('C-001');
+  });
+});
+
+describe('CaseViewPage — 4Ps compliance', () => {
+  it('shows the compliance section for a Pantawid case', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('fourps')) return Promise.resolve({ total: 0, complied: 0, rate: 0, byType: {}, entries: [] });
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) {
+        return Promise.resolve({ ...mockCase, serviceRequested: ['4Ps — Pantawid Pamilyang Pilipino Program'] });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+
+    expect(await screen.findByText('4Ps Compliance')).toBeInTheDocument();
   });
 });

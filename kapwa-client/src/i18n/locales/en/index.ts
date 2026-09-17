@@ -2186,6 +2186,24 @@ const en = {
     "totalCases": "Total Cases",
     "view": "View",
   },
+  "fourps": {
+    "sectionTitle": "4Ps Compliance",
+    "title": "4Ps Compliance Monitoring",
+    "description": "Per-member conditionality tracking",
+    "generate": "Generate 12-Month Items",
+    "generating": "Generating…",
+    "summary": "{{complied}}/{{total}} complied · {{rate}}% rate",
+    "empty": "No compliance items. Generate for this household.",
+    "due": "Due: {{date}}",
+    "markMet": "Mark as complied",
+    "loading": "Loading…",
+    "type": {
+      "school_attendance": "School Attendance",
+      "health_checkup": "Health Checkup",
+      "fds": "Family Development Session",
+      "other": "Other"
+    }
+  },
 } as const;
 
 export default en;

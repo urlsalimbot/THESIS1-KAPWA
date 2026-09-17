@@ -2188,6 +2188,24 @@ const fil: EnLocale = {
     "searchPlaceholder": "Maghanap ng cabinet/folder/shelf...",
     "title": "Pisikal na Pag-file",
     "unknownIntervention": "Hindi kilalang interbensyon"
+  },
+  "fourps": {
+    "sectionTitle": "Pagsunod sa 4Ps",
+    "title": "Pagsubaybay sa Pagsunod sa 4Ps",
+    "description": "Pagsubaybay sa kondisyon ng bawat miyembro",
+    "generate": "Bumuo ng 12-Buwang Aytem",
+    "generating": "Ginagawa…",
+    "summary": "{{complied}}/{{total}} ang natupad · {{rate}}%",
+    "empty": "Walang aytem ng pagsunod. Bumuo para sa sambahayang ito.",
+    "due": "Takdang petsa: {{date}}",
+    "markMet": "Markahan bilang natupad",
+    "loading": "Naglo-load…",
+    "type": {
+      "school_attendance": "Pagpasok sa Paaralan",
+      "health_checkup": "Pagsusuri sa Kalusugan",
+      "fds": "Sesyon sa Pagpapaunlad ng Pamilya",
+      "other": "Iba pa"
+    }
   }
 };
 
