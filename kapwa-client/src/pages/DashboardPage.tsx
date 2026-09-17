@@ -5,7 +5,7 @@ import { TrendingUp, Clock, DollarSign, Plus, Eye, AlertTriangle, Search, Downlo
 } from 'lucide-react';
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
-import { categoryLabel } from '@/i18n/display';
+import { categoryLabel, statusLabel } from '@/i18n/display';
 import { formatDateTime } from '@/lib/format';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
@@ -35,7 +35,7 @@ interface Stat { label: string; value: string; change: string; icon: React.Eleme
 interface CaseRow {
   id: string; no: number; surname: string; first: string; middle: string;
   gender: string; ageRange: string; category: string; barangay: string;
-  remarks: string; date: string; status: string; controlNo: string;
+  date: string; status: string; controlNo: string;
   slaOverdue?: boolean; createdAt: string;
 }
 
@@ -121,7 +121,7 @@ export function DashboardPage() {
     { accessorKey: 'gender', header: t('dashboard.gender', 'Gender') },
     { accessorKey: 'category', header: t('dashboard.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{categoryLabel(t, row.original.category)}</Badge> },
     { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
-    { accessorKey: 'remarks', header: t('dashboard.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks || '—'}</span> },
+    { accessorKey: 'status', header: t('dashboard.statusColumn', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
     { id: 'actions', header: t('dashboard.actions', 'Actions'), cell: ({ row }) => (
       <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label={t('dashboard.viewCase', 'View Case')}>
         <Eye size={14} className="mr-1" /> {t('dashboard.view', 'View')}

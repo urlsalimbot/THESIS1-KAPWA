@@ -21,7 +21,7 @@ const mockDashboardData = {
   disbursedMonth: 45000,
   beneficiaryCount: 28,
   recentCases: [
-    { id: 'C-001', name: 'Juan Dela Cruz', category: 'Senior', barangay: 'Barangay 1', remarks: 'Monthly assistance', date: '2026-06-28', status: 'active' },
+    { id: 'C-001', name: 'Juan Dela Cruz', category: 'Senior', barangay: 'Barangay 1', date: '2026-06-28', status: 'active' },
   ],
 };
 
@@ -118,7 +118,8 @@ describe('DashboardPage', () => {
     renderWithSWR(<DashboardPage />);
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
     expect(await screen.findByText('Served Today')).toBeTruthy();
-    expect(await screen.findByText('Monthly assistance', {}, { timeout: 3000 })).toBeTruthy();
+    expect(await screen.findByRole('columnheader', { name: 'Status' })).toBeTruthy();
+    expect(await screen.findByText('Active', {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.getByText('Senior')).toBeTruthy();
   });
 

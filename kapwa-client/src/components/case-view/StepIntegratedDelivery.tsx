@@ -6,10 +6,11 @@ import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Send, Plus, Lock } from 'lucide-react';
+import { Send, Plus, Lock, Ban, CheckCircle2 } from 'lucide-react';
 import { CreateReferralForm } from '@/components/referrals/CreateReferralForm';
 import { ReferralCard } from '@/components/referrals/ReferralCard';
 import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
+import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { StepInterventions } from './StepInterventions';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +28,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
   const { mutate } = useSWRConfig();
   const [createOpen, setCreateOpen] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [referralSaving, setReferralSaving] = useState(false);
 
   const { data: referrals, isLoading, mutate: revalidate } = useSWR<InterAgencyReferral[]>(
     queryKeys.interAgencyReferrals.byCase(caseId),
@@ -48,6 +50,18 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
       alert(err?.message || t('caseView.integrated.failedUpdateReferral', 'Failed to update referral'));
     } finally {
       setTransitioning(false);
+    }
+  }
+
+  async function saveDecision(notNeeded: boolean) {
+    setReferralSaving(true);
+    try {
+      await api.patch(`/cases/${caseId}/referral-decision`, { notNeeded });
+      await mutate(queryKeys.cases.detail(caseId));
+    } catch (err: any) {
+      alert(err?.message || t('caseView.integrated.failedReferralDecision', 'Failed to save referral decision'));
+    } finally {
+      setReferralSaving(false);
     }
   }
 
@@ -85,6 +99,48 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
           )}
         </div>
       </div>
+
+      {/* Referral decision — Service Delivery is complete when a referral is
+          issued OR the social worker records that no referral is needed. */}
+      {(userRole === 'admin' || userRole === 'social_worker') && (
+        <div className="rounded-lg border bg-card">
+          <div className="px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {caseData?.referralNotNeeded
+                ? <CheckCircle2 size={16} className="text-primary" />
+                : <Ban size={16} className="text-muted-foreground" />}
+              <h3 className="text-sm font-semibold">{t('caseView.integrated.referralDecision', 'Referral Decision')}</h3>
+            </div>
+            {caseData?.referralNotNeeded && (
+              <Badge variant="outline" className="text-[10px]">{t('caseView.integrated.referralNotNeededBadge', 'Referral not needed')}</Badge>
+            )}
+          </div>
+          <Separator />
+          <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              {caseData?.referralNotNeeded
+                ? t('caseView.integrated.referralNotNeededActive', 'No inter-agency referral is required for this case.')
+                : t('caseView.integrated.referralNotNeededHint', 'If coordination shows no referral is required, record the decision to complete Service Delivery.')}
+            </p>
+            {(!readOnly || caseData?.referralNotNeeded) && (
+              <Button
+                variant={caseData?.referralNotNeeded ? 'outline' : 'secondary'}
+                size="sm"
+                disabled={referralSaving}
+                onClick={() => saveDecision(!caseData?.referralNotNeeded)}
+              >
+                {caseData?.referralNotNeeded
+                  ? t('caseView.integrated.undoReferralNotNeeded', 'Undo decision')
+                  : (
+                    <>
+                      <Ban size={14} className="mr-1" /> {t('caseView.integrated.markReferralNotNeeded', 'Mark referral not needed')}
+                    </>
+                  )}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Interventions Record */}
       <StepInterventions caseId={caseId} caseData={caseData} userRole={userRole} readOnly={readOnly} />

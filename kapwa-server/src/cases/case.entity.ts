@@ -124,6 +124,9 @@ export class Case extends BaseEntity {
   @Column({ name: 'approved_by_role', nullable: true })
   approvedByRole?: string;
 
+  @Column({ name: 'referral_not_needed', type: 'boolean', default: false })
+  referralNotNeeded?: boolean;
+
   @Column({ name: 'assigned_worker_id', nullable: true })
   assignedWorkerId?: string;
 

@@ -16,3 +16,27 @@ export function isAssessmentStepDone(caseData: any): boolean {
     (caseData.frvaScore || caseData.swdiScore),
   );
 }
+
+/**
+ * Whether every required document of the programs behind a case's interventions
+ * has been uploaded to the case filing. The Implement HIP step (stepper 2) is not
+ * considered done on an intervention alone — its program's required documents must
+ * be attached. Programs without a required-documents list impose nothing.
+ */
+export function interventionRequirementsMet(
+  interventions: any[],
+  programs: any[],
+  docs: any[],
+): boolean {
+  const programIds = [...new Set(interventions.map((i: any) => i?.programId).filter(Boolean))];
+  const requiredKeys = [
+    ...new Set(
+      programs
+        .filter((p: any) => programIds.includes(p.id) && Array.isArray(p.requiredDocuments) && p.requiredDocuments.length > 0)
+        .flatMap((p: any) => p.requiredDocuments as string[]),
+    ),
+  ];
+  if (requiredKeys.length === 0) return true;
+  const uploadedKeys = new Set(docs.map((d: any) => d?.requirementKey).filter(Boolean));
+  return requiredKeys.every((key) => uploadedKeys.has(key));
+}

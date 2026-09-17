@@ -489,6 +489,13 @@ export class CasesService {
     return this.caseRepo.save(caseEntity);
   }
 
+  async updateReferralDecision(id: string, notNeeded: boolean) {
+    const caseEntity = await this.caseRepo.findOne({ where: { id } });
+    if (!caseEntity) throw new NotFoundException('Case not found');
+    caseEntity.referralNotNeeded = notNeeded;
+    return this.caseRepo.save(caseEntity);
+  }
+
   async getPendingDisbursed() {
     return this.caseRepo.find({ where: { status: CaseStatus.ACTIVE }, take: DEFAULT_LIST_LIMIT });
   }

@@ -239,6 +239,34 @@ describe('CasesService', () => {
     });
   });
 
+  describe('updateReferralDecision', () => {
+    it('should persist the not-needed decision and return the updated case', async () => {
+      const existing = { id: '1', status: CaseStatus.ACTIVE, referralNotNeeded: false, updatedAt: new Date() } as Case;
+      repoMock.findOne.mockResolvedValue(existing);
+      repoMock.save.mockResolvedValue({ ...existing, referralNotNeeded: true });
+
+      const result = await service.updateReferralDecision('1', true);
+
+      expect(repoMock.save).toHaveBeenCalled();
+      expect(result.referralNotNeeded).toBe(true);
+    });
+
+    it('should be able to reverse an earlier not-needed decision', async () => {
+      const existing = { id: '1', status: CaseStatus.ACTIVE, referralNotNeeded: true, updatedAt: new Date() } as Case;
+      repoMock.findOne.mockResolvedValue(existing);
+      repoMock.save.mockResolvedValue({ ...existing, referralNotNeeded: false });
+
+      const result = await service.updateReferralDecision('1', false);
+
+      expect(result.referralNotNeeded).toBe(false);
+    });
+
+    it('should throw if the case is not found', async () => {
+      repoMock.findOne.mockResolvedValue(null);
+      await expect(service.updateReferralDecision('nonexistent', true)).rejects.toThrow('Case not found');
+    });
+  });
+
 
 describe('FSM — requestReview', () => {
   it('should move case from enrolled to assessed when role is social_worker', async () => {

@@ -28,8 +28,9 @@ import {
   CreateCaseSchema, UpdateStatusSchema, ApproveCaseSchema,
   UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema,
   AssessmentV2Schema, TransitionPlanSchema, RequirementsSchema, ClosureSchema,
+  ReferralDecisionSchema,
   CreateCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
-  TransitionPlanInput, RequirementsInput, ClosureInput,
+  TransitionPlanInput, RequirementsInput, ClosureInput, ReferralDecisionInput,
   BulkExportSchema, BulkExportInput,
 } from './dto/cases.zod';
 
@@ -207,6 +208,15 @@ export class CasesController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.casesService.updateClosure(id, body, req.user?.role);
+  }
+
+  @Patch(':id/referral-decision')
+  @Roles('admin', 'social_worker')
+  async updateReferralDecision(
+    @Param('id') id: string,
+    @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
+  ) {
+    return this.casesService.updateReferralDecision(id, body.notNeeded);
   }
 
   @Get('csr/:controlNo/pdf')

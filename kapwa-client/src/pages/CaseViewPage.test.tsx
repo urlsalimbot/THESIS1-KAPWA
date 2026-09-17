@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { CaseViewPage } from './CaseViewPage';
@@ -159,5 +159,94 @@ describe('CaseViewPage — 4Ps compliance', () => {
     renderWithSWR(<CaseViewPage />);
 
     expect(await screen.findByText('4Ps Compliance')).toBeInTheDocument();
+  });
+});
+
+describe('CaseViewPage — stepper gating', () => {
+  const programsMock = [{ id: 'p1', name: 'Medical Assistance', category: 'Medical', requiredDocuments: ['Valid ID'] }];
+  const assumptionCase = {
+    ...mockCase,
+    status: 'assessed',
+    problemsPresented: 'Financial difficulty',
+    socialWorkerAssessment: 'Needs financial assistance',
+    clientCategory: 'Indigent',
+    frvaScore: 65,
+  };
+  const interventionMock = [{ id: 'i1', programId: 'p1', serviceName: 'Medical Assistance', deliveryDate: '2026-07-01', amount: 500 }];
+
+  beforeEach(async () => {
+    mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'SW', role: 'social_worker' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve(interventionMock);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve(programsMock);
+      if (k.includes('cases')) return Promise.resolve(assumptionCase);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
+  function hipStepButton() {
+    return screen.getByText('Implement HIP').closest('button')!;
+  }
+
+  function deliveryStepButton() {
+    return screen.getByText('Service Delivery').closest('button')!;
+  }
+
+  it('keeps Implement HIP unchecked when an intervention exists but required documents are missing', async () => {
+    renderWithSWR(<CaseViewPage />);
+    const step2 = await waitFor(hipStepButton);
+    expect(step2.textContent).toContain('2');
+  });
+
+  it('checks Implement HIP once the required document is uploaded', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf' }]);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve(interventionMock);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve(programsMock);
+      if (k.includes('cases')) return Promise.resolve(assumptionCase);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+    const step2 = await waitFor(hipStepButton);
+    await waitFor(() => expect(step2.querySelector('svg')).not.toBeNull());
+  });
+
+  it('keeps Service Delivery unchecked until a referral is issued or deemed not needed', async () => {
+    renderWithSWR(<CaseViewPage />);
+    const step3 = await waitFor(deliveryStepButton);
+    expect(step3.textContent).toContain('3');
+  });
+
+  it('checks Service Delivery when the case records referral-not-needed', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve(interventionMock);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve(programsMock);
+      if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf' }]);
+      if (k.includes('cases')) return Promise.resolve({ ...assumptionCase, referralNotNeeded: true });
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+    const step3 = await waitFor(deliveryStepButton);
+    expect(step3.textContent).not.toContain('3');
+    expect(step3.querySelector('svg')).not.toBeNull();
   });
 });

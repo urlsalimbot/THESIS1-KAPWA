@@ -125,8 +125,13 @@ export const RequirementsSchema = z.object({
   requirementsChecklist: z.record(z.boolean()),
 });
 
+export const ReferralDecisionSchema = z.object({
+  notNeeded: z.boolean(),
+});
+
 export type TransitionPlanInput = z.infer<typeof TransitionPlanSchema>;
 export type RequirementsInput = z.infer<typeof RequirementsSchema>;
+export type ReferralDecisionInput = z.infer<typeof ReferralDecisionSchema>;
 export type AssessmentV2Input = z.infer<typeof AssessmentV2Schema>;
 export type ClosureInput = z.infer<typeof ClosureSchema>;
 

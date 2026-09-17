@@ -258,6 +258,7 @@ export async function migrate() {
   // -- Supplementary columns (entity/migration reconciliation 2026-07-28)
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_signature TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_role VARCHAR`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS referral_not_needed BOOLEAN NOT NULL DEFAULT FALSE`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS self_reliance_plan TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS referrals JSONB`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS follow_up_date DATE`);

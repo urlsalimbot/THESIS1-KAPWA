@@ -8,14 +8,14 @@ import { useCaseActions } from '../hooks/useCaseActions';
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDate, formatDateTime } from '../lib/format';
-import { isAssessmentStepDone } from '../lib/case-progress';
+import { isAssessmentStepDone, interventionRequirementsMet } from '../lib/case-progress';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { FamilyGraph } from '../components/family/FamilyGraph';
-import { CaseStepper } from '@/components/case-view/CaseStepper';
+import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
 import { CaseAccessCardPanel } from '@/components/case-view/CaseAccessCardPanel';
 import { FourPsComplianceSection, isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
@@ -34,18 +34,12 @@ const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destr
   closed: 'outline',
 };
 
-function findFirstPendingStep(caseData: any, interventionCount: number): number {
-  const checks = [
-    (d: any) => isAssessmentStepDone(d),
-    () => interventionCount > 0,
-    (d: any) => interventionCount > 0 || (d?.referrals?.length || 0) > 0,
-    (d: any) => !!d?.selfRelianceLevel && !!d?.sustainabilityPlan,
-    (d: any) => !!d?.clientSignature && !!d?.closureOutcome,
-  ];
-  for (let i = 0; i < checks.length; i++) {
-    if (!checks[i](caseData)) return i;
+function findFirstPendingStep(caseData: any, interventionCount: number, opts: StepperProgressOpts = {}): number {
+  if (!isAssessmentStepDone(caseData)) return 0;
+  for (let i = 1; i < 5; i++) {
+    if (!stepperStepDone(i, caseData, interventionCount, opts)) return i;
   }
-  return checks.length - 1;
+  return 4;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -118,13 +112,25 @@ export function CaseViewPage() {
     (key) => api.get<InterAgencyReferral[]>(key),
   );
 
+  const { data: programs } = useSWR<any[]>(queryKeys.programs.list());
+  const { data: filingDocs = [] } = useSWR<any[]>(id ? `/filing?caseId=${id}` : null);
+
+  const requirementsMet = useMemo(
+    () => interventionRequirementsMet(interventions, programs || [], filingDocs || []),
+    [interventions, programs, filingDocs],
+  );
+  const progressOpts: StepperProgressOpts = useMemo(
+    () => ({ requirementsMet, referralNotNeeded: !!caseData?.referralNotNeeded }),
+    [requirementsMet, caseData],
+  );
+
   useEffect(() => {
     if (caseData && !initialNavDone.current) {
-      const pending = findFirstPendingStep(caseData, interventions.length);
+      const pending = findFirstPendingStep(caseData, interventions.length, progressOpts);
       setCurrentStep(pending);
       initialNavDone.current = true;
     }
-  }, [caseData, interventions]);
+  }, [caseData, interventions, progressOpts]);
   const { data: history, isLoading: historyLoading } = useSWR<any[]>(
     id ? queryKeys.cases.detail(`${id}/history`) : null,
   );
@@ -134,13 +140,16 @@ export function CaseViewPage() {
   );
 
   const caseClosed = caseData?.status === 'closed';
-  const stepDone = useMemo(() => [
-    isAssessmentStepDone(caseData),
-    interventions.length > 0,
-    interventions.length > 0 || (caseData?.referrals?.length || 0) > 0,
-    !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan,
-    !!caseData?.clientSignature && !!caseData?.closureOutcome,
-  ], [caseData, interventions]);
+  const stepDone = useMemo(() => {
+    const opts = progressOpts;
+    return [
+      isAssessmentStepDone(caseData),
+      stepperStepDone(1, caseData, interventions.length, opts),
+      stepperStepDone(2, caseData, interventions.length, opts),
+      stepperStepDone(3, caseData, interventions.length, opts),
+      stepperStepDone(4, caseData, interventions.length, opts),
+    ];
+  }, [caseData, interventions, progressOpts]);
 
   const ben = caseData?.beneficiary;
   const dob = ben?.dob;
@@ -361,7 +370,7 @@ export function CaseViewPage() {
 
           {/* Stepper */}
           <div className="rounded-lg border bg-card">
-            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} />
+            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} referralNotNeeded={!!caseData?.referralNotNeeded} />
           </div>
 
           {/* Generated approval documents — COE + PCV produced at approval,
