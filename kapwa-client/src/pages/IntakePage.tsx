@@ -8,6 +8,7 @@ import { PageShell } from '@/components/PageShell';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
@@ -139,7 +140,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
         <FieldError error={getError('dob')}>
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('intake.dateOfBirth', 'Date of Birth *')}</label>
-            <Input type="date" required value={form.dob} onChange={e => onChange('dob', e.target.value)} aria-label={`${prefix}-dob`} className={`[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:opacity-60${getError('dob') ? ' border-destructive' : ''}`} />
+            <Input type="date" required value={form.dob} onChange={e => onChange('dob', e.target.value)} aria-label={`${prefix}-dob`} className={cn('[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:opacity-60', getError('dob') && 'border-destructive')} />
           </div>
         </FieldError>
         <FieldError error={getError('placeOfBirth')}>
@@ -194,7 +195,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
             <label className="text-sm font-medium">{t('intake.estimatedIncome', 'Estimated Monthly Income *')}</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₱</span>
-              <Input type="text" inputMode="numeric" required value={form.estimatedMonthlyIncome} onChange={e => onChange('estimatedMonthlyIncome', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) onChange('estimatedMonthlyIncome', formatMoney(v)); }} aria-label={`${prefix}-income`} className={`pl-7${getError('estimatedMonthlyIncome') ? ' border-destructive' : ''}`} />
+              <Input type="text" inputMode="numeric" required value={form.estimatedMonthlyIncome} onChange={e => onChange('estimatedMonthlyIncome', e.target.value.replace(/\D/g, ''))} onBlur={e => { const v = e.target.value; if (v) onChange('estimatedMonthlyIncome', formatMoney(v)); }} aria-label={`${prefix}-income`} className={cn('pl-8', getError('estimatedMonthlyIncome') && 'border-destructive')} />
             </div>
           </div>
         </FieldError>
