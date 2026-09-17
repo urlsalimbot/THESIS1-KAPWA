@@ -43,6 +43,7 @@ interface BeneficiaryDetail {
   contact: string;
   barangay: string;
   purok: string;
+  addressLine?: string;
   category: string;
   placeOfBirth: string;
   civilStatus: string;
@@ -217,6 +218,7 @@ export function BeneficiaryViewPage() {
         contact: (b.phone as string) || "",
         barangay: addrParts[addrParts.length - 1] || "",
         purok: addrParts.length > 1 ? addrParts[0] : "",
+        addressLine: (b.address as string) || "",
         category: (b.category as string) || "",
         placeOfBirth: (b.placeOfBirth as string) || "",
         civilStatus: (b.civilStatus as string) || "",
@@ -396,8 +398,7 @@ export function BeneficiaryViewPage() {
                     <User size={13} /> {beneficiary.gender ? `${beneficiary.gender}, ` : ""}{beneficiary.age} {t("beneficiaries.yearsShort", "yrs")}
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin size={13} /> {beneficiary.barangay}
-                    {beneficiary.purok ? `, ${beneficiary.purok}` : ""}
+                    <MapPin size={13} /> {beneficiary.addressLine || `${beneficiary.barangay}${beneficiary.purok ? `, ${beneficiary.purok}` : ""}`}
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar size={13} /> {beneficiary.birthDate}

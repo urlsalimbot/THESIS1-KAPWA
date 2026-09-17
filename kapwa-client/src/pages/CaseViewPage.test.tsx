@@ -126,6 +126,14 @@ describe('CaseViewPage — government ID photo', () => {
     const idPhotoCall = mockApiGet.mock.calls.find((args) => String(args[0]).includes('id-photo'));
     expect(idPhotoCall).toBeUndefined();
   });
+
+  it('renders the beneficiary address', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+
+    renderWithSWR(<CaseViewPage />);
+
+    expect(await screen.findByText('Purok 1, Barangay 1')).toBeTruthy();
+  });
 });
 
 describe('CaseViewPage — GIS PDF', () => {

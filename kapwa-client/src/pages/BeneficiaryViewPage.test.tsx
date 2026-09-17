@@ -125,6 +125,17 @@ describe('BeneficiaryViewPage', () => {
     expect(await screen.findByText('NORZ-AC-2026-0001', {}, { timeout: 5000 })).toBeTruthy();
   });
 
+  it('renders the beneficiary address', async () => {
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('Purok 1, Barangay 1', {}, { timeout: 5000 })).toBeTruthy();
+  });
+
   it('shows and edits the NHTS-PR / Listahanan ID', async () => {
     mockApiPatch.mockResolvedValue({ householdId: 'h1', nhtsPrId: 'NHTS-2024-999999' });
     renderWithSWR(

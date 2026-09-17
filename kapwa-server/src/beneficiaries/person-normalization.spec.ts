@@ -24,6 +24,35 @@ describe('schema normalization — person child entities', () => {
   });
 });
 
+describe('person address getter', () => {
+  it('falls back to structured parts when raw is missing', () => {
+    const p = new Person();
+    const addr = new PersonAddress();
+    addr.addressType = 'current';
+    addr.barangay = 'Poblacion';
+    addr.city = 'Norzagaray';
+    addr.province = 'Bulacan';
+    (p as any).addresses = [addr];
+    expect(p.address).toBe('Poblacion, Norzagaray, Bulacan');
+  });
+
+  it('prefers raw when present', () => {
+    const p = new Person();
+    const addr = new PersonAddress();
+    addr.addressType = 'current';
+    addr.raw = 'Purok 1, Barangay 1';
+    addr.barangay = 'Poblacion';
+    (p as any).addresses = [addr];
+    expect(p.address).toBe('Purok 1, Barangay 1');
+  });
+
+  it('returns undefined when no address rows exist', () => {
+    const p = new Person();
+    (p as any).addresses = [];
+    expect(p.address).toBeUndefined();
+  });
+});
+
 import { Beneficiary } from './beneficiary.entity';
 import { Person } from './person.entity';
 import { BeneficiaryRole } from './beneficiary-role.entity';

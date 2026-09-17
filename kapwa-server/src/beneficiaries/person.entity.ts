@@ -44,7 +44,11 @@ export class Person extends BaseEntity {
     return this.contacts?.find(c => c.contactType === 'email')?.value;
   }
   @Expose() get address(): string | undefined {
-    return this.addresses?.find(a => a.addressType === 'current')?.raw ?? this.addresses?.[0]?.raw;
+    const a = this.addresses?.find(x => x.addressType === 'current') ?? this.addresses?.[0];
+    if (!a) return undefined;
+    if (a.raw) return a.raw;
+    const parts = [a.barangay, a.city, a.province].filter(Boolean);
+    return parts.length ? parts.join(', ') : undefined;
   }
   @Expose() get currentAddress(): Record<string, string> | undefined {
     const a = this.addresses?.find(x => x.addressType === 'current');
