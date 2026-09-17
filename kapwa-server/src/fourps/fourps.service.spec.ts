@@ -150,3 +150,59 @@ describe('FourPsService compliance status', () => {
     await expect(service.unmarkComplied('missing')).rejects.toThrow(NotFoundException);
   });
 });
+
+describe('FourPsService payouts', () => {
+  let service: FourPsService;
+  let payoutRepoMock: any;
+
+  beforeEach(async () => {
+    payoutRepoMock = { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FourPsService,
+        { provide: getRepositoryToken(CaseComplianceItem), useValue: { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) } },
+        { provide: getRepositoryToken(CasePayout), useValue: payoutRepoMock },
+      ],
+    }).compile();
+    service = module.get(FourPsService);
+  });
+
+  it('schedules a payout as scheduled', async () => {
+    payoutRepoMock.save.mockImplementation(async (e: any) => ({ id: 'p1', ...e }));
+    const payout = await service.schedulePayout('case-1', { cycleNo: 'CY2026-02', scheduledAt: '2026-10-01', amount: 1200 });
+    expect(payoutRepoMock.create).toHaveBeenCalledWith({
+      caseId: 'case-1', cycleNo: 'CY2026-02', scheduledAt: '2026-10-01', amount: 1200, status: 'scheduled',
+    });
+    expect(payout).toMatchObject({ id: 'p1', status: 'scheduled' });
+  });
+
+  it('updates a payout to a terminal status with remarks', async () => {
+    const payout = { id: 'p1', status: 'scheduled' };
+    payoutRepoMock.findOne.mockResolvedValue(payout);
+    payoutRepoMock.save.mockImplementation(async (e: any) => e);
+    await service.setPayoutStatus('p1', 'missed', 'Beneficiary did not attend');
+    expect(payout.status).toBe('missed');
+    expect((payout as any).remarks).toBe('Beneficiary did not attend');
+  });
+
+  it('records a notification', async () => {
+    const payout = { id: 'p1', status: 'scheduled', notifiedAt: undefined, notifiedBy: undefined };
+    payoutRepoMock.findOne.mockResolvedValue(payout);
+    payoutRepoMock.save.mockImplementation(async (e: any) => e);
+    await service.markNotified('p1', 'user-1');
+    expect(payout.notifiedAt).toBeInstanceOf(Date);
+    expect(payout.notifiedBy).toBe('user-1');
+  });
+
+  it('lists payouts for a case ordered by date', async () => {
+    payoutRepoMock.find.mockResolvedValue([]);
+    await service.listByCase('case-1');
+    expect(payoutRepoMock.find).toHaveBeenCalledWith({ where: { caseId: 'case-1' }, order: { scheduledAt: 'ASC' } });
+  });
+
+  it('throws for unknown payout ids', async () => {
+    payoutRepoMock.findOne.mockResolvedValue(null);
+    await expect(service.setPayoutStatus('missing', 'completed')).rejects.toThrow(NotFoundException);
+    await expect(service.markNotified('missing', 'user-1')).rejects.toThrow(NotFoundException);
+  });
+});

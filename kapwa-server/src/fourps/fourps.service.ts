@@ -124,4 +124,41 @@ export class FourPsService {
     entry.metBy = null;
     await this.complianceRepo.save(entry);
   }
+
+  async schedulePayout(
+    caseId: string,
+    input: { cycleNo?: string; scheduledAt: string; amount?: number },
+  ): Promise<CasePayout> {
+    return this.payoutRepo.save(this.payoutRepo.create({
+      caseId,
+      cycleNo: input.cycleNo,
+      scheduledAt: input.scheduledAt,
+      amount: input.amount,
+      status: 'scheduled',
+    }));
+  }
+
+  async setPayoutStatus(
+    id: string,
+    status: 'completed' | 'missed' | 'cancelled',
+    remarks?: string,
+  ): Promise<CasePayout> {
+    const payout = await this.payoutRepo.findOne({ where: { id } });
+    if (!payout) throw new NotFoundException('Payout not found');
+    payout.status = status;
+    if (remarks) payout.remarks = remarks;
+    return this.payoutRepo.save(payout);
+  }
+
+  async markNotified(id: string, userId: string): Promise<CasePayout> {
+    const payout = await this.payoutRepo.findOne({ where: { id } });
+    if (!payout) throw new NotFoundException('Payout not found');
+    payout.notifiedAt = new Date();
+    payout.notifiedBy = userId;
+    return this.payoutRepo.save(payout);
+  }
+
+  async listByCase(caseId: string): Promise<CasePayout[]> {
+    return this.payoutRepo.find({ where: { caseId }, order: { scheduledAt: 'ASC' } });
+  }
 }
