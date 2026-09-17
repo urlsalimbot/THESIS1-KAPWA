@@ -13,7 +13,7 @@ interface ProgramSeed {
   isActive: boolean;
 }
 
-const PROGRAMS: ProgramSeed[] = [
+export const PROGRAMS: ProgramSeed[] = [
   {
     id: uuidv7(),
     name: 'Medical Assistance',
@@ -287,6 +287,67 @@ const PROGRAMS: ProgramSeed[] = [
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
   },
+  {
+    id: uuidv7(),
+    name: '4Ps — Pantawid Pamilyang Pilipino Program',
+    category: 'CCT',
+    waitingPeriodDays: 0,
+    requiredDocuments: [
+      '4Ps Household ID',
+      'Valid ID of parent/guardian',
+      'Birth certificates of children (PSA)',
+      'Barangay Certificate of Indigency',
+      'Enrollment certificate (for school-age children)',
+    ],
+    fundSources: ['DSWD - 4Ps National'],
+    legalBasis: 'RA 11310 (Pantawid Pamilyang Pilipino Program Act)',
+    isActive: true,
+  },
+  {
+    id: uuidv7(),
+    name: 'KALAHI-CIDSS (Community-Driven Development)',
+    category: 'Community Development',
+    waitingPeriodDays: 0,
+    requiredDocuments: [
+      'Barangay assembly resolution / endorsement',
+      'Community sub-project proposal',
+      'Listahanan/NHTS-PR reference for household validation',
+      'Barangay Certificate of Indigency (for household grantees)',
+    ],
+    fundSources: ['DSWD - KALAHI-CIDSS'],
+    legalBasis: 'RA 7160 (Local Government Code); DSWD Administrative Order No. 2011-016 (KALAHI-CIDSS NCDDP)',
+    isActive: true,
+  },
+  {
+    id: uuidv7(),
+    name: 'Walang Gutom Program (Food Stamp)',
+    category: 'Food & Nutrition',
+    waitingPeriodDays: 0,
+    requiredDocuments: [
+      'NHTS-PR / Listahanan reference or DSWD validation',
+      'Valid ID of household grantee',
+      'Barangay Certificate of Indigency',
+      'Household composition certification',
+    ],
+    fundSources: ['DSWD - Walang Gutom Food Stamp'],
+    legalBasis: 'EO 44 s. 2021 (Walang Gutom: Food Provision through Community Participation Program)',
+    isActive: true,
+  },
+  {
+    id: uuidv7(),
+    name: 'UPLIFT (Economic Empowerment)',
+    category: 'Livelihood',
+    waitingPeriodDays: 0,
+    requiredDocuments: [
+      'Valid ID of participant',
+      'Barangay Certificate of Indigency',
+      'NHTS-PR / Listahanan reference or DSWD validation',
+      'Household savings-group or association endorsement',
+    ],
+    fundSources: ['DSWD - UPLIFT'],
+    legalBasis: 'DSWD UPLIFT Program Guidelines; RA 8425 (Social Reform and Poverty Alleviation Act)',
+    isActive: true,
+  },
 ];
 
 async function seedPrograms(dataSource: DataSource) {
@@ -341,7 +402,9 @@ async function main() {
   await AppDataSource.destroy();
 }
 
-main().catch((err) => {
-  console.error('Seed failed:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('Seed failed:', err);
+    process.exit(1);
+  });
+}
