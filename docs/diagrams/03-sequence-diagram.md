@@ -1,10 +1,10 @@
 # Sequence Diagrams
 
-This document expresses four core end-to-end flows of the KAPWA social welfare information system — authentication, intake, case lifecycle, and inter-agency referral — as Mermaid sequence diagrams tied to functional requirements FR-01..FR-16 and to the implementation files that enforce them.
+This document expresses four core end-to-end flows of the KAPWA social welfare information system — authentication, intake, case lifecycle, and inter-agency referral — as high-level Mermaid sequence diagrams tied to functional requirements FR-01..FR-16; the implementation files that enforce them are listed in Section 5.
 
 ## 1. Purpose
 
-Documents the 4 core end-to-end flows (auth, intake, case FSM lifecycle, inter-agency referral) in sequence form, mapping each message to the controller/service/repository that handles it and to the functional requirement it satisfies. The diagrams reflect the actual implementation, not an idealized design: every transition, notification, and error path shown below was verified against the source files listed in Section 5.
+Documents the 4 core end-to-end flows (auth, intake, case FSM lifecycle, inter-agency referral) in sequence form, keeping each diagram at the functional-requirement level; the controller/service/repository behind each step is named in the narrative (Section 4) and cross-references (Section 5). The diagrams reflect the actual implementation, not an idealized design: every transition, notification, and error path shown below was verified against the source files listed in Section 5.
 
 ## 2. Functional Specification
 
@@ -29,6 +29,8 @@ Documents the 4 core end-to-end flows (auth, intake, case FSM lifecycle, inter-a
 
 ## 3. Sequence Diagrams (Mermaid)
 
+All diagrams use the same three high-level lifelines — `User` (actor), `Client`, and `API Server`. They stay at the functional-requirement level: internal controllers, services, repositories, FSM rules, and the notification gateway are deliberately omitted. Implementation detail for each flow lives in the narrative (§4) and cross-references (§5).
+
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
 
@@ -37,54 +39,34 @@ Documents the 4 core end-to-end flows (auth, intake, case FSM lifecycle, inter-a
 ```mermaid
 sequenceDiagram
     autonumber
+    actor User
     participant Client
-    participant AuthController
-    participant AuthService
-    participant UserRepository
+    participant Server as "API Server"
 
-    Note over Client,UserRepository: FR-01..FR-04 Auth flow
-    Client->>AuthController: POST /auth/login (email, password)
-    activate AuthController
-    AuthController->>AuthService: validateUser(email, password)
-    activate AuthService
-    AuthService->>UserRepository: findOne({ email })
-    activate UserRepository
-    UserRepository-->>AuthService: user (bcrypt hash)
-    deactivate UserRepository
-    alt Credentials valid and MFA disabled (FR-01)
-        AuthService-->>AuthController: issueTokens -> accessToken + refreshToken (7d)
-        AuthController-->>Client: 200 { accessToken, refreshToken, user }
-        Client->>Client: setToken(accessToken) + setUser(user)
-    else MFA enabled on account (FR-03)
-        AuthService-->>AuthController: { mfaRequired: true, tempToken (5m) }
-        AuthController-->>Client: { mfaRequired, tempToken }
-        Client->>Client: setMfaChallenge({ tempToken, type: totp or sms })
-        Client->>AuthController: POST /auth/mfa/verify (TOTP) or POST /auth/login/otp-verify (SMS)
-        AuthController->>AuthService: verifyMfaChallenge / verifySmsOtp
-        AuthService-->>AuthController: accessToken + refreshToken
-        AuthController-->>Client: 200 { accessToken, user }
-        Client->>Client: setToken, setUser, clear mfaChallenge
+    Note over User,Server: FR-01..FR-04 Authentication
+    User->>Client: enter email + password
+    Client->>Server: POST /auth/login
+    alt Valid credentials, MFA disabled (FR-01)
+        Server-->>Client: 200 accessToken + refreshToken (7d)
+        Client->>Client: persist session
+    else MFA enabled (FR-03)
+        Server-->>Client: mfaRequired + tempToken (5m)
+        User->>Client: enter TOTP or SMS code
+        Client->>Server: POST /auth/mfa/verify (TOTP) or POST /auth/login/otp-verify (SMS)
+        Server-->>Client: 200 accessToken + refreshToken
+        Client->>Client: persist session
     else Invalid credentials (FR-04)
-        AuthController-->>Client: 401 Unauthorized (Invalid credentials)
+        Server-->>Client: 401 Unauthorized
     end
-    deactivate AuthService
-    deactivate AuthController
 
-    Note over Client,AuthService: FR-02 401 interceptor - single-flight refresh
-    Client->>AuthController: POST /auth/refresh (refreshToken)
-    activate AuthController
-    AuthController->>AuthService: refresh(refreshToken)
-    activate AuthService
-    AuthService->>UserRepository: findByIdWithSecret + tokenVersion check
+    Note over Client,Server: FR-02 Session expiry - single-flight refresh on 401
+    Client->>Server: POST /auth/refresh (one in-flight request)
     alt Refresh succeeds
-        AuthService-->>Client: new accessToken + refreshToken
+        Server-->>Client: new accessToken + refreshToken
     else Refresh fails
-        AuthService-->>AuthController: Unauthorized (Invalid refresh token)
-        Client->>Client: dispatch kapwa:auth:logout event
-        Client->>Client: logout() clears token, user, intake draft
+        Server-->>Client: 401 Unauthorized
+        Client->>Client: clear session (token, user, intake draft)
     end
-    deactivate AuthService
-    deactivate AuthController
 ```
 
 ### S2 — Intake: person find-or-create, household link, case creation
@@ -92,42 +74,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant SocialWorker
-    participant IntakePage
-    participant IntakeController
-    participant IntakeService
-    participant PersonRepository
-    participant HouseholdRepository
-    participant CaseRepository
+    actor User
+    participant Client
+    participant Server as "API Server"
 
-    Note over SocialWorker,CaseRepository: FR-05..FR-08 Intake submission
-    SocialWorker->>IntakePage: fill intake form (beneficiary, claimant, family members)
-    SocialWorker->>IntakePage: submit intake
-    IntakePage->>IntakeController: POST /intake (IntakeInput)
-    activate IntakeController
-    IntakeController->>IntakeService: submitIntake(data)
-    activate IntakeService
-    IntakeService->>PersonRepository: findOrCreatePerson(beneficiary, dedup) (FR-05)
-    alt Existing person matched (philhealth or name+dob+barangay)
-        PersonRepository-->>IntakeService: existing person (fields merged)
-    else No match
-        PersonRepository-->>IntakeService: person created
-    end
-    IntakeService->>PersonRepository: findOrCreatePerson(claimant, no dedup) (FR-06)
-    loop Each family member
-        IntakeService->>PersonRepository: findOrCreatePerson(member) (FR-07)
-        PersonRepository-->>IntakeService: member person
-    end
-    IntakeService->>HouseholdRepository: create household (primaryBeneficiaryId, barangay)
-    HouseholdRepository-->>IntakeService: household
-    IntakeService->>HouseholdRepository: link beneficiary.householdId = household.id
-    IntakeService->>CaseRepository: create case (controlNo, status: enrolled) (FR-08)
-    CaseRepository-->>IntakeService: case
-    IntakeService-->>IntakeController: { beneficiaryId, caseId, controlNo, status: enrolled }
-    IntakeController-->>IntakePage: 201 created
-    IntakePage-->>SocialWorker: success + controlNo
-    deactivate IntakeService
-    deactivate IntakeController
+    Note over User,Server: FR-05..FR-08 Intake submission (social_worker)
+    User->>Client: fill + submit intake form
+    Client->>Server: POST /intake
+    Note over Server: find-or-create person, dedup by philhealth or name+DOB+barangay (FR-05)<br/>create beneficiary + claimant link (FR-06)<br/>create household + members (FR-07)<br/>create case (enrolled) with control number (FR-08)
+    Server-->>Client: 201 caseId + controlNo
+    Client-->>User: confirmation + control number
 ```
 
 ### S3 — Case FSM: validated transition with history logging
@@ -135,38 +91,21 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant SocialWorker
-    participant CasesController
-    participant CasesService
-    participant CaseFsm as "CaseFsm (case-fsm.ts)"
-    participant CaseRepository
+    actor User
+    participant Client
+    participant Server as "API Server"
 
-    Note over SocialWorker,CaseRepository: FR-09..FR-12 Case lifecycle transition
-    SocialWorker->>CasesController: PATCH /cases/:id/status (to: in_review)
-    activate CasesController
-    CasesController->>CasesService: transition(id, in_review, { userRole })
-    activate CasesService
-    CasesService->>CaseRepository: findById(id)
-    CaseRepository-->>CasesService: case (current status)
-    CasesService->>CaseFsm: isValidTransition(assessed, in_review)
-    CaseFsm-->>CasesService: true or false (from CASE_FSM)
-    alt Invalid FSM transition or preconditions unmet (FR-09)
-        CasesService-->>SocialWorker: 400 BadRequest (Invalid transition or missing data)
-    else Valid FSM transition
-        CasesService->>CaseFsm: canTransition(assessed, userRole)
-        CaseFsm-->>CasesService: true (admin override) or false (CASE_FSM_ROLES)
-        alt Role not permitted (FR-10)
-            CasesService-->>SocialWorker: 403 Forbidden (Role cannot transition)
-        else Role permitted
-            CasesService->>CaseRepository: save case (status: in_review, updatedAt) (FR-11)
-            CaseRepository-->>CasesService: updated case
-            CasesService->>CaseRepository: logHistory -> case_history row
-            CasesService->>CasesService: notify assigned worker of new status
-            CasesService-->>SocialWorker: 200 { case, history }
-        end
+    Note over User,Server: FR-09..FR-12 Case lifecycle transition (social_worker)
+    User->>Client: change case status
+    Client->>Server: PATCH /cases/:id/status
+    alt Invalid transition or missing data (FR-09)
+        Server-->>Client: 400 BadRequest
+    else Role not permitted (FR-10)
+        Server-->>Client: 403 Forbidden
+    else Allowed - lifecycle: enrolled -> assessed -> in_review -> active -> transitioning -> closed (FR-11, FR-12)
+        Server-->>Client: 200 case updated + history entry
+        Client-->>User: updated case status
     end
-    deactivate CasesService
-    deactivate CasesController
 ```
 
 ### S4 — Inter-agency referral: create, notify, receive, close
@@ -174,50 +113,26 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant AgencyStaff
-    participant ReferralsPage
-    participant ReferralsController as "InterAgencyReferralsController"
-    participant ReferralsService as "InterAgencyReferralsService"
-    participant NotificationsService
-    participant NotificationsGateway
+    actor User
+    participant Client
+    participant Server as "API Server"
 
-    Note over AgencyStaff,NotificationsGateway: FR-13..FR-14 Referral creation
-    AgencyStaff->>ReferralsPage: create referral (toAgencyId, reason, caseId)
-    ReferralsPage->>ReferralsController: POST /inter-agency-referrals
-    activate ReferralsController
-    ReferralsController->>ReferralsService: create(dto, caller)
-    activate ReferralsService
-    ReferralsService->>ReferralsService: resolve source agency + validate target agency
-    ReferralsService->>ReferralsService: resolvePersonId (beneficiary or case)
-    ReferralsService->>ReferralsService: save referral (status: referred) (FR-13)
-    ReferralsService->>NotificationsService: notifyAgency(toAgencyId, title, message) (FR-14)
-    activate NotificationsService
-    loop Each agency_staff of receiving agency
-        NotificationsService->>NotificationsService: create in-app notification
+    Note over User,Server: FR-13..FR-14 Create referral + notify receiving agency
+    User->>Client: create referral to target agency
+    Client->>Server: POST /inter-agency-referrals
+    Server-->>Client: 201 referral (referred)
+    Server-->>Client: WebSocket notification:new to receiving agency staff
+
+    Note over User,Server: FR-15..FR-16 Receive / action / close + notify creator (referred -> received -> actioned -> closed or declined)
+    User->>Client: act on referral
+    Client->>Server: PATCH /inter-agency-referrals/:id/action
+    alt Not receiving agency or admin (FR-15)
+        Server-->>Client: 403 Forbidden / 409 Conflict
+    else Allowed
+        Server-->>Client: 200 referral updated
+        Server-->>Client: WebSocket notification:new to creator
     end
-    NotificationsService->>NotificationsGateway: emitToUser(staffId, notification:new, payload)
-    NotificationsGateway-->>AgencyStaff: WebSocket push (socket.io room user:{staffId})
-    deactivate NotificationsService
-    ReferralsService-->>ReferralsController: saved referral
-    ReferralsController-->>AgencyStaff: 201 referral created
-
-    Note over AgencyStaff,NotificationsGateway: FR-15..FR-16 Receive / action / close
-    AgencyStaff->>ReferralsPage: action referral
-    ReferralsPage->>ReferralsController: PATCH /inter-agency-referrals/:id/action
-    ReferralsController->>ReferralsService: action(id, caller)
-    ReferralsService->>ReferralsService: assertReceiver (receiving agency only)
-    ReferralsService->>ReferralsService: assertTransition (referred -> actioned) (FR-15)
-    ReferralsService->>ReferralsService: save (status: actioned, actionedAt)
-    ReferralsService->>NotificationsService: notifyCreator(ref) (FR-16)
-    activate NotificationsService
-    NotificationsService->>NotificationsService: create in-app notification for creator
-    NotificationsService->>NotificationsGateway: emitToUser(creatorId, notification:new, payload)
-    Note over NotificationsGateway: push to user:{createdBy} room - creator client receives it
-    deactivate NotificationsService
-    ReferralsService-->>ReferralsController: updated referral
-    ReferralsController-->>AgencyStaff: 200 updated
-    deactivate ReferralsService
-    deactivate ReferralsController
+    Client-->>User: updated referral
 ```
 
 ## 4. Diagram Narrative
