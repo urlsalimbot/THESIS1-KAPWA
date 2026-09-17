@@ -121,12 +121,13 @@ checkoffs (health/education), and scheduled payouts.
 > Addressed 2026-09-17: conditionality checkoffs (`case_compliance_items`), payout
 > schedule tracking (`case_payouts`), the 4Ps program seed, and the compliance UI
 > (case-detail section + `cases/:caseId/4ps-compliance` + `cases/:caseId/payouts`)
-> now exist. Cycle linkage (`cases.renewal_of_case_id`) shipped earlier with
-> `CaseRenewalLink`. Applying `Program.approvalWorkflow` per program remains open
+> now exist. Cycle linkage (`cases.renewal_of_case_id`, migration
+> `CaseRenewalLink0000000000052`) shipped earlier. Applying
+> `Program.approvalWorkflow` per program remains open
 > (tracked as a follow-up). See
 > docs/superpowers/specs/2026-09-17-4ps-and-comanaged-programs-design.md.
 
-### Recommended design if 4Ps compliance is required
+### Recommended design if 4Ps compliance is required (historical design record — superseded by the note above)
 
 | Gap | Minimal additive change |
 |---|---|
