@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { FourPsComplianceSection, isFourPsCase } from './FourPsComplianceSection';
 
@@ -20,9 +21,11 @@ vi.mock('../../lib/api', () => ({
 
 function renderSection() {
   return render(
-    <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
-      <FourPsComplianceSection caseId="C-1" />
-    </SWRConfig>,
+    <MemoryRouter>
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+        <FourPsComplianceSection caseId="C-1" />
+      </SWRConfig>
+    </MemoryRouter>,
   );
 }
 
@@ -87,5 +90,10 @@ describe('FourPsComplianceSection', () => {
     expect(isFourPsCase({ clientCategory: '4Ps' })).toBe(true);
     expect(isFourPsCase({ serviceRequested: ['Financial Assistance'] })).toBe(false);
     expect(isFourPsCase(null)).toBe(false);
+  });
+
+  it('links to the payout schedule', async () => {
+    renderSection();
+    expect(await screen.findByRole('link', { name: 'Payout Schedule' })).toHaveAttribute('href', '/cases/C-1/payouts');
   });
 });

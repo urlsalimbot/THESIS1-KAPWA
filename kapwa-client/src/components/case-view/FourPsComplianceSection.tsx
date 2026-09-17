@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { CheckCircle, Circle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -83,6 +84,12 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
           <p className="text-xs text-muted-foreground">
             {t('fourps.summary', '{{complied}}/{{total}} complied · {{rate}}% rate', { complied, total, rate })}
           </p>
+          <Link
+            to={`/cases/${caseId}/payouts`}
+            className="text-xs text-primary hover:underline"
+          >
+            {t('fourps.viewPayouts', 'Payout Schedule')}
+          </Link>
         </div>
         <Button size="sm" variant="outline" onClick={generate} disabled={generating}>
           <RefreshCw size={14} className={`mr-1 ${generating ? 'animate-spin' : ''}`} />

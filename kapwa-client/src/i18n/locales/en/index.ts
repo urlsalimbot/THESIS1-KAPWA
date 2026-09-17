@@ -2224,6 +2224,7 @@ const en = {
     "markMet": "Mark as complied",
     "actionFailed": "Action failed. Please try again.",
     "loading": "Loading…",
+    "viewPayouts": "Payout Schedule",
     "type": {
       "school_attendance": "School Attendance",
       "health_checkup": "Health Checkup",

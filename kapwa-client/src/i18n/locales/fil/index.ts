@@ -2227,6 +2227,7 @@ const fil: EnLocale = {
     "markMet": "Markahan bilang natupad",
     "actionFailed": "Nabigo ang aksyon. Subukang muli.",
     "loading": "Naglo-load…",
+    "viewPayouts": "Iskedyul ng Pagbabayad",
     "type": {
       "school_attendance": "Pagpasok sa Paaralan",
       "health_checkup": "Pagsusuri sa Kalusugan",
