@@ -3,9 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { StepImplementHIP } from './StepImplementHIP';
 
-const { mockApiGet, mockApiPost } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockUpload } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPost: vi.fn(),
+  mockUpload: vi.fn(),
 }));
 
 vi.mock('@/lib/api', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/lib/api', () => ({
     patch: vi.fn(),
     del: vi.fn(),
   },
+  uploadWithProgress: (...args: unknown[]) => mockUpload(...args),
 }));
 
 const caseData = { status: 'assessed', requirementsChecklist: {} };
@@ -40,8 +42,29 @@ describe('StepImplementHIP adhoc intervention', () => {
   beforeEach(() => {
     mockApiGet.mockReset();
     mockApiPost.mockReset();
+    mockUpload.mockReset();
     mockApiGet.mockResolvedValue([]);
     mockApiPost.mockResolvedValue({});
+    mockUpload.mockResolvedValue({});
+  });
+
+  it('renders an uploader in step 2 even when no program requirements exist, posting with just caseId', async () => {
+    renderHIP();
+
+    // With zero programs the old requirements checklist (and its upload) never
+    // rendered — the regression: Case Documents uploader must always appear.
+    expect(await screen.findByText(/Case Documents/)).toBeTruthy();
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    const file = new File(['x'], 'receipt.pdf', { type: 'application/pdf' });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1));
+    const [path, form] = mockUpload.mock.calls[0];
+    expect(path).toBe('/filing/upload');
+    expect((form as FormData).get('caseId')).toBe('case-1');
+    expect((form as FormData).get('requirementKey')).toBeNull();
   });
 
   it('sends programId as null for an adhoc service (not the adhoc: sentinel)', async () => {

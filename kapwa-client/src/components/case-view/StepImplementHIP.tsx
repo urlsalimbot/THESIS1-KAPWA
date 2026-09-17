@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Download, X, Lock } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Download, X, Lock, FolderOpen } from 'lucide-react';
 import { RequirementFileUpload } from './RequirementFileUpload';
+import { FileUploadList } from './FileUploadList';
 import { SERVICE_TYPES, NATURE_OF_SERVICE } from '@/lib/constants';
 import { useTranslation } from 'react-i18next';
 
@@ -70,14 +71,16 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
     .filter((v, i, a) => a.indexOf(v) === i);
 
   const { data: docs = [] } = useSWR<any[]>(
-    caseId && allRequirements.length > 0 ? `/filing?caseId=${caseId}` : null,
+    caseId ? `/filing?caseId=${caseId}` : null,
   );
   const docsByRequirement: Record<string, any[]> = {};
   for (const d of docs) {
-    const k = d.requirementKey || '__uncategorized__';
+    const k = d.requirementKey;
+    if (!k) continue;
     if (!docsByRequirement[k]) docsByRequirement[k] = [];
     docsByRequirement[k].push(d);
   }
+  const caseDocs = docs.filter((d: any) => !d.requirementKey);
 
   const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole) && !readOnly);
 
@@ -312,6 +315,28 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Case Documents — uploads always available regardless of program config */}
+      {canUpload && (
+        <div className="rounded-lg border bg-card">
+          <div className="px-4 py-3 flex items-center gap-2">
+            <FolderOpen size={16} className="text-primary" />
+            <h3 className="text-sm font-semibold">{t('caseView.implement.caseDocuments', 'Case Documents')}</h3>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {t('caseView.implement.caseDocumentsHint', 'Upload receipts, certificates, and supporting evidence')}
+            </span>
+          </div>
+          <Separator />
+          <div className="px-4 py-2">
+            <FileUploadList
+              docs={caseDocs}
+              canUpload={canUpload}
+              onChanged={() => globalMutate(`/filing?caseId=${caseId}`)}
+              formExtras={{ caseId }}
+            />
+          </div>
         </div>
       )}
 
