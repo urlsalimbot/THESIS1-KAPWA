@@ -57,4 +57,15 @@ describe('PayoutSchedulePage', () => {
     renderPage();
     expect(await screen.findByText('No payout schedules yet.')).toBeInTheDocument();
   });
+
+  it('surfaces status update failures', async () => {
+    mockApiGet.mockResolvedValue([
+      { id: 'p1', scheduledAt: '2026-10-01', cycleNo: 'CY2026-02', amount: 1200, status: 'scheduled' },
+    ]);
+    mockApiPatch.mockRejectedValueOnce(new Error('boom'));
+    renderPage();
+    await screen.findByText('CY2026-02');
+    fireEvent.click(screen.getByRole('button', { name: /Mark Completed/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Action failed. Please try again.');
+  });
 });

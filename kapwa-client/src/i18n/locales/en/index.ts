@@ -2202,6 +2202,8 @@ const en = {
     "cancelPayout": "Cancel Payout",
     "empty": "No payout schedules yet.",
     "notified": "Notified: {{date}}",
+    "actionFailed": "Action failed. Please try again.",
+    "loading": "Loading…",
     "status": {
       "scheduled": "Scheduled",
       "completed": "Completed",

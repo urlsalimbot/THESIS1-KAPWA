@@ -2205,6 +2205,8 @@ const fil: EnLocale = {
     "cancelPayout": "Kanselahin ang Pagbabayad",
     "empty": "Wala pang iskedyul ng pagbabayad.",
     "notified": "Naabisuhan: {{date}}",
+    "actionFailed": "Nabigo ang aksyon. Subukang muli.",
+    "loading": "Naglo-load…",
     "status": {
       "scheduled": "Naka-iskedyul",
       "completed": "Tapos na",

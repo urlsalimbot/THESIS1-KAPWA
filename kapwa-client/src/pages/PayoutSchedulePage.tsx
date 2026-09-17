@@ -24,10 +24,11 @@ interface Payout {
 export function PayoutSchedulePage() {
   const { caseId } = useParams<{ caseId: string }>();
   const { t } = useTranslation();
-  const { data, mutate } = useSWR<Payout[]>(caseId ? queryKeys.fourps.payouts(caseId) : null);
+  const { data, isLoading, mutate } = useSWR<Payout[]>(caseId ? queryKeys.fourps.payouts(caseId) : null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ scheduledAt: '', cycleNo: '', amount: '' });
   const [error, setError] = useState('');
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const payouts = data ?? [];
 
   async function handleSchedule() {
@@ -42,19 +43,35 @@ export function PayoutSchedulePage() {
       setForm({ scheduledAt: '', cycleNo: '', amount: '' });
       setError('');
       await mutate();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error');
+    } catch {
+      setError(t('payouts.actionFailed', 'Action failed. Please try again.'));
     }
   }
 
   async function setStatus(id: string, status: 'completed' | 'missed' | 'cancelled') {
-    await api.patch(`/fourps/payouts/${id}/status`, { status });
-    await mutate();
+    setPendingId(id);
+    setError('');
+    try {
+      await api.patch(`/fourps/payouts/${id}/status`, { status });
+      await mutate();
+    } catch {
+      setError(t('payouts.actionFailed', 'Action failed. Please try again.'));
+    } finally {
+      setPendingId(null);
+    }
   }
 
   async function notify(id: string) {
-    await api.post(`/fourps/payouts/${id}/notify`);
-    await mutate();
+    setPendingId(id);
+    setError('');
+    try {
+      await api.post(`/fourps/payouts/${id}/notify`);
+      await mutate();
+    } catch {
+      setError(t('payouts.actionFailed', 'Action failed. Please try again.'));
+    } finally {
+      setPendingId(null);
+    }
   }
 
   const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -70,7 +87,7 @@ export function PayoutSchedulePage() {
       description={t('payouts.description', 'Track DSWD payout schedules and beneficiary notifications')}
     >
       {error && (
-        <div className="rounded-lg bg-destructive/10 border px-4 py-3 text-sm text-destructive mb-4">{error}</div>
+        <div role="alert" className="rounded-lg bg-destructive/10 border px-4 py-3 text-sm text-destructive mb-4">{error}</div>
       )}
 
       <div className="mb-4">
@@ -111,7 +128,9 @@ export function PayoutSchedulePage() {
         </DialogContent>
       </Dialog>
 
-      {payouts.length === 0 ? (
+      {isLoading ? (
+        <p className="text-muted-foreground">{t('payouts.loading', 'Loading…')}</p>
+      ) : payouts.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <DollarSign className="mx-auto mb-2" size={32} />
           <p>{t('payouts.empty', 'No payout schedules yet.')}</p>
@@ -144,16 +163,36 @@ export function PayoutSchedulePage() {
               <div className="mt-2 flex items-center gap-2">
                 {payout.status === 'scheduled' && (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => notify(payout.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={pendingId === payout.id}
+                      onClick={() => notify(payout.id)}
+                    >
                       <Bell size={14} className="mr-1" /> {t('payouts.notify', 'Notify')}
                     </Button>
-                    <Button size="sm" variant="default" onClick={() => setStatus(payout.id, 'completed')}>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      disabled={pendingId === payout.id}
+                      onClick={() => setStatus(payout.id, 'completed')}
+                    >
                       <CheckCircle size={14} className="mr-1" /> {t('payouts.markCompleted', 'Mark Completed')}
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => setStatus(payout.id, 'missed')}>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={pendingId === payout.id}
+                      onClick={() => setStatus(payout.id, 'missed')}
+                    >
                       <XCircle size={14} className="mr-1" /> {t('payouts.markMissed', 'Mark Missed')}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setStatus(payout.id, 'cancelled')}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={pendingId === payout.id}
+                      onClick={() => setStatus(payout.id, 'cancelled')}
+                    >
                       {t('payouts.cancelPayout', 'Cancel Payout')}
                     </Button>
                   </>
