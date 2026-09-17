@@ -79,6 +79,16 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   } as unknown as typeof HTMLCanvasElement.prototype.getContext;
 }
 
+// jsdom logs "Not implemented: window.getComputedStyle(elt, pseudoElt)" for
+// every pseudo-element query (axe-core checks ::before/::after during a11y
+// assertions), flooding the output with hundreds of lines per run. Drop the
+// pseudo argument — jsdom only ever returns the element's own declaration.
+if (typeof window !== 'undefined') {
+  const nativeGetComputedStyle = window.getComputedStyle.bind(window);
+  window.getComputedStyle = ((elt: Element) =>
+    nativeGetComputedStyle(elt)) as typeof window.getComputedStyle;
+}
+
 // Mock localStorage for all environments (Node 26 + jsdom compat)
 const store: Record<string, string> = {};
 const mockStorage: Storage = {
