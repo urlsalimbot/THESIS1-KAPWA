@@ -2189,6 +2189,29 @@ const fil: EnLocale = {
     "title": "Pisikal na Pag-file",
     "unknownIntervention": "Hindi kilalang interbensyon"
   },
+  "payouts": {
+    "title": "Iskedyul ng Pagbabayad sa 4Ps",
+    "description": "Subaybayan ang iskedyul ng pagbabayad ng DSWD at mga abiso sa benepisyaryo",
+    "schedule": "Iskedyul ang Pagbabayad",
+    "date": "Petsa ng Pagbabayad",
+    "cycle": "Siklo",
+    "cyclePlaceholder": "hal. CY2026-02",
+    "amount": "Halaga (₱)",
+    "save": "I-save",
+    "cancel": "Kanselahin",
+    "notify": "Abisuhan",
+    "markCompleted": "Markahan na Tapos",
+    "markMissed": "Markahan na Hindi Natupad",
+    "cancelPayout": "Kanselahin ang Pagbabayad",
+    "empty": "Wala pang iskedyul ng pagbabayad.",
+    "notified": "Naabisuhan: {{date}}",
+    "status": {
+      "scheduled": "Naka-iskedyul",
+      "completed": "Tapos na",
+      "missed": "Hindi Natupad",
+      "cancelled": "Kinansela"
+    }
+  },
   "fourps": {
     "sectionTitle": "Pagsunod sa 4Ps",
     "title": "Pagsubaybay sa Pagsunod sa 4Ps",

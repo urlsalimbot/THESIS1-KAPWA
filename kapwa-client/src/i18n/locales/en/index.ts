@@ -2186,6 +2186,29 @@ const en = {
     "totalCases": "Total Cases",
     "view": "View",
   },
+  "payouts": {
+    "title": "4Ps Payout Schedule",
+    "description": "Track DSWD payout schedules and beneficiary notifications",
+    "schedule": "Schedule Payout",
+    "date": "Payout Date",
+    "cycle": "Cycle",
+    "cyclePlaceholder": "e.g. CY2026-02",
+    "amount": "Amount (₱)",
+    "save": "Save",
+    "cancel": "Cancel",
+    "notify": "Notify",
+    "markCompleted": "Mark Completed",
+    "markMissed": "Mark Missed",
+    "cancelPayout": "Cancel Payout",
+    "empty": "No payout schedules yet.",
+    "notified": "Notified: {{date}}",
+    "status": {
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "missed": "Missed",
+      "cancelled": "Cancelled"
+    }
+  },
   "fourps": {
     "sectionTitle": "4Ps Compliance",
     "title": "4Ps Compliance Monitoring",
