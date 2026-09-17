@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { NotFoundException } from '@nestjs/common';
 import { BeneficiariesService } from './beneficiaries.service';
 import { Person } from './person.entity';
 import { Beneficiary } from './beneficiary.entity';
 import { BeneficiaryRole } from './beneficiary-role.entity';
 import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
 import { ConsentLedger } from './consent-ledger.entity';
+import { Household } from './household.entity';
 import { HouseholdMembership } from './household-membership.entity';
 import { Case } from '../cases/case.entity';
 
@@ -17,7 +19,7 @@ describe('BeneficiariesService', () => {
 
   beforeEach(async () => {
     personRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
-    benRepoMock = { create: jest.fn(), save: jest.fn(), findOne: jest.fn() };
+    benRepoMock = { create: jest.fn(), save: jest.fn(), findOne: jest.fn(), manager: { update: jest.fn() } };
     consentRepoMock = { save: jest.fn(), findOne: jest.fn(), find: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -69,6 +71,26 @@ describe('BeneficiariesService', () => {
       expect(personRepoMock.findOne).toHaveBeenCalled();
       expect(personRepoMock.save).toHaveBeenCalledTimes(1);
       expect(result.personId).toBe('person-new');
+    });
+  });
+
+  describe('setHouseholdNhtsPr', () => {
+    it('sets the Listahanan reference id', async () => {
+      benRepoMock.findOne.mockResolvedValue({ id: 'ben-1', household: { id: 'h1' } });
+      const res = await service.setHouseholdNhtsPr('ben-1', 'NHTS-2024-000123');
+      expect(benRepoMock.manager.update).toHaveBeenCalledWith(Household, 'h1', { nhtsPrId: 'NHTS-2024-000123' });
+      expect(res).toEqual({ householdId: 'h1', nhtsPrId: 'NHTS-2024-000123' });
+    });
+
+    it('clears the id when passed an empty string', async () => {
+      benRepoMock.findOne.mockResolvedValue({ id: 'ben-1', household: { id: 'h1' } });
+      await service.setHouseholdNhtsPr('ben-1', '');
+      expect(benRepoMock.manager.update).toHaveBeenCalledWith(Household, 'h1', { nhtsPrId: null });
+    });
+
+    it('throws when the beneficiary has no household', async () => {
+      benRepoMock.findOne.mockResolvedValue({ id: 'ben-1', household: null });
+      await expect(service.setHouseholdNhtsPr('ben-1', 'X')).rejects.toThrow(NotFoundException);
     });
   });
 });

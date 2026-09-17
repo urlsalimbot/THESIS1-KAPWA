@@ -24,5 +24,10 @@ export const RevokeConsentSchema = z.object({
   reason: z.string().optional(),
 });
 
+export const NhtsPrSchema = z.object({
+  nhtsPrId: z.string().max(50).nullable().optional(),
+});
+
 export type CreateBeneficiaryInput = z.infer<typeof CreateBeneficiarySchema>;
 export type UpdateBeneficiaryInput = z.infer<typeof UpdateBeneficiarySchema>;
+export type NhtsPrInput = z.infer<typeof NhtsPrSchema>;

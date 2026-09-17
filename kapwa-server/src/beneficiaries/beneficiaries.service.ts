@@ -11,6 +11,7 @@ import { BeneficiaryRole } from './beneficiary-role.entity';
 import { BeneficiaryClaimant } from './beneficiary-claimant.entity';
 import { ConsentLedger } from './consent-ledger.entity';
 import { HouseholdMembership } from './household-membership.entity';
+import { Household } from './household.entity';
 import { Case } from '../cases/case.entity';
 const FAMILY_MEMBER_LIMIT = 50;
 @Injectable()
@@ -206,6 +207,18 @@ export class BeneficiariesService {
     Object.assign(ben, data, { updatedAt: new Date() });
     await this.benRepo.save(ben);
     return ben;
+  }
+
+  async setHouseholdNhtsPr(
+    beneficiaryId: string,
+    nhtsPrId?: string | null,
+  ): Promise<{ householdId: string; nhtsPrId: string | null }> {
+    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, relations: ['household'] });
+    if (!ben) throw new NotFoundException('Beneficiary not found');
+    if (!ben.household) throw new NotFoundException('Beneficiary has no household');
+    const value = nhtsPrId ? nhtsPrId.trim() : null;
+    await this.benRepo.manager.update(Household, ben.household.id, { nhtsPrId: value } as any);
+    return { householdId: ben.household.id, nhtsPrId: value };
   }
 
   async getFamilyGraph(beneficiaryId: string) {

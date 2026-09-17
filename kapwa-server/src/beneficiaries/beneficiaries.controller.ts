@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { instanceToPlain } from 'class-transformer';
 import { BeneficiariesService } from './beneficiaries.service';
@@ -10,7 +10,7 @@ import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { AuthenticatedRequest } from '../auth/types';
-import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema } from './dto/beneficiaries.zod';
+import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema, NhtsPrSchema, NhtsPrInput } from './dto/beneficiaries.zod';
 
 @Controller('beneficiaries')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
@@ -89,6 +89,16 @@ export class BeneficiariesController {
     @Body(new ZodPipe(RevokeConsentSchema)) body: { reason?: string },
   ) {
     return this.benService.revokeConsent(id, body);
+  }
+
+  @Patch(':id/household/nhts-pr')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @Sensitivity('internal')
+  async setHouseholdNhtsPr(
+    @Param('id') id: string,
+    @Body(new ZodPipe(NhtsPrSchema)) body: NhtsPrInput,
+  ) {
+    return this.benService.setHouseholdNhtsPr(id, body.nhtsPrId);
   }
 
   @Post()
