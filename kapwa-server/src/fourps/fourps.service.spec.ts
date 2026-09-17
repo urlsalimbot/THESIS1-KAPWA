@@ -123,6 +123,25 @@ describe('FourPsService compliance status', () => {
     expect(repoMock.find).toHaveBeenCalledWith({ where: { caseId: 'case-1' }, order: { dueDate: 'ASC' } });
   });
 
+  it('allows a claimant who owns the case', async () => {
+    repoMock.query.mockResolvedValueOnce([{ ok: 1 }]);
+    repoMock.find.mockResolvedValue([]);
+    await expect(service.getComplianceStatus('case-1', { id: 'u1', role: 'claimant' })).resolves.toMatchObject({ total: 0 });
+    expect(repoMock.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a claimant who does not own the case', async () => {
+    repoMock.query.mockResolvedValueOnce([]);
+    await expect(service.getComplianceStatus('case-1', { id: 'u1', role: 'claimant' })).rejects.toThrow(NotFoundException);
+    expect(repoMock.find).not.toHaveBeenCalled();
+  });
+
+  it('skips the ownership check for non-claimants', async () => {
+    repoMock.find.mockResolvedValue([]);
+    await service.getComplianceStatus('case-1', { id: 'w1', role: 'coordinator' });
+    expect(repoMock.query).not.toHaveBeenCalled();
+  });
+
   it('marks an item met with the actor and timestamp', async () => {
     const entry = { id: 'c1', met: false, metAt: undefined, metBy: undefined };
     repoMock.findOne.mockResolvedValue(entry);

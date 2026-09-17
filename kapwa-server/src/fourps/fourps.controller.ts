@@ -34,8 +34,11 @@ export class FourPsController {
   @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   @Sensitivity('public')
   @ApiOperation({ summary: 'Get 4Ps compliance status for a case' })
-  async getCompliance(@Param('caseId', new ParseUUIDPipe()) caseId: string) {
-    return this.svc.getComplianceStatus(caseId);
+  async getCompliance(
+    @Param('caseId', new ParseUUIDPipe()) caseId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.svc.getComplianceStatus(caseId, req.user);
   }
 
   @Patch('compliance/:id/meet')

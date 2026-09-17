@@ -36,7 +36,10 @@ describe('FourPsController', () => {
 
   it('returns compliance status', async () => {
     svc.getComplianceStatus.mockResolvedValue({ total: 0, complied: 0, rate: 0, byType: {}, entries: [] });
-    await expect(controller.getCompliance('case-1')).resolves.toMatchObject({ total: 0 });
+    await expect(
+      controller.getCompliance('case-1', { user: { id: 'u1', role: 'claimant' } } as any),
+    ).resolves.toMatchObject({ total: 0 });
+    expect(svc.getComplianceStatus).toHaveBeenCalledWith('case-1', { id: 'u1', role: 'claimant' });
   });
 
   it('marks and unmarks a compliance item', async () => {

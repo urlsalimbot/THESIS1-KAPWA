@@ -81,13 +81,32 @@ export class FourPsService {
     return count;
   }
 
-  async getComplianceStatus(caseId: string): Promise<{
+  async getComplianceStatus(
+    caseId: string,
+    caller?: { id: string; role: string },
+  ): Promise<{
     total: number;
     complied: number;
     rate: number;
     byType: Record<string, { total: number; complied: number; rate: number }>;
     entries: CaseComplianceItem[];
   }> {
+    if (caller?.role === 'claimant') {
+      const owned = await this.complianceRepo.query(
+        `SELECT 1
+         FROM cases c
+         JOIN beneficiaries b ON b.id = c.beneficiary_id
+         LEFT JOIN beneficiary_claimants bcl ON bcl.beneficiary_id = b.person_id
+         WHERE c.id = $1
+           AND (
+             b.user_id = $2
+             OR bcl.claimant_id IN (SELECT person_id FROM beneficiaries WHERE user_id = $2)
+           )
+         LIMIT 1`,
+        [caseId, caller.id],
+      );
+      if (!owned?.[0]) throw new NotFoundException('Compliance status not found');
+    }
     const entries = await this.complianceRepo.find({
       where: { caseId },
       order: { dueDate: 'ASC' },
