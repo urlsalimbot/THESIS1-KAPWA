@@ -120,8 +120,8 @@ export class FourPsService {
     const entry = await this.complianceRepo.findOne({ where: { id } });
     if (!entry) throw new NotFoundException('Compliance entry not found');
     entry.met = false;
-    entry.metAt = undefined;
-    entry.metBy = undefined;
+    entry.metAt = null;
+    entry.metBy = null;
     await this.complianceRepo.save(entry);
   }
 }

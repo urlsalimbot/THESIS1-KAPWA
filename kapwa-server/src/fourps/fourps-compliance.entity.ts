@@ -24,10 +24,10 @@ export class CaseComplianceItem extends BaseEntity {
   met!: boolean;
 
   @Column({ name: 'met_at', type: 'timestamp', nullable: true })
-  metAt?: Date;
+  metAt?: Date | null;
 
   @Column({ name: 'met_by', nullable: true })
-  metBy?: string;
+  metBy?: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

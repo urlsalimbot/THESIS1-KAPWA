@@ -140,8 +140,8 @@ describe('FourPsService compliance status', () => {
     repoMock.save.mockImplementation(async (e: any) => e);
     await service.unmarkComplied('c1');
     expect(entry.met).toBe(false);
-    expect(entry.metAt).toBeUndefined();
-    expect(entry.metBy).toBeUndefined();
+    expect(entry.metAt).toBeNull();
+    expect(entry.metBy).toBeNull();
   });
 
   it('throws for an unknown compliance id', async () => {
