@@ -100,4 +100,31 @@ describe('CasesExportService', () => {
     caseRepoMock.findOne.mockResolvedValue(null);
     await expect(service.findIdByControlNo('KAPWA-9999')).rejects.toThrow(NotFoundException);
   });
+
+  it('generates approval documents stamped with system office identity', async () => {
+    caseRepoMock.findOne.mockResolvedValue({
+      ...baseCase,
+      interviewedBy: 'Maria Clara Santos',
+      serviceRequested: ['Financial Assistance'],
+      amountAssistance: '4500',
+      sourceOfFund: 'AICS',
+      beneficiary: { person: { firstName: 'Juan', middleName: 'M', surname: 'Dela Cruz', address: 'Poblacion, Norzagaray' } },
+    });
+    const filingMock = (service as any).filing;
+    filingMock.upload.mockClear();
+    filingMock.upload.mockResolvedValue({ id: 'doc-1' });
+
+    await service.generateApprovalDocuments('c1', 'u1');
+
+    expect(filingMock.upload).toHaveBeenCalledTimes(2);
+    const coe = filingMock.upload.mock.calls[0][0];
+    const pcv = filingMock.upload.mock.calls[1][0];
+    expect(coe.originalname).toBe('COE-KAPWA-2026-0001.pdf');
+    expect(pcv.originalname).toBe('PCV-KAPWA-2026-0001.pdf');
+    const coeText = (coe.buffer as Buffer).toString('latin1');
+    const pcvText = (pcv.buffer as Buffer).toString('latin1');
+    expect(coeText).toContain('%PDF');
+    expect(coeText).toContain('Municipal Social Welfare and Development Office');
+    expect(pcvText).toContain('Municipal Social Welfare and Development Office');
+  });
 });

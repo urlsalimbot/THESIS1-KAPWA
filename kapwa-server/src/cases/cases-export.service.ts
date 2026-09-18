@@ -447,6 +447,9 @@ export class CasesExportService {
 
     const services = Array.isArray(c.serviceRequested) ? c.serviceRequested.join(', ') : '';
     const barangay = ((c.beneficiary as any)?.person?.address || '').split(',').pop()?.trim() || '';
+    const localeSuffix = barangay && barangay.toLowerCase() === ORG_LOCATION.municipality.toLowerCase()
+      ? `, ${ORG_LOCATION.province}`
+      : `, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`;
     const dateStr = fmtDateLong(new Date());
     const preparedBy = c.interviewedBy || c.assignedWorkerName || (c.assignedWorker as any)?.fullName || '';
 
@@ -457,7 +460,7 @@ export class CasesExportService {
     doc.fontSize(16).font('Helvetica-Bold').text('CERTIFICATE OF ELIGIBILITY', { align: 'center' });
     doc.moveDown(2);
 
-    doc.fontSize(11).font('Helvetica').text(`This certifies that ${this.beneficiaryName(c)} of ${barangay}, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province} has been assessed and found ELIGIBLE for the following assistance under Case No. ${c.controlNo}:`);
+    doc.fontSize(11).font('Helvetica').text(`This certifies that ${this.beneficiaryName(c)} of ${barangay}${localeSuffix} has been assessed and found ELIGIBLE for the following assistance under Case No. ${c.controlNo}:`);
     doc.moveDown();
     doc.fontSize(11).font('Helvetica').text(`Services: ${services || 'N/A'}`, { align: 'center' });
     if (c.amountAssistance != null) {
