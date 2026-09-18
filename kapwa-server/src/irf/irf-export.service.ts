@@ -5,6 +5,8 @@ import { IrfCase } from './irf-case.entity';
 import { IrfService } from './irf.service';
 import { IrfAuditService } from './irf-audit.service';
 import { AgenciesService } from '../agencies/agencies.service';
+import { ORG_LOCATION } from '../common/constants';
+import { fmtDateLong, fmtDateTime } from '../common/pdf-format';
 
 @Injectable()
 export class IrfExportService {
@@ -19,7 +21,7 @@ export class IrfExportService {
 
   private async agencyLabel(): Promise<string> {
     const mswdo = await this.agenciesService.findByCode('MSWDO');
-    return mswdo?.name || 'MSWDO Norzagaray';
+    return mswdo?.name || 'Municipal Social Welfare and Development Office';
   }
 
   async exportPdf(id: string, legalBasis: string, password: string, userId: string): Promise<Buffer> {
@@ -62,11 +64,15 @@ export class IrfExportService {
 
     // Build PDF content
     // Header
+    doc.fontSize(14).font('Helvetica-Bold').text(ORG_LOCATION.country, { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text(`${agencyName}`, { align: 'center' });
+    doc.fontSize(10).text(`${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`, { align: 'center' });
+    doc.moveDown();
     doc.fontSize(16).font('Helvetica-Bold').text('INCIDENT REPORT FORM', { align: 'center' });
-    doc.fontSize(10).font('Helvetica').text(`${agencyName}, Bulacan`, { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(8).fillColor('#666').text(`Generated: ${fmtDateTime(new Date())} | Format: WCPD-EXPORT-v1`, { align: 'right' });
     doc.moveDown();
-    doc.fontSize(8).text(`Generated: ${new Date().toISOString()} | Format: WCPD-EXPORT-v1`, { align: 'right' });
-    doc.moveDown();
+    doc.fillColor('#111');
 
     // Horizontal rule
     doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
@@ -78,8 +84,8 @@ export class IrfExportService {
     doc.fontSize(10).font('Helvetica');
     doc.text(`Blotter Entry Number: ${irfData.case?.blotterEntryNumber || 'N/A'}`);
     doc.text(`Case Category: ${irfData.case?.caseCategory || 'N/A'}`);
-    doc.text(`Date Reported: ${irfData.case?.datetimeReported ? new Date(irfData.case.datetimeReported).toLocaleDateString() : 'N/A'}`);
-    doc.text(`Date of Incident: ${irfData.case?.datetimeIncident ? new Date(irfData.case.datetimeIncident).toLocaleDateString() : 'N/A'}`);
+    doc.text(`Date Reported: ${irfData.case?.datetimeReported ? fmtDateLong(irfData.case.datetimeReported) : 'N/A'}`);
+    doc.text(`Date of Incident: ${irfData.case?.datetimeIncident ? fmtDateLong(irfData.case.datetimeIncident) : 'N/A'}`);
     doc.text(`Case Disposition: ${irfData.case?.caseDisposition || 'N/A'}`);
     doc.moveDown();
 
@@ -88,16 +94,27 @@ export class IrfExportService {
     doc.moveDown(0.5);
     doc.fontSize(10).font('Helvetica');
 
-    if (irfData.parties?.reportingPerson) {
-      doc.text('Item A — Reporting Person:');
-      doc.fontSize(9).text(JSON.stringify(irfData.parties.reportingPerson, null, 2));
+    const renderRecord = (label: string, record: Record<string, any>) => {
+      doc.font('Helvetica-Bold').fontSize(10).text(label);
+      doc.font('Helvetica').fontSize(9);
+      Object.entries(record ?? {}).forEach(([key, value]) => {
+        const fieldLabel = key
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/^./, (ch) => ch.toUpperCase());
+        const text = value == null || value === '' ? 'N/A'
+          : typeof value === 'object' ? JSON.stringify(value) : String(value);
+        doc.font('Helvetica-Bold').text(`${fieldLabel}: `, { continued: true });
+        doc.font('Helvetica').text(text);
+      });
       doc.moveDown(0.5);
+    };
+
+    if (irfData.parties?.reportingPerson) {
+      renderRecord('Item A — Reporting Person', irfData.parties.reportingPerson);
     }
 
     if (irfData.parties?.personReported) {
-      doc.fontSize(10).font('Helvetica-Bold').text('Item B — Person Reported:');
-      doc.fontSize(9).font('Helvetica').text(JSON.stringify(irfData.parties.personReported, null, 2));
-      doc.moveDown(0.5);
+      renderRecord('Item B — Person Reported', irfData.parties.personReported);
     }
 
     // Narration section (only if decrypted)
@@ -112,8 +129,8 @@ export class IrfExportService {
     doc.fontSize(12).font('Helvetica-Bold').text('Signatures');
     doc.moveDown(0.5);
     doc.fontSize(10).font('Helvetica');
-    doc.text(`MSWDO Signature: ${irfData.signatures?.msdwSignatureUrl || 'Not provided'}`);
-    doc.text(`Reporting Party Signature: ${irfData.signatures?.reportingSignatureUrl || 'Not provided'}`);
+    doc.text(`MSWDO Signature: ${irfData.signatures?.msdwSignatureUrl ? 'Signed (on file)' : 'Not provided'}`);
+    doc.text(`Reporting Party Signature: ${irfData.signatures?.reportingSignatureUrl ? 'Signed (on file)' : 'Not provided'}`);
 
     // Footer with legal basis info
     doc.moveDown(2);

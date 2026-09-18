@@ -5,6 +5,7 @@ import { IrfCase, IrfDisposition } from './irf-case.entity';
 import { CreateIrfInput } from './dto/irf.zod';
 import { IrfKeyService } from './irf-key.service';
 import { IrfAuditService } from './irf-audit.service';
+import { OrgService } from '../common/org.service';
 
 const BLOTTER_PAD_WIDTH = 4;
 
@@ -28,6 +29,7 @@ export class IrfService {
     @InjectRepository(IrfCase) private irfRepo: Repository<IrfCase>,
     private irfKeyService: IrfKeyService,
     private irfAuditService: IrfAuditService,
+    private readonly org: OrgService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -243,7 +245,7 @@ export class IrfService {
         generatedAt: new Date(),
         legalBasis,
         format: 'WCPD-EXPORT-v1',
-        agency: 'MSWDO Norzagaray',
+        agency: await this.org.officeName(),
       },
       case: {
         blotterEntryNumber: irf.blotterEntryNumber,

@@ -27,6 +27,16 @@ export function exportFileName(caseType: string, caseNumber: string, date: Date 
   return `${caseType} ${caseNumber}-${y}-${m}-${d}.pdf`;
 }
 
+// Static geographic parts of the official letterhead stamped on every generated
+// PDF. The office name itself is NOT here — it is resolved from the agencies
+// table (MSWDO row) via OrgService so exports always print system data.
+export const ORG_LOCATION = {
+  country: 'Republic of the Philippines',
+  region: 'Region III',
+  province: 'Bulacan',
+  municipality: 'Norzagaray',
+} as const;
+
 // --- Auth / security ---
 export const BCRYPT_SALT_ROUNDS = 12;
 export const MIN_PASSWORD_LENGTH = 8;

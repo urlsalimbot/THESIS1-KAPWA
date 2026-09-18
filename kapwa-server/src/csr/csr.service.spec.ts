@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CsrService } from './csr.service';
+import { OrgService } from '../common/org.service';
 import { CsrRecord } from './csr.entity';
 
 describe('CsrService', () => {
@@ -21,6 +22,7 @@ describe('CsrService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CsrService,
+        { provide: OrgService, useValue: { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') } },
         { provide: getRepositoryToken(CsrRecord), useValue: repoMock },
       ],
     }).compile();

@@ -8,6 +8,7 @@ import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { Agency } from '../agencies/agency.entity';
 import { User } from '../auth/user.entity';
+import { OrgService } from '../common/org.service';
 
 const ACCESS_CARD_PAD_WIDTH = 4;
 @Injectable()
@@ -21,6 +22,7 @@ export class AccessCardsService {
     private referralRepo: Repository<InterAgencyReferral>,
     @InjectRepository(Agency)
     private agencyRepo: Repository<Agency>,
+    private readonly org: OrgService,
   ) {}
 
   async generateAndAssign(beneficiaryId: string): Promise<string> {
@@ -314,6 +316,7 @@ export class AccessCardsService {
       code,
       barangay,
       contact: p.phone ?? '',
+      officeName: await this.org.officeName(),
       nhtsPrId: p.nhts_pr_id ?? undefined,
       client: {
         surname: p.surname ?? '',

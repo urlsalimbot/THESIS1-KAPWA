@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ExportService } from './export.service';
+import { OrgService } from '../common/org.service';
 import { Case } from '../cases/case.entity';
 import { AuditService } from '../audit/audit.service';
 
@@ -25,6 +26,7 @@ describe('ExportService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExportService,
+        { provide: OrgService, useValue: { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') } },
         { provide: getRepositoryToken(Case), useValue: caseRepo },
         { provide: AuditService, useValue: auditService },
       ],

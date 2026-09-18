@@ -2,6 +2,7 @@ export interface AccessCardPdfData {
   code: string;
   barangay: string;
   contact: string;
+  officeName?: string;
   nhtsPrId?: string;
   client: {
     surname: string;

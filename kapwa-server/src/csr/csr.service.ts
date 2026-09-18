@@ -1,8 +1,10 @@
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
+import { ORG_LOCATION } from '../common/constants';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CsrRecord } from './csr.entity';
+import { OrgService } from '../common/org.service';
 import * as PDFDocument from 'pdfkit';
 
 const CSR_PAD_WIDTH = 4;
@@ -11,6 +13,7 @@ export class CsrService {
   constructor(
     @InjectRepository(CsrRecord)
     private readonly csrRepo: Repository<CsrRecord>,
+    private readonly org: OrgService,
   ) {}
 
   async create(data: Partial<CsrRecord>, userId: string): Promise<CsrRecord> {
@@ -60,6 +63,7 @@ export class CsrService {
 
   async generatePdf(controlNo: string): Promise<Buffer> {
     const record = await this.findByControlNo(controlNo);
+    const officeName = await this.org.officeName();
 
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
@@ -79,12 +83,12 @@ export class CsrService {
 
       const primaryColor = '#2E5C8A';
 
-      doc.fontSize(8).fillColor('#666').text('Republic of the Philippines', { align: 'center' });
+      doc.fontSize(8).fillColor('#666').text(ORG_LOCATION.country, { align: 'center' });
       doc.moveDown(0.3);
-      doc.fontSize(12).fillColor(primaryColor).font('Helvetica-Bold').text('MUNICIPAL SOCIAL WELFARE AND DEVELOPMENT OFFICE', { align: 'center' });
-      doc.fontSize(9).fillColor('#555').font('Helvetica').text('Norzagaray, Bulacan', { align: 'center' });
+      doc.fontSize(12).fillColor(primaryColor).font('Helvetica-Bold').text(officeName.toUpperCase(), { align: 'center' });
+      doc.fontSize(9).fillColor('#555').font('Helvetica').text(`${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`, { align: 'center' });
       doc.moveDown(0.5);
-      doc.fontSize(8).fillColor(primaryColor).text('═'.repeat(70), { align: 'center' });
+      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor(primaryColor).lineWidth(0.8).stroke();
       doc.moveDown(0.5);
       doc.fontSize(14).fillColor('#1a1a1a').font('Helvetica-Bold').text('FAMILY CASE STUDY REPORT', { align: 'center' });
       doc.fontSize(9).fillColor('#666').font('Helvetica').text(`CSR No. ${record.controlNo}`, { align: 'center' });

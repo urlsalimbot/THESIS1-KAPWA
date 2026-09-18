@@ -47,6 +47,7 @@ export interface GisPdfData {
   referrals: Array<{ reason: string }>;
   assignedWorkerName?: string | null;
   approvedByRole?: string | null;
+  officeName?: string | null;
   beneficiary: GisPersonData;
   claimant: GisPersonData;
   familyMembers: GisFamilyMemberData[];

@@ -1,4 +1,5 @@
 import { AccessCardPdfData } from './access-card-pdf.types';
+import { ORG_LOCATION } from '../common/constants';
 
 const PAGE_BOTTOM = 790;
 const LEFT = 50;
@@ -40,14 +41,14 @@ function fmtDate(v?: Date | string): string {
 
 function drawServicesHeader(doc: any, x: number, y: number): number {
   let cx = x;
-  doc.rect(x, y, SERVICES_COLS.reduce((a, b) => a + b, 0), 14).fillColor('#e6e6e6').fill();
+  doc.rect(x, y, SERVICES_COLS.reduce((a, b) => a + b, 0), 18).fillColor('#e6e6e6').fill();
   SERVICES_HEADER.forEach((label, i) => {
     doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111')
-      .text(label, cx + 2, y + 2, { width: SERVICES_COLS[i] - 4, ellipsis: true });
-    doc.rect(cx, y, SERVICES_COLS[i], 14).lineWidth(0.5).strokeColor('#999').stroke();
+      .text(label, cx + 2, y + 3, { width: SERVICES_COLS[i] - 4, height: 15 });
+    doc.rect(cx, y, SERVICES_COLS[i], 18).lineWidth(0.5).strokeColor('#999').stroke();
     cx += SERVICES_COLS[i];
   });
-  return y + 14;
+  return y + 18;
 }
 
 function drawServiceRows(doc: any, x: number, y: number, rows: AccessCardPdfData['services'], minRows: number): number {
@@ -68,8 +69,8 @@ function drawServiceRows(doc: any, x: number, y: number, rows: AccessCardPdfData
     let cx = x;
     SERVICES_COLS.forEach((w, ci) => {
       doc.rect(cx, y, w, 18).lineWidth(0.5).strokeColor('#999').stroke();
-      doc.font('Helvetica').fontSize(8).fillColor('#111')
-        .text(vals[ci] || '', cx + 2, y + 5, { width: w - 4, ellipsis: true });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#111')
+        .text(vals[ci] || '', cx + 2, y + 5, { width: w - 4, height: 11, ellipsis: true });
       cx += w;
     });
     y += 18;
@@ -84,7 +85,7 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
     margins: { top: 38, bottom: 40, left: LEFT - 15, right: RIGHT + 15 },
     info: {
       Title: `Access Card ${data.code}`,
-      Author: 'MSWDO Norzagaray',
+      Author: data.officeName ?? 'Municipal Social Welfare and Development Office',
       Subject: 'Family Access Card — Client Service Record',
       Keywords: [data.code, data.client.surname, data.client.firstName, ...data.familyMembers.map(m => m.fullName)].filter(Boolean).join(' | '),
     },
@@ -121,13 +122,14 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
 
   // Right column: header + client + family composition + signatures
   const rx = LEFT + WIDTH / 2;
+  const officeName = data.officeName ?? 'Municipal Social Welfare and Development Office';
   doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#111')
-    .text('Republic of the Philippines', rx + 10, 42, { align: 'right', width: WIDTH / 2 - 20 });
+    .text(ORG_LOCATION.country, rx + 10, 42, { align: 'right', width: WIDTH / 2 - 20 });
   doc.font('Helvetica').fontSize(8)
-    .text('Province of Bulacan', rx + 10, 52, { align: 'right', width: WIDTH / 2 - 20 });
-  doc.text('Municipality of Norzagaray', rx + 10, 60, { align: 'right', width: WIDTH / 2 - 20 });
+    .text(`Province of ${ORG_LOCATION.province}`, rx + 10, 52, { align: 'right', width: WIDTH / 2 - 20 });
+  doc.text(`Municipality of ${ORG_LOCATION.municipality}`, rx + 10, 60, { align: 'right', width: WIDTH / 2 - 20 });
   doc.font('Helvetica-Bold').fontSize(7).fillColor('#222')
-    .text('MUNICIPAL SOCIAL WELFARE & DEVELOPMENT OFFICE', rx + 10, 68, { align: 'right', width: WIDTH / 2 - 20 });
+    .text(officeName.toUpperCase(), rx + 10, 68, { align: 'right', width: WIDTH / 2 - 20 });
 
   doc.moveTo(rx, 80).lineTo(RIGHT, 80).lineWidth(0.8).strokeColor('#111').stroke();
   doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
@@ -234,7 +236,7 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
 
   doc.font('Helvetica').fontSize(5.5).fillColor('#888')
     .text(
-      'Municipal Social Welfare and Development Office | Norzagaray, Bulacan',
+      `${officeName} | ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`,
       LEFT, 792, { align: 'center', width: WIDTH },
     );
 

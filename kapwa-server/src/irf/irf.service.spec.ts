@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { IrfService } from './irf.service';
+import { OrgService } from '../common/org.service';
 import { IrfCase, IrfDisposition } from './irf-case.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { IrfKeyService } from './irf-key.service';
@@ -36,6 +37,7 @@ describe('IrfService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         IrfService,
+        { provide: OrgService, useValue: { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') } },
         { provide: getRepositoryToken(IrfCase), useValue: repoMock },
         { provide: IrfKeyService, useValue: keyServiceMock },
         { provide: IrfAuditService, useValue: auditServiceMock },

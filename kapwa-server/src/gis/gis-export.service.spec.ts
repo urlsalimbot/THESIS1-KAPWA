@@ -26,6 +26,7 @@ describe('GisExportService', () => {
   const caseRepoMock = { findOne: jest.fn() };
   const claimantRepoMock = { findOne: jest.fn() };
   const interventionRepoMock = { find: jest.fn() };
+  const orgMock = { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') };
 
   let service: GisExportService;
   beforeEach(() => {
@@ -33,10 +34,12 @@ describe('GisExportService', () => {
     caseRepoMock.findOne.mockResolvedValue(baseCase);
     claimantRepoMock.findOne.mockResolvedValue(null);
     interventionRepoMock.find.mockResolvedValue([]);
+    orgMock.officeName.mockResolvedValue('Municipal Social Welfare and Development Office');
     service = new GisExportService(
       caseRepoMock as any,
       claimantRepoMock as any,
       interventionRepoMock as any,
+      orgMock as any,
     );
   });
 

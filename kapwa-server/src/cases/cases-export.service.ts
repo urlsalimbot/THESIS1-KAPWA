@@ -5,6 +5,9 @@ import { Case } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { FilingService } from '../filing/filing.service';
+import { OrgService } from '../common/org.service';
+import { ORG_LOCATION } from '../common/constants';
+import { php, fmtDateLong, flowArrow } from '../common/pdf-format';
 
 @Injectable()
 export class CasesExportService {
@@ -18,6 +21,7 @@ export class CasesExportService {
     @InjectRepository(CaseIntervention)
     private interventionRepo: Repository<CaseIntervention>,
     private filing: FilingService,
+    private readonly org: OrgService,
   ) {}
 
   async generateCsrPdf(caseId: string): Promise<Buffer> {
@@ -26,6 +30,7 @@ export class CasesExportService {
       relations: ['beneficiary', 'beneficiary.person', 'beneficiary.household', 'assignedWorker'],
     });
     if (!c) throw new NotFoundException('Case not found');
+    const officeName = await this.org.officeName();
 
     const history = await this.historyRepo.find({
       where: { caseId },
@@ -52,7 +57,7 @@ export class CasesExportService {
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       info: {
         Title: `CSR-${c.controlNo}`,
-        Author: 'MSWDO Norzagaray',
+        Author: officeName,
         Subject: 'Case Study Report',
       },
     });
@@ -66,14 +71,14 @@ export class CasesExportService {
 
     const pageWidth = 545;
     const leftMargin = 50;
-    const y0 = doc.y;
     const col1X = leftMargin;
     const col2X = leftMargin + 260;
+    const colWidth = 240;
 
     function header(label: string, value: string, x: number = col1X, y?: number) {
       const pos = y ?? doc.y;
       doc.fontSize(7).font('Helvetica-Bold').fillColor('#666').text(label, x, pos, { continued: false });
-      doc.fontSize(9).font('Helvetica').fillColor('#111').text(value || '—', x, doc.y + 1);
+      doc.fontSize(9).font('Helvetica').fillColor('#111').text(value || '—', x, doc.y + 1, { width: colWidth });
       doc.moveDown(0.3);
     }
 
@@ -87,7 +92,7 @@ export class CasesExportService {
 
     // === HEADER ===
     doc.fontSize(16).font('Helvetica-Bold').fillColor('#1a1a1a').text('CASE STUDY REPORT', { align: 'center' });
-    doc.fontSize(10).font('Helvetica').fillColor('#555').text('MSWDO Norzagaray, Bulacan', { align: 'center' });
+    doc.fontSize(10).font('Helvetica').fillColor('#555').text(`${officeName}, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`, { align: 'center' });
     doc.moveDown(0.3);
     doc.fontSize(8).fillColor('#888').text(`Generated: ${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`, { align: 'center' });
     doc.moveDown(0.5);
@@ -127,6 +132,7 @@ export class CasesExportService {
     // === 1. BENEFICIARY INFORMATION ===
     sectionTitle('1. Beneficiary Information');
 
+    const benStartY = doc.y;
     doc.fontSize(9).fillColor('#444');
     const benLeft = [
       { label: 'Full Name', value: person ? `${person.firstName || ''} ${person.middleName || ''} ${person.surname || ''}`.trim() : '—' },
@@ -138,16 +144,16 @@ export class CasesExportService {
     const benRight = [
       { label: 'Address', value: person?.address || '—' },
       { label: 'Barangay', value: household?.barangay || person?.address?.split(',').pop()?.trim() || '—' },
-      { label: 'Estimated Income', value: household?.estimatedIncome ? `₱${Number(household.estimatedIncome).toLocaleString()}/mo` : '—' },
+      { label: 'Estimated Income', value: household?.estimatedIncome ? `${php(household.estimatedIncome)}/mo` : '—' },
       { label: 'Access Card', value: household?.accessCardCode || '—' },
       { label: 'Philsys #', value: person?.philsysNumber || '—' },
     ];
 
     benLeft.forEach((e) => { header(e.label, e.value, col1X); });
-    const maxBenY = doc.y;
-    doc.y = y0 + 48;
+    const leftEndY = doc.y;
+    doc.y = benStartY;
     benRight.forEach((e) => { header(e.label, e.value, col2X); });
-    doc.y = Math.max(maxBenY, doc.y);
+    doc.y = Math.max(leftEndY, doc.y);
 
     // === 2. ASSESSMENT SUMMARY ===
     sectionTitle('2. Assessment Summary');
@@ -159,7 +165,7 @@ export class CasesExportService {
       { label: 'FRVA Score', value: c.frvaScore != null ? String(c.frvaScore) : '—' },
       { label: 'SWDI Score', value: c.swdiScore != null ? String(c.swdiScore) : '—' },
       { label: 'Nature of Service', value: (c.natureOfService as string[])?.join(', ') || '—' },
-      { label: 'Amount of Assistance', value: c.amountAssistance != null ? `₱${Number(c.amountAssistance).toLocaleString()}` : '—' },
+      { label: 'Amount of Assistance', value: c.amountAssistance != null ? php(c.amountAssistance) : '—' },
       { label: 'Mode of Financial Assistance', value: c.modeFinancialAssistance || '—' },
       { label: 'Source of Fund', value: c.sourceOfFund || '—' },
       { label: 'Interviewed By', value: c.interviewedBy || '—' },
@@ -179,27 +185,31 @@ export class CasesExportService {
       doc.fontSize(9).font('Helvetica').fillColor('#888').text('No interventions recorded.', leftMargin, doc.y);
       doc.moveDown(0.5);
     } else {
-      const tableTop = doc.y;
       const colWidths = [25, 140, 80, 80, 60, 70];
       const headers3 = ['#', 'Service Name', 'Delivery Date', 'Category', 'Amount', 'Mode'];
 
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#fff');
-      let hx = leftMargin;
-      doc.roundedRect(leftMargin - 2, tableTop, pageWidth - leftMargin + 4, 16, 3).fillColor('#2563eb').fill();
-      doc.fillColor('#fff');
-      headers3.forEach((h, i) => {
-        doc.text(h, hx + 4, tableTop + 3, { width: colWidths[i] });
-        hx += colWidths[i];
-      });
+      const drawTableHeader = (top: number): void => {
+        let hx = leftMargin;
+        doc.roundedRect(leftMargin - 2, top, pageWidth - leftMargin + 4, 16, 3).fillColor('#2563eb').fill();
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#fff');
+        headers3.forEach((h, i) => {
+          doc.text(h, hx + 4, top + 3, { width: colWidths[i] });
+          hx += colWidths[i];
+        });
+        doc.fillColor('#111');
+      };
 
-      doc.fillColor('#111');
+      let cy = doc.y;
+      drawTableHeader(cy);
+      cy += 18;
+
       interventions.forEach((iv, i) => {
-        const rowY = tableTop + 18 + i * 16;
-        if (rowY > 720) {
+        if (cy + 16 > 760) {
           doc.addPage();
-          doc.y = 50;
+          cy = 50;
+          drawTableHeader(cy);
+          cy += 18;
         }
-        const cy = doc.y > tableTop + 18 ? doc.y : tableTop + 18 + i * 16;
         if (i % 2 === 0) {
           doc.rect(leftMargin - 2, cy - 2, pageWidth - leftMargin + 4, 16).fillColor('#f8fafc').fill();
         }
@@ -210,15 +220,16 @@ export class CasesExportService {
           iv.serviceName || '—',
           iv.deliveryDate ? new Date(iv.deliveryDate).toLocaleDateString('en-PH') : '—',
           iv.category || '—',
-          iv.amount != null ? `₱${Number(iv.amount).toLocaleString()}` : '—',
+          iv.amount != null ? php(iv.amount) : '—',
           iv.modeOfDelivery || '—',
         ];
         vals3.forEach((v, j) => {
           doc.text(v, dx + 3, cy, { width: colWidths[j] });
           dx += colWidths[j];
         });
-        doc.y = cy + 16;
+        cy += 16;
       });
+      doc.y = cy;
       doc.moveDown(0.5);
     }
 
@@ -252,7 +263,7 @@ export class CasesExportService {
         if (doc.y > 730) doc.addPage();
 
         doc.circle(leftMargin + 5, doc.y + 4, 3).fillColor('#2563eb').fill();
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#111').text(`${fromLabel} → ${toLabel}`, leftMargin + 14, doc.y - 7);
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#111').text(flowArrow(fromLabel, toLabel), leftMargin + 14, doc.y - 7);
         doc.fontSize(8).font('Helvetica').fillColor('#888').text(`${dateStr}${h.changedByRole ? ` · ${h.changedByRole.replace(/_/g, ' ')}` : ''}`, leftMargin + 14, doc.y + 2);
         doc.moveDown(0.5);
         if (h.remarks) {
@@ -284,7 +295,7 @@ export class CasesExportService {
     sectionTitle('7. Certification');
 
     doc.fontSize(9).font('Helvetica').fillColor('#444');
-    doc.text('This certifies that the above-named beneficiary has been served through the Comprehensive Case Management Program of the MSWDO Norzagaray, Bulacan.', {
+    doc.text(`This certifies that the above-named beneficiary has been served through the Comprehensive Case Management Program of the ${officeName}, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}.`, {
       align: 'justify',
     });
     doc.moveDown(1);
@@ -309,7 +320,7 @@ export class CasesExportService {
     for (let i = first; i < first + count; i++) {
       doc.switchToPage(i);
       doc.fontSize(7).font('Helvetica').fillColor('#aaa');
-      doc.text(`CSR-${c.controlNo} | Page ${i} of ${first + count - 1} | MSWDO Norzagaray`, leftMargin, 780, { align: 'center' });
+      doc.text(`CSR-${c.controlNo} | Page ${i} of ${first + count - 1} | ${officeName}`, leftMargin, 780, { align: 'center' });
     }
 
     doc.end();
@@ -426,35 +437,38 @@ export class CasesExportService {
     return [p?.firstName, p?.middleName, p?.surname].filter(Boolean).join(' ') || 'N/A';
   }
 
-  private buildCertificateOfEligibility(c: Case): Promise<Buffer> {
+  private async buildCertificateOfEligibility(c: Case): Promise<Buffer> {
+    const officeName = await this.org.officeName();
     const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    const doc = new PDFDocument({ size: 'A4', margin: 60, info: { Title: `COE-${c.controlNo}`, Author: officeName, Subject: 'Certificate of Eligibility' } });
     const chunks: Buffer[] = [];
     doc.on('data', (ch: Buffer) => chunks.push(ch));
     const done = new Promise<void>((resolve) => doc.on('end', resolve));
 
     const services = Array.isArray(c.serviceRequested) ? c.serviceRequested.join(', ') : '';
     const barangay = ((c.beneficiary as any)?.person?.address || '').split(',').pop()?.trim() || '';
-    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const dateStr = fmtDateLong(new Date());
+    const preparedBy = c.interviewedBy || c.assignedWorkerName || (c.assignedWorker as any)?.fullName || '';
 
-    doc.fontSize(14).font('Helvetica-Bold').text('Republic of the Philippines', { align: 'center' });
-    doc.fontSize(12).font('Helvetica').text('Municipal Social Welfare and Development Office', { align: 'center' });
-    doc.fontSize(10).text('Norzagaray, Bulacan', { align: 'center' });
+    doc.fontSize(14).font('Helvetica-Bold').text(ORG_LOCATION.country, { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text(officeName, { align: 'center' });
+    doc.fontSize(10).text(`${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`, { align: 'center' });
     doc.moveDown();
     doc.fontSize(16).font('Helvetica-Bold').text('CERTIFICATE OF ELIGIBILITY', { align: 'center' });
     doc.moveDown(2);
 
-    doc.fontSize(11).font('Helvetica').text(`This certifies that ${this.beneficiaryName(c)} of ${barangay}, Norzagaray, Bulacan has been assessed and found ELIGIBLE for the following assistance under Case No. ${c.controlNo}:`);
+    doc.fontSize(11).font('Helvetica').text(`This certifies that ${this.beneficiaryName(c)} of ${barangay}, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province} has been assessed and found ELIGIBLE for the following assistance under Case No. ${c.controlNo}:`);
     doc.moveDown();
     doc.fontSize(11).font('Helvetica').text(`Services: ${services || 'N/A'}`, { align: 'center' });
     if (c.amountAssistance != null) {
-      doc.fontSize(11).text(`Assistance Amount: Php ${Number(c.amountAssistance).toLocaleString()}`, { align: 'center' });
+      doc.fontSize(11).text(`Assistance Amount: ${php(c.amountAssistance)}`, { align: 'center' });
     }
     doc.moveDown();
     doc.fontSize(10).font('Helvetica').text(`This certification is issued upon the recommendation of the Social Worker and approval of the Municipal Social Welfare and Development Officer, in accordance with prevailing DSWD and LGU guidelines.`);
     doc.moveDown(3);
-    doc.fontSize(10).font('Helvetica').text('____________________________', { align: 'center' });
-    doc.fontSize(10).text('MSWDO Officer / Social Worker', { align: 'center' });
+    doc.fontSize(10).font('Helvetica').text(preparedBy || ' ', { align: 'center' });
+    doc.fontSize(10).text('____________________________', { align: 'center' });
+    doc.fontSize(10).text('Social Worker / Case Officer', { align: 'center' });
     doc.moveDown();
     doc.fontSize(9).text(`Issued on ${dateStr}`, { align: 'right' });
 
@@ -462,20 +476,21 @@ export class CasesExportService {
     return done.then(() => Buffer.concat(chunks));
   }
 
-  private buildPettyCashVoucher(c: Case): Promise<Buffer> {
+  private async buildPettyCashVoucher(c: Case): Promise<Buffer> {
+    const officeName = await this.org.officeName();
     const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    const doc = new PDFDocument({ size: 'A4', margin: 60, info: { Title: `PCV-${c.controlNo}`, Author: officeName, Subject: 'Petty Cash Voucher' } });
     const chunks: Buffer[] = [];
     doc.on('data', (ch: Buffer) => chunks.push(ch));
     const done = new Promise<void>((resolve) => doc.on('end', resolve));
 
     const amount = c.amountAssistance != null ? Number(c.amountAssistance) : 0;
     const fundSource = c.sourceOfFund || 'LGU - Municipal';
-    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const dateStr = fmtDateLong(new Date());
 
-    doc.fontSize(14).font('Helvetica-Bold').text('Republic of the Philippines', { align: 'center' });
-    doc.fontSize(12).font('Helvetica').text('Municipal Social Welfare and Development Office', { align: 'center' });
-    doc.fontSize(10).text('Norzagaray, Bulacan', { align: 'center' });
+    doc.fontSize(14).font('Helvetica-Bold').text(ORG_LOCATION.country, { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text(officeName, { align: 'center' });
+    doc.fontSize(10).text(`${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`, { align: 'center' });
     doc.moveDown();
     doc.fontSize(16).font('Helvetica-Bold').text('PETTY CASH VOUCHER', { align: 'center' });
     doc.moveDown(2);
@@ -484,7 +499,7 @@ export class CasesExportService {
     doc.text(`Case No.: ${c.controlNo}`);
     doc.text(`Date: ${dateStr}`);
     doc.moveDown();
-    doc.fontSize(11).text(`AMOUNT: Php ${amount.toLocaleString()}`, { align: 'center' });
+    doc.fontSize(11).text(`AMOUNT: ${php(amount)}`, { align: 'center' });
     doc.moveDown();
     doc.text(`Fund Source: ${fundSource}`);
     doc.moveDown(2);
@@ -508,7 +523,7 @@ export class CasesExportService {
   async generateApprovalDocuments(caseId: string, actorId?: string): Promise<{ certificateUrl?: string; pettyCashVoucherUrl?: string }> {
     const c = await this.caseRepo.findOne({
       where: { id: caseId },
-      relations: ['beneficiary', 'beneficiary.person', 'assistances'],
+      relations: ['beneficiary', 'beneficiary.person', 'assistances', 'assignedWorker'],
     });
     if (!c) throw new NotFoundException('Case not found');
 

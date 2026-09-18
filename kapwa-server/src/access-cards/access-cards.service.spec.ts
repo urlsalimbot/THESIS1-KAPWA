@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccessCardsService } from './access-cards.service';
+import { OrgService } from '../common/org.service';
 import { AccessCardService } from './access-card-service.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
@@ -42,6 +43,7 @@ describe('AccessCardsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccessCardsService,
+        { provide: OrgService, useValue: { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') } },
         { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
         { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepoMock },
@@ -355,6 +357,7 @@ describe('AccessCardsService — ensureHouseholdCard', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccessCardsService,
+        { provide: OrgService, useValue: { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') } },
         { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
         { provide: getRepositoryToken(ConsentLedger), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: { find: jest.fn() } },
@@ -419,6 +422,7 @@ describe('AccessCardsService.generateAccessCardPdf', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccessCardsService,
+        { provide: OrgService, useValue: { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') } },
         { provide: getRepositoryToken(AccessCardService), useValue: repoMock },
         { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepoMock },

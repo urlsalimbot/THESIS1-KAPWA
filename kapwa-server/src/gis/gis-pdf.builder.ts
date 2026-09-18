@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { GisPdfData } from './gis-export.types';
+import { ORG_LOCATION } from '../common/constants';
 
 const FORM_NUMBER = 'DSWD PMB-FO3-07-011 | REV 01 / 30 SEPT 2022';
 const BANNER_TEXT = 'MAARING MAGPATULONG SUMAGOT SA DSWD PERSONNEL';
@@ -100,7 +101,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
     margins: { top: 38, bottom: 40, left: LEFT - 15, right: RIGHT + 15 },
     info: {
       Title: `GIS-${data.controlNo}`,
-      Author: 'MSWDO Norzagaray',
+      Author: data.officeName ?? 'Municipal Social Welfare and Development Office',
       Subject: 'General Intake Sheet',
       Keywords: keywords,
     },
@@ -173,7 +174,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   lineField(doc, LEFT + 140, y + 20, 115, 'Barangay', ben.address.barangay);
   lineField(doc, LEFT + 260, y + 20, 115, 'City/Municipality', ben.address.city);
   lineField(doc, LEFT + 380, y + 20, 55, 'Province/District', ben.address.province);
-  lineField(doc, LEFT + 440, y + 20, 55, 'Region', ben.address.region || 'III');
+  lineField(doc, LEFT + 440, y + 20, 55, 'Region', ben.address.region || ORG_LOCATION.region);
 
   const benRow3: Array<[string, unknown]> = [
     ['Telepono', ben.phone],
@@ -208,7 +209,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   lineField(doc, LEFT + 140, y + 20, 115, 'Barangay', clm.address.barangay);
   lineField(doc, LEFT + 260, y + 20, 115, 'City/Municipality', clm.address.city);
   lineField(doc, LEFT + 380, y + 20, 55, 'Province/District', clm.address.province);
-  lineField(doc, LEFT + 440, y + 20, 55, 'Region', clm.address.region || 'III');
+  lineField(doc, LEFT + 440, y + 20, 55, 'Region', clm.address.region || ORG_LOCATION.region);
 
   const clmRow3: Array<[string, unknown]> = [
     ['Telepono', clm.phone],
@@ -388,7 +389,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   doc.font('Helvetica').fontSize(5.5).fillColor('#888')
     .text(
-      'DSWD Field Office III, Municipal Social Welfare and Development Office | Norzagaray, Bulacan | Tel. (044) 963-2141 | www.dswd.gov.ph',
+      `${data.officeName ?? 'Municipal Social Welfare and Development Office'} | ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`,
       LEFT, 792, { align: 'center', width: WIDTH },
     );
 

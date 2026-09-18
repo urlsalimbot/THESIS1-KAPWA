@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Case } from '../cases/case.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
+import { OrgService } from '../common/org.service';
 import { loadGisData } from './gis-export.loader';
 import { buildGisPdf } from './gis-pdf.builder';
 
@@ -15,6 +16,7 @@ export class GisExportService {
     @InjectRepository(Case) private readonly caseRepo: Repository<Case>,
     @InjectRepository(BeneficiaryClaimant) private readonly claimantRepo: Repository<BeneficiaryClaimant>,
     @InjectRepository(CaseIntervention) private readonly interventionRepo: Repository<CaseIntervention>,
+    private readonly org: OrgService,
   ) {}
 
   async generateGisPdf(caseId: string): Promise<Buffer> {
@@ -22,6 +24,7 @@ export class GisExportService {
       { caseRepo: this.caseRepo, claimantRepo: this.claimantRepo, interventionRepo: this.interventionRepo },
       caseId,
     );
+    data.officeName = await this.org.officeName();
     const pdf = await buildGisPdf(data);
     this.logger.warn(`GIS export: case ${caseId} (${data.controlNo}), ${pdf.length} bytes`);
     return pdf;

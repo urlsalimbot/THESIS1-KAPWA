@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CasesExportService } from './cases-export.service';
+import { OrgService } from '../common/org.service';
 import { Case, CaseStatus } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
@@ -47,6 +48,7 @@ describe('CasesExportService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CasesExportService,
+        { provide: OrgService, useValue: { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') } },
         { provide: getRepositoryToken(Case), useValue: caseRepoMock },
         { provide: getRepositoryToken(CaseHistory), useValue: historyRepoMock },
         { provide: getRepositoryToken(CaseIntervention), useValue: { find: jest.fn().mockResolvedValue([]) } },
