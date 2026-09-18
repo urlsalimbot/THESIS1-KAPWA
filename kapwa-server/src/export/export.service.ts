@@ -352,7 +352,12 @@ export class ExportService {
           ? 'is hereby certified as ELIGIBLE to receive assistance and social services from this office.'
           : 'is hereby referred to the appropriate agency for the necessary intervention and assistance.';
 
-    doc.fontSize(12).font('Helvetica').text(`This certifies that ${data.fullName}${data.address ? ` of ${data.address}, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}` : ''} ${certification}`);
+    const address = data.address?.trim();
+    const addressSuffix = address && !address.toLowerCase().includes(ORG_LOCATION.municipality.toLowerCase())
+      ? `, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`
+      : '';
+
+    doc.fontSize(12).font('Helvetica').text(`This certifies that ${data.fullName}${address ? ` of ${address}${addressSuffix}` : ''} ${certification}`);
     if (data.details) {
       doc.moveDown();
       doc.text(data.details);

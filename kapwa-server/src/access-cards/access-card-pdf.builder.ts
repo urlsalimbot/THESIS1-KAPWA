@@ -28,7 +28,7 @@ const PAALALA_LINES = [
 ];
 
 const SERVICES_HEADER = ['DATE', 'SERVICES RENDERED\n(Including Cost if any)', 'BY AGENCY', "WORKER'S NAME\n& SIGNATURE"];
-const SERVICES_COLS = [37, 94, 67, 49.5]; // sums to WIDTH/2 = 247.5
+const SERVICES_COLS = [44, 89, 66, 48.5]; // sums to WIDTH/2 = 247.5
 
 function fmtDate(v?: Date | string): string {
   if (!v) return '';

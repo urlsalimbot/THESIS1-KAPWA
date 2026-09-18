@@ -84,7 +84,7 @@ export class CasesExportService {
 
     function sectionTitle(title: string) {
       doc.moveDown(0.5);
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a1a').text(title);
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a1a').text(title, leftMargin, doc.y);
       doc.moveTo(leftMargin, doc.y).lineTo(pageWidth, doc.y).strokeColor('#ccc').stroke();
       doc.moveDown(0.3);
       doc.fillColor('#111');
