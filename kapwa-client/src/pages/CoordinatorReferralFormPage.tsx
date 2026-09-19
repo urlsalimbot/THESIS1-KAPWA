@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { humanizeError } from '@/lib/errors';
 import { User, MapPin, FileText, Phone, Send } from 'lucide-react';
 
 export function CoordinatorReferralFormPage() {
@@ -50,7 +51,7 @@ export function CoordinatorReferralFormPage() {
       navigate('/coordinator/referrals');
     } catch (err: any) {
       setError(err?.message || t('coordinator.submitFailed', 'Failed to submit referral'));
-      toast.error(t('coordinator.submitFailed', 'Failed to submit referral'), { description: err?.message || t('coordinator.tryAgain', 'Please try again.') });
+      toast.error(t('coordinator.submitFailed', 'Could not submit referral'), { description: humanizeError(err) });
     } finally {
       setSubmitting(false);
     }

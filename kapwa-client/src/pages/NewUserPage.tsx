@@ -7,6 +7,7 @@ import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import useSWR from 'swr';
 import { toast } from 'sonner';
+import { humanizeError } from '@/lib/errors';
 import { ArrowLeft, UserPlus, Loader2 } from 'lucide-react';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -101,10 +102,10 @@ export function NewUserPage() {
         body.agency_id = agencyId;
       }
       await api.post('/users', body);
-      toast.success(t('usersPanel.userCreated', 'User created successfully'));
+      toast.success(t('usersPanel.userCreated', 'User created'));
       navigate('/admin?tab=users');
     } catch (e: any) {
-      toast.error(e?.message || t('usersPanel.createFailed', 'Failed to create user'));
+      toast.error(t('usersPanel.createFailed', 'Could not create user'), { description: humanizeError(e) });
     }
   }
 

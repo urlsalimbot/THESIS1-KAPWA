@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { api } from '../../lib/api';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { humanizeError } from '../../lib/errors';
 
 interface NameMaskToggleProps {
   irfId: string;
@@ -15,14 +17,19 @@ export default function NameMaskToggle({ irfId, legalBasis: initialLegalBasis, o
   const [loading, setLoading] = useState(false);
 
   async function handleUnlock() {
-    if (!legalBasis) return alert(t('irf.legalBasisRequired', 'Legal basis code required'));
+    if (!legalBasis) {
+      toast.error(t('irf.legalBasisRequired', 'Legal basis required'), {
+        description: t('irf.legalBasisRequiredDesc', 'Enter the legal basis and reference before unlocking names.'),
+      });
+      return;
+    }
     setLoading(true);
     try {
       const data = await api.get(`/irf/${irfId}/unmask-names?legalBasis=${encodeURIComponent(legalBasis)}`);
       setUnlocked(true);
       onUnlock(data);
     } catch (e) {
-      alert(t('irf.unlockFailed', 'Unlock failed — verify legal basis code'));
+      toast.error(t('irf.unlockFailed', 'Could not unlock names'), { description: t('irf.verifyLegalBasis', 'Check the legal basis and reference, then try again.') });
     }
     setLoading(false);
   }

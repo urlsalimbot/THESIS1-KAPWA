@@ -20,15 +20,22 @@ export async function showBulkProgress(
       toast.loading(t('bulkActions.progress', '{{label}} {{done}}/{{total}}...', { label: actionLabel, done: completed, total }), { id: toastId });
     } catch {
       failed.push(id);
-      toast.error(t('bulkActions.failed', '{{label}} failed', { label: actionLabel }), { description: t('bulkActions.couldNotProcess', '{{id}} could not be processed.', { id }), id: `err-${id}` });
     }
   }
 
+  // Failures are summarised in the single progress toast; one toast per failed
+  // row flooded the screen for large selections.
   if (failed.length === 0) {
     toast.success(t('bulkActions.complete', '{{label}} complete', { label: actionLabel }), { description: t('bulkActions.allProcessed', 'All {{count}} case(s) processed.', { count: total }), id: toastId });
   } else if (completed > 0) {
-    toast.warning(t('bulkActions.partialSuccess', 'Partial success'), { description: t('bulkActions.partialDesc', '{{done}}/{{total}} succeeded, {{failed}} failed.', { done: completed, total, failed: failed.length }), id: toastId });
+    toast.warning(t('bulkActions.partialSuccess', 'Partial success'), {
+      description: t('bulkActions.partialDesc', '{{done}} of {{total}} succeeded, {{failed}} failed.', { done: completed, total, failed: failed.length }),
+      id: toastId,
+    });
   } else {
-    toast.error(t('bulkActions.failed', '{{label}} failed', { label: actionLabel }), { description: t('bulkActions.allFailed', 'All {{count}} case(s) failed.', { count: total }), id: toastId });
+    toast.error(t('bulkActions.failed', '{{label}} failed', { label: actionLabel }), {
+      description: t('bulkActions.allFailed', 'All {{count}} case(s) failed. Please try again.', { count: total }),
+      id: toastId,
+    });
   }
 }

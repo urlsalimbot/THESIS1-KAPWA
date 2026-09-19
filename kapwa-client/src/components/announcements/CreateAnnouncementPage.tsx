@@ -15,7 +15,7 @@ export function CreateAnnouncementPage() {
     setSaving(status);
     try {
       await api.post(['announcements'], { ...values, status });
-      toast.success(status === 'published' ? t('announcements.publishSuccess', 'Published!') : t('announcements.savedDraft', 'Saved as draft'));
+      toast.success(status === 'published' ? t('announcements.publishSuccess', 'Published') : t('announcements.savedDraft', 'Saved as draft'));
       navigate('/announcements/manage');
     } catch {
       toast.error(t('announcements.saveFailed', 'Failed to save'));

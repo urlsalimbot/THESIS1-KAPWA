@@ -2,6 +2,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { humanizeError } from '@/lib/errors';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuth } from '@/lib/auth-context';
 import { PageShell } from '@/components/PageShell';
@@ -34,7 +36,7 @@ export function AgencyReferralDetailPage() {
       await api.patch(`/inter-agency-referrals/${transitionId}/${action}`, body);
       if (id) await mutate(queryKeys.interAgencyReferrals.detail(id));
     } catch (err: any) {
-      alert(err?.message || t('agency.transitionFailed', 'Transition failed'));
+      toast.error(t('agency.transitionFailed', 'Could not update this referral'), { description: humanizeError(err) });
     }
   }
 

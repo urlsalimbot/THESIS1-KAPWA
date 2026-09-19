@@ -54,7 +54,7 @@ export function AnnouncementDetailPage() {
     if (!data) return;
     try {
       await api.patch(['announcements', data.id], { status: data.status === 'published' ? 'draft' : 'published' });
-      toast.success(data.status === 'published' ? t('announcements.unpublished', 'Unpublished') : t('announcements.publishSuccess', 'Published!'));
+      toast.success(data.status === 'published' ? t('announcements.unpublished', 'Unpublished') : t('announcements.publishSuccess', 'Published'));
       mutate();
     } catch {
       toast.error(t('announcements.publishFailed', 'Failed to publish announcement'));

@@ -447,3 +447,56 @@ input[type="number"] {
 #root {
   @apply min-h-screen flex flex-col;
 }
+
+/* Toast status accents. The surface stays neutral (card background); the left
+   accent bar and the icon carry the status so success/error/warning/info are
+   distinguishable at a glance. Sonner's own rules use `[data-styled="true"]`
+   with a border shorthand, so these selectors match that specificity and are
+   declared after the app bundle. */
+ol[data-sonner-toaster],
+ol[data-sonner-toaster][data-sonner-theme='light'],
+ol[data-sonner-toaster][data-sonner-theme='dark'],
+ol[data-sonner-toaster][data-sonner-theme='system'] {
+  --normal-bg: var(--card);
+  --normal-text: var(--card-foreground);
+  --normal-border: var(--border);
+  --success-bg: var(--card);
+  --success-text: var(--card-foreground);
+  --success-border: var(--success);
+  --error-bg: var(--card);
+  --error-text: var(--card-foreground);
+  --error-border: var(--destructive);
+  --warning-bg: var(--card);
+  --warning-text: var(--card-foreground);
+  --warning-border: var(--warning);
+  --info-bg: var(--card);
+  --info-text: var(--card-foreground);
+  --info-border: var(--primary);
+}
+
+/* Toast surface: always the app card colour (sonner's own theme defaults are
+   black/white). Specificity outranks sonner's injected `[data-styled]` rules. */
+[data-sonner-toast][data-styled][data-type] {
+  background: var(--card);
+  color: var(--card-foreground);
+  border-color: var(--border);
+}
+
+[data-sonner-toast][data-styled][data-type='success'] { border-left: 4px solid var(--success); }
+[data-sonner-toast][data-styled][data-type='success'] [data-icon] { color: var(--success); }
+[data-sonner-toast][data-styled][data-type='error'] { border-left: 4px solid var(--destructive); }
+[data-sonner-toast][data-styled][data-type='error'] [data-icon] { color: var(--destructive); }
+[data-sonner-toast][data-styled][data-type='warning'] { border-left: 4px solid var(--warning); }
+[data-sonner-toast][data-styled][data-type='warning'] [data-icon] { color: var(--warning); }
+[data-sonner-toast][data-styled][data-type='info'] { border-left: 4px solid var(--primary); }
+[data-sonner-toast][data-styled][data-type='info'] [data-icon] { color: var(--primary); }
+[data-sonner-toast][data-styled][data-type='loading'] { border-left: 4px solid var(--muted-foreground); }
+[data-sonner-toast][data-styled][data-type='loading'] [data-icon] { color: var(--muted-foreground); }
+
+/* Never clip toast copy: long error messages wrap instead of truncating. */
+[data-sonner-toast] [data-title],
+[data-sonner-toast] [data-description] {
+  overflow-wrap: anywhere;
+}
+
+

@@ -755,7 +755,7 @@ const en = {
     "published": "Published",
     "publishedOn": "Published",
     "publishFailed": "Failed to publish announcement",
-    "publishSuccess": "Published!",
+    "publishSuccess": "Published",
     "readAria": "Read: {{title}}",
     "readMore": "Read more",
     "savedDraft": "Saved as draft",

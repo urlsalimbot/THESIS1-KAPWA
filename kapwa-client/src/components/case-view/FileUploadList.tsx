@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { api, uploadWithProgress, downloadFilingDoc, getFilingObjectUrl } from '@/lib/api';
+import { humanizeError } from '@/lib/errors';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -108,10 +109,12 @@ export function FileUploadList({
       toast.success(t('caseView.documents.uploaded', 'Uploaded {{name}}', { name: file.name }));
       onChanged();
     } catch (e: any) {
-      toast.error(
-        t('caseView.documents.uploadFailed', 'Failed to upload {{name}}', { name: file.name }) +
-          (e?.message ? `: ${e.message}` : ''),
-      );
+      toast.error(t('caseView.documents.uploadFailed', 'Upload failed'), {
+        description: t('caseView.documents.uploadFailedDesc', '{{name}} could not be uploaded. {{reason}}', {
+          name: file.name,
+          reason: humanizeError(e, 'Please check the file and try again.'),
+        }),
+      });
     } finally {
       setInFlight(null);
     }
@@ -132,7 +135,9 @@ export function FileUploadList({
       setRemoveId(null);
       onChanged();
     } catch (e: any) {
-      toast.error(e?.message || t('caseView.documents.removeFailed', 'Failed to remove document'));
+      toast.error(t('caseView.documents.removeFailed', 'Could not remove document'), {
+        description: humanizeError(e),
+      });
     } finally {
       setRemoving(false);
     }

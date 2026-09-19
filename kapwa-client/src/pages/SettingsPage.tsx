@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { humanizeError } from '@/lib/errors';
 import { Shield, Smartphone, CheckCircle, Mail, Lock, Bell, User, Copy, Eye, EyeOff, KeyRound, Languages, Phone, Save } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 
@@ -59,7 +60,7 @@ function ProfileTab() {
         toast.success(t('settings.verificationSent', 'Verification sent'), { description: t('settings.checkNewEmail', 'Check your new email inbox.') });
       },
       onError: (err) => {
-        toast.error(t('settings.emailUpdateFailed', 'Failed to update email'), { description: err.message || t('settings.tryAgain', 'Please try again.') });
+        toast.error(t('settings.emailUpdateFailed', 'Failed to update email'), { description: humanizeError(err) });
       },
     },
   );
@@ -84,7 +85,7 @@ function ProfileTab() {
         setPwError('');
       },
       onError: (err) => {
-        toast.error(t('settings.passwordChangeFailed', 'Failed to change password'), { description: err.message || t('settings.tryAgain', 'Please try again.') });
+        toast.error(t('settings.passwordChangeFailed', 'Failed to change password'), { description: humanizeError(err) });
       },
     },
   );
@@ -103,7 +104,7 @@ function ProfileTab() {
       toast.success(t('settings.phoneUpdated', 'Phone number updated'), { description: t('settings.contactSaved', 'Your contact info has been saved.') });
       globalMutate(queryKeys.auth.me());
     } catch (err: any) {
-      toast.error(t('settings.phoneUpdateFailed', 'Failed to update phone'), { description: err.message || t('settings.tryAgain', 'Please try again.') });
+      toast.error(t('settings.phoneUpdateFailed', 'Failed to update phone'), { description: humanizeError(err) });
     } finally {
       setPhoneSaving(false);
     }

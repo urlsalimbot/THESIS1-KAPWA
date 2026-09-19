@@ -1,4 +1,5 @@
 import { ApiError } from './api-error';
+import { apiErrorMessage } from './errors';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'kapwa_token';
@@ -91,7 +92,7 @@ async function rawRequest<T>(
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => null);
-      throw new ApiError(res.status, errBody, res.statusText);
+      throw new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
     }
     return (await res.json()) as T;
   } finally {
@@ -200,7 +201,7 @@ export const api = {
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => null);
-      throw new ApiError(res.status, errBody, res.statusText);
+      throw new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
     }
     return res.json();
   },
@@ -234,7 +235,7 @@ export async function uploadWithProgress<T>(
       } else {
         let body: unknown = null;
         try { body = JSON.parse(xhr.responseText); } catch { /* ignore */ }
-        reject(new ApiError(xhr.status, body, xhr.statusText));
+        reject(new ApiError(xhr.status, body, apiErrorMessage(xhr.status, body)));
       }
     };
     xhr.onerror = () => reject(new Error('Network error'));

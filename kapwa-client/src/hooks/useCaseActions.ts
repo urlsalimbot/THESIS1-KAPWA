@@ -6,6 +6,8 @@ import { queryKeys } from '../lib/query-keys';
 import { toast } from 'sonner';
 import { isOnline } from '../lib/sync';
 import { queueFsmTransition } from '../lib/offline-queue';
+import { humanizeError } from '../lib/errors';
+import i18n from '../i18n';
 
 export function useCaseActions() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -40,12 +42,16 @@ export function useCaseActions() {
             // the assessed transition); queue the matching target state so the
             // sync applies a valid FSM step.
             await queueFsmTransition(caseId, 'assessed');
-            toast.success('Review request queued — will sync when online.');
+            toast.success(i18n.t('caseView.actions.queued', 'Saved offline'), {
+              description: i18n.t('caseView.actions.queuedDesc', 'The review request will be sent when you are back online.'),
+            });
           }
           break;
         case 'disburse':
           if (!isOnline()) {
-            alert('This action requires an internet connection.');
+            toast.warning(i18n.t('common.onlineRequired', 'Connection required'), {
+              description: i18n.t('common.onlineRequiredDesc', 'This action needs an internet connection.'),
+            });
             setActionLoading(null);
             return;
           }
@@ -53,7 +59,9 @@ export function useCaseActions() {
           break;
         case 'close':
           if (!isOnline()) {
-            alert('This action requires an internet connection.');
+            toast.warning(i18n.t('common.onlineRequired', 'Connection required'), {
+              description: i18n.t('common.onlineRequiredDesc', 'This action needs an internet connection.'),
+            });
             setActionLoading(null);
             return;
           }
@@ -61,7 +69,9 @@ export function useCaseActions() {
           break;
         case 'override':
           if (!isOnline()) {
-            alert('This action requires an internet connection.');
+            toast.warning(i18n.t('common.onlineRequired', 'Connection required'), {
+              description: i18n.t('common.onlineRequiredDesc', 'This action needs an internet connection.'),
+            });
             setActionLoading(null);
             return;
           }
@@ -71,7 +81,9 @@ export function useCaseActions() {
       await mutate(queryKeys.cases.all, undefined, { revalidate: true });
     } catch (err) {
       console.error(`Action ${action} failed:`, err);
-      alert(`Action failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      toast.error(i18n.t('caseView.actions.failed', 'Action could not be completed'), {
+        description: humanizeError(err),
+      });
     }
     setActionLoading(null);
   }

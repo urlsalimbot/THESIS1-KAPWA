@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Shield } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, exportIrfPdf } from '../lib/api';
+import { toast } from 'sonner';
+import { humanizeError } from '../lib/errors';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -73,7 +75,7 @@ export function IrfPage() {
       setExportIrfId(null);
       setLegalBasis('');
       setPdfPassword('');
-    } catch (e) { console.error('PDF export:', e); alert(t('irf.pdfExportFailed', 'PDF export failed')); }
+    } catch (e) { console.error('PDF export:', e); toast.error(t('irf.pdfExportFailed', 'PDF export failed'), { description: humanizeError(e) }); }
     setExporting(false);
   }
 
@@ -92,7 +94,7 @@ export function IrfPage() {
       setExportIrfId(null);
       setLegalBasis('');
       setPdfPassword('');
-    } catch (e) { console.error('JSON export:', e); alert(t('irf.jsonExportFailed', 'JSON export failed')); }
+    } catch (e) { console.error('JSON export:', e); toast.error(t('irf.jsonExportFailed', 'JSON export failed'), { description: humanizeError(e) }); }
     setExporting(false);
   }
 

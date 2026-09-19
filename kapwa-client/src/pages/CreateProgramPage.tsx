@@ -8,6 +8,7 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { humanizeError } from '@/lib/errors';
 import { Plus, Trash2, FileText, ClipboardList, ArrowRight, Landmark, Scale, Coins } from 'lucide-react';
 
 interface WorkflowStep { stepName: string; approverRole: string; slaDays: string; }
@@ -69,7 +70,7 @@ export function CreateProgramPage() {
       globalMutate(queryKeys.programs.list());
       navigate('/admin/programs');
     } catch (err: any) {
-      toast.error(t('programs.createFailed', 'Failed to create program'), { description: err.message || t('programs.checkInput', 'Please check your input and try again.') });
+      toast.error(t('programs.createFailed', 'Could not create program'), { description: humanizeError(err) });
     } finally {
       setSubmitting(false);
     }

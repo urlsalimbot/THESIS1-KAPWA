@@ -172,7 +172,8 @@ function swrErrorHandler(error: unknown) {
 export function MainRoutes() {
   return (
     <ThemeProvider>
-      <Toaster position="top-center" closeButton duration={6000} />
+      {/* Position, gap and close button come from the Toaster defaults. */}
+      <Toaster duration={6000} />
       <AuthProvider>
         <SWRConfig
           value={{

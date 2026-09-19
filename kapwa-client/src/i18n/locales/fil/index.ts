@@ -1259,7 +1259,7 @@ const fil: EnLocale = {
     "published": "Nai-publish",
     "publishedOn": "Nai-publish",
     "publishFailed": "Nabigo ang pag-publish ng anunsyo",
-    "publishSuccess": "Nai-publish na!",
+    "publishSuccess": "Nai-publish na",
     "readAria": "Basahin: {{title}}",
     "readMore": "Magbasa pa",
     "savedDraft": "Na-save bilang Burahon",
