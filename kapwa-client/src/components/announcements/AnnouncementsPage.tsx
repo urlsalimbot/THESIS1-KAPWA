@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
-import { api } from '@/lib/api';
+import { api, publicAnnouncementPhotoUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -105,7 +105,7 @@ export function AnnouncementsPage() {
                 <div className="flex items-start gap-4 p-4">
                   {a.coverPhotoId && (
                     <img
-                      src={`/announcements/public/photo/${a.coverPhotoId}`}
+                      src={publicAnnouncementPhotoUrl(a.coverPhotoId)}
                       alt={t('announcements.photoCover', 'Cover photo')}
                       className="h-16 w-24 rounded-md object-cover shrink-0"
                       loading="lazy"

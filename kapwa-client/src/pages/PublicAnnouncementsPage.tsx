@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
-import { api } from '@/lib/api';
+import { api, publicAnnouncementPhotoUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Megaphone, Pin, CalendarDays, ArrowRight } from 'lucide-react';
 
@@ -82,7 +82,7 @@ export function PublicAnnouncementsPage() {
               <div className="flex items-start gap-4">
                 {a.coverPhotoId && (
                   <img
-                    src={`/announcements/public/photo/${a.coverPhotoId}`}
+                    src={publicAnnouncementPhotoUrl(a.coverPhotoId)}
                     alt={t('announcements.photoCover', 'Cover photo')}
                     className="h-20 w-28 rounded-lg object-cover shrink-0"
                     loading="lazy"

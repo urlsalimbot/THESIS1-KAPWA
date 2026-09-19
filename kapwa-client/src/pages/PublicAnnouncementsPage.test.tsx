@@ -4,10 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { PublicAnnouncementsPage } from './PublicAnnouncementsPage';
 
+const API = 'http://localhost:3000/api/v1';
+
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
   api: { get: (...args: unknown[]) => mockApiGet(...args) },
+  publicAnnouncementPhotoUrl: (id: string) => `http://localhost:3000/api/v1/announcements/public/photo/${id}`,
 }));
 
 function renderPage() {
@@ -39,5 +42,17 @@ describe('PublicAnnouncementsPage', () => {
     mockApiGet.mockResolvedValue([]);
     renderPage();
     expect(await screen.findByText('No announcements yet.')).toBeTruthy();
+  });
+
+  it('renders the cover photo through the API base URL', async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        id: 'a2', slug: 'with-cover', title: 'Covered Announcement', excerpt: '',
+        pinned: false, publishedAt: '2026-08-02T00:00:00Z', photoCount: 1, coverPhotoId: 'photo-9',
+      },
+    ]);
+    renderPage();
+    const img = await screen.findByAltText('Cover photo');
+    expect(img.getAttribute('src')).toBe(`${API}/announcements/public/photo/photo-9`);
   });
 });

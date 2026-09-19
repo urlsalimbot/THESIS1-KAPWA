@@ -8,6 +8,7 @@ const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
   api: { get: (...args: unknown[]) => mockApiGet(...args) },
+  publicAnnouncementPhotoUrl: (id: string) => `http://localhost:3000/api/v1/announcements/public/photo/${id}`,
 }));
 
 function renderPage() {
@@ -48,7 +49,7 @@ describe('AnnouncementsPage', () => {
     renderPage();
 
     const img = await screen.findByAltText('Cover photo');
-    expect(img.getAttribute('src')).toBe('/announcements/public/photo/photo-1');
+    expect(img.getAttribute('src')).toBe(`http://localhost:3000/api/v1/announcements/public/photo/photo-1`);
     expect(mockApiGet).toHaveBeenCalledWith(['announcements']);
   });
 

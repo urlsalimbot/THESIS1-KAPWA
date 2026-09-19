@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
-import { api } from '@/lib/api';
+import { api, publicAnnouncementPhotoUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Pin, ArrowLeft, Megaphone, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -119,8 +119,8 @@ export function AnnouncementPage() {
             <h2 className="text-lg font-semibold mb-4">{t('announcements.photos', 'Photos')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {photos.map(p => (
-                <a key={p.id} href={`/announcements/public/photo/${p.id}`} target="_blank" rel="noreferrer">
-                  <img src={`/announcements/public/photo/${p.id}`} alt={p.originalName} className="w-full rounded-lg border object-cover aspect-video" loading="lazy" />
+                <a key={p.id} href={publicAnnouncementPhotoUrl(p.id)} target="_blank" rel="noreferrer">
+                  <img src={publicAnnouncementPhotoUrl(p.id)} alt={p.originalName} className="w-full rounded-lg border object-cover aspect-video" loading="lazy" />
                 </a>
               ))}
             </div>

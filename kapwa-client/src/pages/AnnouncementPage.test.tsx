@@ -8,6 +8,7 @@ const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
   api: { get: (...args: unknown[]) => mockApiGet(...args) },
+  publicAnnouncementPhotoUrl: (id: string) => `http://localhost:3000/api/v1/announcements/public/photo/${id}`,
 }));
 
 function renderPage(initialEntry: string) {
@@ -49,7 +50,7 @@ describe('AnnouncementPage', () => {
 
     const img = await screen.findByAltText('first.jpg');
     expect(img).toBeTruthy();
-    expect(img.getAttribute('src')).toBe('/announcements/public/photo/photo-1');
+    expect(img.getAttribute('src')).toBe(`http://localhost:3000/api/v1/announcements/public/photo/photo-1`);
     expect(mockApiGet).toHaveBeenCalledWith(['announcements', 'public', 'my-post', 'photos']);
   });
 
@@ -57,7 +58,7 @@ describe('AnnouncementPage', () => {
     renderPage('/announcements/my-post');
 
     const link = await screen.findByRole('link', { name: 'second.jpg' });
-    expect(link.getAttribute('href')).toBe('/announcements/public/photo/photo-2');
+    expect(link.getAttribute('href')).toBe(`http://localhost:3000/api/v1/announcements/public/photo/photo-2`);
   });
 
   it('hides the gallery when the announcement has no photos', async () => {

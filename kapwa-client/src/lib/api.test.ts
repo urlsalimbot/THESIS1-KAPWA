@@ -8,6 +8,7 @@ import {
   downloadCsrPdf,
   downloadFilingDoc,
   getFilingObjectUrl,
+  publicAnnouncementPhotoUrl,
   exportIrfPdf,
   downloadCertificate,
   downloadMonthlyFunds,
@@ -15,6 +16,12 @@ import {
 } from './api';
 
 const API = 'http://localhost:3000/api/v1';
+
+describe('publicAnnouncementPhotoUrl', () => {
+  it('prefixes the API base so photos are not resolved against the SPA origin', () => {
+    expect(publicAnnouncementPhotoUrl('photo-1')).toBe(`${API}/announcements/public/photo/photo-1`);
+  });
+});
 
 function jsonRes(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return {

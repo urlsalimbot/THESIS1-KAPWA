@@ -350,6 +350,13 @@ export async function getFilingObjectUrl(id: string): Promise<string> {
   return URL.createObjectURL(await res.blob());
 }
 
+// Public announcement photos are served by the API (not the SPA origin), so the
+// URL must carry the API base. Built as a plain relative path, the SPA answered
+// 200 text/html and every cover/photo rendered as a broken image.
+export function publicAnnouncementPhotoUrl(photoId: string): string {
+  return `${API_BASE}/announcements/public/photo/${photoId}`;
+}
+
 export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(
