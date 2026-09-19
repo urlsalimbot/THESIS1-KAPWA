@@ -70,7 +70,7 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
     .filter((v, i, a) => a.indexOf(v) === i);
 
   const { data: docs = [] } = useSWR<any[]>(
-    caseId && allRequirements.length > 0 ? `/filing?caseId=${caseId}` : null,
+    caseId && allRequirements.length > 0 ? queryKeys.filing.byCase(caseId) : null,
   );
   const docsByRequirement: Record<string, any[]> = {};
   for (const d of docs) {
@@ -333,7 +333,7 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
                     requirementKey={req}
                     canUpload={canUpload}
                     docs={uploadedDocs}
-                    onChanged={() => globalMutate(`/filing?caseId=${caseId}`)}
+                    onChanged={() => globalMutate(queryKeys.filing.byCase(caseId))}
                   />
                 </div>
               );

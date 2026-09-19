@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import useSWR, { useSWRConfig } from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
@@ -47,7 +48,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
       await revalidate();
       await mutate(queryKeys.cases.detail(caseId));
     } catch (err: any) {
-      alert(err?.message || t('caseView.integrated.failedUpdateReferral', 'Failed to update referral'));
+      toast.error(err?.message || t('caseView.integrated.failedUpdateReferral', 'Failed to update referral'));
     } finally {
       setTransitioning(false);
     }
@@ -59,7 +60,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
       await api.patch(`/cases/${caseId}/referral-decision`, { notNeeded });
       await mutate(queryKeys.cases.detail(caseId));
     } catch (err: any) {
-      alert(err?.message || t('caseView.integrated.failedReferralDecision', 'Failed to save referral decision'));
+      toast.error(err?.message || t('caseView.integrated.failedReferralDecision', 'Failed to save referral decision'));
     } finally {
       setReferralSaving(false);
     }

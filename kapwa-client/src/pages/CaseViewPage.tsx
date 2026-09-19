@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useId } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
-import { User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning, Plus, Lock, Send, ExternalLink } from 'lucide-react';
+import {
+  User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning,
+  Plus, Lock, Send, ExternalLink, MoreHorizontal, RotateCcw, Activity,
+} from 'lucide-react';
 import { useCaseActions } from '../hooks/useCaseActions';
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -15,6 +19,10 @@ import { PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
 import { CaseAccessCardPanel } from '@/components/case-view/CaseAccessCardPanel';
@@ -114,11 +122,10 @@ export function CaseViewPage() {
   );
 
   const { data: programs } = useSWR<any[]>(queryKeys.programs.list());
-  const { data: filingDocs = [] } = useSWR<any[]>(id ? `/filing?caseId=${id}` : null);
 
   const requirementsMet = useMemo(
-    () => interventionRequirementsMet(interventions, programs || [], filingDocs || []),
-    [interventions, programs, filingDocs],
+    () => interventionRequirementsMet(interventions, programs || [], documents || []),
+    [interventions, programs, documents],
   );
   const progressOpts: StepperProgressOpts = useMemo(
     () => ({ requirementsMet, referralNotNeeded: !!caseData?.referralNotNeeded }),
@@ -156,8 +163,7 @@ export function CaseViewPage() {
   const benAddress = addressNames(ben?.currentAddress) || ben?.address;
   const claimantAddress = addressNames(caseData?.claimant?.currentAddress) || caseData?.claimant?.address;
   const dob = ben?.dob;
-  const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 0;
-  const ageRange = dob ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '';
+  const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : null;
   const household = ben?.household;
 
 
@@ -223,8 +229,36 @@ export function CaseViewPage() {
 
   if (isLoading) {
     return (
-      <PageShell title={t('cases.loadingTitle', 'Loading...')} description="">
-        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">{t('cases.loadingCase', 'Loading case...')}</div>
+      <PageShell title={t('cases.loadingTitle', 'Loading case…')} description="">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start" aria-busy="true" aria-live="polite">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <Skeleton className="h-5 w-56" />
+              <Skeleton className="h-4 w-72" />
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-lg border bg-card p-4 space-y-3">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            ))}
+          </div>
+        </div>
       </PageShell>
     );
   }
@@ -232,9 +266,12 @@ export function CaseViewPage() {
   if (!caseData) {
     return (
       <PageShell title={t('cases.notFoundTitle', 'Case Not Found')} description="" backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}>
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <FileText size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">{t('cases.notFound', 'Case not found.')}</p>
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
+          <FileText size={40} className="opacity-30" aria-hidden="true" />
+          <p className="text-sm">{t('cases.notFound', 'This case could not be found. It may have been removed, or the link is incorrect.')}</p>
+          <Button variant="outline" size="sm" onClick={() => mutate(queryKeys.cases.detail(id!))}>
+            <RotateCcw size={14} className="mr-1.5" /> {t('common.retry', 'Retry')}
+          </Button>
         </div>
       </PageShell>
     );
@@ -250,16 +287,48 @@ export function CaseViewPage() {
     <StepClosure key="closure" caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed} />,
   ];
 
+  const renewCase = () => navigate('/intake', {
+    state: {
+      renewalOfCaseId: id,
+      prefill: {
+        surname: (ben?.surname as string) || '', firstName: (ben?.firstName as string) || '',
+        middleName: (ben?.middleName as string) || '', gender: (ben?.gender as string) || '',
+        dob: (ben?.dob as string) || '', placeOfBirth: (ben?.placeOfBirth as string) || '',
+        civilStatus: (ben?.civilStatus as string) || '', cellularNumber: (ben?.phone as string) || '',
+        occupation: (ben?.occupation as string) || '',
+        estimatedMonthlyIncome: (ben?.estimatedMonthlyIncome as number)?.toString() || '',
+        philhealthNumber: (ben?.philhealthNumber as string) || '',
+        familyMembers: (famGraph?.members || []).map((m: any) => ({
+          id: m.id, surname: m.surname ?? '', firstName: m.firstName ?? '',
+          middleName: m.middleName ?? '', extension: m.extension ?? '', gender: m.gender ?? '',
+          dob: m.dob ?? '', relationship: m.relationship ?? '', occupation: m.occupation ?? '',
+          income: m.income != null ? String(m.income) : '', status: m.status ?? '', done: false,
+        })),
+      },
+    },
+  });
+
+  const canRequestReview = caseData.status === 'enrolled'
+    && caseData.problemsPresented && caseData.socialWorkerAssessment && caseData.clientCategory
+    && (user?.role === 'social_worker' || user?.role === 'admin');
+
   return (
     <PageShell
       title={t('cases.caseTitle', 'Case {{controlNo}}', { controlNo: caseData.controlNo })}
       description={t('cases.beneficiaryOf', 'Beneficiary: {{name}}', { name: `${ben?.firstName || ''} ${ben?.surname || ''}` })}
       backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}
-      actions={caseData.slaOverdue ? (
-        <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-          <AlertTriangle size={12} /> {t('cases.overdueBadge', 'OVERDUE')}
-        </span>
-      ) : undefined}
+      actions={
+        <div className="flex items-center gap-2">
+          {caseData.slaOverdue && (
+            <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive">
+              <AlertTriangle size={12} aria-hidden="true" /> {t('cases.overdueBadge', 'OVERDUE')}
+            </span>
+          )}
+          <Badge variant={STATUS_BADGES[caseData.status] || 'outline'} className="px-3 py-1 text-sm">
+            {statusLabel(t, caseData.status)}
+          </Badge>
+        </div>
+      }
     >
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
@@ -267,63 +336,28 @@ export function CaseViewPage() {
         {/* === LEFT COLUMN (2/3) — Stepper + Active Step === */}
         <div className="lg:col-span-2 space-y-4">
 
-          {/* Case info card */}
-          <div className="rounded-lg border bg-card">
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold">{caseData.controlNo}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {t('cases.createdUpdated', 'Created {{created}} · Updated {{updated}}', { created: formatDate(caseData.createdAt), updated: formatDate(caseData.updatedAt) })}
-                </p>
-                {caseData.renewalOfCaseId && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {t('cases.renewalOf', 'Renewal of case')}{' '}
-                    <button className="text-primary underline underline-offset-2" onClick={() => navigate(`/cases/${caseData.renewalOfCaseId}`)}>
-                      {String(caseData.renewalOfCaseId).slice(0, 8)}…
-                    </button>
-                  </p>
+          {/* Case details strip */}
+          <section className="rounded-lg border bg-card" aria-label={t('cases.caseDetails', 'Case details')}>
+            <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+              <dl className="grid flex-1 min-w-[15rem] grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <Meta label={t('cases.serviceRequested', 'Service Requested')} value={(caseData.serviceRequested || []).join(', ') || '—'} />
+                <Meta label={t('cases.assignedWorker', 'Assigned Worker')} value={caseData.assignedWorker?.fullName || '—'} />
+                {caseData.approvedByRole && (
+                  <Meta label={t('cases.approvedBy', 'Approved By')} value={caseData.approvedByRole} />
                 )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={STATUS_BADGES[caseData.status] || 'outline'} className="text-sm px-3 py-1">
-                  {statusLabel(t, caseData.status)}
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => navigate('/intake', {
-                    state: {
-                      renewalOfCaseId: id,
-                      prefill: {
-                        surname: (ben?.surname as string) || '', firstName: (ben?.firstName as string) || '',
-                        middleName: (ben?.middleName as string) || '', gender: (ben?.gender as string) || '',
-                        dob: (ben?.dob as string) || '', placeOfBirth: (ben?.placeOfBirth as string) || '',
-                        civilStatus: (ben?.civilStatus as string) || '', cellularNumber: (ben?.phone as string) || '',
-                        occupation: (ben?.occupation as string) || '',
-                        estimatedMonthlyIncome: (ben?.estimatedMonthlyIncome as number)?.toString() || '',
-                        philhealthNumber: (ben?.philhealthNumber as string) || '',
-                        familyMembers: (famGraph?.members || []).map((m: any) => ({
-                          id: m.id, surname: m.surname ?? '', firstName: m.firstName ?? '',
-                          middleName: m.middleName ?? '', extension: m.extension ?? '', gender: m.gender ?? '',
-                          dob: m.dob ?? '', relationship: m.relationship ?? '', occupation: m.occupation ?? '',
-                          income: m.income != null ? String(m.income) : '', status: m.status ?? '', done: false,
-                        })),
-                      },
-                    },
-                  })}
-                >
-                  <Plus size={14} /> {t('cases.renewCase', 'Renew Case')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => downloadGisPdf(id!)}
-                >
-                  <Download size={14} /> {t('cases.gisPdf', 'GIS (PDF)')}
-                </Button>
-                {caseData.status === 'enrolled' && caseData.problemsPresented && caseData.socialWorkerAssessment && caseData.clientCategory && (user?.role === 'social_worker' || user?.role === 'admin') && (
+                <Meta
+                  label={t('cases.createdUpdatedLabel', 'Created · Updated')}
+                  value={t('cases.createdUpdated', 'Created {{created}} · Updated {{updated}}', { created: formatDate(caseData.createdAt), updated: formatDate(caseData.updatedAt) })}
+                />
+                {caseData.remarks && (
+                  <div className="col-span-2">
+                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t('cases.remarks', 'Remarks')}</dt>
+                    <dd className="mt-0.5">{caseData.remarks}</dd>
+                  </div>
+                )}
+              </dl>
+              <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                {canRequestReview && (
                   <Button
                     variant="default"
                     size="sm"
@@ -331,48 +365,53 @@ export function CaseViewPage() {
                     disabled={actionLoading === id}
                     onClick={() => handleAction('request-review', id!)}
                   >
-                    <Send size={14} /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('cases.requestReview', 'Request Review')}
+                    <Send size={14} aria-hidden="true" /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('cases.requestReview', 'Request Review')}
                   </Button>
                 )}
-                {caseData.status === 'closed' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => downloadCsrPdf(id!)}
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadGisPdf(id!)}>
+                  <Download size={14} aria-hidden="true" /> {t('cases.gisPdf', 'GIS (PDF)')}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" aria-label={t('cases.moreActions', 'More actions')}>
+                      <MoreHorizontal size={16} aria-hidden="true" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={renewCase}>
+                      <Plus size={14} className="mr-2" aria-hidden="true" /> {t('cases.renewCase', 'Renew Case')}
+                    </DropdownMenuItem>
+                    {caseData.status === 'closed' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => downloadCsrPdf(id!)}>
+                          <FileText size={14} className="mr-2" aria-hidden="true" /> {t('cases.caseStudyReport', 'Case Study Report')}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            {caseData.renewalOfCaseId && (
+              <>
+                <Separator />
+                <p className="px-4 py-2 text-xs text-muted-foreground">
+                  {t('cases.renewalOf', 'Renewal of case')}{' '}
+                  <button
+                    type="button"
+                    className="rounded text-primary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                    onClick={() => navigate(`/cases/${caseData.renewalOfCaseId}`)}
                   >
-                    <Download size={14} /> {t('cases.caseStudyReport', 'Case Study Report')}
-                  </Button>
-                )}
-              </div>
-            </div>
-            <Separator />
-            <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">{t('cases.serviceRequested', 'Service Requested')}</span>
-                <p className="font-medium">{(caseData.serviceRequested || []).join(', ') || '—'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">{t('cases.assignedWorker', 'Assigned Worker')}</span>
-                <p className="font-medium">{caseData.assignedWorker?.fullName || '—'}</p>
-              </div>
-              {caseData.approvedByRole && (
-                <div>
-                  <span className="text-muted-foreground">{t('cases.approvedBy', 'Approved By')}</span>
-                  <p className="font-medium">{caseData.approvedByRole}</p>
-                </div>
-              )}
-              {caseData.remarks && (
-                <div className="col-span-2">
-                  <span className="text-muted-foreground">{t('cases.remarks', 'Remarks')}</span>
-                  <p className="font-medium">{caseData.remarks}</p>
-                </div>
-              )}
-            </div>
-          </div>
+                    {String(caseData.renewalOfCaseId).slice(0, 8)}…
+                  </button>
+                </p>
+              </>
+            )}
+          </section>
 
-          {/* Stepper */}
-          <div className="rounded-lg border bg-card">
+          {/* Stepper — sticky so step switching stays reachable on long cases */}
+          <div className="sticky top-2 z-10 rounded-lg border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
             <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} referralNotNeeded={!!caseData?.referralNotNeeded} />
           </div>
 
@@ -401,22 +440,17 @@ export function CaseViewPage() {
         </div>
 
         {/* === RIGHT COLUMN (1/3) — Beneficiary + Household Sidebar === */}
-        <div className="space-y-4">
+        <aside className="space-y-4" aria-label={t('cases.caseSidebar', 'Case contacts and records')}>
 
           {/* Beneficiary card */}
           {ben && (
-            <div className="rounded-lg border bg-card">
-              <div className="px-4 py-3 flex items-center gap-3">
-                <User size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">{t('cases.beneficiary', 'Beneficiary')}</h3>
-              </div>
-              <Separator />
+            <SectionCard icon={User} title={t('cases.beneficiary', 'Beneficiary')}>
               <div className="px-4 py-3 space-y-2 text-sm">
                 <div>
                   <span className="text-muted-foreground text-xs">{t('cases.fullName', 'Full Name')}</span>
                   <p className="font-medium">{ben.firstName} {ben.middleName || ''} {ben.surname}</p>
                 </div>
-                {(ben.gender || ageRange) && (
+                {(ben.gender || age != null) && (
                   <div className="grid grid-cols-2 gap-3">
                     {ben.gender && (
                       <div>
@@ -424,10 +458,10 @@ export function CaseViewPage() {
                         <p>{ben.gender}</p>
                       </div>
                     )}
-                    {ageRange && (
+                    {age != null && (
                       <div>
                         <span className="text-muted-foreground text-xs">{t('cases.age', 'Age')}</span>
-                        <p>{ageRange}</p>
+                        <p className="tabular-nums">{age}</p>
                       </div>
                     )}
                   </div>
@@ -474,17 +508,17 @@ export function CaseViewPage() {
                 )}
               </div>
               <Separator />
-              <div className="px-5 py-3">
+              <div className="px-4 py-3">
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full"
                   onClick={() => navigate(`/beneficiaries/${ben.id}`)}
                 >
-                  <User size={14} className="mr-1" /> {t('cases.viewProfile', 'View Profile')}
+                  <User size={14} className="mr-1.5" aria-hidden="true" /> {t('cases.viewProfile', 'View Profile')}
                 </Button>
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* Access Card Ledger — payouts & compliance accounted on the card */}
@@ -497,13 +531,8 @@ export function CaseViewPage() {
 
           {/* Documents card */}
           {ben && (
-            <div className="rounded-lg border bg-card">
-              <div className="px-4 py-3 flex items-center gap-3">
-                <FileText size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">{t('cases.documents', 'Documents')}</h3>
-              </div>
-              <Separator />
-              <div className="px-4 py-3 space-y-2">
+            <SectionCard icon={FileText} title={t('cases.documents', 'Documents')}>
+              <div className="px-4 py-3 space-y-1">
                 {documents.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t('cases.noDocuments', 'No documents attached to this case.')}</p>
                 ) : (
@@ -518,9 +547,10 @@ export function CaseViewPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() => alert(t('cases.downloadFailed', 'Download failed')))}
+                        aria-label={t('cases.downloadNamed', 'Download {{name}}', { name: doc.originalName || 'document' })}
+                        onClick={() => downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() => toast.error(t('cases.downloadFailed', 'Download failed')))}
                       >
-                        <Download size={14} className="mr-1" /> {t('cases.download', 'Download')}
+                        <Download size={14} className="mr-1.5" aria-hidden="true" /> {t('cases.download', 'Download')}
                       </Button>
                     </div>
                   ))
@@ -536,16 +566,11 @@ export function CaseViewPage() {
                   />
                 </div>
               )}
-            </div>
+            </SectionCard>
           )}
 
           {/* Inter-Agency Referrals card */}
-          <div className="rounded-lg border bg-card">
-            <div className="px-4 py-3 flex items-center gap-3">
-              <Send size={20} className="text-primary" />
-              <h3 className="text-sm font-semibold">{t('cases.interAgencyReferrals', 'Inter-Agency Referrals')}</h3>
-            </div>
-            <Separator />
+          <SectionCard icon={Send} title={t('cases.interAgencyReferrals', 'Inter-Agency Referrals')}>
             <div className="px-4 py-3 space-y-2">
               {iarLoading ? (
                 <p className="text-xs text-muted-foreground">{t('cases.loadingCase', 'Loading case...')}</p>
@@ -555,8 +580,9 @@ export function CaseViewPage() {
                 (iarReferrals || []).map(r => (
                   <button
                     key={r.id}
+                    type="button"
                     onClick={() => navigate(`/agency/referrals/${r.id}`, { state: { from: `/cases/${id}` } })}
-                    className="w-full text-left rounded-md border border-border/60 px-3 py-2 hover:bg-muted/50 transition-colors"
+                    className="w-full text-left rounded-md border border-border/60 px-3 py-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                     aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id })}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -570,23 +596,18 @@ export function CaseViewPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge variant={r.status === 'declined' ? 'destructive' : 'default'}>{referralStatusLabel(t, r.status)}</Badge>
-                        <ExternalLink size={14} className="text-muted-foreground" />
+                        <ExternalLink size={14} className="text-muted-foreground" aria-hidden="true" />
                       </div>
                     </div>
                   </button>
                 ))
               )}
             </div>
-          </div>
+          </SectionCard>
 
           {/* Claimant card */}
           {caseData?.claimant && (
-            <div className="rounded-lg border bg-card">
-              <div className="px-4 py-3 flex items-center gap-3">
-                <User size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">{t('cases.claimant', 'Claimant')}</h3>
-              </div>
-              <Separator />
+            <SectionCard icon={User} title={t('cases.claimant', 'Claimant')}>
               <div className="px-4 py-3 space-y-2 text-sm">
                 <div>
                   <span className="text-muted-foreground text-xs">{t('cases.fullName', 'Full Name')}</span>
@@ -609,7 +630,7 @@ export function CaseViewPage() {
                 )}
                 {claimantAddress && (
                   <div className="flex items-start gap-2">
-                    <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+                    <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <div>
                       <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
                       <p>{claimantAddress}</p>
@@ -617,17 +638,12 @@ export function CaseViewPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* Household card */}
           {household && (
-            <div className="rounded-lg border bg-card">
-              <div className="px-4 py-3 flex items-center gap-3">
-                <Users size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">{t('cases.household', 'Household')}</h3>
-              </div>
-              <Separator />
+            <SectionCard icon={Users} title={t('cases.household', 'Household')}>
               <div className="px-4 py-3 space-y-2 text-sm">
                 {household.barangay && (
                   <div className="flex items-center gap-2">
@@ -638,7 +654,7 @@ export function CaseViewPage() {
                 {household.estimatedIncome && (
                   <div>
                     <span className="text-muted-foreground text-xs">{t('cases.estimatedIncome', 'Estimated Income')}</span>
-                    <p>₱{Number(household.estimatedIncome).toLocaleString()}/mo</p>
+                    <p className="tabular-nums">₱{Number(household.estimatedIncome).toLocaleString()}/mo</p>
                   </div>
                 )}
                 {household.nhtsPrId && (
@@ -650,7 +666,7 @@ export function CaseViewPage() {
                 {(famGraph?.members?.length || 0) > 0 && (
                   <div className="mt-2">
                     <span className="text-muted-foreground text-xs flex items-center gap-1 mb-2">
-                      <Users size={12} /> {t('cases.memberCount', '{{count}} Member', { count: famGraph!.members.length })}
+                      <Users size={12} aria-hidden="true" /> {t('cases.memberCount', '{{count}} Member', { count: famGraph!.members.length })}
                     </span>
                     <FamilyGraph
                       loading={famLoading && !famGraph}
@@ -661,34 +677,36 @@ export function CaseViewPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* Incident Reports */}
-          <div className="rounded-lg border bg-card">
-              <div className="px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FileWarning size={20} className="text-primary" />
-                  <h3 className="text-sm font-semibold">{t('cases.incidentReports', 'Incident Reports')}</h3>
-                </div>
-                <Button size="sm" onClick={() => navigate(`/irf/new?caseId=${id}`)}>
-                  <Plus size={14} className="mr-1" /> {t('cases.newIrfFromCase', 'New IRF from Case')}
-                </Button>
-              </div>
-            <Separator />
+          <SectionCard
+            icon={FileWarning}
+            title={t('cases.incidentReports', 'Incident Reports')}
+            action={(
+              <Button size="sm" onClick={() => navigate(`/irf/new?caseId=${id}`)}>
+                <Plus size={14} className="mr-1.5" aria-hidden="true" /> {t('cases.newIrfFromCase', 'New IRF')}
+              </Button>
+            )}
+          >
             <IrfCaseList caseId={id!} />
-          </div>
+          </SectionCard>
 
           {/* Case History */}
-          {history && history.length > 0 && (
-            <div className="rounded-lg border bg-card">
-              <div className="px-4 py-3 flex items-center gap-3">
-                <Clock size={20} className="text-primary" />
-                <h3 className="text-sm font-semibold">{t('cases.caseHistory', 'Case History')}</h3>
-                {historyLoading && <span className="text-xs text-muted-foreground">{t('cases.loading', 'Loading...')}</span>}
-              </div>
-              <Separator />
+          <SectionCard icon={Clock} title={t('cases.caseHistory', 'Case History')}>
               <div className="px-4 py-3">
+                {historyLoading && !history ? (
+                  <div className="space-y-3" aria-busy="true">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-56" />
+                  </div>
+                ) : !history || history.length === 0 ? (
+                  <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Activity size={14} aria-hidden="true" />
+                    {t('cases.noHistory', 'No activity recorded yet.')}
+                  </p>
+                ) : (
                 <div className="relative pl-5 space-y-3">
                   {history.map((entry: any, i: number) => (
                     <div key={entry.id} className="relative">
@@ -703,11 +721,11 @@ export function CaseViewPage() {
                               ? `${statusLabel(t, entry.fromStatus)} → ${statusLabel(t, entry.toStatus)}`
                               : statusLabel(t, entry.toStatus)}
                           </span>
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">
-                            {entry.transitionType}
+                          <Badge variant="outline" className="px-1 py-0 text-[10px] capitalize">
+                            {String(entry.transitionType || '').replace(/_/g, ' ')}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                           {formatDateTime(entry.createdAt)}
                           {entry.changedByRole && t('cases.byRole', ' · by {{role}}', { role: entry.changedByRole.replace(/_/g, ' ') })}
                         </p>
@@ -715,19 +733,59 @@ export function CaseViewPage() {
                           <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{entry.remarks}</p>
                         )}
                         {entry.overrideReason && (
-                          <p className="text-xs text-amber-600 mt-0.5">{t('cases.override', 'Override: {{reason}}', { reason: entry.overrideReason })}</p>
+                          <p className="mt-0.5 text-xs text-warning">{t('cases.override', 'Override: {{reason}}', { reason: entry.overrideReason })}</p>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
+          </SectionCard>
+        </aside>
       </div>
     </PageShell>
     );
+}
+
+function Meta({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium break-words">{value}</dd>
+    </div>
+  );
+}
+
+// One consistent panel for every card on the case page: icon + heading +
+// optional action, then a divider. Replaces the per-card header boilerplate.
+function SectionCard({
+  icon: Icon,
+  title,
+  action,
+  children,
+  className = '',
+}: {
+  icon: React.ComponentType<{ size?: number | string; className?: string; 'aria-hidden'?: boolean }>;
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const headingId = useId();
+  return (
+    <section className={`rounded-lg border bg-card ${className}`} aria-labelledby={headingId}>
+      <header className="flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Icon size={18} className="shrink-0 text-primary" aria-hidden={true} />
+          <h3 id={headingId} className="truncate font-heading text-sm font-semibold">{title}</h3>
+        </div>
+        {action}
+      </header>
+      <Separator />
+      {children}
+    </section>
+  );
 }
 
 function IrfCaseList({ caseId }: { caseId: string }) {
@@ -740,24 +798,41 @@ function IrfCaseList({ caseId }: { caseId: string }) {
     api.get(`/irf/by-case/${caseId}`).then((d: any) => setIrfs(d)).finally(() => setLoading(false));
   }, [caseId]);
 
-  if (loading) return <div className="px-4 py-6 text-sm text-muted-foreground">{t('irf.loadingIrfs', 'Loading IRFs...')}</div>;
+  if (loading) {
+    return (
+      <div className="space-y-2 px-4 py-3" aria-busy="true">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+    );
+  }
 
   if (!irfs || irfs.length === 0) {
-    return <div className="px-4 py-6 text-sm text-muted-foreground">{t('irf.noLinked', 'No incident reports linked to this case.')}</div>;
+    return (
+      <p className="flex items-center gap-2 px-4 py-4 text-xs text-muted-foreground">
+        <FileWarning size={14} aria-hidden="true" />
+        {t('irf.noLinked', 'No incident reports linked to this case.')}
+      </p>
+    );
   }
 
   return (
     <div className="divide-y">
       {irfs.map((irf: any) => (
-        <div key={irf.id} className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/irf/${irf.id}`)}>
-          <div>
-            <p className="text-sm font-medium">{irf.blotterEntryNumber}</p>
-            <p className="text-xs text-muted-foreground">{irf.caseCategory} &middot; {formatDate(irf.createdAt)}</p>
-          </div>
-          <Badge variant={irf.caseDisposition === 'Closed' ? 'default' : 'secondary'} className="text-xs">
+        <button
+          key={irf.id}
+          type="button"
+          onClick={() => navigate(`/irf/${irf.id}`)}
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        >
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium">{irf.blotterEntryNumber}</span>
+            <span className="block text-xs tabular-nums text-muted-foreground">{irf.caseCategory} &middot; {formatDate(irf.createdAt)}</span>
+          </span>
+          <Badge variant={irf.caseDisposition === 'Closed' ? 'default' : 'secondary'} className="shrink-0 text-xs">
             {irf.caseDisposition}
           </Badge>
-        </div>
+        </button>
       ))}
     </div>
   );

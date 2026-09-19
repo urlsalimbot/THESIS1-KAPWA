@@ -190,6 +190,14 @@ body {
   --alert-error-bg: #FFF3CD;
   --alert-error-fg: #856404;
 
+  /* Warning / success text tokens (semantic, dark-mode aware). Used for
+     status notes such as override reasons and compliance checks instead of
+     hardcoded Tailwind palette scales. */
+  --warning: #B45309;
+  --warning-foreground: #7C2D12;
+  --success: #15803D;
+  --success-foreground: #14532D;
+
   --font-heading: 'Geist', 'PesoSymbol', sans-serif;
   --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PesoSymbol', sans-serif;
   --font-size-xs: 0.75rem;
@@ -264,6 +272,11 @@ body {
   --alert-success-fg: #6FCF8A;
   --alert-error-bg: rgba(251, 191, 36, 0.15);
   --alert-error-fg: #FFD666;
+
+  --warning: #FBBF24;
+  --warning-foreground: #FDE68A;
+  --success: #34D399;
+  --success-foreground: #A7F3D0;
 }
 
 /* Theme reference for utility class generation — @theme inline per shadcn v4 */
@@ -307,6 +320,10 @@ body {
   --color-alert-success-fg: var(--alert-success-fg);
   --color-alert-error-bg: var(--alert-error-bg);
   --color-alert-error-fg: var(--alert-error-fg);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
 
   --font-heading: 'Geist', 'PesoSymbol', sans-serif;
   --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PesoSymbol', sans-serif;

@@ -99,14 +99,19 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                       key={stepIdx}
                       type="button"
                       onClick={() => handleClick(stepIdx)}
-                      disabled={!isClickable}
-                      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                      aria-current={isActive ? 'step' : undefined}
+                      aria-disabled={!isClickable}
+                      aria-label={`${stepIdx + 1}. ${step.label}`}
+                      title={isClickable ? step.description : t('caseView.stepper.accomplishStepFirst', 'Accomplish current step first.')}
+                      className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
                         isActive
                           ? 'bg-primary text-primary-foreground'
                           : done
                           ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                          : 'text-muted-foreground hover:bg-muted'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          : isClickable
+                          ? 'text-muted-foreground hover:bg-muted'
+                          : 'cursor-not-allowed text-muted-foreground/60'
+                      }`}
                     >
                       <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
                         isActive
@@ -115,9 +120,9 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        {done ? <Check size={12} /> : stepIdx + 1}
+                        {done ? <Check size={12} aria-hidden="true" /> : stepIdx + 1}
                       </span>
-                      <span className="hidden md:inline">{step.label}</span>
+                      <span className="hidden sm:inline">{step.label}</span>
                     </button>
                   );
                 })}

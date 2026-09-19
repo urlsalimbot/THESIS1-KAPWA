@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
@@ -59,11 +60,11 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
 
   async function handleFinalClosure() {
     if (!closure.closureOutcome) {
-      alert(t('caseView.closure.selectOutcome', 'Please select a closure outcome'));
+      toast.error(t('caseView.closure.selectOutcome', 'Please select a closure outcome'));
       return;
     }
     if (!closure.clientSignature) {
-      alert(t('caseView.closure.captureSignature', 'Please capture client signature'));
+      toast.error(t('caseView.closure.captureSignature', 'Please capture client signature'));
       return;
     }
     setSaving(true);

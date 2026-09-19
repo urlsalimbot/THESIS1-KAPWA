@@ -71,7 +71,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
     .filter((v, i, a) => a.indexOf(v) === i);
 
   const { data: docs = [] } = useSWR<any[]>(
-    caseId ? `/filing?caseId=${caseId}` : null,
+    caseId ? queryKeys.filing.byCase(caseId) : null,
   );
   const docsByRequirement: Record<string, any[]> = {};
   for (const d of docs) {
@@ -336,7 +336,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
             <FileUploadList
               docs={caseDocs}
               canUpload={canUpload}
-              onChanged={() => globalMutate(`/filing?caseId=${caseId}`)}
+              onChanged={() => globalMutate(queryKeys.filing.byCase(caseId))}
               formExtras={{ caseId }}
             />
           </div>
@@ -383,7 +383,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
                     requirementKey={req}
                     canUpload={canUpload}
                     docs={uploadedDocs}
-                    onChanged={() => globalMutate(`/filing?caseId=${caseId}`)}
+                    onChanged={() => globalMutate(queryKeys.filing.byCase(caseId))}
                   />
                 </div>
               );

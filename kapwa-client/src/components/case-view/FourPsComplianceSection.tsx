@@ -124,7 +124,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
                   {entry.monthLabel || typeLabel(entry.complianceType)}
                 </Badge>
                 {entry.met ? (
-                  <CheckCircle size={16} className="text-green-600" />
+                  <CheckCircle size={16} className="text-success" />
                 ) : (
                   <Button
                     size="sm"
@@ -134,7 +134,7 @@ export function FourPsComplianceSection({ caseId }: { caseId: string }) {
                     disabled={pendingId === entry.id}
                     onClick={() => markMet(entry.id)}
                   >
-                    <Circle size={14} className="text-amber-600" />
+                    <Circle size={14} className="text-warning" />
                   </Button>
                 )}
               </div>
