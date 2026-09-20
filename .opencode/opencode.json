@@ -23,7 +23,6 @@
     }
   },
   "permission": {
-    "edit": "allow",
     "bash": "allow",
     "external_directory": {
       "/home/typwtypw/Documents/NC/THESIS1-KAPWA/**": "allow",
