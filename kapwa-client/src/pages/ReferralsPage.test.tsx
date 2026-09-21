@@ -1,13 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { ReferralsPage } from './ReferralsPage';
 
-const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
+const { mockApiGet, mockApiPatch, mockNavigate } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPatch: vi.fn(),
+  mockNavigate: vi.fn(),
+}));
 
 vi.mock('@/lib/api', () => ({
-  api: { get: (...args: unknown[]) => mockApiGet(...args), patch: vi.fn() },
+  api: {
+    get: (...args: unknown[]) => mockApiGet(...args),
+    patch: (...args: unknown[]) => mockApiPatch(...args),
+  },
+}));
+
+// Keep MemoryRouter real, but capture navigation so the handoff can be asserted.
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => mockNavigate,
 }));
 
 vi.mock('@/lib/auth-context', () => ({
@@ -36,6 +49,8 @@ function referral(overrides: Record<string, unknown> = {}) {
 describe('ReferralsPage', () => {
   beforeEach(() => {
     mockApiGet.mockReset();
+    mockApiPatch.mockReset();
+    mockNavigate.mockReset();
     useAuthMock.mockReset();
   });
 
@@ -52,8 +67,64 @@ describe('ReferralsPage', () => {
     mockApiGet.mockResolvedValue([referral()]);
     renderPage('social_worker');
     expect(await screen.findByText('Pending Referrals')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Accept referral for Juan/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Decline referral for Juan/ })).toBeTruthy();
+    // The accessible name carries the full name schema, not just the first name.
+    expect(screen.getByRole('button', { name: /Accept referral for Dela Cruz, Juan/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Decline referral for Dela Cruz, Juan/ })).toBeTruthy();
     expect(mockApiGet).toHaveBeenCalledWith('/referrals?status=pending');
+  });
+
+  it('hands off to a pre-filled intake when a referral is accepted', async () => {
+    const accepted = referral({ personId: 'person-1', caseId: null, status: 'accepted' });
+    mockApiGet.mockResolvedValue([referral({ personId: 'person-1' })]);
+    mockApiPatch.mockResolvedValue(accepted);
+    renderPage('social_worker');
+    await screen.findByText('Pending Referrals');
+
+    fireEvent.click(screen.getByRole('button', { name: /Accept referral for Dela Cruz, Juan/ }));
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    const [path, opts] = mockNavigate.mock.calls[0];
+    expect(path).toBe('/intake');
+    expect(opts.state.sourceReferral).toEqual({
+      type: 'barangay',
+      id: 'r1',
+      reason: 'Assistance needed',
+    });
+    expect(opts.state.prefill.firstName).toBe('Juan');
+  });
+
+  it('stays on the list when the accepted referral has no linked person', async () => {
+    mockApiGet.mockResolvedValue([referral()]);
+    mockApiPatch.mockResolvedValue(referral({ status: 'accepted' }));
+    renderPage('social_worker');
+    await screen.findByText('Pending Referrals');
+
+    fireEvent.click(screen.getByRole('button', { name: /Accept referral for Dela Cruz, Juan/ }));
+
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('offers Continue intake for accepted referrals that still have no case', async () => {
+    mockApiGet.mockImplementation((url: string) =>
+      Promise.resolve(
+        String(url).includes('intakePending')
+          ? [referral({ status: 'accepted', personId: 'person-1', caseId: null })]
+          : [],
+      ),
+    );
+    renderPage('social_worker');
+
+    expect(await screen.findByText('Awaiting intake')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Continue intake for Dela Cruz, Juan/ }));
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/intake',
+      expect.objectContaining({
+        state: expect.objectContaining({
+          sourceReferral: expect.objectContaining({ type: 'barangay', id: 'r1' }),
+        }),
+      }),
+    );
   });
 });

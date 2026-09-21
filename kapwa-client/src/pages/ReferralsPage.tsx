@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -14,15 +14,26 @@ import {
 } from '@/components/ui/dialog';
 import { DataTable } from '@/components/data-table';
 import { IncomingInterAgencyReferrals } from '@/components/referrals/IncomingInterAgencyReferrals';
-import { Plus, Send, Check, X, Inbox, Loader2, ArrowUpRight } from 'lucide-react';
+import { referralIntakeState, referralListName } from '@/components/referrals/referral-utils';
+import { Plus, Send, Check, X, Inbox, Loader2, ArrowUpRight, ClipboardList } from 'lucide-react';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
 import { toast } from 'sonner';
 
 interface Referral {
   id: string;
+  personId?: string | null;
+  caseId?: string | null;
+  // Name schema, assembled from the linked person server-side.
   surname: string;
   firstName: string;
   middleName?: string;
+  extension?: string;
+  gender?: string;
+  dob?: string;
+  phone?: string;
+  address?: Record<string, string>;
+  currentAddress?: Record<string, string>;
+  addressLine?: string;
   barangay: string;
   reason: string;
   status: 'pending' | 'accepted' | 'declined';
@@ -121,7 +132,7 @@ function CoordinatorReferralView() {
     },
     {
       id: 'name', header: t('referral.name', 'Name'),
-      cell: ({ row }) => <span className="font-medium">{row.original.surname}, {row.original.firstName}</span>,
+      cell: ({ row }) => <span className="font-medium">{referralListName(row.original)}</span>,
     },
     { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
     {
@@ -135,7 +146,7 @@ function CoordinatorReferralView() {
     {
       id: 'actions', header: '',
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)} aria-label={t('referral.viewAria', 'View referral for {{name}}', { name: row.original.firstName })}>
+        <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)} aria-label={t('referral.viewAria', 'View referral for {{name}}', { name: referralListName(row.original) })}>
           {t('referral.view', 'View')} <ArrowUpRight size={14} className="ml-1" />
         </Button>
       ),
@@ -168,12 +179,12 @@ function CoordinatorReferralView() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('referral.details', 'Referral Details')}</DialogTitle>
-            <DialogDescription>{t('referral.detailsFor', 'Referral information for {{name}}', { name: `${selected?.surname}, ${selected?.firstName}` })}</DialogDescription>
+            <DialogDescription>{t('referral.detailsFor', 'Referral information for {{name}}', { name: referralListName(selected) })}</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
               <span className="text-xs text-muted-foreground font-medium">{t('referral.name', 'Name')}</span>
-              <p className="font-medium">{selected?.surname}, {selected?.firstName}</p>
+              <p className="font-medium">{referralListName(selected)}</p>
             </div>
             <div>
               <span className="text-xs text-muted-foreground font-medium">{t('referral.barangay', 'Barangay')}</span>
@@ -214,7 +225,9 @@ function CoordinatorReferralView() {
 
 function WorkerReferralView() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [awaiting, setAwaiting] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [declineModal, setDeclineModal] = useState<Referral | null>(null);
@@ -224,6 +237,7 @@ function WorkerReferralView() {
 
   useEffect(() => {
     loadReferrals();
+    loadAwaiting();
   }, []);
 
   async function loadReferrals() {
@@ -234,12 +248,29 @@ function WorkerReferralView() {
     setLoading(false);
   }
 
+  // Accepted referrals that never got a case: the intake handed off from accept
+  // was abandoned, so the worker needs a way back into it.
+  async function loadAwaiting() {
+    try {
+      const data = await api.get<Referral[]>('/referrals?intakePending=true');
+      setAwaiting(data);
+    } catch { /* handled */ }
+  }
+
+  function openIntakeFor(r: Referral) {
+    navigate('/intake', { state: referralIntakeState('barangay', r) });
+  }
+
   async function handleAccept(id: string) {
     setActionId(id);
     try {
-      await api.patch(`/referrals/${id}/accept`, {});
+      const accepted = await api.patch<Referral>(`/referrals/${id}/accept`, {});
       setReferrals(prev => prev.filter(r => r.id !== id));
       toast.success(t('referral.accepted', 'Referral accepted'));
+
+      // Hand off to the intake that creates the case. A referral with no linked
+      // person has nothing to prefill, so it stays on the list.
+      if (accepted?.personId) openIntakeFor(accepted);
     } catch {
       toast.error(t('referral.acceptFailed', 'Failed to accept referral'));
     }
@@ -268,7 +299,7 @@ function WorkerReferralView() {
     },
     {
       id: 'name', header: t('referral.name', 'Name'),
-      cell: ({ row }) => <span className="font-medium">{row.original.surname}, {row.original.firstName}</span>,
+      cell: ({ row }) => <span className="font-medium">{referralListName(row.original)}</span>,
     },
     { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
     {
@@ -286,14 +317,14 @@ function WorkerReferralView() {
           <Button
             variant="outline" size="sm" className="text-emerald-700 border-emerald-300/60 hover:bg-emerald-50"
             onClick={() => handleAccept(row.original.id)} disabled={actionId === row.original.id}
-            aria-label={t('referral.acceptAria', 'Accept referral for {{name}}', { name: row.original.firstName })}
+            aria-label={t('referral.acceptAria', 'Accept referral for {{name}}', { name: referralListName(row.original) })}
           >
             {actionId === row.original.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {t('referral.accept', 'Accept')}
           </Button>
           <Button
             variant="outline" size="sm" className="text-destructive border-destructive/30/60 hover:bg-destructive/10"
             onClick={() => setDeclineModal(row.original)} disabled={actionId === row.original.id}
-            aria-label={t('referral.declineAria', 'Decline referral for {{name}}', { name: row.original.firstName })}
+            aria-label={t('referral.declineAria', 'Decline referral for {{name}}', { name: referralListName(row.original) })}
           >
             <X size={14} className="mr-1" /> {t('referral.decline', 'Decline')}
           </Button>
@@ -321,6 +352,42 @@ function WorkerReferralView() {
         )}
       </Card>
 
+      <Card className="shadow-sm border-border/60">
+        <SectionHeader
+          icon={ClipboardList}
+          title={t('referral.awaitingIntake', 'Awaiting intake')}
+          count={awaiting.length}
+        />
+        {awaiting.length === 0 ? (
+          <CardContent className="py-6 text-center text-sm text-muted-foreground">
+            {t('referral.awaitingIntakeDesc', 'Accepted referrals that still need an intake and a case.')}
+          </CardContent>
+        ) : (
+          <div className="divide-y">
+            {awaiting.map(r => (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="font-medium">{referralListName(r)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {r.barangay} — {r.reason}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant="secondary">{t('referral.intakePending', 'Intake pending')}</Badge>
+                  <Button
+                    size="sm"
+                    onClick={() => openIntakeFor(r)}
+                    aria-label={t('referral.continueIntakeAria', 'Continue intake for {{name}}', { name: referralListName(r) })}
+                  >
+                    {t('referral.continueIntake', 'Continue intake')}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       <IncomingInterAgencyReferrals />
 
       <Dialog open={!!declineModal} onOpenChange={(open) => { if (!open) { setDeclineModal(null); setDeclineReason(''); } }}>
@@ -328,7 +395,7 @@ function WorkerReferralView() {
           <DialogHeader>
             <DialogTitle>{t('referral.declineReferral', 'Decline Referral')}</DialogTitle>
             <DialogDescription>
-              {declineModal?.surname}, {declineModal?.firstName} — {declineModal?.barangay}
+              {referralListName(declineModal)} — {declineModal?.barangay}
             </DialogDescription>
           </DialogHeader>
           <textarea

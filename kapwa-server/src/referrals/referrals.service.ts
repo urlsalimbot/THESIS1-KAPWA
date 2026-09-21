@@ -83,7 +83,7 @@ export class ReferralsService {
     return this.repo.save(referral);
   }
 
-  async findAll(options?: { barangay?: string; status?: string }): Promise<Referral[]> {
+  async findAll(options?: { barangay?: string; status?: string; intakePending?: boolean }): Promise<Referral[]> {
     const qb = this.repo.createQueryBuilder('r')
       .leftJoinAndSelect('r.coordinator', 'u')
       .leftJoinAndSelect('r.case', 'c')
@@ -95,6 +95,12 @@ export class ReferralsService {
     }
     if (options?.status) {
       qb.andWhere('r.status = :status', { status: options.status });
+    }
+    // Accepted but still without a case: the intake handed off from accept was
+    // never submitted, so the worker needs a way back into it.
+    if (options?.intakePending) {
+      qb.andWhere('r.status = :accepted', { accepted: ReferralStatus.ACCEPTED })
+        .andWhere('r.case_id IS NULL');
     }
 
     return qb.getMany();

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { referralStatusLabel } from '@/i18n/display';
 import { api } from '../lib/api';
@@ -11,15 +12,26 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { DataTable } from '@/components/data-table';
+import { referralIntakeState, referralListName } from '@/components/referrals/referral-utils';
 import { Check, X, Loader2, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 interface Referral {
   id: string;
+  personId?: string | null;
+  caseId?: string | null;
+  // Name schema, assembled from the linked person server-side.
   surname: string;
   firstName: string;
   middleName?: string;
+  extension?: string;
+  gender?: string;
+  dob?: string;
+  phone?: string;
+  address?: Record<string, string>;
+  currentAddress?: Record<string, string>;
+  addressLine?: string;
   barangay: string;
   reason: string;
   status: 'pending' | 'accepted' | 'declined';
@@ -35,6 +47,7 @@ const variantMap: Record<string, 'secondary' | 'default' | 'destructive'> = {
 
 export function ReferralReviewPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -59,9 +72,15 @@ export function ReferralReviewPage() {
   async function handleAccept(id: string) {
     setActionId(id);
     try {
-      await api.patch(`/referrals/${id}/accept`, {});
+      const accepted = await api.patch<Referral>(`/referrals/${id}/accept`, {});
       setReferrals(prev => prev.filter(r => r.id !== id));
       toast.success(t('referral.accepted', 'Referral accepted'));
+
+      // Hand off to the intake that creates the case. A referral with no linked
+      // person has nothing to prefill, so it stays on the list.
+      if (accepted?.personId) {
+        navigate('/intake', { state: referralIntakeState('barangay', accepted) });
+      }
     } catch {
       toast.error(t('referral.acceptFailed', 'Failed to accept referral'));
     }
@@ -87,7 +106,7 @@ export function ReferralReviewPage() {
     {
       id: 'name',
       header: t('referral.name', 'Name'),
-      cell: ({ row }) => `${row.original.surname}, ${row.original.firstName}`,
+      cell: ({ row }) => referralListName(row.original),
     },
     { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
     {
@@ -186,7 +205,7 @@ export function ReferralReviewPage() {
           <DialogHeader>
             <DialogTitle>{t('referral.declineReferral', 'Decline Referral')}</DialogTitle>
             <DialogDescription>
-              {declineModal?.surname}, {declineModal?.firstName} — {declineModal?.barangay}
+              {referralListName(declineModal)} — {declineModal?.barangay}
             </DialogDescription>
           </DialogHeader>
           <textarea

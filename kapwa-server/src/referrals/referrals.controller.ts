@@ -38,8 +38,9 @@ export class ReferralsController {
   async findAll(
     @Query('barangay') barangay?: string,
     @Query('status') status?: string,
+    @Query('intakePending') intakePending?: string,
   ) {
-    return this.svc.findAll({ barangay, status });
+    return this.svc.findAll({ barangay, status, intakePending: intakePending === 'true' });
   }
 
   @Get('mine')
