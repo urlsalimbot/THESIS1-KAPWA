@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
-import { InterAgencyReferral, StatusTimeline } from '@/components/referrals/referral-utils';
+import { InterAgencyReferral, StatusTimeline, referralIntakeState, referralFullName } from '@/components/referrals/referral-utils';
 import { ReferralActions } from '@/components/referrals/ReferralActions';
 import { referralStatusLabel } from '@/i18n/display';
 
@@ -35,6 +35,13 @@ export function AgencyReferralDetailPage() {
     try {
       await api.patch(`/inter-agency-referrals/${transitionId}/${action}`, body);
       if (id) await mutate(queryKeys.interAgencyReferrals.detail(id));
+
+      // Only MSWDO runs an intake. An external receiving agency (RHU, LTO...)
+      // keeps the plain receive-and-refresh behaviour — and agency_staff cannot
+      // open /intake at all, since that route is admin/social_worker only.
+      if (action === 'receive' && data?.toAgency?.code === 'MSWDO' && data.personId) {
+        navigate('/intake', { state: referralIntakeState('inter_agency', data) });
+      }
     } catch (err: any) {
       toast.error(t('agency.transitionFailed', 'Could not update this referral'), { description: humanizeError(err) });
     }
@@ -60,9 +67,12 @@ export function AgencyReferralDetailPage() {
     );
   }
 
-  const personName = data.person
-    ? `${data.person.firstName} ${data.person.surname}`.trim()
-    : t('referrals.person', 'Person');
+  const personName = referralFullName(data) || t('referrals.person', 'Person');
+
+  // Mirrors the barangay side: a received referral with no case yet still needs
+  // an intake. Inter-agency statuses have no 'accepted' state — 'received' is
+  // the equivalent.
+  const intakePending = data.status === 'received' && !data.caseId;
 
   return (
     <PageShell
@@ -83,6 +93,9 @@ export function AgencyReferralDetailPage() {
               </div>
               <div className="flex items-center gap-2">
                 {data.status !== 'declined' && <StatusTimeline status={data.status} />}
+                {intakePending && (
+                  <Badge variant="secondary">{t('referral.intakePending', 'Intake pending')}</Badge>
+                )}
                 <Badge variant={data.status === 'declined' ? 'destructive' : 'default'}>
                   {referralStatusLabel(t, data.status)}
                 </Badge>

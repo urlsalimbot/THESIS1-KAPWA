@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Send, ExternalLink } from 'lucide-react';
-import { InterAgencyReferral } from './referral-utils';
+import { InterAgencyReferral, referralFullName } from './referral-utils';
 import { referralStatusLabel } from '@/i18n/display';
 
 export function IncomingInterAgencyReferrals() {
@@ -43,12 +43,12 @@ export function IncomingInterAgencyReferrals() {
               key={r.id}
               onClick={() => navigate(`/agency/referrals/${r.id}`, { state: { from: '/referrals' } })}
               className="w-full text-left rounded-lg border border-border/60 bg-card px-4 py-3 hover:bg-muted/50 transition-colors"
-              aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id })}
+              aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: referralFullName(r) || r.id })}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">
-                    {r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id}
+                    {referralFullName(r) || r.id}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {t('referrals.fromAgency', 'From Agency')}: {r.fromAgency?.name || r.fromAgencyId}
@@ -56,6 +56,9 @@ export function IncomingInterAgencyReferrals() {
                   <p className="text-xs text-muted-foreground truncate">{r.reason}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {r.status === 'received' && !r.caseId && (
+                    <Badge variant="secondary">{t('referral.intakePending', 'Intake pending')}</Badge>
+                  )}
                   <Badge variant={r.status === 'declined' ? 'destructive' : 'default'}>{referralStatusLabel(t, r.status)}</Badge>
                   <ExternalLink size={14} className="text-muted-foreground" />
                 </div>

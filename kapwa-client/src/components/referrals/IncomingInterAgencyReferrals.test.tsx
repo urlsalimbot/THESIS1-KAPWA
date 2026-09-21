@@ -22,6 +22,8 @@ const inbox = [
     createdAt: '2026-08-01T00:00:00.000Z',
     fromAgency: { id: 'ag-rhu', code: 'RHU', name: 'Rural Health Unit - Norzagaray' },
     toAgency: { id: 'ag-mswdo', code: 'MSWDO', name: 'Municipal Social Welfare' },
+    // Flat schema carries the middle name; the deprecated `person` does not.
+    surname: 'Santos', firstName: 'Maria', middleName: 'Reyes',
     person: { id: 'p1', firstName: 'Maria', surname: 'Santos' },
   },
   {
@@ -30,6 +32,7 @@ const inbox = [
     createdAt: '2026-08-01T00:00:00.000Z',
     fromAgency: { id: 'ag-mswdo', code: 'MSWDO', name: 'Municipal Social Welfare' },
     toAgency: { id: 'ag-rhu', code: 'RHU', name: 'Rural Health Unit - Norzagaray' },
+    surname: 'Dela Cruz', firstName: 'Juan',
     person: { id: 'p2', firstName: 'Juan', surname: 'Dela Cruz' },
   },
 ];
@@ -66,8 +69,34 @@ describe('IncomingInterAgencyReferrals', () => {
 
   it('renders only incoming referrals (same toAgencyId as caller agency)', async () => {
     renderWithSWR(<IncomingInterAgencyReferrals />);
-    expect(await screen.findByText('Maria Santos')).toBeTruthy();
+    // Middle name present: the previous `firstName + surname` dropped it.
+    expect(await screen.findByText('Maria Reyes Santos')).toBeTruthy();
     expect(screen.queryByText('Juan Dela Cruz')).toBeNull();
+  });
+
+  it('flags a received referral that still has no case as intake pending', async () => {
+    mockApiGet.mockImplementation((key: unknown) =>
+      Promise.resolve(
+        JSON.stringify(key).includes('inter-agency-referrals')
+          ? [{ ...inbox[0], status: 'received', caseId: null }]
+          : null,
+      ),
+    );
+    renderWithSWR(<IncomingInterAgencyReferrals />);
+    expect(await screen.findByText('Intake pending')).toBeTruthy();
+  });
+
+  it('does not flag a referral that already has a case', async () => {
+    mockApiGet.mockImplementation((key: unknown) =>
+      Promise.resolve(
+        JSON.stringify(key).includes('inter-agency-referrals')
+          ? [{ ...inbox[0], status: 'received', caseId: 'case-1' }]
+          : null,
+      ),
+    );
+    renderWithSWR(<IncomingInterAgencyReferrals />);
+    await screen.findByText('Maria Reyes Santos');
+    expect(screen.queryByText('Intake pending')).toBeNull();
   });
 
   it('shows the empty state when there are no incoming referrals', async () => {
@@ -79,7 +108,7 @@ describe('IncomingInterAgencyReferrals', () => {
   it('navigates to /agency/referrals/:id when a row is clicked', async () => {
     const user = userEvent.setup();
     renderWithSWR(<IncomingInterAgencyReferrals />);
-    const row = await screen.findByRole('button', { name: /View details for Maria Santos/ });
+    const row = await screen.findByRole('button', { name: /View details for Maria Reyes Santos/ });
     await user.click(row);
     expect(await screen.findByTestId('location')).toHaveTextContent('/agency/referrals/r1');
   });
