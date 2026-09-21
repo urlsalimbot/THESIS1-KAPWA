@@ -571,3 +571,105 @@ describe('IntakePage — prefill from BeneficiaryViewPage', () => {
     expect((fmSurnames[0] as HTMLInputElement).disabled).toBe(false);
   });
 });
+
+describe('IntakePage — prefill from a referral handoff', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
+  function renderWithReferralState(state: Record<string, unknown>) {
+    return render(
+      <MemoryRouter initialEntries={[{ pathname: '/intake', state }]}>
+        <IntakePage />
+      </MemoryRouter>
+    );
+  }
+
+  it('applies extension and address from the prefill', async () => {
+    renderWithReferralState({
+      prefill: {
+        surname: 'Dela Cruz',
+        firstName: 'Juan',
+        extension: 'Jr.',
+        currentAddress: { street: '123 Mabini St', barangay: 'Poblacion' },
+      },
+    });
+
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByLabelText('ben-extension')).toHaveValue('Jr.');
+    // Both the beneficiary and claimant sections render an address block with
+    // the same label, so index into the beneficiary's.
+    expect(screen.getAllByLabelText('Address Street')[0]).toHaveValue('123 Mabini St');
+    // The barangay select is keyed by PSGC code but displays the name, so the
+    // name coming from the referral resolves to the right option.
+    expect(screen.getAllByLabelText('Address Barangay')[0]).toHaveDisplayValue('Poblacion');
+  });
+
+  it('keeps the Norzagaray address defaults when the prefill has no address', async () => {
+    renderWithReferralState({ prefill: { surname: 'Reyes', firstName: 'Maria' } });
+
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getAllByLabelText('Address Street')[0]).toHaveValue('');
+    expect(screen.getAllByLabelText('Address City')[0]).toHaveDisplayValue('Norzagaray');
+  });
+
+  it('sends sourceReferral and carries the reason into serviceRequested', async () => {
+    renderWithReferralState({
+      prefill: { surname: 'Dela Cruz', firstName: 'Juan' },
+      sourceReferral: { type: 'barangay', id: 'ref-1', reason: 'Medical assistance' },
+    });
+
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    // Collapses the claimant section so its duplicate field labels go away.
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const intakeCall = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: unknown[]) => call[0] === '/intake',
+    );
+    expect(intakeCall).toBeTruthy();
+    const payload = intakeCall![1] as {
+      sourceReferral?: unknown;
+      case?: { serviceRequested?: string[] };
+    };
+    expect(payload.sourceReferral).toEqual({ type: 'barangay', id: 'ref-1' });
+    expect(payload.case?.serviceRequested).toEqual(['Medical assistance']);
+  });
+
+  it('shows where the intake came from', async () => {
+    renderWithReferralState({
+      prefill: { surname: 'Dela Cruz', firstName: 'Juan' },
+      sourceReferral: { type: 'inter_agency', id: 'iar-1', reason: 'Medical assistance' },
+    });
+
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByText(/From referral: Medical assistance/)).toBeInTheDocument();
+  });
+
+  it('omits sourceReferral when the intake was not handed off', async () => {
+    renderWithReferralState({});
+
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const intakeCall = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: unknown[]) => call[0] === '/intake',
+    );
+    const payload = intakeCall![1] as { sourceReferral?: unknown; case?: unknown };
+    expect(payload.sourceReferral).toBeUndefined();
+    expect(payload.case).toEqual({});
+  });
+});

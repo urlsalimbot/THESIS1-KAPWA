@@ -295,13 +295,20 @@ export function IntakePage() {
   }, [userId]);
 
   useEffect(() => {
-    const prefill = (location.state as { prefill?: Record<string, string> & { familyMembers?: FamilyMember[] } })?.prefill;
+    const prefill = (location.state as {
+      prefill?: Record<string, string> & {
+        familyMembers?: FamilyMember[];
+        currentAddress?: { street?: string; barangay?: string };
+      };
+    })?.prefill;
     if (prefill) {
+      const address = prefill.currentAddress;
       setBeneficiary(prev => ({
         ...prev,
         surname: prefill.surname ?? prev.surname,
         firstName: prefill.firstName ?? prev.firstName,
         middleName: prefill.middleName ?? prev.middleName,
+        extension: prefill.extension ?? prev.extension,
         gender: prefill.gender ?? prev.gender,
         dob: prefill.dob ?? prev.dob,
         placeOfBirth: prefill.placeOfBirth ?? prev.placeOfBirth,
@@ -310,6 +317,14 @@ export function IntakePage() {
         occupation: prefill.occupation ?? prev.occupation,
         estimatedMonthlyIncome: prefill.estimatedMonthlyIncome ?? prev.estimatedMonthlyIncome,
         philhealthNumber: prefill.philhealthNumber ?? prev.philhealthNumber,
+        // Merge rather than replace: region/province/city keep the Norzagaray
+        // defaults, and only non-empty referral values are applied because the
+        // intake validates street and barangay as min(1).
+        currentAddress: {
+          ...prev.currentAddress,
+          ...(address?.street ? { street: address.street } : {}),
+          ...(address?.barangay ? { barangay: address.barangay } : {}),
+        },
       }));
       if (Array.isArray(prefill.familyMembers) && prefill.familyMembers.length > 0) {
         setFamily(prefill.familyMembers);
@@ -497,6 +512,10 @@ export function IntakePage() {
 
     setSubmitting(true);
 
+    const sourceReferral = (location.state as {
+      sourceReferral?: { type: 'barangay' | 'inter_agency'; id: string; reason?: string };
+    })?.sourceReferral;
+
     const intakePayload = {
       beneficiary: personToPayload(beneficiary),
       claimant: beneficiaryIsClaimant
@@ -504,7 +523,14 @@ export function IntakePage() {
         : { ...personToPayload(claimant), relationshipToBeneficiary },
       familyMembers: familyMembersPayload(),
       renewalOfCaseId: (location.state as { renewalOfCaseId?: string })?.renewalOfCaseId || undefined,
-      case: {},
+      // Lets the server link the case it creates back to the referral that
+      // handed off to this intake (IntakeService.linkSourceReferral).
+      sourceReferral: sourceReferral
+        ? { type: sourceReferral.type, id: sourceReferral.id }
+        : undefined,
+      // The referral reason rides in the existing serviceRequested slot so it is
+      // not lost now that accepting no longer creates the case itself.
+      case: sourceReferral?.reason ? { serviceRequested: [sourceReferral.reason] } : {},
     };
 
     try {
@@ -552,6 +578,13 @@ export function IntakePage() {
       {(location.state as { prefill?: Record<string, string> })?.prefill && (
         <div className="mb-4 rounded border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
           {t('intake.addingCaseFor', 'Adding a case for')} <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>{t('intake.addingCaseForSuffix', '. Review and modify details before submitting.')}
+        </div>
+      )}
+      {(location.state as { sourceReferral?: { reason?: string } })?.sourceReferral?.reason && (
+        <div className="mb-4 rounded border border-accent/25 bg-accent/5 p-3 text-sm text-accent">
+          {t('intake.fromReferral', 'From referral: {{reason}}', {
+            reason: (location.state as { sourceReferral?: { reason?: string } }).sourceReferral?.reason,
+          })}
         </div>
       )}
       <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6">
