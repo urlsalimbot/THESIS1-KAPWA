@@ -44,6 +44,19 @@ async function call(
   return { status: r.status, json };
 }
 
+// Files one required document so the activation gate (all program-required
+// documents present) can pass. Multipart, so it bypasses the JSON `call` helper.
+async function uploadRequirement(token: string, caseId: string, requirementKey: string): Promise<void> {
+  const fd = new FormData();
+  fd.append('caseId', caseId);
+  fd.append('requirementKey', requirementKey);
+  fd.append('category', 'requirement');
+  fd.append('notes', 'Seeded demo requirement');
+  fd.append('file', new Blob([Buffer.from('%PDF-1.3 demo')], { type: 'application/pdf' }), `${requirementKey.replace(/[^a-z0-9]+/gi, '_')}.pdf`);
+  const r = await fetch(`${API}/filing/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+  if (r.status >= 400) console.warn(`  WARN requirement upload '${requirementKey}' -> ${r.status}`);
+}
+
 interface Person {
   surname: string; firstName: string; middleName: string; gender: string; dob: string;
   phone: string; address: string; philsysNumber: string; stage: string;
@@ -223,10 +236,21 @@ async function main(): Promise<void> {
         if (!programId) console.warn(`  WARN no program matched for intervention '${iv.serviceName}'`);
         await call(worker, 'POST', `/cases/${caseId}/interventions`, { ...iv, programId }, 'intervention');
       }
+      // The activation gate requires every required document of the linked
+      // programs; file them so the demo reaches active/transitioning/closed.
+      const requiredKeys = [...new Set(
+        INTERVENTIONS[p.stage]
+          .map((iv) => programIdFor(programs, String(iv.serviceName)))
+          .filter(Boolean)
+          .flatMap((pid) => (programs.find((pr: any) => pr.id === pid)?.requiredDocuments || []) as string[]),
+      )];
+      for (const key of requiredKeys) await uploadRequirement(admin, caseId, key);
       await call(admin, 'PATCH', `/cases/${caseId}/approve`, { status: 'active', signature: 'Admin Approval' }, 'approve');
     }
     if (['transitioning', 'closed'].includes(p.stage)) {
       await call(admin, 'PATCH', `/cases/${caseId}/transition-plan`, TRANSITION, 'transition-plan');
+      // The transition gate requires the inter-agency referral decision.
+      await call(admin, 'PATCH', `/cases/${caseId}/referral-decision`, { notNeeded: true }, 'referral-decision');
       await call(admin, 'PATCH', `/cases/${caseId}/disburse`, { status: 'transitioning' }, 'disburse');
     }
     if (p.stage === 'closed') {
