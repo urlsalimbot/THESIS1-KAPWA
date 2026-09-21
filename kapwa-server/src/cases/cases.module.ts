@@ -18,9 +18,10 @@ import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { GisModule } from '../gis/gis.module';
 import { FilingModule } from '../filing/filing.module';
+import { IrfModule } from '../irf/irf.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseIntervention, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule],
+  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseIntervention, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
   controllers: [CasesController],
   providers: [CasesService, CasesExportService],
   exports: [CasesService]
