@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { User, UserRole } from '../auth/user.entity';
+import { UserToken } from '../auth/user-token.entity';
 import { Person } from '../beneficiaries/person.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { EmailService } from '../email/email.service';
@@ -30,11 +31,12 @@ export interface ProvisionClaimantResult {
   smsDelivered: boolean;
 }
 
-// Generates a readable temporary password (no ambiguous 0/O/1/l/I).
-export function generateTempPassword(): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  const bytes = crypto.randomBytes(10);
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// A password nobody knows: the account is only usable after the one-time
+// set-password link is consumed. Never sent to the user.
+function unusablePassword(): string {
+  return crypto.randomBytes(32).toString('hex');
 }
 
 @Injectable()
@@ -43,6 +45,7 @@ export class AccountProvisioningService {
 
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(UserToken) private tokenRepo: Repository<UserToken>,
     @InjectRepository(Person) private personRepo: Repository<Person>,
     @InjectRepository(BeneficiaryClaimant) private claimantRepo: Repository<BeneficiaryClaimant>,
     private emailService: EmailService,
@@ -62,7 +65,7 @@ export class AccountProvisioningService {
     const existing = await this.findExistingUser(email, phone);
     if (existing) {
       // A claimant may represent up to 2 beneficiaries: reuse the account and
-      // only confirm the new enrollment — never resend credentials.
+      // only confirm the new enrollment — never resend setup credentials.
       if (!existing.personId) {
         existing.personId = input.claimantPersonId;
         await this.userRepo.save(existing);
@@ -83,10 +86,9 @@ export class AccountProvisioningService {
       return { created: false, emailDelivered: false, smsDelivered: false };
     }
 
-    const tempPassword = generateTempPassword();
     const user = this.userRepo.create({
       email: email || `claimant-${phone}@claimant.kapwa.local`,
-      password: await bcrypt.hash(tempPassword, BCRYPT_SALT_ROUNDS),
+      password: await bcrypt.hash(unusablePassword(), BCRYPT_SALT_ROUNDS),
       role: UserRole.CLAIMANT,
       firstName: person?.firstName,
       middleName: person?.middleName,
@@ -95,28 +97,23 @@ export class AccountProvisioningService {
       personId: input.claimantPersonId,
       isActive: true,
       emailVerified: true,
-      mustChangePassword: true,
     });
     const saved = await this.userRepo.save(user);
 
-    const delivered = { emailDelivered: false, smsDelivered: false };
-    if (email) {
-      delivered.emailDelivered = await this.emailService
-        .sendClaimantWelcomeEmail(email, { tempPassword, beneficiaryName: input.beneficiaryName, controlNo: input.controlNo })
-        .catch(() => false);
-    }
-    if (phone) {
-      const sms = await this.smsGateway
-        .sendSms(
-          phone,
-          `KAPWA: account for ${input.beneficiaryName} (Case ${input.controlNo}) created. Email ${saved.email}. Temp password: ${tempPassword}. Change it after signing in.`,
-        )
-        .catch(() => ({ success: false }));
-      delivered.smsDelivered = Boolean((sms as { success?: boolean })?.success);
-    }
+    const delivered = await this.deliverSetupLink({
+      userId: saved.id,
+      email: saved.email,
+      phone,
+      fullName,
+      role: UserRole.CLAIMANT,
+      beneficiaryName: input.beneficiaryName,
+      controlNo: input.controlNo,
+      actorId: input.actorId,
+      syntheticEmail: !email,
+    });
 
     if (!delivered.emailDelivered && !delivered.smsDelivered) {
-      await this.flagStaff(input, `Claimant account ${saved.email} created but credentials could not be delivered.`, saved.id);
+      await this.flagStaff(input, `Claimant account ${saved.email} created but the setup link could not be delivered.`, saved.id);
     }
 
     await this.auditLog?.log('claimant.account_created', input.beneficiaryId, input.actorId, {
@@ -127,6 +124,80 @@ export class AccountProvisioningService {
     });
 
     return { created: true, userId: saved.id, ...delivered };
+  }
+
+  // Shared delivery for staff/admin-provisioned accounts (no person or
+  // beneficiary context): email + SMS a one-time set-password link.
+  async deliverAccountCredentials(opts: {
+    userId: string;
+    email: string;
+    phone?: string;
+    fullName?: string;
+    role: string;
+    actorId?: string;
+  }): Promise<{ emailDelivered: boolean; smsDelivered: boolean }> {
+    const delivered = await this.deliverSetupLink({
+      userId: opts.userId,
+      email: opts.email,
+      phone: opts.phone,
+      fullName: opts.fullName,
+      role: opts.role,
+      actorId: opts.actorId,
+      syntheticEmail: false,
+    });
+
+    if (!delivered.emailDelivered && !delivered.smsDelivered) {
+      await this.flagAdmins(`Account ${opts.email} created but the setup link could not be delivered.`, opts.userId);
+    }
+
+    return delivered;
+  }
+
+  // Issues a single-use password_reset token (consumed by POST
+  // /auth/reset-password) and delivers the link over email and/or SMS.
+  private async deliverSetupLink(opts: {
+    userId: string;
+    email: string;
+    phone?: string;
+    fullName?: string;
+    role: string;
+    beneficiaryName?: string;
+    controlNo?: string;
+    actorId?: string;
+    syntheticEmail: boolean;
+  }): Promise<{ emailDelivered: boolean; smsDelivered: boolean }> {
+    const token = crypto.randomBytes(32).toString('hex');
+    await this.tokenRepo.save(
+      this.tokenRepo.create({
+        userId: opts.userId,
+        purpose: 'password_reset',
+        token,
+        expiresAt: new Date(Date.now() + SETUP_LINK_TTL_MS),
+      }),
+    );
+    const link = `${this.emailService.getAppBaseUrl()}/reset-password?token=${token}`;
+
+    const emailDelivered = opts.syntheticEmail
+      ? false
+      : await this.emailService
+          .sendAccountSetupEmail(opts.email, { link, fullName: opts.fullName, role: opts.role, beneficiaryName: opts.beneficiaryName, controlNo: opts.controlNo })
+          .catch(() => false);
+
+    let smsDelivered = false;
+    if (opts.phone) {
+      const sms = await this.smsGateway
+        .sendSms(opts.phone, `KAPWA: set up your account. Choose your password here (valid 7 days): ${link}`)
+        .catch(() => ({ success: false }));
+      smsDelivered = Boolean((sms as { success?: boolean })?.success);
+    }
+
+    await this.auditLog?.log('account.setup_link_issued', opts.userId, opts.actorId, {
+      role: opts.role,
+      emailDelivered,
+      smsDelivered,
+    });
+
+    return { emailDelivered, smsDelivered };
   }
 
   private async findExistingUser(email?: string, phone?: string): Promise<User | null> {
@@ -159,45 +230,6 @@ export class AccountProvisioningService {
 
   private async flagStaff(input: ProvisionClaimantInput, message: string, userId?: string) {
     await this.flagAdmins(`${message} Beneficiary: ${input.beneficiaryName} (Case ${input.controlNo}).`, userId);
-  }
-
-  // Delivery for staff/admin-provisioned accounts (no person or beneficiary
-  // context): email + SMS the temporary password and force a reset.
-  async deliverAccountCredentials(opts: {
-    userId: string;
-    email: string;
-    phone?: string;
-    fullName?: string;
-    role: string;
-    tempPassword: string;
-    actorId?: string;
-  }): Promise<{ emailDelivered: boolean; smsDelivered: boolean }> {
-    const emailDelivered = await this.emailService
-      .sendAccountWelcomeEmail(opts.email, { tempPassword: opts.tempPassword, fullName: opts.fullName, role: opts.role })
-      .catch(() => false);
-
-    let smsDelivered = false;
-    if (opts.phone) {
-      const sms = await this.smsGateway
-        .sendSms(
-          opts.phone,
-          `KAPWA: your ${opts.role.replace(/_/g, ' ')} account is ready. Email ${opts.email}. Temp password: ${opts.tempPassword}. Change it after signing in.`,
-        )
-        .catch(() => ({ success: false }));
-      smsDelivered = Boolean((sms as { success?: boolean })?.success);
-    }
-
-    if (!emailDelivered && !smsDelivered) {
-      await this.flagAdmins(`Account ${opts.email} created but credentials could not be delivered.`, opts.userId);
-    }
-
-    await this.auditLog?.log('account.credentials_delivered', opts.userId, opts.actorId, {
-      role: opts.role,
-      emailDelivered,
-      smsDelivered,
-    });
-
-    return { emailDelivered, smsDelivered };
   }
 
   private async flagAdmins(message: string, referenceId?: string) {

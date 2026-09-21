@@ -52,12 +52,13 @@ describe('UsersService', () => {
     const result = await service.createUser({ email: 'new@test.com', role: 'social_worker', firstName: 'New', lastName: 'Person' });
 
     const saved = mockRepo.save.mock.calls[0][0];
-    expect(saved.mustChangePassword).toBe(true);
+    expect(saved.mustChangePassword).toBeUndefined();
     expect(saved.password).toMatch(/^\$2[aby]\$/);
     expect((result as any).password).toBeUndefined();
     expect((service as any).accounts.deliverAccountCredentials).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'new@test.com', role: 'social_worker', tempPassword: expect.any(String) }),
+      expect.objectContaining({ email: 'new@test.com', role: 'social_worker' }),
     );
+    expect((service as any).accounts.deliverAccountCredentials.mock.calls[0][0].tempPassword).toBeUndefined();
   });
 
   describe('createUser', () => {

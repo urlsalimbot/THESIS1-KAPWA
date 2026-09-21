@@ -4,8 +4,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, FindOptionsWhere } from 'typeorm';
 import { User, UserRole } from '../auth/user.entity';
 import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity';
-import { AccountProvisioningService, generateTempPassword } from '../accounts/account-provisioning.service';
+import { AccountProvisioningService } from '../accounts/account-provisioning.service';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 export interface CreateUserInput {
   email: string;
@@ -90,12 +91,10 @@ export class UsersService {
       throw new ConflictException('A user with this email already exists');
     }
 
-    // Admin-provisioned accounts get a server-generated temporary password and
-    // a forced reset; the credentials are delivered by email/SMS (spec: same
-    // treatment as intake-provisioned claimants).
-    const tempPassword = generateTempPassword();
+    // Admin-provisioned accounts get a one-time set-password link: an unusable
+    // random password is stored, and the link is delivered by email/SMS.
     const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(tempPassword, salt);
+    const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), salt);
 
     const user = this.userRepo.create({
       email: dto.email,
@@ -107,7 +106,6 @@ export class UsersService {
       nameExtension: dto.nameExtension,
       phone: dto.phone,
       agencyId: dto.agencyId,
-      mustChangePassword: true,
       barangayAssignments: this.buildAssignments(dto.assignedBarangay, dto.permittedBarangays || []),
     });
 
@@ -120,10 +118,9 @@ export class UsersService {
         phone: saved.phone ?? undefined,
         fullName: saved.fullName,
         role: saved.role,
-        tempPassword,
       });
     } catch (e) {
-      this.logger.warn(`Credential delivery failed for ${saved.email}: ${(e as Error)?.message ?? e}`);
+      this.logger.warn(`Setup link delivery failed for ${saved.email}: ${(e as Error)?.message ?? e}`);
     }
 
     const { password, ...safe } = saved;

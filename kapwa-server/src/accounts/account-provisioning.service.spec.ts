@@ -7,22 +7,27 @@ function build(overrides: any = {}) {
     save: jest.fn(async (x: any) => ({ id: 'u-new', ...x })),
     query: jest.fn().mockResolvedValue([{ id: 'admin-1' }]),
   };
+  const tokenRepo = {
+    create: jest.fn((x: any) => ({ ...x })),
+    save: jest.fn(async (x: any) => x),
+  };
   const personRepo = { findOne: jest.fn().mockResolvedValue({ firstName: 'Pedro', middleName: 'P', surname: 'Reyes' }) };
   const claimantRepo = { findOne: jest.fn() };
   const emailService = {
-    sendClaimantWelcomeEmail: jest.fn().mockResolvedValue(true),
+    sendAccountSetupEmail: jest.fn().mockResolvedValue(true),
     sendClaimantEnrollmentEmail: jest.fn().mockResolvedValue(true),
+    getAppBaseUrl: jest.fn().mockReturnValue('http://localhost:5173'),
   };
   const smsGateway = { sendSms: jest.fn().mockResolvedValue({ success: true }) };
   const notifications = { createMany: jest.fn().mockResolvedValue([]) };
   const auditLog = { log: jest.fn().mockResolvedValue(undefined) };
 
   const svc = new AccountProvisioningService(
-    userRepo as any, personRepo as any, claimantRepo as any,
+    userRepo as any, tokenRepo as any, personRepo as any, claimantRepo as any,
     emailService as any, smsGateway as any, notifications as any, auditLog as any,
   );
   Object.assign(userRepo, overrides.userRepo || {});
-  return { svc, userRepo, personRepo, emailService, smsGateway, notifications, auditLog };
+  return { svc, userRepo, tokenRepo, personRepo, emailService, smsGateway, notifications, auditLog };
 }
 
 const input = {
@@ -36,8 +41,8 @@ const input = {
 };
 
 describe('AccountProvisioningService', () => {
-  it('creates a claimant account with a temp password and delivers both channels', async () => {
-    const { svc, userRepo, emailService, smsGateway } = build();
+  it('creates a claimant account and delivers a one-time set-password link', async () => {
+    const { svc, userRepo, tokenRepo, emailService, smsGateway } = build();
 
     const result = await svc.provision(input);
 
@@ -45,28 +50,36 @@ describe('AccountProvisioningService', () => {
     const saved = userRepo.save.mock.calls[0][0];
     expect(saved.role).toBe('claimant');
     expect(saved.personId).toBe('person-1');
-    expect(saved.mustChangePassword).toBe(true);
-    expect(saved.emailVerified).toBe(true);
     expect(saved.password).toMatch(/^\$2[aby]\$/);
-    expect(saved.password).not.toContain('KAPWA');
-    expect(emailService.sendClaimantWelcomeEmail).toHaveBeenCalledWith('pedro@example.test', expect.objectContaining({ controlNo: input.controlNo }));
-    expect(smsGateway.sendSms).toHaveBeenCalledWith('09171234567', expect.stringContaining('Temp password'));
+    expect(saved.mustChangePassword).toBeUndefined();
+
+    const tokenRow = tokenRepo.save.mock.calls[0][0];
+    expect(tokenRow.purpose).toBe('password_reset');
+    expect(tokenRow.token).toHaveLength(64);
+    expect(tokenRow.expiresAt.getTime()).toBeGreaterThan(Date.now());
+
+    expect(emailService.sendAccountSetupEmail).toHaveBeenCalledWith(
+      'pedro@example.test',
+      expect.objectContaining({ link: expect.stringContaining('/reset-password?token='), controlNo: input.controlNo }),
+    );
+    expect(smsGateway.sendSms).toHaveBeenCalledWith('09171234567', expect.stringContaining('/reset-password?token='));
     expect(result.emailDelivered).toBe(true);
     expect(result.smsDelivered).toBe(true);
   });
 
   it('reuses an existing account and sends the enrollment notification only', async () => {
     const existing = { id: 'u-existing', email: 'pedro@example.test', phone: '09171234567', personId: null };
-    const { svc, userRepo, emailService, smsGateway } = build({ userRepo: { findOne: jest.fn().mockResolvedValue(existing) } });
+    const { svc, userRepo, tokenRepo, emailService, smsGateway } = build({ userRepo: { findOne: jest.fn().mockResolvedValue(existing) } });
 
     const result = await svc.provision(input);
 
     expect(result.created).toBe(false);
     expect(result.userId).toBe('u-existing');
     expect(userRepo.create).not.toHaveBeenCalled();
+    expect(tokenRepo.save).not.toHaveBeenCalled();
     expect(existing.personId).toBe('person-1');
     expect(emailService.sendClaimantEnrollmentEmail).toHaveBeenCalled();
-    expect(emailService.sendClaimantWelcomeEmail).not.toHaveBeenCalled();
+    expect(emailService.sendAccountSetupEmail).not.toHaveBeenCalled();
     expect(smsGateway.sendSms).toHaveBeenCalledWith('09171234567', expect.stringContaining('enrolled'));
   });
 
@@ -82,9 +95,9 @@ describe('AccountProvisioningService', () => {
     ]);
   });
 
-  it('flags staff when a created account could not be delivered', async () => {
+  it('flags staff when the setup link could not be delivered', async () => {
     const { svc, notifications } = build();
-    svc['emailService'].sendClaimantWelcomeEmail = jest.fn().mockResolvedValue(false);
+    svc['emailService'].sendAccountSetupEmail = jest.fn().mockResolvedValue(false);
     svc['smsGateway'].sendSms = jest.fn().mockResolvedValue({ success: false });
 
     const result = await svc.provision(input);
@@ -92,5 +105,15 @@ describe('AccountProvisioningService', () => {
     expect(result.created).toBe(true);
     expect(result.emailDelivered).toBe(false);
     expect(notifications.createMany).toHaveBeenCalled();
+  });
+
+  it('issues a setup link for admin-provisioned accounts', async () => {
+    const { svc, tokenRepo, emailService, smsGateway } = build();
+
+    await svc.deliverAccountCredentials({ userId: 'u9', email: 'staff@test.com', phone: '09170000000', fullName: 'A B', role: 'social_worker' });
+
+    expect(tokenRepo.save).toHaveBeenCalled();
+    expect(emailService.sendAccountSetupEmail).toHaveBeenCalledWith('staff@test.com', expect.objectContaining({ link: expect.stringContaining('/reset-password?token=') }));
+    expect(smsGateway.sendSms).toHaveBeenCalledWith('09170000000', expect.stringContaining('/reset-password?token='));
   });
 });
