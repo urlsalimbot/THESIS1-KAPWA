@@ -14,6 +14,7 @@ import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
 import { formatDate, formatDateTime } from '../lib/format';
 import { isAssessmentStepDone, interventionRequirementsMet } from '../lib/case-progress';
+import { humanizeError } from '../lib/errors';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +67,19 @@ export function CaseViewPage() {
   const navigate = useNavigate();
   const { mutate } = useSWRConfig();
   const { user } = useAuth();
+  const [issuing, setIssuing] = useState<'coe' | 'pcv' | null>(null);
+
+  async function issueDoc(type: 'coe' | 'pcv') {
+    setIssuing(type);
+    try {
+      await api.post(`/cases/${id}/${type === 'coe' ? 'issue-coe' : 'issue-pcv'}`);
+      await mutate(queryKeys.cases.detail(id!));
+      toast.success(type === 'coe' ? t('cases.coeIssued', 'Certificate of Eligibility issued') : t('cases.pcvIssued', 'Petty Cash Voucher issued'));
+    } catch (e) {
+      toast.error(humanizeError(e));
+    }
+    setIssuing(null);
+  }
 
   const [currentStep, setCurrentStep] = useState(0);
   const { actionLoading, handleAction } = useCaseActions();
@@ -385,6 +399,16 @@ export function CaseViewPage() {
                     onClick={() => handleAction('submit-review', id!)}
                   >
                     <Send size={14} aria-hidden="true" /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('caseView.implement.submitForReview', 'Submit for Review →')}
+                  </Button>
+                )}
+                {user?.role === 'admin' && !caseData.certificateUrl && (
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled={issuing === 'coe'} onClick={() => issueDoc('coe')}>
+                    <FileText size={14} aria-hidden="true" /> {issuing === 'coe' ? t('cases.issuing', 'Issuing…') : t('cases.issueCoe', 'Issue COE')}
+                  </Button>
+                )}
+                {user?.role === 'admin' && !caseData.pettyCashVoucherUrl && (
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled={issuing === 'pcv'} onClick={() => issueDoc('pcv')}>
+                    <FileText size={14} aria-hidden="true" /> {issuing === 'pcv' ? t('cases.issuing', 'Issuing…') : t('cases.issuePcv', 'Issue PCV')}
                   </Button>
                 )}
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadGisPdf(id!)}>

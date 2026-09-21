@@ -163,6 +163,21 @@ describe('CaseViewPage — government ID photo', () => {
 
     expect(await screen.findByText('Poblacion, Norzagaray, Bulacan')).toBeTruthy();
   });
+
+  it('shows Issue COE and Issue PCV to an admin on an active case without documents', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' }, loading: false });
+    renderWithSWR(<CaseViewPage />);
+    expect(await screen.findByRole('button', { name: /Issue COE/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Issue PCV/i })).toBeTruthy();
+  });
+
+  it('hides Issue COE and Issue PCV from non-admins', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '2', fullName: 'Worker', role: 'social_worker' }, loading: false });
+    renderWithSWR(<CaseViewPage />);
+    await screen.findByRole('button', { name: /GIS \(PDF\)/i });
+    expect(screen.queryByRole('button', { name: /Issue COE/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Issue PCV/i })).toBeNull();
+  });
 });
 
 describe('CaseViewPage — GIS PDF', () => {
