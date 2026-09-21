@@ -335,8 +335,13 @@ export class CasesService {
         );
       }
     }
-    if (c.status === CaseStatus.ACTIVE && newStatus === CaseStatus.TRANSITIONING && (!c.selfRelianceLevel || !c.sustainabilityPlan)) {
-      throw new BadRequestException('Self-reliance level and sustainability plan are required for transition');
+    if (c.status === CaseStatus.ACTIVE && newStatus === CaseStatus.TRANSITIONING) {
+      if (!c.selfRelianceLevel || !c.sustainabilityPlan) {
+        throw new BadRequestException('Self-reliance level and sustainability plan are required for transition');
+      }
+      if (!(c.referrals?.length) && !c.referralNotNeeded) {
+        throw new BadRequestException('Record the inter-agency referral decision before transitioning');
+      }
     }
     if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && (!c.clientSignature || !c.closureOutcome)) {
       throw new BadRequestException('Client signature and closure outcome are required for closure');
