@@ -7,6 +7,10 @@ import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { psgcNameFor } from '@/lib/psgc';
@@ -300,11 +304,17 @@ export function IntakePage() {
   //   3. otherwise nothing.
   // A draft belonging to a different intake never seeds, so a stale draft cannot
   // clobber a fresh referral hand-off.
+  // Bumped by "start over" so the seeding pass below can run again without
+  // changing route.
+  const [seedNonce, setSeedNonce] = useState(0);
+
   const seededForRef = useRef<string | null>(null);
   useEffect(() => {
     if (!userId) return; // wait for auth so the draft can be read
-    if (seededForRef.current === location.key) return;
-    seededForRef.current = location.key;
+    // Keyed by navigation AND the nonce, so a start-over re-seeds in place.
+    const seedKey = `${location.key}:${seedNonce}`;
+    if (seededForRef.current === seedKey) return;
+    seededForRef.current = seedKey;
 
     const incoming = location.state as {
       prefill?: Record<string, string> & {
@@ -372,7 +382,7 @@ export function IntakePage() {
     if (Array.isArray(prefill.familyMembers) && prefill.familyMembers.length > 0) {
       setFamily(prefill.familyMembers);
     }
-  }, [userId, location.key, location.state]);
+  }, [userId, location.key, location.state, seedNonce]);
 
   function updateBeneficiary(field: string, value: string) {
     setBeneficiary(prev => ({ ...prev, [field]: value }));
@@ -506,6 +516,29 @@ export function IntakePage() {
     } finally {
       setBatchSubmitting(false);
     }
+  }
+
+  /**
+   * Discard everything typed into this intake. The referral (or renewal)
+   * hand-off is deliberately kept: the draft is cleared and the seeding pass is
+   * re-run, so it re-applies the prefill — only the worker's own entries are
+   * lost, not the reason they are on this form.
+   */
+  function startOver() {
+    clearDraft(userId);
+    clearPendingIdPhoto();
+    clearBenPreview();
+    clearClaimPreview();
+    setBeneficiary(emptyPerson());
+    setClaimant(emptyPerson());
+    setRelationshipToBeneficiary('');
+    setFamily([]);
+    setBeneficiaryIsClaimant(false);
+    setHasConsent(false);
+    setBenErrors({});
+    setClaimErrors({});
+    setError('');
+    setSeedNonce(n => n + 1);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -847,10 +880,31 @@ export function IntakePage() {
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Button type="submit" disabled={submitting} aria-label={t('intake.submitIntake', 'Submit Intake')}>
             {submitting ? t('intake.checkingRecords', 'Checking records...') : t('intake.submitCheck', 'Submit & Check for Prior Records')}
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="outline" disabled={submitting}>
+                {t('intake.startOver', 'Start over')}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('intake.startOverTitle', 'Start over?')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('intake.startOverDesc', 'This clears everything you have entered for this intake. Any referral stays attached.')}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('intake.startOverCancel', 'Keep my entries')}</AlertDialogCancel>
+                <AlertDialogAction onClick={startOver}>
+                  {t('intake.startOverConfirm', 'Yes, clear it')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </form>
 

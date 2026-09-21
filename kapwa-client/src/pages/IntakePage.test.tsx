@@ -795,4 +795,29 @@ describe('IntakePage — draft recovery for a referral hand-off', () => {
     expect(screen.getByLabelText('ben-firstName')).toHaveValue('Drafted');
     expect(screen.queryByText(/From referral/)).toBeNull();
   });
+
+  it('start over clears the draft and restores the referral prefill, keeping the hand-off', async () => {
+    renderWithState({
+      prefill: { surname: 'Reyes', firstName: 'Maria', gender: 'Female' },
+      sourceReferral: { type: 'barangay', id: 'ref-3', reason: 'Assistance' },
+    });
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    // Something the prefill did not provide, then let the autosave persist it.
+    fireEvent.change(screen.getByLabelText('ben-occupation'), { target: { value: 'Vendor' } });
+    await waitFor(
+      () => expect(localStorage.getItem(DRAFT_KEY)).not.toBeNull(),
+      { timeout: 3000 },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Start over/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Yes, clear it/ }));
+
+    // The worker's own entry is gone, the referral prefill is back, and the
+    // referral itself is still attached.
+    expect(screen.getByLabelText('ben-occupation')).toHaveValue('');
+    expect(screen.getByLabelText('ben-firstName')).toHaveValue('Maria');
+    expect(screen.getByText(/From referral: Assistance/)).toBeInTheDocument();
+    expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
 });
