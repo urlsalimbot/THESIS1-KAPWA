@@ -59,8 +59,18 @@ export class ReferralsService {
       const raw = typeof dto.address === 'string'
         ? dto.address
         : Object.values(dto.address).filter(Boolean).join(', ');
+      // Also set the structured barangay: Person.currentAddress requires at
+      // least one of barangay/city/province, and the referral → intake prefill
+      // needs a structured barangay to populate the intake address block.
+      // There is no `street` column, so street stays inside `raw`.
+      const structured =
+        typeof dto.address === 'object' && dto.address !== null
+          ? (dto.address as Record<string, unknown>).barangay
+          : undefined;
       (person as any).addresses = [{
-        personId: undefined, addressType: 'current', raw, isPrimary: true,
+        personId: undefined, addressType: 'current', raw,
+        barangay: typeof structured === 'string' && structured ? structured : undefined,
+        isPrimary: true,
       }];
     }
     return this.personRepo.save(person);

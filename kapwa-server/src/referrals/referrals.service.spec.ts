@@ -114,4 +114,74 @@ describe('ReferralsService', () => {
       expect((result as any).status).toBe('accepted');
     });
   });
+
+  describe('create', () => {
+    // resolveOrCreatePerson looks up an existing person first; return no match
+    // so the address write path is exercised.
+    function stubPersonLookupMiss() {
+      personRepoMock.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      });
+    }
+
+    function stubEntityPersistence() {
+      personRepoMock.create.mockImplementation((v: Record<string, unknown>) => ({ ...v }));
+      personRepoMock.save.mockImplementation(async (p: Record<string, unknown>) => ({ ...p, id: 'person-new' }));
+      repoMock.create.mockImplementation((v: Record<string, unknown>) => ({ ...v }));
+      repoMock.save.mockImplementation(async (r: Record<string, unknown>) => ({ ...r, id: 'ref-1' }));
+    }
+
+    it('stores a structured barangay alongside the raw address string', async () => {
+      stubPersonLookupMiss();
+      stubEntityPersistence();
+
+      await service.create(
+        {
+          surname: 'Reyes',
+          firstName: 'Maria',
+          gender: 'Female',
+          dob: '1995-08-20',
+          phone: '09171234567',
+          address: { street: '123 Mabini St', barangay: 'Poblacion' },
+          reason: 'Medical assistance',
+        } as any,
+        'coord-1',
+        'Poblacion',
+      );
+
+      const savedPerson = personRepoMock.save.mock.calls[0][0];
+      expect(savedPerson.addresses).toEqual([
+        expect.objectContaining({
+          addressType: 'current',
+          raw: '123 Mabini St, Poblacion',
+          barangay: 'Poblacion',
+          isPrimary: true,
+        }),
+      ]);
+    });
+
+    it('omits the structured barangay when the payload has none', async () => {
+      stubPersonLookupMiss();
+      stubEntityPersistence();
+
+      await service.create(
+        {
+          surname: 'Reyes',
+          firstName: 'Maria',
+          gender: 'Female',
+          dob: '1995-08-20',
+          address: { street: '123 Mabini St' },
+          reason: 'Medical assistance',
+        } as any,
+        'coord-1',
+        'Poblacion',
+      );
+
+      const savedPerson = personRepoMock.save.mock.calls[0][0];
+      expect(savedPerson.addresses[0].barangay).toBeUndefined();
+      expect(savedPerson.addresses[0].raw).toBe('123 Mabini St');
+    });
+  });
 });
