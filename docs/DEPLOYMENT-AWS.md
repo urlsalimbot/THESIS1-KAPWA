@@ -488,3 +488,83 @@ Total ≈ **$30–35/month** for a small deployment. Terminate `t3.small` / use
 | Deep link 404s | CloudFront custom-error-response for 403/404 → `/index.html` not configured (§4.8) |
 | Stale frontend after deploy | `aws cloudfront create-invalidation --paths "/*"` not run, or `index.html` cached (must be `no-cache`) |
 | API health 503 via CloudFront | EC2 SG blocks port 3000 from CloudFront ranges, or the `api` container is down (`docker compose -f docker-compose.aws.yml logs api`) |
+
+---
+
+## 13. Continuous deployment
+
+Two workflows publish the two halves of the stack, each where it belongs:
+
+| Component | Runner | What it does |
+|---|---|---|
+| **API** | `self-hosted` runner on the EC2 (label `kapwa-aws`) | rsyncs the checkout to `/opt/kapwa`, runs `./deploy-aws.sh api` → rebuild API image, wait for health, apply migrations. **Needs no AWS credentials.** |
+| **SPA** | GitHub-hosted `ubuntu-latest` | `npm ci`, then `./deploy-aws.sh frontend` → build, `s3 sync` (no-cache HTML / immutable assets), CloudFront invalidation. Uses the scoped CI credentials. |
+
+Both wait for the `CI` workflow to succeed on `main`, or can be run manually
+via **Actions → Deploy AWS → Run workflow**.
+
+### 13.1 Install the self-hosted runner on the EC2
+
+```bash
+# On the EC2 (as the ubuntu user, who is in the docker group)
+mkdir -p ~/actions-runner && cd ~/actions-runner
+curl -o actions-runner.tar.gz -L \
+  https://github.com/actions/runner/releases/latest/download/actions-runner-linux-x64-2.321.0.tar.gz
+tar xzf actions-runner.tar.gz
+./config.sh --url https://github.com/<owner>/<repo> --token <REGISTRATION_TOKEN> \
+  --labels kapwa-aws --name kapwa-api-runner --unattended
+sudo ./svc.sh install ubuntu && sudo ./svc.sh start
+```
+
+Get `<REGISTRATION_TOKEN>` from **Repo → Settings → Actions → Runners → New self-hosted runner**.
+The runner talks outbound to GitHub only — no inbound SSH is opened.
+
+### 13.2 GitHub configuration
+
+Repository → Settings → Secrets and variables → Actions:
+
+| Kind | Name | Value |
+|---|---|---|
+| Secret | `AWS_DEPLOY_ACCESS_KEY_ID` | access key of a user scoped to the frontend bucket + invalidation |
+| Secret | `AWS_DEPLOY_SECRET_ACCESS_KEY` | matching secret key |
+| Variable | `DEPLOY_PATH` | optional, defaults to `/opt/kapwa` |
+
+The CI user needs only:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::kapwa-software-frontend"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:DeleteObject", "s3:GetObject"],
+      "Resource": "arn:aws:s3:::kapwa-software-frontend/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"],
+      "Resource": "arn:aws:cloudfront::<account-id>:distribution/<distribution-id>"
+    }
+  ]
+}
+```
+
+### 13.3 Manual deploy
+
+```bash
+./deploy-aws.sh            # API + SPA
+./deploy-aws.sh api        # API only (no AWS credentials needed)
+./deploy-aws.sh frontend   # SPA only
+```
+
+Override defaults via environment: `AWS_HOST` (or `local` when run on the EC2),
+`AWS_SSH_KEY`, `DEPLOY_PATH`, `FRONTEND_BUCKET`, `CF_DIST_ID`.
+
+> The legacy `.github/workflows/deploy.yml` targets the self-hosted-PC model
+> (single-host docker compose + Caddy). It is superseded by `deploy-aws.yml`
+> for the AWS architecture — disable it if the PC runner is no longer used.

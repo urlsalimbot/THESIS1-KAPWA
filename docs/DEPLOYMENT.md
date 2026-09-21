@@ -127,8 +127,8 @@ production when either value is missing.
 | `EMAIL_HOST` | yes (live) | e.g. `smtp.your-provider.com` |
 | `EMAIL_PORT` | no | defaults to `587` (465 → TLS) |
 | `EMAIL_USER` / `EMAIL_PASS` | yes (live) | SMTP credentials |
-| `EMAIL_FROM` | no | e.g. `KAPWA MSWDO <noreply@your-domain.gov.ph>` |
-| `APP_URL` | **yes** | public origin, e.g. `https://kapwa.mswdo-norzagaray.gov.ph` — email links are built from it; without it links point to `http://localhost:5173` |
+| `EMAIL_FROM` | no | e.g. `KAPWA MSWDO <noreply@mail.kapwa.software>` |
+| `APP_URL` | **yes** | public origin, e.g. `https://kapwa.software` — email links are built from it; without it links point to `http://localhost:5173` |
 | `NOTIF_WS_ORIGIN` | no | comma-separated allowed origins for the notifications WebSocket (defaults to localhost dev origins) |
 
 Set them in `/opt/kapwa/infra/.env.production` (rsync never touches it) and

@@ -54,6 +54,9 @@ import { AppController } from './app.controller';
         username: config.get('DB_USER', 'kapwa'),
         password: config.get('DB_PASSWORD', 'kapwa'),
         database: config.get('DB_NAME', 'kapwa'),
+        // RDS enforces TLS (rds.force_ssl=1); self-hosted Postgres stays
+        // plaintext unless DB_SSL is explicitly enabled.
+        ssl: config.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         // The TypeORM migration chain is NOT fresh-boot-safe (legacy timestamp
