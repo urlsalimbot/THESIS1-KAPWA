@@ -328,6 +328,12 @@ export class CasesService {
       if (interventionCount === 0) {
         throw new BadRequestException('At least one intervention must be logged before activating');
       }
+      const missing = await this.casesExport.missingRequiredDocuments(c.id);
+      if (missing.length > 0) {
+        throw new BadRequestException(
+          `Cannot activate: missing required document(s): ${missing.join(', ')}`,
+        );
+      }
     }
     if (c.status === CaseStatus.ACTIVE && newStatus === CaseStatus.TRANSITIONING && (!c.selfRelianceLevel || !c.sustainabilityPlan)) {
       throw new BadRequestException('Self-reliance level and sustainability plan are required for transition');

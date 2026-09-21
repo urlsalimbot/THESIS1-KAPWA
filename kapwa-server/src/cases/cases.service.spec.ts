@@ -98,6 +98,34 @@ describe('CasesService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('approval document gate', () => {
+    it('blocks in_review -> active when required documents are missing', async () => {
+      const c = {
+        id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-2026-00001',
+        beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
+      } as unknown as Case;
+      repoMock.findOne.mockResolvedValue(c);
+      (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
+      (service as any).casesExport = { missingRequiredDocuments: jest.fn().mockResolvedValue(['Valid ID']) };
+
+      await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1'))
+        .rejects.toThrow(/missing required document/i);
+    });
+
+    it('allows in_review -> active when no documents are required', async () => {
+      const c = {
+        id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-2026-00001',
+        beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
+      } as unknown as Case;
+      repoMock.findOne.mockResolvedValue(c);
+      repoMock.save.mockImplementation(async (x: any) => x);
+      (service as any).casesExport = { missingRequiredDocuments: jest.fn().mockResolvedValue([]) };
+      (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
+
+      await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1')).resolves.toBeTruthy();
+    });
+  });
+
   describe('create', () => {
     it('should create a case with enrolled status', async () => {
       const caseData = {

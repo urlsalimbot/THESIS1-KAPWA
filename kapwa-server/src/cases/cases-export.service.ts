@@ -520,6 +520,29 @@ export class CasesExportService {
     return done.then(() => Buffer.concat(chunks));
   }
 
+  // Required document keys (mandatory) contributed by the programs behind this
+  // case's interventions, minus the keys already filed against the case.
+  // A program with no required documents contributes nothing.
+  async missingRequiredDocuments(caseId: string): Promise<string[]> {
+    const required: Array<{ document_key: string }> = await this.caseRepo.manager.query(
+      `SELECT DISTINCT prd.document_key
+         FROM case_interventions ci
+         JOIN program_required_documents prd ON prd.program_id = ci.program_id
+        WHERE ci.case_id = $1 AND prd.mandatory = TRUE`,
+      [caseId],
+    );
+    const requiredKeys = required.map((r) => r.document_key).filter(Boolean);
+    if (requiredKeys.length === 0) return [];
+
+    const filed: Array<{ requirement_key: string }> = await this.caseRepo.manager.query(
+      `SELECT DISTINCT requirement_key FROM document_vault
+        WHERE case_id = $1 AND requirement_key IS NOT NULL`,
+      [caseId],
+    );
+    const filedKeys = new Set(filed.map((r) => r.requirement_key));
+    return requiredKeys.filter((k) => !filedKeys.has(k));
+  }
+
   // Generates + files both documents for an approved case; returns their
   // download URLs. Best-effort: callers should not fail the transition on a
   // generation error.

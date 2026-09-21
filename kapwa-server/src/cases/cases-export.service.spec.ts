@@ -128,3 +128,24 @@ describe('CasesExportService', () => {
     expect(pcvText).toContain('Municipal Social Welfare and Development Office');
   });
 });
+
+describe('CasesExportService — missingRequiredDocuments', () => {
+  it('returns only required keys with no filed document, scoped to the case', async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce([{ document_key: 'A' }, { document_key: 'B' }])
+      .mockResolvedValueOnce([{ requirement_key: 'A' }, { requirement_key: 'Z' }]);
+    const caseRepo = { manager: { query } };
+    const svc = new CasesExportService(caseRepo as any, {} as any, {} as any, {} as any, {} as any);
+    await expect(svc.missingRequiredDocuments('c1')).resolves.toEqual(['B']);
+    expect(query.mock.calls[0][0]).toMatch(/WHERE ci\.case_id = \$1/);
+    expect(query.mock.calls[0][1]).toEqual(['c1']);
+    expect(query.mock.calls[1][0]).toMatch(/WHERE case_id = \$1/);
+    expect(query.mock.calls[1][1]).toEqual(['c1']);
+  });
+
+  it('passes when no program requires documents', async () => {
+    const caseRepo = { manager: { query: jest.fn().mockResolvedValueOnce([]) } };
+    const svc = new CasesExportService(caseRepo as any, {} as any, {} as any, {} as any, {} as any);
+    await expect(svc.missingRequiredDocuments('c1')).resolves.toEqual([]);
+  });
+});
