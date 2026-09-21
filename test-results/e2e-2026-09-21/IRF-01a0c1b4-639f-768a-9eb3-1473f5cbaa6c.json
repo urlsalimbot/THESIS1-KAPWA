@@ -1,0 +1,34 @@
+{
+  "exportMetadata": {
+    "format": "WCPD-EXPORT-v1",
+    "generatedAt": "2026-09-21T02:28:18.779Z",
+    "legalBasis": "AO-2020-002",
+    "agency": "Municipal Social Welfare and Development Office",
+    "encrypted": false
+  },
+  "case": {
+    "blotterEntryNumber": "BLT-2026-0001",
+    "caseCategory": "Abuse",
+    "datetimeReported": "2026-08-14T01:30:00.000Z",
+    "datetimeIncident": "2026-08-13T11:00:00.000Z",
+    "caseDisposition": "Under Investigation"
+  },
+  "parties": {
+    "reportingPerson": {
+      "name": "Maria L. Santos",
+      "phone": "09171234002",
+      "address": "Bigte, Norzagaray",
+      "relation": "Self (victim)"
+    },
+    "personReported": {
+      "name": "Unknown Male",
+      "alias": "Kapitbahay",
+      "address": "Bigte, Norzagaray"
+    }
+  },
+  "narration": "Victim reported being threatened by a neighbor during an altercation at the barangay hall. Case documented for Women and Children Protection Desk coordination.",
+  "signatures": {
+    "msdwSignatureUrl": "",
+    "reportingSignatureUrl": ""
+  }
+}
