@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, HandHeart, ArrowLeft } from 'lucide-react';
+import { Loader2, HandHeart } from 'lucide-react';
 import { api } from '../lib/api';
+import { AuthShell } from '@/components/public/AuthShell';
 
 const barangays = [
   'Bangkal',
@@ -118,11 +119,8 @@ export function RegisterPage() {
 
   if (registeredEmail) {
     return (
-      <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden bg-background">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-        </div>
-        <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
+      <AuthShell>
+        <Card className="w-full border-border/50 shadow-lg">
           <CardHeader className="text-center pb-6">
             <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
               <HandHeart size={28} className="text-accent" />
@@ -134,7 +132,7 @@ export function RegisterPage() {
               {t('auth.checkInboxToActivate', 'Please check your inbox and click the link to activate your account.')}
             </CardDescription>
             {!emailDelivered && (
-              <div className="mt-3 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+              <div className="error-msg mt-3" role="alert">
                 {t('auth.emailNotDelivered', 'The verification email could not be sent right now. Please contact the MSWDO office to activate your account.')}
               </div>
             )}
@@ -164,24 +162,13 @@ export function RegisterPage() {
             </Button>
           </CardFooter>
         </Card>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden bg-background">
-      {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
-      </div>
-
-      <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
-        <ArrowLeft size={16} /> {t('auth.backToHome', 'Back to Home')}
-      </Link>
-
-      <Card className="w-full max-w-lg mx-auto relative shadow-lg border-border/50">
+    <AuthShell cardWidth="lg">
+      <Card className="w-full border-border/50 shadow-lg">
         <CardHeader className="text-center pb-6">
           <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
             <HandHeart size={24} className="text-accent" />
@@ -361,6 +348,6 @@ export function RegisterPage() {
           </Button>
         </CardFooter>
       </Card>
-    </div>
+    </AuthShell>
   );
 }

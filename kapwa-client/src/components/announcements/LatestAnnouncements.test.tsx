@@ -8,6 +8,10 @@ const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
   api: { get: (...args: unknown[]) => mockApiGet(...args) },
+  // Announcement photos must go through the shared helper: it prefixes
+  // API_BASE, which the hardcoded `/announcements/public/photo/...` path did
+  // not (so covers 404'd in dev and in the mobile build).
+  publicAnnouncementPhotoUrl: (id: string) => `/api/v1/announcements/public/photo/${id}`,
 }));
 
 function renderSection() {
@@ -47,7 +51,7 @@ describe('LatestAnnouncements', () => {
     renderSection();
 
     const img = await screen.findByAltText('Cover photo');
-    expect(img.getAttribute('src')).toBe('/announcements/public/photo/photo-1');
+    expect(img.getAttribute('src')).toBe('/api/v1/announcements/public/photo/photo-1');
     expect(mockApiGet).toHaveBeenCalledWith(['announcements', 'public']);
   });
 

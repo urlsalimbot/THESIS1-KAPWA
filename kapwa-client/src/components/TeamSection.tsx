@@ -6,6 +6,10 @@ interface TeamSectionProps {
   className?: string;
 }
 
+/**
+ * Team content only — the page owns the surrounding <section> and container,
+ * so section padding is applied once instead of twice.
+ */
 export function TeamSection({ className }: TeamSectionProps) {
   const { t } = useTranslation();
   const teamMembers = [
@@ -18,26 +22,30 @@ export function TeamSection({ className }: TeamSectionProps) {
   ];
 
   return (
-    <section className={cn('py-16 md:py-24', className)}>
-      <div className="container mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-semibold text-center mb-4">
-          {t('team.title', 'Our Team')}
-        </h2>
-        <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
-          {t('team.subtitle', 'Dedicated public servants committed to delivering social welfare services to the community of Norzagaray, Bulacan.')}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {teamMembers.map((member) => (
-            <div key={member.position} className="flex flex-col items-center text-center p-6">
-              <Avatar className="w-16 h-16 mb-4">
-                <AvatarFallback className="text-lg font-medium">{member.initials}</AvatarFallback>
-              </Avatar>
-              <h3 className="font-medium text-base mb-1">{member.name}</h3>
-              <p className="text-sm text-muted-foreground">{member.position}</p>
-            </div>
-          ))}
-        </div>
+    <div className={cn(className)}>
+      <h2 className="mb-4 text-center font-heading text-2xl font-semibold tracking-tight md:text-3xl">
+        {t('team.title', 'Our Team')}
+      </h2>
+      <p className="mx-auto mb-12 max-w-2xl text-center text-pretty text-muted-foreground">
+        {t(
+          'team.subtitle',
+          'Dedicated public servants committed to delivering social welfare services to the community of Norzagaray, Bulacan.'
+        )}
+      </p>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {teamMembers.map((member) => (
+          <div
+            key={member.position}
+            className="flex flex-col items-center p-6 text-center"
+          >
+            <Avatar className="mb-4 h-16 w-16">
+              <AvatarFallback className="text-lg font-medium">{member.initials}</AvatarFallback>
+            </Avatar>
+            <h3 className="mb-1 font-medium text-base">{member.name}</h3>
+            <p className="text-sm text-muted-foreground">{member.position}</p>
+          </div>
+        ))}
       </div>
-    </section>
+    </div>
   );
 }

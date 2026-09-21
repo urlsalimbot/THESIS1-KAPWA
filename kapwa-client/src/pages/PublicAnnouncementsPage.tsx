@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { api, publicAnnouncementPhotoUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Megaphone, Pin, CalendarDays, ArrowRight } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { PageContainer } from '@/components/public/PageContainer';
+import { PageHero } from '@/components/public/PageHero';
+import { cn } from '@/lib/utils';
 
 interface PublicAnnouncement {
   id: string;
@@ -35,81 +39,95 @@ export function PublicAnnouncementsPage() {
   const sorted = [...announcements].sort((a, b) => Number(b.pinned) - Number(a.pinned));
 
   return (
-    <div className="relative max-w-5xl mx-auto px-4 py-16">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
-      </div>
-      <div className="relative">
-      <div className="mb-10">
-        <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
-          <Megaphone size={28} className="text-accent" />
-        </div>
-        <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">{t('public.news', 'News')}</p>
-        <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-balance mb-4">
-          {t('announcementsPublic.title', 'News & Announcements')}
-        </h1>
-        <p className="text-muted-foreground leading-relaxed max-w-2xl text-pretty">
-          {t('announcementsPublic.description', 'Updates, advisories, and information from the MSWDO of Norzagaray.')}
-        </p>
-      </div>
+    <div className="w-full py-12 sm:py-16 lg:py-20">
+      <PageContainer>
+        <PageHero
+          icon={Megaphone}
+          eyebrow={t('public.news', 'News')}
+          title={t('announcementsPublic.title', 'News & Announcements')}
+          description={t(
+            'announcementsPublic.description',
+            'Updates, advisories, and information from the MSWDO of Norzagaray.'
+          )}
+        />
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-border/60 bg-card p-5 animate-pulse">
-              <div className="h-5 w-2/3 bg-muted rounded mb-2" />
-              <div className="h-4 w-full bg-muted rounded" />
-            </div>
-          ))}
-        </div>
-      ) : error ? (
-        <p className="text-destructive text-sm">{t('announcementsPublic.loadFailed', 'Failed to load announcements.')}</p>
-      ) : announcements.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <Megaphone size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">{t('announcementsPublic.empty', 'No announcements yet.')}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {sorted.map((a) => (
-            <Link
-              key={a.id}
-              to={`/announcements/${a.slug}`}
-              className="block rounded-2xl border border-border/60 bg-card p-5 hover:shadow-md hover:border-accent/30 transition-all no-underline"
-            >
-              <div className="flex items-start gap-4">
-                {a.coverPhotoId && (
-                  <img
-                    src={publicAnnouncementPhotoUrl(a.coverPhotoId)}
-                    alt={t('announcements.photoCover', 'Cover photo')}
-                    className="h-20 w-28 rounded-lg object-cover shrink-0"
-                    loading="lazy"
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    {a.pinned && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent shrink-0">
-                        <Pin size={12} /> {t('announcements.pinned', 'Pinned')}
-                      </span>
-                    )}
-                    <h2 className="font-heading text-lg font-semibold text-foreground tracking-tight truncate">{a.title}</h2>
-                  </div>
-                  {a.excerpt && <p className="text-sm text-muted-foreground line-clamp-2">{a.excerpt}</p>}
-                  <p className="text-xs text-muted-foreground/80 mt-2 flex items-center gap-1">
-                    <CalendarDays size={12} />
-                    {a.publishedAt ? formatDate(a.publishedAt) : ''}
-                  </p>
-                </div>
-                <ArrowRight size={16} className="shrink-0 mt-1 text-muted-foreground" />
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl border border-border/60 bg-card p-5">
+                <div className="mb-2 h-5 w-2/3 rounded bg-muted" />
+                <div className="h-4 w-full rounded bg-muted" />
               </div>
-            </Link>
-          ))}
-        </div>
-      )}
-      </div>
+            ))}
+          </div>
+        ) : error ? (
+          <p className="text-sm text-destructive">
+            {t('announcementsPublic.loadFailed', 'Failed to load announcements.')}
+          </p>
+        ) : announcements.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Megaphone size={40} className="mb-3 opacity-30" aria-hidden="true" />
+            <p className="text-sm">{t('announcementsPublic.empty', 'No announcements yet.')}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sorted.map((a) => (
+              <Link
+                key={a.id}
+                to={`/announcements/${a.slug}`}
+                className="block no-underline"
+                aria-label={t('announcements.readAria', 'Read: {{title}}', { title: a.title })}
+              >
+                <Card
+                  className={cn(
+                    'group border-border/60 p-5 hover:-translate-y-0.5 hover:border-accent/30',
+                    a.pinned && 'border-accent/40',
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    {a.coverPhotoId && (
+                      <img
+                        src={publicAnnouncementPhotoUrl(a.coverPhotoId)}
+                        alt={t('announcements.photoCover', 'Cover photo')}
+                        className="h-20 w-28 shrink-0 rounded-lg object-cover sm:h-24 sm:w-36"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        {a.pinned && (
+                          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-accent">
+                            <Pin size={12} aria-hidden="true" />
+                            {t('announcements.pinned', 'Pinned')}
+                          </span>
+                        )}
+                        {a.publishedAt && (
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <CalendarDays size={12} aria-hidden="true" />
+                            {formatDate(a.publishedAt)}
+                          </span>
+                        )}
+                      </div>
+                      <h2 className="font-heading text-lg font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-accent line-clamp-2">
+                        {a.title}
+                      </h2>
+                      {a.excerpt && (
+                        <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">
+                          {a.excerpt}
+                        </p>
+                      )}
+                      <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent">
+                        {t('announcements.readMore', 'Read more')}
+                        <ArrowRight size={12} aria-hidden="true" />
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </PageContainer>
     </div>
   );
 }

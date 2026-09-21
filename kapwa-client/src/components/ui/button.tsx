@@ -18,6 +18,9 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm",
         ghost: "border border-transparent hover:bg-accent hover:text-accent-foreground hover:border-border",
         link: "text-primary underline-offset-4 hover:underline",
+        /** Public-facing action colour: the terracotta accent, used on the
+         *  landing/auth/legal pages so buttons match the public brand. */
+        brand: "bg-accent text-accent-foreground hover:bg-accent/90 hover:shadow-md active:shadow-sm",
       },
       size: {
         default: "h-10 px-4 py-2",

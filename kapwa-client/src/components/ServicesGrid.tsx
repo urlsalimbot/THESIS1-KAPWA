@@ -7,6 +7,11 @@ interface ServicesGridProps {
   className?: string;
 }
 
+/**
+ * Services content only — the page owns the surrounding <section> and
+ * container. It used to render its own `py-16 md:py-24` wrapper, which
+ * doubled the landing page's section padding.
+ */
 export function ServicesGrid({ className }: ServicesGridProps) {
   const { t } = useTranslation();
   const services = [
@@ -19,40 +24,46 @@ export function ServicesGrid({ className }: ServicesGridProps) {
   ];
 
   return (
-    <section className={cn('py-16 md:py-24', className)}>
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-4">
-            <span className="text-xs font-medium text-accent tracking-wide">{t('services.whatWeOffer', 'What We Offer')}</span>
-          </div>
-          <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight text-balance">
-            {t('services.title', 'Our Services')}
-          </h2>
-          <p className="text-muted-foreground text-center max-w-2xl mx-auto text-pretty">
-            {t('services.subtitle', 'Comprehensive social welfare programs designed to support every member of the Norzagaray community.')}
-          </p>
+    <div className={cn(className)}>
+      <div className="mb-12 text-center">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
+          <span className="text-xs font-medium tracking-wide text-accent">
+            {t('services.whatWeOffer', 'What We Offer')}
+          </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service) => {
-            const Icon = service.icon;
-            return (
-              <Card key={service.title} className="flex flex-col group hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-3 group-hover:bg-accent/20 transition-colors duration-200">
-                    <Icon size={24} className="text-accent" />
-                  </div>
-                  <CardTitle className="text-lg tracking-tight">{service.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <CardDescription className="text-base leading-relaxed text-pretty">
-                    {service.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <h2 className="mb-4 text-balance font-heading text-3xl font-semibold tracking-tight md:text-4xl">
+          {t('services.title', 'Our Services')}
+        </h2>
+        <p className="mx-auto max-w-2xl text-pretty text-muted-foreground">
+          {t(
+            'services.subtitle',
+            'Comprehensive social welfare programs designed to support every member of the Norzagaray community.'
+          )}
+        </p>
       </div>
-    </section>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {services.map((service) => {
+          const Icon = service.icon;
+          return (
+            <Card
+              key={service.title}
+              className="group flex flex-col border-border/60 hover:-translate-y-1 hover:border-accent/30"
+            >
+              <CardHeader>
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 transition-colors duration-200 group-hover:bg-accent/20">
+                  <Icon size={24} className="text-accent" aria-hidden="true" />
+                </div>
+                <CardTitle className="text-lg tracking-tight">{service.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <CardDescription className="text-base leading-relaxed text-pretty">
+                  {service.description}
+                </CardDescription>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }

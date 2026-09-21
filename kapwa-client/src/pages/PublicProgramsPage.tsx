@@ -5,6 +5,9 @@ import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { ScrollText, HandHeart, ArrowRight, Clock, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { PageContainer } from '@/components/public/PageContainer';
+import { PageHero } from '@/components/public/PageHero';
 
 interface PublicProgram {
   id: string;
@@ -26,95 +29,124 @@ export function PublicProgramsPage() {
   const programs = data || [];
 
   return (
-    <div className="relative max-w-5xl mx-auto px-4 py-16">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
-      </div>
-      <div className="relative">
-      <div className="mb-10">
-        <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
-          <ScrollText size={28} className="text-accent" />
-        </div>
-        <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">{t('public.programs', 'Programs')}</p>
-        <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-balance mb-4">
-          {t('programsPublic.title', 'Social Assistance Programs')}
-        </h1>
-        <p className="text-muted-foreground leading-relaxed max-w-2xl text-pretty">
-          {t('programsPublic.description', 'Available assistance programs and services offered by the MSWDO of Norzagaray.')}
-        </p>
-      </div>
+    <div className="w-full py-12 sm:py-16 lg:py-20">
+      <PageContainer>
+        <PageHero
+          icon={ScrollText}
+          eyebrow={t('public.programs', 'Programs')}
+          title={t('programsPublic.title', 'Social Assistance Programs')}
+          description={t(
+            'programsPublic.description',
+            'Available assistance programs and services offered by the MSWDO of Norzagaray.'
+          )}
+        />
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-border/60 bg-card p-6 animate-pulse">
-              <div className="h-5 w-2/3 bg-muted rounded mb-3" />
-              <div className="h-4 w-full bg-muted rounded mb-2" />
-              <div className="h-4 w-5/6 bg-muted rounded" />
-            </div>
-          ))}
-        </div>
-      ) : error ? (
-        <p className="text-destructive text-sm">{t('programsPublic.loadFailed', 'Failed to load programs.')}</p>
-      ) : programs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <HandHeart size={40} className="mb-3 opacity-30" />
-          <p className="text-sm">{t('programsPublic.empty', 'No programs are currently listed.')}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {programs.map((p) => (
-            <div
-              key={p.id}
-              className="rounded-2xl border border-border/60 bg-card p-6 flex flex-col hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h2 className="font-heading text-lg font-semibold tracking-tight">{p.name}</h2>
-                {p.category && <Badge variant="secondary" className="shrink-0 text-[10px]">{p.category}</Badge>}
-              </div>
-              {p.waitingPeriodDays != null && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
-                  <Clock size={12} /> {t('programsPublic.waitingPeriod', 'Waiting period: {{days}} days', { days: p.waitingPeriodDays })}
-                </p>
-              )}
-              {p.fundSources && p.fundSources.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">{t('programsPublic.fundSources', 'Fund Sources')}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {p.fundSources.map((f) => (
-                      <span key={f} className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{f}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {p.requiredDocuments && p.requiredDocuments.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                    <FileText size={12} /> {t('programsPublic.requiredDocuments', 'Required Documents')}
-                  </p>
-                  <ul className="flex flex-wrap gap-1">
-                    {p.requiredDocuments.map((doc, i) => (
-                      <li key={i}><span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{doc}</span></li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {p.legalBasis && (
-                <p className="text-xs text-muted-foreground mt-1">{t('programsPublic.legalBasis', 'Legal Basis')}: {p.legalBasis}</p>
-              )}
-              <Link
-                to="/contact"
-                className="mt-auto pt-4 inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="animate-pulse rounded-2xl border border-border/60 bg-card p-6"
               >
-                {t('programsPublic.inquire', 'Inquire about this program')} <ArrowRight size={14} />
-              </Link>
-            </div>
-          ))}
-        </div>
-      )}
-      </div>
+                <div className="mb-3 h-5 w-2/3 rounded bg-muted" />
+                <div className="mb-2 h-4 w-full rounded bg-muted" />
+                <div className="h-4 w-5/6 rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <p className="text-sm text-destructive">
+            {t('programsPublic.loadFailed', 'Failed to load programs.')}
+          </p>
+        ) : programs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <HandHeart size={40} className="mb-3 opacity-30" aria-hidden="true" />
+            <p className="text-sm">{t('programsPublic.empty', 'No programs are currently listed.')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {programs.map((p) => (
+              <Card
+                key={p.id}
+                className="flex flex-col border-border/60 p-6 hover:border-accent/30"
+              >
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <h2 className="font-heading text-lg font-semibold tracking-tight">{p.name}</h2>
+                  {p.category && (
+                    <Badge variant="secondary" className="shrink-0">
+                      {p.category}
+                    </Badge>
+                  )}
+                </div>
+
+                {p.waitingPeriodDays != null && (
+                  <p className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock size={14} aria-hidden="true" />
+                    {t('programsPublic.waitingPeriod', 'Waiting period: {{days}} days', {
+                      days: p.waitingPeriodDays,
+                    })}
+                  </p>
+                )}
+
+                <div className="space-y-3">
+                  {p.fundSources && p.fundSources.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                        {t('programsPublic.fundSources', 'Fund Sources')}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {p.fundSources.map((f) => (
+                          <span
+                            key={f}
+                            className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
+                          >
+                            {f}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {p.requiredDocuments && p.requiredDocuments.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <FileText size={12} aria-hidden="true" />
+                        {t('programsPublic.requiredDocuments', 'Required Documents')}
+                      </p>
+                      <ul className="flex flex-wrap gap-1.5">
+                        {p.requiredDocuments.map((doc, i) => (
+                          <li key={i}>
+                            <span className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground">
+                              {doc}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {p.legalBasis && (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      <span className="font-medium">
+                        {t('programsPublic.legalBasis', 'Legal Basis')}:
+                      </span>{' '}
+                      {p.legalBasis}
+                    </p>
+                  )}
+                </div>
+
+                <Link
+                  to="/contact"
+                  className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-medium text-accent hover:underline"
+                >
+                  {t('programsPublic.inquire', 'Inquire about this program')}
+                  <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+              </Card>
+            ))}
+          </div>
+        )}
+      </PageContainer>
     </div>
   );
 }

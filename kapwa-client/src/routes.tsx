@@ -75,6 +75,7 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 const FourPsCompliancePage = lazy(() => import('./pages/FourPsCompliancePage').then(m => ({ default: m.FourPsCompliancePage })));
 const PayoutSchedulePage = lazy(() => import('./pages/PayoutSchedulePage').then(m => ({ default: m.PayoutSchedulePage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   return <ProtectedRoute roles={roles}><Layout>{children}</Layout></ProtectedRoute>;
@@ -101,6 +102,9 @@ const router = createBrowserRouter([
       { path: 'terms', element: <TermsPage /> },
       { path: 'accessibility', element: <AccessibilityPage /> },
       { path: 'privacy-policy', element: <PrivacyPolicyPage /> },
+      // Branded 404 for any unknown public URL (previously redirected to `/`,
+      // which hid broken links instead of explaining them).
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
   { path: 'login', element: <LoginPage /> },
@@ -159,7 +163,6 @@ const router = createBrowserRouter([
   { path: '/announcements/manage/:id', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementDetailPage /></Private> },
   { path: '/announcements/manage/:id/edit', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementEditPage /></Private> },
   { path: '/my-access-card', element: <Private roles={['claimant']}><ClaimantAccessCardPage /></Private> },
-  { path: '*', element: <Navigate to="/" /> },
 ]);
 
 function swrErrorHandler(error: unknown) {

@@ -5,6 +5,7 @@ import { api, publicAnnouncementPhotoUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Pin, ArrowLeft, Megaphone, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageContainer } from '@/components/public/PageContainer';
 
 interface AnnouncementDetail {
   id: string;
@@ -44,98 +45,114 @@ export function AnnouncementPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto py-16 px-4">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 w-40 bg-muted rounded" />
-          <div className="h-10 w-3/4 bg-muted rounded" />
-          <div className="h-4 w-full bg-muted rounded" />
-          <div className="h-4 w-5/6 bg-muted rounded" />
-          <div className="h-4 w-full bg-muted rounded" />
+      <PageContainer className="py-12 sm:py-16">
+        <div className="max-w-3xl animate-pulse space-y-4">
+          <div className="h-4 w-40 rounded bg-muted" />
+          <div className="h-10 w-3/4 rounded bg-muted" />
+          <div className="h-4 w-full rounded bg-muted" />
+          <div className="h-4 w-5/6 rounded bg-muted" />
+          <div className="h-4 w-full rounded bg-muted" />
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="max-w-5xl mx-auto py-16 px-4 text-center">
-        <h1 className="text-2xl font-bold font-heading">{t('announcements.notFound', 'Article not found')}</h1>
-        <p className="text-muted-foreground mt-2">{t('announcements.notFoundBody', 'This announcement may have been removed or is no longer published.')}</p>
-        <Button asChild variant="outline" className="mt-4">
+      <PageContainer className="py-16 text-center">
+        <h1 className="font-heading text-2xl font-bold">{t('announcements.notFound', 'Article not found')}</h1>
+        <p className="mt-2 text-muted-foreground">{t('announcements.notFoundBody', 'This announcement may have been removed or is no longer published.')}</p>
+        <Button asChild variant="outline" className="mt-6">
           <Link to="/">{t('announcements.backToHome', 'Back to home')}</Link>
         </Button>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-10 md:py-16 px-4">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-      >
-        <ArrowLeft size={16} />
-        {t('announcements.backToHome', 'Back to home')}
-      </Link>
+    <PageContainer className="py-10 sm:py-14 lg:py-16">
+      <div className="mx-auto max-w-3xl">
+        <Link
+          to="/"
+          className="mb-8 inline-flex items-center gap-1 text-sm text-muted-foreground no-underline transition-colors hover:text-foreground"
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          {t('announcements.backToHome', 'Back to home')}
+        </Link>
 
       <article>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-5">
-          <Megaphone size={14} className="text-accent" />
-          <span className="text-xs font-medium text-accent tracking-wide">{t('announcements.announcement', 'Announcement')}</span>
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
+          <Megaphone size={14} className="text-accent" aria-hidden="true" />
+          <span className="text-xs font-medium tracking-wide text-accent">
+            {t('announcements.announcement', 'Announcement')}
+          </span>
         </div>
 
-        <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-balance leading-tight mb-5">
+        <h1 className="mb-5 text-balance font-heading text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           {data.title}
         </h1>
 
-        <div className="flex items-center gap-3 mb-8">
+        <div className="mb-8 flex flex-wrap items-center gap-3">
           {data.pinned && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent">
-              <Pin size={13} />
+              <Pin size={13} aria-hidden="true" />
               {t('announcements.pinned', 'Pinned')}
             </span>
           )}
           {data.publishedAt && (
             <time className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-              <CalendarDays size={14} />
+              <CalendarDays size={14} aria-hidden="true" />
               {formatDate(data.publishedAt)}
             </time>
           )}
         </div>
 
         {data.excerpt && (
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed text-pretty mb-8 border-l-2 border-accent/40 pl-4">
+          <p className="mb-8 border-l-2 border-accent/40 pl-4 text-lg leading-relaxed text-pretty text-muted-foreground">
             {data.excerpt}
           </p>
         )}
 
         <div
-          className="prose prose-slate max-w-none prose-headings:font-heading prose-headings:tracking-tight prose-a:text-primary prose-img:rounded-lg prose-img:my-6 dark:prose-invert"
+          className="prose prose-stone max-w-none prose-headings:font-heading prose-headings:tracking-tight prose-a:text-primary prose-img:my-6 prose-img:rounded-lg dark:prose-invert"
           dangerouslySetInnerHTML={{ __html: data.bodyHtml }}
         />
 
         {photos && photos.length > 0 && (
           <div className="mt-10">
-            <h2 className="text-lg font-semibold mb-4">{t('announcements.photos', 'Photos')}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {photos.map(p => (
+            <h2 className="mb-4 text-lg font-semibold">{t('announcements.photos', 'Photos')}</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {photos.map((p) => (
                 <a key={p.id} href={publicAnnouncementPhotoUrl(p.id)} target="_blank" rel="noreferrer">
-                  <img src={publicAnnouncementPhotoUrl(p.id)} alt={p.originalName} className="w-full rounded-lg border object-cover aspect-video" loading="lazy" />
+                  <img
+                    src={publicAnnouncementPhotoUrl(p.id)}
+                    alt={p.originalName}
+                    className="aspect-video w-full rounded-lg border object-cover"
+                    loading="lazy"
+                  />
                 </a>
               ))}
             </div>
           </div>
         )}
 
-        <div className="mt-12 pt-8 border-t flex items-center justify-between">
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t pt-8">
           <p className="text-sm text-muted-foreground">
             {t('announcements.footer', 'MSWDO Norzagaray — Municipal Social Welfare & Development Office')}
           </p>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/">{t('announcements.backToHome', 'Back to home')}</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/announcements">
+                {t('announcements.allAnnouncements', 'All announcements')}
+              </Link>
+            </Button>
+            <Button asChild variant="brand" size="sm">
+              <Link to="/">{t('announcements.backToHome', 'Back to home')}</Link>
+            </Button>
+          </div>
         </div>
       </article>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

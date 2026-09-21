@@ -5,7 +5,8 @@ import { api } from '../lib/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, ArrowLeft, Mail } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
+import { AuthShell } from '@/components/public/AuthShell';
 
 export function ForgotPasswordPage() {
   const { t } = useTranslation();
@@ -30,64 +31,79 @@ export function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="relative flex items-center justify-center min-h-screen px-4 bg-background">
-        <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
-          <ArrowLeft size={16} /> {t('auth.backToHome', 'Back to Home')}
-        </Link>
-        <Card className="w-full max-w-md mx-auto shadow-lg border-border/50">
+      <AuthShell>
+        <Card className="w-full border-border/50 shadow-lg">
           <CardHeader className="text-center pb-6">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
-              <Mail size={28} className="text-accent" />
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
+              <Mail size={28} className="text-accent" aria-hidden="true" />
             </div>
-            <CardTitle className="text-2xl tracking-tight">{t('auth.checkYourEmail', 'Check Your Email')}</CardTitle>
+            <CardTitle className="text-2xl tracking-tight">
+              {t('auth.checkYourEmail', 'Check Your Email')}
+            </CardTitle>
             <CardDescription className="text-base">
-              {t('auth.checkEmailBody', "If an account with that email exists, we've sent a password reset link.")}
+              {t(
+                'auth.checkEmailBody',
+                "If an account with that email exists, we've sent a password reset link."
+              )}
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <p className="text-center text-sm text-muted-foreground">
+              {t(
+                'auth.checkSpamFolder',
+                "Didn't receive it? Check your spam folder, or try again in a few minutes."
+              )}
+            </p>
+          </CardContent>
           <CardFooter className="justify-center pt-2 pb-6">
             <Button variant="link" asChild>
               <Link to="/login">{t('auth.backToSignIn', 'Back to Sign In')}</Link>
             </Button>
           </CardFooter>
         </Card>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden bg-background">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-      </div>
-      <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
-        <ArrowLeft size={16} /> {t('auth.backToHome', 'Back to Home')}
-      </Link>
-      <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
+    <AuthShell>
+      <Card className="w-full border-border/50 shadow-lg">
         <CardHeader className="text-center pb-6">
-          <CardTitle className="text-2xl tracking-tight">{t('auth.forgotPassword', 'Forgot Password')}</CardTitle>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-inset ring-accent/15">
+            <Mail size={28} className="text-accent" aria-hidden="true" />
+          </div>
+          <CardTitle className="text-2xl tracking-tight">
+            {t('auth.forgotPassword', 'Forgot Password')}
+          </CardTitle>
           <CardDescription className="text-base">
             {t('auth.forgotPasswordBody', "Enter your email and we'll send you a reset link.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-4" role="alert">
+            <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
               {error}
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               type="email"
+              autoComplete="email"
               placeholder={t('auth.emailPlaceholder', 'Enter your email')}
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
               className="h-11"
               aria-label={t('auth.emailLabel', 'Email')}
             />
-            <Button type="submit" className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90" disabled={submitting || !email}>
-              {submitting && <Loader2 size={16} className="mr-2 animate-spin" />}
+            <Button
+              type="submit"
+              variant="brand"
+              className="h-11 w-full"
+              disabled={submitting || !email}
+            >
+              {submitting && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
               {t('auth.sendResetLink', 'Send Reset Link')}
             </Button>
           </form>
@@ -98,6 +114,6 @@ export function ForgotPasswordPage() {
           </Button>
         </CardFooter>
       </Card>
-    </div>
+    </AuthShell>
   );
 }

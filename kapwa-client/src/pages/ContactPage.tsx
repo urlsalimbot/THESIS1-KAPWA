@@ -6,9 +6,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PageContainer } from '@/components/public/PageContainer';
+import { PageHero } from '@/components/public/PageHero';
 import { toast } from 'sonner';
 import { Loader2, Mail } from 'lucide-react';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface FormErrors {
   name?: string;
@@ -50,117 +53,124 @@ export function ContactPage() {
         email: email.trim(),
         message: message.trim(),
       });
-      toast.success(t('contact.sendSuccess', 'Message sent'), { description: t('contact.sendSuccessDesc', 'We will respond within 1-2 business days.') });
+      toast.success(t('contact.sendSuccess', 'Message sent'), {
+        description: t('contact.sendSuccessDesc', 'We will respond within 1-2 business days.'),
+      });
       setName('');
       setEmail('');
       setMessage('');
       setErrors({});
     } catch {
-      toast.error(t('contact.sendFailed', 'Message failed'), { description: t('contact.sendFailedDesc', 'Please try again or call us directly.') });
+      toast.error(t('contact.sendFailed', 'Message failed'), {
+        description: t('contact.sendFailedDesc', 'Please try again or call us directly.'),
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="relative w-full px-4 py-16 md:py-24">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
-      </div>
-      <div className="relative">
-      {/* Header */}
-      <div className="mb-12 max-w-7xl mx-auto">
-        <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-4 shadow-sm">
-          <Mail size={28} className="text-accent" />
-        </div>
-        <p className="text-xs font-medium text-accent tracking-wide uppercase mb-2">{t('public.contactUs', 'Contact Us')}</p>
-        <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-balance mb-4">
-          {t('contact.title', 'Get in Touch')}
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-xl text-pretty">
-          {t('contact.subtitle', 'We are here to help. Reach out to us through any of the channels below.')}
-        </p>
-      </div>
+    <div className="w-full py-12 sm:py-16 lg:py-20">
+      <PageContainer>
+        <PageHero
+          icon={Mail}
+          eyebrow={t('public.contactUs', 'Contact Us')}
+          title={t('contact.title', 'Get in Touch')}
+          description={t(
+            'contact.subtitle',
+            'We are here to help. Reach out to us through any of the channels below.'
+          )}
+        />
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-7xl mx-auto">
-        {/* Left column: Contact info */}
-        <div className="md:col-span-5">
-          <Card className="p-6 border-border/50 shadow-sm">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          {/* Left column: contact info. ContactInfo already renders office
+              hours as one of its rows, so the page does not repeat them. */}
+          <div className="lg:col-span-5">
+            <h2 className="mb-4 font-heading text-lg font-semibold tracking-tight">
+              {t('contact.officeInformation', 'Office Information')}
+            </h2>
             <ContactInfo />
-            <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                {t('contact.officeHours', 'Office Hours')}: {t('contact.officeHoursValue', 'Monday to Friday, 8:00 AM - 5:00 PM')}
-              </p>
-            </div>
-          </Card>
+          </div>
+
+          {/* Right column: contact form */}
+          <div className="lg:col-span-7">
+            <Card className="border-border/60 p-6 shadow-sm">
+              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                <div className="space-y-2">
+                  <Label htmlFor="name">{t('contact.name', 'Name')}</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    autoComplete="name"
+                    placeholder={t('contact.namePlaceholder', 'Your full name')}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    aria-invalid={!!errors.name}
+                    aria-describedby={errors.name ? 'name-error' : undefined}
+                    className={cn('h-11', errors.name && 'border-destructive')}
+                  />
+                  {errors.name && (
+                    <p id="name-error" role="alert" className="text-sm text-destructive">
+                      {errors.name}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">{t('contact.email', 'Email')}</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
+                    className={cn('h-11', errors.email && 'border-destructive')}
+                  />
+                  {errors.email && (
+                    <p id="email-error" role="alert" className="text-sm text-destructive">
+                      {errors.email}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">{t('contact.message', 'Message')}</Label>
+                  <Textarea
+                    id="message"
+                    placeholder={t('contact.messagePlaceholder', 'How can we help you?')}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    aria-invalid={!!errors.message}
+                    aria-describedby={errors.message ? 'message-error' : undefined}
+                    className={cn(errors.message && 'border-destructive')}
+                    rows={5}
+                  />
+                  {errors.message && (
+                    <p id="message-error" role="alert" className="text-sm text-destructive">
+                      {errors.message}
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="brand"
+                  className="h-11 w-full"
+                  disabled={submitting}
+                >
+                  {submitting && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
+                  {submitting
+                    ? t('contact.sending', 'Sending...')
+                    : t('contact.sendMessage', 'Send Message')}
+                </Button>
+              </form>
+            </Card>
+          </div>
         </div>
-
-        {/* Right column: Contact form */}
-        <div className="md:col-span-7">
-          <Card className="p-6 border-border/50 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="name">{t('contact.name', 'Name')}</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder={t('contact.namePlaceholder', 'Your full name')}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  aria-invalid={!!errors.name}
-                  className="h-11"
-                />
-                {errors.name && (
-                  <p className="text-sm text-destructive mt-1">{errors.name}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('contact.email', 'Email')}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={!!errors.email}
-                  className="h-11"
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive mt-1">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="message">{t('contact.message', 'Message')}</Label>
-                <Textarea
-                  id="message"
-                  placeholder={t('contact.messagePlaceholder', 'How can we help you?')}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  aria-invalid={!!errors.message}
-                  rows={5}
-                />
-                {errors.message && (
-                  <p className="text-sm text-destructive mt-1">{errors.message}</p>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                className="bg-accent text-accent-foreground hover:bg-accent/90 w-full h-11"
-                disabled={submitting}
-              >
-                {submitting && <Loader2 size={16} className="mr-2 animate-spin" />}
-                {submitting ? t('contact.sending', 'Sending...') : t('contact.sendMessage', 'Send Message')}
-              </Button>
-            </form>
-          </Card>
-        </div>
-      </div>
+      </PageContainer>
     </div>
-      </div>
   );
 }

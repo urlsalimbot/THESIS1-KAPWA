@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/lib/auth-context';
+import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { HandHeart, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { PageContainer } from './public/PageContainer';
 
 interface User {
   id: string;
@@ -18,15 +19,6 @@ interface PublicHeaderProps {
   user: User | null;
   loading: boolean;
 }
-
-const roleRedirectMap: Record<string, string> = {
-  social_worker: '/dashboard',
-  admin: '/dashboard',
-  coordinator: '/dashboard',
-  claimant: '/dashboard',
-  mayor: '/dashboard',
-  auditor: '/dashboard',
-};
 
 export function PublicHeader({ user, loading }: PublicHeaderProps) {
   const { t } = useTranslation();
@@ -42,32 +34,41 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
     { to: '/contact', label: t('public.contact', 'Contact') },
   ];
 
+  // Section links stay highlighted on their detail pages (/announcements/:slug).
+  const isActive = (to: string) => (to === '/' ? currentPath === '/' : currentPath.startsWith(to));
+
   return (
-    <header className="sticky top-0 z-40 h-16 bg-background/95 backdrop-blur-sm border-b border-border">
-      <div className="w-full px-4 lg:px-8 h-full flex items-center gap-6">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
+      <PageContainer className="flex h-16 items-center gap-4 lg:gap-6">
         {/* Logo/brand */}
-        <Link to="/" className="shrink-0 flex items-center gap-2.5 no-underline group">
-          <div className="rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-200 group-hover:shadow-md">
-            <HandHeart className="w-10 h-10 text-accent" />
+        <Link to="/" className="group flex shrink-0 items-center gap-2.5 no-underline">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 transition-shadow duration-200 group-hover:shadow-md">
+            <HandHeart size={22} className="text-accent" aria-hidden="true" />
           </div>
-          <span className="font-heading text-xl font-bold text-foreground tracking-tight">KAPWA</span>
+          <span className="font-heading text-xl font-bold tracking-tight text-foreground">
+            KAPWA
+          </span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav aria-label={t('public.mainNavigation', 'Main navigation')} className="hidden sm:flex items-center justify-center gap-2 flex-1 min-w-0">
+        {/* Desktop nav — md, not sm: at 640px the five links overlapped the
+            Login button (last link ended at x=584, CTA started at x=567). */}
+        <nav
+          aria-label={t('public.mainNavigation', 'Main navigation')}
+          className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex"
+        >
           {navLinks.map((link) => {
-            const isActive = currentPath === link.to || (link.to !== '/' && currentPath.startsWith(link.to));
+            const active = isActive(link.to);
             return (
               <Link
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'shrink-0 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200',
-                  'hover:bg-muted hover:text-foreground hover:translate-y-px',
+                  'shrink-0 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 lg:px-4',
+                  'hover:bg-muted hover:text-foreground',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  isActive ? 'text-accent font-semibold' : 'text-muted-foreground'
+                  active ? 'font-semibold text-accent' : 'text-muted-foreground'
                 )}
-                aria-current={isActive ? 'page' : undefined}
+                aria-current={active ? 'page' : undefined}
               >
                 {link.label}
               </Link>
@@ -76,62 +77,67 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
         </nav>
 
         {/* Right side: CTA + mobile menu */}
-        <div className="shrink-0 flex items-center gap-3">
-          {!loading && (
-            user ? (
-              <Button variant="outline" size="sm" asChild>
-                <Link to={roleRedirectMap[user.role] || '/dashboard'}>
+        <div className="flex shrink-0 items-center gap-2">
+          {!loading &&
+            (user ? (
+              <Button variant="outline" size="sm" className="touch-sm" asChild>
+                <Link to={ROLE_REDIRECT_MAP[user.role] ?? '/dashboard'}>
                   {t('public.goToDashboard', 'Go to Dashboard')}
                 </Link>
               </Button>
             ) : (
-              <Button size="sm" className="touch-sm" asChild>
+              <Button variant="brand" size="sm" className="touch-sm" asChild>
                 <Link to="/login">{t('public.login', 'Login')}</Link>
               </Button>
-            )
-          )}
+            ))}
 
           {/* Mobile menu trigger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <button
-                className="touch-sm sm:hidden w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 hover:scale-105"
+                className="touch-sm flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden"
                 aria-label={t('public.openMenu', 'Open menu')}
               >
-                <Menu size={20} />
+                <Menu size={20} aria-hidden="true" />
               </button>
             </SheetTrigger>
             <SheetContent side="right" className="w-72 p-0">
-              <div className="flex items-center justify-between px-6 h-14 border-b">
-                <Link to="/" className="flex items-center gap-2 no-underline" onClick={() => setMobileOpen(false)}>
-                  <div className="w-7 h-7 rounded-md bg-accent/10 flex items-center justify-center">
-                    <HandHeart size={16} className="text-accent" />
+              <div className="flex h-14 items-center justify-between border-b px-6">
+                <Link
+                  to="/"
+                  className="flex items-center gap-2 no-underline"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent/10">
+                    <HandHeart size={16} className="text-accent" aria-hidden="true" />
                   </div>
-                  <span className="font-heading text-base font-bold text-foreground tracking-tight">KAPWA</span>
+                  <span className="font-heading text-base font-bold tracking-tight text-foreground">
+                    KAPWA
+                  </span>
                 </Link>
                 <button
-                  className="touch-sm w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                  className="touch-sm flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
                   onClick={() => setMobileOpen(false)}
                   aria-label={t('public.closeMenu', 'Close menu')}
                 >
-                  <X size={18} />
+                  <X size={18} aria-hidden="true" />
                 </button>
               </div>
-              <nav className="flex flex-col p-4 gap-1">
+              <nav className="flex flex-col gap-1 p-4">
                 {navLinks.map((link) => {
-                  const isActive = currentPath === link.to;
+                  const active = isActive(link.to);
                   return (
                     <Link
                       key={link.to}
                       to={link.to}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        'touch-sm px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 no-underline',
-                        'hover:bg-muted hover:text-foreground hover:translate-x-0.5',
+                        'touch-sm rounded-md px-4 py-3 text-sm font-medium no-underline transition-colors duration-200',
+                        'hover:bg-muted hover:text-foreground',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        isActive ? 'text-accent font-semibold bg-accent/5' : 'text-muted-foreground'
+                        active ? 'bg-accent/5 font-semibold text-accent' : 'text-muted-foreground'
                       )}
-                      aria-current={isActive ? 'page' : undefined}
+                      aria-current={active ? 'page' : undefined}
                     >
                       {link.label}
                     </Link>
@@ -141,7 +147,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
             </SheetContent>
           </Sheet>
         </div>
-      </div>
+      </PageContainer>
     </header>
   );
 }

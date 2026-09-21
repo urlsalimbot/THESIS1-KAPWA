@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Smartphone, HandHeart, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Smartphone, HandHeart, Eye, EyeOff } from 'lucide-react';
+import { AuthShell } from '@/components/public/AuthShell';
 
 const appendDomain = (v: string) => (v.includes('@') ? v : `${v}@mswdo.test`);
 type LoginValues = z.infer<ReturnType<typeof makeLoginSchema>>;
@@ -93,16 +94,8 @@ export function LoginPage() {
   const isSmsOtp = mfaChallenge?.type === 'sms';
   if (mfaChallenge) {
     return (
-      <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden bg-background">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
-        </div>
-        <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
-          <ArrowLeft size={16} /> {t('auth.backToHome', 'Back to Home')}
-        </Link>
-        <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
+      <AuthShell>
+        <Card className="w-full border-border/50 shadow-lg">
           <CardHeader className="text-center pb-6">
             <Avatar className="w-14 h-14 mx-auto mb-3 shadow-sm">
               <AvatarFallback className="bg-accent/10">
@@ -119,7 +112,9 @@ export function LoginPage() {
               </div>
             )}
             <form onSubmit={handleMfaSubmit} className="space-y-6">
-              <div className="flex gap-2 justify-center">
+              {/* flex-wrap: the 44px minimum touch target applies to inputs, so
+                  six OTP boxes exceed a 320px screen on one line. */}
+              <div className="flex flex-wrap justify-center gap-2">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
                   <input
                     key={i}
@@ -181,25 +176,14 @@ export function LoginPage() {
             </Button>
           </CardFooter>
         </Card>
-      </div>
+      </AuthShell>
     );
   }
 
   // Login Form Mode
   return (
-    <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden bg-background">
-      {/* Background decoration with visual depth */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-muted/20 rounded-full blur-3xl opacity-40" />
-      </div>
-
-      <Link to="/" className="absolute top-6 left-6 z-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline">
-        <ArrowLeft size={16} /> {t('auth.backToHome', 'Back to Home')}
-      </Link>
-
-      <Card className="w-full max-w-md mx-auto relative shadow-lg border-border/50">
+    <AuthShell>
+      <Card className="w-full border-border/50 shadow-lg">
         <CardHeader className="text-center pb-6">
           <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
             <HandHeart size={28} className="text-accent" />
@@ -209,12 +193,12 @@ export function LoginPage() {
         </CardHeader>
         <CardContent>
           {emailNotVerified && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-3 rounded-md mb-4">
+            <div className="error-msg" role="alert">
               <p className="font-medium mb-1">{t('auth.emailNotVerified', 'Email not verified')}</p>
               <p className="mb-2">{t('auth.checkInboxForVerification', 'Please check your inbox for the verification link.')}</p>
               <button
                 type="button"
-                className="text-amber-900 underline underline-offset-2 hover:no-underline text-xs"
+                className="text-xs underline underline-offset-2 hover:no-underline"
                 onClick={async () => {
                   try {
                     await api.post('/auth/resend-verification', { email: emailNotVerified });
@@ -301,6 +285,6 @@ export function LoginPage() {
           </Button>
         </CardFooter>
       </Card>
-    </div>
+    </AuthShell>
   );
 }

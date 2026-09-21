@@ -145,6 +145,28 @@ body {
     min-height: unset !important;
     min-width: unset !important;
   }
+
+  /* ---- Public-facing brand background ------------------------------------
+     One shared decorative treatment for public + auth pages. Replaces the
+     identical three-blurred-blob stack that was copy-pasted onto nine pages.
+     Colours come from the brand tokens so both layers follow light/dark mode. */
+  .brand-aura {
+    background-image:
+      radial-gradient(58rem 32rem at 50% -6rem, rgba(200, 85, 61, 0.1), transparent 68%),
+      radial-gradient(40rem 24rem at 86% 4rem, rgba(27, 58, 92, 0.08), transparent 70%);
+  }
+  .dark .brand-aura {
+    background-image:
+      radial-gradient(58rem 32rem at 50% -6rem, rgba(224, 122, 95, 0.12), transparent 68%),
+      radial-gradient(40rem 24rem at 86% 4rem, rgba(232, 230, 225, 0.05), transparent 70%);
+  }
+  .brand-grid {
+    background-image: radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0);
+    background-size: 22px 22px;
+    opacity: 0.5;
+    -webkit-mask-image: radial-gradient(80rem 42rem at 50% 0%, #000 0%, transparent 72%);
+    mask-image: radial-gradient(80rem 42rem at 50% 0%, #000 0%, transparent 72%);
+  }
 }
 
 /* shadcn design tokens — raw hex (NOT HSL) per Pitfall 2 (shadcn v4 raw-hex path) */
@@ -445,7 +467,7 @@ input[type="number"] {
 }
 
 #root {
-  @apply min-h-screen flex flex-col;
+  @apply min-h-dvh flex flex-col;
 }
 
 /* Toast status accents. The surface stays neutral (card background); the left
