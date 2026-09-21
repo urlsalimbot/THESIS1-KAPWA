@@ -87,7 +87,7 @@ describe('CasesService', () => {
         { provide: getRepositoryToken(HouseholdMembership), useValue: familyRepoMock },
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: bcRepoMock },
         { provide: NotificationsService, useValue: notifMock },
-        { provide: CasesExportService, useValue: { generateApprovalDocuments: jest.fn().mockResolvedValue({}) } },
+        { provide: CasesExportService, useValue: { missingRequiredDocuments: jest.fn().mockResolvedValue([]), issueCoe: jest.fn(), issuePcv: jest.fn() } },
       ],
     }).compile();
 
@@ -123,6 +123,19 @@ describe('CasesService', () => {
       (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
 
       await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1')).resolves.toBeTruthy();
+    });
+  });
+
+  describe('issueDocument', () => {
+    it('delegates to the export service for an active case', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001', updatedAt: new Date() } as unknown as Case);
+      (service as any).casesExport = { issueCoe: jest.fn().mockResolvedValue('/filing/x/download') };
+      await expect(service.issueDocument('1', 'coe', 'u1')).resolves.toEqual({ url: '/filing/x/download' });
+    });
+
+    it('rejects before the case is active', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-2026-00001', updatedAt: new Date() } as unknown as Case);
+      await expect(service.issueDocument('1', 'coe', 'u1')).rejects.toThrow(/active/i);
     });
   });
 

@@ -359,22 +359,6 @@ export class CasesService {
     c.updatedAt = new Date();
     await this.caseRepo.save(c);
 
-    // The Certificate of Eligibility + Petty Cash Voucher are PRODUCED at the
-    // point the disbursement is approved (in_review -> active). Best-effort —
-    // a generation failure must never block the approval itself.
-    if (newStatus === CaseStatus.ACTIVE && oldStatus !== CaseStatus.ACTIVE) {
-      try {
-        const docs = await this.casesExport.generateApprovalDocuments(id, opts?.actorId);
-        if (docs.certificateUrl || docs.pettyCashVoucherUrl) {
-          c.certificateUrl = docs.certificateUrl ?? c.certificateUrl;
-          c.pettyCashVoucherUrl = docs.pettyCashVoucherUrl ?? c.pettyCashVoucherUrl;
-          await this.caseRepo.save(c);
-        }
-      } catch (e) {
-        this.logger.error(`Approval document generation failed for case ${id}: ${(e as Error)?.message ?? e}`);
-      }
-    }
-
     await this.logHistory(id, oldStatus, newStatus, opts?.userRole, undefined, opts?.reason || `Transitioned by ${opts?.userRole || 'system'}`, opts?.historyType);
 
     await this.auditLog?.log('case.transition', id, opts?.actorId, { from: oldStatus, to: newStatus, by: opts?.userRole, controlNo: c.controlNo });
@@ -404,6 +388,18 @@ export class CasesService {
 
   async approve(id: string, newStatus: CaseStatus, signature: string, userRole: string, actorId?: string) {
     return this.transition(id, newStatus, { signature, userRole, actorId, reason: `Approved by ${userRole}` });
+  }
+
+  async issueDocument(id: string, type: 'coe' | 'pcv', actorId?: string) {
+    const c = await this.findById(id);
+    if (![CaseStatus.ACTIVE, CaseStatus.TRANSITIONING, CaseStatus.CLOSED].includes(c.status)) {
+      throw new BadRequestException('COE/PCV can only be issued once the case is active');
+    }
+    const url = type === 'coe'
+      ? await this.casesExport.issueCoe(id, actorId)
+      : await this.casesExport.issuePcv(id, actorId);
+    await this.auditLog?.log(`case.issue_${type}`, id, actorId, { controlNo: c.controlNo, url });
+    return { url };
   }
 
   async requestReview(id: string, userRole?: string, actorId?: string) {

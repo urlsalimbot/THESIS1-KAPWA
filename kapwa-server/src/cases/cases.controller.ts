@@ -142,6 +142,18 @@ export class CasesController {
     return this.casesService.approve(id, mapStatus(body.status as string), body.signature || '', req.user?.role || '', req.user?.id);
   }
 
+  @Post(':id/issue-coe')
+  @Roles('admin')
+  async issueCoe(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.casesService.issueDocument(id, 'coe', req.user?.id);
+  }
+
+  @Post(':id/issue-pcv')
+  @Roles('admin')
+  async issuePcv(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.casesService.issueDocument(id, 'pcv', req.user?.id);
+  }
+
   @Patch(':id/request-review')
   @Roles('social_worker')
   async requestReview(@Param('id') id: string, @Request() req: AuthenticatedRequest) {

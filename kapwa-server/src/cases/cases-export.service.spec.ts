@@ -101,31 +101,48 @@ describe('CasesExportService', () => {
     await expect(service.findIdByControlNo('KAPWA-9999')).rejects.toThrow(NotFoundException);
   });
 
-  it('generates approval documents stamped with system office identity', async () => {
-    caseRepoMock.findOne.mockResolvedValue({
-      ...baseCase,
-      interviewedBy: 'Maria Clara Santos',
-      serviceRequested: ['Financial Assistance'],
-      amountAssistance: '4500',
-      sourceOfFund: 'AICS',
-      beneficiary: { person: { firstName: 'Juan', middleName: 'M', surname: 'Dela Cruz', address: 'Poblacion, Norzagaray' } },
-    });
-    const filingMock = (service as any).filing;
-    filingMock.upload.mockClear();
-    filingMock.upload.mockResolvedValue({ id: 'doc-1' });
+  it('issues COE and PCV once each and reuses the stored URL', async () => {
+    const filedUrl = '/filing/doc-1/download';
+    const caseRepo = {
+      findOne: jest.fn()
+        .mockResolvedValueOnce({ ...baseCase, certificateUrl: undefined })
+        .mockResolvedValueOnce({ ...baseCase, certificateUrl: filedUrl })
+        .mockResolvedValueOnce({ ...baseCase, pettyCashVoucherUrl: undefined })
+        .mockResolvedValueOnce({ ...baseCase, pettyCashVoucherUrl: filedUrl }),
+      save: jest.fn(async (x: any) => x),
+      manager: { query: jest.fn().mockResolvedValue([]) },
+    };
+    const filing = { upload: jest.fn().mockResolvedValue({ id: 'doc-1' }) };
+    const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, filing, {} as any);
+    svc.org = { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') };
 
-    await service.generateApprovalDocuments('c1', 'u1');
+    await expect(svc.issueCoe('c1', 'u1')).resolves.toBe(filedUrl);
+    await expect(svc.issueCoe('c1', 'u1')).resolves.toBe(filedUrl);
+    await expect(svc.issuePcv('c1', 'u1')).resolves.toBe(filedUrl);
+    await expect(svc.issuePcv('c1', 'u1')).resolves.toBe(filedUrl);
 
-    expect(filingMock.upload).toHaveBeenCalledTimes(2);
-    const coe = filingMock.upload.mock.calls[0][0];
-    const pcv = filingMock.upload.mock.calls[1][0];
+    expect(filing.upload).toHaveBeenCalledTimes(2);
+    const coe = filing.upload.mock.calls[0][0];
+    const pcv = filing.upload.mock.calls[1][0];
     expect(coe.originalname).toBe('COE-KAPWA-2026-0001.pdf');
     expect(pcv.originalname).toBe('PCV-KAPWA-2026-0001.pdf');
-    const coeText = (coe.buffer as Buffer).toString('latin1');
-    const pcvText = (pcv.buffer as Buffer).toString('latin1');
-    expect(coeText).toContain('%PDF');
-    expect(coeText).toContain('Municipal Social Welfare and Development Office');
-    expect(pcvText).toContain('Municipal Social Welfare and Development Office');
+    expect((coe.buffer as Buffer).toString('latin1')).toContain('%PDF');
+    expect(caseRepo.save).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not re-file or re-save when the document already exists', async () => {
+    const filedUrl = '/filing/doc-9/download';
+    const caseRepo = {
+      findOne: jest.fn().mockResolvedValue({ ...baseCase, certificateUrl: filedUrl }),
+      save: jest.fn(),
+      manager: { query: jest.fn().mockResolvedValue([]) },
+    };
+    const filing = { upload: jest.fn() };
+    const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, filing, {} as any);
+
+    await expect(svc.issueCoe('c1', 'u1')).resolves.toBe(filedUrl);
+    expect(filing.upload).not.toHaveBeenCalled();
+    expect(caseRepo.save).not.toHaveBeenCalled();
   });
 });
 

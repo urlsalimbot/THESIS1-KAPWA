@@ -543,31 +543,40 @@ export class CasesExportService {
     return requiredKeys.filter((k) => !filedKeys.has(k));
   }
 
-  // Generates + files both documents for an approved case; returns their
-  // download URLs. Best-effort: callers should not fail the transition on a
-  // generation error.
-  async generateApprovalDocuments(caseId: string, actorId?: string): Promise<{ certificateUrl?: string; pettyCashVoucherUrl?: string }> {
+  private async requireCase(caseId: string) {
     const c = await this.caseRepo.findOne({
       where: { id: caseId },
       relations: ['beneficiary', 'beneficiary.person', 'assistances', 'assignedWorker'],
     });
     if (!c) throw new NotFoundException('Case not found');
+    return c;
+  }
 
-    const coe = await this.buildCertificateOfEligibility(c);
-    const pcv = await this.buildPettyCashVoucher(c);
-
-    const coeDoc = await this.filing.upload(
-      { originalname: `COE-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: coe.length, buffer: coe },
-      { caseId: c.id, category: 'approval_document', notes: `Certificate of Eligibility — generated on approval of ${c.controlNo}`, uploadedBy: actorId },
+  // Manual issuance (spec §2). Idempotent: an already-issued document is
+  // returned as-is without filing a duplicate.
+  async issueCoe(caseId: string, actorId?: string): Promise<string> {
+    const c = await this.requireCase(caseId);
+    if (c.certificateUrl) return c.certificateUrl;
+    const pdf = await this.buildCertificateOfEligibility(c);
+    const doc = await this.filing.upload(
+      { originalname: `COE-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: pdf.length, buffer: pdf },
+      { caseId: c.id, category: 'approval_document', notes: `Certificate of Eligibility — issued for ${c.controlNo}`, uploadedBy: actorId },
     );
-    const pcvDoc = await this.filing.upload(
-      { originalname: `PCV-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: pcv.length, buffer: pcv },
-      { caseId: c.id, category: 'approval_document', notes: `Petty Cash Voucher — generated on approval of ${c.controlNo}`, uploadedBy: actorId },
-    );
+    c.certificateUrl = `/filing/${doc.id}/download`;
+    await this.caseRepo.save(c);
+    return c.certificateUrl;
+  }
 
-    return {
-      certificateUrl: `/filing/${coeDoc.id}/download`,
-      pettyCashVoucherUrl: `/filing/${pcvDoc.id}/download`,
-    };
+  async issuePcv(caseId: string, actorId?: string): Promise<string> {
+    const c = await this.requireCase(caseId);
+    if (c.pettyCashVoucherUrl) return c.pettyCashVoucherUrl;
+    const pdf = await this.buildPettyCashVoucher(c);
+    const doc = await this.filing.upload(
+      { originalname: `PCV-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: pdf.length, buffer: pdf },
+      { caseId: c.id, category: 'approval_document', notes: `Petty Cash Voucher — issued for ${c.controlNo}`, uploadedBy: actorId },
+    );
+    c.pettyCashVoucherUrl = `/filing/${doc.id}/download`;
+    await this.caseRepo.save(c);
+    return c.pettyCashVoucherUrl;
   }
 }
