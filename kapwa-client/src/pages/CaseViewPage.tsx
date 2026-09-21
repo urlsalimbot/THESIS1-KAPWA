@@ -310,7 +310,15 @@ export function CaseViewPage() {
 
   const canRequestReview = caseData.status === 'enrolled'
     && caseData.problemsPresented && caseData.socialWorkerAssessment && caseData.clientCategory
-    && (user?.role === 'social_worker' || user?.role === 'admin');
+    && user?.role === 'social_worker';
+
+  // `assessed` cases are submitted for admin review from the case view. Mirrors
+  // the StepImplementHIP gate (interventions must exist before review because
+  // activation requires at least one). Also rendered in the header so the
+  // action is discoverable without switching to the Implement HIP step.
+  const canSubmitReview = caseData.status === 'assessed'
+    && interventions.length > 0
+    && user?.role === 'social_worker';
 
   return (
     <PageShell
@@ -366,6 +374,17 @@ export function CaseViewPage() {
                     onClick={() => handleAction('request-review', id!)}
                   >
                     <Send size={14} aria-hidden="true" /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('cases.requestReview', 'Request Review')}
+                  </Button>
+                )}
+                {canSubmitReview && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={actionLoading === id}
+                    onClick={() => handleAction('submit-review', id!)}
+                  >
+                    <Send size={14} aria-hidden="true" /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('caseView.implement.submitForReview', 'Submit for Review →')}
                   </Button>
                 )}
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadGisPdf(id!)}>

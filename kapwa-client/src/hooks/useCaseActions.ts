@@ -16,6 +16,10 @@ export function useCaseActions() {
     queryKeys.cases.all,
     (_key, { arg }: { arg: { id: string } }) => api.patch(`/cases/${arg.id}/request-review`),
   );
+  const { trigger: submitReview } = useSWRMutation(
+    queryKeys.cases.all,
+    (_key, { arg }: { arg: { id: string } }) => api.patch(`/cases/${arg.id}/status`, { status: 'in_review' }),
+  );
   const { trigger: disburseCase } = useSWRMutation(
     queryKeys.cases.all,
     (_key, { arg }: { arg: { id: string } }) => api.patch(`/cases/${arg.id}/disburse`, { status: 'transitioning' }),
@@ -46,6 +50,16 @@ export function useCaseActions() {
               description: i18n.t('caseView.actions.queuedDesc', 'The review request will be sent when you are back online.'),
             });
           }
+          break;
+        case 'submit-review':
+          if (!isOnline()) {
+            toast.warning(i18n.t('common.onlineRequired', 'Connection required'), {
+              description: i18n.t('common.onlineRequiredDesc', 'This action needs an internet connection.'),
+            });
+            setActionLoading(null);
+            return;
+          }
+          await submitReview({ id: caseId });
           break;
         case 'disburse':
           if (!isOnline()) {

@@ -1,0 +1,94 @@
+{
+  "results": [
+    {
+      "name": "login admin",
+      "ok": true,
+      "detail": "http://localhost:3001/admin"
+    },
+    {
+      "name": "case list rows",
+      "ok": true,
+      "detail": "rows=9"
+    },
+    {
+      "name": "BUG1 admin sees Request Review (client role bug)",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "BUG1 admin request-review -> 403 (client shows unusable action)",
+      "ok": true,
+      "detail": "status=403"
+    },
+    {
+      "name": "closed case single assistance",
+      "ok": true,
+      "detail": "KAPWA-2026-00001"
+    },
+    {
+      "name": "GIS download filename",
+      "ok": true,
+      "detail": "GIS KAPWA-2026-00001-2026-09-21.pdf"
+    },
+    {
+      "name": "CSR download filename",
+      "ok": true,
+      "detail": "CSR KAPWA-2026-00001-2026-09-21.pdf"
+    },
+    {
+      "name": "IRF PDF download filename",
+      "ok": true,
+      "detail": "IRF BLT-2026-0001-2026-09-21.pdf"
+    },
+    {
+      "name": "IRF JSON download filename",
+      "ok": true,
+      "detail": "IRF-01a0c1b4-639f-768a-9eb3-1473f5cbaa6c.json"
+    },
+    {
+      "name": "access card button label",
+      "ok": true,
+      "detail": "matches=1"
+    },
+    {
+      "name": "access card download filename",
+      "ok": true,
+      "detail": "ACCESS CARD NORZ-AC-2026-0001-2026-09-21.pdf"
+    },
+    {
+      "name": "worker sees Request Review",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "request-review enrolled -> assessed",
+      "ok": true,
+      "detail": "status=assessed"
+    },
+    {
+      "name": "BUG2 no assessed->in_review UI action",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "in_review case visible in approvals",
+      "ok": true,
+      "detail": "KAPWA-2026-00003"
+    },
+    {
+      "name": "in_review case renders step 3 (Service Delivery)",
+      "ok": true,
+      "detail": "KAPWA-2026-00003"
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "SWR fetch error: ApiError: Forbidden resource\n    at rawRequest (http://localhost:3001/src/lib/api.ts:79:10)\n    at async executeWithRetry (http://localhost:3001/src/lib/api.ts:126:10)\n    at async mutateByKey (http://localhost:3001/node_modules/.vite/deps/index-BkX1cu9Z.js?v=f8ac7c92:221:11)\n    at",
+    "Action request-review failed: ApiError: Forbidden resource\n    at rawRequest (http://localhost:3001/src/lib/api.ts:79:10)\n    at async executeWithRetry (http://localhost:3001/src/lib/api.ts:126:10)\n    at async mutateByKey (http://localhost:3001/node_modules/.vite/deps/index-BkX1cu9Z.js?v=f8ac7c92:2",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}

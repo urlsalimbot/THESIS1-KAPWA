@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { queryKeys } from '../lib/query-keys';
 import { getCurrentUser } from '../lib/auth-context';
 import SignaturePad from '../components/forms/SignaturePad';
-import { CheckCircle, Upload, FileText, ArrowRight, ListChecks, Check } from 'lucide-react';
+import { CheckCircle, ArrowRight, ListChecks, Check } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -254,16 +254,6 @@ export function ApprovalPipelinePage() {
 
                     {group.key !== 'phase-in' && (
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
-                        {c.certificateUrl && (
-                          <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600">
-                            <FileText size={14} /> {t('approvals.viewCertificate', 'View Certificate')}
-                          </a>
-                        )}
-                        {c.pettyCashVoucherUrl && (
-                          <a href={c.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs textemerald-600">
-                            <FileText size={14} /> {t('approvals.viewVoucher', 'View Voucher')}
-                          </a>
-                        )}
                         {c.status === 'active' && user?.role === 'admin' && (
                           <Button onClick={() => openApproval(c, 'disburse')} size="sm" variant="secondary" className="w-full mt-1">
                             <ArrowRight size={14} /> {t('approvals.markTransitioned', 'Mark Transitioned')}
