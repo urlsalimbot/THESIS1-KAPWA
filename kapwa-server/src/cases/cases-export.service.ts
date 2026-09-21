@@ -304,7 +304,7 @@ export class CasesExportService {
 
     const filed: Array<{ requirement_key: string }> = await this.caseRepo.manager.query(
       `SELECT DISTINCT requirement_key FROM document_vault
-        WHERE case_id = $1 AND requirement_key IS NOT NULL`,
+        WHERE case_id = $1 AND requirement_key IS NOT NULL AND category = 'requirement'`,
       [caseId],
     );
     const filedKeys = new Set(filed.map((r) => r.requirement_key));

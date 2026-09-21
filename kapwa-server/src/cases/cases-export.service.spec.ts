@@ -233,6 +233,7 @@ describe('CasesExportService — missingRequiredDocuments', () => {
     expect(query.mock.calls[0][0]).toMatch(/WHERE ci\.case_id = \$1/);
     expect(query.mock.calls[0][1]).toEqual(['c1']);
     expect(query.mock.calls[1][0]).toMatch(/WHERE case_id = \$1/);
+    expect(query.mock.calls[1][0]).toMatch(/category = 'requirement'/);
     expect(query.mock.calls[1][1]).toEqual(['c1']);
   });
 

@@ -68,14 +68,14 @@ enrolled → assessed → in_review → active → transitioning → closed
 
 | Step | Requirement to complete |
 |---|---|
-| **Assessment** | problems presented, social-worker assessment, client category (FRVA/SWDI) |
-| **Implement HIP** | ≥ 1 intervention logged |
-| **Service Delivery** | interventions or referrals (referrals optional per protocol) |
-| **Transition** | self-reliance level + sustainability plan |
-| **Closure** | client signature + closure outcome (CSR PDF available after) |
+| **Assess & Interview** | problems presented, social-worker assessment, client category (FRVA/SWDI) |
+| **Intervention & Requirements** | ≥ 1 intervention logged **and** every required document of the linked program(s) filed; admin approval, then manual **Issue COE** / **Issue PCV** |
+| **Inter-agency Referrals** | a referral is issued, or "no referral needed" is recorded |
+| **Evaluate Help Given** | self-reliance level + sustainability plan; level ≥ 3 guides closure, below guides renewal |
+| **Case Study & Closure** | client signature + closure outcome; the merged CSR bundle is available |
 
 - Transitions are role-checked by the FSM (`canTransition`); approvals capture `approvedBySignature` / `approvedByRole`.
-- **Approval documents produced at approval** — the Certificate of Eligibility and Petty Cash Voucher PDFs are auto-generated and filed when the disbursement is approved (`in_review → active`); viewable by admin + social workers in the case stepper, Implement HIP step, and approvals pipeline.
+- **Approval documents are issued manually** — an admin generates the Certificate of Eligibility and Petty Cash Voucher from the case view (`POST /cases/:id/issue-coe`, `issue-pcv`) once the case is active; both are idempotent and viewable by admin + social workers in the case view.
 - **Case stepper** visualizes the five steps across three phases (Phase-In / Implementation / Phase-Out) with shared completion logic.
 - History + audit rows are written per transition; case updates notify the assigned worker **and** the linked claimant account.
 - Renewal reuses the beneficiary/household/card for the next cycle.
@@ -137,7 +137,8 @@ enrolled → assessed → in_review → active → transitioning → closed
 All case-document PDFs use one naming convention — **`<CaseType> <caseNo>-<YYYY>-<MM>-<DD>.pdf`** (export date, Asia/Manila):
 
 - **GIS** — `GET /cases/:id/gis-pdf` → `GIS KAPWA-2026-00008-2026-09-09.pdf`
-- **CSR** — `GET /cases/:id/csr-pdf` and `GET /cases/csr/:controlNo/pdf` (admin/social-worker/coordinator) → `CSR …`
+- **CSR (Case Study Report)** — `GET /cases/:id/csr-pdf` and `GET /cases/csr/:controlNo/pdf` (admin/social-worker/coordinator) → `CSR …`. The export is a **merged PDF bundle**: cover page + Petty Cash Voucher + Certificate of Eligibility + IRF (when the case has one) + GIS.
+- **COE / PCV** — issued manually by an admin from the case view (`POST /cases/:id/issue-coe`, `POST /cases/:id/issue-pcv`) once the case is active; not generated automatically at approval.
 - **IRF** — `GET /irf/:id/export-pdf` → `IRF <blotter>-…`
 - **Access card** — `ACCESS CARD <code>-…`
 - **Cases bulk CSV** — `POST /cases/bulk-export` (masked by default; unmasked requires a justification + audit).
