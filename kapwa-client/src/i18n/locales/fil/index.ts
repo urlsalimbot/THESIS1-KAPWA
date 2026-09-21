@@ -186,6 +186,7 @@ const fil: EnLocale = {
     "checkEmailBody": "Kung may account na may ganitong email, nagpadala kami ng link para sa password reset.",
     "checkInboxForVerification": "Pakitingnan ang iyong inbox para sa verification link.",
     "checkInboxToActivate": "Pakitingnan ang iyong inbox at i-click ang link para i-activate ang iyong account.",
+    "checkSpamFolder": "Hindi natanggap? Tingnan ang iyong spam folder, o subukang muli pagkalipas ng ilang minuto.",
     "checkYourEmail": "Suriin ang Iyong Email",
     "checkYourInbox": "Suriin ang iyong inbox.",
     "claimantRegistration": "Pagpaparehistro ng Claimant",
@@ -206,6 +207,7 @@ const fil: EnLocale = {
     "emailNotDelivered": "Hindi maipadala ang verification email sa ngayon. Pakikontakin ang opisina ng MSWDO upang ma-activate ang iyong account.",
     "emailPlaceholder": "Ilagay ang iyong email",
     "emailVerification": "Pag-verify ng Email",
+    "emailVerificationBody": "Kinukumpirma ang address ng iyong KAPWA account.",
     "emailVerified": "Matagumpay na na-verify ang email!",
     "enterNewPassword": "Ilagay ang iyong bagong password sa ibaba.",
     "enterPasswordToConfirm": "Ilagay ang password para kumpirmahin",
@@ -261,6 +263,7 @@ const fil: EnLocale = {
     "registerDescription": "Gumawa ng account para subaybayan ang iyong mga serbisyo at aplikasyon.",
     "registrationFailed": "Hindi matagumpay ang pagpaparehistro",
     "registrationFailedDesc": "Pakitingnan ang iyong impormasyon at subukang muli.",
+    "requestNewLink": "Maaari kang humiling ng bagong verification email mula sa sign-in page.",
     "resend": "ipadala muli",
     "resendFailed": "Hindi maipadala muli. Subukang muli mamaya.",
     "resendVerificationEmail": "Ipadala muli ang verification email",
@@ -1196,6 +1199,7 @@ const fil: EnLocale = {
     "viewInbox": "Tingnan ang Inbox"
   },
   "announcements": {
+    "allAnnouncements": "Lahat ng Anunsyo",
     "announcement": "Anunsyo",
     "backToHome": "Bumalik sa home",
     "backToManage": "Bumalik sa Mga Anunsyo",
@@ -1969,6 +1973,7 @@ const fil: EnLocale = {
     "mswdoAddress": "Municipal Social Welfare and Development Office, Norzagaray, Bulacan",
     "officeHours": "Oras ng Opisina",
     "officeHoursValue": "Lunes hanggang Biyernes, 8:00 AM - 5:00 PM",
+    "officeInformation": "Impormasyon ng Opisina",
     "phone": "Telepono",
     "emailError": "Pakilagay ang wastong email address.",
     "message": "Mensahe",
@@ -2055,6 +2060,21 @@ const fil: EnLocale = {
     "total": "Kabuuan",
     "tryAgain": "Subukang muli.",
     "updated": "Na-update"
+  },
+  "about": {
+    "barangaysServed": "Mga barangay na pinaglilingkuran",
+    "coreServices": "Pangunahing serbisyo",
+    "established": "Itinatag"
+  },
+  "landing": {
+    "activePrograms": "Mga Aktibong Programa",
+    "visitOffice": "Bumisita o makipag-ugnayan sa opisina"
+  },
+  "notFound": {
+    "backHome": "Bumalik sa tahanan",
+    "body": "Maaaring inilipat, inalis, o mali ang link ng hinahanap mong pahina.",
+    "contact": "Makipag-ugnayan sa opisina",
+    "title": "Hindi Nahanap ang Pahina"
   },
   "public": {
     "about": "Tungkol sa Amin",
