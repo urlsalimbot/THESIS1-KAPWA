@@ -247,20 +247,20 @@ describe('CaseViewPage — stepper gating', () => {
   });
 
   function hipStepButton() {
-    return screen.getByText('Implement HIP').closest('button')!;
+    return screen.getByText("Intervention & Requirements").closest('button')!;
   }
 
   function deliveryStepButton() {
-    return screen.getByText('Service Delivery').closest('button')!;
+    return screen.getByText("Inter-agency Referrals").closest('button')!;
   }
 
-  it('keeps Implement HIP unchecked when an intervention exists but required documents are missing', async () => {
+  it('keeps Intervention & Requirements unchecked when an intervention exists but required documents are missing', async () => {
     renderWithSWR(<CaseViewPage />);
     const step2 = await waitFor(hipStepButton);
     expect(step2.textContent).toContain('2');
   });
 
-  it('checks Implement HIP once the required document is uploaded', async () => {
+  it('checks Intervention & Requirements once the required document is uploaded', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf' }]);
@@ -279,13 +279,13 @@ describe('CaseViewPage — stepper gating', () => {
     await waitFor(() => expect(step2.querySelector('svg')).not.toBeNull());
   });
 
-  it('keeps Service Delivery unchecked until a referral is issued or deemed not needed', async () => {
+  it('keeps Inter-agency Referrals unchecked until a referral is issued or deemed not needed', async () => {
     renderWithSWR(<CaseViewPage />);
     const step3 = await waitFor(deliveryStepButton);
     expect(step3.textContent).toContain('3');
   });
 
-  it('checks Service Delivery when the case records referral-not-needed', async () => {
+  it('checks Inter-agency Referrals when the case records referral-not-needed', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);

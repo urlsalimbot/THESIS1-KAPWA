@@ -2,6 +2,16 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CaseStepper, stepperStepDone, stepperStatus } from './CaseStepper';
 
+describe('CaseStepper — lifecycle labels', () => {
+  it('renders the five lifecycle step labels', () => {
+    render(<CaseStepper currentStep={0} onStepClick={() => {}} caseData={{}} interventionCount={0} />);
+    ['Assess & Interview', 'Intervention & Requirements', 'Inter-agency Referrals', 'Evaluate Help Given', 'Case Study & Closure']
+      .forEach((label, i) => {
+        expect(screen.getByRole('button', { name: `${i + 1}. ${label}` })).toBeTruthy();
+      });
+  });
+});
+
 describe('stepperStepDone — Implement HIP gating', () => {
   it('requires an intervention before step 2 completes', () => {
     expect(stepperStepDone(1, {}, 0, {})).toBe(false);
@@ -63,14 +73,14 @@ describe('CaseStepper rendering', () => {
     render(
       <CaseStepper currentStep={0} onStepClick={vi.fn()} caseData={baseCase} interventionCount={1} requirementsMet={false} />,
     );
-    expect(stepButton('Implement HIP').textContent).toContain('2');
+    expect(stepButton('Intervention & Requirements').textContent).toContain('2');
   });
 
   it('shows a check on step 2 once an intervention and all required documents exist', () => {
     render(
       <CaseStepper currentStep={0} onStepClick={vi.fn()} caseData={baseCase} interventionCount={2} requirementsMet={true} />,
     );
-    const step2 = stepButton('Implement HIP');
+    const step2 = stepButton('Intervention & Requirements');
     expect(step2.textContent).not.toContain('2');
     expect(step2.querySelector('svg')).not.toBeNull();
   });
@@ -85,7 +95,7 @@ describe('CaseStepper rendering', () => {
         requirementsMet={true}
       />,
     );
-    const step3 = stepButton('Service Delivery');
+    const step3 = stepButton('Inter-agency Referrals');
     expect(step3.textContent).not.toContain('3');
     expect(step3.querySelector('svg')).not.toBeNull();
   });
@@ -94,7 +104,7 @@ describe('CaseStepper rendering', () => {
     render(
       <CaseStepper currentStep={0} onStepClick={vi.fn()} caseData={baseCase} interventionCount={2} requirementsMet={true} referralNotNeeded={false} />,
     );
-    expect(stepButton('Service Delivery').textContent).toContain('3');
+    expect(stepButton('Inter-agency Referrals').textContent).toContain('3');
   });
 });
 

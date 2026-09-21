@@ -47,11 +47,11 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
   const referralNotNeeded = referralNotNeededProp ?? Boolean(caseData?.referralNotNeeded);
   const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded };
   const STEPS = [
-    { label: t('caseView.stepper.assessment', 'Assessment'), description: t('caseView.stepper.assessmentDesc', 'FRVA & SWDI analysis'), phase: t('caseView.stepper.phaseIn', 'Phase-In') },
-    { label: t('caseView.stepper.implementHip', 'Implement HIP'), description: t('caseView.stepper.implementHipDesc', 'Intervention delivery'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
-    { label: t('caseView.stepper.serviceDelivery', 'Service Delivery'), description: t('caseView.stepper.serviceDeliveryDesc', 'Referrals & resources'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
-    { label: t('caseView.stepper.transition', 'Transition'), description: t('caseView.stepper.transitionDesc', 'Graduation readiness'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
-    { label: t('caseView.stepper.closure', 'Closure'), description: t('caseView.stepper.closureDesc', 'Formal exit'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
+    { label: t('caseView.stepper.assessment', 'Assess & Interview'), description: t('caseView.stepper.assessmentDesc', 'Interview and FRVA/SWDI analysis'), phase: t('caseView.stepper.phaseIn', 'Phase-In') },
+    { label: t('caseView.stepper.implementHip', 'Intervention & Requirements'), description: t('caseView.stepper.implementHipDesc', 'Select intervention; client documents; COE/PCV release'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
+    { label: t('caseView.stepper.serviceDelivery', 'Inter-agency Referrals'), description: t('caseView.stepper.serviceDeliveryDesc', 'Referral needed: yes or no'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
+    { label: t('caseView.stepper.transition', 'Evaluate Help Given'), description: t('caseView.stepper.transitionDesc', 'Self-reliance assessment'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
+    { label: t('caseView.stepper.closure', 'Case Study & Closure'), description: t('caseView.stepper.closureDesc', 'Evaluate case study; formal exit'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
   ];
   const highestReachable = (() => {
     for (let i = STEPS.length - 1; i >= 0; i--) {
