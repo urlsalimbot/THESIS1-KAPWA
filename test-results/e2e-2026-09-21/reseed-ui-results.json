@@ -1,0 +1,39 @@
+[
+  {
+    "n": "active case shows generated documents",
+    "ok": true
+  },
+  {
+    "n": "active case hides Issue buttons",
+    "ok": true
+  },
+  {
+    "n": "new step labels render",
+    "ok": true
+  },
+  {
+    "n": "GIS filename §12",
+    "ok": true,
+    "d": "GIS KAPWA-2026-00001-2026-09-21.pdf"
+  },
+  {
+    "n": "CSR filename §12",
+    "ok": true,
+    "d": "CSR KAPWA-2026-00001-2026-09-21.pdf"
+  },
+  {
+    "n": "CSR is a multi-page bundle",
+    "ok": true,
+    "d": "pages=5"
+  },
+  {
+    "n": "IRF filename §12",
+    "ok": true,
+    "d": "IRF BLT-2026-0001-2026-09-21.pdf"
+  },
+  {
+    "n": "Access Card filename §12",
+    "ok": true,
+    "d": "ACCESS CARD NORZ-AC-2026-0001-2026-09-21.pdf"
+  }
+]
