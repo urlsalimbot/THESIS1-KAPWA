@@ -10,6 +10,8 @@ import { Separator } from '@/components/ui/separator';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadIntakeIdPhotos } from '@/lib/intake-id-photo';
+import { useAuth } from '@/lib/auth-context';
+import { clearDraft } from '@/hooks/useIntakeAutosave';
 
 interface MatchCandidate {
   householdId: string;
@@ -72,9 +74,17 @@ export function IntakeReviewPage() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const state = location.state as LocationState | null;
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
+
+  // The intake form deliberately keeps its draft until a case actually exists —
+  // a reload at this step would otherwise lose the whole payload with nothing to
+  // recover from — so this is where the draft is finally retired.
+  function clearIntakeDraft() {
+    if (user?.id) clearDraft(user.id);
+  }
 
   if (!state || !state.candidates) {
     return (
@@ -99,6 +109,9 @@ export function IntakeReviewPage() {
         `/intake/confirm/${householdId}`,
         intakeData,
       );
+      // The intake has been consumed either way (case created, or existing case
+      // updated), so the draft is spent.
+      clearIntakeDraft();
       if (result.caseCreated) {
         toast.success(t('intake.clientRegistered', 'Client registered'), { description: result.message });
         if (result.caseId) {
@@ -122,6 +135,7 @@ export function IntakeReviewPage() {
     setCreatingNew(true);
     try {
       const result = await api.post<{ caseId: string; controlNo: string }>('/intake', intakeData);
+      clearIntakeDraft();
       void uploadIntakeIdPhotos(result.caseId).then((ok) => {
         if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
       });

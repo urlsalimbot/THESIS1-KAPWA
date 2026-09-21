@@ -70,9 +70,17 @@ vi.mock('../lib/api', () => ({
   api: { post: vi.fn().mockResolvedValue({ caseCreated: true, caseId: 'case-1', controlNo: 'CTRL-001', message: 'Info updated and new case created.' }) },
 }));
 
+// The review step is where the intake draft is retired, so it needs a user id.
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: () => ({ user: { id: 'u1' } }),
+}));
+
+const DRAFT_KEY = 'kapwa:intake:draft:u1';
+
 describe('IntakeReviewPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockLocationState = {
       candidates: [
         {
@@ -249,5 +257,27 @@ describe('IntakeReviewPage', () => {
     );
     const matchCards = screen.getAllByText(/Is this/i);
     expect(matchCards.length).toBe(2);
+  });
+
+  it('retires the intake draft once an existing case is updated', async () => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ data: {}, savedAt: new Date().toISOString() }));
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: /update info/i })[0]);
+    await waitFor(() => expect(localStorage.getItem(DRAFT_KEY)).toBeNull());
+  });
+
+  it('retires the intake draft when registering as a new client', async () => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ data: {}, savedAt: new Date().toISOString() }));
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /register as new client/i }));
+    await waitFor(() => expect(localStorage.getItem(DRAFT_KEY)).toBeNull());
   });
 });

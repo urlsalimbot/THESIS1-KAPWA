@@ -673,3 +673,126 @@ describe('IntakePage — prefill from a referral handoff', () => {
     expect(payload.case).toEqual({});
   });
 });
+
+describe('IntakePage — draft recovery for a referral hand-off', () => {
+  const DRAFT_KEY = 'kapwa:intake:draft:u1';
+
+  function validPerson(over: Record<string, unknown> = {}) {
+    return {
+      surname: 'Dela Cruz', firstName: 'Juan', middleName: 'Santos', extension: '',
+      gender: 'Male', dob: '1990-01-15', placeOfBirth: 'Manila', civilStatus: 'Single',
+      cellularNumber: '09171234567', email: 'juan@example.com',
+      currentAddress: {
+        street: '123 Rizal St', barangay: 'Bigte', city: '0301413000',
+        province: '0301400000', region: '03', postalCode: '3012', psgcCode: '',
+      },
+      philhealthNumber: '', occupation: 'Fisherman', estimatedMonthlyIncome: '15000',
+      ...over,
+    };
+  }
+
+  // The draft holds a fully valid person, so if the draft is applied the form
+  // submits and /intake is called. That makes "did the draft win?" observable
+  // end-to-end rather than only through input values.
+  function seedDraft(over: Record<string, unknown> = {}) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      data: {
+        beneficiary: validPerson(),
+        claimant: validPerson({ firstName: 'Maria' }),
+        relationshipToBeneficiary: 'Spouse',
+        family: [],
+        beneficiaryIsClaimant: true,
+        hasConsent: true,
+        ...over,
+      },
+      savedAt: new Date().toISOString(),
+    }));
+  }
+
+  function renderWithState(state?: Record<string, unknown>) {
+    return render(
+      <MemoryRouter initialEntries={[state ? { pathname: '/intake', state } : '/intake']}>
+        <IntakePage />
+      </MemoryRouter>,
+    );
+  }
+
+  function intakePayloadOf() {
+    const call = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+      (c: unknown[]) => c[0] === '/intake',
+    );
+    expect(call).toBeTruthy();
+    return call![1] as {
+      sourceReferral?: unknown;
+      beneficiary?: { firstName?: string; occupation?: string };
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
+  it('keeps the worker edits and the referral link across a reload', async () => {
+    // A reload keeps router state, so the prefill is still there — but the draft
+    // is the newer state and must win, including the referral it belongs to.
+    seedDraft({
+      beneficiary: validPerson({ firstName: 'Edited', occupation: 'Edited occupation' }),
+      sourceReferral: { type: 'barangay', id: 'ref-1', reason: 'Medical assistance' },
+    });
+    renderWithState({
+      prefill: { surname: 'FromPrefill', firstName: 'FromPrefill' },
+      sourceReferral: { type: 'barangay', id: 'ref-1', reason: 'Medical assistance' },
+    });
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByLabelText('ben-firstName')).toHaveValue('Edited');
+
+    submitForm();
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const payload = intakePayloadOf();
+    expect(payload.beneficiary?.firstName).toBe('Edited');
+    expect(payload.sourceReferral).toEqual({ type: 'barangay', id: 'ref-1' });
+  });
+
+  it('recovers the referral from the draft after a cold start', async () => {
+    // Cold start: router state is gone entirely, so only the draft can supply the
+    // referral the created case has to link back to.
+    seedDraft({ sourceReferral: { type: 'inter_agency', id: 'iar-9', reason: 'Follow-up' } });
+    renderWithState();
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByText(/From referral: Follow-up/)).toBeInTheDocument();
+
+    submitForm();
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    expect(intakePayloadOf().sourceReferral).toEqual({ type: 'inter_agency', id: 'iar-9' });
+  });
+
+  it('does not let a draft for another referral clobber a fresh hand-off', async () => {
+    seedDraft({
+      beneficiary: validPerson({ firstName: 'StaleDraft' }),
+      sourceReferral: { type: 'barangay', id: 'other-ref' },
+    });
+    renderWithState({
+      prefill: { surname: 'Reyes', firstName: 'Maria' },
+      sourceReferral: { type: 'barangay', id: 'ref-2', reason: 'New referral' },
+    });
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByLabelText('ben-firstName')).toHaveValue('Maria');
+    expect(screen.getByText(/From referral: New referral/)).toBeInTheDocument();
+  });
+
+  it('ignores a draft entirely when a plain intake is started', async () => {
+    // No prefill and no draft referral: today's behaviour, draft restores.
+    seedDraft({ beneficiary: validPerson({ firstName: 'Drafted' }) });
+    renderWithState();
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByLabelText('ben-firstName')).toHaveValue('Drafted');
+    expect(screen.queryByText(/From referral/)).toBeNull();
+  });
+});

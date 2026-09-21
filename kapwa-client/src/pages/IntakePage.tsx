@@ -59,6 +59,13 @@ interface PersonForm {
   philhealthNumber: string; occupation: string; estimatedMonthlyIncome: string;
 }
 
+/** Which referral this intake was handed off from, if any. */
+interface SourceReferralRef {
+  type: 'barangay' | 'inter_agency';
+  id: string;
+  reason?: string;
+}
+
 const emptyAddress: AddressFields = { street: '', barangay: '', city: '0301413000', province: '0301400000', region: '03', postalCode: '3013', psgcCode: '' };
 
 const emptyPerson = (): PersonForm => ({
@@ -262,6 +269,17 @@ export function IntakePage() {
     };
   }, []);
 
+  // The referral / renewal context arrives in router state. A reload preserves
+  // that by browser convention, but a cold start (new tab, typed URL, app
+  // restart) discards it — and without it the created case never links back to
+  // its referral. Mirroring it into state lets the autosaved draft carry it.
+  const [renewalOfCaseId, setRenewalOfCaseId] = useState<string | undefined>(
+    () => (location.state as { renewalOfCaseId?: string } | null)?.renewalOfCaseId,
+  );
+  const [sourceReferral, setSourceReferral] = useState<SourceReferralRef | undefined>(
+    () => (location.state as { sourceReferral?: SourceReferralRef } | null)?.sourceReferral,
+  );
+
   const formSnapshot = useMemo(() => ({
     beneficiary,
     claimant,
@@ -269,68 +287,92 @@ export function IntakePage() {
     family,
     beneficiaryIsClaimant,
     hasConsent,
-  }), [beneficiary, claimant, relationshipToBeneficiary, family, beneficiaryIsClaimant, hasConsent]);
+    renewalOfCaseId,
+    sourceReferral,
+  }), [beneficiary, claimant, relationshipToBeneficiary, family, beneficiaryIsClaimant, hasConsent, renewalOfCaseId, sourceReferral]);
 
   useIntakeAutosave(formSnapshot, userId);
 
+  // Seed the form exactly once per navigation. Precedence:
+  //   1. a draft for THIS intake — the worker's own latest edits, and the only
+  //      thing that survives a cold start — wins;
+  //   2. otherwise the referral/renewal prefill;
+  //   3. otherwise nothing.
+  // A draft belonging to a different intake never seeds, so a stale draft cannot
+  // clobber a fresh referral hand-off.
+  const seededForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!userId) return;
-    const draft = loadDraft(userId);
-    if (draft?.data && !location.state?.prefill) {
-      const d = draft.data as {
-        beneficiary: PersonForm;
-        claimant: PersonForm;
-        relationshipToBeneficiary: string;
-        family: FamilyMember[];
-        beneficiaryIsClaimant: boolean;
-        hasConsent: boolean;
-      };
-      setBeneficiary(d.beneficiary);
-      setClaimant(d.claimant);
-      setRelationshipToBeneficiary(d.relationshipToBeneficiary);
-      setFamily(d.family ?? []);
-      setBeneficiaryIsClaimant(d.beneficiaryIsClaimant);
-      setHasConsent(d.hasConsent);
-    }
-  }, [userId]);
+    if (!userId) return; // wait for auth so the draft can be read
+    if (seededForRef.current === location.key) return;
+    seededForRef.current = location.key;
 
-  useEffect(() => {
-    const prefill = (location.state as {
+    const incoming = location.state as {
       prefill?: Record<string, string> & {
         familyMembers?: FamilyMember[];
         currentAddress?: { street?: string; barangay?: string };
       };
-    })?.prefill;
-    if (prefill) {
-      const address = prefill.currentAddress;
-      setBeneficiary(prev => ({
-        ...prev,
-        surname: prefill.surname ?? prev.surname,
-        firstName: prefill.firstName ?? prev.firstName,
-        middleName: prefill.middleName ?? prev.middleName,
-        extension: prefill.extension ?? prev.extension,
-        gender: prefill.gender ?? prev.gender,
-        dob: prefill.dob ?? prev.dob,
-        placeOfBirth: prefill.placeOfBirth ?? prev.placeOfBirth,
-        civilStatus: prefill.civilStatus ?? prev.civilStatus,
-        cellularNumber: prefill.cellularNumber ?? prev.cellularNumber,
-        occupation: prefill.occupation ?? prev.occupation,
-        estimatedMonthlyIncome: prefill.estimatedMonthlyIncome ?? prev.estimatedMonthlyIncome,
-        philhealthNumber: prefill.philhealthNumber ?? prev.philhealthNumber,
-        // Merge rather than replace: region/province/city keep the Norzagaray
-        // defaults, and only non-empty referral values are applied because the
-        // intake validates street and barangay as min(1).
-        currentAddress: {
-          ...prev.currentAddress,
-          ...(address?.street ? { street: address.street } : {}),
-          ...(address?.barangay ? { barangay: address.barangay } : {}),
-        },
-      }));
-      if (Array.isArray(prefill.familyMembers) && prefill.familyMembers.length > 0) {
-        setFamily(prefill.familyMembers);
-      }
+      renewalOfCaseId?: string;
+      sourceReferral?: SourceReferralRef;
+    } | null;
+
+    const draft = loadDraft(userId)?.data as {
+      beneficiary: PersonForm;
+      claimant: PersonForm;
+      relationshipToBeneficiary: string;
+      family: FamilyMember[];
+      beneficiaryIsClaimant: boolean;
+      hasConsent: boolean;
+      renewalOfCaseId?: string;
+      sourceReferral?: SourceReferralRef;
+    } | undefined;
+
+    const draftIsForThisIntake = !!draft
+      && (draft.sourceReferral?.id ?? '') === (incoming?.sourceReferral?.id ?? '')
+      && (draft.renewalOfCaseId ?? '') === (incoming?.renewalOfCaseId ?? '');
+
+    if (draft && (!incoming?.prefill || draftIsForThisIntake)) {
+      setBeneficiary(draft.beneficiary);
+      setClaimant(draft.claimant);
+      setRelationshipToBeneficiary(draft.relationshipToBeneficiary);
+      setFamily(draft.family ?? []);
+      setBeneficiaryIsClaimant(draft.beneficiaryIsClaimant);
+      setHasConsent(draft.hasConsent);
+      if (draft.sourceReferral) setSourceReferral(draft.sourceReferral);
+      if (draft.renewalOfCaseId) setRenewalOfCaseId(draft.renewalOfCaseId);
+      return;
     }
-  }, [location.state]);
+
+    const prefill = incoming?.prefill;
+    if (!prefill) return;
+
+    const address = prefill.currentAddress;
+    setBeneficiary(prev => ({
+      ...prev,
+      surname: prefill.surname ?? prev.surname,
+      firstName: prefill.firstName ?? prev.firstName,
+      middleName: prefill.middleName ?? prev.middleName,
+      extension: prefill.extension ?? prev.extension,
+      gender: prefill.gender ?? prev.gender,
+      dob: prefill.dob ?? prev.dob,
+      placeOfBirth: prefill.placeOfBirth ?? prev.placeOfBirth,
+      civilStatus: prefill.civilStatus ?? prev.civilStatus,
+      cellularNumber: prefill.cellularNumber ?? prev.cellularNumber,
+      occupation: prefill.occupation ?? prev.occupation,
+      estimatedMonthlyIncome: prefill.estimatedMonthlyIncome ?? prev.estimatedMonthlyIncome,
+      philhealthNumber: prefill.philhealthNumber ?? prev.philhealthNumber,
+      // Merge rather than replace: region/province/city keep the Norzagaray
+      // defaults, and only non-empty referral values are applied because the
+      // intake validates street and barangay as min(1).
+      currentAddress: {
+        ...prev.currentAddress,
+        ...(address?.street ? { street: address.street } : {}),
+        ...(address?.barangay ? { barangay: address.barangay } : {}),
+      },
+    }));
+    if (Array.isArray(prefill.familyMembers) && prefill.familyMembers.length > 0) {
+      setFamily(prefill.familyMembers);
+    }
+  }, [userId, location.key, location.state]);
 
   function updateBeneficiary(field: string, value: string) {
     setBeneficiary(prev => ({ ...prev, [field]: value }));
@@ -512,19 +554,16 @@ export function IntakePage() {
 
     setSubmitting(true);
 
-    const sourceReferral = (location.state as {
-      sourceReferral?: { type: 'barangay' | 'inter_agency'; id: string; reason?: string };
-    })?.sourceReferral;
-
     const intakePayload = {
       beneficiary: personToPayload(beneficiary),
       claimant: beneficiaryIsClaimant
         ? { ...personToPayload(beneficiary), relationshipToBeneficiary: 'Self' }
         : { ...personToPayload(claimant), relationshipToBeneficiary },
       familyMembers: familyMembersPayload(),
-      renewalOfCaseId: (location.state as { renewalOfCaseId?: string })?.renewalOfCaseId || undefined,
+      renewalOfCaseId: renewalOfCaseId || undefined,
       // Lets the server link the case it creates back to the referral that
-      // handed off to this intake (IntakeService.linkSourceReferral).
+      // handed off to this intake (IntakeService.linkSourceReferral). Read from
+      // component state rather than router state so it survives draft recovery.
       sourceReferral: sourceReferral
         ? { type: sourceReferral.type, id: sourceReferral.id }
         : undefined,
@@ -543,7 +582,10 @@ export function IntakePage() {
       });
 
       if (matchResult.candidates && matchResult.candidates.length > 0) {
-        clearDraft(userId);
+        // The draft is intentionally NOT cleared here: the review step receives
+        // its payload through router state, so a reload there would otherwise
+        // lose the whole intake with nothing to recover from. It is cleared once
+        // a case actually exists — below, and in IntakeReviewPage.
         navigate('/intake/review', {
           state: { candidates: matchResult.candidates, intakeData: intakePayload },
         });
@@ -580,11 +622,9 @@ export function IntakePage() {
           {t('intake.addingCaseFor', 'Adding a case for')} <strong>{beneficiary.surname}, {beneficiary.firstName}</strong>{t('intake.addingCaseForSuffix', '. Review and modify details before submitting.')}
         </div>
       )}
-      {(location.state as { sourceReferral?: { reason?: string } })?.sourceReferral?.reason && (
+      {sourceReferral?.reason && (
         <div className="mb-4 rounded border border-accent/25 bg-accent/5 p-3 text-sm text-accent">
-          {t('intake.fromReferral', 'From referral: {{reason}}', {
-            reason: (location.state as { sourceReferral?: { reason?: string } }).sourceReferral?.reason,
-          })}
+          {t('intake.fromReferral', 'From referral: {{reason}}', { reason: sourceReferral.reason })}
         </div>
       )}
       <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6">
