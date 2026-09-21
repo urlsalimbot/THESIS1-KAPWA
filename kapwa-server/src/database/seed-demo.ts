@@ -246,6 +246,10 @@ async function main(): Promise<void> {
       )];
       for (const key of requiredKeys) await uploadRequirement(admin, caseId, key);
       await call(admin, 'PATCH', `/cases/${caseId}/approve`, { status: 'active', signature: 'Admin Approval' }, 'approve');
+      // COE/PCV are issued manually now; the demo issues both so the documents
+      // surface on the case view.
+      await call(admin, 'POST', `/cases/${caseId}/issue-coe`, undefined, 'issue-coe');
+      await call(admin, 'POST', `/cases/${caseId}/issue-pcv`, undefined, 'issue-pcv');
     }
     if (['transitioning', 'closed'].includes(p.stage)) {
       await call(admin, 'PATCH', `/cases/${caseId}/transition-plan`, TRANSITION, 'transition-plan');
