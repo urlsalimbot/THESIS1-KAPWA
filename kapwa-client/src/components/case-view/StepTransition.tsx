@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Calendar, FileText, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { isSelfSufficient } from '@/lib/self-reliance';
 
 interface FollowUpVisit {
   date: string;
@@ -76,8 +77,16 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
     }
   }
 
+  const selfSufficient = isSelfSufficient(plan.selfRelianceLevel);
+
   return (
     <div className="space-y-4">
+      {/* Step 4 guide — the self-reliance level decides renewal vs closure. */}
+      <div className={`rounded-lg border px-4 py-3 text-sm ${selfSufficient ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-amber-300 bg-amber-50 text-amber-900'}`}>
+        {selfSufficient
+          ? t('caseView.transition.selfSufficient', 'Self-sufficient — proceed to Closure.')
+          : t('caseView.transition.notSelfSufficient', 'Not self-sufficient — subject to case renewal.')}
+      </div>
       {/* Self-Reliance Assessment */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3">

@@ -1709,6 +1709,8 @@ const fil: EnLocale = {
       "planReadyHint": "Markahan ang kaso bilang naglilipat upang simulan ang proseso ng graduation.",
       "saveTransitionPlan": "I-save ang Transition Plan",
       "selfRelianceAssessment": "Pagsusuri ng Pagsasarili",
+      "selfSufficient": "Nakakapag-isa — magpatuloy sa Pagsasara.",
+      "notSelfSufficient": "Hindi pa nakakapag-isa — maaaring isailalim sa renewal ng kaso.",
       "selfRelianceLevel": "Antas ng Pagsasarili *",
       "selfRelianceSteps": "Mga Hakbang sa Pagsasarili",
       "selfRelianceStepsPlaceholder": "Mga rekomendasyon para sa pagsasanay sa kasanayan, mga programa sa kabuhayan...",

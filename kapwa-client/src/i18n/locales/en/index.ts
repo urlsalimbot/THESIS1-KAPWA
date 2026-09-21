@@ -275,6 +275,8 @@ const en = {
       "planReadyHint": "Mark case as transitioning to begin graduation process.",
       "saveTransitionPlan": "Save Transition Plan",
       "selfRelianceAssessment": "Self-Reliance Assessment",
+      "selfSufficient": "Self-sufficient — proceed to Closure.",
+      "notSelfSufficient": "Not self-sufficient — subject to case renewal.",
       "selfRelianceLevel": "Self-Reliance Level *",
       "selfRelianceSteps": "Self-Reliance Steps",
       "selfRelianceStepsPlaceholder": "Recommendations for skills training, livelihood programs...",
