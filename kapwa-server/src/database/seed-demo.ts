@@ -71,39 +71,46 @@ const CATEGORIES: Record<string, string> = {
   assessed: 'Family Head and Other Needy Adult',
 };
 
+// One assistance per case, themed to the case's client category. Values are
+// exact seeded program names (see seedPrograms) so `programIdFor` links the
+// intervention to a program instead of falling back to a fuzzy match.
 const SERVICES: Record<string, string[]> = {
-  closed: ['Financial Assistance', 'Medical Assistance'],
-  active: ['Assistive Devices', 'Medical Assistance'],
-  in_review: ['Cash Assistance'],
-  transitioning: ['Financial Assistance'],
-  enrolled: ['Emergency Assistance'],
+  closed: ['Senior Citizen Social Pension'],
+  transitioning: ['Medical Assistance'],
+  active: ['PWD Assistance'],
+  in_review: ['Financial Assistance (General)'],
+  enrolled: ['Emergency Cash/Food for Work'],
   assessed: ['Livelihood Assistance'],
 };
 
-const ASSESSMENT = {
+const ASSESSMENT_BASE = {
   problemsPresented: 'Client presented with financial difficulties and limited income sources.',
   socialWorkerAssessment: 'Household income below poverty threshold; eligible for assistance.',
   frvaScore: 42,
   swdiScore: 35,
-  natureOfService: ['Financial Assistance'],
   amountAssistance: 3000,
   modeFinancialAssistance: 'Cash',
   sourceOfFund: 'AICS',
   interviewedBy: 'Maria Clara Santos',
 };
 
+// Assessment carries the case's single themed service as `natureOfService` so
+// the recorded assessment matches the case's one assistance.
+const assessmentFor = (stage: string) => ({
+  ...ASSESSMENT_BASE,
+  natureOfService: SERVICES[stage],
+  clientCategory: CATEGORIES[stage],
+});
+
 const INTERVENTIONS: Record<string, Record<string, unknown>[]> = {
   active: [
-    { serviceName: 'Medical Assistance', category: 'FA', deliveryDate: '2026-07-10', amount: 2500, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Hospital bill support', deliveredBy: 'MSWDO' },
-    { serviceName: 'Assistive Devices', category: 'HV', deliveryDate: '2026-07-25', amount: 0, modeOfDelivery: 'In-kind', fundSource: 'LGU', notes: 'Wheelchair issued', deliveredBy: 'MSWDO' },
-    { serviceName: 'Cash Assistance', category: 'FA', deliveryDate: '2026-08-05', amount: 3000, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Tricycle driver livelihood support', deliveredBy: 'MSWDO' },
+    { serviceName: 'PWD Assistance', category: 'HV', deliveryDate: '2026-07-25', amount: 0, modeOfDelivery: 'In-kind', fundSource: 'LGU', notes: 'Assistive device issued', deliveredBy: 'MSWDO' },
   ],
   transitioning: [
-    { serviceName: 'Financial Assistance', category: 'FA', deliveryDate: '2026-06-15', amount: 4500, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Monthly assistance', deliveredBy: 'MSWDO' },
+    { serviceName: 'Medical Assistance', category: 'FA', deliveryDate: '2026-06-15', amount: 4500, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Medical assistance cycle', deliveredBy: 'MSWDO' },
   ],
   closed: [
-    { serviceName: 'Financial Assistance', category: 'FA', deliveryDate: '2026-03-05', amount: 5000, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Regular assistance cycle', deliveredBy: 'MSWDO' },
-    { serviceName: 'Medical Assistance', category: 'FA', deliveryDate: '2026-04-12', amount: 3000, modeOfDelivery: 'Cash', fundSource: 'LGU', notes: 'Follow-up checkup', deliveredBy: 'MSWDO' },
+    { serviceName: 'Senior Citizen Social Pension', category: 'FA', deliveryDate: '2026-03-05', amount: 5000, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Social pension cycle', deliveredBy: 'MSWDO' },
   ],
 };
 
@@ -199,12 +206,12 @@ async function main(): Promise<void> {
     console.log(`intake enrolled ${p.firstName} ${p.surname} (${caseId.slice(0, 8)}) stage=${p.stage} — access card auto-generated`);
 
     if (['assessed', 'in_review', 'active', 'transitioning', 'closed'].includes(p.stage)) {
-      await call(worker, 'PATCH', `/cases/${caseId}/assessment`, { ...ASSESSMENT, clientCategory: CATEGORIES[p.stage] }, 'assessment');
+      await call(worker, 'PATCH', `/cases/${caseId}/assessment`, assessmentFor(p.stage), 'assessment');
       await call(worker, 'PATCH', `/cases/${caseId}/request-review`, undefined, 'request-review');
     } else if (p.stage === 'enrolled') {
       // enrolled: assessment only (no review) so the case stays enrolled but
       // still carries client_category + interviewed_by.
-      await call(worker, 'PATCH', `/cases/${caseId}/assessment`, { ...ASSESSMENT, clientCategory: CATEGORIES[p.stage] }, 'assessment');
+      await call(worker, 'PATCH', `/cases/${caseId}/assessment`, assessmentFor(p.stage), 'assessment');
     }
     if (['in_review', 'active', 'transitioning', 'closed'].includes(p.stage)) {
       await call(worker, 'PATCH', `/cases/${caseId}/status`, { status: 'in_review' }, 'to-in_review');
@@ -261,7 +268,7 @@ async function main(): Promise<void> {
       const dswd = agencies.find(a => a.code === 'DSWD');
       const existingServices = cardInfo.json?.services || [];
       const ledger = [
-        { accessCardCode: code, serviceRendered: 'Case service — medical assistance follow-up', serviceDate: '2026-08-01', cost: 1500, category: 'case_service' },
+        { accessCardCode: code, serviceRendered: 'Case service — assistive device issuance', serviceDate: '2026-08-01', cost: 1500, category: 'case_service' },
         { accessCardCode: code, serviceRendered: 'RHU referral — specialist consultation', serviceDate: '2026-08-03', cost: 0, category: 'referral', agencyId: rhu?.id },
         { accessCardCode: code, serviceRendered: 'Community outreach — health caravan assistance', serviceDate: '2026-08-10', cost: 500, category: 'community_service' },
         { accessCardCode: code, serviceRendered: 'Seminar — Family Development Session', serviceDate: '2026-08-12', cost: 0, category: 'seminar' },
@@ -334,7 +341,7 @@ async function main(): Promise<void> {
     } else {
     const renewed = await call(worker, 'POST', '/cases', {
       beneficiaryId: closed.benId,
-      serviceRequested: ['Financial Assistance'],
+      serviceRequested: ['Financial Assistance (General)'],
       assignedWorkerId: workerId,
     }, 'renewal-case');
     if (renewed.status < 400) {
