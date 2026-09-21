@@ -232,8 +232,6 @@ export function IntakePage() {
   const [hasConsent, setHasConsent] = useState(false);
   const [benErrors, setBenErrors] = useState<ValidationErrors>({});
   const [claimErrors, setClaimErrors] = useState<ValidationErrors>({});
-  const [submittedCase, setSubmittedCase] = useState<{ caseId: string } | null>(null);
-  const [batchSubmitting, setBatchSubmitting] = useState(false);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [claimPreview, setClaimPreview] = useState<string | null>(null);
   const benPhotoRef = useRef<HTMLInputElement>(null);
@@ -493,29 +491,9 @@ export function IntakePage() {
     void uploadIntakeIdPhotos(caseId).then((ok) => {
       if (!ok) toast.error(t('intake.idPhoto.uploadFailed', 'ID photo upload failed'));
     });
-    if (family.some(m => m.surname.trim())) {
-      setSubmittedCase({ caseId });
-    } else {
-      navigate(`/cases/${caseId}`);
-    }
-  }
-
-  async function handleBatchSubmit() {
-    if (!submittedCase) return;
-    setBatchSubmitting(true);
-    setError('');
-    try {
-      await api.post('/intake/batch-family', {
-        caseId: submittedCase.caseId,
-        primary: personToPayload(beneficiary),
-        members: familyMembersPayload(),
-      });
-      navigate(`/cases/${submittedCase.caseId}`);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('intake.batchSubmitFailed', 'Failed to submit batch family intake'));
-    } finally {
-      setBatchSubmitting(false);
-    }
+    // Family members are persisted by the very submit that produced this case,
+    // so there is nothing left to confirm here — go straight to it.
+    navigate(`/cases/${caseId}`);
   }
 
   /**
@@ -907,26 +885,6 @@ export function IntakePage() {
           </AlertDialog>
         </div>
       </form>
-
-      {submittedCase && (
-        <div className="mt-6 w-full rounded-lg border bg-card p-6 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Users size={16} className="text-muted-foreground" />
-            <h2 className="text-sm font-semibold">{t('intake.addAnotherBatch', 'Add another family member as a batch?')}</h2>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('intake.batchMembers', 'Submit {{count}} member(s) together with this household in one flow.', { count: family.filter(m => m.surname.trim()).length })}
-          </p>
-          <div className="mt-4 flex gap-3">
-            <Button type="button" onClick={handleBatchSubmit} disabled={batchSubmitting} aria-label={t('intake.yesAddBatch', 'Yes, add as batch')}>
-              {batchSubmitting ? t('intake.addingMembers', 'Adding members...') : t('intake.yesAddBatch', 'Yes, add as batch')}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => navigate(`/cases/${submittedCase.caseId}`)}>
-              {t('intake.noViewCase', 'No, view case')}
-            </Button>
-          </div>
-        </div>
-      )}
     </PageShell>
   );
 }

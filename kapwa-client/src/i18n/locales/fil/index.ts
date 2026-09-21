@@ -718,9 +718,7 @@ const fil: EnLocale = {
     "noInterAgencyReferrals": "Walang inter-agency referral para sa kasong ito."
   },
   "intake": {
-    "addAnotherBatch": "Magdagdag ng isa pang miyembro ng pamilya bilang isang batch?",
     "addingCaseFor": "Nagdaragdag ng kaso para kay",
-    "addingMembers": "Nagdaragdag ng mga miyembro...",
     "addMember": "+ Magdagdag ng Miyembro",
     "address": "Tirahan",
     "age": "Edad",
@@ -728,9 +726,6 @@ const fil: EnLocale = {
     "authorizedToClaim": "Ang taong awtorisadong tumanggap sa pangalan ng benepisyaryo.",
     "backToForm": "Bumalik sa intake form",
     "barangay": "Barangay",
-    "batchMembers_one": "Isumite ang {{count}} miyembro kasama ng sambahayang ito sa isang flow.",
-    "batchMembers_other": "Isumite ang {{count}} na miyembro kasama ng sambahayang ito sa isang flow.",
-    "batchSubmitFailed": "Nabigo ang pag-submit ng batch family intake",
     "beneficiaryIsClaimant": "Ang benepisyaryo ay ang claimant",
     "cellularNumber": "Numero ng Cellphone *",
     "checkingRecords": "Sinusuri ang mga rekord...",
@@ -794,7 +789,6 @@ const fil: EnLocale = {
     "noneMatch": "Wala sa mga ito ang tugma sa iyong kliyente?",
     "noPriorRecords": "Walang nakitang naunang rekord para sa pangalang ito.",
     "nothingToReview": "Walang intake data na susuriin.",
-    "noViewCase": "Hindi, tingnan ang kaso",
     "occupation": "Trabaho",
     "optional": "Opsyonal",
     "philhealth": "PhilHealth",
@@ -826,7 +820,6 @@ const fil: EnLocale = {
     "updateFailed": "Nabigo ang pag-update",
     "updateInfo": "Oo, i-update ang impormasyon",
     "updating": "Ina-update...",
-    "yesAddBatch": "Oo, idagdag bilang batch",
     "youEntered": "Inilagay mo",
     "addingCaseForSuffix": ". Suriin at baguhin ang mga detalye bago isumite.",
     "isThisQ": "?"

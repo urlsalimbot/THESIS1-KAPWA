@@ -1,25 +1,4 @@
-import { FamilyMemberSchema, batchFamilySchema } from './intake.zod';
-
-describe('batch-family schema', () => {
-  const base = {
-    caseId: 'case-1',
-    primary: { surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', dob: '1990-01-01' },
-    members: [{ surname: 'Dela Cruz', firstName: 'Ana', gender: 'Female', dob: '1992-02-02', relationship: 'Spouse' }],
-  };
-
-  it('validates a caseId plus primary and member array', () => {
-    const result = batchFamilySchema.safeParse(base);
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects when caseId is missing', () => {
-    const result = batchFamilySchema.safeParse({
-      primary: base.primary,
-      members: base.members,
-    });
-    expect(result.success).toBe(false);
-  });
-});
+import { FamilyMemberSchema } from './intake.zod';
 
 describe('FamilyMemberSchema', () => {
   const base = {

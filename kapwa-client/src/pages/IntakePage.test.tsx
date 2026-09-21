@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { IntakePage } from './IntakePage';
 import { api } from '../lib/api';
@@ -281,7 +281,12 @@ describe('IntakePage — family member sex and dob', () => {
   });
 });
 
-describe('IntakePage — batch family submit', () => {
+function CaseLocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+}
+
+describe('IntakePage — family members ride on the single submit', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     queueCalls.length = 0;
@@ -291,8 +296,11 @@ describe('IntakePage — batch family submit', () => {
 
   async function renderWithMember() {
     render(
-      <MemoryRouter>
-        <IntakePage />
+      <MemoryRouter initialEntries={['/intake']}>
+        <Routes>
+          <Route path="/intake" element={<IntakePage />} />
+          <Route path="/cases/:id" element={<CaseLocationProbe />} />
+        </Routes>
       </MemoryRouter>
     );
     await screen.findByRole('heading', { name: /General Intake Form/i });
@@ -323,38 +331,38 @@ describe('IntakePage — batch family submit', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
   }
 
-  it('shows an optional batch prompt after a successful single submit', async () => {
+  it('goes straight to the created case instead of prompting to batch', async () => {
     await renderWithMember();
     const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
     fireEvent.submit(form);
 
-    expect(await screen.findByText(/Add another family member as a batch\?/i)).toBeInTheDocument();
+    // The worker reaches the case without a second decision to make.
+    expect(await screen.findByTestId('location')).toHaveTextContent('/cases/case-id-1');
+    expect(screen.queryByText(/Add another family member as a batch/i)).toBeNull();
   });
 
-  it('posts the queued members to /intake/batch-family with the primary address pre-filled and the completed intake caseId', async () => {
+  it('sends the family members with the single intake submit', async () => {
     await renderWithMember();
     const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
     fireEvent.submit(form);
 
-    const confirm = await screen.findByRole('button', { name: /Yes, add as batch/i });
-    fireEvent.click(confirm);
-
-    await waitFor(() => {
-      const batchCall = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call: unknown[]) => call[0] === '/intake/batch-family',
-      );
-      expect(batchCall).toBeDefined();
-      expect(batchCall?.[1].caseId).toBe('case-id-1');
-      expect(batchCall?.[1].primary).toMatchObject({
-        currentAddress: expect.objectContaining({ barangay: 'Bangkal', city: 'Norzagaray', province: 'Bulacan' }),
-      });
-      expect(batchCall?.[1].members[0]).toMatchObject({
-        surname: 'Dela Cruz',
-        firstName: 'Ana',
-        gender: 'Female',
-        relationship: 'Spouse',
-      });
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const intakeCall = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: unknown[]) => call[0] === '/intake',
+    );
+    expect(intakeCall).toBeDefined();
+    expect(intakeCall?.[1].familyMembers[0]).toMatchObject({
+      surname: 'Dela Cruz',
+      firstName: 'Ana',
+      gender: 'Female',
+      relationship: 'Spouse',
     });
+    // The redundant second call is gone.
+    expect(
+      (api.post as ReturnType<typeof vi.fn>).mock.calls.some(
+        (call: unknown[]) => call[0] === '/intake/batch-family',
+      ),
+    ).toBe(false);
   });
 });
 

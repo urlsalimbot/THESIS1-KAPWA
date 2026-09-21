@@ -16,7 +16,7 @@ import { Referral, ReferralStatus } from '../referrals/referral.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { memberToPerson } from './member-person';
 import { User, UserRole } from '../auth/user.entity';
-import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse, BatchFamilyInput } from './dto/intake.zod';
+import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse } from './dto/intake.zod';
 
 // Only MSWDO staff (admin / social worker) may be assigned as a case worker;
 // coordinators are not MSWDO employees and must never be assigned.
@@ -476,87 +476,6 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
     } finally {
       await queryRunner.release();
     }
-  }
-
-  async submitBatchFamily(input: BatchFamilyInput): Promise<{
-    beneficiaryId: string;
-    caseId: string;
-    controlNo: string;
-    status: string;
-  }> {
-    const requiredPrimaryFields = ['surname', 'firstName', 'gender', 'dob'] as const;
-    const missing = requiredPrimaryFields.filter((field) => {
-      const value = (input.primary as Record<string, unknown>)[field];
-      return value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
-    });
-    if (missing.length > 0) {
-      throw new BadRequestException(
-        `Batch family primary is missing required fields: ${missing.join(', ')}`,
-      );
-    }
-
-    // The single intake already created the Beneficiary, Household, Case, and
-    // member Persons. Link batch members to that EXISTING household instead of
-    // creating duplicate records that would inflate reporting counts.
-    const existingCase = await this.caseRepo.findOne({ where: { id: input.caseId } });
-    if (!existingCase) throw new NotFoundException('Case not found');
-
-    if (!existingCase.beneficiaryId) {
-      throw new BadRequestException('Case is not linked to a beneficiary');
-    }
-
-    const beneficiary = await this.benRepo.findOne({ where: { id: existingCase.beneficiaryId } });
-    if (!beneficiary) throw new NotFoundException('Beneficiary not found');
-
-    const householdId = beneficiary.householdId;
-    if (!householdId) throw new BadRequestException('Beneficiary is not linked to a household');
-
-    // Dedup scope: only match existing persons from the primary household's
-    // barangay so a same-name/same-dob person in another barangay is never
-    // linked to this household.
-    const household = await this.hhRepo.findOne({ where: { id: householdId } });
-    const dedupScope = household?.barangay
-      ? { currentAddress: { barangay: household.barangay } }
-      : undefined;
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction('SERIALIZABLE');
-
-    try {
-      const validMembers = (input.members || []).filter(m => m.surname && m.surname.trim().length > 0);
-      for (const fm of validMembers) {
-        const memberPerson = await this.findOrCreatePerson(memberToPerson(fm), queryRunner, true, dedupScope);
-        const existingMembership = await queryRunner.manager.findOne(HouseholdMembership, {
-          where: { personId: memberPerson.id, householdId },
-        });
-        if (!existingMembership) {
-          const membership = queryRunner.manager.create(HouseholdMembership, {
-            personId: memberPerson.id,
-            householdId,
-            relationship: fm.relationship,
-            isPrimary: false,
-            status: fm.status,
-          });
-          await queryRunner.manager.save(membership);
-        }
-      }
-
-      await queryRunner.commitTransaction();
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      this.logger.error('submitBatchFamily failed', error instanceof Error ? error.stack : undefined);
-      throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
-    } finally {
-      await queryRunner.release();
-    }
-
-    return {
-      beneficiaryId: beneficiary.id,
-      caseId: existingCase.id,
-      controlNo: existingCase.controlNo,
-      status: existingCase.status,
-    };
   }
 
   async matchCheck(data: MatchCheckInput, workerBarangays: string[]): Promise<{ candidates: MatchCandidate[] }> {

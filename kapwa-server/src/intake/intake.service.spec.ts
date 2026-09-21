@@ -17,8 +17,8 @@ import { CasesService } from '../cases/cases.service';
 import { Referral } from '../referrals/referral.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { UserRole } from '../auth/user.entity';
-import { batchFamilySchema, IntakeInputSchema } from './dto/intake.zod';
-import type { BatchFamilyInput, IntakeInput } from './dto/intake.zod';
+import { IntakeInputSchema } from './dto/intake.zod';
+import type { IntakeInput } from './dto/intake.zod';
 
 describe('IntakeService', () => {
   let service: IntakeService;
@@ -154,14 +154,6 @@ describe('IntakeService', () => {
       { surname: 'Dela Cruz', firstName: 'Jose', middleName: '', gender: 'Male', dob: '2015-06-15', age: 10, relationship: 'Child', occupation: 'Student' },
     ],
     case: {},
-  };
-
-  const validBatchInput: BatchFamilyInput = {
-    caseId: 'case-1',
-    primary: { surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', dob: '1990-01-01' },
-    members: [
-      { surname: 'Dela Cruz', firstName: 'Ana', gender: 'Female', dob: '1992-02-02', relationship: 'Spouse' },
-    ],
   };
 
   describe('submitIntake', () => {
@@ -712,141 +704,9 @@ describe('IntakeService', () => {
       const validResult = IntakeInputSchema.safeParse(minimalValid);
       expect(validResult.success).toBe(true);
     });
-
-    it('rejects a batch payload missing the members array', () => {
-      const result = batchFamilySchema.safeParse({
-        caseId: 'case-1',
-        primary: { surname: 'Dela Cruz', firstName: 'Juan' },
-      });
-      expect(result.success).toBe(false);
-    });
   });
 
-  describe('submitBatchFamily', () => {
-    function seedExistingRecords() {
-      caseRepo.findOne.mockResolvedValue({
-        id: 'case-1',
-        beneficiaryId: 'ben-1',
-        controlNo: 'NC-2026-0001',
-        status: 'enrolled',
-      });
-      benRepo.findOne.mockResolvedValue({ id: 'ben-1', householdId: 'household-1' });
-    }
-
-    function membershipSaves() {
-      return queryRunnerMock.manager.save.mock.calls.filter(
-        (call) =>
-          call[0] &&
-          typeof call[0] === 'object' &&
-          (call[0] as { householdId?: string }).householdId === 'household-1',
-      );
-    }
-
-    it('throws BadRequestException when the primary is missing required fields', async () => {
-      await expect(
-        service.submitBatchFamily({ caseId: 'case-1', primary: { surname: 'Dela Cruz' }, members: [] }),
-      ).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('throws NotFoundException when the case does not exist', async () => {
-      caseRepo.findOne.mockResolvedValue(null);
-      await expect(service.submitBatchFamily(validBatchInput)).rejects.toBeInstanceOf(NotFoundException);
-    });
-
-    it('throws BadRequestException when the case is not linked to a beneficiary', async () => {
-      caseRepo.findOne.mockResolvedValue({
-        id: 'case-1',
-        beneficiaryId: null,
-        controlNo: 'NC-2026-0001',
-        status: 'enrolled',
-      });
-      await expect(service.submitBatchFamily(validBatchInput)).rejects.toBeInstanceOf(BadRequestException);
-      expect(benRepo.findOne).not.toHaveBeenCalled();
-    });
-
-    it('throws BadRequestException when the beneficiary has no household', async () => {
-      caseRepo.findOne.mockResolvedValue({
-        id: 'case-1',
-        beneficiaryId: 'ben-1',
-        controlNo: 'NC-2026-0001',
-        status: 'enrolled',
-      });
-      benRepo.findOne.mockResolvedValue({ id: 'ben-1', householdId: null });
-      await expect(service.submitBatchFamily(validBatchInput)).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('does NOT create a new Beneficiary, Household, or Case', async () => {
-      seedExistingRecords();
-      await service.submitBatchFamily(validBatchInput);
-      expect(benRepo.create).not.toHaveBeenCalled();
-      expect(hhRepo.create).not.toHaveBeenCalled();
-      expect(caseRepo.create).not.toHaveBeenCalled();
-    });
-
-    it('links members to the primary existing household and returns the existing caseId', async () => {
-      seedExistingRecords();
-      const result = await service.submitBatchFamily(validBatchInput);
-      expect(queryRunnerMock.commitTransaction).toHaveBeenCalled();
-      expect(queryRunnerMock.rollbackTransaction).not.toHaveBeenCalled();
-      expect(result.caseId).toBe('case-1');
-      expect(result.beneficiaryId).toBe('ben-1');
-      expect(result.controlNo).toBe('NC-2026-0001');
-      expect(result.status).toBe('enrolled');
-      const saves = membershipSaves();
-      expect(saves).toHaveLength(1);
-      expect(saves[0][0]).toMatchObject({
-        personId: 'person-ana',
-        householdId: 'household-1',
-        relationship: 'Spouse',
-        isPrimary: false,
-      });
-    });
-
-    it('is idempotent: does not re-create the member person or duplicate the membership when already linked', async () => {
-      seedExistingRecords();
-      queryRunnerMock.manager.findOne
-        .mockResolvedValueOnce({ id: 'person-ana' })
-        .mockResolvedValueOnce({ id: 'membership-1', personId: 'person-ana', householdId: 'household-1' });
-      const result = await service.submitBatchFamily(validBatchInput);
-      expect(queryRunnerMock.commitTransaction).toHaveBeenCalled();
-      expect(result.caseId).toBe('case-1');
-      expect(personRepo.create).not.toHaveBeenCalled();
-      expect(membershipSaves()).toHaveLength(0);
-    });
-
-    it('scopes the member dedup lookup to the primary household barangay', async () => {
-      seedExistingRecords();
-      (hhRepo.findOne as jest.Mock).mockResolvedValue({ id: 'household-1', barangay: 'Bigte' });
-      await service.submitBatchFamily(validBatchInput);
-      const qrMgr = queryRunnerMock.manager;
-      expect(qrMgr.getRepository).toHaveBeenCalledWith(Person);
-      const qb = qrMgr.getRepository.mock.results[0].value.createQueryBuilder.mock.results[0].value;
-      expect(qb.where).toHaveBeenCalledWith('p.surname = :surname', { surname: 'Dela Cruz' });
-      const scopedCall = (qb.andWhere as jest.Mock).mock.calls.find(c => c[1] && c[1].barangay === 'Bigte');
-      expect(scopedCall).toBeDefined();
-      expect(scopedCall[0]).toContain('person_addresses');
-      expect(scopedCall[0]).toContain("pa2.address_type = 'current'");
-    });
-
-    it('falls back to an unscoped dedup lookup when the household has no barangay', async () => {
-      seedExistingRecords();
-      (hhRepo.findOne as jest.Mock).mockResolvedValue({ id: 'household-1', barangay: '' });
-      await service.submitBatchFamily(validBatchInput);
-      const [entity, options] = queryRunnerMock.manager.findOne.mock.calls[0];
-      expect(entity).toBe(Person);
-      expect(options.where.currentAddress).toBeUndefined();
-    });
-
-    it('surfaces a generic message on batch failure, not the raw error', async () => {
-      seedExistingRecords();
-      queryRunnerMock.manager.save.mockRejectedValue(
-        new Error('ERROR: column person.currentaddress does not exist'),
-      );
-      await expect(service.submitBatchFamily(validBatchInput)).rejects.toThrow(
-        'Service temporarily unavailable',
-      );
-    });
-
+  describe('person dedup query column safety', () => {
     it('generates column-safe SQL for the barangay-scoped dedup lookup', async () => {
       const dataSource = new DataSource({ type: 'postgres', entities: [Person, PersonContact, PersonAddress, BeneficiaryRole] });
       await (dataSource as any).buildMetadatas();
