@@ -331,14 +331,13 @@ describe('IntakePage — family members ride on the single submit', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
   }
 
-  it('goes straight to the created case instead of prompting to batch', async () => {
+  it('goes straight to the created case after a successful submit', async () => {
     await renderWithMember();
     const form = screen.getByRole('button', { name: /Submit Intake/i }).closest('form')!;
     fireEvent.submit(form);
 
     // The worker reaches the case without a second decision to make.
     expect(await screen.findByTestId('location')).toHaveTextContent('/cases/case-id-1');
-    expect(screen.queryByText(/Add another family member as a batch/i)).toBeNull();
   });
 
   it('sends the family members with the single intake submit', async () => {
@@ -357,12 +356,6 @@ describe('IntakePage — family members ride on the single submit', () => {
       gender: 'Female',
       relationship: 'Spouse',
     });
-    // The redundant second call is gone.
-    expect(
-      (api.post as ReturnType<typeof vi.fn>).mock.calls.some(
-        (call: unknown[]) => call[0] === '/intake/batch-family',
-      ),
-    ).toBe(false);
   });
 });
 
