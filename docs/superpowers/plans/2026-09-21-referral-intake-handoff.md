@@ -5,6 +5,20 @@
 > existing tests assert — update the test **in the same task** as the behaviour change, not
 > in a later cleanup pass.
 
+> **Execution status — 2026-09-21:** Tasks 1–9 implemented and committed on
+> `feat/referral-intake-handoff`. Task 10 Steps 1–3 verified: server typecheck + build +
+> 70 suites / 570 tests, client typecheck + build + 110 files / 638 tests, and no migration
+> or `migrate.ts` change (the feature is migration-free by design). Re-verified after merging
+> `main` in.
+>
+> **Task 10 Step 4 (manual end-to-end) is NOT done.** It needs a live Postgres and writes real
+> referral/intake data, so it is left for the operator. Steps are listed at the end of this
+> document.
+>
+> Three contract corrections were discovered during implementation and folded back into
+> Tasks 1–3: `Referral.address` could not change shape, `InterAgencyReferral.person` had to
+> stay serialized, and inter-agency statuses have no `accepted` state.
+
 **Goal:** Accepting a barangay referral, or receiving an inter-agency referral addressed to
 MSWDO, hands the worker off to the Intake form pre-filled from the referral. The case is
 created by the intake and linked back to the referral atomically. Every referral payload
