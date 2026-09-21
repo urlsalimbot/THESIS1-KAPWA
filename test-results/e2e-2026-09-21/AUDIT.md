@@ -88,10 +88,21 @@ header (`CaseViewPage`) under the identical gate.
 - `kapwa-client/src/lib/export-filename.ts` (+ test), `src/lib/api.ts` — §12 fallbacks.
 - `kapwa-client/src/pages/AccessCardViewPage.tsx` (+ test), `src/i18n/locales/{en,fil}/index.ts`, `src/i18n/__tests__/fil-parity.test.ts` — label rename.
 
-## Unexpected workspace change (needs your call)
+## Lifecycle enforcement audit — 2026-09-21 (after spec `2026-09-21-case-lifecycle-5step`)
 
-These tracked files existed at session start but are now deleted from the working
-tree; they were not deleted by this audit:
-`AUDIT-GAPS.md`, `bugsnow.md`, `login-page.yml`, `wave7-access-card.png`,
-`wave8-messages.png`, `mobile-dashboard-header.png`.
-Restore with `git checkout -- <paths>` if the deletion was not intentional.
+Verified against a rebuilt database (`migrate.ts` bootstrap + `seed` + `seed:demo`).
+Browser driver: `/tmp/opencode/audit-lifecycle.mjs`; results in `audit-results.json`; 9/9 pass.
+
+1. `in_review → active` returns **400** while the linked program's required documents are missing,
+   naming the missing keys.
+2. After the documentary requirements are filed, the same approval returns **200**.
+3. `Issue COE` then `Issue PCV` set `certificateUrl` / `pettyCashVoucherUrl`; both are admin-only
+   and re-issuing files nothing new (`approval_document` rows stay at 2).
+4. `active → transitioning` returns **400** until the inter-agency referral decision is recorded;
+   after `notNeeded: true` it returns **200**.
+5. The Case Study Report downloads as a multi-page bundle named
+   `CSR KAPWA-2026-00001-2026-09-21.pdf` (5 pages for the seeded closed case — cover + PCV + COE + GIS;
+   IRF is appended when the case has one).
+
+Screenshots: `18-issued-coe-pcv.png`, `19-csr-bundle.png`.
+

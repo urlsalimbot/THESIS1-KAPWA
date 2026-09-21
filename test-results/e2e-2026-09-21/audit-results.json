@@ -1,0 +1,47 @@
+[
+  {
+    "n": "approval blocked while required documents missing",
+    "ok": true,
+    "d": "status=400"
+  },
+  {
+    "n": "approval succeeds once documents are filed",
+    "ok": true,
+    "d": "status=200"
+  },
+  {
+    "n": "Issue COE sets certificateUrl",
+    "ok": true,
+    "d": "/filing/01a0c200-fb64-7239-bc0d-aa332c1099b4/download"
+  },
+  {
+    "n": "Issue PCV sets pettyCashVoucherUrl",
+    "ok": true,
+    "d": "/filing/01a0c201-0345-720e-853d-06396668c1d2/download"
+  },
+  {
+    "n": "re-issuing does not duplicate documents",
+    "ok": true,
+    "d": "before=2 after=2"
+  },
+  {
+    "n": "transition blocked without referral decision",
+    "ok": true,
+    "d": "status=400"
+  },
+  {
+    "n": "transition succeeds after referral decision",
+    "ok": true,
+    "d": "status=200"
+  },
+  {
+    "n": "CSR filename follows doc §12",
+    "ok": true,
+    "d": "CSR KAPWA-2026-00001-2026-09-21.pdf"
+  },
+  {
+    "n": "CSR bundle has multiple pages",
+    "ok": true,
+    "d": "pages=5"
+  }
+]
