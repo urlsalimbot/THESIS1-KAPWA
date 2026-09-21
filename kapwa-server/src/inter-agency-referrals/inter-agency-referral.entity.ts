@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
+import { Exclude, Expose } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { Agency } from '../agencies/agency.entity';
 import { Person } from '../beneficiaries/person.entity';
@@ -21,7 +22,39 @@ export class InterAgencyReferral extends BaseEntity {
 
   @ManyToOne(() => Person, { nullable: true })
   @JoinColumn({ name: 'person_id' })
+  @Exclude()
   person?: Person;
+
+  // --- Identity surface, assembled from the joined Person ------------------
+  // Mirrors Referral so both referral payloads carry the persons name schema
+  // (surname / first name / middle name / extension) rather than a flat name.
+  // Getters need explicit @Expose(): exposeAll covers own enumerable
+  // properties, not prototype accessors.
+  @Expose() get surname(): string { return this.person?.surname ?? ''; }
+  @Expose() get firstName(): string { return this.person?.firstName ?? ''; }
+  @Expose() get middleName(): string | undefined { return this.person?.middleName; }
+  @Expose() get extension(): string | undefined { return this.person?.extension; }
+  @Expose() get gender(): string { return this.person?.gender ?? ''; }
+  @Expose() get dob(): string {
+    const d = this.person?.dob;
+    if (!d) return '';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  // Structured address (mirrors Referral's object shape) plus the raw-backed
+  // display string, which is the only place `street` is stored.
+  @Expose() get address(): Record<string, string> | undefined {
+    return this.person?.currentAddress;
+  }
+  @Expose() get currentAddress(): Record<string, string> | undefined {
+    return this.person?.currentAddress;
+  }
+  @Expose() get addressLine(): string | undefined { return this.person?.address; }
+  @Expose() get phone(): string | undefined { return this.person?.phone; }
 
   @Column({ name: 'from_agency_id' })
   fromAgencyId!: string;

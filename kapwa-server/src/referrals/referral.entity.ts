@@ -66,6 +66,13 @@ export class Referral extends BaseEntity {
   @Expose() get address(): Record<string, any> | undefined {
     return this.person?.currentAddress;
   }
+  // Raw-backed display string (`person_addresses.raw`), alongside the
+  // structured `address` above. `street` only exists in this string because
+  // person_addresses has no street column.
+  @Expose() get addressLine(): string | undefined { return this.person?.address; }
+  @Expose() get currentAddress(): Record<string, string> | undefined {
+    return this.person?.currentAddress;
+  }
   @Expose() get phone(): string | undefined { return this.person?.phone; }
 
   @CreateDateColumn({ name: 'created_at' })
