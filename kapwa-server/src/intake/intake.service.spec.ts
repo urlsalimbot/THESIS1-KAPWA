@@ -14,6 +14,8 @@ import { HouseholdMembership } from '../beneficiaries/household-membership.entit
 import { Case, CaseStatus } from '../cases/case.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
+import { Referral } from '../referrals/referral.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { UserRole } from '../auth/user.entity';
 import { batchFamilySchema, IntakeInputSchema } from './dto/intake.zod';
 import type { BatchFamilyInput, IntakeInput } from './dto/intake.zod';
@@ -32,6 +34,7 @@ describe('IntakeService', () => {
       findOne: jest.Mock;
       create: jest.Mock;
       save: jest.Mock;
+      update: jest.Mock;
       getRepository: jest.Mock;
     };
   };
@@ -55,6 +58,7 @@ describe('IntakeService', () => {
         save: jest.fn().mockImplementation((entity: unknown, data?: unknown) =>
           Promise.resolve(data ?? entity),
         ),
+        update: jest.fn().mockResolvedValue(undefined),
         getRepository: jest.fn(() => ({
           createQueryBuilder: jest.fn(() => {
             const qb: any = {};
@@ -99,7 +103,10 @@ describe('IntakeService', () => {
     }).compile();
 
     service = module.get<IntakeService>(IntakeService);
-    (service as unknown as { logger: { error: jest.Mock } }).logger = { error: jest.fn() };
+    (service as unknown as { logger: { error: jest.Mock; warn: jest.Mock } }).logger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+    };
   });
 
   afterEach(() => {
@@ -359,6 +366,108 @@ describe('IntakeService', () => {
       expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalled();
       expect(queryRunnerMock.commitTransaction).not.toHaveBeenCalled();
       expect(queryRunnerMock.release).toHaveBeenCalled();
+    });
+  });
+
+  describe('sourceReferral linking', () => {
+    function fakeManager() {
+      return { findOne: jest.fn(), update: jest.fn().mockResolvedValue(undefined) };
+    }
+
+    function link(manager: any, sourceReferral: any, caseId: string | undefined) {
+      return (service as any).linkSourceReferral(manager, sourceReferral, caseId);
+    }
+
+    it('links an accepted barangay referral to the case', async () => {
+      const m = fakeManager();
+      m.findOne.mockResolvedValue({ id: 'ref-1', status: 'accepted', caseId: null });
+
+      await link(m, { type: 'barangay', id: 'ref-1' }, 'case-1');
+
+      expect(m.update).toHaveBeenCalledWith(Referral, 'ref-1', { caseId: 'case-1' });
+    });
+
+    it('links a received inter-agency referral to the case', async () => {
+      const m = fakeManager();
+      m.findOne.mockResolvedValue({ id: 'iar-1', status: 'received', caseId: null });
+
+      await link(m, { type: 'inter_agency', id: 'iar-1' }, 'case-1');
+
+      expect(m.update).toHaveBeenCalledWith(InterAgencyReferral, 'iar-1', { caseId: 'case-1' });
+    });
+
+    it('skips an unknown referral without failing the intake', async () => {
+      const m = fakeManager();
+      m.findOne.mockResolvedValue(null);
+
+      await expect(link(m, { type: 'barangay', id: 'missing' }, 'case-1')).resolves.toBeUndefined();
+      expect(m.update).not.toHaveBeenCalled();
+    });
+
+    it('skips a referral that has not been accepted yet', async () => {
+      const m = fakeManager();
+      m.findOne.mockResolvedValue({ id: 'ref-1', status: 'pending', caseId: null });
+
+      await link(m, { type: 'barangay', id: 'ref-1' }, 'case-1');
+
+      expect(m.update).not.toHaveBeenCalled();
+    });
+
+    it('does not overwrite an existing link to a different case', async () => {
+      const m = fakeManager();
+      m.findOne.mockResolvedValue({ id: 'ref-1', status: 'accepted', caseId: 'case-old' });
+
+      await link(m, { type: 'barangay', id: 'ref-1' }, 'case-new');
+
+      expect(m.update).not.toHaveBeenCalled();
+    });
+
+    it('no-ops without a source referral or a case id', async () => {
+      const m = fakeManager();
+
+      await link(m, undefined, 'case-1');
+      await link(m, { type: 'barangay', id: 'ref-1' }, undefined);
+
+      expect(m.findOne).not.toHaveBeenCalled();
+      expect(m.update).not.toHaveBeenCalled();
+    });
+
+    it('links inside the intake transaction, before commit', async () => {
+      const saveMock = queryRunnerMock.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid-1' })
+        .mockResolvedValueOnce({ id: 'ben-uuid-1', surname: 'Dela Cruz', consentStatus: 'active' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: 'claim-uuid-1' })
+        .mockResolvedValueOnce({ id: 'bc-uuid-1' })
+        .mockResolvedValueOnce({ id: 'hh-uuid-1', primaryBeneficiaryId: 'ben-uuid-1' })
+        .mockResolvedValueOnce({ id: 'ben-uuid-1', householdId: 'hh-uuid-1' })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'case-uuid-1', controlNo: 'KAPWA-2026-00001', status: CaseStatus.ENROLLED })
+        .mockResolvedValueOnce({ id: 'cl-uuid-1', status: 'active' });
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+      queryRunnerMock.manager.findOne = jest
+        .fn()
+        .mockImplementation((entity: unknown) =>
+          Promise.resolve(entity === Referral ? { id: 'ref-1', status: 'accepted', caseId: null } : null),
+        );
+
+      await service.submitIntake(
+        { ...validIntakeInput, sourceReferral: { type: 'barangay', id: 'ref-1' } },
+        { id: 'caller-1', role: UserRole.SW },
+      );
+
+      expect(queryRunnerMock.manager.update).toHaveBeenCalledWith(Referral, 'ref-1', {
+        caseId: 'case-uuid-1',
+      });
+      const updateOrder = (queryRunnerMock.manager.update as jest.Mock).mock.invocationCallOrder[0];
+      const commitOrder = (queryRunnerMock.commitTransaction as jest.Mock).mock.invocationCallOrder[0];
+      expect(updateOrder).toBeLessThan(commitOrder);
     });
   });
 

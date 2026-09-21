@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, MoreThan, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -12,6 +12,8 @@ import { CaseRequirement } from '../cases/case-requirement.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { AccessCardsService } from '../access-cards/access-cards.service';
+import { Referral, ReferralStatus } from '../referrals/referral.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { memberToPerson } from './member-person';
 import { User, UserRole } from '../auth/user.entity';
 import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse, BatchFamilyInput } from './dto/intake.zod';
@@ -41,6 +43,64 @@ export class IntakeService {
     private casesService: CasesService,
     private accessCards: AccessCardsService,
   ) {}
+
+  /**
+   * Attach the case produced by this intake to the referral that handed off to
+   * it. Runs inside the caller's transaction, so a case can never be committed
+   * without its referral link.
+   *
+   * An unknown, not-yet-accepted, or differently-linked referral is logged and
+   * skipped: the intake is the primary operation and the link is bookkeeping.
+   */
+  private async linkSourceReferral(
+    manager: EntityManager,
+    sourceReferral: IntakeInput['sourceReferral'],
+    caseId: string | undefined,
+  ): Promise<void> {
+    if (!sourceReferral || !caseId) return;
+    const { type, id } = sourceReferral;
+
+    if (type === 'barangay') {
+      const referral = await manager.findOne(Referral, { where: { id } });
+      if (!referral) {
+        this.logger.warn(`Intake ${caseId}: barangay referral ${id} not found; link skipped`);
+        return;
+      }
+      if (referral.status !== ReferralStatus.ACCEPTED) {
+        this.logger.warn(
+          `Intake ${caseId}: barangay referral ${id} is "${referral.status}", not accepted; link skipped`,
+        );
+        return;
+      }
+      if (referral.caseId && referral.caseId !== caseId) {
+        this.logger.warn(
+          `Intake ${caseId}: barangay referral ${id} already linked to ${referral.caseId}; link skipped`,
+        );
+        return;
+      }
+      await manager.update(Referral, id, { caseId });
+      return;
+    }
+
+    const referral = await manager.findOne(InterAgencyReferral, { where: { id } });
+    if (!referral) {
+      this.logger.warn(`Intake ${caseId}: inter-agency referral ${id} not found; link skipped`);
+      return;
+    }
+    if (referral.status !== 'received') {
+      this.logger.warn(
+        `Intake ${caseId}: inter-agency referral ${id} is "${referral.status}", not received; link skipped`,
+      );
+      return;
+    }
+    if (referral.caseId && referral.caseId !== caseId) {
+      this.logger.warn(
+        `Intake ${caseId}: inter-agency referral ${id} already linked to ${referral.caseId}; link skipped`,
+      );
+      return;
+    }
+    await manager.update(InterAgencyReferral, id, { caseId });
+  }
 
   private async findOrCreatePerson(
     data: Partial<Person> & { surname: string; firstName: string; gender: string; dob: Date },
@@ -257,6 +317,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
               }
             }
           }
+          await this.linkSourceReferral(queryRunner.manager, data.sourceReferral, recentCase.id);
           await queryRunner.commitTransaction();
           return {
             beneficiaryId: existingBeneficiary.id,
@@ -361,6 +422,8 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         status: 'active',
       });
       await queryRunner.manager.save(consent);
+
+      await this.linkSourceReferral(queryRunner.manager, data.sourceReferral, savedCase.id);
 
       await queryRunner.commitTransaction();
 
@@ -685,6 +748,8 @@ const caseEntity = this.caseRepo.create({
         status: 'active',
       });
       await queryRunner.manager.save(consent);
+
+      await this.linkSourceReferral(queryRunner.manager, data.sourceReferral, savedCase?.id ?? undefined);
 
       await queryRunner.commitTransaction();
 

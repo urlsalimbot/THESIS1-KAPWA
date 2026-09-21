@@ -50,6 +50,11 @@ export const FamilyMemberSchema = z.object({
   status: z.string().optional(),
 });
 
+export const SourceReferralSchema = z.object({
+  type: z.enum(['barangay', 'inter_agency']),
+  id: z.string().uuid(),
+});
+
 export const IntakeInputSchema = z.object({
   beneficiary: PersonSchema,
   claimant: PersonSchema.extend({
@@ -57,6 +62,9 @@ export const IntakeInputSchema = z.object({
   }),
   familyMembers: z.array(FamilyMemberSchema).optional(),
   renewalOfCaseId: z.string().uuid().optional(),
+  // Referral this intake was handed off from. Linked to the created case
+  // inside the intake transaction (IntakeService.linkSourceReferral).
+  sourceReferral: SourceReferralSchema.optional(),
   case: z.object({
     serviceRequested: z.array(z.string()).optional(),
     requirementsChecklist: z.record(z.boolean()).optional(),
