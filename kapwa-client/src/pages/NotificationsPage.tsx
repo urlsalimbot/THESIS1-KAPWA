@@ -43,7 +43,7 @@ const categoryLabels: Record<string, { key: string; label: string }> = {
 
 const categoryColors: Record<string, string> = {
   case_update: 'bg-primary/10 text-primary',
-  approval: 'bgemerald-100 textemerald-700',
+  approval: 'bg-emerald-100 text-emerald-700',
   disbursement: 'bg-primary/10 text-primary',
   chat: 'bg-amber-100 text-amber-700',
   sync_conflict: 'bg-destructive/10 text-destructive',

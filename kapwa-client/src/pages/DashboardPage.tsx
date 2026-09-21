@@ -77,7 +77,7 @@ export function DashboardPage() {
   const offlineStats: Stat[] = [
     { label: t('dashboard.servedToday', 'Served Today'), value: '0', change: 'N/A', icon: TrendingUp, iconClass: 'bg-primary/5 text-primary' },
     { label: t('dashboard.pendingReview', 'Pending Review'), value: '0', change: 'N/A', icon: Clock, iconClass: 'bg-yellow-100 text-yellow-800' },
-    { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bgemerald-100 textemerald-800' },
+    { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-emerald-100 text-emerald-800' },
   ];
 
   const swrKey = WORKER_ROLES.includes(role) ? queryKeys.dashboard.stats() : null;

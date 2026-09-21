@@ -20,7 +20,7 @@ const DISPOSITION_COLORS: Record<string, string> = {
   'Referred to PNP': 'bg-primary/10 text-primary border-primary/30',
   'Referred to WCPD': 'bg-violet-100 text-violet-800 border-violet-300',
   'Dismissed': 'bg-destructive/10 text-destructive border-destructive/30',
-  'Closed': 'bgemerald-100 textemerald-800 borderemerald-300',
+  'Closed': 'bg-emerald-100 text-emerald-800 border-emerald-300',
 };
 
 const LEGAL_BASIS_OPTIONS = [
@@ -153,13 +153,13 @@ function DispositionStepper({ states, currentIndex, currentState }: {
             <div className="flex flex-col items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2
                 ${isCurrent ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/30'
-                  : isPast ? 'bgemerald-500 text-white borderemerald-500'
+                  : isPast ? 'bg-emerald-500 text-white border-emerald-500'
                   : 'bg-muted text-muted-foreground border-border'}`}>
                 {isPast && !isCurrent ? '✓' : i + 1}
               </div>
               <span className={`text-xs font-medium whitespace-nowrap px-2 py-0.5 rounded
                 ${isCurrent ? 'bg-primary/10 text-primary font-semibold'
-                  : isPast ? 'textemerald-700'
+                  : isPast ? 'text-emerald-700'
                   : 'text-muted-foreground'}`}>{state}</span>
             </div>
             {i < states.length - 1 && (

@@ -22,7 +22,7 @@ interface ConsentManagerProps {
 function StatusBadge({ status, t }: { status: string; t: TFunction }) {
   if (status === 'active') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bgemerald-100 px-3 py-1 text-sm font-medium textemerald-700">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700">
         <Check size={14} /> {t('consent.active', 'Active')}
       </span>
     );
@@ -76,7 +76,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
       <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
         <div className="flex items-center gap-3">
           {status === 'active' ? (
-            <Shield size={32} className="textemerald-500" />
+            <Shield size={32} className="text-emerald-500" />
           ) : (
             <ShieldOff size={32} className="text-destructive" />
           )}
@@ -201,7 +201,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                           entry.status === 'active'
-                            ? 'bgemerald-100 textemerald-700'
+                            ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-destructive/10 text-destructive'
                         }`}
                       >

@@ -625,7 +625,7 @@ export function IntakePage() {
             {family.map(m => {
               const dobError = m.dob && (!/^\d{4}-\d{2}-\d{2}$/.test(m.dob) || computeAge(m.dob) < 0 || computeAge(m.dob) > 120) ? t('intake.invalidDob', 'Invalid date of birth') : '';
               return (
-                <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bgemerald-50 borderemerald-300' : 'bg-muted/30'}`}>
+                <div key={m.id} className={`mb-3 rounded-lg border p-3 transition-colors ${m.done ? 'bg-emerald-50 border-emerald-300' : 'bg-muted/30'}`}>
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">{t('intake.surname', 'Surname *')}</label>

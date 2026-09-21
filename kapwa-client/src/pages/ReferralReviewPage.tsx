@@ -120,7 +120,7 @@ export function ReferralReviewPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="textemerald-600"
+            className="text-emerald-600"
             onClick={() => handleAccept(row.original.id)}
             disabled={actionId === row.original.id}
           >

@@ -140,10 +140,10 @@ export function MfaSetupPage() {
           {step === 'done' && mfaEnabled && (
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <CheckCircle className="textemerald-600" size={32} />
+                <CheckCircle className="text-emerald-600" size={32} />
                 <div>
-                  <p className="font-medium textemerald-800">{t('auth.mfaEnabled', 'MFA is enabled')}</p>
-                  <p className="text-xs textemerald-600">{t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
+                  <p className="font-medium text-emerald-800">{t('auth.mfaEnabled', 'MFA is enabled')}</p>
+                  <p className="text-xs text-emerald-600">{t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
                 </div>
               </div>
               <Button variant="outline" onClick={() => { setStep('idle'); setCode(''); }} aria-label={t('auth.done', 'Done')}>

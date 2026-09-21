@@ -100,7 +100,7 @@ export function StepAssessment({
                 </Button>
               )}
               {caseData?.status === 'assessed' && (
-                <span className="text-xs textemerald-600 font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
+                <span className="text-xs text-emerald-600 font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
               )}
             </div>
           )}

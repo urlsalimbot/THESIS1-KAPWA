@@ -178,7 +178,7 @@ export function MayorReportsPage() {
 
   const statCards = metrics ? [
     { label: t('dashboard.totalCases', 'Total Cases'), value: String(metrics.totalCases || 0), icon: TrendingUp, color: 'bg-primary/5 text-primary' },
-    { label: t('dashboard.uniqueHouseholds', 'Unique Households'), value: String(metrics.uniqueHouseholds || 0), icon: Users, color: 'bgemerald-100 textemerald-800' },
+    { label: t('dashboard.uniqueHouseholds', 'Unique Households'), value: String(metrics.uniqueHouseholds || 0), icon: Users, color: 'bg-emerald-100 text-emerald-800' },
     { label: t('dashboard.fundUtilization', 'Fund Utilization'), value: fmtPeso(metrics.fundUtilization), icon: DollarSign, color: 'bg-primary/5 text-primary' },
     { label: t('reports.beneficiariesServed', 'Beneficiaries Served'), value: String(metrics.beneficiariesServed ?? 0), icon: UserRound, color: 'bg-primary/5 text-primary' },
     { label: t('dashboard.servedToday', 'Served Today'), value: String(metrics.servedToday || 0), icon: Clock, color: 'bg-yellow-100 text-yellow-800' },

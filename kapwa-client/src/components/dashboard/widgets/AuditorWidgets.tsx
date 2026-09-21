@@ -32,16 +32,16 @@ export function AuditorWidgets() {
 
   return (
     <div className="space-y-4">
-      <Card className={allValid ? 'borderemerald-200' : 'border-destructive/20'}>
-        <CardContent className={`p-4 ${allValid ? 'bgemerald-50' : 'bg-destructive/10'}`}>
+      <Card className={allValid ? 'border-emerald-200' : 'border-destructive/20'}>
+        <CardContent className={`p-4 ${allValid ? 'bg-emerald-50' : 'bg-destructive/10'}`}>
           <div className="flex items-center gap-3">
             {allValid ? (
-              <CheckCircle className="textemerald-600 shrink-0" size={24} />
+              <CheckCircle className="text-emerald-600 shrink-0" size={24} />
             ) : (
               <XCircle className="text-destructive shrink-0" size={24} />
             )}
             <div className="flex-1">
-              <p className={`font-semibold text-sm ${allValid ? 'textemerald-800' : 'text-destructive'}`}>
+              <p className={`font-semibold text-sm ${allValid ? 'text-emerald-800' : 'text-destructive'}`}>
                 {allValid ? t('dashboard.chainsVerified', 'All chains verified — integrity confirmed') : t('dashboard.chainCheckFailed', 'Chain integrity check failed')}
               </p>
               <p className="text-xs text-muted-foreground">
@@ -62,7 +62,7 @@ export function AuditorWidgets() {
               <div key={table} className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
                   {status.valid ? (
-                    <CheckCircle size={16} className="textemerald-600" />
+                    <CheckCircle size={16} className="text-emerald-600" />
                   ) : (
                     <XCircle size={16} className="text-destructive" />
                   )}
@@ -70,7 +70,7 @@ export function AuditorWidgets() {
                     {table.replace(/([A-Z])/g, ' $1')}
                   </span>
                 </div>
-                <span className={`text-xs ${status.valid ? 'textemerald-600' : 'text-destructive'}`}>
+                <span className={`text-xs ${status.valid ? 'text-emerald-600' : 'text-destructive'}`}>
                   {status.valid ? t('dashboard.valid', 'Valid') : t('dashboard.brokenAt', 'Broken at: {{date}}', { date: status.brokenAt || t('dashboard.unknown', 'unknown') })}
                 </span>
               </div>
