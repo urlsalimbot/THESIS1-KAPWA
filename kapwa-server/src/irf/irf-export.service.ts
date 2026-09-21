@@ -27,11 +27,6 @@ export class IrfExportService {
   async exportPdf(id: string, legalBasis: string, password: string, userId: string): Promise<Buffer> {
     if (!legalBasis) throw new ForbiddenException('Legal basis code is required');
 
-    const agencyName = await this.agencyLabel();
-
-    const irfData = await this.irfService.exportWcpd(id, legalBasis);
-    if (!irfData) throw new NotFoundException('IRF case not found');
-
     // Audit before export (audit-first pattern)
     await this.irfAuditService.logAccess({
       irfId: id,
@@ -41,9 +36,24 @@ export class IrfExportService {
       format: 'pdf',
     });
 
-    // Build PDF via pdfkit with password protection
+    return this.buildIrfPdfBuffer(id, { password, legalBasis, userId });
+  }
+
+  // Renders the IRF PDF. Encrypted only when `password` is supplied — the CSR
+  // bundle embeds the unencrypted form and is itself a gated admin export.
+  async buildIrfPdfBuffer(
+    id: string,
+    opts: { password?: string; userId?: string; legalBasis?: string } = {},
+  ): Promise<Buffer> {
+    const legalBasis = opts.legalBasis || 'RA 9262';
+    const agencyName = await this.agencyLabel();
+
+    const irfData = await this.irfService.exportWcpd(id, legalBasis);
+    if (!irfData) throw new NotFoundException('IRF case not found');
+
+    // Build PDF via pdfkit with optional password protection
     const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({
+    const docOptions: Record<string, unknown> = {
       size: 'A4',
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       info: {
@@ -51,10 +61,13 @@ export class IrfExportService {
         Author: agencyName,
         Subject: 'Incident Report Form — WCPD Export',
       },
-      userPassword: password,
-      ownerPassword: process.env.PDF_OWNER_PW || 'kapwa-admin-2026',
-      permissions: { printing: 'lowResolution', modifying: false, copying: false },
-    });
+    };
+    if (opts.password) {
+      docOptions.userPassword = opts.password;
+      docOptions.ownerPassword = process.env.PDF_OWNER_PW || 'kapwa-admin-2026';
+      docOptions.permissions = { printing: 'lowResolution', modifying: false, copying: false };
+    }
+    const doc = new PDFDocument(docOptions);
 
     const buffers: Buffer[] = [];
     doc.on('data', (chunk: Buffer) => buffers.push(chunk));

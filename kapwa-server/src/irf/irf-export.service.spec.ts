@@ -155,4 +155,17 @@ describe('IrfExportService', () => {
       await expect(service.controlNo('irf-999')).rejects.toThrow('IRF not found');
     });
   });
+
+  describe('buildIrfPdfBuffer', () => {
+    it('builds an unencrypted IRF buffer without auditing', async () => {
+      irfServiceMock.exportWcpd.mockResolvedValue(sampleCaseData);
+      agenciesServiceMock.findByCode.mockResolvedValue({ name: 'MSWDO' });
+
+      const buf = await service.buildIrfPdfBuffer('irf-1', {});
+
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
+      expect(auditMock.logAccess).not.toHaveBeenCalled();
+    });
+  });
 });
