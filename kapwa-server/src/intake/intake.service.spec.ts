@@ -22,7 +22,7 @@ import type { BatchFamilyInput, IntakeInput } from './dto/intake.zod';
 
 describe('IntakeService', () => {
   let service: IntakeService;
-  let dataSourceMock: { createQueryRunner: jest.Mock; query: jest.Mock };
+  let dataSourceMock: { createQueryRunner: jest.Mock; query: jest.Mock; getRepository: jest.Mock };
   let queryRunnerMock: {
     connect: jest.Mock;
     startTransaction: jest.Mock;
@@ -70,7 +70,13 @@ describe('IntakeService', () => {
         })),
       },
     };
-    dataSourceMock = { createQueryRunner: jest.fn(() => queryRunnerMock), query: jest.fn() };
+    dataSourceMock = {
+      createQueryRunner: jest.fn(() => queryRunnerMock),
+      query: jest.fn(),
+      // The referral-already-converted guard looks the referral up outside the
+      // transaction; default to "no such referral" so it never blocks.
+      getRepository: jest.fn(() => ({ findOne: jest.fn().mockResolvedValue(null) })),
+    };
     caseRepo = { findOne: jest.fn(), create: jest.fn() };
     benRepo = { findOne: jest.fn(), create: jest.fn(), find: jest.fn() };
     hhRepo = { create: jest.fn(), findOne: jest.fn().mockResolvedValue(null) };
@@ -430,6 +436,39 @@ describe('IntakeService', () => {
 
       expect(m.findOne).not.toHaveBeenCalled();
       expect(m.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses a second intake for a referral that already has a case', async () => {
+      // The guard runs before the transaction opens, so no case is created at
+      // all — this is what stops a reload / Continue intake / Back-button
+      // re-submit from producing a duplicate case.
+      dataSourceMock.getRepository = jest.fn(() => ({
+        findOne: jest.fn().mockResolvedValue({ id: 'ref-1', caseId: 'case-existing' }),
+      }));
+      caseRepo.findOne.mockResolvedValue({ id: 'case-existing', controlNo: 'KAPWA-2026-00012' });
+
+      await expect(
+        service.submitIntake(
+          { ...validIntakeInput, sourceReferral: { type: 'barangay', id: 'ref-1' } },
+          { id: 'u1', role: UserRole.SW },
+        ),
+      ).rejects.toThrow(/already has case KAPWA-2026-00012/);
+
+      expect(queryRunnerMock.startTransaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses a second intake for an inter-agency referral that already has a case', async () => {
+      dataSourceMock.getRepository = jest.fn(() => ({
+        findOne: jest.fn().mockResolvedValue({ id: 'iar-1', caseId: 'case-existing' }),
+      }));
+      caseRepo.findOne.mockResolvedValue({ id: 'case-existing', controlNo: 'KAPWA-2026-00013' });
+
+      await expect(
+        service.submitIntake(
+          { ...validIntakeInput, sourceReferral: { type: 'inter_agency', id: 'iar-1' } },
+          { id: 'u1', role: UserRole.SW },
+        ),
+      ).rejects.toThrow(/already has case KAPWA-2026-00013/);
     });
 
     it('links inside the intake transaction, before commit', async () => {

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
@@ -236,12 +236,39 @@ export class IntakeService {
     };
   }
 
+  /**
+   * Refuse an intake for a referral that has already produced a case.
+   *
+   * Accepting a referral no longer creates the case (the intake does), so a
+   * worker who re-enters the pre-filled intake — after a reload, via Continue
+   * intake, or by pressing Back after submitting — would otherwise open a second
+   * case for the same referral. `linkSourceReferral` only refuses to *re-point*
+   * an existing link, which is too late: the duplicate case already exists.
+   */
+  private async assertReferralNotConverted(
+    sourceReferral: IntakeInput['sourceReferral'],
+  ): Promise<void> {
+    if (!sourceReferral) return;
+
+    const caseId = sourceReferral.type === 'barangay'
+      ? (await this.dataSource.getRepository(Referral).findOne({ where: { id: sourceReferral.id } }))?.caseId
+      : (await this.dataSource.getRepository(InterAgencyReferral).findOne({ where: { id: sourceReferral.id } }))?.caseId;
+    if (!caseId) return;
+
+    const existing = await this.caseRepo.findOne({ where: { id: caseId } });
+    throw new ConflictException(
+      `This referral already has case ${existing?.controlNo ?? caseId}. Open that case instead of starting a new intake.`,
+    );
+  }
+
   async submitIntake(data: IntakeInput, caller?: Pick<User, 'id' | 'role'>): Promise<{
     beneficiaryId: string;
     caseId: string;
     controlNo: string;
     status: string;
   }> {
+    await this.assertReferralNotConverted(data.sourceReferral);
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction('SERIALIZABLE');
@@ -636,6 +663,8 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
   }
 
   async confirmMatch(householdId: string, data: ConfirmMatchInput, workerBarangays: string[], caller: Pick<User, 'id' | 'role'>): Promise<ConfirmMatchResponse> {
+    await this.assertReferralNotConverted(data.sourceReferral);
+
     const household = await this.hhRepo.findOne({ where: { id: householdId } });
     if (!household) throw new NotFoundException('Household not found');
     if (workerBarangays.length > 0 && household.barangay && !workerBarangays.includes(household.barangay)) {
