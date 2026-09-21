@@ -1629,7 +1629,7 @@ const fil: EnLocale = {
       "noInterventions": "Wala pang naitalang interbensyon. I-click ang \"Add Intervention\" upang idokumento ang mga naihatid na serbisyo.",
       "notes": "Mga Tala",
       "notesPlaceholder": "Mga karagdagang detalye tungkol sa interbensyong ito...",
-      "otherServices": "Ibang Serbisyo",
+      "otherService": "Iba pang serbisyo (tukuyin)…",
       "programService": "Programa / Serbisyo *",
       "recorded": "Mga naitalang interbensyon",
       "req": "req.",

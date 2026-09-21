@@ -5,7 +5,6 @@ export const BARANGAYS = [
 ] as const;
 export const AGE_RANGES = ['0-7', '8-17', '18-59', '60+'] as const;
 export const CLIENT_CATEGORIES = ['Children', 'Youth', 'Women', 'PWD', 'Senior', 'Indigent', '4Ps', 'IP', 'Family'] as const;
-export const SERVICE_TYPES = ['Financial Aid', 'Case Study Report', 'PWD Referral', 'Medical Assistance', 'Burial Assistance', 'Food Assistance', 'Educational Assistance', 'Transportation', 'Others'] as const;
 
 export const CIVIL_STATUSES = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as const;
 
@@ -20,8 +19,6 @@ export const CLIENT_CATEGORIES_V2 = [
   'Indigenous Person',
   'Family Head and Other Needy Adult',
 ] as const;
-
-export const NATURE_OF_SERVICE = ['Counseling', 'Financial Assistance', 'Legal Assistance'] as const;
 
 export const FINANCIAL_SUBSIDIES = [
   'Food Subsidy', 'Livelihood', 'Education', 'Medical',

@@ -79,7 +79,7 @@ const en = {
       "noInterventions": "No interventions recorded yet. Click \"Add Intervention\" to document delivered services.",
       "notes": "Notes",
       "notesPlaceholder": "Additional details about this intervention...",
-      "otherServices": "Other Services",
+      "otherService": "Other service (specify)…",
       "programService": "Program / Service *",
       "recorded": "Interventions recorded",
       "req": "req.",

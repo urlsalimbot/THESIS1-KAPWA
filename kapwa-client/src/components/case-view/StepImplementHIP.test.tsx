@@ -73,9 +73,10 @@ describe('StepImplementHIP adhoc intervention', () => {
     // Open the New Intervention form
     fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
 
-    // No programs available (empty), so the adhoc "Other Services" options render
+    // No programs available (empty), so the generic "Other service" entry is
+    // the only choice — there is no hardcoded service list any more.
     const programSelect = screen.getAllByRole('combobox')[0];
-    fireEvent.change(programSelect, { target: { value: 'adhoc:Medical Assistance' } });
+    fireEvent.change(programSelect, { target: { value: 'adhoc:other' } });
 
     // Adhoc selection reveals the required Service Name input
     const serviceNameInput = await screen.findByPlaceholderText(/Counseling Session/);

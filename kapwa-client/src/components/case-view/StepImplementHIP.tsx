@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Download, X, Lock, FolderOpen } from 'lucide-react';
 import { RequirementFileUpload } from './RequirementFileUpload';
 import { FileUploadList } from './FileUploadList';
-import { SERVICE_TYPES, NATURE_OF_SERVICE } from '@/lib/constants';
 import { useTranslation } from 'react-i18next';
 
 interface Intervention {
@@ -194,14 +193,9 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
               {programs.map(p => (
                 <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} ${t('caseView.implement.req', 'req.')})` : ''}</option>
               ))}
-              <optgroup label={t('caseView.implement.otherServices', 'Other Services')}>
-                {SERVICE_TYPES.map(s => (
-                  <option key={s} value={`adhoc:${s}`}>{s}</option>
-                ))}
-                {NATURE_OF_SERVICE.map(s => (
-                  <option key={s} value={`adhoc:${s}`}>{s}</option>
-                ))}
-              </optgroup>
+              <option value="adhoc:other">
+                {t('caseView.implement.otherService', 'Other service (specify)…')}
+              </option>
             </select>
           </div>
 
