@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { IntakeService } from './intake.service';
 import { AccessCardsService } from '../access-cards/access-cards.service';
+import { AccountProvisioningService } from '../accounts/account-provisioning.service';
 import { Person } from '../beneficiaries/person.entity';
 import { PersonContact } from '../beneficiaries/person-contact.entity';
 import { PersonAddress } from '../beneficiaries/person-address.entity';
@@ -104,6 +105,10 @@ describe('IntakeService', () => {
         {
           provide: AccessCardsService,
           useValue: { ensureHouseholdCard: jest.fn().mockResolvedValue('NORZ-AC-2026-0001') },
+        },
+        {
+          provide: AccountProvisioningService,
+          useValue: { provision: jest.fn().mockResolvedValue({ created: false, emailDelivered: false, smsDelivered: false }) },
         },
       ],
     }).compile();

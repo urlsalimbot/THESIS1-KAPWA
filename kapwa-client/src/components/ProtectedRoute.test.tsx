@@ -83,33 +83,33 @@ describe('ProtectedRoute', () => {
     });
   });
 
-  it('redirects agency_staff to /agency/dashboard when hitting a guarded route not in their roles', async () => {
+  it('redirects a must-change-password user to /settings from any other route', async () => {
     localStorage.setItem('kapwa_token', 'test');
     mockGetCurrentUser.mockResolvedValue({
       id: '1',
-      email: 'staff@norzagaray.test',
-      fullName: 'Dra. RHU Staff',
-      role: 'agency_staff',
-      agencyId: '20000000-0000-0000-0000-000000000009',
+      email: 'claimant@example.test',
+      fullName: 'Claimant',
+      role: 'claimant',
+      mustChangePassword: true,
     });
     render(
-      <MemoryRouter initialEntries={['/cases']}>
+      <MemoryRouter initialEntries={['/my-dashboard']}>
         <Routes>
           <Route
-            path="/cases"
+            path="/my-dashboard"
             element={
-              <ProtectedRoute roles={['admin', 'social_worker', 'coordinator']}>
-                <div>Protected Cases</div>
+              <ProtectedRoute roles={['claimant']}>
+                <div>Claimant Dashboard</div>
               </ProtectedRoute>
             }
           />
-          <Route path="/agency/dashboard" element={<div>Agency Dashboard</div>} />
+          <Route path="/settings" element={<div>Settings Page</div>} />
         </Routes>
       </MemoryRouter>
     );
     await waitFor(() => {
-      expect(screen.queryByText('Protected Cases')).toBeNull();
+      expect(screen.queryByText('Claimant Dashboard')).toBeNull();
     });
-    expect(await screen.findByText('Agency Dashboard')).toBeTruthy();
+    expect(await screen.findByText('Settings Page')).toBeTruthy();
   });
 });

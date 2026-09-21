@@ -342,6 +342,7 @@ export async function migrate() {
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT FALSE`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INT DEFAULT 0`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE`);
+  await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMP`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR`);

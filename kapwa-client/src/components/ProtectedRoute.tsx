@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as auth from '../lib/auth-context';
 import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
@@ -8,6 +8,7 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
   const { t } = useTranslation();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const checkingRef = useRef(false);
 
   useEffect(() => {
@@ -43,6 +44,15 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
     if (roles && roles.length > 0 && !roles.includes(user.role)) {
       checkingRef.current = false;
       navigate(ROLE_REDIRECT_MAP[user.role] || '/dashboard', { replace: true });
+      return;
+    }
+
+    // Staff-provisioned accounts carry a temporary password: block every route
+    // except Settings (which hosts Change Password) until it is changed.
+    if (user.mustChangePassword && location.pathname !== '/settings') {
+      setAuthorized(true);
+      checkingRef.current = false;
+      navigate('/settings', { replace: true });
       return;
     }
 

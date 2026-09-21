@@ -158,6 +158,24 @@ describe('AuthService', () => {
     });
   });
 
+  describe('changePassword', () => {
+    it('clears mustChangePassword and bumps tokenVersion', async () => {
+      const bcrypt = require('bcrypt');
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed-new');
+      const user: any = { id: 'u1', password: 'old-hash', tokenVersion: 0, mustChangePassword: true };
+      (repoMock.findOne as jest.Mock).mockResolvedValue(user);
+      (repoMock.save as jest.Mock).mockImplementation(async (u: any) => u);
+
+      await service.changePassword('u1', { currentPassword: 'temp-pass', newPassword: 'new-pass-123' });
+
+      expect(user.mustChangePassword).toBe(false);
+      expect(user.tokenVersion).toBe(1);
+      expect(user.password).toBe('hashed-new');
+      jest.restoreAllMocks();
+    });
+  });
+
   describe('login', () => {
     it('should return tokens for non-coordinator without MFA', async () => {
       const user = { id: '1', email: 'a@a.com', role: 'social_worker', fullName: 'Test', emailVerified: true } as User;

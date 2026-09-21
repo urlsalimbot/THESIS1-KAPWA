@@ -191,7 +191,7 @@ export class AuthService {
     return {
       accessToken: this.jwtService.sign(payload),
       refreshToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
-      user: { id: user.id, email: user.email, role: user.role, fullName: user.fullName }
+      user: { id: user.id, email: user.email, role: user.role, fullName: user.fullName, mustChangePassword: user.mustChangePassword }
     };
   }
 
@@ -297,6 +297,7 @@ export class AuthService {
 
     const hashed = await bcrypt.hash(body.newPassword, BCRYPT_SALT_ROUNDS);
     user.password = hashed;
+    user.mustChangePassword = false;
     // Revoke all existing sessions: refresh tokens carry tokenVersion, so a
     // bump forces old refresh tokens to be rejected (US-007).
     user.tokenVersion += 1;

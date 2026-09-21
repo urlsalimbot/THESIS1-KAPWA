@@ -76,6 +76,12 @@ export class User extends BaseEntity {
   @Column({ name: 'email_verified', default: true })
   emailVerified!: boolean;
 
+  // Set when an account is provisioned with a temporary password (e.g. a
+  // claimant created on intake). The client forces a password change before
+  // any other route is reachable; cleared by AuthService.changePassword.
+  @Column({ name: 'must_change_password', default: false })
+  mustChangePassword!: boolean;
+
   @Exclude()
   @OneToMany(() => UserToken, t => t.user, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   tokens!: UserToken[];

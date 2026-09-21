@@ -6,7 +6,9 @@ export const UserRoleEnum = z.enum([
 
 export const CreateUserInputSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  // Password is generated server-side (temporary + forced reset); accepted
+  // but ignored for backward compatibility.
+  password: z.string().min(8, 'Password must be at least 8 characters').optional(),
   role: UserRoleEnum,
   firstName: z.string().min(1).optional(),
   middleName: z.string().optional(),

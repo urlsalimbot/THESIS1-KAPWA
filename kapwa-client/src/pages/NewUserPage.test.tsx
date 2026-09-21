@@ -49,7 +49,7 @@ describe('NewUserPage', () => {
     expect(screen.getByLabelText('Last Name *')).toBeTruthy();
     expect(screen.getByLabelText('Name Extension')).toBeTruthy();
     expect(screen.getByLabelText('Email *')).toBeTruthy();
-    expect(screen.getByLabelText('Password *')).toBeTruthy();
+    expect(screen.queryByLabelText('Password *')).toBeNull();
   });
 
   it('reveals the agency select when role agency_staff is selected', async () => {
@@ -69,7 +69,6 @@ describe('NewUserPage', () => {
     await user.type(screen.getByLabelText('Last Name *'), 'Dela Cruz');
     await user.type(screen.getByLabelText('Name Extension'), 'Jr.');
     await user.type(screen.getByLabelText('Email *'), 'staff@agency.test');
-    await user.type(screen.getByLabelText('Password *'), 'password123');
 
     await user.click(screen.getByRole('combobox', { name: 'Role' }));
     await user.click(await screen.findByRole('option', { name: 'Agency Staff' }));
@@ -82,12 +81,12 @@ describe('NewUserPage', () => {
       expect(mockApiPost).toHaveBeenCalledWith(
         '/users',
         expect.objectContaining({
-          first_name: 'Jane',
-          middle_name: 'Marie',
-          last_name: 'Dela Cruz',
-          name_extension: 'Jr.',
+          firstName: 'Jane',
+          middleName: 'Marie',
+          lastName: 'Dela Cruz',
+          nameExtension: 'Jr.',
           role: 'agency_staff',
-          agency_id: 'ag-rhu',
+          agencyId: 'ag-rhu',
         }),
       );
     });

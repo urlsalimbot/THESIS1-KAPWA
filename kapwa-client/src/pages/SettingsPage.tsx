@@ -43,7 +43,7 @@ const channelLabels: Record<string, { key: string; label: string }> = {
 
 function ProfileTab() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const { lang, setLang } = useLanguage();
 
   const [newEmail, setNewEmail] = useState('');
@@ -83,6 +83,8 @@ function ProfileTab() {
         setNewPw('');
         setConfirmPw('');
         setPwError('');
+        // Clear the must_change_password gate (staff-provisioned accounts).
+        refresh();
       },
       onError: (err) => {
         toast.error(t('settings.passwordChangeFailed', 'Failed to change password'), { description: humanizeError(err) });

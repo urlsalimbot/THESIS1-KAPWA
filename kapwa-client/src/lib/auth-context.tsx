@@ -3,7 +3,7 @@ import { api } from './api';
 import { clearDraft } from '../hooks/useIntakeAutosave';
 import { clearPendingIdPhoto } from './intake-id-photo';
 
-interface User { id: string; email: string; fullName: string; role: string; phone?: string; agencyId?: string; }
+interface User { id: string; email: string; fullName: string; role: string; phone?: string; agencyId?: string; mustChangePassword?: boolean; }
 
 interface AuthContextType {
   user: User | null;
@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ mfaRequired: boolean; tempToken: string } | User | void>;
   logout: () => void;
   loading: boolean;
+  refresh: () => Promise<void>;
   mfaChallenge: { tempToken: string; type: 'totp' | 'sms' } | null;
   resolveMfa: (code: string) => Promise<User | undefined>;
   cancelMfa: () => void;
@@ -136,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, mfaChallenge, resolveMfa, cancelMfa }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, refresh: fetchUser, mfaChallenge, resolveMfa, cancelMfa }}>
       {children}
     </AuthContext.Provider>
   );

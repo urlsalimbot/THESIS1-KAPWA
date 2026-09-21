@@ -1926,6 +1926,7 @@ const fil: EnLocale = {
     "createFailed": "Nabigo ang paggawa ng user",
     "createNewUser": "Gumawa ng Bagong User",
     "createUser": "Gumawa ng User",
+    "credentialsEmailed": "Awtomatikong gumagawa ng pansamantalang password at ipinapadala ito sa email/SMS; kailangang palitan ito sa unang pag-sign in.",
     "creating": "Gumagawa...",
     "deactivate": "I-deactivate",
     "delete": "Tanggalin",

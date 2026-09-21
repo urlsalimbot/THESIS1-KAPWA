@@ -1,30 +1,34 @@
 import { DEFAULT_PAGE_SIZE } from '../common/constants';
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, FindOptionsWhere } from 'typeorm';
 import { User, UserRole } from '../auth/user.entity';
 import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity';
+import { AccountProvisioningService, generateTempPassword } from '../accounts/account-provisioning.service';
 import * as bcrypt from 'bcrypt';
 
 export interface CreateUserInput {
   email: string;
-  password: string;
+  password?: string;
   role: string;
-  first_name?: string;
-  middle_name?: string;
-  last_name?: string;
-  name_extension?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  nameExtension?: string;
   phone?: string;
-  assigned_barangay?: string;
-  permitted_barangays?: string[];
-  agency_id?: string;
+  assignedBarangay?: string;
+  permittedBarangays?: string[];
+  agencyId?: string;
 }
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private accounts: AccountProvisioningService,
   ) {}
 
   private buildAssignments(assigned?: string, permitted: string[] = []): UserBarangayAssignment[] {
@@ -86,23 +90,42 @@ export class UsersService {
       throw new ConflictException('A user with this email already exists');
     }
 
+    // Admin-provisioned accounts get a server-generated temporary password and
+    // a forced reset; the credentials are delivered by email/SMS (spec: same
+    // treatment as intake-provisioned claimants).
+    const tempPassword = generateTempPassword();
     const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(dto.password, salt);
+    const hashedPassword = await bcrypt.hash(tempPassword, salt);
 
     const user = this.userRepo.create({
       email: dto.email,
       password: hashedPassword,
       role: dto.role as UserRole,
-      firstName: dto.first_name,
-      middleName: dto.middle_name,
-      lastName: dto.last_name,
-      nameExtension: dto.name_extension,
+      firstName: dto.firstName,
+      middleName: dto.middleName,
+      lastName: dto.lastName,
+      nameExtension: dto.nameExtension,
       phone: dto.phone,
-      agencyId: dto.agency_id,
-      barangayAssignments: this.buildAssignments(dto.assigned_barangay, dto.permitted_barangays || []),
+      agencyId: dto.agencyId,
+      mustChangePassword: true,
+      barangayAssignments: this.buildAssignments(dto.assignedBarangay, dto.permittedBarangays || []),
     });
 
     const saved = await this.userRepo.save(user);
+
+    try {
+      await this.accounts.deliverAccountCredentials({
+        userId: saved.id,
+        email: saved.email,
+        phone: saved.phone ?? undefined,
+        fullName: saved.fullName,
+        role: saved.role,
+        tempPassword,
+      });
+    } catch (e) {
+      this.logger.warn(`Credential delivery failed for ${saved.email}: ${(e as Error)?.message ?? e}`);
+    }
+
     const { password, ...safe } = saved;
     return { ...safe, fullName: saved.fullName };
   }

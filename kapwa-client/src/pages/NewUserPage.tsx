@@ -49,7 +49,6 @@ const makeNewUserSchema = (t: TFunction) => z.object({
     .optional()
     .refine((v) => !v || /^[A-Za-z.\s]*$/.test(v), t('auth.lettersOnly', 'Letters and spaces only.')),
   email: z.string().email(t('auth.emailInvalid', 'Please enter a valid email address.')),
-  password: z.string().min(8, t('usersPanel.passwordMin', 'Password must be at least 8 characters.')),
   role: z.string().min(1),
   phone: z.string().optional(),
   assignedBarangay: z.string().optional(),
@@ -69,7 +68,7 @@ export function NewUserPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       firstName: '', middleName: '', lastName: '', nameExtension: '',
-      email: '', password: '', role: 'social_worker', phone: '',
+      email: '', role: 'social_worker', phone: '',
       assignedBarangay: '', permittedBarangays: '', agencyId: '',
     },
   });
@@ -81,17 +80,16 @@ export function NewUserPage() {
     try {
       const body: Record<string, unknown> = {
         email: values.email,
-        password: values.password,
         role: values.role,
-        first_name: values.firstName,
-        middle_name: values.middleName || undefined,
-        last_name: values.lastName,
-        name_extension: values.nameExtension || undefined,
+        firstName: values.firstName,
+        middleName: values.middleName || undefined,
+        lastName: values.lastName,
+        nameExtension: values.nameExtension || undefined,
       };
       if (values.phone) body.phone = values.phone;
-      if (values.assignedBarangay) body.assigned_barangay = values.assignedBarangay;
+      if (values.assignedBarangay) body.assignedBarangay = values.assignedBarangay;
       if (values.permittedBarangays?.trim()) {
-        body.permitted_barangays = values.permittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
+        body.permittedBarangays = values.permittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
       }
       if (role === 'agency_staff') {
         const agencyId = form.getValues('agencyId') as string | undefined;
@@ -99,7 +97,7 @@ export function NewUserPage() {
           toast.error(t('usersPanel.agencyRequired', 'Please select an agency.'));
           return;
         }
-        body.agency_id = agencyId;
+        body.agencyId = agencyId;
       }
       await api.post('/users', body);
       toast.success(t('usersPanel.userCreated', 'User created'));
@@ -198,19 +196,9 @@ export function NewUserPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('usersPanel.password', 'Password')} *</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder={t('usersPanel.minChars', 'Min 8 characters')} className="h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <p className="text-xs text-muted-foreground">
+                  {t('usersPanel.credentialsEmailed', 'A temporary password is generated automatically and emailed/SMSed to the user, who must change it on first sign-in.')}
+                </p>
                 <FormField
                   control={form.control}
                   name="role"

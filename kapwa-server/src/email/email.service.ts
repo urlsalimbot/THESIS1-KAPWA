@@ -107,6 +107,71 @@ export class EmailService {
     return this.sendWithBreaker(to, safeSubject, html);
   }
 
+  // Claimant account provisioned by staff on intake: temporary password plus
+  // first-login instructions. The account is flagged must_change_password, so
+  // the client forces a change before any other route is reachable.
+  async sendClaimantWelcomeEmail(
+    to: string,
+    opts: { tempPassword: string; beneficiaryName: string; controlNo: string },
+  ): Promise<boolean> {
+    const loginUrl = `${this.appUrl()}/login`;
+    const safePassword = escapeHtml(opts.tempPassword);
+    const safeName = escapeHtml(opts.beneficiaryName);
+    const safeControl = escapeHtml(opts.controlNo);
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#1e3a5f">Your KAPWA claimant account</h2>
+        <p>An account was created for you as the claimant of <strong>${safeName}</strong> (Case ${safeControl}).</p>
+        <p><strong>Email:</strong> ${escapeHtml(to)}<br/><strong>Temporary password:</strong> <code>${safePassword}</code></p>
+        <p>Sign in and change this password immediately — the system will require it before you can use any other page.</p>
+        <a href="${loginUrl}" style="display:inline-block;padding:12px 24px;background:#1e3a5f;color:#fff;text-decoration:none;border-radius:6px">Sign in to KAPWA</a>
+        <p style="margin-top:24px;font-size:13px;color:#666">If you did not expect this account, contact MSWDO Norzagaray.</p>
+        <p style="font-size:12px;color:#999">MSWDO Norzagaray &middot; KAPWA Social Welfare System</p>
+      </div>`;
+    return this.sendWithBreaker(to, 'Your KAPWA claimant account', html);
+  }
+
+  // Existing claimant account linked to a newly enrolled beneficiary: no
+  // credentials, just confirmation that the enrollment succeeded.
+  async sendClaimantEnrollmentEmail(
+    to: string,
+    opts: { beneficiaryName: string; controlNo: string },
+  ): Promise<boolean> {
+    const safeName = escapeHtml(opts.beneficiaryName);
+    const safeControl = escapeHtml(opts.controlNo);
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#1e3a5f">Enrollment confirmed</h2>
+        <p><strong>${safeName}</strong> has been successfully enrolled (Case ${safeControl}) and linked to your KAPWA claimant account.</p>
+        <p>Sign in to view the case status and access card.</p>
+        <a href="${this.appUrl()}/login" style="display:inline-block;padding:12px 24px;background:#1e3a5f;color:#fff;text-decoration:none;border-radius:6px">Sign in to KAPWA</a>
+        <p style="font-size:12px;color:#999">MSWDO Norzagaray &middot; KAPWA Social Welfare System</p>
+      </div>`;
+    return this.sendWithBreaker(to, 'KAPWA enrollment confirmed', html);
+  }
+
+  // Staff/admin-provisioned account: temporary password + forced reset note.
+  async sendAccountWelcomeEmail(
+    to: string,
+    opts: { tempPassword: string; fullName?: string; role: string },
+  ): Promise<boolean> {
+    const loginUrl = `${this.appUrl()}/login`;
+    const safePassword = escapeHtml(opts.tempPassword);
+    const safeName = escapeHtml(opts.fullName || to);
+    const safeRole = escapeHtml(opts.role.replace(/_/g, ' '));
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#1e3a5f">Your KAPWA account</h2>
+        <p>An account was created for <strong>${safeName}</strong> with the role <strong>${safeRole}</strong>.</p>
+        <p><strong>Email:</strong> ${escapeHtml(to)}<br/><strong>Temporary password:</strong> <code>${safePassword}</code></p>
+        <p>Sign in and change this password immediately — the system will require it before you can use any other page.</p>
+        <a href="${loginUrl}" style="display:inline-block;padding:12px 24px;background:#1e3a5f;color:#fff;text-decoration:none;border-radius:6px">Sign in to KAPWA</a>
+        <p style="margin-top:24px;font-size:13px;color:#666">If you did not expect this account, contact MSWDO Norzagaray.</p>
+        <p style="font-size:12px;color:#999">MSWDO Norzagaray &middot; KAPWA Social Welfare System</p>
+      </div>`;
+    return this.sendWithBreaker(to, 'Your KAPWA account', html);
+  }
+
   async sendOtpEmail(to: string, code: string): Promise<boolean> {
     const html = `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto">

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
+import { AccountProvisioningService } from '../accounts/account-provisioning.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User, UserRole } from '../auth/user.entity';
 import { ConflictException, BadRequestException } from '@nestjs/common';
@@ -37,9 +38,26 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         { provide: getRepositoryToken(User), useValue: mockRepo },
+        { provide: AccountProvisioningService, useValue: { deliverAccountCredentials: jest.fn().mockResolvedValue({ emailDelivered: true, smsDelivered: true }) } },
       ],
     }).compile();
     service = module.get<UsersService>(UsersService);
+  });
+
+  it('creates a user with a server-generated temporary password and delivers credentials', async () => {
+    mockRepo.findOne.mockResolvedValue(null);
+    mockRepo.create.mockImplementation((x: any) => ({ ...x }));
+    mockRepo.save.mockImplementation(async (u: any) => ({ id: 'uuid-9', fullName: 'New Person', ...u }));
+
+    const result = await service.createUser({ email: 'new@test.com', role: 'social_worker', firstName: 'New', lastName: 'Person' });
+
+    const saved = mockRepo.save.mock.calls[0][0];
+    expect(saved.mustChangePassword).toBe(true);
+    expect(saved.password).toMatch(/^\$2[aby]\$/);
+    expect((result as any).password).toBeUndefined();
+    expect((service as any).accounts.deliverAccountCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'new@test.com', role: 'social_worker', tempPassword: expect.any(String) }),
+    );
   });
 
   describe('createUser', () => {
@@ -105,7 +123,7 @@ describe('UsersService', () => {
         email: 'rhu@norzagaray.test',
         password: 'password123',
         role: UserRole.AGENCY_STAFF,
-        agency_id: 'ag-rhu',
+        agencyId: 'ag-rhu',
       };
 
       mockRepo.findOne.mockResolvedValue(null);

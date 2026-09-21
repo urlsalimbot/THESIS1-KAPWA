@@ -1,0 +1,96 @@
+import { AccountProvisioningService } from './account-provisioning.service';
+
+function build(overrides: any = {}) {
+  const userRepo = {
+    findOne: jest.fn().mockResolvedValue(null),
+    create: jest.fn((x: any) => ({ ...x })),
+    save: jest.fn(async (x: any) => ({ id: 'u-new', ...x })),
+    query: jest.fn().mockResolvedValue([{ id: 'admin-1' }]),
+  };
+  const personRepo = { findOne: jest.fn().mockResolvedValue({ firstName: 'Pedro', middleName: 'P', surname: 'Reyes' }) };
+  const claimantRepo = { findOne: jest.fn() };
+  const emailService = {
+    sendClaimantWelcomeEmail: jest.fn().mockResolvedValue(true),
+    sendClaimantEnrollmentEmail: jest.fn().mockResolvedValue(true),
+  };
+  const smsGateway = { sendSms: jest.fn().mockResolvedValue({ success: true }) };
+  const notifications = { createMany: jest.fn().mockResolvedValue([]) };
+  const auditLog = { log: jest.fn().mockResolvedValue(undefined) };
+
+  const svc = new AccountProvisioningService(
+    userRepo as any, personRepo as any, claimantRepo as any,
+    emailService as any, smsGateway as any, notifications as any, auditLog as any,
+  );
+  Object.assign(userRepo, overrides.userRepo || {});
+  return { svc, userRepo, personRepo, emailService, smsGateway, notifications, auditLog };
+}
+
+const input = {
+  claimantPersonId: 'person-1',
+  beneficiaryId: 'ben-1',
+  beneficiaryName: 'Pedro Reyes',
+  controlNo: 'KAPWA-2026-00010',
+  email: 'pedro@example.test',
+  phone: '09171234567',
+  actorId: 'worker-1',
+};
+
+describe('AccountProvisioningService', () => {
+  it('creates a claimant account with a temp password and delivers both channels', async () => {
+    const { svc, userRepo, emailService, smsGateway } = build();
+
+    const result = await svc.provision(input);
+
+    expect(result.created).toBe(true);
+    const saved = userRepo.save.mock.calls[0][0];
+    expect(saved.role).toBe('claimant');
+    expect(saved.personId).toBe('person-1');
+    expect(saved.mustChangePassword).toBe(true);
+    expect(saved.emailVerified).toBe(true);
+    expect(saved.password).toMatch(/^\$2[aby]\$/);
+    expect(saved.password).not.toContain('KAPWA');
+    expect(emailService.sendClaimantWelcomeEmail).toHaveBeenCalledWith('pedro@example.test', expect.objectContaining({ controlNo: input.controlNo }));
+    expect(smsGateway.sendSms).toHaveBeenCalledWith('09171234567', expect.stringContaining('Temp password'));
+    expect(result.emailDelivered).toBe(true);
+    expect(result.smsDelivered).toBe(true);
+  });
+
+  it('reuses an existing account and sends the enrollment notification only', async () => {
+    const existing = { id: 'u-existing', email: 'pedro@example.test', phone: '09171234567', personId: null };
+    const { svc, userRepo, emailService, smsGateway } = build({ userRepo: { findOne: jest.fn().mockResolvedValue(existing) } });
+
+    const result = await svc.provision(input);
+
+    expect(result.created).toBe(false);
+    expect(result.userId).toBe('u-existing');
+    expect(userRepo.create).not.toHaveBeenCalled();
+    expect(existing.personId).toBe('person-1');
+    expect(emailService.sendClaimantEnrollmentEmail).toHaveBeenCalled();
+    expect(emailService.sendClaimantWelcomeEmail).not.toHaveBeenCalled();
+    expect(smsGateway.sendSms).toHaveBeenCalledWith('09171234567', expect.stringContaining('enrolled'));
+  });
+
+  it('flags staff when the claimant has no email or phone', async () => {
+    const { svc, userRepo, notifications } = build();
+
+    const result = await svc.provision({ ...input, email: undefined, phone: undefined });
+
+    expect(result.created).toBe(false);
+    expect(userRepo.save).not.toHaveBeenCalled();
+    expect(notifications.createMany).toHaveBeenCalledWith([
+      expect.objectContaining({ recipientId: 'admin-1', title: 'Account needs attention' }),
+    ]);
+  });
+
+  it('flags staff when a created account could not be delivered', async () => {
+    const { svc, notifications } = build();
+    svc['emailService'].sendClaimantWelcomeEmail = jest.fn().mockResolvedValue(false);
+    svc['smsGateway'].sendSms = jest.fn().mockResolvedValue({ success: false });
+
+    const result = await svc.provision(input);
+
+    expect(result.created).toBe(true);
+    expect(result.emailDelivered).toBe(false);
+    expect(notifications.createMany).toHaveBeenCalled();
+  });
+});

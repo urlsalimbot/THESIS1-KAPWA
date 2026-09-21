@@ -393,6 +393,7 @@ const en = {
     "createFailed": "Failed to create user",
     "createNewUser": "Create New User",
     "createUser": "Create User",
+    "credentialsEmailed": "A temporary password is generated automatically and emailed/SMSed to the user, who must change it on first sign-in.",
     "creating": "Creating...",
     "deactivate": "Deactivate",
     "delete": "Delete",

@@ -12,6 +12,7 @@ import { CaseRequirement } from '../cases/case-requirement.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { AccessCardsService } from '../access-cards/access-cards.service';
+import { AccountProvisioningService } from '../accounts/account-provisioning.service';
 import { Referral, ReferralStatus } from '../referrals/referral.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { memberToPerson } from './member-person';
@@ -42,7 +43,34 @@ export class IntakeService {
     private consentRepo: Repository<ConsentLedger>,
     private casesService: CasesService,
     private accessCards: AccessCardsService,
+    private claimants: AccountProvisioningService,
   ) {}
+
+  // Best-effort claimant account provisioning, run AFTER the intake commits.
+  // Never throws: an email/SMS failure must not fail a successful intake.
+  private async provisionClaimant(
+    claimantPersonId: string | undefined,
+    beneficiaryId: string,
+    beneficiaryName: string,
+    controlNo: string,
+    data: IntakeInput,
+    actorId?: string,
+  ): Promise<void> {
+    if (!claimantPersonId) return;
+    try {
+      await this.claimants.provision({
+        claimantPersonId,
+        beneficiaryId,
+        beneficiaryName,
+        controlNo,
+        email: data.claimant?.email,
+        phone: data.claimant?.cellularNumber,
+        actorId,
+      });
+    } catch (e) {
+      this.logger.warn(`Claimant provisioning failed for beneficiary ${beneficiaryId}: ${(e as Error)?.message ?? e}`);
+    }
+  }
 
   /**
    * Attach the case produced by this intake to the referral that handed off to
@@ -346,6 +374,14 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           }
           await this.linkSourceReferral(queryRunner.manager, data.sourceReferral, recentCase.id);
           await queryRunner.commitTransaction();
+          await this.provisionClaimant(
+            claimPerson.id,
+            existingBeneficiary.id,
+            `${data.beneficiary.firstName} ${data.beneficiary.surname}`.trim(),
+            recentCase.controlNo,
+            data,
+            caller?.id,
+          );
           return {
             beneficiaryId: existingBeneficiary.id,
             caseId: recentCase.id,
@@ -462,6 +498,15 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       } catch (e) {
         this.logger.warn(`Access card auto-assign failed for beneficiary ${savedBeneficiary.id}: ${(e as Error)?.message ?? e}`);
       }
+
+      await this.provisionClaimant(
+        claimPerson.id,
+        savedBeneficiary.id,
+        `${data.beneficiary.firstName} ${data.beneficiary.surname}`.trim(),
+        controlNo,
+        data,
+        caller?.id,
+      );
 
       return {
         beneficiaryId: savedBeneficiary.id,
