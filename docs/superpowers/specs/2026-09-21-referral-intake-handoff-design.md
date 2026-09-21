@@ -101,9 +101,11 @@ In `resolveOrCreatePerson`, when `dto.address` is an object, also populate the
 structured `barangay` column alongside the existing `raw` composition. `raw` remains
 the full display string because `person_addresses` has no `street` column.
 
-`Referral.address` (barangay referrals) changes from `person.currentAddress` to the
-raw-backed `person.address` getter, so legacy raw-only rows and new structured rows both
-resolve instead of returning `undefined`.
+The structured `Referral.address` getter is left **unchanged** — `referral-wave2.spec.ts`
+asserts its object shape. A raw-backed `addressLine` getter is added alongside it for the
+display string, and `InterAgencyReferral` gains the same `address` / `currentAddress` /
+`addressLine` trio so both referral payloads are shaped identically. Populating the structured
+barangay (above) is what makes `address` resolve in production.
 
 No backfill: existing rows keep resolving through the `raw` fallback.
 
