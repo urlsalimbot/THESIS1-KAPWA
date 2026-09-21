@@ -45,7 +45,7 @@ async function bootstrap() {
     if (!process.env.APP_URL) {
       console.warn(
         'PRODUCTION WARNING: APP_URL is not set — email links will default to http://localhost:5173 and will be broken for users. ' +
-        'Set APP_URL to the public origin (e.g. https://kapwa.mswdo-norzagaray.gov.ph).'
+        'Set APP_URL to the public origin (e.g. https://kapwa.software).'
       );
     }
   }

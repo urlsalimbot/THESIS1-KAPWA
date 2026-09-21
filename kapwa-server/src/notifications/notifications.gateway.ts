@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 
 // CORS origins for the notifications socket. Defaults cover local dev; in
 // production set NOTIF_WS_ORIGIN to a comma-separated list of allowed origins
-// (e.g. "https://kapwa.mswdo-norzagaray.gov.ph") so the deployed client can
+// (e.g. "https://kapwa.software") so the deployed client can
 // connect when served from a different origin than the API.
 function wsOrigins(): string[] {
   const raw = process.env.NOTIF_WS_ORIGIN;
