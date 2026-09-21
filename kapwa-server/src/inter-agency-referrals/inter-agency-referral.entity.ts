@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
-import { Exclude, Expose } from 'class-transformer';
+import { Expose } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { Agency } from '../agencies/agency.entity';
 import { Person } from '../beneficiaries/person.entity';
@@ -20,9 +20,13 @@ export class InterAgencyReferral extends BaseEntity {
   @Column({ name: 'person_id' })
   personId!: string;
 
+  // NOTE: this relation stays serialized (Person already @Exclude()s its own
+  // child relations), because agency-program-wave2.spec.ts pins it as present and
+  // the agency portal reads person.surname/person.phone. The getters below are
+  // additive: they give clients a first-class name schema without a breaking
+  // removal of `person`.
   @ManyToOne(() => Person, { nullable: true })
   @JoinColumn({ name: 'person_id' })
-  @Exclude()
   person?: Person;
 
   // --- Identity surface, assembled from the joined Person ------------------

@@ -80,17 +80,19 @@ Everything else in the spec is implemented as written.
 - Produces: both referral payloads expose `surname`, `firstName`, `middleName`, `extension`,
   `gender`, `dob` (`YYYY-MM-DD`), `phone`, plus the address trio — `address` and
   `currentAddress` (structured `{ barangay?, city?, province? }`) and `addressLine` (raw
-  display string). Neither payload leaks a raw `person` object, and `Referral.address` keeps
-  its existing object shape. Task 5's prefill helper consumes exactly these field names.
+  display string). Both payloads keep their existing `person` relation — pinned by
+  `agency-program-wave2.spec.ts` and read by the agency portal — so the getters are purely
+  additive. `Referral.address` keeps its existing object shape. Task 5's prefill helper
+  consumes exactly these field names.
 
 - [ ] **Step 1: Add the getters and exclude `person` on `InterAgencyReferral`**
 
-Import `Exclude, Expose` from `class-transformer`, then mark the relation and add the block:
+Import `Expose` from `class-transformer`, then add the block after the `person` relation.
+Leave the relation itself unmarked — see the note below the block.
 
 ```ts
   @ManyToOne(() => Person, { nullable: true })
   @JoinColumn({ name: 'person_id' })
-  @Exclude()
   person?: Person;
 
   // --- Identity surface, assembled from the joined Person ------------------
@@ -123,6 +125,12 @@ Import `Exclude, Expose` from `class-transformer`, then mark the relation and ad
   @Expose() get addressLine(): string | undefined { return this.person?.address; }
   @Expose() get phone(): string | undefined { return this.person?.phone; }
 ```
+
+Do **not** add `@Exclude()` to `person`. `agency-program-wave2.spec.ts` (lines 145–149)
+asserts the relation stays serialized with `person.surname` / `person.phone` present and only
+the PII children (`addresses`, `roles`, `contacts`) absent, and the agency portal reads
+`person.surname` / `person.firstName` directly. The new getters are additive; removing
+`person` would be a breaking API change this feature does not need.
 
 - [ ] **Step 2: Add the raw-backed `addressLine` — do NOT change `address`**
 
@@ -509,7 +517,7 @@ export interface InterAgencyReferral {
   declinedReason?: string;
   fromAgency?: Agency;
   toAgency?: Agency;
-  // Identity surface (Task 1). No `person` object: the API excludes it.
+  // Identity surface (Task 1). `person` remains for backward compatibility.
   surname?: string;
   firstName?: string;
   middleName?: string;

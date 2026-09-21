@@ -63,7 +63,7 @@ describe('InterAgencyReferral identity getters', () => {
     expect(ref.phone).toBeUndefined();
   });
 
-  it('serializes the flat name schema under exposeAll without leaking person', () => {
+  it('serializes the flat name schema alongside the existing person relation', () => {
     const person = linkedPerson();
     const ref = new InterAgencyReferral();
     ref.reason = 'Medical assistance';
@@ -84,6 +84,11 @@ describe('InterAgencyReferral identity getters', () => {
     expect(plain.gender).toBe('Female');
     expect(plain.dob).toBe('1995-08-20');
     expect(plain.addressLine).toBe('Blk 2, Brgy San Roque');
-    expect(plain.person).toBeUndefined();
+    // `person` is deliberately still exposed — agency-program-wave2.spec.ts pins
+    // it and the agency portal reads it. Only its PII children stay excluded.
+    const nested = plain.person as Record<string, unknown> | undefined;
+    expect(nested?.surname).toBe('Reyes');
+    expect(nested?.addresses).toBeUndefined();
+    expect(nested?.roles).toBeUndefined();
   });
 });

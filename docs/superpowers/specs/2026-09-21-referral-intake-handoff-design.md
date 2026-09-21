@@ -87,7 +87,11 @@ is a client concern based on `toAgency.code`.
 
 Mirror the Wave-2 trio already used by `Referral`:
 
-- Add `@Exclude()` to the `person` relation so the raw person stops leaking.
+- Add the `@Expose()` name getters listed below. The `person` relation is **kept** — it stays
+  serialized (with its PII children excluded by `Person` itself), because
+  `agency-program-wave2.spec.ts` pins it as present and the agency portal reads
+  `person.surname` / `person.firstName`. Removing it would be a breaking API change this
+  feature does not require.
 - Add `@Expose()` getters reading from `this.person`: `surname`, `firstName`,
   `middleName`, `extension`, `gender`, `dob` (formatted `YYYY-MM-DD`, reusing
   `Referral`'s implementation), `address`, `phone`.
@@ -183,7 +187,8 @@ Server (`npx jest --silent`):
 - `intake.service` tests: `sourceReferral` links on the create path and on the
   `caseCreated: true` confirm path; no link on the info-updated branch.
 - Inter-agency serialization test: response exposes `surname`/`firstName`/`middleName`
-  and no longer leaks the raw `person` object.
+  alongside the existing `person` relation, with `person.addresses` / `person.roles` still
+  absent.
 
 Client (`npm run test:run`, `npm run typecheck`):
 
