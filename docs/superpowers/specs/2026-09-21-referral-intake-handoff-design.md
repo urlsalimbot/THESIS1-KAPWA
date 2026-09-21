@@ -172,6 +172,7 @@ never silently dropped.
 | Accept on a non-pending referral | Unchanged: `403` |
 | Accept succeeds but navigation fails | Referral is accepted; the row shows intake-pending with Continue intake |
 | Intake submit with an unknown/already-linked `sourceReferral` | Intake succeeds; link skipped and logged |
+| Unexpected error while writing the link | The whole intake transaction rolls back — no case is committed without its link. Deliberate: committing a case whose link failed would leave the referral showing "intake pending", and the Continue-intake path would then create a second case for it |
 | `confirmMatch` returns `caseCreated: false` | No link; referral stays intake-pending |
 | Referral has no linked person | Accept + toast, no redirect |
 
