@@ -22,7 +22,7 @@ const ALLOWED_IDENTICAL = new Set([
   'accessCard.byWorker',
   'accessCard.catReferral',
   'accessCard.catSeminar',
-  'accessCard.exportGisPdf',
+  'accessCard.exportAccessCardPdf',
   'admin.device',
   'admin.entryCount_one',
   'admin.entryCount_other',

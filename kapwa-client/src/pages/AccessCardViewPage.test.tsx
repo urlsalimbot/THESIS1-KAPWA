@@ -116,18 +116,18 @@ describe('AccessCardViewPage', () => {
   });
 });
 
-describe('AccessCardViewPage — GIS PDF export', () => {
+describe('AccessCardViewPage — access card PDF export', () => {
   it('downloads the access card PDF when the button is clicked', async () => {
     renderWithSWR(<AccessCardViewPage />);
-    const btn = await screen.findByRole('button', { name: /gis \(pdf\)/i });
+    const btn = await screen.findByRole('button', { name: /access card \(pdf\)/i });
     btn.click();
     expect(mockDownloadAccessCardPdf).toHaveBeenCalledWith('ben1');
   });
 
-  it('hides the GIS PDF button from claimants', async () => {
+  it('hides the access card PDF button from claimants', async () => {
     mockUseAuth.mockReturnValue({ user: { id: '1', role: 'claimant' }, loading: false });
     renderWithSWR(<AccessCardViewPage />);
     await screen.findByText('Services Rendered');
-    expect(screen.queryByRole('button', { name: /gis \(pdf\)/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /access card \(pdf\)/i })).toBeNull();
   });
 });

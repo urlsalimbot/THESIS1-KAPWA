@@ -184,7 +184,7 @@ export function AccessCardViewPage() {
                     className="gap-1.5"
                     onClick={() => downloadAccessCardPdf(id!)}
                   >
-                    <Download size={14} /> {t('accessCard.exportGisPdf', 'GIS (PDF)')}
+                    <Download size={14} /> {t('accessCard.exportAccessCardPdf', 'Access Card (PDF)')}
                   </Button>
                 )}
               </div>

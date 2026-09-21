@@ -1,5 +1,6 @@
 import { ApiError } from './api-error';
 import { apiErrorMessage } from './errors';
+import { exportFileName } from './export-filename';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'kapwa_token';
@@ -283,7 +284,7 @@ export async function downloadCsrPdf(caseId: string) {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = dispositionFilename(res, `CSR-${caseId}.pdf`);
+  a.download = dispositionFilename(res, exportFileName('CSR', caseId));
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -299,7 +300,7 @@ export async function downloadGisPdf(caseId: string) {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = dispositionFilename(res, `GIS-${caseId}.pdf`);
+  a.download = dispositionFilename(res, exportFileName('GIS', caseId));
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -307,7 +308,7 @@ export async function downloadGisPdf(caseId: string) {
 export async function downloadAccessCardPdf(beneficiaryId: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(
-    `${API_BASE}/access-cards/beneficiary/${beneficiaryId}/gis-pdf`,
+    `${API_BASE}/access-cards/beneficiary/${beneficiaryId}/access-card-pdf`,
     { headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
   if (!res.ok) throw new Error(`Access Card export failed: ${res.status}`);
@@ -315,7 +316,7 @@ export async function downloadAccessCardPdf(beneficiaryId: string) {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = dispositionFilename(res, `ACCESS CARD ${beneficiaryId}.pdf`);
+  a.download = dispositionFilename(res, exportFileName('ACCESS CARD', beneficiaryId));
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -369,7 +370,7 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = dispositionFilename(res, `IRF-${id}.pdf`);
+  a.download = dispositionFilename(res, exportFileName('IRF', id));
   a.click();
   URL.revokeObjectURL(url);
 }

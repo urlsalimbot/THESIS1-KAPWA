@@ -42,7 +42,7 @@ export class AccessCardsController {
     return this.svc.findBeneficiaryCard(id);
   }
 
-  @Get('beneficiary/:id/gis-pdf')
+  @Get('beneficiary/:id/access-card-pdf')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Download family access card PDF' })
   async downloadAccessCardPdf(@Param('id', new ParseUUIDPipe()) id: string, @Res() res: any) {

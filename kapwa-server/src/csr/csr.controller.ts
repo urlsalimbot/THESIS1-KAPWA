@@ -6,6 +6,7 @@ import { CsrService } from './csr.service';
 import { createCsrSchema, updateCsrSchema } from './dto/csr.zod';
 import { AuthenticatedRequest } from '../auth/types';
 import { ZodPipe } from '../common/pipes/zod.pipe';
+import { exportFileName } from '../common/constants';
 import { z } from 'zod';
 import type { Response } from 'express';
 
@@ -51,7 +52,7 @@ export class CsrController {
     const buffer = await this.csrService.generatePdf(controlNo);
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="CSR-${controlNo}.pdf"`,
+      'Content-Disposition': `attachment; filename="${exportFileName('CSR', controlNo)}"`,
       'Content-Length': buffer.length.toString(),
     });
     res.end(buffer);
