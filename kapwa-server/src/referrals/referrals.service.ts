@@ -3,8 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Referral, ReferralStatus } from './referral.entity';
 import { Person } from '../beneficiaries/person.entity';
-import { Beneficiary } from '../beneficiaries/beneficiary.entity';
-import { CasesService } from '../cases/cases.service';
 import type { CreateReferralInput, DeclineReferralInput } from './dto/referrals.zod';
 
 @Injectable()
@@ -14,9 +12,6 @@ export class ReferralsService {
     private repo: Repository<Referral>,
     @InjectRepository(Person)
     private personRepo: Repository<Person>,
-    @InjectRepository(Beneficiary)
-    private benRepo: Repository<Beneficiary>,
-    private casesService: CasesService,
   ) {}
 
   private async resolveOrCreatePerson(dto: CreateReferralInput): Promise<Person | undefined> {
@@ -122,28 +117,15 @@ export class ReferralsService {
     return referral;
   }
 
-  async accept(id: string, actorId?: string): Promise<Referral> {
+  async accept(id: string): Promise<Referral> {
     const referral = await this.findById(id);
     if (referral.status !== ReferralStatus.PENDING) {
       throw new ForbiddenException('Referral is not in pending status');
     }
-
-    let caseId: string | undefined;
-    if (referral.personId) {
-      let beneficiary = await this.benRepo.findOne({ where: { personId: referral.personId } });
-      if (!beneficiary) {
-        beneficiary = await this.benRepo.save(this.benRepo.create({ personId: referral.personId }));
-      }
-      const created = await this.casesService.create({
-        beneficiaryId: beneficiary.id,
-        serviceRequested: [referral.reason],
-        assignedWorkerId: actorId,
-      });
-      caseId = created.id;
-    }
-
+    // Status only: the case is created by the intake this hands off to and
+    // linked back by IntakeService.linkSourceReferral. Creating one here would
+    // produce a second case for every accepted referral.
     referral.status = ReferralStatus.ACCEPTED;
-    referral.caseId = caseId;
     await this.repo.save(referral);
     return this.findById(id);
   }
