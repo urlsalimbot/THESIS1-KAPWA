@@ -13,10 +13,12 @@ export class MinioService implements OnModuleInit {
     @Optional() private cb?: CircuitBreakerService,
   ) {
     const endPoint = this.config.get<string>('MINIO_ENDPOINT', 'minio');
-    const port = this.config.get<number>('MINIO_PORT', 9000);
+    const port = parseInt(this.config.get<string>('MINIO_PORT', '9000'), 10) || 9000;
     const useSSL = this.config.get<string>('MINIO_USE_SSL', 'false') === 'true';
     const accessKey = this.config.get<string>('MINIO_ROOT_USER', '');
     const secretKey = this.config.get<string>('MINIO_ROOT_PASSWORD', '');
+    // Required by AWS S3 for SigV4 signing; self-hosted MinIO ignores it.
+    const region = this.config.get<string>('MINIO_REGION', '');
 
     this.client = new Minio.Client({
       endPoint,
@@ -24,7 +26,19 @@ export class MinioService implements OnModuleInit {
       useSSL,
       accessKey,
       secretKey,
+      ...(region ? { region } : {}),
     });
+  }
+
+  /**
+   * Map a logical bucket name (what the app and API use) to its physical name.
+   * S3 bucket names are globally unique, so cloud deployments set
+   * MINIO_BUCKET_PREFIX (e.g. "kapwa-prod") to namespace them; self-hosted
+   * MinIO leaves it empty and physical names equal logical names.
+   */
+  private resolveBucket(bucket: string): string {
+    const prefix = this.config.get<string>('MINIO_BUCKET_PREFIX', '');
+    return prefix ? `${prefix}-${bucket}` : bucket;
   }
 
   async onModuleInit(): Promise<void> {
@@ -41,10 +55,11 @@ export class MinioService implements OnModuleInit {
     mimeType: string,
   ): Promise<string> {
     const fn = async () => {
-      await this.client.putObject(bucket, fileName, fileBuffer, fileBuffer.length, {
+      const physical = this.resolveBucket(bucket);
+      await this.client.putObject(physical, fileName, fileBuffer, fileBuffer.length, {
         'Content-Type': mimeType,
       });
-      return this.client.presignedGetObject(bucket, fileName, 24 * 60 * 60);
+      return this.client.presignedGetObject(physical, fileName, 24 * 60 * 60);
     };
     return this.cb ? this.cb.call('minio', fn) : fn();
   }
@@ -54,14 +69,15 @@ export class MinioService implements OnModuleInit {
     fileName: string,
     expirySeconds = 86400,
   ): Promise<string> {
-    const fn = () => this.client.presignedGetObject(bucket, fileName, expirySeconds);
+    const fn = () =>
+      this.client.presignedGetObject(this.resolveBucket(bucket), fileName, expirySeconds);
     return this.cb ? this.cb.call('minio', fn) : fn();
   }
 
   async listObjects(bucket: string, prefix?: string): Promise<string[]> {
     const fn = () => {
       const objects: string[] = [];
-      const stream = this.client.listObjects(bucket, prefix, true);
+      const stream = this.client.listObjects(this.resolveBucket(bucket), prefix, true);
       return new Promise<string[]>((resolve, reject) => {
         stream.on('data', (obj: { name?: string }) => {
           if (obj.name) objects.push(obj.name);
@@ -74,7 +90,7 @@ export class MinioService implements OnModuleInit {
   }
 
   async deleteFile(bucket: string, fileName: string): Promise<void> {
-    const fn = () => this.client.removeObject(bucket, fileName);
+    const fn = () => this.client.removeObject(this.resolveBucket(bucket), fileName);
     return this.cb ? this.cb.call('minio', fn) : fn();
   }
 
@@ -108,10 +124,11 @@ export class MinioService implements OnModuleInit {
 
     for (const bucket of requiredBuckets) {
       try {
-        const exists = await this.client.bucketExists(bucket);
+        const physical = this.resolveBucket(bucket);
+        const exists = await this.client.bucketExists(physical);
         if (!exists) {
-          await this.client.makeBucket(bucket);
-          this.logger.log(`Created bucket: ${bucket}`);
+          await this.client.makeBucket(physical);
+          this.logger.log(`Created bucket: ${physical}`);
         }
       } catch (err) {
         this.logger.error(`Failed to init bucket "${bucket}": ${(err as Error).message}`);

@@ -6,7 +6,10 @@ const dataSource = new DataSource({
   port: parseInt(process.env.DB_PORT || '5432'),
   username: process.env.DB_USER || 'kapwa',
   password: process.env.DB_PASSWORD || 'kapwa',
-  database: process.env.DB_NAME || 'kapwa'
+  database: process.env.DB_NAME || 'kapwa',
+  // RDS enforces TLS (rds.force_ssl=1); self-hosted Postgres stays plaintext
+  // unless DB_SSL is explicitly enabled.
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
 export async function migrate() {
