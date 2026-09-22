@@ -139,7 +139,7 @@ All case-document PDFs use one naming convention — **`<CaseType> <caseNo>-<YYY
 - **GIS** — `GET /cases/:id/gis-pdf` → `GIS KAPWA-2026-00008-2026-09-09.pdf`
 - **CSR (Case Study Report)** — `GET /cases/:id/csr-pdf` and `GET /cases/csr/:controlNo/pdf` (admin/social-worker/coordinator) → `CSR …`. The export is a **merged PDF bundle**: cover page + Petty Cash Voucher + Certificate of Eligibility + IRF (when the case has one) + GIS.
 - **COE / PCV** — issued manually by an admin from the case view (`POST /cases/:id/issue-coe`, `POST /cases/:id/issue-pcv`) once the case is active; not generated automatically at approval.
-- **IRF** — `GET /irf/:id/export-pdf` → `IRF <blotter>-…`
+- **IRF** — `POST /irf/:id/export-pdf` (password in the JSON body, never the URL) → `IRF <blotter>-…`
 - **Access card** — `ACCESS CARD <code>-…`
 - **Cases bulk CSV** — `POST /cases/bulk-export` (masked by default; unmasked requires a justification + audit).
 

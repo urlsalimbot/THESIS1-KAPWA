@@ -11,7 +11,11 @@ export class CsrfGuard implements CanActivate {
     const cookieToken = req.cookies?.['csrf-token'];
     const headerToken = req.headers['x-csrf-token'];
 
-    // Set cookie on every request if missing
+    // Set cookie on every request if missing.
+    // httpOnly is intentionally false: this is the double-submit CSRF pattern,
+    // so the SPA must read the token and echo it in X-CSRF-Token. It is not a
+    // session cookie. sameSite=lax + secure-in-prod limit exposure. Scanners
+    // flag "Cookie No HttpOnly" here; it is expected.
     if (!cookieToken) {
       res.cookie('csrf-token', crypto.randomBytes(32).toString('hex'), {
         sameSite: 'lax',

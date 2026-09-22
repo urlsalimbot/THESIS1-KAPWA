@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException, Res, StreamableFile } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Res, StreamableFile, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import * as fs from 'fs';
@@ -48,7 +48,7 @@ export class AnnouncementsPublicController {
 
   @Get('photo/:id')
   @ApiOperation({ summary: 'Stream an announcement photo (public, category-gated)' })
-  async photo(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+  async photo(@Param('id', new ParseUUIDPipe()) id: string, @Res({ passthrough: true }) res: Response) {
     const doc = await this.filingService.findOneByCategory(id, 'announcement_photo');
     const filePath = path.resolve(process.cwd(), 'uploads', doc.fileName);
     if (!fs.existsSync(filePath)) throw new NotFoundException('File not found on disk');

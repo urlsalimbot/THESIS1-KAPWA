@@ -362,8 +362,15 @@ export function publicAnnouncementPhotoUrl(photoId: string): string {
 export async function exportIrfPdf(id: string, legalBasis: string, password: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(
-    `${API_BASE}/irf/${id}/export-pdf?legalBasis=${encodeURIComponent(legalBasis)}&password=${encodeURIComponent(password)}`,
-    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+    `${API_BASE}/irf/${id}/export-pdf`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ legalBasis, password }),
+    },
   );
   if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
   const blob = await res.blob();

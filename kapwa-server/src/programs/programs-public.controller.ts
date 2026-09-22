@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ProgramsService } from './programs.service';
 
@@ -27,7 +27,7 @@ export class ProgramsPublicController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get an active program by id (public)' })
-  async byId(@Param('id') id: string) {
+  async byId(@Param('id', new ParseUUIDPipe()) id: string) {
     const p = await this.svc.findById(id);
     if (!p.isActive) throw new NotFoundException('Program not found');
     return {

@@ -276,12 +276,14 @@ describe('download helpers', () => {
     await expect(getFilingObjectUrl('f2')).resolves.toBe('blob:mock');
   });
 
-  it('exportIrfPdf encodes query params and clicks the anchor', async () => {
+  it('exportIrfPdf sends the password in the POST body, not the URL', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonRes({}));
     vi.stubGlobal('fetch', fetchMock);
     await exportIrfPdf('i1', 'RA 7160', 'pw');
-    expect(String(fetchMock.mock.calls[0][0])).toContain('legalBasis=RA%207160');
-    expect(String(fetchMock.mock.calls[0][0])).toContain('password=pw');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).not.toContain('password=');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ legalBasis: 'RA 7160', password: 'pw' });
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
   });
 

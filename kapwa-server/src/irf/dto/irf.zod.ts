@@ -25,6 +25,13 @@ export const DecryptNarrationSchema = z.object({
   legalBasis: z.string().min(1, 'Legal basis code is required'),
 });
 
+// Password travels in the body, never the query string (kept out of logs,
+// history and referrers).
+export const ExportIrfPdfSchema = z.object({
+  legalBasis: z.string().min(1, 'Legal basis code is required'),
+  password: z.string().optional(),
+});
+
 export const OverrideDispositionSchema = z.object({
   targetDisposition: z.nativeEnum(IrfDisposition),
   reason: z.string().min(1, 'Override reason is required'),

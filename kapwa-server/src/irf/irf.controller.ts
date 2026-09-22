@@ -15,6 +15,7 @@ import {
   DismissIrfSchema,
   DecryptNarrationSchema,
   OverrideDispositionSchema,
+  ExportIrfPdfSchema,
   CreateIrfInput,
   DismissIrfInput,
   DecryptNarrationInput,
@@ -162,17 +163,16 @@ export class IrfController {
     return this.irfService.exportWcpd(id, legalBasis);
   }
 
-  @Get(':id/export-pdf')
+  @Post(':id/export-pdf')
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Export IRF as password-protected PDF' })
+  @ApiOperation({ summary: 'Export IRF as password-protected PDF (password in body, not URL)' })
   async exportPdf(
     @Param('id') id: string,
-    @Query('legalBasis') legalBasis: string,
-    @Query('password') password: string,
+    @Body(new ZodPipe(ExportIrfPdfSchema)) body: { legalBasis: string; password?: string },
     @Request() req: AuthenticatedRequest,
     @Res() res: Response,
   ) {
-    const pdf = await this.irfExportService.exportPdf(id, legalBasis, password || 'default', req.user?.id || 'system');
+    const pdf = await this.irfExportService.exportPdf(id, body.legalBasis, body.password || 'default', req.user?.id || 'system');
     const controlNo = await this.irfExportService.controlNo(id);
 
     res.set({
