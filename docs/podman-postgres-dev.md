@@ -106,3 +106,41 @@ podman rm -f kapwa-db      # remove a manually-created container
   `migrate.ts` bootstrap (at API boot) → TypeORM migrations (`migrations/`).
 - To test a truly fresh database, wipe the podman volume first:
   `podman-compose down -v && podman-compose up -d db`.
+
+## Full test stack with MailHog
+
+`kapwa-server/docker-compose.mailhog.yml` is a test override that adds
+[MailHog](https://github.com/mailhog/MailHog) and points the API's
+transactional email at it, so verification / password-reset / OTP messages can
+be inspected without a real SMTP relay. It is merged on top of the production
+compose file:
+
+```bash
+cd kapwa-server
+podman-compose -f docker-compose.yml -f docker-compose.mailhog.yml up -d --build
+```
+
+Endpoints once the stack is healthy:
+
+| Service | URL |
+|---|---|
+| App (Caddy → client, `/api/*` → API) | http://localhost:8090 |
+| MailHog inbox | http://localhost:8025 |
+| MailHog SMTP (from host) | localhost:1025 |
+| MinIO console | port `9001` (mapped inside the stack; front with Caddy or add a port) |
+
+The override sets `EMAIL_HOST=mailhog`, `EMAIL_PORT=1025`,
+`EMAIL_USER=mailhog`, `EMAIL_PASS=mailhog`, a test `EMAIL_FROM`, and
+`APP_URL=http://localhost:8090` on the `api` service. Compose `environment`
+takes precedence over `env_file`, so the production credentials in
+`infra/.env.production` are left untouched.
+
+Note: the API only creates an SMTP transporter when **both** `EMAIL_HOST` and
+`EMAIL_USER` are set; MailHog accepts any username/password, which is why a
+dummy `EMAIL_USER` is supplied.
+
+Teardown, including the fresh test database:
+
+```bash
+podman-compose -f docker-compose.yml -f docker-compose.mailhog.yml down -v
+```

@@ -1,0 +1,28 @@
+# Test override — adds MailHog and points the API's transactional email at it.
+#
+# Usage from kapwa-server/:
+#   podman-compose -f docker-compose.yml -f docker-compose.mailhog.yml up -d --build
+#
+#   MailHog UI : http://localhost:8025
+#   SMTP       : mailhog:1025 (in-network) / localhost:1025 (host)
+#   Stack entry: http://localhost:8090  (Caddy → client, /api/* → api)
+#
+# `environment` overrides win over the base service's env_file, so the
+# production SMTP credentials in infra/.env.production are not used here.
+services:
+  mailhog:
+    image: docker.io/mailhog/mailhog:latest
+    container_name: kapwa-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  api:
+    environment:
+      EMAIL_HOST: mailhog
+      EMAIL_PORT: "1025"
+      EMAIL_USER: mailhog
+      EMAIL_PASS: mailhog
+      EMAIL_FROM: "KAPWA MSWDO <noreply@mswdo.test>"
+      APP_URL: "http://localhost:8090"
