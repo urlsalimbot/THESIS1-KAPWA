@@ -24,6 +24,13 @@ export const RevokeConsentSchema = z.object({
   reason: z.string().optional(),
 });
 
+// Grants (or reinstates) consent. The ledger is append-only: a grant adds a
+// new active row rather than flipping the revoked one back.
+export const GrantConsentSchema = z.object({
+  purpose: z.string().max(60).optional(),
+  channel: z.string().max(40).optional(),
+});
+
 export const NhtsPrSchema = z.object({
   nhtsPrId: z.string().max(50).nullable().optional(),
 });

@@ -13,6 +13,7 @@ import { ConsentLedger } from './consent-ledger.entity';
 import { HouseholdMembership } from './household-membership.entity';
 import { Household } from './household.entity';
 import { Case } from '../cases/case.entity';
+import { User } from '../auth/user.entity';
 const FAMILY_MEMBER_LIMIT = 50;
 @Injectable()
 export class BeneficiariesService {
@@ -31,8 +32,23 @@ export class BeneficiariesService {
     private hmRepo: Repository<HouseholdMembership>,
     @InjectRepository(Case)
     private caseRepo: Repository<Case>,
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
     @Optional() private auditLog?: AuditLogService,
   ) {}
+
+  // Resolves the beneficiary a claimant owns. Prefers the stamped
+  // beneficiaries.user_id; falls back to the beneficiary_claimants person link
+  // so a claimant representing a 2nd beneficiary still resolves.
+  private async resolveMyBeneficiary(userId: string): Promise<Beneficiary | null> {
+    const direct = await this.benRepo.findOne({ where: { userId }, order: { createdAt: 'ASC' } });
+    if (direct) return direct;
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user?.personId) return null;
+    const link = await this.bcRepo.findOne({ where: { claimantId: user.personId }, order: { createdAt: 'ASC' } });
+    if (!link) return null;
+    return this.benRepo.findOne({ where: { id: link.beneficiaryId } });
+  }
 
   async createBeneficiary(
     data: {
@@ -183,7 +199,7 @@ export class BeneficiariesService {
   }
 
   async findByUserId(userId: string) {
-    return this.benRepo.findOne({ where: { userId }, relations: ['person'] });
+    return this.resolveMyBeneficiary(userId);
   }
 
   async findById(id: string) {
@@ -314,7 +330,7 @@ export class BeneficiariesService {
   }
 
   async getMyServices(userId: string) {
-    const ben = await this.benRepo.findOne({ where: { userId } });
+    const ben = await this.resolveMyBeneficiary(userId);
     if (!ben) return { services: [], caseStatus: 'No active case', case: null };
     const cases = await this.caseRepo.find({
       where: { beneficiaryId: ben.id },
@@ -358,14 +374,76 @@ export class BeneficiariesService {
   }
 
   async getMyConsent(userId: string) {
-    const ben = await this.benRepo.findOne({ where: { userId } });
+    const ben = await this.resolveMyBeneficiary(userId);
     if (!ben) return [];
     return this.consentRepo.find({ where: { beneficiaryId: ben.id }, order: { grantedAt: 'DESC' } });
   }
 
+  // Staff view: consent history for a specific beneficiary.
+  async getConsentHistory(beneficiaryId: string) {
+    return this.consentRepo.find({ where: { beneficiaryId }, order: { grantedAt: 'DESC' } });
+  }
+
+  // Grants (or reinstates) consent: appends a new active ledger row so the
+  // revoke/grant trail stays append-only.
+  async grantConsent(beneficiaryId: string, body: { purpose?: string; channel?: string }) {
+    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id', 'personId'] });
+    if (!ben) throw new NotFoundException('Beneficiary not found');
+    const record = await this.consentRepo.save(
+      this.consentRepo.create({
+        beneficiaryId,
+        purpose: body.purpose || 'data_processing',
+        channel: body.channel || 'in_person',
+        status: 'active',
+        grantedAt: new Date(),
+      }),
+    );
+    if (ben.personId) {
+      await this.roleRepo.update({ personId: ben.personId }, { consentStatus: 'active' });
+    }
+    return record;
+  }
+
+  async grantMyConsent(userId: string, body: { purpose?: string; channel?: string }) {
+    const ben = await this.resolveMyBeneficiary(userId);
+    if (!ben) throw new NotFoundException('No beneficiary linked to this account');
+    return this.grantConsent(ben.id, body);
+  }
+
+  // Disbursement records for the claimant: interventions with an amount plus
+  // access-card payout entries, each with a receipt reference when available.
+  async getMyDisbursements(userId: string) {
+    const ben = await this.resolveMyBeneficiary(userId);
+    if (!ben) return { disbursements: [], total: 0 };
+    const rows = await this.caseRepo.manager.query(
+      `SELECT ci.id, ci.service_name AS "serviceName", ci.delivery_date AS "date",
+              ci.amount, ci.fund_source AS "fundSource", c.control_no AS "controlNo"
+         FROM case_interventions ci
+         JOIN cases c ON c.id::text = ci.case_id
+        WHERE c.beneficiary_id = $1::uuid AND ci.amount IS NOT NULL AND ci.amount > 0
+        ORDER BY ci.delivery_date DESC NULLS LAST`,
+      [ben.id],
+    );
+    const disbursements = rows.map((r: any) => ({
+      id: r.id,
+      controlNo: r.controlNo,
+      serviceName: r.serviceName,
+      date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+      amount: Number(r.amount) || 0,
+      fundSource: r.fundSource || null,
+      receiptUrl: null,
+    }));
+    const total = disbursements.reduce((sum: number, d: any) => sum + d.amount, 0);
+    return { disbursements, total };
+  }
+
   async getAccessCard(userId: string) {
-    const ben = await this.benRepo.findOne({ where: { userId }, relations: ['person', 'household'] });
-    if (!ben || !ben.household?.accessCardCode) {
+    const ben = await this.resolveMyBeneficiary(userId);
+    if (!ben) throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
+    const withHousehold = await this.benRepo.findOne({ where: { id: ben.id }, relations: ['person', 'household'] });
+    const resolved = withHousehold || ben;
+    const household = (resolved as any).household;
+    if (!household?.accessCardCode) {
       throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
     }
     // The card is the household's accounting ledger — surface its entries so
@@ -375,7 +453,7 @@ export class BeneficiariesService {
        FROM access_card_services
        WHERE access_card_code = $1
        ORDER BY service_date DESC`,
-      [ben.household.accessCardCode],
+      [household.accessCardCode],
     );
     const services = rows.map((r: any) => ({
       serviceRendered: r.service_rendered,
@@ -383,11 +461,12 @@ export class BeneficiariesService {
       cost: r.cost != null ? Number(r.cost) : null,
       category: r.category,
     }));
+    const person = (resolved as any).person;
     return {
-      code: ben.household.accessCardCode,
+      code: household.accessCardCode,
       beneficiary: {
-        name: [ben.person?.firstName, ben.person?.surname].filter(Boolean).join(' '),
-        barangay: ben.household?.barangay || (ben.person?.address || '').split(',').pop()?.trim() || '',
+        name: [person?.firstName, person?.surname].filter(Boolean).join(' '),
+        barangay: household?.barangay || (person?.address || '').split(',').pop()?.trim() || '',
       },
       services,
       remainingSlots: Math.max(0, 18 - services.length),

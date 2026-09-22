@@ -10,6 +10,7 @@ import { Beneficiary } from '../src/beneficiaries/beneficiary.entity';
 import { BeneficiaryRole } from '../src/beneficiaries/beneficiary-role.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
 import { Case } from '../src/cases/case.entity';
+import { User } from '../src/auth/user.entity';
 
 describe('BeneficiariesService — Family Graph', () => {
   let service: BeneficiariesService;
@@ -67,6 +68,7 @@ describe('BeneficiariesService — Family Graph', () => {
         },
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(Case), useValue: { find: jest.fn().mockResolvedValue([]) } },
+        { provide: getRepositoryToken(User), useValue: { findOne: jest.fn(), query: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 

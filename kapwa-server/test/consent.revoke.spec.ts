@@ -10,6 +10,7 @@ import { BeneficiaryClaimant } from '../src/beneficiaries/beneficiary-claimant.e
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
 import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
 import { Case } from '../src/cases/case.entity';
+import { User } from '../src/auth/user.entity';
 
 describe('BeneficiariesService — Consent Revoke', () => {
   let service: BeneficiariesService;
@@ -51,6 +52,7 @@ describe('BeneficiariesService — Consent Revoke', () => {
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(HouseholdMembership), useValue: { find: jest.fn(), query: jest.fn() } },
         { provide: getRepositoryToken(Case), useValue: { find: jest.fn().mockResolvedValue([]) } },
+        { provide: getRepositoryToken(User), useValue: { findOne: jest.fn(), query: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 

@@ -8,6 +8,7 @@ import { BeneficiaryRole } from '../src/beneficiaries/beneficiary-role.entity';
 import { ConsentLedger } from '../src/beneficiaries/consent-ledger.entity';
 import { HouseholdMembership } from '../src/beneficiaries/household-membership.entity';
 import { Case } from '../src/cases/case.entity';
+import { User } from '../src/auth/user.entity';
 
 function createMockQb() {
   return {
@@ -42,6 +43,7 @@ describe('BeneficiariesService — Trigram + BM25 Search', () => {
         { provide: getRepositoryToken(ConsentLedger), useValue: { find: jest.fn(), findOne: jest.fn() } },
         { provide: getRepositoryToken(HouseholdMembership), useValue: { find: jest.fn(), query: jest.fn() } },
         { provide: getRepositoryToken(Case), useValue: { find: jest.fn() } },
+        { provide: getRepositoryToken(User), useValue: { findOne: jest.fn(), query: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 

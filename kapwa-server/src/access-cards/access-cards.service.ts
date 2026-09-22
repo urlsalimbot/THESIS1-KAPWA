@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { buildAccessCardPdf } from './access-card-pdf.builder';
@@ -96,7 +96,56 @@ export class AccessCardsService {
     return this.generateAndAssign(beneficiaryId);
   }
 
-  async getSummary(beneficiaryId: string) {
+  // Claimant/agency ownership gate for the raw card + ledger endpoints.
+  // Staff (admin/social_worker/coordinator) keep their existing scope.
+  private async assertCardAccess(caller: User | undefined, opts: { beneficiaryId?: string; cardCode?: string }) {
+    if (!caller) throw new ForbiddenException('Not authenticated');
+    if (['admin', 'social_worker', 'coordinator'].includes(caller.role)) return;
+
+    const lookup = opts.beneficiaryId ? 'b.id = $1::uuid' : 'COALESCE(h.access_card_code, br.access_card_code) = $1';
+    const rows = await this.repo.query(
+      `SELECT b.id AS beneficiary_id, b.user_id, b.person_id
+         FROM beneficiaries b
+         LEFT JOIN households h ON h.id = b.household_id
+         LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
+        WHERE ${lookup}
+        LIMIT 1`,
+      [opts.beneficiaryId ?? opts.cardCode],
+    );
+    const ben = rows?.[0];
+    if (!ben) throw new NotFoundException('Access card not found');
+
+    if (caller.role === 'claimant') {
+      if (ben.user_id === caller.id) return;
+      // Fallback: a claimant may represent a 2nd beneficiary without holding
+      // beneficiaries.user_id — accept an explicit beneficiary_claimants link.
+      if (caller.personId) {
+        const link = await this.repo.query(
+          `SELECT 1 FROM beneficiary_claimants WHERE beneficiary_id = $1::uuid AND claimant_id = $2::uuid LIMIT 1`,
+          [ben.beneficiary_id, caller.personId],
+        );
+        if (link?.[0]) return;
+      }
+      throw new ForbiddenException('You can only view your own access card');
+    }
+
+    if (caller.role === 'agency_staff') {
+      if (!caller.agencyId) throw new ForbiddenException('Agency not set for this account');
+      const ref = await this.repo.query(
+        `SELECT 1 FROM inter_agency_referrals r
+          WHERE r.beneficiary_id = $1::uuid AND (r.from_agency_id = $2::uuid OR r.to_agency_id = $2::uuid)
+          LIMIT 1`,
+        [ben.beneficiary_id, caller.agencyId],
+      );
+      if (ref?.[0]) return;
+      throw new ForbiddenException('No referral links your agency to this card');
+    }
+
+    throw new ForbiddenException('Not allowed');
+  }
+
+  async getSummary(beneficiaryId: string, caller?: User) {
+    await this.assertCardAccess(caller, { beneficiaryId });
     const ben = await this.repo.query(
       'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
@@ -114,7 +163,8 @@ export class AccessCardsService {
     return { cardCode: code, total: services.length, byCategory };
   }
 
-  async findBeneficiaryCard(beneficiaryId: string) {
+  async findBeneficiaryCard(beneficiaryId: string, caller?: User) {
+    await this.assertCardAccess(caller, { beneficiaryId });
     const ben = await this.repo.query(
       'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE b.id = $1',
       [beneficiaryId]
@@ -248,7 +298,8 @@ export class AccessCardsService {
     await this.repo.save(entry);
   }
 
-  async findByCard(cardCode: string) {
+  async findByCard(cardCode: string, caller?: User) {
+    await this.assertCardAccess(caller, { cardCode });
     return this.repo.find({ where: { accessCardCode: cardCode }, order: { serviceDate: 'DESC' } });
   }
 

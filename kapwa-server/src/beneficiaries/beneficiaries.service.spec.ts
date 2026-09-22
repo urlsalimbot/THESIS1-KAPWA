@@ -10,6 +10,7 @@ import { ConsentLedger } from './consent-ledger.entity';
 import { Household } from './household.entity';
 import { HouseholdMembership } from './household-membership.entity';
 import { Case } from '../cases/case.entity';
+import { User } from '../auth/user.entity';
 
 describe('BeneficiariesService', () => {
   let service: BeneficiariesService;
@@ -31,6 +32,7 @@ describe('BeneficiariesService', () => {
         { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
         { provide: getRepositoryToken(HouseholdMembership), useValue: { query: jest.fn() } },
         { provide: getRepositoryToken(Case), useValue: { find: jest.fn(), findOne: jest.fn() } },
+        { provide: getRepositoryToken(User), useValue: { findOne: jest.fn(), query: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
     service = module.get<BeneficiariesService>(BeneficiariesService);

@@ -73,6 +73,22 @@ export class AbacGuard implements CanActivate {
     // Client/claimant scoping
     if (user.role === 'claimant') {
       if (resourceSensitivity !== 'public') return false;
+      // Consent-ledger ABAC for the self-scoped /me/* surface (the param-based
+      // branch above only covers /beneficiaries/:id routes).
+      if (/\/me(\/|$)/.test(routePath) || /\/dashboard$/.test(routePath)) {
+        const rows = await this.consentRepo.query(
+          `SELECT cl.status
+             FROM consent_ledger cl
+             JOIN beneficiaries b ON b.id = cl.beneficiary_id
+            WHERE b.user_id = $1::uuid
+            ORDER BY cl.granted_at DESC
+            LIMIT 1`,
+          [user.id],
+        );
+        if (rows?.[0] && rows[0].status !== 'active') {
+          throw new ForbiddenException('Beneficiary consent has been revoked');
+        }
+      }
       return true;
     }
 

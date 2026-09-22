@@ -31,15 +31,15 @@ export class AccessCardsController {
   @Get('beneficiary/:id/card/summary')
   @Roles('admin', 'social_worker', 'claimant', 'coordinator')
   @ApiOperation({ summary: 'Get access card summary counts' })
-  async getSummary(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.svc.getSummary(id);
+  async getSummary(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.getSummary(id, req.user);
   }
 
   @Get('beneficiary/:id/card')
   @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Get beneficiary card details' })
-  async findBeneficiaryCard(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.svc.findBeneficiaryCard(id);
+  async findBeneficiaryCard(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.findBeneficiaryCard(id, req.user);
   }
 
   @Get('beneficiary/:id/access-card-pdf')
@@ -81,8 +81,8 @@ export class AccessCardsController {
   @Get(':cardCode')
   @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Get services by card code' })
-  async findByCard(@Param('cardCode') cardCode: string) {
-    return this.svc.findByCard(cardCode);
+  async findByCard(@Param('cardCode') cardCode: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.findByCard(cardCode, req.user);
   }
 
   @Get()

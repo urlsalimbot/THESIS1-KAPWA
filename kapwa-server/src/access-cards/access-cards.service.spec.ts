@@ -100,7 +100,7 @@ describe('AccessCardsService', () => {
       repoMock.query.mockResolvedValue([benData]);
       repoMock.find.mockResolvedValue([]);
 
-      const result = await service.findBeneficiaryCard('ben-id');
+      const result = await service.findBeneficiaryCard('ben-id', { role: 'admin' } as any);
 
       expect(result).toEqual({
         beneficiary: benData,
@@ -116,7 +116,7 @@ describe('AccessCardsService', () => {
     it('throws NotFoundException when beneficiary has no card', async () => {
       repoMock.query.mockResolvedValue([{ id: 'ben-id', access_card_code: null }]);
 
-      await expect(service.findBeneficiaryCard('ben-id')).rejects.toThrow('Beneficiary has no Access Card');
+      await expect(service.findBeneficiaryCard('ben-id', { role: 'admin' } as any)).rejects.toThrow('Beneficiary has no Access Card');
     });
   });
 
@@ -137,7 +137,7 @@ describe('AccessCardsService', () => {
     it('returns services for a card code ordered by date desc', async () => {
       const services = [{ id: '1', accessCardCode: 'NORZ-AC-2026-0042', serviceDate: new Date() }];
       repoMock.find.mockResolvedValue(services);
-      const result = await service.findByCard('NORZ-AC-2026-0042');
+      const result = await service.findByCard('NORZ-AC-2026-0042', { role: 'admin' } as any);
       expect(repoMock.find).toHaveBeenCalledWith({
         where: { accessCardCode: 'NORZ-AC-2026-0042' },
         order: { serviceDate: 'DESC' },
@@ -448,5 +448,46 @@ describe('AccessCardsService.generateAccessCardPdf', () => {
     ]);
     const pdf = await service.generateAccessCardPdf('b1');
     expect(pdf.toString('latin1')).toContain('%PDF');
+  });
+
+  describe('claimant card ownership', () => {
+    it('blocks a claimant from reading another beneficiary card', async () => {
+      repoMock.query.mockResolvedValueOnce([
+        { beneficiary_id: 'b1', user_id: 'someone-else', person_id: 'p-other' },
+      ]);
+      await expect(
+        service.findBeneficiaryCard('b1', { id: 'me', role: 'claimant' } as any),
+      ).rejects.toThrow('own access card');
+    });
+
+    it('allows a claimant to read their own card', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: 'me', person_id: 'p1' }])
+        .mockResolvedValueOnce([{ id: 'b1', access_card_code: 'NORZ-AC-2026-0001', surname: 'X', first_name: 'Y' }]);
+      repoMock.find.mockResolvedValueOnce([]);
+      await expect(
+        service.findBeneficiaryCard('b1', { id: 'me', role: 'claimant' } as any),
+      ).resolves.toMatchObject({ code: 'NORZ-AC-2026-0001' });
+    });
+
+    it('allows a claimant with a beneficiary_claimants link but no user_id stamp', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([{ beneficiary_id: 'b2', user_id: null, person_id: 'p-ben' }])
+        .mockResolvedValueOnce([{ '?column?': 1 }])
+        .mockResolvedValueOnce([{ id: 'b2', access_card_code: 'NORZ-AC-2026-0002', surname: 'X', first_name: 'Y' }]);
+      repoMock.find.mockResolvedValueOnce([]);
+      await expect(
+        service.findBeneficiaryCard('b2', { id: 'me', role: 'claimant', personId: 'p-claim' } as any),
+      ).resolves.toMatchObject({ code: 'NORZ-AC-2026-0002' });
+    });
+
+    it('blocks agency_staff when no referral links their agency', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }])
+        .mockResolvedValueOnce([]);
+      await expect(
+        service.findByCard('NORZ-AC-2026-0001', { id: 'a', role: 'agency_staff', agencyId: 'ag-9' } as any),
+      ).rejects.toThrow('No referral links');
+    });
   });
 });

@@ -10,7 +10,7 @@ import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { AuthenticatedRequest } from '../auth/types';
-import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema, NhtsPrSchema, NhtsPrInput } from './dto/beneficiaries.zod';
+import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema, GrantConsentSchema, NhtsPrSchema, NhtsPrInput } from './dto/beneficiaries.zod';
 
 @Controller('beneficiaries')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
@@ -62,6 +62,20 @@ export class BeneficiariesController {
     return this.benService.getMyConsent(req.user?.id || req.user.id);
   }
 
+  @Post('me/consent/grant')
+  @Roles('claimant')
+  @Sensitivity('public')
+  async grantMyConsent(@Request() req: AuthenticatedRequest, @Body(new ZodPipe(GrantConsentSchema)) body: { purpose?: string; channel?: string }) {
+    return this.benService.grantMyConsent(req.user?.id || req.user.id, body);
+  }
+
+  @Get('me/disbursements')
+  @Roles('claimant')
+  @Sensitivity('public')
+  async getMyDisbursements(@Request() req: AuthenticatedRequest) {
+    return this.benService.getMyDisbursements(req.user?.id || req.user.id);
+  }
+
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   async findOne(@Param('id') id: string) {
@@ -79,7 +93,16 @@ export class BeneficiariesController {
   @Get(':id/consent')
   @Roles('admin', 'social_worker')
   async getConsentHistory(@Param('id') id: string) {
-    return this.benService.getMyConsent(id);
+    return this.benService.getConsentHistory(id);
+  }
+
+  @Post(':id/consent/grant')
+  @Roles('admin', 'social_worker')
+  async grantConsent(
+    @Param('id') id: string,
+    @Body(new ZodPipe(GrantConsentSchema)) body: { purpose?: string; channel?: string },
+  ) {
+    return this.benService.grantConsent(id, body);
   }
 
   @Post(':id/consent/revoke')

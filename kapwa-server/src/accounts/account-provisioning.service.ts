@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { User, UserRole } from '../auth/user.entity';
 import { UserToken } from '../auth/user-token.entity';
 import { Person } from '../beneficiaries/person.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { EmailService } from '../email/email.service';
 import { SmsGatewayService } from '../otp/sms-gateway.service';
@@ -47,6 +48,7 @@ export class AccountProvisioningService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(UserToken) private tokenRepo: Repository<UserToken>,
     @InjectRepository(Person) private personRepo: Repository<Person>,
+    @InjectRepository(Beneficiary) private beneficiaryRepo: Repository<Beneficiary>,
     @InjectRepository(BeneficiaryClaimant) private claimantRepo: Repository<BeneficiaryClaimant>,
     private emailService: EmailService,
     private smsGateway: SmsGatewayService,
@@ -70,6 +72,7 @@ export class AccountProvisioningService {
         existing.personId = input.claimantPersonId;
         await this.userRepo.save(existing);
       }
+      await this.linkBeneficiary(input.beneficiaryId, existing.id);
       const delivered = await this.deliverEnrollment(existing, input);
       await this.auditLog?.log('claimant.enrollment_notified', input.beneficiaryId, input.actorId, {
         userId: existing.id,
@@ -99,6 +102,8 @@ export class AccountProvisioningService {
       emailVerified: true,
     });
     const saved = await this.userRepo.save(user);
+
+    await this.linkBeneficiary(input.beneficiaryId, saved.id);
 
     const delivered = await this.deliverSetupLink({
       userId: saved.id,
@@ -200,8 +205,17 @@ export class AccountProvisioningService {
     return { emailDelivered, smsDelivered };
   }
 
-  private async findExistingUser(email?: string, phone?: string): Promise<User | null> {
-    if (email) {
+  // beneficiaries.user_id is how the claimant /me/* lookups resolve their
+  // record. Stamp only the first beneficiary a claimant is linked to, so a
+  // claimant representing a 2nd beneficiary does not hijack the lookup; the
+  // resolver in BeneficiariesService falls back to beneficiary_claimants.
+  private async linkBeneficiary(beneficiaryId: string, userId: string): Promise<void> {
+    const already = await this.beneficiaryRepo.findOne({ where: { userId } });
+    if (already) return;
+    await this.beneficiaryRepo.update({ id: beneficiaryId }, { userId });
+  }
+
+  private async findExistingUser(email?: string, phone?: string): Promise<User | null> {    if (email) {
       const byEmail = await this.userRepo.findOne({ where: { email } });
       if (byEmail) return byEmail;
     }

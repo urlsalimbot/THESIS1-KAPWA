@@ -45,7 +45,7 @@ export class FilingController {
     if (caseId && requirementKey !== undefined) {
       return this.filingService.findByCaseAndRequirement(caseId, requirementKey || undefined, req.user?.role);
     }
-    return this.filingService.findAll(caseId, beneficiaryId, req.user?.role);
+    return this.filingService.findAll(caseId, beneficiaryId, req.user?.role, req.user?.role === 'claimant' ? req.user?.id : undefined);
   }
 
   @Get('irf/:irfId/photos')

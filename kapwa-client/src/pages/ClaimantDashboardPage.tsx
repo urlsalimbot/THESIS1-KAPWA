@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useSWR from 'swr';
+import { useSWRConfig } from 'swr';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -57,7 +58,46 @@ export function ClaimantDashboardPage() {
   );
   const { data: consents = [] } = useSWR<ConsentRecord[]>(queryKeys.beneficiaries.myConsent());
   const { data: prefs } = useSWR<NotificationPreference[]>('/notifications/preferences');
+  const { data: disbData } = useSWR<{ disbursements: any[]; total: number }>('/beneficiaries/me/disbursements');
+  const caseId = servicesData?.case?.id;
+  const { data: myDocs = [], mutate: mutateDocs } = useSWR<any[]>(caseId ? `/filing?caseId=${caseId}` : null);
+  const { mutate: globalMutate } = useSWRConfig();
+  const [uploading, setUploading] = useState(false);
+  const [granting, setGranting] = useState(false);
   const loading = !servicesData && !consents.length;
+
+  async function uploadDoc(file: File) {
+    if (!caseId) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('caseId', caseId);
+      fd.append('category', 'claimant_upload');
+      fd.append('notes', 'Uploaded by claimant');
+      fd.append('file', file);
+      const token = localStorage.getItem('kapwa_token');
+      const base = (import.meta as any).env?.VITE_API_URL || '/api/v1';
+      const res = await fetch(`${base}/filing/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      await mutateDocs();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function grantConsent() {
+    setGranting(true);
+    try {
+      await api.post('/beneficiaries/me/consent/grant', {});
+      await globalMutate(queryKeys.beneficiaries.myConsent());
+    } finally {
+      setGranting(false);
+    }
+  }
 
   const services = servicesData?.services || [];
   const myCase = servicesData?.case || null;
@@ -223,7 +263,63 @@ export function ClaimantDashboardPage() {
         )}
       </Card>
 
-      {/* Consent Hub */}
+      {/* Disbursements */}
+      <Card>
+        <div className="border-b px-4 py-3 flex items-center justify-between">
+          <h2 className="font-semibold text-sm text-primary">{t('claims.disbursements', 'Disbursements')}</h2>
+          {(disbData?.total ?? 0) > 0 && <span className="text-sm font-semibold">₱{(disbData!.total).toLocaleString()}</span>}
+        </div>
+        {(disbData?.disbursements?.length ?? 0) === 0 ? (
+          <CardContent>
+            <p className="text-center py-8 text-sm text-muted-foreground">{t('claims.noDisbursements', 'No disbursements recorded yet.')}</p>
+          </CardContent>
+        ) : (
+          <div className="divide-y">
+            {disbData!.disbursements.map((d: any) => (
+              <div key={d.id} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">{d.serviceName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {d.controlNo}{d.date ? ` · ${new Date(d.date).toLocaleDateString()}` : ''}{d.fundSource ? ` · ${d.fundSource}` : ''}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold">₱{Number(d.amount).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Documents */}
+      <Card>
+        <div className="border-b px-4 py-3">
+          <h2 className="font-semibold text-sm text-primary">{t('claims.myDocuments', 'My Documents')}</h2>
+        </div>
+        <CardContent className="p-4 space-y-3">
+          <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed px-4 py-6 text-sm text-muted-foreground hover:bg-muted">
+            {uploading ? t('common.uploading', 'Uploading…') : t('claims.uploadPrompt', 'Click to upload a document (ID, certificate, receipt)')}
+            <input
+              type="file"
+              className="sr-only"
+              disabled={uploading || !caseId}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDoc(f); e.target.value = ''; }}
+            />
+          </label>
+          {myDocs.length === 0 ? (
+            <p className="text-xs text-muted-foreground">{t('claims.noDocuments', 'No documents uploaded yet.')}</p>
+          ) : (
+            <ul className="divide-y text-sm">
+              {myDocs.map((d: any) => (
+                <li key={d.id} className="flex items-center justify-between py-2">
+                  <span className="truncate">{d.originalName || d.fileName}</span>
+                  <span className="text-xs text-muted-foreground">{d.category}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <div className="border-b px-4 py-3">
           <h3 className="font-semibold text-sm text-primary">{t('claims.consentManagement', 'Consent Management')}</h3>
@@ -245,7 +341,12 @@ export function ClaimantDashboardPage() {
             ))}
           </div>
         )}
-        <div className="border-t px-4 py-3">
+        <div className="border-t px-4 py-3 space-y-2">
+          {consents.length > 0 && consents[0].status !== 'active' && (
+            <Button size="sm" onClick={grantConsent} disabled={granting}>
+              {granting ? t('common.saving', 'Saving…') : t('claims.grantConsent', 'Grant consent again')}
+            </Button>
+          )}
           <p className="text-xs text-muted-foreground">{t('claims.dataPrivacyNotice', 'Your data is processed per RA 10173 (Data Privacy Act). You may revoke consent at any time.')}</p>
         </div>
       </Card>

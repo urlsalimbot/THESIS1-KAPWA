@@ -12,6 +12,7 @@ function build(overrides: any = {}) {
     save: jest.fn(async (x: any) => x),
   };
   const personRepo = { findOne: jest.fn().mockResolvedValue({ firstName: 'Pedro', middleName: 'P', surname: 'Reyes' }) };
+  const beneficiaryRepo = { findOne: jest.fn().mockResolvedValue(null), update: jest.fn().mockResolvedValue(undefined) };
   const claimantRepo = { findOne: jest.fn() };
   const emailService = {
     sendAccountSetupEmail: jest.fn().mockResolvedValue(true),
@@ -23,11 +24,11 @@ function build(overrides: any = {}) {
   const auditLog = { log: jest.fn().mockResolvedValue(undefined) };
 
   const svc = new AccountProvisioningService(
-    userRepo as any, tokenRepo as any, personRepo as any, claimantRepo as any,
+    userRepo as any, tokenRepo as any, personRepo as any, beneficiaryRepo as any, claimantRepo as any,
     emailService as any, smsGateway as any, notifications as any, auditLog as any,
   );
   Object.assign(userRepo, overrides.userRepo || {});
-  return { svc, userRepo, tokenRepo, personRepo, emailService, smsGateway, notifications, auditLog };
+  return { svc, userRepo, tokenRepo, personRepo, beneficiaryRepo, emailService, smsGateway, notifications, auditLog };
 }
 
 const input = {
@@ -107,8 +108,25 @@ describe('AccountProvisioningService', () => {
     expect(notifications.createMany).toHaveBeenCalled();
   });
 
-  it('issues a setup link for admin-provisioned accounts', async () => {
-    const { svc, tokenRepo, emailService, smsGateway } = build();
+  it('stamps beneficiaries.user_id so claimant /me lookups resolve', async () => {
+    const { svc, beneficiaryRepo } = build();
+
+    await svc.provision(input);
+
+    expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({ where: { userId: 'u-new' } });
+    expect(beneficiaryRepo.update).toHaveBeenCalledWith({ id: 'ben-1' }, { userId: 'u-new' });
+  });
+
+  it('does not overwrite an existing beneficiary stamp', async () => {
+    const { svc, beneficiaryRepo } = build({ userRepo: {} });
+    beneficiaryRepo.findOne.mockResolvedValue({ id: 'other-ben', userId: 'u-new' });
+
+    await svc.provision(input);
+
+    expect(beneficiaryRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('issues a setup link for admin-provisioned accounts', async () => {    const { svc, tokenRepo, emailService, smsGateway } = build();
 
     await svc.deliverAccountCredentials({ userId: 'u9', email: 'staff@test.com', phone: '09170000000', fullName: 'A B', role: 'social_worker' });
 

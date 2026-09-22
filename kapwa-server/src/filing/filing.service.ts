@@ -79,7 +79,7 @@ export class FilingService {
     return this.docRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async findAll(caseId?: string, beneficiaryId?: string, role?: string) {
+  async findAll(caseId?: string, beneficiaryId?: string, role?: string, claimantUserId?: string) {
     const where: FindOptionsWhere<DocumentVault> = {};
     if (caseId) where.caseId = caseId;
     if (beneficiaryId) where.beneficiaryId = beneficiaryId;
@@ -90,6 +90,32 @@ export class FilingService {
     }
     if (role === 'coordinator') {
       where.category = 'announcement_photo';
+    }
+    // Claimants may only list documents belonging to a beneficiary they own —
+    // a caller-supplied caseId/beneficiaryId must never widen that.
+    if (claimantUserId) {
+      const rows: Array<{ id: string }> = await this.docRepo.query(
+        `SELECT b.id FROM beneficiaries b WHERE b.user_id = $1::uuid
+         UNION
+         SELECT bc.beneficiary_id FROM beneficiary_claimants bc
+           JOIN users u ON u.person_id = bc.claimant_id
+          WHERE u.id = $1`,
+        [claimantUserId],
+      );
+      const allowed = rows.map((r) => r.id);
+      if (allowed.length === 0) return [];
+      if (caseId) {
+        const owns = await this.docRepo.query(
+          'SELECT 1 FROM cases WHERE id = $1::uuid AND beneficiary_id = ANY($2::uuid[]) LIMIT 1',
+          [caseId, allowed],
+        );
+        if (!owns?.[0]) return [];
+        delete (where as any).beneficiaryId;
+      } else if (beneficiaryId) {
+        if (!allowed.includes(beneficiaryId)) return [];
+      } else {
+        where.beneficiaryId = In(allowed);
+      }
     }
     return this.docRepo.find({ where, order: { createdAt: 'DESC' }, take: DEFAULT_DOC_LIMIT });
   }
