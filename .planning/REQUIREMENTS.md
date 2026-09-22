@@ -53,8 +53,8 @@
 
 ### Major Upgrades
 
-- [x] **UPG-01**: Upgrade React 18 → 19 (test mobile Capacitor builds after)
-- [x] **UPG-02**: Upgrade Capacitor 6 → 8 (test Android + iOS builds after)
+- [x] **UPG-01**: Upgrade React 18 → 19
+- [x] **UPG-02**: Superseded — native app builds are out of scope; browser PWA only
 - [x] **UPG-03**: Upgrade Tailwind CSS v3 → v4 (audit UI rendering after)
 
 ---
@@ -102,10 +102,10 @@
 ### User Roles & Access
 
 - [ ] **ROL-01**: 6 roles: MSWDO Social Worker, MSWDO Admin, Barangay Coordinator, Claimant, Mayor's Office, Auditor
-- [ ] **ROL-02**: Barangay Coordinator scoped to single barangay, SMS OTP auth + mobile PWA
+- [ ] **ROL-02**: Barangay Coordinator scoped to single barangay, optional MFA (email OTP or TOTP) + mobile PWA
 - [ ] **ROL-03**: Mayor's Office sees aggregate data only (no PII)
 - [ ] **ROL-04**: Auditor role — read-only audit logs, hash-chain verification, consent ledger
-- [ ] **ROL-05**: Beneficiary self-service dashboard (status tracker, service history, Access Card view, consent hub)
+- [ ] **ROL-05**: Claimant representation — beneficiaries are represented by a claimant (a beneficiary may also be their own claimant); claimants transact on the beneficiary's behalf: status tracker, service history, read-only Access Card view, required-document uploads, disbursement records/receipts, notifications, and consent handling (grant/revoke)
 
 ### Consent & Compliance
 
@@ -117,7 +117,7 @@
 
 ### Offline Sync
 
-- [ ] **SYNC-01**: SQLCipher local cache on mobile (AES-256 encrypted)
+- [ ] **SYNC-01**: Encrypted local cache in the browser PWA (AES-256)
 - [ ] **SYNC-02**: All core workflows function offline; delta sync on reconnect
 - [ ] **SYNC-03**: Conflict resolution rules: Financial/Amount → Server Wins, Notes → Chronological Append, Consent → Server Revocation Overrides, Unclear → Conflict Queue
 - [ ] **SYNC-04**: Idempotency key enforcement on sync endpoint
@@ -127,7 +127,7 @@
 - [ ] **INF-01**: MinIO (S3-compatible) for document vault (signatures, vouchers, IRF attachments)
 - [ ] **INF-02**: Caddy 2 reverse proxy with auto-TLS, rate limiting
 - [ ] **INF-03**: Podman deployment with backup cron
-- [ ] **INF-04**: Notifications (SMS via Twilio? + in-app) respecting consent preferences
+- [ ] **INF-04**: Notifications (in-app; SMS when an SMS provider is configured) respecting consent preferences
 
 ---
 

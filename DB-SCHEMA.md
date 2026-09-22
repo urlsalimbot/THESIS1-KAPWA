@@ -136,8 +136,10 @@
 
 ---
 
-### 6. `beneficiary_claimants` — Claimant relationships for beneficiaries
+### 6. `beneficiary_claimants` — Claimants representing beneficiaries
 *Entity: beneficiaries/beneficiary-claimant.entity.ts*
+
+A claimant transacts on behalf of the represented beneficiary (who may be the claimant themselves); the linked claimant account handles status/history reads, required-document uploads, disbursement receipts, notifications, and consent.
 
 | Column | Type | Constraints |
 |---|---|---|
@@ -156,6 +158,8 @@
 
 ### 7. `beneficiary_roles` — Role/consent/access-card records per person
 *Entity: beneficiaries/beneficiary-role.entity.ts*
+
+`consent_status` is the per-person consent flag flipped by consent handling (grant/revoke) on the represented beneficiary's record.
 
 | Column | Type | Constraints |
 |---|---|---|

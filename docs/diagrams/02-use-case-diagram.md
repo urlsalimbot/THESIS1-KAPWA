@@ -12,7 +12,7 @@ Presents the use case model in which the eight account roles are **segregated in
 | **A — Casework core** | `admin`, `social_worker` | Create and progress cases; the operational core |
 | **B — Field / partner** | `coordinator`, `agency_staff` | Referrals and access-card activity within their scope |
 | **C — Oversight** | `mayor`, `auditor` | Read-only tracking, reports, audit/compliance |
-| **D — Self-service** | `claimant` | Own case, card, consent |
+| **D — Claimant representation** | `claimant` | Transacts for the represented beneficiary (may be themselves) |
 
 Each use case is tagged with the functional requirements it satisfies; enforcement (`@Roles`) and client routes are covered in Sections 4–5, and the role-by-role capability matrix lives in `docs/ROLE-MATRIX.md`.
 
@@ -22,7 +22,7 @@ Each use case is tagged with the functional requirements it satisfies; enforceme
 |----|-------------|----------|
 | FR-01 | Guest/public user views the landing page, programs, and public announcements. | Guest |
 | FR-02 | Guest registers, verifies email, logs in, completes MFA when enabled, and links to an existing beneficiary record via OTP (person-link). | Guest, D |
-| FR-03 | Claimant views their own access card, service history, case details, and consent records (`GET /beneficiaries/me/access-card`, `/me/services`, `/me/consent`). | D |
+| FR-03 | Claimant views the represented beneficiary's access card (read-only), service history, case details, and consent records (`GET /beneficiaries/me/access-card`, `/me/services`, `/me/consent`). | D |
 | FR-04 | Social worker/admin creates intakes (beneficiary + claimant + family + household, auto access card), assesses cases, logs interventions, and drives the case FSM. | A |
 | FR-05 | Coordinator files barangay referrals and manages access cards for their barangay; agency staff logs card activity and reads agency card summaries; admin/social worker assign cards. | A, B |
 | FR-06 | Admin manages users, agencies, announcements, and remote device wipes. | A |
@@ -31,7 +31,7 @@ Each use case is tagged with the functional requirements it satisfies; enforceme
 | FR-09 | Agency staff views the agency dashboard/profile, inter-agency referrals, and card activities. | B |
 | FR-10 | Chat restricted to admin, social_worker, coordinator, claimant; role-appropriate notifications for all roles except mayor. | A, B, D |
 | FR-11 | Offline sync for field roles (admin, social_worker, coordinator): queue, delta sync, conflict resolution, transient-failure auto-retry. | A, B |
-| FR-12 | Claimant dashboard (`/my-dashboard`) shows case status, case details, service history, and notification preferences. | D |
+| FR-12 | Claimant dashboard (`/my-dashboard`) shows case status, case details, service history, required-document uploads, disbursement records/receipts, and notification preferences. | D |
 | FR-13 | Announcements management for admin, social_worker, coordinator. | A, B |
 | FR-14 | Referral review: MSWDO staff accept/decline referrals; coordinators file and track them (`GET /referrals/mine`). | A, B |
 | FR-15 | Physical files management for admin, social_worker, coordinator. | A, B |
@@ -42,7 +42,7 @@ Each use case is tagged with the functional requirements it satisfies; enforceme
 | FR-20 | Admin wipe/reset: remote wipe a device or user session and list registered devices. | A |
 | FR-21 | Case approval: admin approves `in_review → active` with a signature; the **Certificate of Eligibility and Petty Cash Voucher are produced automatically**, filed, and viewable by admin/social_worker (case stepper, Implement HIP step, approvals pipeline). | A |
 | FR-22 | Public contact form submissions are stored in the in-app **contact inbox** and notify admins/social workers (no mailbox required). | Guest → A |
-| FR-23 | Consent revocation (RA 10173): revoking flags the ledger, blocks staff reads of the beneficiary record, and rejects new interventions; historical records are retained for audit. | D → A |
+| FR-23 | Consent handling (RA 10173): the claimant grants or revokes consent on the represented beneficiary's record; revocation flags the ledger, blocks staff reads of the beneficiary record, and rejects new interventions; historical records are retained for audit. | D → A |
 | FR-24 | Case tracking and trends: `/tracker` (Monday-anchored week stat, per-status segregation, closed excluded) and dashboard trends with 1w/1m/3m/6m ranges. | A, B, C |
 
 ## 3. Use Case Diagram
@@ -57,7 +57,7 @@ flowchart LR
     A["Group A — Casework core<br/>admin · social_worker"]
     B["Group B — Field / partner<br/>coordinator · agency_staff"]
     C["Group C — Oversight<br/>mayor · auditor"]
-    D["Group D — Self-service<br/>claimant"]
+    D["Group D — Claimant representation<br/>claimant"]
 
     subgraph UC1[PUBLIC & ACCOUNT]
         direction TB
@@ -79,9 +79,9 @@ flowchart LR
         U4["Tracker, SLA, dashboards, trends (FR-24)<br/>Reports · fund utilization (FR-07)<br/>Audit logs · hash-chain verify (FR-08)"]
     end
 
-    subgraph UC5[SELF-SERVICE]
+    subgraph UC5[CLAIMANT TRANSACTIONS]
         direction TB
-        U5["My dashboard: case details, services (FR-12)<br/>My access card (FR-03)<br/>Consent revoke (FR-23)"]
+        U5["My dashboard: case details, services, document uploads,<br/>disbursement receipts (FR-12)<br/>My access card — read-only (FR-03)<br/>Consent grant/revoke (FR-23)"]
     end
 
     subgraph UC6[COMMS, SYNC & ADMIN]
@@ -121,7 +121,7 @@ The diagram shows the four functional-overlap groups; this subsection narrates e
 - **auditor** reads audit logs, **verifies the hash chain** (`GET /audit/verify-all`), and exports audit/compliance data (FR-08, FR-24).
 - Both appear in the tracker/SLA read set and receive notifications (FR-10, FR-19).
 
-**Group D — Self-service (`claimant`).** Redirected to `/my-dashboard`: case status and case details (control no, assigned worker, amount, services requested), service history, and notification preferences (FR-12); their own access card with the household ledger (FR-03); consent records with **revocation** — which blocks staff reads of the record and rejects new interventions while retaining history for audit (FR-23); chat and notifications (FR-10, FR-19).
+**Group D — Claimant representation (`claimant`).** The claimant is the beneficiary's representative — a beneficiary may also be their own claimant. Redirected to `/my-dashboard`: case status and case details (control no, assigned worker, amount, services requested), service history, required-document uploads, and disbursement records/receipts (FR-12); the represented beneficiary's access card with the household ledger — **read-only** (FR-03); consent records with **grant/revoke** — revocation blocks staff reads of the record and rejects new interventions while retaining history for audit (FR-23); chat and notifications (FR-10, FR-19).
 
 ## 4. Role Restriction Enforcement
 
@@ -141,7 +141,7 @@ The client redirect map `ROLE_REDIRECT_MAP` (social_worker→`/dashboard`, admin
 | Intake (create, review, match-check) | `kapwa-server/src/intake/intake.controller.ts` |
 | Cases + interventions + approvals | `kapwa-server/src/cases/cases.controller.ts`, `kapwa-server/src/case-interventions/case-interventions.controller.ts` |
 | Approval documents (COE + PCV) | `kapwa-server/src/cases/cases-export.service.ts` (`generateApprovalDocuments`) |
-| Beneficiaries (claimant self endpoints, consent revoke) | `kapwa-server/src/beneficiaries/beneficiaries.controller.ts` |
+| Beneficiaries (claimant self/represented endpoints, consent grant/revoke) | `kapwa-server/src/beneficiaries/beneficiaries.controller.ts` |
 | Referrals (coordinator file, MSWDO review) | `kapwa-server/src/referrals/referrals.controller.ts` |
 | Inter-agency referrals | `kapwa-server/src/inter-agency-referrals/inter-agency-referrals.controller.ts` |
 | Access cards (assign, log, summaries, printable PDF) | `kapwa-server/src/access-cards/access-cards.controller.ts` |

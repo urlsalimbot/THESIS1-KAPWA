@@ -2,6 +2,8 @@
 
 Functional-requirements view of the seven roles, derived from the route guards (`routes.tsx`) and controller `@Roles` decorators. **Authentication is a non-functional requirement** and is therefore excluded from the overlap analysis — every role authenticates; what distinguishes them is *what they can do*.
 
+> **Claimant representation:** a claimant is the person who transacts with the system on behalf of a beneficiary — the beneficiary may also be their own claimant. All claimant actions below are scoped to the represented beneficiary record(s) and gated by consent.
+
 ---
 
 ## 1. Functional requirement areas
@@ -24,7 +26,7 @@ Functional-requirements view of the seven roles, derived from the route guards (
 | F14 | Audit & compliance | Audit log, hash-chain verify, consent ledger |
 | F15 | Admin panel | Users, sync queue, audit log, contact inbox |
 | F16 | Document exports | GIS/CSR/IRF/access card, audit logs, service summary, monthly funds, compliance, certificates |
-| F17 | Claimant self-service | My dashboard, my access card, my consent |
+| F17 | Claimant transactions | My dashboard, my access card (read-only), required-document uploads, disbursement receipts, my consent |
 | F18 | Public website | Anonymous browsing, registration, contact |
 
 ## 2. Role × area matrix
@@ -36,8 +38,8 @@ Functional-requirements view of the seven roles, derived from the route guards (
 | F1 Intake | W | W | — | — | — | — | — |
 | F2 Case lifecycle | W | W | — | — | — | — | — |
 | F3 Case approval | W | R | — | — | — | — | — |
-| F4 Beneficiaries | W | W | R | — | R | R | S |
-| F5 Access cards | W | W | S | S | — | — | S (own) |
+| F4 Beneficiaries | W | W | R | — | R | R | S (represented) |
+| F5 Access cards | W | W | S | S | — | — | R (own) |
 | F6 IRF | W | W | — | — | — | R | — |
 | F7 Programs | W | R | R | R | R | R | R |
 | F8 Announcements | W | W | W | — | R | R | R |
@@ -46,10 +48,10 @@ Functional-requirements view of the seven roles, derived from the route guards (
 | F11 Notifications | W | W | W | W | W | W | W |
 | F12 Offline sync | W | W | W | — | — | — | — |
 | F13 Dashboards/tracker | W | W | S | S | R | R | S |
-| F14 Audit & compliance | W | — | — | — | — | W | S (consent) |
+| F14 Audit & compliance | W | — | — | — | — | W | W (consent) |
 | F15 Admin panel | W | — | — | — | — | — | — |
 | F16 Document exports | W | W | S | — | R | R | — |
-| F17 Claimant self-service | — | — | — | — | — | — | W |
+| F17 Claimant transactions | — | — | — | — | — | — | W |
 | F18 Public website | (anonymous — no role) | | | | | | |
 
 ---
@@ -76,9 +78,9 @@ Functional-requirements view of the seven roles, derived from the route guards (
 - Mayor extras: fund utilization, mayor reports.
 - Character: *observers* — zero write paths anywhere in the system.
 
-### Group D — Self-service
-**claimant** — singleton group.
-- Only F17 (+ scoped F4/F5 reads, F10 chat, F11, consent). No operational overlap with any staff role by design.
+### Group D — Claimant representation
+**claimant** — singleton group; represents the beneficiary (who may be the claimant).
+- F17 (+ scoped F4/F5 reads, F10 chat, F11 notifications, consent handling, required-document uploads, disbursement receipts). No operational overlap with any staff role by design — the claimant transacts on the beneficiary's behalf while staff deliver the services.
 
 ---
 
@@ -87,5 +89,5 @@ Functional-requirements view of the seven roles, derived from the route guards (
 1. **Group A is the true core**: all operational data flows through admin/social_worker; every other group consumes their output. Any RBAC change here has the widest blast radius.
 2. **Group B is the natural unification candidate** (see the earlier coordinator/agency question): the roles share the partner *function set* and differ mainly in **scope** (barangay vs agency) and **referral direction** (refer-in vs respond). Unifying them = one partner role carrying a scope attribute, not a permission merge.
 3. **Group C can be merged with zero write-risk** — mayor and auditor are both read-only; the only functional difference is *which reports* (funds vs compliance) and audit-log access.
-4. **Claimant must stay isolated** — the only role with a self-scoped identity, and the only non-staff actor in the casework domain.
+4. **Claimant must stay isolated** — the only role scoped to the represented beneficiary record(s), and the only non-staff actor in the casework domain.
 5. **Auth (non-functional)** is identical across all seven roles (JWT + refresh + optional MFA + person-link for claimants), so it contributes no differentiation — role segregation is purely a functional-requirements concern, as modeled above.

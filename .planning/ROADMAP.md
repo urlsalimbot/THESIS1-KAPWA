@@ -30,18 +30,15 @@ Plans:
 
 ## Phase 13: Major Version Upgrades
 
-**Goal:** Upgrade React, Capacitor, and Tailwind CSS to latest major versions early so all subsequent phases test against the new platform.
+**Goal:** Upgrade React and Tailwind CSS to latest major versions early so all subsequent phases test against the new platform.
 
-**Requirements:** UPG-01, UPG-02, UPG-03
+**Requirements:** UPG-01, UPG-03 (UPG-02 superseded — native app builds are out of scope; browser PWA only)
 
 **Success criteria:**
 
 1. `react` and `react-dom` at ^19.0.0, all React 18 deprecated APIs resolved
-2. `@capacitor/core`, `@capacitor/android`, `@capacitor/ios` at ^8.0.0
-3. `npx cap sync android` and `npx cap sync ios` succeed without errors
-4. `tailwindcss` at ^4.0.0, `postcss.config.mjs` uses `@tailwindcss/postcss` plugin
-5. Full visual regression: all 28 pages render identically to v1.1 screenshots
-6. Production Android APK and iOS IPA build successfully
+2. `tailwindcss` at ^4.0.0, `postcss.config.mjs` uses `@tailwindcss/postcss` plugin
+3. Full visual regression: all 28 pages render identically to v1.1 screenshots
 
 ---
 

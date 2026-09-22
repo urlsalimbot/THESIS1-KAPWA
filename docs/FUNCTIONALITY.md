@@ -3,7 +3,7 @@
 The KAPWA Municipal Social Welfare and Development Office (MSWDO Norzagaray) system: a two-app monorepo for the social-welfare case lifecycle, from public walk-in intake through case closure, with field/mobile support and audit compliance.
 
 - `kapwa-server/` — NestJS 11 + TypeORM + PostgreSQL REST/WebSocket backend (entrypoint `src/main.ts`).
-- `kapwa-client/` — React 19 + Vite + Tailwind/Radix UI + SWR + Capacitor (PWA/mobile), entrypoint `src/main.tsx`.
+- `kapwa-client/` — React 19 + Vite + Tailwind/Radix UI + SWR (PWA), entrypoint `src/main.tsx`.
 
 ---
 
@@ -17,7 +17,7 @@ Seven roles, each with a distinct surface and scope:
 | `social_worker` | Assigned / permitted barangays | Intake, Cases, Beneficiaries, IRFs, Referrals, Approvals (view) |
 | `coordinator` | Assigned barangay | Coordinator dashboard, barangay referrals, access cards, messages |
 | `agency_staff` | Agency | Agency dashboard, inter-agency referrals, card activities, agency summaries |
-| `claimant` | Own person record | My Dashboard, My Access Card, messages |
+| `claimant` | Represented beneficiary (own or linked) | My Dashboard, My Access Card (read-only), document uploads, disbursement receipts, messages, consent |
 | `mayor` | Read-only municipality | Mayor reports, tracker, SLA |
 | `auditor` | Read-only | Audit logs, tracker, compliance exports |
 
@@ -32,7 +32,7 @@ Seven roles, each with a distinct surface and scope:
 
 - **Login** — email + password (bcrypt, 12 rounds) → JWT **access (1h)** + **refresh (7d)** + user payload.
 - **Refresh** — silent rotation; a session in one tab never revokes another (multi-session stable); revocation still works on password/email change.
-- **MFA (TOTP)** — setup/enable/verify flows; MFA-enabled accounts present a 6-digit challenge at login (seed demo account: `ana.claimant@test.com`).
+- **MFA (optional)** — TOTP implemented: setup/enable/verify flows; MFA-enabled accounts present a 6-digit challenge at login (seed demo account: `ana.claimant@test.com`). Email OTP can be enabled as an alternative option; SMS OTP is not offered (no SMS provider configured on the API server).
 - **Person-link (claimant)** — registration links an account to an existing beneficiary record via OTP code (`verify-person-link`), which drives the claimant's case visibility.
 - **Email verification** — verify-account, forgot/reset password, email-change confirm, OTP (send-only until SMTP is configured; log-only fallback).
 - **Session-expiry UX** — when a session dies (expired or network), the login page explains why instead of silently redirecting.
@@ -113,7 +113,7 @@ enrolled → assessed → in_review → active → transitioning → closed
 ## 9. Chat & Notifications
 
 - **Messages** between workers, coordinators, and claimants (role-gated), popover + page surfaces, WebSocket real-time.
-- **Notifications** — categories (case update, approval, disbursement, sync conflict, system), channels (in-app / SMS), per-category user preferences, consent-aware delivery; alerts feed dashboards (e.g. SLA escalations).
+- **Notifications** — categories (case update, approval, disbursement, sync conflict, system), channels (in-app; SMS when an SMS provider is configured), per-category user preferences, consent-aware delivery; alerts feed dashboards (e.g. SLA escalations).
 
 ---
 
@@ -151,7 +151,7 @@ All case-document PDFs use one naming convention — **`<CaseType> <caseNo>-<YYY
 - **Coordinator** — barangay-scoped dashboard, referrals, access cards.
 - **Mayor** — reports + tracker + SLA.
 - **Auditor** — audit logs + tracker.
-- **Claimant** — My Dashboard (case status, case details: control no, worker, amount, services requested, service history) + My Access Card (ledger).
+- **Claimant** — My Dashboard (case status, case details: control no, worker, amount, services requested, service history, required-document uploads, disbursement records/receipts, consent handling) + My Access Card (read-only ledger).
 
 ---
 

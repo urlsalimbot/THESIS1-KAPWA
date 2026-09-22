@@ -12,10 +12,10 @@ Documents the 4 core end-to-end flows (auth, intake, case FSM lifecycle, inter-a
 |----|-------------|
 | FR-01 | User logs in with email/password; on valid credentials (MFA disabled) the server issues an access token and a 7-day refresh token (`POST /auth/login`, `AuthService.issueTokens`). |
 | FR-02 | On a 401 response, the client api layer performs a single-flight `/auth/refresh`; when refresh fails it dispatches the `kapwa:auth:logout` window event and the AuthProvider clears token, user, and the user's intake draft (`kapwa-client/src/lib/auth-context.tsx`). |
-| FR-03 | When the account has MFA enabled, login returns `{ mfaRequired: true, tempToken (5m) }`; the client shows the challenge and verifies it via `POST /auth/mfa/verify` (TOTP) or `POST /auth/login/otp-verify` (SMS) before tokens are issued. |
+| FR-03 | When the account has MFA enabled, login returns `{ mfaRequired: true, tempToken (5m) }`; the client shows the challenge and verifies it via `POST /auth/mfa/verify` (TOTP) before tokens are issued. |
 | FR-04 | Invalid credentials return `401 Unauthorized (Invalid credentials)`; unverified email blocks login with `401` (verify-email first), enforced in `AuthService.login`. |
 | FR-05 | A social_worker submits an intake; the beneficiary Person is found (dedup by philhealth number or surname+first name+DOB scoped to barangay) or created (`IntakeService.submitIntake` step 1, `findOrCreatePerson`). |
-| FR-06 | A Beneficiary record (consentStatus `active`) is created for the person and the claimant Person + `BeneficiaryClaimant` primary link are created. |
+| FR-06 | A Beneficiary record (consentStatus `active`) is created for the person and the claimant Person + `BeneficiaryClaimant` primary link are created; the claimant represents the beneficiary in all system transactions. |
 | FR-07 | A Household is created with the beneficiary as primary; the beneficiary is linked to it (`householdId`) and each family member is created and linked via `HouseholdMembership`. |
 | FR-08 | A Case is created with status `enrolled`, a generated control number, service requested and assigned worker; a `ConsentLedger` row (purpose `registration`) is written; everything commits in a SERIALIZABLE transaction. |
 | FR-09 | Every case status change is validated by the shared FSM: `isValidTransition(from, to)` must return true and field preconditions must pass, else `400 BadRequest` (`case-fsm.ts` + `CasesService.validateTransition`). |
@@ -51,8 +51,8 @@ sequenceDiagram
         Client->>Client: persist session
     else MFA enabled (FR-03)
         Server-->>Client: mfaRequired + tempToken (5m)
-        User->>Client: enter TOTP or SMS code
-        Client->>Server: POST /auth/mfa/verify (TOTP) or POST /auth/login/otp-verify (SMS)
+        User->>Client: enter TOTP code
+        Client->>Server: POST /auth/mfa/verify (TOTP)
         Server-->>Client: 200 accessToken + refreshToken
         Client->>Client: persist session
     else Invalid credentials (FR-04)
@@ -137,7 +137,7 @@ sequenceDiagram
 
 ## 4. Diagram Narrative
 
-**S1 — Auth (FR-01..FR-04).** The `Client` posts credentials to `AuthController.login`, which delegates to `AuthService.validateUser` — a lookup against `UserRepository` with a bcrypt comparison; failure returns `401 Invalid credentials` (FR-04). On success, `AuthService.login` branches: if `mfaEnabled` it returns a 5-minute `tempToken` flagged `mfaChallenge` (FR-03), which the client stores via `setMfaChallenge` and redeems through `POST /auth/mfa/verify` (TOTP) or `POST /auth/login/otp-verify` (SMS) before tokens are issued; otherwise `issueTokens` returns the access token and 7-day refresh token, and the client persists them with `setToken`/`setUser` (FR-01). The second half of the lifeline models the client 401 interceptor: on a 401, one in-flight refresh request is made to `/auth/refresh` (single-flight); `AuthService.refresh` re-verifies the token and bumps `tokenVersion`. If it fails, the api client dispatches the `kapwa:auth:logout` window event, and the `AuthProvider` listener calls `logout()`, clearing the token, user state, and the user's intake draft (FR-02).
+**S1 — Auth (FR-01..FR-04).** The `Client` posts credentials to `AuthController.login`, which delegates to `AuthService.validateUser` — a lookup against `UserRepository` with a bcrypt comparison; failure returns `401 Invalid credentials` (FR-04). On success, `AuthService.login` branches: if `mfaEnabled` it returns a 5-minute `tempToken` flagged `mfaChallenge` (FR-03), which the client stores via `setMfaChallenge` and redeems through `POST /auth/mfa/verify` (TOTP) before tokens are issued; otherwise `issueTokens` returns the access token and 7-day refresh token, and the client persists them with `setToken`/`setUser` (FR-01). The second half of the lifeline models the client 401 interceptor: on a 401, one in-flight refresh request is made to `/auth/refresh` (single-flight); `AuthService.refresh` re-verifies the token and bumps `tokenVersion`. If it fails, the api client dispatches the `kapwa:auth:logout` window event, and the `AuthProvider` listener calls `logout()`, clearing the token, user state, and the user's intake draft (FR-02).
 
 **S2 — Intake (FR-05..FR-08).** The `SocialWorker` fills and submits the intake form; `IntakePage` posts to `IntakeController`, which calls `IntakeService.submitIntake` inside a SERIALIZABLE transaction. The service first find-or-creates the beneficiary `Person` with dedup enabled (philhealth number, or surname+first name+DOB scoped to the barangay) (FR-05), creates the `Beneficiary` record, the claimant `Person` and the primary `BeneficiaryClaimant` link (FR-06), creates the `Household` with the beneficiary as primary and links the beneficiary to it, then creates each family member `Person` plus a `HouseholdMembership` (FR-07). Finally it generates a control number, creates the `Case` with status `enrolled`, and writes the `ConsentLedger` row before committing; the response carries `beneficiaryId`, `caseId`, `controlNo`, and status `enrolled` (FR-08).
 

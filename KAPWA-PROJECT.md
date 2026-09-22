@@ -8,6 +8,7 @@
 | Principle | Implementation Directive |
 |-----------|--------------------------|
 | **Augment, Don't Replace** | Preserve physical signatures, paper fallbacks, and "natural" workflows. Digital layer adds search, sync, audit, and duplicate detection only. |
+| **Claimant Representation** | Beneficiaries are represented by a claimant — who may be the beneficiary themselves — and the claimant transacts all beneficiary-facing workflows: required-document uploads, disbursement receipt, notifications, and consent handling. Access Card viewing is read-only. |
 | **Service-Triggered Profile Updates** | `beneficiaries` fields may ONLY be modified during an active GIS intake session. Zero standalone `PATCH /beneficiaries/:id` endpoints. |
 | **Post-Disbursement Intervention Logging** | Interventions (FA/C/CSR/R/H/HV) are logged ONLY after `cases.status = 'disbursed'`. Intake ≠ Intervention. |
 | **Offline-First by Default** | All core workflows function without internet. Sync uses custom delta protocol with domain-aware conflict resolution. |
@@ -18,7 +19,7 @@
 ## 🏗️ 2. Architecture & Tech Stack
 | Layer | Technology | Configuration | Role |
 |-------|------------|---------------|------|
-| **Client** | React 18 + TypeScript + Capacitor 6 + Vite | PWA + Native SQLCipher (AES-256) | Offline UI, local cache, signature capture, dynamic form renderer |
+| **Client** | React 18 + TypeScript + Vite | PWA (offline-capable, encrypted browser storage) | Offline UI, local cache, signature capture, dynamic form renderer |
 | **Server** | NestJS 10 + TypeScript + Node 20 LTS | Strict typing, Zod validation, modular guards | Sync endpoint, workflow router, ABAC evaluator, notification bus |
 | **Database** | PostgreSQL 16 | `pgcrypto`, `pgAudit`, RLS enabled, materialized views | Single source of truth, encrypted PII, immutable audit logs |
 | **Storage** | MinIO (S3-compatible) | SSE-S3 encryption, versioning, private buckets | Document vault (signatures, vouchers, IRF attachments) |
@@ -30,10 +31,10 @@
 ## 👥 3. User Roles & Access Matrix
 | Role | Auth/Channel | Permissions | Data Scope | PDF Anchor |
 |------|--------------|-------------|------------|------------|
-| **MSWDO Social Worker** | JWT + SMS OTP + Device Binding | Create GIS, log interventions (post-disbursement), view family graph, export reports | Assigned barangays + linked households | GIS, Client Stub, Access Card |
+| **MSWDO Social Worker** | JWT + optional MFA (email OTP or TOTP) | Create GIS, log interventions (post-disbursement), view family graph, export reports | Assigned barangays + linked households | GIS, Client Stub, Access Card |
 | **MSWDO Admin** | MFA + Desktop (online) | Manage programs, users, consent ledger, sync queue, audit exports | Full system | Dynamic Program Config |
-| **Barangay Coordinator** | SMS OTP + Mobile PWA | Submit GIS drafts, scan signatures, view assigned beneficiaries, receive announcements | Single barangay only | Case Tracker, Field Intake |
-| **Claimant/Beneficiary** | SMS OTP + Access Card `Code#` | View service history, track status, manage consent, download receipts | Self + household (if consent granted) | Access Card, Client Dashboard |
+| **Barangay Coordinator** | Optional MFA (email OTP or TOTP) + mobile PWA | Submit GIS drafts, scan signatures, view assigned beneficiaries, receive announcements | Single barangay only | Case Tracker, Field Intake |
+| **Claimant** (beneficiary representative) | Email + password; optional MFA (email OTP or TOTP); person-link to the beneficiary record | Represent the beneficiary in all transactions: track status and case details, view service history, read-only Access Card view, upload required case documents, receive disbursement records/receipts, notifications, and handle consent (grant/revoke) | Represented beneficiary — self or linked person/household (consent-gated) | Access Card, Client Dashboard |
 | **Mayor's Office** | MFA + SSO | View anonymized tracker, fund utilization, SLA compliance (NO PII) | Aggregate/municipal | Petty Cash Voucher, Dashboard |
 | **Auditor (COA/DSWD)** | MFA + Hardware Token | Read-only audit logs, hash-chain verification, consent ledger | Full system (immutable) | IRF, pgAudit, COA Reports |
 
@@ -60,8 +61,8 @@
        ↓
 4️⃣ TRACKING & NOTIFICATION
    • Auto-syncs to Case Tracker dashboard
-   • SMS/in-app notification sent (if opted-in)
-   • Beneficiary dashboard updates status & digital Access Card log
+   • In-app notification sent (if opted-in)
+   • Claimant dashboard updates status, disbursement records, and digital Access Card log
 ```
 
 **IRF/Criminal Workflow**:
@@ -211,7 +212,7 @@ CREATE TABLE consent_ledger (
 | `/api/interventions` | `POST` | Log post-disbursement service | `CHECK cases.status = 'disbursed'`; requires `worker_signature_url` |
 | `/api/sync/v1` | `POST` | Delta sync (offline → server) | Ed25519 sig verification + idempotency key + consent filter |
 | `/api/irf` | `POST` | Submit Incident Report Form | Encrypts `Item C` immediately; masks names in default views |
-| `/api/beneficiary/dashboard` | `GET` | Claimant self-service view | ABAC + `consent_ledger` evaluation; read-only |
+| `/api/beneficiary/dashboard` | `GET/POST` | Claimant transactions for the represented beneficiary (status, history, card, required-document uploads, disbursement, consent) | ABAC + `consent_ledger` evaluation; self/represented-scoped |
 | `/api/programs` | `GET/POST` | Dynamic program config | Admin-only; validates JSON Schema form templates |
 
 **Sync Conflict Rules**:
@@ -232,7 +233,7 @@ CREATE TABLE consent_ledger (
 | Digital Case Tracker | All | Date-ordered table, Surname/First/Middle, Gender/Age/Category/Barangay, Intervention/Remarks |
 | Access Card Manager | Admin/SW | Code# generator, 18-row service log, refill print, loss/replacement workflow, rules display |
 | IRF Module | SW/WCPD Liaison | Blotter #, Category, Item A/B/C fields, Auth signatures, masked victim view, secure export |
-| Claimant Dashboard | Beneficiary | Status tracker, Service history timeline, Digital Access Card view, Consent hub, Notifications |
+| Claimant Dashboard | Claimant (beneficiary representative) | Status tracker, Case details, Service history timeline, Digital Access Card view (read-only), Required-document uploads, Disbursement records/receipts, Consent handling (grant/revoke), Notifications |
 | Program Configurator | Admin | Name/Category/Waiting period/Requirements/Workflow builder, JSON Schema form preview |
 | Fund & SLA Dashboard | Mayor/Auditor | Released vs allocated %, unique households, overdue approvals, COA export |
 
@@ -259,7 +260,7 @@ CREATE TABLE consent_ledger (
 | RA 10173 Consent Gating | `consent_ledger` + ABAC middleware; instant UI masking on revoke | Sec. 12/26 |
 | COA Audit Integrity | `pgAudit` + SHA-256 chain + mandatory `worker_signature_url` | Circular 2022-003 |
 | ARTA Processing Time | SLA timers + FSM state tracking + auto-escalation | RA 11032 |
-| Offline Resilience | SQLCipher cache + version vectors + CSV fallback + date sequencing | Business Continuity |
+| Offline Resilience | Encrypted browser storage + version vectors + CSV fallback + date sequencing | Business Continuity |
 | IRF Confidentiality | `pgcrypto` AES-256 for narration; default `NULL` for names; access log required | DSWD AO 2020-002 |
 | "No Card = No Voucher" | API guard: `SELECT status FROM beneficiaries WHERE access_card_code = ?` | Access Card Rule 4 |
 
@@ -270,9 +271,9 @@ CREATE TABLE consent_ledger (
 | Sprint | Weeks | Focus | Deliverables | Acceptance Gate |
 |--------|-------|-------|--------------|-----------------|
 | **1** | 1–2 | Architecture, Programs, Graph | ERD live, program builder, family graph, RBAC/ABAC, consent ledger | All schemas deployed, graph query <500ms, RLS enforced |
-| **2** | 3–4 | Offline Core, Sync, Forms | SQLCipher, delta sync, conflict resolver, JSON schema renderer | Offline CRUD → online sync w/ zero loss; 12 conflict tests pass |
+| **2** | 3–4 | Offline Core, Sync, Forms | Encrypted local storage, delta sync, conflict resolver, JSON schema renderer | Offline CRUD → online sync w/ zero loss; 12 conflict tests pass |
 | **3** | 5–6 | GIS, Intervention, Tracker | Dual-mode GIS, post-logging guard, daily tracker, signature capture | Interventions block until `disbursed`; tracker matches manual tally |
-| **4** | 7–8 | Access Card, Workflow, Notifications | Code# system, SLA timers, OTP fallback, SMS/in-app templates, rate limiting | "No card = no voucher" enforced; notifications respect consent |
+| **4** | 7–8 | Access Card, Workflow, Notifications | Code# system, SLA timers, in-app notification templates, rate limiting | "No card = no voucher" enforced; notifications respect consent |
 | **5** | 9–10 | IRF, Sharing, Security | Encrypted IRF, victim masking, WCPD export, field-level sharing | COA audit trail valid; IRF reveal requires legal basis + 2FA |
 | **6** | 11–12 | Dashboard, UAT, Hardening | Fund metrics, claimant dashboard, pilot, bug fixes, final docs | 95% sync success; staff UAT sign-off; thesis chapters complete |
 
@@ -297,7 +298,7 @@ CREATE TABLE consent_ledger (
 ## ✅ Handoff Checklist for Agentic Team
 - [ ] Initialize PostgreSQL 16 + enable `pgcrypto`, `pgAudit`, RLS
 - [ ] Scaffold NestJS modules: `auth`, `sync`, `cases`, `interventions`, `programs`, `notifications`, `irf`, `audit`, `beneficiary_dashboard`
-- [ ] Configure Capacitor + SQLCipher + dynamic form renderer
+- [ ] Configure offline encrypted storage + dynamic form renderer
 - [ ] Implement sync endpoint with Ed25519 verification + idempotency
 - [ ] Deploy Caddy + Podman + backup cron
 - [ ] Run compliance audit script (RA 10173 field mapping, RLS policy validation, hash-chain integrity)

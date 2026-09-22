@@ -18,7 +18,7 @@
 | FR-05 | Attach encrypted documents | ⚠️ PARTIAL | IRF narration encrypted (pgcrypto AES-256-CBC). File uploads stored unencrypted on local disk — MinIO not wired |
 | FR-06 | Tag outcomes: Resolved, Ongoing, Referred, Closed | ⚠️ PARTIAL | Case FSM uses enrolled/assessed/in_review/active/transitioning/closed. No "Resolved", "Ongoing", or "Referred" statuses |
 | FR-07 | Flag duplicate assistance within configurable windows | ❌ FAIL | No duplicate detection logic found |
-| FR-08 | Store data locally in encrypted format | ✅ PASS | AES-256-GCM (localStorage) + SQLCipher (Capacitor, PBKDF2-SHA-256 key) |
+| FR-08 | Store data locally in encrypted format | ✅ PASS | AES-256-GCM (browser localStorage) |
 | FR-09 | Auto-detect connectivity → background delta sync | ⚠️ PARTIAL | Delta sync endpoint exists. No client-side connectivity detection or background sync scheduling |
 | FR-10 | Domain-aware conflict resolution (DACRA) | ⚠️ PARTIAL | Multi-strategy resolver exists (server-wins/append-notes/LWW). `FINANCIAL_TABLES` set is empty. Not the sophisticated DACRA algorithm described in spec |
 | FR-11 | Queue unresolvable conflicts for human review with diff UI | ⚠️ PARTIAL | `sync_queue` with conflict status + resolver endpoint. No frontend diff UI |

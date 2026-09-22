@@ -173,7 +173,7 @@ Associates a person with a household and their role within it.
 
 ### 6. beneficiary_claimants — Claimant relationships for beneficiaries
 
-Records a claimant (e.g. a parent/guardian) claiming on behalf of a beneficiary person, both being `persons` rows.
+Records a claimant (e.g. a parent/guardian, or the beneficiary themselves) transacting on behalf of a beneficiary person, both being `persons` rows. The linked claimant account handles the beneficiary's transactions: status/history reads, required-document uploads, disbursement receipts, notifications, and consent.
 
 | Table Name: | `beneficiary_claimants` |
 | Primary Key: | `id` (UUID) |
@@ -192,7 +192,7 @@ Records a claimant (e.g. a parent/guardian) claiming on behalf of a beneficiary 
 
 ### 7. beneficiary_roles — Role/consent/access-card records per person
 
-Per-person role, consent, and access-card attributes.
+Per-person role, consent, and access-card attributes; `consent_status` reflects consent granted or revoked for the beneficiary record.
 
 | Table Name: | `beneficiary_roles` |
 | Primary Key: | `id` (UUID) |

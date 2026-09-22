@@ -36,7 +36,7 @@ Documents the 12 decision-heavy business workflows (intake, case lifecycle trans
 | FR-24 | The monthly fund utilization export SHALL validate the `month` parameter (`YYYY-MM`, months 01-12 only), aggregate `case_interventions` on `cases.status = 'transitioning'` by program × fund source, and produce an XLSX workbook (`ExportService.monthlyFundUtilization`, exceljs). |
 | FR-25 | Announcements SHALL be authored as `draft` or `published`; body HTML SHALL be sanitized server-side (allow-listed tags/attributes), a slug SHALL be generated from the title, and publishing SHALL stamp `published_at` (`AnnouncementsService.create`). |
 | FR-26 | Announcement visibility SHALL be status-gated: public list/detail endpoints SHALL return only `published` items, with `pinned` items ordered first; the manage endpoints SHALL allow draft editing, pinning, and deletion (`AnnouncementsService.findAll/findPublic`). |
-| FR-27 | OTP codes SHALL be generated with an expiry (`OTP_EXPIRY_MINUTES`), delivered via SMS/email, and SHALL verify once — the code is marked verified on first successful check and expired codes are purged (`OtpService.generateAndSend`, `verifyOtp`). |
+| FR-27 | OTP codes SHALL be generated with an expiry (`OTP_EXPIRY_MINUTES`), delivered through the configured SMS provider (log-only fallback when none is configured; email delivery is not implemented), and SHALL verify once — the code is marked verified on first successful check and expired codes are purged (`OtpService.generateAndSend`, `verifyOtp`). |
 | FR-28 | Notifications SHALL be delivered in-app via the WebSocket gateway (`notification:new` on the recipient's `user:{id}` room) and SHALL support mark-read, read-all, and delete with realtime `unread:count` updates (`NotificationsService`, `NotificationsGateway`). |
 
 ## 3. Activity Diagrams (Mermaid)
@@ -239,7 +239,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([start]) --> B[System generates OTP code with expiry]
-    B --> C[Send code via SMS or email]
+    B --> C[Send code via SMS gateway]
     C --> D[User submits code]
     D --> E{Code matches and unexpired?}
     E -- no --> F[Fail - invalid or expired]
@@ -289,7 +289,7 @@ flowchart TD
 
 **A10 — Announcement publishing (FR-25..FR-26).** The author composes title + body HTML; the HTML is sanitized server-side (allow-listed tags and attributes) and a slug is generated from the title. `{Status?}` branches: drafts are saved with no public visibility; published announcements stamp `published_at` and become publicly visible. `{Should be pinned?}` then orders pinned items first in the public list.
 
-**A11 — OTP verification (FR-27).** The system generates a code with an expiry window and sends it via SMS/email. `{Code matches and unexpired?}` branches: failure terminates at the fail terminal; success marks the code verified (single use) and expired codes are purged periodically.
+**A11 — OTP verification (FR-27).** The system generates a code with an expiry window and sends it through the configured SMS provider (log-only fallback when no provider is configured). `{Code matches and unexpired?}` branches: failure terminates at the fail terminal; success marks the code verified (single use) and expired codes are purged periodically.
 
 **A12 — Notification delivery (FR-28).** Any event — a referral, a case update, a notification — creates a notification record and emits `notification:new` on the recipient's `user:{id}` WebSocket room. `{Recipient reads or bulk-reads?}` branches into three handling paths: single read emits `notification:updated` + `unread:count`; read-all emits `notifications:read-all` + `unread:count`; delete emits `notification:deleted` + `unread:count`. All converge at the end terminal.
 

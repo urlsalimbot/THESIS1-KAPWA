@@ -4,7 +4,7 @@
 
 Kapwa (Kindred Assistance and People's Welfare Assistance) is a social support software for the Municipal Social Welfare and Development Office (MSWDO) of Norzagaray, Bulacan. It replaces paper-based workflows with a digital system for claimant/beneficiary profiling, intervention tracking, and end-to-end case management — from GIS intake through assessment, approval, disbursement, and post-intervention logging. It includes an Incident Report Form (IRF) module for abuse/criminal cases with mandatory encryption, an Access Card system with Code# generation, and compliance with RA 11032, RA 10173 (Data Privacy), COA audit requirements, and DSWD standards.
 
-Built as an offline-first PWA with Capacitor 6 mobile wrappers, React 18 client, NestJS 11 server, PostgreSQL 16 database, and MinIO object storage.
+Built as an offline-first PWA (React client), NestJS 11 server, PostgreSQL 16 database, and MinIO object storage.
 
 ## Core Value
 
@@ -26,7 +26,7 @@ Social workers can register any claimant, conduct a full social case study (GIS)
 - Token refresh/rotation in auth-context
 - Dependency cleanup: move playwright, @capacitor/cli, esbuild → devDependencies
 - Upgrade vitest to v4, testing libraries to latest
-- Plan React 19 + Capacitor 8 + Tailwind CSS v4 upgrade (medium-term, tested via mobile builds)
+- Plan React 19 + Tailwind CSS v4 upgrade (medium-term)
 
 **Target scores:** Overall 53/100 → 75/100 (PRODUCTION READY)
 
@@ -34,12 +34,12 @@ Social workers can register any claimant, conduct a full social case study (GIS)
 
 Existing Kapwa codebase capabilities:
 
-- ✓ **JWT authentication with role infrastructure** — Multi-factor auth (password, SMS OTP, device binding)
+- ✓ **JWT authentication with role infrastructure** — Multi-factor auth (password + optional MFA: email OTP or TOTP)
 - ✓ **Case management FSM** — pending_assessment → in_review → approved → disbursed → closed lifecycle
 - ✓ **Beneficiary entity and schema** — beneficiaries, households, family_members tables
 - ✓ **Intervention entity and schema** — interventions, case_tracker_log tables
 - ✓ **Offline sync protocol** — Delta sync with Ed25519 signatures, version vectors, conflict resolution
-- ✓ **PWA + Capacitor mobile deployment** — Cross-platform (browser + Android/iOS native)
+- ✓ **PWA deployment** — Browser-based responsive web app
 - ✓ **RBAC + ABAC authorization pipeline** — Role-based and attribute-based access control with consent evaluation
 - ✓ **Socket.IO real-time messaging** — Chat infrastructure
 - ✓ **Zod validation pipeline** — API boundary validation
@@ -84,10 +84,10 @@ Existing Kapwa codebase capabilities:
 
 #### User Roles & Access
 - [ ] **ROL-01**: 6 roles: MSWDO Social Worker, MSWDO Admin, Barangay Coordinator, Claimant, Mayor's Office, Auditor
-- [ ] **ROL-02**: Barangay Coordinator scoped to single barangay, SMS OTP auth + mobile PWA
+- [ ] **ROL-02**: Barangay Coordinator scoped to single barangay, optional MFA (email OTP or TOTP) + mobile PWA
 - [ ] **ROL-03**: Mayor's Office sees aggregate data only (no PII)
 - [ ] **ROL-04**: Auditor role — read-only audit logs, hash-chain verification, consent ledger
-- [ ] **ROL-05**: Beneficiary self-service dashboard (status tracker, service history, Access Card view, consent hub)
+- [ ] **ROL-05**: Claimant representation — beneficiaries are represented by a claimant (a beneficiary may also be their own claimant); claimants transact on the beneficiary's behalf: status tracker, service history, read-only Access Card view, required-document uploads, disbursement records/receipts, notifications, and consent handling (grant/revoke)
 
 #### Consent & Compliance
 - [ ] **CON-01**: Consent ledger with grant/revoke tracking; revoked consent = immediate UI masking
@@ -97,7 +97,7 @@ Existing Kapwa codebase capabilities:
 - [ ] **CON-05**: RA 10173 data privacy controls (pgcrypto for PII, consent gating)
 
 #### Offline Sync
-- [ ] **SYNC-01**: SQLCipher local cache on mobile (AES-256 encrypted)
+- [ ] **SYNC-01**: Encrypted local cache in the browser PWA (AES-256)
 - [ ] **SYNC-02**: All core workflows function offline; delta sync on reconnect
 - [ ] **SYNC-03**: Conflict resolution rules: Financial/Amount → Server Wins, Notes → Chronological Append, Consent → Server Revocation Overrides, Unclear → Conflict Queue
 - [ ] **SYNC-04**: Idempotency key enforcement on sync endpoint
@@ -106,7 +106,7 @@ Existing Kapwa codebase capabilities:
 - [ ] **INF-01**: MinIO (S3-compatible) for document vault (signatures, vouchers, IRF attachments)
 - [ ] **INF-02**: Caddy 2 reverse proxy with auto-TLS, rate limiting
 - [ ] **INF-03**: Podman deployment with backup cron
-- [ ] **INF-04**: Notifications (SMS via Twilio? + in-app) respecting consent preferences
+- [ ] **INF-04**: Notifications (in-app; SMS when an SMS provider is configured) respecting consent preferences
 
 #### DSWD KILOS UNLAD Case Management
 - [x] **KILOS-01**: `CaseStatus` enum reflects 6-stage KILOS lifecycle (enrolled/assessed/in_review/active/transitioning/closed)
@@ -153,7 +153,7 @@ Existing Kapwa codebase capabilities:
 
 ## Context
 
-Kapwa is a thesis project targeting full deployment at the MSWDO of Norzagaray, Bulacan. The existing codebase has a strong technical foundation (NestJS modular architecture, offline-first sync protocol, JWT+ABAC auth, Capacitor mobile, PostgreSQL with RLS/pgcrypto/pgAudit). Key technical debt includes sub-50% test coverage, NestJS version mismatch (v10 vs v11), TypeORM alpha dependency, and sync service complexity. The full spec is defined in KAPWA-PROJECT.md v2.0, which maps directly to MSWDO paper forms (Client Stub, General Intake Sheet, Access Card, IRF, Petty Cash Voucher).
+Kapwa is a thesis project targeting full deployment at the MSWDO of Norzagaray, Bulacan. The existing codebase has a strong technical foundation (NestJS modular architecture, offline-first sync protocol, JWT+ABAC auth, offline-capable PWA, PostgreSQL with RLS/pgcrypto/pgAudit). Key technical debt includes sub-50% test coverage, NestJS version mismatch (v10 vs v11), TypeORM alpha dependency, and sync service complexity. The full spec is defined in KAPWA-PROJECT.md v2.0, which maps directly to MSWDO paper forms (Client Stub, General Intake Sheet, Access Card, IRF, Petty Cash Voucher).
 
 **Timeline:** 12 weeks (current semester)
 **Deployment:** Cloud-hosted (Ubuntu + Podman + Caddy)
@@ -161,7 +161,7 @@ Kapwa is a thesis project targeting full deployment at the MSWDO of Norzagaray, 
 
 ## Constraints
 
-- **Stack**: React 18 + Capacitor 6 / NestJS 11 / PostgreSQL 16 / MinIO
+- **Stack**: React 18 + Vite (PWA) / NestJS 11 / PostgreSQL 16 / MinIO
 - **Offline-first**: All core workflows must work without internet
 - **Post-disbursement logging**: Interventions only after case disbursement
 - **Service-triggered updates**: Profile edits only during active GIS intake
@@ -173,11 +173,12 @@ Kapwa is a thesis project targeting full deployment at the MSWDO of Norzagaray, 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Build on existing Kapwa codebase | Avoid rebuild; existing sync, auth, and case infrastructure significantly accelerates development | — Pending |
-| Offline-first with SQLCipher | Field workers in Norzagaray need reliable offline operation | — Pending |
+| Offline-first with encrypted local cache | Field workers in Norzagaray need reliable offline operation | — Pending |
 | Post-disbursement intervention logging | Matches MSWDO paper workflow exactly; prevents data entry before service delivery | — Pending |
 | MinIO for document storage | S3-compatible, self-hosted, encryption at rest | — Pending |
 | ABAC + consent ledger for access control | RA 10173 compliance; dynamic row-level masking on consent revoke | — Pending |
 | 6-sprint schedule (12 weeks) | Aligned with thesis timeline and project complexity | — Pending |
+| Claimant as beneficiary representative | One beneficiary-facing role transacts all self-service workflows (uploads, disbursement receipt, notifications, consent) for the represented beneficiary; a beneficiary may act as their own claimant | — Pending |
 
 ## Evolution
 

@@ -29,8 +29,8 @@ Kapwa uses **JWT bearer authentication** with short-lived access tokens (1 hour)
 - `intake_officer` — Beneficiary intake and initial assessment
 - `auditor` — Read-only audit logs, hash-chain verification, consent ledger
 - `mayor` — Aggregate data views only (no PII)
-- `barangay_coordinator` — Single-barangay scope, SMS OTP auth + mobile PWA
-- `claimant` — Self-service dashboard, status tracker, service history
+- `barangay_coordinator` — Single-barangay scope, optional MFA (email OTP or TOTP) + mobile PWA
+- `claimant` — Beneficiary representative (may be the beneficiary themselves): status tracking, service history, read-only Access Card view, required-document uploads, disbursement records/receipts, notifications, consent handling (grant/revoke)
 
 Tokens are stored in `localStorage` and attached as `Authorization: Bearer <token>` on every API request.
 

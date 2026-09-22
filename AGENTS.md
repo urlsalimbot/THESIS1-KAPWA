@@ -2,7 +2,7 @@
 
 KAPWA — MSWDO Norzagaray Social Welfare System. Two-app monorepo:
 - `kapwa-server/` — NestJS 11 + TypeORM + Postgres REST/WebSocket backend. Entrypoint `src/main.ts`; modules under `src/<domain>/` each with `<domain>.module.ts / controller / service / *.entity.ts`.
-- `kapwa-client/` — React 19 + Vite + Tailwind/Radix UI + Capacitor (mobile) + SWR. Entrypoint `src/main.tsx`.
+- `kapwa-client/` — React 19 + Vite + Tailwind/Radix UI + SWR (PWA). Entrypoint `src/main.tsx`.
 
 Root `package.json` is a stub; each app has its own `package.json`. CI is `.github/workflows/ci.yml` (runs server build+`npm test` against a Postgres service, client `vitest run` + coverage).
 

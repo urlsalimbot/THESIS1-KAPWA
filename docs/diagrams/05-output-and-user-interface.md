@@ -32,7 +32,7 @@ Documents the complete output surface of the system: the landing/auth experience
 | FR-36 | **Coordinator —** Referrals: `CoordinatorReferralListPage` (`/coordinator/referrals`, tracking) and `CoordinatorReferralFormPage` (`/coordinator/referrals/new`); declining an incoming referral on `ReferralsPage`/`ReferralReviewPage` requires the `ReferralCard` confirm dialog ("This will decline the referral... This action cannot be undone."). |
 | FR-37 | **Coordinator —** Access cards: `CoordinatorAccessCardsPage` (`/coordinator/access-cards`) assigns and manages barangay access cards, including QR/code verification and print access for staff. |
 | **Claimant** | |
-| FR-38 | **Claimant —** `ClaimantDashboardPage` (`/my-dashboard`) shows the claimant's dashboard with their service history and notifications; `ClaimantAccessCardPage` (`/my-access-card`) shows their own access card; claimants may also view the card via `AccessCardViewPage` (`/beneficiary/:id/access-card`). |
+| FR-38 | **Claimant —** `ClaimantDashboardPage` (`/my-dashboard`) shows the represented beneficiary's case status, service history, required-document uploads, disbursement receipts, consent handling, and notifications; `ClaimantAccessCardPage` (`/my-access-card`) shows the access card (read-only); claimants may also view the card via `AccessCardViewPage` (`/beneficiary/:id/access-card`). |
 | **Mayor-Auditor-Admin** | |
 | FR-39 | **Mayor —** `MayorReportsPage` (`/reports`) shows reporting KPIs and drives the fund-utilization export through `ReportsExportButton` (`GET /export/monthly-funds`). |
 | FR-40 | **Auditor —** `AuditorPage` (`/audit-logs`) lists audit events and offers PDF/CSV export (`GET /export/audit-logs`, roles admin/auditor); `AuditPage` implements the COA fund-utilization export view (`GET /audit/coa-export`) but is not yet imported by `routes.tsx` (implemented, unrouted — flagged for routing). |
@@ -89,9 +89,9 @@ flowchart LR
         CC["Access Cards"]
     end
 
-    subgraph CLAIM["Claimant"]
+    subgraph CLAIM["Claimant (representative)"]
         MD["My Dashboard"]
-        MC["My Access Card"]
+        MC["My Access Card (read-only)"]
     end
 
     subgraph OV["Mayor / Auditor / Admin"]
@@ -181,7 +181,7 @@ flowchart LR
 
 **Coordinator tree** (FR-35..FR-37): Dashboard embeds QuickScan; Referrals list/new (decline confirm in `ReferralCard`, FR-36); Access Cards.
 
-**Claimant tree** (FR-38): My Dashboard → My Access Card.
+**Claimant tree** (FR-38): My Dashboard (status, services, document uploads, disbursement receipts, consent) → My Access Card (read-only).
 
 **Mayor / Auditor / Admin** (FR-39..FR-41): Mayor Reports (fund export), Audit Logs (PDF/CSV export), Admin Panel (+ remote wipe with "Type WIPE" confirm phrase).
 

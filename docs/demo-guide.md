@@ -21,7 +21,7 @@
 | **Social Worker** | Field social worker | worker1@mswdo.test | worker123 |
 | **Barangay Coordinator** | Barangay representative | coordinator.bigte@mswdo.test | coordinator123 |
 | **Agency Staff** | RHU / partner agency | rhu.staff@norzagaray.test | rhu123 |
-| **Claimant** | Resident beneficiary | pedro.claimant@test.com | claimant123 |
+| **Claimant** | Beneficiary representative (the beneficiary themselves in the demo) | pedro.claimant@test.com | claimant123 |
 | **Mayor** | Mayor's Office | mayor@mswdo.test | mayor123 |
 | **Auditor** | Internal auditor | auditor@mswdo.test | auditor123 |
 
@@ -67,7 +67,7 @@ Sign in as **admin@mswdo.test / admin123**.
 - **Card Activities** — scanning and logging a beneficiary's access card.
 - **Agency Profile** — the RHU's own page.
 
-### 6. Claimant — the resident's view (2 min)
+### 6. Claimant — the beneficiary representative's view (2 min)
 **Logout** → **pedro.claimant@test.com / claimant123**.
 
 - **My Dashboard** — what the resident sees about their own record.
