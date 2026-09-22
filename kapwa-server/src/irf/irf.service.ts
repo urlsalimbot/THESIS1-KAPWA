@@ -253,6 +253,7 @@ export class IrfService {
         datetimeReported: irf.datetimeReported,
         datetimeIncident: irf.datetimeIncident,
         caseDisposition: irf.caseDisposition,
+        dismissalReason: irf.dismissalReason,
       },
       parties: {
         reportingPerson: irf.itemAReportingPerson,
