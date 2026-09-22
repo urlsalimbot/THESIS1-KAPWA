@@ -1,5 +1,25 @@
+import * as zlib from 'zlib';
 import { buildGisPdf } from './gis-pdf.builder';
 import { GisPdfData } from './gis-export.types';
+
+// pdfkit stores page content in FlateDecode streams and encodes text as
+// hex-encoded TJ arrays, so decode both before asserting on text.
+function searchableText(buf: Buffer): string {
+  const raw = buf.toString('latin1');
+  const streams: string[] = [];
+  const re = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    try {
+      streams.push(zlib.inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1'));
+    } catch {
+      // stream not FlateDecode; ignore
+    }
+  }
+  const hex = streams.join('\n').match(/<([0-9A-Fa-f]+)>/g) ?? [];
+  const decoded = hex.map(h => Buffer.from(h.slice(1, -1), 'hex').toString('latin1')).join('');
+  return `${raw}\n${decoded}`;
+}
 
 const fullData: GisPdfData = {
   controlNo: 'KAPWA-2026-0001',
@@ -36,7 +56,7 @@ describe('buildGisPdf', () => {
   it('produces a PDF buffer with populated fields', async () => {
     const buf = await buildGisPdf(fullData);
     expect(buf[0]).toBe(0x25); // '%'
-    const text = buf.toString('latin1');
+    const text = searchableText(buf);
     expect(text).toContain('%PDF');
     expect(text).toContain('KAPWA-2026-0001');
     expect(text).toContain('Dela Cruz');
@@ -47,7 +67,7 @@ describe('buildGisPdf', () => {
     expect(text).toContain('Maria Santos');
     expect(text).toContain('GENERAL INTAKE SHEET');
     const pageCount = (text.match(/\/Type \/Page\b/g) ?? []).length;
-    expect(pageCount).toBeLessThanOrEqual(3);
+    expect(pageCount).toBe(1);
   });
 
   it('never crashes on minimal data (blanks)', async () => {

@@ -1,11 +1,12 @@
 // Official MSWDO Norzagaray case documents, reproduced as generated PDFs:
-//   * Certificate of Eligibility  (COE)
-//   * Petty Cash Voucher          (PCV)
+//   * Certificate of Eligibility  (COE) — 21cm x 7cm landscape paper strip
+//   * Petty Cash Voucher          (PCV) — 21cm x 14cm landscape paper strip
 //
-// These are the LGU paper forms the system replaces. Every filled-in value is
-// sourced from the database (beneficiary, case, assistance, assigned worker and
-// the admin/RSW signatory); the only fixed text is the municipal mayor stamped
-// on the voucher and the statutory form wording.
+// Both are printed on cut strips of bond paper, so they use custom page sizes
+// rather than A4. Every filled-in value is sourced from the database
+// (beneficiary, case, assistance, assigned worker and the admin/RSW signatory);
+// the only fixed text is the municipal mayor stamped on the voucher and the
+// statutory form wording.
 //
 // pdfkit's built-in Helvetica family is used so the base-14 fonts stay
 // embeddable-free; money therefore renders as "Php"/plain numerals instead of
@@ -14,7 +15,9 @@
 import * as path from 'path';
 import * as fs from 'fs';
 
-const PAGE_H = 841.89;
+const CM = 28.3465; // points per centimetre
+export const COE_PAGE: [number, number] = [21 * CM, 7 * CM]; // 595.28 x 198.43
+export const PCV_PAGE: [number, number] = [21 * CM, 14 * CM]; // 595.28 x 396.85
 
 // ---------------------------------------------------------------------------
 // Shared formatting helpers
@@ -48,12 +51,12 @@ function logoPath(): string {
   return path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
 }
 
-function drawLogo(doc: any, cx: number, y: number, size = 48): number {
+function drawLogo(doc: any, cx: number, y: number, size = 20): number {
   const p = logoPath();
   if (!fs.existsSync(p)) return y;
   try {
     doc.image(p, cx - size / 2, y, { fit: [size, size] });
-    return y + size + 8;
+    return y + size;
   } catch {
     return y;
   }
@@ -107,9 +110,9 @@ export function drawRichParagraph(
     let runEnd = 0;
     const flushRun = () => {
       if (runStart !== null) {
-        doc.moveTo(runStart, cy + fontSize + 2.5)
-          .lineTo(runEnd, cy + fontSize + 2.5)
-          .lineWidth(0.8).strokeColor('#111').stroke();
+        doc.moveTo(runStart, cy + fontSize + 1.5)
+          .lineTo(runEnd, cy + fontSize + 1.5)
+          .lineWidth(0.6).strokeColor('#111').stroke();
         runStart = null;
       }
     };
@@ -144,7 +147,7 @@ export function drawRichParagraph(
 }
 
 // ---------------------------------------------------------------------------
-// Certificate of Eligibility
+// Certificate of Eligibility — 21cm x 7cm landscape strip
 // ---------------------------------------------------------------------------
 
 export interface CertificateOfEligibilityData {
@@ -169,8 +172,8 @@ export async function buildCertificateOfEligibilityPdf(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const PDFDocument = require('pdfkit');
   const doc = new PDFDocument({
-    size: 'A4',
-    margins: { top: 40, bottom: 40, left: 60, right: 60 },
+    size: COE_PAGE,
+    margins: { top: 8, bottom: 6, left: 22, right: 22 },
     info: {
       Title: `COE-${data.controlNo}`,
       Author: data.officeName,
@@ -183,36 +186,33 @@ export async function buildCertificateOfEligibilityPdf(
     doc.on('end', () => resolve(Buffer.concat(chunks))),
   );
 
-  const LEFT = 60;
-  const RIGHT = 535;
+  const [PAGE_W, PAGE_H] = COE_PAGE;
+  const LEFT = 22;
+  const RIGHT = PAGE_W - 22;
   const WIDTH = RIGHT - LEFT;
-  const CENTER = LEFT + WIDTH / 2;
-
-  const line = (
-    text: string,
-    y: number,
-    opts: { size?: number; bold?: boolean; align?: 'left' | 'center' | 'right'; gap?: number } = {},
-  ): number => {
-    doc
-      .font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
-      .fontSize(opts.size ?? 11)
-      .fillColor('#111')
-      .text(text, LEFT, y, { align: opts.align ?? 'center', width: WIDTH, lineGap: opts.gap ?? 2 });
-    return doc.y;
-  };
+  const CENTER = PAGE_W / 2;
 
   // ---- Letterhead ----
-  let y = drawLogo(doc, CENTER, 42, 50);
-  y = line('Republic of the Philippines', y, { size: 11 });
-  y = line('Province of Bulacan', y, { size: 11 });
-  y = line('Municipality of Norzagaray', y, { size: 11 });
-  y = line(data.officeName.toUpperCase(), y, { size: 11.5, bold: true });
-  y += 6;
-  doc.moveTo(LEFT, y).lineTo(RIGHT, y).lineWidth(1).strokeColor('#111').stroke();
-  y += 30;
+  drawLogo(doc, CENTER, 6, 20);
+  const y = 28;
+  const line = (
+    text: string,
+    ly: number,
+    opts: { size?: number; bold?: boolean } = {},
+  ): void => {
+    doc
+      .font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
+      .fontSize(opts.size ?? 7)
+      .fillColor('#111')
+      .text(text, LEFT, ly, { align: 'center', width: WIDTH, lineBreak: false });
+  };
+  line('Republic of the Philippines', y, { size: 7 });
+  line(data.officeName.toUpperCase(), y + 8, { size: 8.5, bold: true });
+  line('Norzagaray, Bulacan', y + 17, { size: 7 });
+  doc.moveTo(LEFT, y + 27).lineTo(RIGHT, y + 27).lineWidth(0.8).strokeColor('#111').stroke();
 
-  y = line('CERTIFICATE OF ELIGIBILITY', y, { size: 14, bold: true });
-  y += 34;
+  // ---- Title ----
+  line('CERTIFICATE OF ELIGIBILITY', y + 32, { size: 11, bold: true });
 
   // ---- Body: underlined values are matched to the database ----
   const spans: RichSpan[] = [
@@ -234,37 +234,36 @@ export async function buildCertificateOfEligibilityPdf(
     { text: money(data.amount), underline: true },
     { text: '.' },
   ];
-  y = drawRichParagraph(doc, spans, LEFT, y, WIDTH, 11, 21);
+  drawRichParagraph(doc, spans, LEFT, y + 54, WIDTH, 7.5, 10.5);
 
   // ---- Interviewer- Designation (right) ----
-  const iw = 230;
+  const iw = 190;
   const ix = RIGHT - iw;
-  const iy = y + 46;
+  const iy = PAGE_H - 52;
   if (data.interviewer) {
-    doc.font('Helvetica').fontSize(10).fillColor('#111')
-      .text(data.interviewer, ix, iy - 15, { width: iw, align: 'center' });
+    doc.font('Helvetica').fontSize(7).fillColor('#111')
+      .text(data.interviewer, ix, iy - 10, { width: iw, align: 'center', lineBreak: false });
   }
-  doc.moveTo(ix, iy).lineTo(RIGHT, iy).lineWidth(0.8).strokeColor('#111').stroke();
-  doc.font('Helvetica').fontSize(10).fillColor('#111')
-    .text('Interviewer- Designation', ix, iy + 4, { width: iw, align: 'center' });
+  doc.moveTo(ix, iy).lineTo(RIGHT, iy).lineWidth(0.7).strokeColor('#111').stroke();
+  doc.font('Helvetica').fontSize(6.5).fillColor('#111')
+    .text('Interviewer- Designation', ix, iy + 2, { width: iw, align: 'center', lineBreak: false });
 
   // ---- Recommending Approval (lower left) ----
-  const swY = PAGE_H - 150;
-  doc.font('Helvetica').fontSize(10).fillColor('#111')
-    .text('Recommending Approval', LEFT, swY, { width: WIDTH });
+  doc.font('Helvetica').fontSize(7).fillColor('#111')
+    .text('Recommending Approval', LEFT, PAGE_H - 60, { lineBreak: false });
   if (data.signatoryName) {
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#111')
-      .text(`${data.signatoryName}, RSW`, LEFT, swY + 34, { width: WIDTH });
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
+      .text(`${data.signatoryName}, RSW`, LEFT, PAGE_H - 42, { lineBreak: false });
   }
-  doc.font('Helvetica').fontSize(10).fillColor('#111')
-    .text('MSWDO', LEFT, swY + 50, { width: WIDTH });
+  doc.font('Helvetica').fontSize(7).fillColor('#111')
+    .text('MSWDO', LEFT, PAGE_H - 31, { lineBreak: false });
 
   doc.end();
   return done;
 }
 
 // ---------------------------------------------------------------------------
-// Petty Cash Voucher
+// Petty Cash Voucher — 21cm x 14cm landscape strip
 // ---------------------------------------------------------------------------
 
 export interface PettyCashVoucherData {
@@ -289,8 +288,8 @@ export async function buildPettyCashVoucherPdf(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const PDFDocument = require('pdfkit');
   const doc = new PDFDocument({
-    size: 'A4',
-    margins: { top: 36, bottom: 30, left: 36, right: 36 },
+    size: PCV_PAGE,
+    margins: { top: 10, bottom: 8, left: 14, right: 14 },
     info: {
       Title: `PCV-${data.controlNo}`,
       Author: data.officeName,
@@ -303,18 +302,19 @@ export async function buildPettyCashVoucherPdf(
     doc.on('end', () => resolve(Buffer.concat(chunks))),
   );
 
-  const LEFT = 36;
-  const RIGHT = 559;
-  const WIDTH = RIGHT - LEFT; // 523
-  const MID = LEFT + 300; // left | right divider
-  const TOP = 36;
-  const LW = MID - LEFT; // 300
-  const RW = RIGHT - MID; // 223
+  const PAGE_W = PCV_PAGE[0];
+  const LEFT = 14;
+  const RIGHT = PAGE_W - 14;
+  const WIDTH = RIGHT - LEFT;
+  const MID = LEFT + 0.55 * WIDTH;
+  const TOP = 10;
+  const LW = MID - LEFT;
+  const RW = RIGHT - MID;
 
-  const hline = (x1: number, x2: number, yy: number, lw = 0.8) =>
+  const hline = (x1: number, x2: number, yy: number, lw = 0.7) =>
     doc.moveTo(x1, yy).lineTo(x2, yy).lineWidth(lw).strokeColor('#111').stroke();
   const vline = (x: number, y1: number, y2: number) =>
-    doc.moveTo(x, y1).lineTo(x, y2).lineWidth(0.8).strokeColor('#111').stroke();
+    doc.moveTo(x, y1).lineTo(x, y2).lineWidth(0.7).strokeColor('#111').stroke();
   const text = (
     value: string,
     x: number,
@@ -324,14 +324,14 @@ export async function buildPettyCashVoucherPdf(
   ) => {
     doc
       .font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
-      .fontSize(opts.size ?? 10)
+      .fontSize(opts.size ?? 7)
       .fillColor('#111')
-      .text(value, x, yy, { width: w, align: opts.align ?? 'left', lineGap: opts.gap ?? 1 });
+      .text(value, x, yy, { width: w, align: opts.align ?? 'left', lineGap: opts.gap ?? 0 });
   };
 
   // Column heights (pt). Left stack defines the form height; the right stack is
   // ruled independently so its subsections keep their paper proportions.
-  const H = { header: 70, payee: 24, address: 24, req: 22, thead: 20, tbody: 150, approved: 150, paid: 110, cash: 130 };
+  const H = { header: 46, payee: 20, address: 20, req: 16, thead: 15, tbody: 96, approved: 76, paid: 38, cash: 50 };
   const leftRows: number[] = [];
   let ly = TOP;
   for (const key of ['header', 'payee', 'address', 'req', 'thead', 'tbody', 'approved', 'paid'] as const) {
@@ -347,96 +347,95 @@ export async function buildPettyCashVoucherPdf(
 
   // ---- Left: letterhead ----
   const lc = LEFT + LW / 2;
-  text('PETTY CASH VOUCHER', LEFT, TOP + 12, LW, { size: 13, bold: true, align: 'center' });
-  text('Norzagaray, Bulacan', LEFT, TOP + 34, LW, { size: 10, align: 'center' });
-  text('LGU', LEFT, TOP + 48, LW, { size: 10, align: 'center' });
+  text('PETTY CASH VOUCHER', LEFT, TOP + 7, LW, { size: 11, bold: true, align: 'center' });
+  text('Norzagaray, Bulacan', LEFT, TOP + 23, LW, { size: 8, align: 'center' });
+  text('LGU', LEFT, TOP + 33, LW, { size: 8, align: 'center' });
 
   // ---- Right: control block ----
-  text(`No: ${data.controlNo}`, MID + 7, TOP + 8, RW - 14, { size: 9.5 });
-  text(`Date: ${longDate(data.date)}`, MID + 7, TOP + 24, RW - 14, { size: 9.5 });
-  text('Responsibility Center:', MID + 7, TOP + 40, RW - 14, { size: 9 });
-  text(data.officeName, MID + 7, TOP + 51, RW - 14, { size: 8.5, bold: true });
+  text(`No: ${data.controlNo}`, MID + 6, TOP + 6, RW - 12, { size: 7 });
+  text(`Date: ${longDate(data.date)}`, MID + 6, TOP + 17, RW - 12, { size: 7 });
+  text('Responsibility Center:', MID + 6, TOP + 28, RW - 12, { size: 6.5 });
+  text(data.officeName, MID + 6, TOP + 35, RW - 12, { size: 6, bold: true });
 
   // ---- Left: payee / request ----
   const payeeY = leftRows[0];
-  text(`Payee:  ${data.payee}`, LEFT + 5, payeeY + 6, LW - 10, { size: 10.5 });
+  text(`Payee:  ${data.payee}`, LEFT + 5, payeeY + 5, LW - 10, { size: 8 });
   const addrY = leftRows[1];
-  text(`Address:  ${data.address}`, LEFT + 5, addrY + 6, LW - 10, { size: 10.5 });
+  text(`Address:  ${data.address}`, LEFT + 5, addrY + 5, LW - 10, { size: 8 });
   const reqY = leftRows[2];
-  text('I. To be filled up upon request', LEFT + 5, reqY + 5, LW - 10, { size: 10 });
+  text('I. To be filled up upon request', LEFT + 5, reqY + 4, LW - 10, { size: 7.5 });
 
   // ---- Left: particulars table ----
   const theadY = leftRows[3];
   const tbodyY = leftRows[4];
   const tbodyEnd = leftRows[5];
-  const col1 = 115;
-  const col2 = 112;
+  const col1 = 120;
+  const col2 = 118;
   // Column rules stop below the first data row so the trailing supporting-papers
   // note sits in open space, as on the printed form.
-  vline(LEFT + col1, theadY, tbodyY + 24);
-  vline(LEFT + col1 + col2, theadY, tbodyY + 24);
-  text('To payment of', LEFT + 5, theadY + 5, col1 - 10, { size: 10, bold: true });
-  text('Particular', LEFT + col1 + 5, theadY + 5, col2 - 10, { size: 10, bold: true });
-  text('Amount', LEFT + col1 + col2 + 5, theadY + 5, LW - col1 - col2 - 10, { size: 10, bold: true, align: 'right' });
-  text(data.payee, LEFT + 5, tbodyY + 6, col1 - 10, { size: 10 });
-  text(data.particulars, LEFT + col1 + 5, tbodyY + 6, col2 - 10, { size: 9.5 });
-  text(money(data.amount), LEFT + col1 + col2 + 5, tbodyY + 6, LW - col1 - col2 - 10, { size: 10, align: 'right' });
-  text('(as per attached supporting papers...)', LEFT + 5, tbodyEnd - 18, LW - 10, { size: 9 });
+  vline(LEFT + col1, theadY, tbodyY + 16);
+  vline(LEFT + col1 + col2, theadY, tbodyY + 16);
+  text('To payment of', LEFT + 4, theadY + 4, col1 - 8, { size: 7.5, bold: true });
+  text('Particular', LEFT + col1 + 4, theadY + 4, col2 - 8, { size: 7.5, bold: true });
+  text('Amount', LEFT + col1 + col2 + 4, theadY + 4, LW - col1 - col2 - 8, { size: 7.5, bold: true, align: 'right' });
+  text(data.payee, LEFT + 4, tbodyY + 4, col1 - 8, { size: 7 });
+  text(data.particulars, LEFT + col1 + 4, tbodyY + 4, col2 - 8, { size: 6.5 });
+  text(money(data.amount), LEFT + col1 + col2 + 4, tbodyY + 4, LW - col1 - col2 - 8, { size: 7, align: 'right' });
+  text('(as per attached supporting papers...)', LEFT + 4, tbodyEnd - 13, LW - 8, { size: 6.5 });
 
   // ---- Left: approved / paid / received ----
   const apprY = leftRows[5];
-  text('Approved by:', LEFT + 5, apprY + 6, LW - 10, { size: 10.5 });
-  text(data.mayorName, LEFT, apprY + H.approved - 56, LW, { size: 12.5, bold: true, align: 'center' });
-  text(data.mayorTitle, LEFT, apprY + H.approved - 38, LW, { size: 11, bold: true, align: 'center' });
+  text('Approved by:', LEFT + 5, apprY + 5, LW - 10, { size: 8 });
+  text(data.mayorName, LEFT, apprY + H.approved - 30, LW, { size: 9.5, bold: true, align: 'center' });
+  text(data.mayorTitle, LEFT, apprY + H.approved - 19, LW, { size: 8, bold: true, align: 'center' });
 
   const paidY = leftRows[6];
-  text('Paid by:', LEFT + 5, paidY + 6, LW - 10, { size: 10.5 });
-  hline(lc - 95, lc + 95, paidY + 72);
-  text('Disbursing Officer', lc - 95, paidY + 76, 190, { size: 10, align: 'center' });
+  text('Paid by:', LEFT + 5, paidY + 5, LW - 10, { size: 8 });
+  hline(lc - 80, lc + 80, paidY + 26);
+  text('Disbursing Officer', lc - 80, paidY + 28, 160, { size: 7, align: 'center' });
 
   const cashY = leftRows[7];
-  text('Cash received by:', LEFT + 5, cashY + 6, LW - 10, { size: 10.5 });
-  hline(lc - 115, lc + 115, cashY + 88);
-  text('Signature Over Printed Name of Payee', lc - 130, cashY + 92, 260, { size: 10, align: 'center' });
+  text('Cash received by:', LEFT + 5, cashY + 5, LW - 10, { size: 8 });
+  hline(lc - 100, lc + 100, cashY + 34);
+  text('Signature Over Printed Name of Payee', lc - 115, cashY + 36, 230, { size: 7, align: 'center' });
 
-  // ---- Right: liquidation block ----
+  // ---- Right: liquidation block (PART II) — left blank for liquidation ----
   let ry = TOP + H.header;
   const rSep = (delta: number) => {
     ry += delta;
     hline(MID, RIGHT, ry);
     return ry;
   };
-  text('II. to be filled up upon liquidation', MID + 7, ry + 6, RW - 14, { size: 10 });
+  text('II. to be filled up upon liquidation', MID + 6, ry + 4, RW - 12, { size: 7.5 });
 
-  const grantedY = rSep(26);
-  text('Total Amount Granted', MID + 7, grantedY + 8, RW - 14, { size: 10 });
-  text(money(data.amount), MID + 7, grantedY + 8, RW - 14, { size: 10, bold: true, align: 'right' });
+  const grantedY = rSep(14);
+  text('Total Amount Granted', MID + 6, grantedY + 5, RW - 12, { size: 7.5 });
 
-  const paidPerY = rSep(30);
-  text('Total Amount Paid per', MID + 7, paidPerY + 8, RW - 14, { size: 10 });
+  const paidPerY = rSep(17);
+  text('Total Amount Paid per', MID + 6, paidPerY + 5, RW - 12, { size: 7.5 });
 
-  const orY = rSep(30);
-  text('OR No. ______________________', MID + 7, orY + 8, RW - 14, { size: 10 });
+  const orY = rSep(17);
+  text('OR No. ______________________', MID + 6, orY + 5, RW - 12, { size: 7.5 });
 
-  const refY = rSep(30);
-  text('Amount Refunded/', MID + 7, refY + 4, RW - 14, { size: 9.5 });
+  const refY = rSep(17);
+  text('Amount Refunded/', MID + 6, refY + 3, RW - 12, { size: 7 });
 
-  const reimbY = rSep(22);
-  text('(Reimbursed)', MID + 7, reimbY + 4, RW - 14, { size: 9.5 });
+  const reimbY = rSep(12);
+  text('(Reimbursed)', MID + 6, reimbY + 3, RW - 12, { size: 7 });
 
-  const checksY = rSep(22);
-  text('______  Received Refund', MID + 10, checksY + 8, RW - 20, { size: 9.5 });
-  text('______  Reimbursement Paid', MID + 10, checksY + 30, RW - 20, { size: 9.5 });
-  text('______  Disbursing Officer', MID + 10, checksY + 52, RW - 20, { size: 9.5 });
+  const checksY = rSep(12);
+  text('______  Received Refund', MID + 8, checksY + 5, RW - 16, { size: 7 });
+  text('______  Reimbursement Paid', MID + 8, checksY + 17, RW - 16, { size: 7 });
+  text('______  Disbursing Officer', MID + 8, checksY + 29, RW - 16, { size: 7 });
 
-  const liqY = rSep(86);
-  text('______  Liquidation Submitted:', MID + 10, liqY + 8, RW - 20, { size: 9.5 });
-  text('______  Reimbursement received by:', MID + 10, liqY + 34, RW - 20, { size: 9.5 });
+  const liqY = rSep(47);
+  text('______  Liquidation Submitted:', MID + 8, liqY + 5, RW - 16, { size: 7 });
+  text('______  Reimbursement received by:', MID + 8, liqY + 17, RW - 16, { size: 7 });
 
   // Bottom signature over printed name of payee (right column).
-  const sigY = BOTTOM - 70;
-  hline(MID + 30, RIGHT - 30, sigY);
-  text('Signature Over Printed Name of Payee', MID + 10, sigY + 5, RW - 20, { size: 10, align: 'center' });
+  const sigY = BOTTOM - 34;
+  hline(MID + 24, RIGHT - 24, sigY);
+  text('Signature Over Printed Name of Payee', MID + 8, sigY + 3, RW - 16, { size: 7, align: 'center' });
 
   doc.end();
   return done;

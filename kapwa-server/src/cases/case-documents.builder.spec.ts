@@ -44,14 +44,14 @@ describe('money', () => {
 });
 
 describe('buildCertificateOfEligibilityPdf', () => {
-  it('produces a single-page A4 PDF', async () => {
+  it('produces a single-page 21cm x 7cm landscape strip', async () => {
     const buf = await buildCertificateOfEligibilityPdf(coeData);
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
     const doc = await PDFDocument.load(buf);
     expect(doc.getPageCount()).toBe(1);
     const { width, height } = doc.getPage(0).getSize();
     expect(Math.round(width)).toBe(595);
-    expect(Math.round(height)).toBe(842);
+    expect(Math.round(height)).toBe(198);
   });
 
   it('renders without a signatory or interviewer (blank fallbacks)', async () => {
@@ -68,14 +68,14 @@ describe('buildCertificateOfEligibilityPdf', () => {
 });
 
 describe('buildPettyCashVoucherPdf', () => {
-  it('produces a single-page A4 PDF', async () => {
+  it('produces a single-page 21cm x 14cm landscape strip', async () => {
     const buf = await buildPettyCashVoucherPdf(pcvData);
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
     const doc = await PDFDocument.load(buf);
     expect(doc.getPageCount()).toBe(1);
     const { width, height } = doc.getPage(0).getSize();
     expect(Math.round(width)).toBe(595);
-    expect(Math.round(height)).toBe(842);
+    expect(Math.round(height)).toBe(397);
   });
 
   it('falls back to the "Assistance" particular when none is given', async () => {
