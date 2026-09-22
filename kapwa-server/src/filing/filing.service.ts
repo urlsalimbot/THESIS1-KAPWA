@@ -48,6 +48,18 @@ export class FilingService {
       throw new ForbiddenException('Only announcement managers can attach photos');
     }
 
+    // A file tied to a documentary need is always category 'requirement' — the
+    // activation gate keys off the requirement, not on the caller remembering
+    // to send the category.
+    const requirementKey = metadata.requirementKey;
+    const category = requirementKey ? 'requirement' : metadata.category;
+
+    // Staff uploads happen at the office, so they count as "passed on-site";
+    // claimant uploads are remote and stay pending until staff verify them.
+    const isRemote = callerRole === 'claimant';
+    const verifiedAt = requirementKey && !isRemote ? new Date() : undefined;
+    const verifiedBy = verifiedAt ? (metadata.uploadedBy ?? metadata.userId) : undefined;
+
     const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\./g, '');
     const fileName = `${Date.now()}-${safeName}`;
     const filePath = path.join(UPLOAD_DIR, fileName);
@@ -62,12 +74,53 @@ export class FilingService {
       beneficiaryId: metadata.beneficiaryId,
       irfId: metadata.irfId,
       announcementId: metadata.announcementId,
-      category: metadata.category,
+      category,
       notes: metadata.notes,
-      requirementKey: metadata.requirementKey,
+      requirementKey,
       uploadedBy: metadata.uploadedBy,
+      verifiedAt,
+      verifiedBy,
     });
-    return this.docRepo.save(doc);
+    const saved = await this.docRepo.save(doc);
+    if (verifiedAt && requirementKey && metadata.caseId) {
+      await this.markRequirementMet(metadata.caseId, requirementKey, true);
+    }
+    return saved;
+  }
+
+  // Documentary-needs verification ("pass on-site"). Verifying a remote upload
+  // satisfies the requirement; clearing verification re-derives it from any
+  // remaining verified document for the same requirement.
+  async setVerified(id: string, verified: boolean, actorId?: string) {
+    const doc = await this.findOne(id);
+    doc.verifiedAt = verified ? new Date() : undefined;
+    doc.verifiedBy = verified ? actorId : undefined;
+    await this.docRepo.save(doc);
+    if (doc.caseId && doc.requirementKey) {
+      await this.recomputeRequirementMet(doc.caseId, doc.requirementKey);
+    }
+    return doc;
+  }
+
+  private async markRequirementMet(caseId: string, requirementKey: string, met: boolean) {
+    await this.docRepo.query(
+      `INSERT INTO case_requirements (case_id, requirement_key, met)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (case_id, requirement_key)
+       DO UPDATE SET met = EXCLUDED.met, updated_at = NOW()`,
+      [caseId, requirementKey, met],
+    );
+  }
+
+  private async recomputeRequirementMet(caseId: string, requirementKey: string) {
+    const rows = await this.docRepo.query(
+      `SELECT EXISTS(
+         SELECT 1 FROM document_vault
+          WHERE case_id = $1 AND requirement_key = $2 AND verified_at IS NOT NULL
+       ) AS verified`,
+      [caseId, requirementKey],
+    );
+    await this.markRequirementMet(caseId, requirementKey, Boolean(rows?.[0]?.verified));
   }
 
   async findByCaseAndRequirement(caseId: string, requirementKey?: string, role?: string) {
@@ -169,7 +222,11 @@ export class FilingService {
     const doc = await this.findOne(id);
     const filePath = path.join(UPLOAD_DIR, doc.fileName);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    return this.docRepo.delete(id);
+    const result = await this.docRepo.delete(id);
+    if (doc.caseId && doc.requirementKey) {
+      await this.recomputeRequirementMet(doc.caseId, doc.requirementKey);
+    }
+    return result;
   }
 
   async cleanupOlderThan(days: number) {

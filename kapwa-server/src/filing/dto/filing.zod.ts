@@ -10,4 +10,9 @@ export const UploadMetadataSchema = z.object({
   requirementKey: z.string().optional(),
 });
 
+export const VerifyDocumentSchema = z.object({
+  verified: z.boolean(),
+});
+
 export type UploadMetadataInput = z.infer<typeof UploadMetadataSchema>;
+export type VerifyDocumentInput = z.infer<typeof VerifyDocumentSchema>;

@@ -373,8 +373,73 @@ export class BeneficiariesService {
     };
   }
 
-  async getMyConsent(userId: string) {
+  // Documentary needs for the claimant's own case. The client can upload a
+  // document remotely against a specific need; it then shows as pending until
+  // MSWDO staff confirm it on-site (or the client passes it on-site directly).
+  async getMyRequirements(userId: string) {
     const ben = await this.resolveMyBeneficiary(userId);
+    if (!ben) return { case: null, requirements: [] };
+    const cases = await this.caseRepo.find({
+      where: { beneficiaryId: ben.id },
+      order: { createdAt: 'DESC' },
+      take: 1,
+    });
+    const latestCase = cases[0];
+    if (!latestCase) return { case: null, requirements: [] };
+
+    const rows = await this.caseRepo.manager.query(
+      `SELECT prd.document_key AS key,
+              prd.mandatory AS mandatory,
+              COALESCE(cr.met, FALSE) AS met
+         FROM case_interventions ci
+         JOIN program_required_documents prd ON prd.program_id = ci.program_id
+         LEFT JOIN case_requirements cr
+                ON cr.case_id::text = ci.case_id AND cr.requirement_key = prd.document_key
+        WHERE ci.case_id = $1
+        GROUP BY prd.document_key, prd.mandatory, cr.met
+        ORDER BY prd.document_key`,
+      [latestCase.id],
+    );
+
+    const docs = await this.caseRepo.manager.query(
+      `SELECT id, original_name AS "originalName", requirement_key AS "requirementKey",
+              verified_at AS "verifiedAt", created_at AS "createdAt"
+         FROM document_vault
+        WHERE case_id = $1 AND requirement_key IS NOT NULL
+        ORDER BY created_at DESC`,
+      [latestCase.id],
+    );
+
+    const documentsByKey = new Map<string, any[]>();
+    for (const d of docs) {
+      const list = documentsByKey.get(d.requirementKey) || [];
+      list.push({
+        id: d.id,
+        originalName: d.originalName,
+        verifiedAt: d.verifiedAt,
+        createdAt: d.createdAt,
+      });
+      documentsByKey.set(d.requirementKey, list);
+    }
+
+    const requirements = rows.map((r: any) => {
+      const documents = documentsByKey.get(r.key) || [];
+      return {
+        key: r.key,
+        mandatory: Boolean(r.mandatory),
+        met: Boolean(r.met),
+        documents,
+        pendingVerification: documents.some((d) => !d.verifiedAt),
+      };
+    });
+
+    return {
+      case: { id: latestCase.id, controlNo: latestCase.controlNo, status: latestCase.status },
+      requirements,
+    };
+  }
+
+  async getMyConsent(userId: string) {    const ben = await this.resolveMyBeneficiary(userId);
     if (!ben) return [];
     return this.consentRepo.find({ where: { beneficiaryId: ben.id }, order: { grantedAt: 'DESC' } });
   }

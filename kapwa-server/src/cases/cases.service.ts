@@ -6,6 +6,7 @@ import { Case, CaseStatus } from './case.entity';
 import { CaseRequirement } from './case-requirement.entity';
 import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
+import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -478,23 +479,45 @@ export class CasesService {
   async updateTransitionPlan(id: string, data: TransitionPlanInput) {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
-    const { referrals, ...rest } = data;
+    const { referrals, followUpVisits, ...rest } = data;
     Object.assign(caseEntity, rest);
     if (referrals !== undefined && referrals !== null) {
       caseEntity.referralRows = referrals.map(r =>
         this.caseRepo.manager.create(CaseReferral, { caseId: caseEntity.id, agency: r.agencyName, status: r.status, notes: r.notes ?? undefined, reason: r.reason, contactInfo: r.contactInfo ?? undefined }),
       );
     }
-    return this.caseRepo.save(caseEntity);
+    await this.caseRepo.save(caseEntity);
+
+    // Follow-up / home visits are replaced wholesale. Done with explicit
+    // delete+insert (rather than reassigning the collection) so removing a visit
+    // deletes the row instead of nulling its NOT NULL case_id.
+    if (followUpVisits !== undefined) {
+      await this.caseRepo.manager.delete(CaseFollowUpVisit, { caseId: id });
+      const visits = (followUpVisits ?? []).map(v =>
+        this.caseRepo.manager.create(CaseFollowUpVisit, {
+          caseId: id,
+          visitDate: v.date,
+          visitType: v.type,
+          notes: v.notes ?? undefined,
+          outcome: v.outcome ?? undefined,
+        }),
+      );
+      if (visits.length > 0) await this.caseRepo.manager.save(CaseFollowUpVisit, visits);
+    }
+    return this.caseRepo.findOne({ where: { id }, relations: ['followUpVisitRows'] });
   }
 
   async updateRequirements(id: string, data: RequirementsInput) {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
-    caseEntity.requirements = Object.entries(data.requirementsChecklist).map(([requirementKey, met]) =>
-      this.caseRepo.manager.create(CaseRequirement, { caseId: caseEntity.id, requirementKey, met }),
+    // Replace the checklist wholesale. Explicit delete+insert (not a collection
+    // reassignment) keeps the (case, requirement) uniqueness intact.
+    await this.caseRepo.manager.delete(CaseRequirement, { caseId: id });
+    const rows = Object.entries(data.requirementsChecklist).map(([requirementKey, met]) =>
+      this.caseRepo.manager.create(CaseRequirement, { caseId: id, requirementKey, met }),
     );
-    return this.caseRepo.save(caseEntity);
+    if (rows.length > 0) await this.caseRepo.manager.save(CaseRequirement, rows);
+    return this.caseRepo.findOne({ where: { id }, relations: ['requirements'] });
   }
 
   async updateReferralDecision(id: string, notNeeded: boolean) {

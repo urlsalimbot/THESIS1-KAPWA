@@ -284,7 +284,7 @@ describe('CasesExportService — document field mapping', () => {
 });
 
 describe('CasesExportService — missingRequiredDocuments', () => {
-  it('returns only required keys with no filed document, scoped to the case', async () => {
+  it('returns only required keys not marked met, scoped to the case', async () => {
     const query = jest.fn()
       .mockResolvedValueOnce([{ document_key: 'A' }, { document_key: 'B' }])
       .mockResolvedValueOnce([{ requirement_key: 'A' }, { requirement_key: 'Z' }]);
@@ -293,8 +293,8 @@ describe('CasesExportService — missingRequiredDocuments', () => {
     await expect(svc.missingRequiredDocuments('c1')).resolves.toEqual(['B']);
     expect(query.mock.calls[0][0]).toMatch(/WHERE ci\.case_id = \$1/);
     expect(query.mock.calls[0][1]).toEqual(['c1']);
-    expect(query.mock.calls[1][0]).toMatch(/WHERE case_id = \$1/);
-    expect(query.mock.calls[1][0]).toMatch(/category = 'requirement'/);
+    expect(query.mock.calls[1][0]).toMatch(/FROM case_requirements/);
+    expect(query.mock.calls[1][0]).toMatch(/met = TRUE/);
     expect(query.mock.calls[1][1]).toEqual(['c1']);
   });
 

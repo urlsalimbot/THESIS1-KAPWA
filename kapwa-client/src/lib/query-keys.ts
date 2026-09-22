@@ -34,6 +34,7 @@ export const queryKeys = {
     myAccessCard: () => memo('beneficiaries.myAccessCard', () => ['beneficiaries', 'me', 'access-card'] as const),
     myServices: () => memo('beneficiaries.myServices', () => ['beneficiaries', 'me', 'services'] as const),
     myConsent: () => memo('beneficiaries.myConsent', () => ['beneficiaries', 'me', 'consent'] as const),
+    myRequirements: () => memo('beneficiaries.myRequirements', () => ['beneficiaries', 'me', 'requirements'] as const),
   },
   fourps: {
     compliance: (caseId: string) =>

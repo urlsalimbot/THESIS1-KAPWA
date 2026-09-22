@@ -61,10 +61,38 @@ export function ClaimantDashboardPage() {
   const { data: disbData } = useSWR<{ disbursements: any[]; total: number }>('/beneficiaries/me/disbursements');
   const caseId = servicesData?.case?.id;
   const { data: myDocs = [], mutate: mutateDocs } = useSWR<any[]>(caseId ? `/filing?caseId=${caseId}` : null);
+  const { data: myRequirements, mutate: mutateRequirements } = useSWR<{
+    case: { id: string; controlNo: string; status: string } | null;
+    requirements: Array<{ key: string; mandatory: boolean; met: boolean; pendingVerification: boolean; documents: Array<{ id: string; originalName?: string; verifiedAt?: string }> }>;
+  }>(queryKeys.beneficiaries.myRequirements());
   const { mutate: globalMutate } = useSWRConfig();
   const [uploading, setUploading] = useState(false);
   const [granting, setGranting] = useState(false);
   const loading = !servicesData && !consents.length;
+
+  async function uploadRequirement(file: File, requirementKey: string) {
+    if (!caseId) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('caseId', caseId);
+      fd.append('requirementKey', requirementKey);
+      fd.append('category', 'requirement');
+      fd.append('file', file);
+      const token = localStorage.getItem('kapwa_token');
+      const base = (import.meta as any).env?.VITE_API_URL || '/api/v1';
+      const res = await fetch(`${base}/filing/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      await mutateRequirements();
+      await mutateDocs();
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function uploadDoc(file: File) {
     if (!caseId) return;
@@ -232,6 +260,69 @@ export function ClaimantDashboardPage() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Documentary Needs — client uploads remotely, then MSWDO confirms on-site */}
+      {(myRequirements?.requirements?.length || 0) > 0 && (
+        <Card>
+          <div className="border-b px-4 py-3 flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-primary">{t('claims.documentaryNeeds', 'Documentary Needs')}</h2>
+            <span className="text-xs text-muted-foreground">
+              {t('claims.documentaryNeedsHint', 'Upload here, then bring the original to the office')}
+            </span>
+          </div>
+          <CardContent className="p-4 space-y-3">
+            {(myRequirements?.requirements || []).map((req) => {
+              const submitted = req.documents.length > 0;
+              return (
+                <div key={req.key} className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{req.key}</p>
+                      {req.mandatory && (
+                        <p className="text-[11px] text-muted-foreground">{t('claims.required', 'Required')}</p>
+                      )}
+                    </div>
+                    {req.met ? (
+                      <Badge variant="default" className="shrink-0 text-[10px]">{t('claims.requirementMet', 'Confirmed')}</Badge>
+                    ) : req.pendingVerification ? (
+                      <Badge variant="secondary" className="shrink-0 text-[10px]">{t('claims.pendingOnSite', 'Pending on-site')}</Badge>
+                    ) : (
+                      <Badge variant="outline" className="shrink-0 text-[10px]">{t('claims.notSubmitted', 'Not submitted')}</Badge>
+                    )}
+                  </div>
+                  {submitted && (
+                    <ul className="text-xs text-muted-foreground space-y-0.5">
+                      {req.documents.map((d) => (
+                        <li key={d.id} className="truncate">
+                          {d.originalName || d.id}
+                          {d.verifiedAt ? ` · ${t('claims.verified', 'verified')}` : ` · ${t('claims.awaitingVerification', 'awaiting on-site verification')}`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!req.met && (
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-muted">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        disabled={uploading}
+                        aria-label={t('claims.uploadFor', 'Upload for {{key}}', { key: req.key })}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadRequirement(f, req.key);
+                          e.target.value = '';
+                        }}
+                      />
+                      {uploading ? t('claims.uploading', 'Uploading…') : t('claims.uploadDocument', 'Upload document')}
+                    </label>
+                  )}
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}

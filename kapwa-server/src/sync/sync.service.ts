@@ -37,6 +37,10 @@ const ALLOWED_COLUMNS = new Set([
   "full_name","relationship","intervention_id",
   // Allow SLA field on cases
   "sla_overdue",
+  // Documentary-needs checklist + on-site verification
+  "requirement_key","met","document_key","mandatory","verified_at","verified_by",
+  // Phase-Out follow-up / home visits
+  "visit_date","visit_type","outcome",
   // Referrals now link to persons via person_id (embedded person copy columns dropped)
   "person_id"
 ]);
@@ -554,6 +558,7 @@ export class SyncService implements OnApplicationShutdown {
       case_requirements: 'case_requirements',
       case_referrals: 'case_referrals',
       case_assistances: 'case_assistances',
+      case_follow_up_visits: 'case_follow_up_visits',
       referrals: 'referrals',
       person_contacts: 'person_contacts',
       person_addresses: 'person_addresses',

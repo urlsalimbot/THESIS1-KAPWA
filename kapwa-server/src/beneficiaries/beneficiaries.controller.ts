@@ -62,6 +62,13 @@ export class BeneficiariesController {
     return this.benService.getMyConsent(req.user?.id || req.user.id);
   }
 
+  @Get('me/requirements')
+  @Roles('claimant')
+  @Sensitivity('public')
+  async getMyRequirements(@Request() req: AuthenticatedRequest) {
+    return this.benService.getMyRequirements(req.user?.id || req.user.id);
+  }
+
   @Post('me/consent/grant')
   @Roles('claimant')
   @Sensitivity('public')

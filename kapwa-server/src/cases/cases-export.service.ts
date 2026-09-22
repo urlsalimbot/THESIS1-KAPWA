@@ -305,9 +305,15 @@ export class CasesExportService {
     return buildPettyCashVoucherPdf(data);
   }
 
-  // Required document keys (mandatory) contributed by the programs behind this
-  // case's interventions, minus the keys already filed against the case.
-  // A program with no required documents contributes nothing.
+  // Mandatory document keys contributed by the programs behind this case's
+  // interventions, minus the requirements the social worker has satisfied.
+  //
+  // A documentary need is satisfied when its `case_requirements` row is met —
+  // which happens when the document is confirmed on-site (staff upload or an
+  // explicit verification of a remote upload), or when the worker records that
+  // the client passed it on-site directly. Keying the gate on the requirement
+  // (not on a document's category) keeps the UI checklist, the stepper and this
+  // gate in agreement.
   async missingRequiredDocuments(caseId: string): Promise<string[]> {
     const required: Array<{ document_key: string }> = await this.caseRepo.manager.query(
       `SELECT DISTINCT prd.document_key
@@ -319,13 +325,13 @@ export class CasesExportService {
     const requiredKeys = required.map((r) => r.document_key).filter(Boolean);
     if (requiredKeys.length === 0) return [];
 
-    const filed: Array<{ requirement_key: string }> = await this.caseRepo.manager.query(
-      `SELECT DISTINCT requirement_key FROM document_vault
-        WHERE case_id = $1 AND requirement_key IS NOT NULL AND category = 'requirement'`,
+    const met: Array<{ requirement_key: string }> = await this.caseRepo.manager.query(
+      `SELECT DISTINCT requirement_key FROM case_requirements
+        WHERE case_id = $1 AND met = TRUE`,
       [caseId],
     );
-    const filedKeys = new Set(filed.map((r) => r.requirement_key));
-    return requiredKeys.filter((k) => !filedKeys.has(k));
+    const metKeys = new Set(met.map((r) => r.requirement_key));
+    return requiredKeys.filter((k) => !metKeys.has(k));
   }
 
   private async requireCase(caseId: string) {

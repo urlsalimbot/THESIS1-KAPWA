@@ -78,6 +78,13 @@ export const TransitionPlanSchema = z.object({
   })).nullable().optional(),
   followUpDate: z.string().nullable().optional(),
   exitNotes: z.string().nullable().optional(),
+  // Progress-monitoring home/community visits recorded during Phase-Out.
+  followUpVisits: z.array(z.object({
+    date: z.string().min(1),
+    type: z.string().min(1),
+    notes: z.string().nullable().optional(),
+    outcome: z.string().nullable().optional(),
+  })).nullable().optional(),
 });
 
 export const AssessmentV2Schema = z.object({

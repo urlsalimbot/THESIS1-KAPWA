@@ -47,40 +47,35 @@ describe('interventionRequirementsMet', () => {
   const program = (id: string, requiredDocuments: string[]) => ({ id, name: id, requiredDocuments });
 
   it('returns true when no interventions exist', () => {
-    expect(interventionRequirementsMet([], [program('p1', ['Valid ID'])], [])).toBe(true);
+    expect(interventionRequirementsMet([], [program('p1', ['Valid ID'])], {})).toBe(true);
   });
 
   it('returns true when interventions link to programs with no required documents', () => {
     const interventions = [{ id: 'i1', programId: 'p1' }, { id: 'i2', programId: null }];
-    expect(interventionRequirementsMet(interventions, [{ id: 'p1', requiredDocuments: [] }], [])).toBe(true);
+    expect(interventionRequirementsMet(interventions, [{ id: 'p1', requiredDocuments: [] }], {})).toBe(true);
   });
 
-  it('returns false when an intervention exists but required documents are missing', () => {
+  it('returns false when an intervention exists but required documents are not met', () => {
     const interventions = [{ id: 'i1', programId: 'p1' }];
     const programs = [program('p1', ['Valid ID', 'Barangay Certificate'])];
-    expect(interventionRequirementsMet(interventions, programs, [])).toBe(false);
-    expect(interventionRequirementsMet(
-      interventions,
-      programs,
-      [{ requirementKey: 'Valid ID' }],
-    )).toBe(false);
+    expect(interventionRequirementsMet(interventions, programs, {})).toBe(false);
+    expect(interventionRequirementsMet(interventions, programs, { 'Valid ID': true })).toBe(false);
   });
 
-  it('returns true once every required document has been uploaded', () => {
+  it('returns true once every required document is marked met', () => {
     const interventions = [{ id: 'i1', programId: 'p1' }];
     const programs = [program('p1', ['Valid ID', 'Barangay Certificate'])];
-    const docs = [{ requirementKey: 'Valid ID' }, { requirementKey: 'Barangay Certificate' }];
-    expect(interventionRequirementsMet(interventions, programs, docs)).toBe(true);
+    const checklist = { 'Valid ID': true, 'Barangay Certificate': true };
+    expect(interventionRequirementsMet(interventions, programs, checklist)).toBe(true);
   });
 
-  it('ignores uploads that are not tied to a requirement and unrelated programs', () => {
+  it('ignores checklist entries for unrelated programs', () => {
     const interventions = [{ id: 'i1', programId: 'p1' }];
     const programs = [program('p1', ['Valid ID']), program('p2', ['Medical Abstract'])];
-    const docs = [{ requirementKey: 'Medical Abstract' }, { requirementKey: 'Valid ID' }];
-    expect(interventionRequirementsMet(interventions, programs, docs)).toBe(true);
+    expect(interventionRequirementsMet(interventions, programs, { 'Medical Abstract': true, 'Valid ID': true })).toBe(true);
   });
 
   it('treats programs that have not loaded yet as imposing nothing', () => {
-    expect(interventionRequirementsMet([{ id: 'i1', programId: 'p1' }], [], [])).toBe(true);
+    expect(interventionRequirementsMet([{ id: 'i1', programId: 'p1' }], [], {})).toBe(true);
   });
 });

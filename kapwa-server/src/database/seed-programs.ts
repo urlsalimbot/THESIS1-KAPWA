@@ -13,8 +13,26 @@ interface ProgramSeed {
   isActive: boolean;
 }
 
-export const PROGRAMS: ProgramSeed[] = [
-  {
+// Documents that only apply in some situations (written as "... (if ...)" or
+// "... (depending on ...)" in the program matrix). They must not block
+// activation of a routine case, so they seed as non-mandatory.
+const OPTIONAL_DOCUMENT_KEYS = new Set<string>([
+  'Death certificate (for burial-adjacent medical claims)',
+  'Medical appointment slip / referral (if medical-related)',
+  'Affidavit of need (if emergency travel)',
+  'Supporting documents depending on purpose (hospital bill, quotation, assessment)',
+  'Bank account details / GCash account (if applicable)',
+  'Skills training certificate (if applicable)',
+  'Referral letter (if from other agency)',
+  'Referral letter (if any)',
+  'Medical assessment (if medical-related)',
+  'Social case study report (if available)',
+  'Medical certificate / hospital bill / quotation (depending on need)',
+  'Barangay Certificate of Indigency (for household grantees)',
+  'Grades / class card (for continuing)',
+]);
+
+export const PROGRAMS: ProgramSeed[] = [  {
     id: uuidv7(),
     name: 'Medical Assistance',
     category: 'Medical',
@@ -381,8 +399,8 @@ export async function seedPrograms(dataSource: DataSource) {
       for (const documentKey of prog.requiredDocuments) {
         await q.query(
           `INSERT INTO program_required_documents (program_id, document_key, mandatory)
-           VALUES ($1, $2, true)`,
-          [prog.id, documentKey],
+           VALUES ($1, $2, $3)`,
+          [prog.id, documentKey, !OPTIONAL_DOCUMENT_KEYS.has(documentKey)],
         );
       }
 

@@ -1,5 +1,5 @@
 import { MAX_FILE_SIZE } from '../common/constants';
-import { Controller, Get, Post, Delete, Param, Query, UseGuards, UploadedFile, Body, Request, UseInterceptors, StreamableFile, Res, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, UseGuards, UploadedFile, Body, Request, UseInterceptors, StreamableFile, Res, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -8,7 +8,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { FilingService } from './filing.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UploadMetadataSchema } from './dto/filing.zod';
+import { UploadMetadataSchema, VerifyDocumentSchema, VerifyDocumentInput } from './dto/filing.zod';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -69,6 +69,17 @@ export class FilingController {
     const photo = await this.filingService.findIdPhotoByCase(caseId);
     if (!photo) throw new NotFoundException('ID photo not found');
     return photo;
+  }
+
+  @Patch(':id/verify')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Confirm (or clear) on-site verification of a documentary need' })
+  async verify(
+    @Param('id') id: string,
+    @Body(new ZodPipe(VerifyDocumentSchema)) body: VerifyDocumentInput,
+    @Request() req: any,
+  ) {
+    return this.filingService.setVerified(id, body.verified, req.user?.id || req.user?.sub);
   }
 
   @Get(':id')

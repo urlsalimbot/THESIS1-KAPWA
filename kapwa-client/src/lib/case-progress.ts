@@ -18,25 +18,48 @@ export function isAssessmentStepDone(caseData: any): boolean {
 }
 
 /**
- * Whether every required document of the programs behind a case's interventions
- * has been uploaded to the case filing. The Implement HIP step (stepper 2) is not
- * considered done on an intervention alone — its program's required documents must
- * be attached. Programs without a required-documents list impose nothing.
+ * Mandatory documentary needs of a program. Prefers the mandatory/optional split
+ * (`requiredDocumentDetails`) and falls back to every listed document when the
+ * program payload predates that field.
+ */
+export function mandatoryDocumentKeys(program: any): string[] {
+  const details = program?.requiredDocumentDetails;
+  if (Array.isArray(details) && details.length > 0) {
+    return details.filter((d: any) => d?.mandatory).map((d: any) => d.key).filter(Boolean);
+  }
+  return Array.isArray(program?.requiredDocuments) ? program.requiredDocuments : [];
+}
+
+/** Conditional documentary needs of a program (shown, but never gating). */
+export function optionalDocumentKeys(program: any): string[] {
+  const details = program?.requiredDocumentDetails;
+  if (!Array.isArray(details)) return [];
+  return details.filter((d: any) => !d?.mandatory).map((d: any) => d.key).filter(Boolean);
+}
+
+/**
+ * Whether every mandatory document of the programs behind a case's interventions
+ * has been satisfied. A documentary need is satisfied when its checklist entry is
+ * met — which the worker records by confirming an upload on-site (or uploading it
+ * at the office), or by marking that the client passed it on-site directly.
+ *
+ * Keyed on `case_requirements` (the same source the server's activation gate
+ * reads) so the stepper, the checklist and the gate never disagree.
  */
 export function interventionRequirementsMet(
   interventions: any[],
   programs: any[],
-  docs: any[],
+  requirementsChecklist?: Record<string, boolean> | null,
 ): boolean {
   const programIds = [...new Set(interventions.map((i: any) => i?.programId).filter(Boolean))];
   const requiredKeys = [
     ...new Set(
       programs
-        .filter((p: any) => programIds.includes(p.id) && Array.isArray(p.requiredDocuments) && p.requiredDocuments.length > 0)
-        .flatMap((p: any) => p.requiredDocuments as string[]),
+        .filter((p: any) => programIds.includes(p.id))
+        .flatMap((p: any) => mandatoryDocumentKeys(p)),
     ),
   ];
   if (requiredKeys.length === 0) return true;
-  const uploadedKeys = new Set(docs.map((d: any) => d?.requirementKey).filter(Boolean));
-  return requiredKeys.every((key) => uploadedKeys.has(key));
+  const met = requirementsChecklist || {};
+  return requiredKeys.every((key) => met[key] === true);
 }

@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import useSWR, { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Calendar, DollarSign, FileCheck, CheckCircle2, Circle, FileText, Download, X } from 'lucide-react';
-import { RequirementFileUpload } from './RequirementFileUpload';
+import { Plus, Trash2, Calendar, DollarSign } from 'lucide-react';
+import { CaseRequirements } from './CaseRequirements';
 import { useTranslation } from 'react-i18next';
 
 interface Intervention {
@@ -40,7 +39,6 @@ interface StepInterventionsProps {
 
 export function StepInterventions({ caseId, caseData, userRole, readOnly = false }: StepInterventionsProps) {
   const { t } = useTranslation();
-  const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
     queryKeys.cases.interventions(caseId),
   );
@@ -58,27 +56,6 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
     notes: '',
   });
   const [saving, setSaving] = useState(false);
-  const [savingReqs, setSavingReqs] = useState(false);
-
-  const checklist = (caseData?.requirementsChecklist || {}) as Record<string, boolean>;
-
-  const programIds = [...new Set(interventions.map(i => i.programId).filter(Boolean))];
-  const allRequirements = programs
-    .filter(p => programIds.includes(p.id) && p.requiredDocuments?.length)
-    .flatMap(p => p.requiredDocuments!)
-    .filter((v, i, a) => a.indexOf(v) === i);
-
-  const { data: docs = [] } = useSWR<any[]>(
-    caseId && allRequirements.length > 0 ? queryKeys.filing.byCase(caseId) : null,
-  );
-  const docsByRequirement: Record<string, any[]> = {};
-  for (const d of docs) {
-    const k = d.requirementKey || '__uncategorized__';
-    if (!docsByRequirement[k]) docsByRequirement[k] = [];
-    docsByRequirement[k].push(d);
-  }
-
-  const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole) && !readOnly);
 
   async function handleAdd() {
     setSaving(true);
@@ -115,21 +92,7 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
     }
   }
 
-  async function toggleRequirement(key: string) {
-    const updated = { ...checklist, [key]: !checklist[key] };
-    setSavingReqs(true);
-    try {
-      await api.patch(`/cases/${caseId}/requirements`, { requirementsChecklist: updated });
-      await globalMutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to update requirements:', e);
-    } finally {
-      setSavingReqs(false);
-    }
-  }
-
   const totalAmount = interventions.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
-  const completedCount = allRequirements.filter(r => checklist[r]).length;
 
   return (
     <div className="space-y-4">
@@ -288,53 +251,7 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
       )}
 
       {/* Requirements Checklist */}
-      {allRequirements.length > 0 && (
-        <div className="rounded-lg border bg-card">
-          <div className="px-4 py-3 flex items-center gap-2">
-            <FileCheck size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold">{t('caseView.implement.requirements', 'Requirements')}</h3>
-            <span className="text-xs text-muted-foreground ml-auto">{completedCount}/{allRequirements.length} {t('caseView.implement.complete', 'complete')}</span>
-          </div>
-          <Separator />
-          <div className="px-4 py-3 space-y-2">
-            {allRequirements.map(req => {
-              const done = checklist[req];
-              const uploadedDocs = docsByRequirement[req] || [];
-              return (
-                <div key={req} className="border rounded-md overflow-hidden">
-                  <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted transition-colors">
-                    <button
-                      onClick={() => toggleRequirement(req)}
-                      disabled={savingReqs}
-                      className="flex items-center gap-3 flex-1 text-left"
-                    >
-                      {done
-                        ? <CheckCircle2 size={18} className="text-primary shrink-0" />
-                        : <Circle size={18} className="text-muted-foreground shrink-0" />
-                      }
-                      <span className={`text-sm ${done ? 'line-through text-muted-foreground' : ''}`}>{req}</span>
-                    </button>
-                    <div className="flex items-center gap-1">
-                      {uploadedDocs.length > 0 && (
-                        <Badge variant="outline" className="text-[10px] gap-1">
-                          <FileText size={10} /> {uploadedDocs.length}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <RequirementFileUpload
-                    caseId={caseId}
-                    requirementKey={req}
-                    canUpload={canUpload}
-                    docs={uploadedDocs}
-                    onChanged={() => globalMutate(queryKeys.filing.byCase(caseId))}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <CaseRequirements caseId={caseId} caseData={caseData} userRole={userRole} />
     </div>
   );
 }

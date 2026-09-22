@@ -37,6 +37,15 @@ export class DocumentVault extends BaseEntity {
   @Column({ name: 'requirement_key', nullable: true })
   requirementKey?: string;
 
+  // On-site confirmation of a documentary need. Remote (claimant) uploads start
+  // unverified; MSWDO staff either confirm them here or upload directly (which
+  // is treated as already on-site). Null = pending on-site verification.
+  @Column({ name: 'verified_at', type: 'timestamp', nullable: true })
+  verifiedAt?: Date;
+
+  @Column({ name: 'verified_by', nullable: true })
+  verifiedBy?: string;
+
   @Column({ name: 'uploaded_by', nullable: true })
   uploadedBy?: string;
 

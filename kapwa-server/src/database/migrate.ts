@@ -285,6 +285,9 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_requirements_case ON case_requirements(case_id)`);
+  await q.query(`DELETE FROM case_requirements a USING case_requirements b
+    WHERE a.id < b.id AND a.case_id = b.case_id AND a.requirement_key = b.requirement_key`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_case_requirements_case_key ON case_requirements(case_id, requirement_key)`);
   await q.query(`INSERT INTO case_requirements (case_id, requirement_key, met)
     SELECT c.id, e.key, e.value::boolean
     FROM cases c, jsonb_each(c.requirements_checklist) AS e
@@ -334,6 +337,41 @@ export async function migrate() {
     SELECT c.id, 'other', jsonb_build_object(e.key, e.value)
     FROM cases c, jsonb_each(c.other_assistance) AS e
     WHERE c.other_assistance IS NOT NULL`);
+
+  await q.query(`CREATE TABLE IF NOT EXISTS case_follow_up_visits (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL,
+    visit_date DATE NOT NULL,
+    visit_type TEXT NOT NULL,
+    notes TEXT,
+    outcome TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_follow_up_visits_case ON case_follow_up_visits(case_id)`);
+
+  // Documentary-needs verification state: a remote upload is confirmed at the
+  // office ("pass on-site"); staff uploads are treated as already on-site.
+  await q.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`);
+  await q.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS verified_by UUID`);
+
+  // Conditional program documents are not mandatory; the seed historically
+  // inserted every document as mandatory, which blocked routine activations.
+  await q.query(`UPDATE program_required_documents SET mandatory = FALSE WHERE document_key IN (
+    'Death certificate (for burial-adjacent medical claims)',
+    'Medical appointment slip / referral (if medical-related)',
+    'Affidavit of need (if emergency travel)',
+    'Supporting documents depending on purpose (hospital bill, quotation, assessment)',
+    'Bank account details / GCash account (if applicable)',
+    'Skills training certificate (if applicable)',
+    'Referral letter (if from other agency)',
+    'Referral letter (if any)',
+    'Medical assessment (if medical-related)',
+    'Social case study report (if available)',
+    'Medical certificate / hospital bill / quotation (depending on need)',
+    'Barangay Certificate of Indigency (for household grantees)',
+    'Grades / class card (for continuing)'
+  )`);
 
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_person_id UUID`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS person_link_code VARCHAR`);

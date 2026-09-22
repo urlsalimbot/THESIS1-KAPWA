@@ -138,8 +138,8 @@ export function CaseViewPage() {
   const { data: programs } = useSWR<any[]>(queryKeys.programs.list());
 
   const requirementsMet = useMemo(
-    () => interventionRequirementsMet(interventions, programs || [], documents || []),
-    [interventions, programs, documents],
+    () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
+    [interventions, programs, caseData],
   );
   const progressOpts: StepperProgressOpts = useMemo(
     () => ({ requirementsMet, referralNotNeeded: !!caseData?.referralNotNeeded }),

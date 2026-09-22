@@ -6,6 +6,7 @@ import { BaseEntity } from '../common/base.entity';
 import { CaseRequirement } from './case-requirement.entity';
 import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
+import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
 
 export enum CaseStatus {
   ENROLLED = 'enrolled',
@@ -48,6 +49,10 @@ export class Case extends BaseEntity {
   @Exclude()
   @OneToMany(() => CaseAssistance, a => a.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   assistances!: CaseAssistance[];
+
+  @Exclude()
+  @OneToMany(() => CaseFollowUpVisit, v => v.case, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  followUpVisitRows!: CaseFollowUpVisit[];
 
   @Expose()
   get requirementsChecklist(): Record<string, boolean> | undefined {
@@ -105,8 +110,14 @@ export class Case extends BaseEntity {
   }
 
   @Expose()
-  get followUpVisits(): undefined {
-    return undefined;
+  get followUpVisits(): Array<{ date: string; type: string; notes?: string; outcome?: string }> | undefined {
+    if (!this.followUpVisitRows || this.followUpVisitRows.length === 0) return undefined;
+    return this.followUpVisitRows.map(v => ({
+      date: v.visitDate,
+      type: v.visitType,
+      notes: v.notes,
+      outcome: v.outcome,
+    }));
   }
 
   @Column({ name: 'status', type: 'enum', enum: CaseStatus, default: CaseStatus.ENROLLED })

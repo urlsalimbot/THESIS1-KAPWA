@@ -17,7 +17,7 @@ export function RequirementFileUpload(props: RequirementFileUploadProps) {
       docs={props.docs}
       canUpload={props.canUpload}
       onChanged={props.onChanged}
-      formExtras={{ caseId: props.caseId, requirementKey: props.requirementKey }}
+      formExtras={{ caseId: props.caseId, requirementKey: props.requirementKey, category: 'requirement' }}
     />
   );
 }

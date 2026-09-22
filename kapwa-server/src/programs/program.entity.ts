@@ -43,6 +43,15 @@ export class Program extends BaseEntity {
     return this.requiredDocumentRows.map(d => d.documentKey);
   }
 
+  // Mandatory/optional split for the documentary-needs checklist. Conditional
+  // documents ("... (if applicable)") are non-mandatory and must not gate case
+  // activation, but are still shown so the client can submit them.
+  @Expose()
+  get requiredDocumentDetails(): Array<{ key: string; mandatory: boolean }> | undefined {
+    if (!this.requiredDocumentRows || this.requiredDocumentRows.length === 0) return undefined;
+    return this.requiredDocumentRows.map(d => ({ key: d.documentKey, mandatory: !!d.mandatory }));
+  }
+
   @Column({ type: 'jsonb', name: 'approval_workflow', nullable: true })
   approvalWorkflow?: ApprovalStep[];       // WAS: string[] (text[])
 

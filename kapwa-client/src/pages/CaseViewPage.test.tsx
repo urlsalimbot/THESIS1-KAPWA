@@ -275,16 +275,16 @@ describe('CaseViewPage — stepper gating', () => {
     expect(step2.textContent).toContain('2');
   });
 
-  it('checks Intervention & Requirements once the required document is uploaded', async () => {
+  it('checks Intervention & Requirements once every required document is confirmed', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
-      if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf' }]);
+      if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf', verifiedAt: '2026-07-02T00:00:00Z' }]);
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve(interventionMock);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('programs')) return Promise.resolve(programsMock);
-      if (k.includes('cases')) return Promise.resolve(assumptionCase);
+      if (k.includes('cases')) return Promise.resolve({ ...assumptionCase, requirementsChecklist: { 'Valid ID': true } });
       return Promise.resolve(null);
     });
     await mutate(() => true, undefined, { revalidate: false });
