@@ -382,7 +382,7 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
   URL.revokeObjectURL(url);
 }
 
-export type CertificateType = 'indigency' | 'eligibility' | 'referral';
+export type CertificateType = 'eligibility' | 'referral';
 
 export async function downloadCertificate(
   type: CertificateType,

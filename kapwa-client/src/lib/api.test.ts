@@ -290,9 +290,9 @@ describe('download helpers', () => {
   it('downloadCertificate POSTs the certificate request and downloads', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonRes({}, 200, { 'Content-Disposition': 'attachment; filename="cert.pdf"' }));
     vi.stubGlobal('fetch', fetchMock);
-    await downloadCertificate('indigency', { fullName: 'A', date: '2026-01-01' });
+    await downloadCertificate('referral', { fullName: 'A', date: '2026-01-01' });
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ type: 'indigency', fullName: 'A' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ type: 'referral', fullName: 'A' });
     expect(URL.createObjectURL).toHaveBeenCalled();
   });
 

@@ -49,14 +49,6 @@ describe('ExportService', () => {
     });
   });
 
-  describe('exportServiceSummaryPdf', () => {
-    it('returns a Buffer', async () => {
-      const result = await service.exportServiceSummaryPdf();
-      expect(result).toBeInstanceOf(Buffer);
-      expect(result.length).toBeGreaterThan(0);
-    });
-  });
-
   describe('exportAuditLogCsv', () => {
     it('generates CSV with correct columns', async () => {
       auditService.exportForCoa.mockResolvedValue({
@@ -72,25 +64,6 @@ describe('ExportService', () => {
       expect(result.filename).toBe('audit-logs.csv');
       expect(text).toContain('action,table,entity,actor,timestamp');
       expect(text).toContain('case.create,case,c1,Rosario Mendoza,');
-    });
-  });
-
-  describe('exportCompliancePdf', () => {
-    it('returns a Buffer', async () => {
-      caseRepo.count.mockResolvedValue(10);
-      caseRepo.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue([
-          { status: 'active', count: '5' },
-          { status: 'closed', count: '5' },
-        ]),
-      } as any);
-
-      const result = await service.exportCompliancePdf();
-      expect(result).toBeInstanceOf(Buffer);
-      expect(result.length).toBeGreaterThan(0);
     });
   });
 
@@ -138,12 +111,6 @@ describe('ExportService', () => {
   });
 
   describe('certificate generation', () => {
-    it('produces a PDF for a certificate of indigency', async () => {
-      const result = await service.generateCertificate('indigency', { fullName: 'Juan Dela Cruz', address: 'Poblacion, Norzagaray', date: '2026-08-04' });
-      expect(result.buffer).toBeDefined();
-      expect(result.buffer.toString('ascii', 0, 4)).toBe('%PDF');
-    });
-
     it('produces PDFs for eligibility and referral certificates with filenames', async () => {
       const result = await service.generateCertificate('eligibility', { fullName: 'Maria Santos', date: '2026-08-04', details: 'Approved for AICS assistance.' });
       expect(result.buffer.toString('ascii', 0, 4)).toBe('%PDF');

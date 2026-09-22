@@ -19,8 +19,3 @@ export const createCsrSchema = z.object({
 export const updateCsrSchema = createCsrSchema.partial().extend({
   finalized: z.boolean().optional(),
 });
-
-export const generatePdfSchema = z.object({
-  controlNo: z.string(),
-  orientation: z.enum(['portrait', 'landscape']).optional().default('portrait'),
-});

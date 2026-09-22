@@ -9,7 +9,7 @@ import { ZodPipe } from '../common/pipes/zod.pipe';
 import { ExportService } from './export.service';
 
 const GenerateCertificateSchema = z.object({
-  type: z.enum(['indigency', 'eligibility', 'referral']),
+  type: z.enum(['eligibility', 'referral']),
   fullName: z
     .string()
     .trim()
@@ -31,8 +31,8 @@ export class ExportController {
 
   @Get('audit-logs')
   @Roles('admin', 'auditor')
-  @ApiOperation({ summary: 'Export audit logs as PDF or CSV' })
-  @ApiQuery({ name: 'format', required: true, enum: ['pdf', 'csv'] })
+  @ApiOperation({ summary: 'Export audit logs as CSV' })
+  @ApiQuery({ name: 'format', required: true, enum: ['csv'] })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   async exportAuditLogs(
@@ -45,15 +45,7 @@ export class ExportController {
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 
-    if (format === 'pdf') {
-      const buf = await this.exportService.exportAuditLogPdf(start, end);
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="audit-logs.pdf"',
-        'Content-Length': buf.length,
-      });
-      res.send(buf);
-    } else if (format === 'csv') {
+    if (format === 'csv') {
       const { buffer, filename } = await this.exportService.exportAuditLogCsv(start, end);
       res.set({
         'Content-Type': 'text/csv',
@@ -62,14 +54,14 @@ export class ExportController {
       });
       res.send(buffer);
     } else {
-      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid format. Use pdf or csv.' });
+      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid format. Use csv.' });
     }
   }
 
   @Get('service-summary')
   @Roles('admin', 'mayor', 'auditor')
-  @ApiOperation({ summary: 'Export service summary as PDF, CSV, or XLSX' })
-  @ApiQuery({ name: 'format', required: true, enum: ['pdf', 'csv', 'xlsx'] })
+  @ApiOperation({ summary: 'Export service summary as CSV or XLSX' })
+  @ApiQuery({ name: 'format', required: true, enum: ['csv', 'xlsx'] })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   async exportServiceSummary(
@@ -82,15 +74,7 @@ export class ExportController {
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 
-    if (format === 'pdf') {
-      const buf = await this.exportService.exportServiceSummaryPdf(start, end);
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="service-summary.pdf"',
-        'Content-Length': buf.length,
-      });
-      res.send(buf);
-    } else if (format === 'csv') {
+    if (format === 'csv') {
       const { buffer, filename } = await this.exportService.exportServiceSummaryCsv(start, end);
       res.set({
         'Content-Type': 'text/csv',
@@ -107,7 +91,7 @@ export class ExportController {
       });
       res.send(buf);
     } else {
-      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid format. Use pdf, csv, or xlsx.' });
+      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid format. Use csv, or xlsx.' });
     }
   }
 
@@ -145,22 +129,14 @@ export class ExportController {
 
   @Get('compliance')
   @Roles('admin', 'auditor', 'mayor')
-  @ApiOperation({ summary: 'Export compliance report as PDF or CSV' })
-  @ApiQuery({ name: 'format', required: true, enum: ['pdf', 'csv'] })
+  @ApiOperation({ summary: 'Export compliance report as CSV' })
+  @ApiQuery({ name: 'format', required: true, enum: ['csv'] })
   async exportCompliance(
     @Query('format') format: string,
     @Res() res?: Response,
   ) {
     if (!res) return;
-    if (format === 'pdf') {
-      const buf = await this.exportService.exportCompliancePdf();
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="compliance.pdf"',
-        'Content-Length': buf.length,
-      });
-      res.send(buf);
-    } else if (format === 'csv') {
+    if (format === 'csv') {
       const { buffer, filename } = await this.exportService.exportComplianceCsv();
       res.set({
         'Content-Type': 'text/csv',
@@ -169,13 +145,13 @@ export class ExportController {
       });
       res.send(buffer);
     } else {
-      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid format. Use pdf or csv.' });
+      res.status(HttpStatus.BAD_REQUEST).json({ message: 'Invalid format. Use csv.' });
     }
   }
 
   @Post('certificate')
   @Roles('admin', 'social_worker', 'coordinator')
-  @ApiOperation({ summary: 'Generate a certificate of indigency, eligibility, or referral as a PDF' })
+  @ApiOperation({ summary: 'Generate a certificate of eligibility or referral as a PDF' })
   async generateCertificate(
     @Body(new ZodPipe(GenerateCertificateSchema)) body: z.infer<typeof GenerateCertificateSchema>,
     @Res() res: Response,

@@ -106,28 +106,4 @@ describe('CsrService', () => {
     await service.remove('csr-1');
     expect(repoMock.remove).toHaveBeenCalledWith(record);
   });
-
-  it('generates PDF buffer from control number', async () => {
-    const record = {
-      id: 'csr-1',
-      controlNo: 'CSR-2026-0001',
-      caseId: 'case-uuid',
-      socialWorkerName: 'Jane SW',
-      socialWorkerPosition: 'SWO I',
-      referralOrigin: 'Barangay Bigte',
-      reasonForReferral: 'Poverty',
-      problemPresented: 'Food insufficiency',
-      familyBackground: '4 siblings',
-      socioEconomicProfile: 'Low income',
-      assessmentAnalysis: 'Needs assistance',
-      recommendation: 'FA recommended',
-      interventionPlan: 'Monthly food aid',
-      createdAt: new Date('2026-06-15'),
-    };
-    repoMock.findOne.mockResolvedValue(record);
-
-    const buffer = await service.generatePdf('CSR-2026-0001');
-    expect(buffer).toBeInstanceOf(Buffer);
-    expect(buffer.length).toBeGreaterThan(100);
-  }, 30000);
 });
