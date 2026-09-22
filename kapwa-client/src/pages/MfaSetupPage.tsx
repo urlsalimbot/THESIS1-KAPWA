@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
@@ -11,17 +11,31 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 
+type AccountMfaInfo = { mfaEnabled?: boolean; mfaMethod?: 'totp' | 'email' };
+
 export function MfaSetupPage() {
   const { t } = useTranslation();
-  const { data: user, isLoading } = useSWR<{ mfaEnabled?: boolean }>(queryKeys.auth.me());
+  const { data: me, isLoading } = useSWR<AccountMfaInfo & { user?: AccountMfaInfo }>(queryKeys.auth.me());
+  const account: AccountMfaInfo | undefined = me?.user ?? me;
   const loading = isLoading;
   const [step, setStep] = useState<'idle' | 'setup' | 'verify' | 'done'>('idle');
   const [secret, setSecret] = useState('');
   const [otpauth, setOtpauth] = useState('');
   const [code, setCode] = useState('');
-  const [mfaEnabled, setMfaEnabled] = useState(user?.mfaEnabled ?? false);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaMethod, setMfaMethod] = useState<'totp' | 'email' | null>(null);
+  const [emailStep, setEmailStep] = useState<'idle' | 'sent'>('idle');
+  const [emailCode, setEmailCode] = useState('');
   const [error, setError] = useState('');
   const [disablePw, setDisablePw] = useState('');
+
+  // Sync local state when /auth/me resolves (the API returns { user }, while
+  // older callers passed the bare user object).
+  useEffect(() => {
+    if (!account) return;
+    setMfaEnabled(!!account.mfaEnabled);
+    setMfaMethod(account.mfaEnabled ? (account.mfaMethod ?? 'totp') : null);
+  }, [account]);
 
   async function handleSetup() {
     setError('');
@@ -40,6 +54,34 @@ export function MfaSetupPage() {
     try {
       const res = await api.post<{ mfaEnabled: boolean }>('/auth/mfa/enable', { code });
       setMfaEnabled(res.mfaEnabled);
+      setMfaMethod('totp');
+      setStep('done');
+    } catch (e: any) {
+      setError(e.message || t('auth.mfaVerificationFailed', 'Verification failed'));
+    }
+  }
+
+  async function handleEmailSetup() {
+    setError('');
+    try {
+      const res = await api.post<{ emailDelivered: boolean }>('/auth/mfa/email/setup');
+      setEmailStep('sent');
+      if (res.emailDelivered === false) {
+        setError(t('auth.emailDeliveryFailed', 'The email could not be delivered. Check the address on file.'));
+      }
+    } catch (e: any) {
+      setError(e.message || t('auth.mfaSetupFailed', 'Setup failed'));
+    }
+  }
+
+  async function handleEmailEnable() {
+    setError('');
+    try {
+      const res = await api.post<{ mfaEnabled: boolean; mfaMethod: 'email' }>('/auth/mfa/email/enable', { code: emailCode });
+      setMfaEnabled(res.mfaEnabled);
+      setMfaMethod('email');
+      setEmailStep('idle');
+      setEmailCode('');
       setStep('done');
     } catch (e: any) {
       setError(e.message || t('auth.mfaVerificationFailed', 'Verification failed'));
@@ -51,6 +93,9 @@ export function MfaSetupPage() {
     try {
       const res = await api.post<{ mfaEnabled: boolean }>('/auth/mfa/disable', { password: disablePw });
       setMfaEnabled(res.mfaEnabled);
+      setMfaMethod(null);
+      setEmailStep('idle');
+      setEmailCode('');
       setStep('idle');
       setSecret('');
       setOtpauth('');
@@ -72,24 +117,54 @@ export function MfaSetupPage() {
     );
   }
 
-  const canSetup = !!user;
+  const canSetup = !!account;
 
   return (
     <PageShell title={t('auth.mfaTitle', 'Multi-Factor Authentication')} description={t('auth.mfaDescription', 'Strengthen account security with TOTP via authenticator app.')}>
       <Card className="max-w-lg">
         <CardContent className="p-6">
-          {canSetup && step === 'idle' && !mfaEnabled && (
+          {canSetup && step === 'idle' && emailStep === 'idle' && !mfaEnabled && (
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <Shield className="text-primary" size={32} />
                 <div>
                   <p className="font-medium text-foreground">{t('auth.mfaNotEnabled', 'MFA not enabled')}</p>
-                  <p className="text-xs text-muted-foreground">{t('auth.mfaProtectAccount', 'Protect your account with an authenticator app')}</p>
+                  <p className="text-xs text-muted-foreground">{t('auth.mfaProtectAccount', 'Protect your account with an authenticator app or email codes')}</p>
                 </div>
               </div>
-              <Button onClick={handleSetup} aria-label={t('auth.setUpMfa', 'Set Up MFA')}>
-                {t('auth.setUpMfa', 'Set Up MFA')}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleSetup} aria-label={t('auth.setUpMfa', 'Set Up MFA')}>
+                  {t('auth.setUpMfa', 'Set Up MFA')}
+                </Button>
+                <Button variant="outline" onClick={handleEmailSetup} aria-label={t('auth.useEmailCode', 'Use email code instead')}>
+                  {t('auth.useEmailCode', 'Use email code instead')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'idle' && emailStep === 'sent' && !mfaEnabled && (
+            <div className="space-y-4">
+              <div className="rounded bg-primary/5 border border-primary/20 p-3 text-sm text-primary">
+                {t('auth.emailCodeSentTo', 'Enter the 6-digit code we sent to your email to enable email MFA.')}
+              </div>
+
+              {error && <p className="text-xs text-destructive">{error}</p>}
+
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  maxLength={6}
+                  placeholder="000000"
+                  className="flex-1 text-center text-lg tracking-widest"
+                  value={emailCode}
+                  onChange={e => setEmailCode(e.target.value.replace(/\D/g, ''))}
+                  aria-label={t('auth.emailCodeTitle', 'Email Verification Code')}
+                />
+                <Button onClick={handleEmailEnable} disabled={emailCode.length !== 6} aria-label={t('auth.verifyAndEnable', 'Verify and Enable')}>
+                  {t('auth.verifyAndEnable', 'Verify & Enable')}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -143,7 +218,7 @@ export function MfaSetupPage() {
                 <CheckCircle className="text-emerald-600" size={32} />
                 <div>
                   <p className="font-medium text-emerald-800">{t('auth.mfaEnabled', 'MFA is enabled')}</p>
-                  <p className="text-xs text-emerald-600">{t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
+                  <p className="text-xs text-emerald-600">{mfaMethod === 'email' ? t('auth.mfaEnabledEmail', 'Your account is now protected with email verification codes.') : t('auth.mfaEnabledDesc', 'Your account is now protected with TOTP.')}</p>
                 </div>
               </div>
               <Button variant="outline" onClick={() => { setStep('idle'); setCode(''); }} aria-label={t('auth.done', 'Done')}>
@@ -154,6 +229,9 @@ export function MfaSetupPage() {
 
           {mfaEnabled && (
             <div className="mt-6 pt-4 border-t">
+              <p className="text-xs text-muted-foreground mb-1">
+                {t('auth.mfaMethodLabel', 'Active method:')} {mfaMethod === 'email' ? t('auth.mfaMethodEmail', 'Email OTP') : t('auth.mfaMethodTotp', 'Authenticator app (TOTP)')}
+              </p>
               <h4 className="text-sm font-medium text-foreground mb-2">{t('auth.disableMfa', 'Disable MFA')}</h4>
               <div className="flex gap-2 items-end">
                 <div className="flex-1 space-y-1">

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
@@ -59,5 +59,30 @@ describe('MfaSetupPage', () => {
     await screen.findByRole('heading', { name: 'Multi-Factor Authentication' });
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  it('sends an email code when email MFA is chosen', async () => {
+    mockApiPost.mockResolvedValueOnce({ message: 'sent', emailDelivered: true });
+    renderWithSWR(<MfaSetupPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /use email code instead/i }));
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledWith('/auth/mfa/email/setup'));
+    expect(await screen.findByText(/enter the 6-digit code we sent to your email/i)).toBeTruthy();
+  });
+
+  it('enables email MFA with the emailed code', async () => {
+    mockApiPost
+      .mockResolvedValueOnce({ message: 'sent', emailDelivered: true })
+      .mockResolvedValueOnce({ mfaEnabled: true, mfaMethod: 'email' });
+    renderWithSWR(<MfaSetupPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /use email code instead/i }));
+    const input = await screen.findByLabelText('Email Verification Code');
+    fireEvent.change(input, { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: /verify & enable/i }));
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledWith('/auth/mfa/email/enable', { code: '123456' }));
+    expect(await screen.findByText(/protected with email verification codes/i)).toBeTruthy();
   });
 });

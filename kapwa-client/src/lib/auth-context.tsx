@@ -12,8 +12,9 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   refresh: () => Promise<void>;
-  mfaChallenge: { tempToken: string; type: 'totp' | 'sms' } | null;
+  mfaChallenge: { tempToken: string; type: 'totp' | 'sms' | 'email' } | null;
   resolveMfa: (code: string) => Promise<User | undefined>;
+  resendMfa: () => Promise<boolean>;
   cancelMfa: () => void;
 }
 
@@ -26,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('kapwa_token'));
   const [loading, setLoading] = useState(true);
-  const [mfaChallenge, setMfaChallenge] = useState<{ tempToken: string; type: 'totp' | 'sms' } | null>(null);
+  const [mfaChallenge, setMfaChallenge] = useState<{ tempToken: string; type: 'totp' | 'sms' | 'email' } | null>(null);
 
   // Track the current user id in a ref so the mount-scoped logout/storage handlers
   // (which close over first-render values) can purge the right user's intake draft.
@@ -92,7 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const data = await res.json();
     if (data.mfaRequired || data.otpRequired) {
-      const type = data.otpRequired ? 'sms' : 'totp';
+      const type: 'totp' | 'sms' | 'email' = data.otpRequired
+        ? 'sms'
+        : (data.mfaMethod === 'email' ? 'email' : 'totp');
       setMfaChallenge({ tempToken: data.tempToken, type });
       return { mfaRequired: true as const, tempToken: data.tempToken };
     }
@@ -104,7 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function resolveMfa(code: string) {
     if (!mfaChallenge) return;
-    const endpoint = mfaChallenge.type === 'sms' ? '/auth/login/otp-verify' : '/auth/mfa/verify';
+    const endpoint = mfaChallenge.type === 'sms'
+      ? '/auth/login/otp-verify'
+      : mfaChallenge.type === 'email'
+        ? '/auth/mfa/email/verify'
+        : '/auth/mfa/verify';
     const body = mfaChallenge.type === 'sms'
       ? { tempToken: mfaChallenge.tempToken, otpCode: code }
       : { tempToken: mfaChallenge.tempToken, code };
@@ -122,6 +129,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user;
   }
 
+  async function resendMfa() {
+    if (!mfaChallenge || mfaChallenge.type !== 'email') return false;
+    const res = await fetch(`${API}/auth/mfa/email/resend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tempToken: mfaChallenge.tempToken })
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Failed to resend code');
+    }
+    const data = await res.json().catch(() => ({}));
+    return data.emailDelivered !== false;
+  }
+
   function cancelMfa() {
     setMfaChallenge(null);
   }
@@ -137,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, refresh: fetchUser, mfaChallenge, resolveMfa, cancelMfa }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, refresh: fetchUser, mfaChallenge, resolveMfa, resendMfa, cancelMfa }}>
       {children}
     </AuthContext.Provider>
   );

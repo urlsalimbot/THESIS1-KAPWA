@@ -42,8 +42,10 @@ export function LoginPage() {
   }, []);
   const [mfaValue, setMfaValue] = useState('');
   const [mfaSubmitting, setMfaSubmitting] = useState(false);
+  const [mfaResendIn, setMfaResendIn] = useState(0);
+  const [mfaResendNotice, setMfaResendNotice] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, resolveMfa, cancelMfa, mfaChallenge } = useAuth();
+  const { login, resolveMfa, resendMfa, cancelMfa, mfaChallenge } = useAuth();
   const navigate = useNavigate();
 
   const form = useForm<LoginValues>({
@@ -90,8 +92,28 @@ export function LoginPage() {
     }
   }
 
+  useEffect(() => {
+    if (mfaResendIn <= 0) return;
+    const timer = setTimeout(() => setMfaResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [mfaResendIn]);
+
+  async function handleMfaResend() {
+    setError('');
+    setMfaResendNotice('');
+    try {
+      await resendMfa();
+      setMfaResendNotice(t('auth.codeResent', 'A new code was sent to your email.'));
+      setMfaResendIn(30);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('auth.resendFailed', 'Failed to resend. Try again later.'));
+      setMfaResendIn(10);
+    }
+  }
+
   // MFA Challenge Mode
   const isSmsOtp = mfaChallenge?.type === 'sms';
+  const isEmailOtp = mfaChallenge?.type === 'email';
   if (mfaChallenge) {
     return (
       <AuthShell>
@@ -102,8 +124,8 @@ export function LoginPage() {
                 <Smartphone size={28} className="text-accent" />
               </AvatarFallback>
             </Avatar>
-            <CardTitle className="text-2xl tracking-tight">{isSmsOtp ? t('auth.oneTimePassword', 'One-Time Password') : t('auth.twoFactor', 'Two-Factor Authentication')}</CardTitle>
-            <CardDescription className="text-base">{isSmsOtp ? t('auth.otpSentToPhone', 'Enter the OTP sent to your phone.') : t('auth.enterVerificationCode', 'Enter the verification code from your authenticator app.')}</CardDescription>
+            <CardTitle className="text-2xl tracking-tight">{isSmsOtp ? t('auth.oneTimePassword', 'One-Time Password') : isEmailOtp ? t('auth.emailCodeTitle', 'Email Verification Code') : t('auth.twoFactor', 'Two-Factor Authentication')}</CardTitle>
+            <CardDescription className="text-base">{isSmsOtp ? t('auth.otpSentToPhone', 'Enter the OTP sent to your phone.') : isEmailOtp ? t('auth.otpSentToEmail', 'Enter the 6-digit code sent to your email.') : t('auth.enterVerificationCode', 'Enter the verification code from your authenticator app.')}</CardDescription>
           </CardHeader>
           <CardContent className="pb-2">
             {error && (
@@ -169,9 +191,22 @@ export function LoginPage() {
                 {t('auth.verify', 'Verify')}
               </Button>
             </form>
+            {isEmailOtp && (
+              <div className="text-center text-sm text-muted-foreground mt-4 space-y-1">
+                {mfaResendNotice && <p className="text-emerald-600">{mfaResendNotice}</p>}
+                <button
+                  type="button"
+                  onClick={handleMfaResend}
+                  disabled={mfaResendIn > 0}
+                  className="text-accent hover:underline disabled:opacity-50 disabled:no-underline"
+                >
+                  {mfaResendIn > 0 ? t('auth.resendIn', 'Resend code in {{s}}s', { s: mfaResendIn }) : t('auth.resendCode', 'Resend code')}
+                </button>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="justify-center pt-2 pb-6">
-            <Button variant="ghost" onClick={() => { cancelMfa(); setMfaValue(''); setError(''); }}>
+            <Button variant="ghost" onClick={() => { cancelMfa(); setMfaValue(''); setError(''); setMfaResendNotice(''); setMfaResendIn(0); }}>
               {t('auth.cancel', 'Cancel')}
             </Button>
           </CardFooter>

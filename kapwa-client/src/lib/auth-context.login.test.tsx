@@ -76,6 +76,62 @@ describe('AuthProvider — login', () => {
     expect(localStorage.getItem('kapwa_token')).toBeNull();
   });
 
+  it('login() with an email MFA method sets an email challenge', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ mfaRequired: true, mfaMethod: 'email', tempToken: 'temp-2' }),
+    });
+
+    let captured: ReturnType<typeof useAuth> | null = null;
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={(a) => { captured = a; }} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await act(async () => { await captured!.login('a@b.com', 'pass'); });
+
+    await waitFor(() => {
+      expect(captured!.mfaChallenge).toEqual({ tempToken: 'temp-2', type: 'email' });
+    });
+  });
+
+  it('resolveMfa() posts to the email verify endpoint for email challenges', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ mfaRequired: true, mfaMethod: 'email', tempToken: 'temp-2' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ accessToken: 'tok-2', user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'admin' } }),
+      });
+
+    let captured: ReturnType<typeof useAuth> | null = null;
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={(a) => { captured = a; }} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await act(async () => { await captured!.login('a@b.com', 'pass'); });
+    await act(async () => { await captured!.resolveMfa('123456'); });
+
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(String(url)).toContain('/auth/mfa/email/verify');
+    expect(JSON.parse(init.body)).toEqual({ tempToken: 'temp-2', code: '123456' });
+    expect(localStorage.getItem('kapwa_token')).toBe('tok-2');
+  });
+
   it('login() with 4xx response throws Error', async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValueOnce({

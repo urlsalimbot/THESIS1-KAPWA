@@ -98,6 +98,9 @@ Login accounts and roles for system actors (social workers, admins, coordinators
 | `device_id` | TEXT | variable | tablet-02 |
 | `mfa_secret` | TEXT | variable | JBSWY3DPEHPK3PXP |
 | `mfa_enabled` | BOOLEAN | 1 byte | true |
+| `mfa_method` | TEXT | variable | email |
+| `email_otp_code` | TEXT | variable | 9f86d081884c7d659a2feaa0c55ad015... (SHA-256 hash) |
+| `email_otp_expires_at` | TIMESTAMP | 8 bytes | 2026-09-22 11:45:00 |
 | `token_version` | INTEGER | 4 bytes | 2 |
 | `email_verified` | BOOLEAN | 1 byte | worker1@mswdo.test |
 | `verification_token` | TEXT | variable | vrf-abc123 |

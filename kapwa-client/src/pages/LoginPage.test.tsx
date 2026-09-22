@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { LoginPage } from './LoginPage';
@@ -7,9 +7,10 @@ import { ROLE_REDIRECT_MAP, NOTIFICATION_ROLES, CHAT_ROLES } from '@/lib/role-ac
 
 const mockLogin = vi.fn();
 const mockResolveMfa = vi.fn();
+const mockResendMfa = vi.fn();
 const mockCancelMfa = vi.fn();
 
-const mockMfaChallenge = vi.hoisted(() => ({ current: null as { tempToken: string } | null }));
+const mockMfaChallenge = vi.hoisted(() => ({ current: null as { tempToken: string; type?: string } | null }));
 
 vi.mock('../lib/auth-context', () => ({
   useAuth: vi.fn(() => ({
@@ -20,6 +21,7 @@ vi.mock('../lib/auth-context', () => ({
     loading: false,
     mfaChallenge: mockMfaChallenge.current,
     resolveMfa: mockResolveMfa,
+    resendMfa: mockResendMfa,
     cancelMfa: mockCancelMfa,
   })),
 }));
@@ -79,6 +81,25 @@ describe('LoginPage', () => {
     render(<BrowserRouter><LoginPage /></BrowserRouter>);
     expect(screen.getByText('Two-Factor Authentication')).toBeTruthy();
     expect(screen.getByText('Verify')).toBeTruthy();
+  });
+
+  it('shows the email code screen for an email MFA challenge', () => {
+    mockMfaChallenge.current = { tempToken: 'abc123', type: 'email' };
+    render(<BrowserRouter><LoginPage /></BrowserRouter>);
+    expect(screen.getByText('Email Verification Code')).toBeTruthy();
+    expect(screen.getByText('Enter the 6-digit code sent to your email.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /resend code/i })).toBeTruthy();
+  });
+
+  it('resends the email code from the challenge screen', async () => {
+    mockMfaChallenge.current = { tempToken: 'abc123', type: 'email' };
+    mockResendMfa.mockResolvedValue(true);
+    render(<BrowserRouter><LoginPage /></BrowserRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: /resend code/i }));
+
+    await waitFor(() => expect(mockResendMfa).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('A new code was sent to your email.')).toBeTruthy();
   });
 
   it('has no a11y violations', async () => {

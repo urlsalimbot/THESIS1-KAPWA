@@ -3,7 +3,7 @@ import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
+import { UserCreateSchema, LoginSchema, RefreshTokenSchema, MfaEnableSchema, MfaDisableSchema, MfaVerifySchema, MfaResendSchema, OtpVerifySchema, UserCreateInput, ChangePasswordSchema, ChangeEmailSchema, ChangePasswordInput, ChangeEmailInput, VerifyEmailSchema, ResendVerificationSchema, ForgotPasswordSchema, ResetPasswordSchema, ConfirmEmailChangeSchema, UpdatePhoneSchema, UpdatePhoneInput, PersonLinkRequestSchema, PersonLinkVerifySchema } from './dto/auth.zod';
 import { AuthenticatedRequest } from './types';
 
 @Controller('auth')
@@ -61,6 +61,30 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyMfa(@Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string }) {
     return this.authService.verifyMfaChallenge(body.tempToken, body.code);
+  }
+
+  @Post('mfa/email/setup')
+  @UseGuards(JwtAuthGuard)
+  async setupEmailMfa(@Request() req: AuthenticatedRequest) {
+    return this.authService.setupEmailMfa(req.user.id);
+  }
+
+  @Post('mfa/email/enable')
+  @UseGuards(JwtAuthGuard)
+  async enableEmailMfa(@Request() req: AuthenticatedRequest, @Body(new ZodPipe(MfaEnableSchema)) body: { code: string }) {
+    return this.authService.enableEmailMfa(req.user.id, body.code);
+  }
+
+  @Post('mfa/email/resend')
+  @HttpCode(HttpStatus.OK)
+  async resendEmailMfa(@Body(new ZodPipe(MfaResendSchema)) body: { tempToken: string }) {
+    return this.authService.resendEmailMfa(body.tempToken);
+  }
+
+  @Post('mfa/email/verify')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmailMfa(@Body(new ZodPipe(MfaVerifySchema)) body: { tempToken: string; code: string }) {
+    return this.authService.verifyEmailMfa(body.tempToken, body.code);
   }
 
   @Post('login/otp-verify')

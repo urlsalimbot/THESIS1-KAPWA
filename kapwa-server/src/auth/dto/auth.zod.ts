@@ -49,6 +49,10 @@ export const MfaVerifySchema = z.object({
   code: z.string().length(6),
 });
 
+export const MfaResendSchema = z.object({
+  tempToken: z.string(),
+});
+
 export type UserCreateInput = z.infer<typeof UserCreateSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
@@ -57,6 +61,7 @@ export type MfaEnableInput = z.infer<typeof MfaEnableSchema>;
 export type MfaDisableInput = z.infer<typeof MfaDisableSchema>;
 export type OtpVerifyInput = z.infer<typeof OtpVerifySchema>;
 export type MfaVerifyInput = z.infer<typeof MfaVerifySchema>;
+export type MfaResendInput = z.infer<typeof MfaResendSchema>;
 
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string(),

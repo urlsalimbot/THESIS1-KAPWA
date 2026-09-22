@@ -14,6 +14,11 @@ export enum UserRole {
   AGENCY_STAFF = 'agency_staff'
 }
 
+export enum MfaMethod {
+  TOTP = 'totp',
+  EMAIL = 'email',
+}
+
 @Entity('users')
 export class User extends BaseEntity {
 
@@ -69,6 +74,21 @@ export class User extends BaseEntity {
 
   @Column({ name: 'mfa_enabled', default: false })
   mfaEnabled!: boolean;
+
+  // Which second factor is active when mfa_enabled is true. Accounts created
+  // before this column exist have NULL, which is treated as TOTP.
+  @Column({ name: 'mfa_method', type: 'text', nullable: true })
+  mfaMethod?: MfaMethod | null;
+
+  // Pending email-OTP challenge: only the SHA-256 hash of the 6-digit code is
+  // stored, and it is cleared on successful verification, expiry, or disable.
+  @Exclude()
+  @Column({ name: 'email_otp_code', type: 'text', nullable: true })
+  emailOtpCode?: string | null;
+
+  @Exclude()
+  @Column({ name: 'email_otp_expires_at', type: 'timestamp', nullable: true })
+  emailOtpExpiresAt?: Date | null;
 
   @Column({ name: 'token_version', default: 0 })
   tokenVersion!: number;

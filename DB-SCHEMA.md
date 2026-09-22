@@ -60,8 +60,11 @@
 | `permitted_barangays` | TEXT[] | DEFAULT '{}' |
 | `is_active` | BOOLEAN | DEFAULT TRUE |
 | `device_id` | TEXT | |
-| `mfa_secret` | TEXT | |
+| `mfa_secret` | TEXT | TOTP shared secret |
 | `mfa_enabled` | BOOLEAN | DEFAULT FALSE |
+| `mfa_method` | TEXT | `totp` or `email` — active second factor; NULL treated as `totp` |
+| `email_otp_code` | TEXT | SHA-256 hash of the pending email OTP (never plaintext) |
+| `email_otp_expires_at` | TIMESTAMP | Expiry of the pending email OTP (5 minutes) |
 | `token_version` | INTEGER | DEFAULT 0 — for JWT invalidation |
 | `email_verified` | BOOLEAN | DEFAULT TRUE |
 | `verification_token` | TEXT | |

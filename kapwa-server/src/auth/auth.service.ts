@@ -1,4 +1,4 @@
-import { BCRYPT_SALT_ROUNDS } from '../common/constants';
+import { BCRYPT_SALT_ROUNDS, OTP_EXPIRY_MINUTES, OTP_MIN, OTP_RANGE, OTP_RATE_LIMIT_SECONDS, MS_PER_SECOND, SECONDS_PER_MINUTE } from '../common/constants';
 import { Logger, Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { generateTOTPSecret, generateTOTPUri, verifyTOTP } from './totp';
-import { User } from './user.entity';
+import { User, MfaMethod } from './user.entity';
 import { UserToken } from './user-token.entity';
 import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 import { Person } from '../beneficiaries/person.entity';
@@ -58,6 +58,52 @@ export class AuthService {
 
   private async deleteTokens(userId: string, purpose: string) {
     await this.tokenRepo.delete({ userId, purpose });
+  }
+
+  // --- Email OTP (second factor) -----------------------------------------
+  // Codes are stored as SHA-256 hashes with a short TTL and are single-use.
+  private emailOtpTtlMs(): number {
+    return OTP_EXPIRY_MINUTES * SECONDS_PER_MINUTE * MS_PER_SECOND;
+  }
+
+  private generateEmailOtpCode(): string {
+    return String(Math.floor(OTP_MIN + Math.random() * OTP_RANGE));
+  }
+
+  private hashEmailOtp(code: string): string {
+    return crypto.createHash('sha256').update(code).digest('hex');
+  }
+
+  // True when a code was issued within the rate-limit window, so a login
+  // attempt or resend can reuse it instead of sending another email.
+  private hasFreshEmailOtp(user: User): boolean {
+    if (!user.emailOtpCode || !user.emailOtpExpiresAt) return false;
+    const createdAt = user.emailOtpExpiresAt.getTime() - this.emailOtpTtlMs();
+    return Date.now() - createdAt < OTP_RATE_LIMIT_SECONDS * MS_PER_SECOND;
+  }
+
+  private async sendEmailOtp(user: User): Promise<boolean> {
+    const code = this.generateEmailOtpCode();
+    user.emailOtpCode = this.hashEmailOtp(code);
+    user.emailOtpExpiresAt = new Date(Date.now() + this.emailOtpTtlMs());
+    await this.userRepo.save(user);
+    return this.emailService.sendOtpEmail(user.email, code);
+  }
+
+  // Verifies and consumes a pending code. Returns false (without saving) for
+  // a missing, expired, or mismatched code; the caller persists the user.
+  private async consumeEmailOtp(user: User, code: string): Promise<boolean> {
+    if (!user.emailOtpCode || !user.emailOtpExpiresAt) return false;
+    if (user.emailOtpExpiresAt.getTime() < Date.now()) {
+      user.emailOtpCode = null as any;
+      user.emailOtpExpiresAt = null as any;
+      await this.userRepo.save(user);
+      return false;
+    }
+    if (user.emailOtpCode !== this.hashEmailOtp(code)) return false;
+    user.emailOtpCode = null as any;
+    user.emailOtpExpiresAt = null as any;
+    return true;
   }
 
   async register(data: { email: string; password: string; role?: string; fullName?: string; firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; phone?: string; dob?: string; assignedBarangay?: string }) {
@@ -176,11 +222,17 @@ export class AuthService {
     }
 
     if (user.mfaEnabled) {
+      const mfaMethod = user.mfaMethod ?? MfaMethod.TOTP;
       const tempToken = this.jwtService.sign(
-        { sub: user.id, email: user.email, role: user.role, mfaChallenge: true, tokenVersion: user.tokenVersion },
+        { sub: user.id, email: user.email, role: user.role, mfaChallenge: true, mfaMethod, tokenVersion: user.tokenVersion },
         { expiresIn: '5m' },
       );
-      return { mfaRequired: true, tempToken };
+      if (mfaMethod === MfaMethod.EMAIL) {
+        // Reuse a pending code instead of emailing on every login attempt.
+        const emailDelivered = this.hasFreshEmailOtp(user) ? true : await this.sendEmailOtp(user);
+        return { mfaRequired: true, mfaMethod, tempToken, emailDelivered };
+      }
+      return { mfaRequired: true, mfaMethod, tempToken };
     }
 
     return this.issueTokens(user);
@@ -200,7 +252,7 @@ export class AuthService {
   }
 
   async findByIdWithSecret(id: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'firstName', 'middleName', 'lastName', 'nameExtension', 'mfaSecret', 'mfaEnabled', 'password', 'tokenVersion', 'emailVerified'] });
+    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'firstName', 'middleName', 'lastName', 'nameExtension', 'mfaSecret', 'mfaEnabled', 'mfaMethod', 'emailOtpCode', 'emailOtpExpiresAt', 'password', 'tokenVersion', 'emailVerified'] });
   }
 
   async refresh(refreshToken: string) {
@@ -251,8 +303,9 @@ export class AuthService {
     }
 
     user.mfaEnabled = true;
+    user.mfaMethod = MfaMethod.TOTP;
     await this.userRepo.save(user);
-    return { mfaEnabled: true };
+    return { mfaEnabled: true, mfaMethod: MfaMethod.TOTP };
   }
 
   async disableMfa(userId: string, password: string) {
@@ -265,6 +318,9 @@ export class AuthService {
 
     user.mfaSecret = null as any;
     user.mfaEnabled = false;
+    user.mfaMethod = null;
+    user.emailOtpCode = null as any;
+    user.emailOtpExpiresAt = null as any;
     await this.userRepo.save(user);
     return { mfaEnabled: false };
   }
@@ -276,6 +332,7 @@ export class AuthService {
 
       const user = await this.findByIdWithSecret(payload.sub);
       if (!user || !user.mfaEnabled || !user.mfaSecret) throw new UnauthorizedException();
+      if ((user.mfaMethod ?? MfaMethod.TOTP) !== MfaMethod.TOTP) throw new UnauthorizedException('TOTP is not enabled for this account');
 
       if (!verifyTOTP({ token: code, secret: user.mfaSecret })) {
         throw new BadRequestException('Invalid TOTP code');
@@ -285,6 +342,74 @@ export class AuthService {
     } catch (e) {
       if (e instanceof BadRequestException || e instanceof UnauthorizedException) throw e;
       throw new UnauthorizedException('MFA verification failed');
+    }
+  }
+
+  // Starts email-OTP enrollment: sends a code to the account's verified email.
+  async setupEmailMfa(userId: string) {
+    const user = await this.findById(userId);
+    if (!user) throw new UnauthorizedException();
+    if (user.mfaEnabled) throw new BadRequestException('MFA already enabled');
+    if (!user.emailVerified) throw new BadRequestException('Verify your email address before enabling email MFA');
+
+    const emailDelivered = await this.sendEmailOtp(user);
+    return { message: 'Verification code sent to your email', emailDelivered };
+  }
+
+  // Completes email-OTP enrollment with the code sent by setupEmailMfa.
+  async enableEmailMfa(userId: string, code: string) {
+    const user = await this.findByIdWithSecret(userId);
+    if (!user) throw new UnauthorizedException();
+    if (user.mfaEnabled) throw new BadRequestException('MFA already enabled');
+
+    if (!(await this.consumeEmailOtp(user, code))) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    user.mfaEnabled = true;
+    user.mfaMethod = MfaMethod.EMAIL;
+    user.mfaSecret = null as any;
+    await this.userRepo.save(user);
+    return { mfaEnabled: true, mfaMethod: MfaMethod.EMAIL };
+  }
+
+  async resendEmailMfa(tempToken: string) {
+    try {
+      const payload = this.jwtService.verify(tempToken) as any;
+      if (!payload.mfaChallenge || payload.mfaMethod !== MfaMethod.EMAIL) throw new UnauthorizedException('Invalid challenge token');
+
+      const user = await this.findByIdWithSecret(payload.sub);
+      if (!user || !user.mfaEnabled || (user.mfaMethod ?? MfaMethod.TOTP) !== MfaMethod.EMAIL) throw new UnauthorizedException();
+
+      if (this.hasFreshEmailOtp(user)) {
+        throw new BadRequestException(`Please wait ${OTP_RATE_LIMIT_SECONDS} seconds before requesting a new code`);
+      }
+
+      const emailDelivered = await this.sendEmailOtp(user);
+      return { message: 'Verification code sent to your email', emailDelivered };
+    } catch (e) {
+      if (e instanceof BadRequestException || e instanceof UnauthorizedException) throw e;
+      throw new UnauthorizedException('Email OTP verification failed');
+    }
+  }
+
+  async verifyEmailMfa(tempToken: string, code: string) {
+    try {
+      const payload = this.jwtService.verify(tempToken) as any;
+      if (!payload.mfaChallenge || payload.mfaMethod !== MfaMethod.EMAIL) throw new UnauthorizedException('Invalid challenge token');
+
+      const user = await this.findByIdWithSecret(payload.sub);
+      if (!user || !user.mfaEnabled || (user.mfaMethod ?? MfaMethod.TOTP) !== MfaMethod.EMAIL) throw new UnauthorizedException();
+
+      if (!(await this.consumeEmailOtp(user, code))) {
+        throw new BadRequestException('Invalid or expired verification code');
+      }
+
+      await this.userRepo.save(user);
+      return this.issueTokens(user);
+    } catch (e) {
+      if (e instanceof BadRequestException || e instanceof UnauthorizedException) throw e;
+      throw new UnauthorizedException('Email OTP verification failed');
     }
   }
 

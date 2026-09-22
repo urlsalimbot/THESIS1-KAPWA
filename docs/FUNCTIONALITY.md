@@ -32,7 +32,7 @@ Seven roles, each with a distinct surface and scope:
 
 - **Login** — email + password (bcrypt, 12 rounds) → JWT **access (1h)** + **refresh (7d)** + user payload.
 - **Refresh** — silent rotation; a session in one tab never revokes another (multi-session stable); revocation still works on password/email change.
-- **MFA (optional)** — TOTP implemented: setup/enable/verify flows; MFA-enabled accounts present a 6-digit challenge at login (seed demo account: `ana.claimant@test.com`). Email OTP can be enabled as an alternative option; SMS OTP is not offered (no SMS provider configured on the API server).
+- **MFA (optional)** — two methods: TOTP (authenticator app) and email OTP. Setup/enable at `/auth/mfa/setup|enable` and `/auth/mfa/email/setup|enable`; MFA-enabled accounts present a 6-digit challenge at login, verified at `/auth/mfa/verify` (TOTP) or `/auth/mfa/email/verify` (email, with `/auth/mfa/email/resend`). Email codes are SHA-256-hashed, single-use, expire in 5 minutes, and require a verified email (seed demo: `ana.claimant@test.com`). SMS OTP is not offered (no SMS provider configured on the API server).
 - **Person-link (claimant)** — registration links an account to an existing beneficiary record via OTP code (`verify-person-link`), which drives the claimant's case visibility.
 - **Email verification** — verify-account, forgot/reset password, email-change confirm, OTP (send-only until SMTP is configured; log-only fallback).
 - **Session-expiry UX** — when a session dies (expired or network), the login page explains why instead of silently redirecting.
