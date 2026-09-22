@@ -222,6 +222,67 @@ describe('CasesExportService — CSR bundle', () => {
   });
 });
 
+describe('CasesExportService — document field mapping', () => {
+  const caseFixture = {
+    beneficiary: {
+      person: {
+        surname: 'Dela Cruz',
+        firstName: 'Juan',
+        middleName: 'M',
+        address: 'Poblacion',
+        currentAddress: { barangay: 'Poblacion' },
+      },
+    },
+  };
+  const make = (query: jest.Mock) =>
+    new (CasesExportService as any)({ manager: { query } }, {} as any, {} as any, {} as any, {} as any) as CasesExportService;
+
+  it('formats the beneficiary name as Last Name, First Name and Middle Initial', () => {
+    const svc = make(jest.fn().mockResolvedValue([]));
+    expect((svc as any).beneficiaryDocumentName(caseFixture)).toBe('Dela Cruz, Juan M.');
+    const withExt = {
+      beneficiary: { person: { surname: 'Reyes', firstName: 'Pedro', middleName: 'P', extension: 'Jr.' } },
+    };
+    expect((svc as any).beneficiaryDocumentName(withExt)).toBe('Reyes, Pedro P. Jr.');
+  });
+
+  it('falls back to N/A when the beneficiary person is missing', () => {
+    const svc = make(jest.fn().mockResolvedValue([]));
+    expect((svc as any).beneficiaryDocumentName({})).toBe('N/A');
+  });
+
+  it('returns the complete beneficiary address', () => {
+    const svc = make(jest.fn().mockResolvedValue([]));
+    expect((svc as any).beneficiaryAddress(caseFixture)).toBe('Poblacion');
+    expect((svc as any).beneficiaryAddress({})).toBe('');
+  });
+
+  it('resolves the acting admin signatory by id', async () => {
+    const query = jest.fn().mockResolvedValue([
+      { first_name: 'Rosario', middle_name: 'G.', last_name: 'Mendoza', name_extension: null },
+    ]);
+    const svc = make(query);
+    await expect((svc as any).signatoryName('u1')).resolves.toBe('Rosario G. Mendoza');
+    expect(query.mock.calls[0][0]).toMatch(/FROM users WHERE id = \$1/);
+  });
+
+  it('falls back to the first active admin and appends the name extension', async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { first_name: 'Felicisimo', middle_name: 'I.', last_name: 'Santiago', name_extension: 'Jr.' },
+      ]);
+    const svc = make(query);
+    await expect((svc as any).signatoryName('u1')).resolves.toBe('Felicisimo I. Santiago Jr.');
+    expect(query.mock.calls[1][0]).toMatch(/role = 'admin'/);
+  });
+
+  it('returns a blank signatory when the lookup fails', async () => {
+    const svc = make(jest.fn().mockRejectedValue(new Error('db down')));
+    await expect((svc as any).signatoryName()).resolves.toBe('');
+  });
+});
+
 describe('CasesExportService — missingRequiredDocuments', () => {
   it('returns only required keys with no filed document, scoped to the case', async () => {
     const query = jest.fn()

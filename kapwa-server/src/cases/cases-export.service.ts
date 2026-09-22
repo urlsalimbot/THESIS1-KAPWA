@@ -8,9 +8,14 @@ import { FilingService } from '../filing/filing.service';
 import { GisExportService } from '../gis/gis-export.service';
 import { IrfExportService } from '../irf/irf-export.service';
 import { OrgService } from '../common/org.service';
-import { ORG_LOCATION } from '../common/constants';
-import { php, fmtDateLong, flowArrow } from '../common/pdf-format';
+import { ORG_LOCATION, MUNICIPAL_MAYOR } from '../common/constants';
 import { PDFDocument as PdfLib } from 'pdf-lib';
+import {
+  buildCertificateOfEligibilityPdf,
+  buildPettyCashVoucherPdf,
+  CertificateOfEligibilityData,
+  PettyCashVoucherData,
+} from './case-documents.builder';
 
 @Injectable()
 export class CasesExportService {
@@ -205,87 +210,99 @@ export class CasesExportService {
     return [p?.firstName, p?.middleName, p?.surname].filter(Boolean).join(' ') || 'N/A';
   }
 
-  private async buildCertificateOfEligibility(c: Case): Promise<Buffer> {
-    const officeName = await this.org.officeName();
-    const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({ size: 'A4', margin: 60, info: { Title: `COE-${c.controlNo}`, Author: officeName, Subject: 'Certificate of Eligibility' } });
-    const chunks: Buffer[] = [];
-    doc.on('data', (ch: Buffer) => chunks.push(ch));
-    const done = new Promise<void>((resolve) => doc.on('end', resolve));
+  // "Dela Cruz, Juan M." — Last Name, First Name and Middle Initial, exactly as
+  // printed on the official Certificate of Eligibility / Petty Cash Voucher.
+  private beneficiaryDocumentName(c: Case): string {
+    const p = (c.beneficiary as any)?.person;
+    if (!p) return 'N/A';
+    const given = [
+      p.firstName,
+      p.middleName ? `${String(p.middleName).charAt(0).toUpperCase()}.` : null,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    const extension = p.extension ? ` ${p.extension}` : '';
+    const name = [p.surname, given].filter(Boolean).join(', ');
+    return name ? `${name}${extension}` : 'N/A';
+  }
 
-    const services = Array.isArray(c.serviceRequested) ? c.serviceRequested.join(', ') : '';
-    const barangay = ((c.beneficiary as any)?.person?.address || '').split(',').pop()?.trim() || '';
-    const localeSuffix = barangay && barangay.toLowerCase() === ORG_LOCATION.municipality.toLowerCase()
-      ? `, ${ORG_LOCATION.province}`
-      : `, ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`;
-    const dateStr = fmtDateLong(new Date());
-    const preparedBy = c.interviewedBy || c.assignedWorkerName || (c.assignedWorker as any)?.fullName || '';
+  // Complete address of the beneficiary, assembled from the person's address
+  // rows (or the raw address text on records predating the split).
+  private beneficiaryAddress(c: Case): string {
+    const p = (c.beneficiary as any)?.person;
+    const addr = p?.address ?? p?.currentAddress;
+    if (!addr) return '';
+    if (typeof addr === 'string') return addr;
+    return [addr.barangay, addr.city, addr.province].filter(Boolean).join(', ');
+  }
 
-    doc.fontSize(14).font('Helvetica-Bold').text(ORG_LOCATION.country, { align: 'center' });
-    doc.fontSize(12).font('Helvetica').text(officeName, { align: 'center' });
-    doc.fontSize(10).text(`${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(16).font('Helvetica-Bold').text('CERTIFICATE OF ELIGIBILITY', { align: 'center' });
-    doc.moveDown(2);
+  // Assigned worker printed as the "Interviewer- Designation".
+  private interviewerName(c: Case): string {
+    return (c.assignedWorker as any)?.fullName || c.assignedWorkerName || c.interviewedBy || '';
+  }
 
-    doc.fontSize(11).font('Helvetica').text(`This certifies that ${this.beneficiaryName(c)} of ${barangay}${localeSuffix} has been assessed and found ELIGIBLE for the following assistance under Case No. ${c.controlNo}:`);
-    doc.moveDown();
-    doc.fontSize(11).font('Helvetica').text(`Services: ${services || 'N/A'}`, { align: 'center' });
-    if (c.amountAssistance != null) {
-      doc.fontSize(11).text(`Assistance Amount: ${php(c.amountAssistance)}`, { align: 'center' });
+  // Recommending signatory on the Certificate of Eligibility: the admin (MSWDO)
+  // full name, printed with the RSW credential. Prefer the acting admin; fall
+  // back to the first active admin so the CSR bundle (no actor context) still
+  // prints a signatory. Never throws — a missing lookup just yields a blank.
+  private async signatoryName(actorId?: string): Promise<string> {
+    try {
+      let row: any;
+      if (actorId) {
+        const rows = await this.caseRepo.manager.query(
+          `SELECT first_name, middle_name, last_name, name_extension FROM users WHERE id = $1 LIMIT 1`,
+          [actorId],
+        );
+        row = rows?.[0];
+      }
+      if (!row) {
+        const admins = await this.caseRepo.manager.query(
+          `SELECT first_name, middle_name, last_name, name_extension FROM users WHERE role = 'admin' AND is_active = TRUE ORDER BY created_at ASC LIMIT 1`,
+        );
+        row = admins?.[0];
+      }
+      if (!row) return '';
+      const full = [row.first_name, row.middle_name, row.last_name].filter(Boolean).join(' ').trim();
+      if (!full) return '';
+      return row.name_extension ? `${full} ${row.name_extension}` : full;
+    } catch {
+      return '';
     }
-    doc.moveDown();
-    doc.fontSize(10).font('Helvetica').text(`This certification is issued upon the recommendation of the Social Worker and approval of the Municipal Social Welfare and Development Officer, in accordance with prevailing DSWD and LGU guidelines.`);
-    doc.moveDown(3);
-    doc.fontSize(10).font('Helvetica').text(preparedBy || ' ', { align: 'center' });
-    doc.fontSize(10).text('____________________________', { align: 'center' });
-    doc.fontSize(10).text('Social Worker / Case Officer', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(9).text(`Issued on ${dateStr}`, { align: 'right' });
+  }
 
-    doc.end();
-    return done.then(() => Buffer.concat(chunks));
+  private async buildCertificateOfEligibility(c: Case, actorId?: string): Promise<Buffer> {
+    const officeName = await this.org.officeName();
+    const data: CertificateOfEligibilityData = {
+      controlNo: c.controlNo,
+      officeName,
+      beneficiaryName: this.beneficiaryDocumentName(c),
+      address: this.beneficiaryAddress(c),
+      caseDate: c.createdAt,
+      amount: c.amountAssistance ?? null,
+      interviewer: this.interviewerName(c),
+      signatoryName: await this.signatoryName(actorId),
+    };
+    return buildCertificateOfEligibilityPdf(data);
   }
 
   private async buildPettyCashVoucher(c: Case): Promise<Buffer> {
     const officeName = await this.org.officeName();
-    const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({ size: 'A4', margin: 60, info: { Title: `PCV-${c.controlNo}`, Author: officeName, Subject: 'Petty Cash Voucher' } });
-    const chunks: Buffer[] = [];
-    doc.on('data', (ch: Buffer) => chunks.push(ch));
-    const done = new Promise<void>((resolve) => doc.on('end', resolve));
-
-    const amount = c.amountAssistance != null ? Number(c.amountAssistance) : 0;
-    const fundSource = c.sourceOfFund || 'LGU - Municipal';
-    const dateStr = fmtDateLong(new Date());
-
-    doc.fontSize(14).font('Helvetica-Bold').text(ORG_LOCATION.country, { align: 'center' });
-    doc.fontSize(12).font('Helvetica').text(officeName, { align: 'center' });
-    doc.fontSize(10).text(`${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(16).font('Helvetica-Bold').text('PETTY CASH VOUCHER', { align: 'center' });
-    doc.moveDown(2);
-
-    doc.fontSize(11).font('Helvetica').text(`PAYEE: ${this.beneficiaryName(c)}`);
-    doc.text(`Case No.: ${c.controlNo}`);
-    doc.text(`Date: ${dateStr}`);
-    doc.moveDown();
-    doc.fontSize(11).text(`AMOUNT: ${php(amount)}`, { align: 'center' });
-    doc.moveDown();
-    doc.text(`Fund Source: ${fundSource}`);
-    doc.moveDown(2);
-    doc.fontSize(9).text('Approved for payment:');
-    doc.moveDown(2);
-    doc.fontSize(10).text('____________________________', { align: 'left' });
-    doc.fontSize(9).text('MSWDO Officer', { align: 'left' });
-    doc.moveDown(2);
-    doc.fontSize(9).text('Received the above amount in full.');
-    doc.moveDown(2);
-    doc.fontSize(10).text('____________________________', { align: 'left' });
-    doc.fontSize(9).text('Signature of Payee', { align: 'left' });
-
-    doc.end();
-    return done.then(() => Buffer.concat(chunks));
+    const services = Array.isArray(c.serviceRequested)
+      ? c.serviceRequested.filter(Boolean).join(', ')
+      : '';
+    const data: PettyCashVoucherData = {
+      controlNo: c.controlNo,
+      officeName,
+      payee: this.beneficiaryDocumentName(c),
+      address: this.beneficiaryAddress(c),
+      date: c.createdAt,
+      amount: c.amountAssistance ?? null,
+      particulars: services || 'Assistance',
+      mayorName: MUNICIPAL_MAYOR.name,
+      mayorTitle: MUNICIPAL_MAYOR.title,
+    };
+    return buildPettyCashVoucherPdf(data);
   }
 
   // Required document keys (mandatory) contributed by the programs behind this
@@ -325,7 +342,7 @@ export class CasesExportService {
   async issueCoe(caseId: string, actorId?: string): Promise<string> {
     const c = await this.requireCase(caseId);
     if (c.certificateUrl) return c.certificateUrl;
-    const pdf = await this.buildCertificateOfEligibility(c);
+    const pdf = await this.buildCertificateOfEligibility(c, actorId);
     const doc = await this.filing.upload(
       { originalname: `COE-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: pdf.length, buffer: pdf },
       { caseId: c.id, category: 'approval_document', notes: `Certificate of Eligibility — issued for ${c.controlNo}`, uploadedBy: actorId },

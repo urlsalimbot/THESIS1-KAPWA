@@ -37,6 +37,14 @@ export const ORG_LOCATION = {
   municipality: 'Norzagaray',
 } as const;
 
+// Municipal mayor stamped as the approver on generated Petty Cash Vouchers.
+// This is the one pre-printed name on the form — every other value is sourced
+// from the database. Update here when the sitting mayor changes.
+export const MUNICIPAL_MAYOR = {
+  name: 'HON. MARIA ELENA L. GERMAR',
+  title: 'MUNICIPAL MAYOR',
+} as const;
+
 // --- Auth / security ---
 export const BCRYPT_SALT_ROUNDS = 12;
 export const MIN_PASSWORD_LENGTH = 8;
