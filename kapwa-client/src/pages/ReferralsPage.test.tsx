@@ -59,7 +59,7 @@ describe('ReferralsPage', () => {
     renderPage('coordinator');
     expect(await screen.findByText('My Referrals')).toBeTruthy();
     expect(screen.getByRole('button', { name: /New Referral/ })).toBeTruthy();
-    expect(screen.getByText('Dela Cruz, Juan')).toBeTruthy();
+    expect(await screen.findByText('Dela Cruz, Juan')).toBeTruthy();
     expect(mockApiGet).toHaveBeenCalledWith('/referrals/mine');
   });
 
@@ -68,8 +68,8 @@ describe('ReferralsPage', () => {
     renderPage('social_worker');
     expect(await screen.findByText('Pending Referrals')).toBeTruthy();
     // The accessible name carries the full name schema, not just the first name.
-    expect(screen.getByRole('button', { name: /Accept referral for Dela Cruz, Juan/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Decline referral for Dela Cruz, Juan/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /Accept referral for Dela Cruz, Juan/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /Decline referral for Dela Cruz, Juan/ })).toBeTruthy();
     expect(mockApiGet).toHaveBeenCalledWith('/referrals?status=pending');
   });
 
@@ -80,7 +80,7 @@ describe('ReferralsPage', () => {
     renderPage('social_worker');
     await screen.findByText('Pending Referrals');
 
-    fireEvent.click(screen.getByRole('button', { name: /Accept referral for Dela Cruz, Juan/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Accept referral for Dela Cruz, Juan/ }));
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
     const [path, opts] = mockNavigate.mock.calls[0];
@@ -99,7 +99,7 @@ describe('ReferralsPage', () => {
     renderPage('social_worker');
     await screen.findByText('Pending Referrals');
 
-    fireEvent.click(screen.getByRole('button', { name: /Accept referral for Dela Cruz, Juan/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Accept referral for Dela Cruz, Juan/ }));
 
     await waitFor(() => expect(mockApiPatch).toHaveBeenCalled());
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe('ReferralsPage', () => {
     renderPage('social_worker');
 
     expect(await screen.findByText('Awaiting intake')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Continue intake for Dela Cruz, Juan/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Continue intake for Dela Cruz, Juan/ }));
 
     expect(mockNavigate).toHaveBeenCalledWith(
       '/intake',
