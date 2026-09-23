@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { PageShell } from './PageShell';
 import '@/i18n';
 
@@ -80,5 +81,24 @@ describe('PageShell', () => {
     // Clock icon from lucide-react renders as an inline SVG
     const svg = container.querySelector('svg');
     expect(svg).toBeTruthy();
+  });
+
+  // --- back control ---
+
+  it('fires the back handler once even when clicked repeatedly', async () => {
+    // Rapid clicks on "Back" must not queue a burst of renderer-initiated
+    // navigations (Chromium throttles those and warns about hanging).
+    const onClick = vi.fn();
+    render(
+      <PageShell title="Details" backTo={{ label: 'Back', onClick }}>
+        <div>content</div>
+      </PageShell>,
+    );
+    const btn = screen.getByRole('button', { name: /back/i });
+    const user = userEvent.setup();
+    await user.click(btn);
+    await user.click(btn);
+    await user.click(btn);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

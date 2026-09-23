@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Clock } from 'lucide-react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCacheStaleness } from '@/hooks/use-cache-staleness';
 import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
@@ -24,6 +25,16 @@ export function PageShell({ title, description, actions, backTo, cachedAt, child
   const { t } = useTranslation();
   const { isStale, ageDisplay } = useCacheStaleness(cachedAt);
 
+  // Navigate at most once per mount: rapid clicks on "Back" must not fire a
+  // burst of renderer-initiated navigations (Chromium throttles those with
+  // "Throttling navigation to prevent the browser from hanging").
+  const backFired = useRef(false);
+  const handleBack = () => {
+    if (backFired.current) return;
+    backFired.current = true;
+    backTo?.onClick();
+  };
+
   let fullDescription = description || '';
   if (isStale && ageDisplay) {
     const staleText = t('shell.cachedData', 'Cached data — last sync {{age}} ago', { age: ageDisplay });
@@ -35,7 +46,7 @@ export function PageShell({ title, description, actions, backTo, cachedAt, child
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {backTo && (
-            <Button variant="outline" size="sm" onClick={backTo.onClick} className="shrink-0 -ml-1.5">
+            <Button variant="outline" size="sm" onClick={handleBack} className="shrink-0 -ml-1.5">
               <ArrowLeft size={16} className="mr-1" /> {backTo.label}
             </Button>
           )}

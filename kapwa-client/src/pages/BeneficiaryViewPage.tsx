@@ -352,7 +352,7 @@ export function BeneficiaryViewPage() {
       <PageShell
         title={t("beneficiaries.viewTitle", "Beneficiary Details")}
         description=""
-        backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate(-1) }}
+        backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate("/beneficiaries") }}
       >
         <EmptyState variant="no-data" />
       </PageShell>
@@ -367,7 +367,7 @@ export function BeneficiaryViewPage() {
     <PageShell
       title={t("beneficiaries.viewTitle", "Beneficiary Details")}
       description={t("beneficiaries.viewingFor", "Viewing information for {{name}}", { name: beneficiary.name })}
-      backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate(-1) }}
+      backTo={{ label: t("beneficiaries.back", "Back"), onClick: () => navigate("/beneficiaries") }}
     >
       {assignSuccess && (
         <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm font-medium text-emerald-700 mb-3">
