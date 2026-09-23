@@ -123,13 +123,15 @@ export class NotificationsService {
     return labels[status] || status;
   }
 
-  async notifyCaseUpdate(recipientId: string, caseRef: string, status: string) {
+  async notifyCaseUpdate(recipientId: string, caseId: string, controlNo: string, status: string) {
     return this.create({
       recipientId,
       title: 'Case Update',
-      message: `Case ${caseRef} status changed to ${this.statusLabel(status)}`,
+      message: `Case ${controlNo} status changed to ${this.statusLabel(status)}`,
       category: NotificationCategory.CASE_UPDATE,
-      referenceId: caseRef,
+      // The case UUID, so the client can link to /cases/<id>. The human-readable
+      // control number rides in the message instead.
+      referenceId: caseId,
     });
   }
 

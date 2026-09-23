@@ -290,7 +290,7 @@ describe('CasesService', () => {
 
       const result = await service.updateStatus('1', CaseStatus.ASSESSED);
       expect(result.status).toBe(CaseStatus.ASSESSED);
-      expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('w1', 'KAPWA-001', CaseStatus.ASSESSED);
+      expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('w1', '1', 'KAPWA-001', CaseStatus.ASSESSED);
     });
 
     it('should notify the linked claimant account on transition', async () => {
@@ -305,7 +305,7 @@ describe('CasesService', () => {
         expect.stringContaining('users u'),
         ['ben-1'],
       );
-      expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('claimant-user-1', 'KAPWA-001', CaseStatus.ASSESSED);
+      expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('claimant-user-1', '1', 'KAPWA-001', CaseStatus.ASSESSED);
     });
 
     it('should throw on invalid transition', async () => {

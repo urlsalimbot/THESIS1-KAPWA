@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/lib/theme-context';
@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/i18n/useLanguage';
 import useSWR from 'swr';
 import { queryKeys } from '@/lib/query-keys';
-import { createBreadcrumbs } from '@/lib/breadcrumbs';
+import { createBreadcrumbs, subscribeCaseLabels, caseLabelVersion } from '@/lib/breadcrumbs';
 import {
   Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink,
   BreadcrumbPage, BreadcrumbSeparator,
@@ -41,6 +41,8 @@ export interface TopbarProps {
 }
 
 function BreadcrumbNav({ pathname }: { pathname: string }) {
+  // Re-render when a case page registers its control number.
+  useSyncExternalStore(subscribeCaseLabels, caseLabelVersion, caseLabelVersion);
   const crumbs = createBreadcrumbs(pathname);
   if (crumbs.length < 1) return null;
   return (

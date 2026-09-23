@@ -103,10 +103,11 @@ describe('NotificationsService', () => {
   });
 
   it('creates case update notification', async () => {
-    await service.notifyCaseUpdate('u1', 'NORZ-001', 'approved');
+    await service.notifyCaseUpdate('u1', 'case-uuid-1', 'NORZ-001', 'approved');
     expect(repoMock.create).toHaveBeenCalledWith(expect.objectContaining({
       category: NotificationCategory.CASE_UPDATE,
-      referenceId: 'NORZ-001',
+      referenceId: 'case-uuid-1',
+      message: expect.stringContaining('NORZ-001'),
     }));
   });
 

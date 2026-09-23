@@ -14,6 +14,7 @@ import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
 import { formatDate, formatDateTime } from '../lib/format';
 import { isAssessmentStepDone, interventionRequirementsMet } from '../lib/case-progress';
+import { setCaseLabel } from '../lib/breadcrumbs';
 import { humanizeError } from '../lib/errors';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
@@ -153,6 +154,11 @@ export function CaseViewPage() {
       initialNavDone.current = true;
     }
   }, [caseData, interventions, progressOpts]);
+
+  // Breadcrumb shows the control number, not the URL's UUID.
+  useEffect(() => {
+    if (caseData?.id && caseData?.controlNo) setCaseLabel(caseData.id, caseData.controlNo);
+  }, [caseData?.id, caseData?.controlNo]);
   const { data: history, isLoading: historyLoading } = useSWR<any[]>(
     id ? queryKeys.cases.detail(`${id}/history`) : null,
   );

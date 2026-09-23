@@ -378,7 +378,7 @@ export class CasesService {
     await this.auditLog?.log('case.transition', id, opts?.actorId, { from: oldStatus, to: newStatus, by: opts?.userRole, controlNo: c.controlNo });
 
     if (c.assignedWorkerId) {
-      await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.controlNo, newStatus);
+      await this.notifService.notifyCaseUpdate(c.assignedWorkerId, c.id, c.controlNo, newStatus);
     }
 
     // The beneficiary's linked claimant account should also be notified of
@@ -393,7 +393,7 @@ export class CasesService {
       );
       const claimantUserId = claimantRows?.[0]?.id as string | undefined;
       if (claimantUserId) {
-        await this.notifService.notifyCaseUpdate(claimantUserId, c.controlNo, newStatus);
+        await this.notifService.notifyCaseUpdate(claimantUserId, c.id, c.controlNo, newStatus);
       }
     }
 

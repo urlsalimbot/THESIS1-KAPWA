@@ -195,6 +195,28 @@ export class BeneficiariesService {
       }
     }
 
+    // Enrich with the client category from the beneficiary's latest case: the
+    // assessment sets cases.client_category, while beneficiary_roles.category is
+    // usually empty, so the list column would otherwise always show "—".
+    const benIds = data.map(b => b.id).filter(Boolean);
+    if (benIds.length > 0) {
+      try {
+        const cats: Array<{ beneficiary_id: string; client_category: string }> = await this.benRepo.query(
+          `SELECT DISTINCT ON (beneficiary_id) beneficiary_id, client_category
+             FROM cases
+            WHERE beneficiary_id = ANY($1::uuid[]) AND client_category IS NOT NULL
+            ORDER BY beneficiary_id, created_at DESC`,
+          [benIds],
+        );
+        const catMap = new Map(cats.map(r => [r.beneficiary_id, r.client_category]));
+        for (const b of data) {
+          (b as any).clientCategory = catMap.get(b.id) ?? undefined;
+        }
+      } catch {
+        // Enrichment only — never fail the list because the category lookup failed.
+      }
+    }
+
     return { data, total };
   }
 

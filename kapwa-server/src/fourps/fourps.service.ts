@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CaseComplianceItem, ComplianceType } from './fourps-compliance.entity';
 import { CasePayout } from './fourps-payout.entity';
+import { AccessCardsService } from '../access-cards/access-cards.service';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 
 export function ageFromDob(dob: string | Date | null | undefined, now: Date = new Date()): number {
   if (!dob) return 0;
@@ -20,7 +22,35 @@ export class FourPsService {
     private complianceRepo: Repository<CaseComplianceItem>,
     @InjectRepository(CasePayout)
     private payoutRepo: Repository<CasePayout>,
+    @InjectRepository(CaseIntervention)
+    private interventionRepo: Repository<CaseIntervention>,
+    private readonly accessCards: AccessCardsService,
   ) {}
+
+  // 4Ps activity is logged against the household access card (payouts and
+  // compliance check-offs) so the ledger and the printed card stay complete
+  // without a second manual entry. Best-effort: a logging failure must never
+  // fail the 4Ps action itself.
+  private async logToCard(caseId: string, entry: { serviceRendered: string; serviceDate: Date; cost?: number; category: string }) {
+    try {
+      const rows = await this.payoutRepo.query(
+        'SELECT beneficiary_id FROM cases WHERE id = $1 LIMIT 1',
+        [caseId],
+      );
+      const beneficiaryId = rows?.[0]?.beneficiary_id;
+      if (!beneficiaryId) return;
+      const code = await this.accessCards.accessCardCodeFor(beneficiaryId);
+      await this.accessCards.logService({
+        accessCardCode: code,
+        serviceRendered: entry.serviceRendered,
+        serviceDate: entry.serviceDate,
+        cost: entry.cost,
+        category: entry.category,
+      });
+    } catch {
+      // Card may not exist yet — the 4Ps record is still authoritative.
+    }
+  }
 
   async generateComplianceItems(caseId: string): Promise<number> {
     const caseRows = await this.complianceRepo.query(
@@ -133,6 +163,11 @@ export class FourPsService {
     entry.metAt = new Date();
     entry.metBy = userId;
     await this.complianceRepo.save(entry);
+    await this.logToCard(entry.caseId, {
+      serviceRendered: `4Ps compliance — ${entry.complianceType || 'condition'}${entry.monthLabel ? ` (${entry.monthLabel})` : ''}`,
+      serviceDate: new Date(),
+      category: '4ps_compliance',
+    });
   }
 
   async unmarkComplied(id: string): Promise<void> {
@@ -148,13 +183,20 @@ export class FourPsService {
     caseId: string,
     input: { cycleNo?: string; scheduledAt: string; amount?: number },
   ): Promise<CasePayout> {
-    return this.payoutRepo.save(this.payoutRepo.create({
+    const payout = await this.payoutRepo.save(this.payoutRepo.create({
       caseId,
       cycleNo: input.cycleNo,
       scheduledAt: input.scheduledAt,
       amount: input.amount,
       status: 'scheduled',
     }));
+    await this.logToCard(caseId, {
+      serviceRendered: `4Ps payout scheduled${input.cycleNo ? ` — ${input.cycleNo}` : ''}`,
+      serviceDate: new Date(input.scheduledAt),
+      cost: input.amount,
+      category: '4ps_payout',
+    });
+    return payout;
   }
 
   async setPayoutStatus(
@@ -164,9 +206,37 @@ export class FourPsService {
   ): Promise<CasePayout> {
     const payout = await this.payoutRepo.findOne({ where: { id } });
     if (!payout) throw new NotFoundException('Payout not found');
+    const wasCompleted = payout.status === 'completed';
     payout.status = status;
     if (remarks) payout.remarks = remarks;
-    return this.payoutRepo.save(payout);
+    const saved = await this.payoutRepo.save(payout);
+
+    // A completed 4Ps payout is assistance delivered: record it as a case
+    // intervention so the case view's Intervention Record reflects it (and the
+    // case counts it as a delivered service).
+    if (status === 'completed' && !wasCompleted) {
+      try {
+        await this.interventionRepo.save(this.interventionRepo.create({
+          caseId: payout.caseId,
+          serviceName: `4Ps Payout${payout.cycleNo ? ` ${payout.cycleNo}` : ''}`,
+          category: '4Ps',
+          deliveryDate: payout.scheduledAt,
+          amount: payout.amount,
+          modeOfDelivery: 'Cash',
+          fundSource: 'DSWD',
+          notes: 'Pantawid Pamilyang Pilipino Program payout',
+        }));
+        await this.logToCard(payout.caseId, {
+          serviceRendered: `4Ps payout released${payout.cycleNo ? ` — ${payout.cycleNo}` : ''}`,
+          serviceDate: payout.scheduledAt ? new Date(payout.scheduledAt) : new Date(),
+          cost: payout.amount,
+          category: '4ps_payout',
+        });
+      } catch {
+        // Intervention/card logging is best-effort; the payout status stands.
+      }
+    }
+    return saved;
   }
 
   async markNotified(id: string, userId: string): Promise<CasePayout> {

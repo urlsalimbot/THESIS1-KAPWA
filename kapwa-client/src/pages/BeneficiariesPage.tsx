@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
 
-interface Beneficiary { id: string; name: string; age: number; barangay: string; householdSize: number; category: string; status: string; }
+interface Beneficiary { id: string; name: string; age: number; barangay: string; householdSize: number; category: string; clientCategory?: string; status: string; }
 
 const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   active: 'default',
@@ -42,7 +42,7 @@ function mapBeneficiary(b: Record<string, unknown>): Beneficiary {
     age: b.dob ? new Date().getFullYear() - new Date(b.dob as string).getFullYear() : 0,
     barangay: (((b.household as Record<string, unknown> | undefined)?.barangay as string) || ((b.currentAddress as Record<string, string> | undefined)?.barangay) || ((b.address as string) || '').split(',').pop()?.trim() || '').trim(),
     householdSize: ((b.household as Record<string, unknown>)?.familyMemberCount as number) || 1,
-    category: (b.category as string) || '',
+    category: ((b.clientCategory as string) || (b.category as string) || ''),
     status: (b.consentStatus as string) || 'active',
   };
 }

@@ -4,6 +4,15 @@ import { NotFoundException } from '@nestjs/common';
 import { FourPsService, ageFromDob } from './fourps.service';
 import { CaseComplianceItem } from './fourps-compliance.entity';
 import { CasePayout } from './fourps-payout.entity';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { AccessCardsService } from '../access-cards/access-cards.service';
+
+// 4Ps now auto-logs to the household access card and (on payout completion)
+// records a case intervention. Both are best-effort collaborators.
+const extraProviders = () => [
+  { provide: getRepositoryToken(CaseIntervention), useValue: { save: jest.fn(), create: jest.fn((d: any) => d) } },
+  { provide: AccessCardsService, useValue: { accessCardCodeFor: jest.fn().mockResolvedValue('NORZ-AC-2026-0001'), logService: jest.fn() } },
+];
 
 describe('ageFromDob', () => {
   it('computes full years with birthday awareness', () => {
@@ -29,6 +38,7 @@ describe('FourPsService.generateComplianceItems', () => {
         FourPsService,
         { provide: getRepositoryToken(CaseComplianceItem), useValue: repoMock },
         { provide: getRepositoryToken(CasePayout), useValue: payoutRepoMock },
+        ...extraProviders(),
       ],
     }).compile();
     service = module.get(FourPsService);
@@ -103,6 +113,7 @@ describe('FourPsService compliance status', () => {
         FourPsService,
         { provide: getRepositoryToken(CaseComplianceItem), useValue: repoMock },
         { provide: getRepositoryToken(CasePayout), useValue: { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) } },
+        ...extraProviders(),
       ],
     }).compile();
     service = module.get(FourPsService);
@@ -181,6 +192,7 @@ describe('FourPsService payouts', () => {
         FourPsService,
         { provide: getRepositoryToken(CaseComplianceItem), useValue: { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) } },
         { provide: getRepositoryToken(CasePayout), useValue: payoutRepoMock },
+        ...extraProviders(),
       ],
     }).compile();
     service = module.get(FourPsService);
