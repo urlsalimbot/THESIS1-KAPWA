@@ -6,7 +6,7 @@ import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import {
   User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning,
-  Plus, Lock, Send, ExternalLink, MoreHorizontal, RotateCcw, Activity,
+  Plus, Lock, Send, ExternalLink, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList,
 } from 'lucide-react';
 import { useCaseActions } from '../hooks/useCaseActions';
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
@@ -27,8 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
-import { CaseAccessCardPanel } from '@/components/case-view/CaseAccessCardPanel';
-import { FourPsComplianceSection, isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
+import { isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
 import { StepImplementHIP } from '@/components/case-view/StepImplementHIP';
 import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDelivery';
@@ -347,6 +346,11 @@ export function CaseViewPage() {
       backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}
       actions={
         <div className="flex items-center gap-2">
+          {isFourPsCase(caseData) && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/cases/${id}/4ps-compliance`)}>
+              <ClipboardList size={14} aria-hidden="true" /> {t('cases.fourPsProgram', '4Ps Program')}
+            </Button>
+          )}
           {caseData.slaOverdue && (
             <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive">
               <AlertTriangle size={12} aria-hidden="true" /> {t('cases.overdueBadge', 'OVERDUE')}
@@ -556,26 +560,67 @@ export function CaseViewPage() {
                   </div>
                 )}
               </div>
+
+              {/* Claimant + household live with the beneficiary: one identity card
+                  instead of three near-empty cards. */}
+              {caseData?.claimant && (
+                <>
+                  <Separator />
+                  <div className="px-4 py-3 space-y-2 text-sm">
+                    <span className="text-muted-foreground text-xs">{t('cases.claimant', 'Claimant')}</span>
+                    <p className="font-medium">{caseData.claimant.fullName}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {caseData.claimant.relationship !== 'Self' && <span>{caseData.claimant.relationship}</span>}
+                      {caseData.claimant.phone && <span>{caseData.claimant.phone}</span>}
+                      {claimantAddress && <span>{claimantAddress}</span>}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {household && (
+                <>
+                  <Separator />
+                  <div className="px-4 py-3 space-y-2 text-sm">
+                    <span className="text-muted-foreground text-xs">{t('cases.household', 'Household')}</span>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {household.barangay && <span>{household.barangay}</span>}
+                      {household.estimatedIncome && <span className="tabular-nums">₱{Number(household.estimatedIncome).toLocaleString()}/mo</span>}
+                      {household.nhtsPrId && <span>{t('nhts.label', 'NHTS-PR / Listahanan ID')}: {household.nhtsPrId}</span>}
+                    </div>
+                    {(famGraph?.members?.length || 0) > 0 && (
+                      <div className="mt-1">
+                        <FamilyGraph
+                          loading={famLoading && !famGraph}
+                          error={null}
+                          members={famGraph?.members || [] as any}
+                          primary={famGraph?.primary || null as any}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
               <Separator />
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="flex-1"
                   onClick={() => navigate(`/beneficiaries/${ben.id}`)}
                 >
                   <User size={14} className="mr-1.5" aria-hidden="true" /> {t('cases.viewProfile', 'View Profile')}
                 </Button>
+                {ben.accessCardCode && (
+                  <Button asChild variant="outline" size="sm" className="flex-1">
+                    <a href={`/beneficiary/${ben.id}/access-card`}>
+                      <CreditCard size={14} className="mr-1.5" aria-hidden="true" /> {t('caseView.viewAccessCard', 'View Access Card')}
+                    </a>
+                  </Button>
+                )}
               </div>
             </SectionCard>
-          )}
-
-          {/* Access Card Ledger — payouts & compliance accounted on the card */}
-          <CaseAccessCardPanel beneficiaryId={ben?.id ?? ''} cardCode={ben?.accessCardCode} />
-
-          {/* 4Ps conditionality tracking — visible for Pantawid households */}
-          {isFourPsCase(caseData) && id && (
-            <FourPsComplianceSection caseId={id} />
           )}
 
           {/* Documents card */}
@@ -653,81 +698,6 @@ export function CaseViewPage() {
               )}
             </div>
           </SectionCard>
-
-          {/* Claimant card */}
-          {caseData?.claimant && (
-            <SectionCard icon={User} title={t('cases.claimant', 'Claimant')}>
-              <div className="px-4 py-3 space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground text-xs">{t('cases.fullName', 'Full Name')}</span>
-                  <p className="font-medium">{caseData.claimant.fullName}</p>
-                </div>
-                {caseData.claimant.relationship !== 'Self' && (
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.relationshipToBeneficiary', 'Relationship to Beneficiary')}</span>
-                    <p>{caseData.claimant.relationship}</p>
-                  </div>
-                )}
-                {caseData.claimant.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone size={14} className="shrink-0 text-muted-foreground" />
-                    <div>
-                      <span className="text-muted-foreground text-xs">{t('cases.phone', 'Phone')}</span>
-                      <p>{caseData.claimant.phone}</p>
-                    </div>
-                  </div>
-                )}
-                {claimantAddress && (
-                  <div className="flex items-start gap-2">
-                    <MapPin size={14} className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    <div>
-                      <span className="text-muted-foreground text-xs">{t('cases.address', 'Address')}</span>
-                      <p>{claimantAddress}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </SectionCard>
-          )}
-
-          {/* Household card */}
-          {household && (
-            <SectionCard icon={Users} title={t('cases.household', 'Household')}>
-              <div className="px-4 py-3 space-y-2 text-sm">
-                {household.barangay && (
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} className="shrink-0 text-muted-foreground" />
-                    <span>{household.barangay}</span>
-                  </div>
-                )}
-                {household.estimatedIncome && (
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('cases.estimatedIncome', 'Estimated Income')}</span>
-                    <p className="tabular-nums">₱{Number(household.estimatedIncome).toLocaleString()}/mo</p>
-                  </div>
-                )}
-                {household.nhtsPrId && (
-                  <div>
-                    <span className="text-muted-foreground text-xs">{t('nhts.label', 'NHTS-PR / Listahanan ID')}</span>
-                    <p>{household.nhtsPrId}</p>
-                  </div>
-                )}
-                {(famGraph?.members?.length || 0) > 0 && (
-                  <div className="mt-2">
-                    <span className="text-muted-foreground text-xs flex items-center gap-1 mb-2">
-                      <Users size={12} aria-hidden="true" /> {t('cases.memberCount', '{{count}} Member', { count: famGraph!.members.length })}
-                    </span>
-                    <FamilyGraph
-                      loading={famLoading && !famGraph}
-                      error={null}
-                      members={famGraph?.members || [] as any}
-                      primary={famGraph?.primary || null as any}
-                    />
-                  </div>
-                )}
-              </div>
-            </SectionCard>
-          )}
 
           {/* Incident Reports */}
           <SectionCard

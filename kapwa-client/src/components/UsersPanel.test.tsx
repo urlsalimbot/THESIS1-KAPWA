@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
@@ -124,7 +124,9 @@ describe('UsersPanel', () => {
     renderWithSWR(<UsersPanel />);
     await screen.findByText('worker1@mswdo.test');
 
-    await user.click(screen.getByRole('button', { name: 'Edit worker1@mswdo.test' }));
+    // fireEvent (not userEvent) opens the dialog: userEvent's pointer sequence
+    // can be lost when SWR re-renders the row mid-click, which made this flaky.
+    fireEvent.click(screen.getByRole('button', { name: 'Edit worker1@mswdo.test' }));
     await screen.findByRole('dialog', {}, { timeout: 10000 });
     expect(screen.getByDisplayValue('Juan')).toBeTruthy();
     expect(screen.getByDisplayValue('Dela Cruz')).toBeTruthy();

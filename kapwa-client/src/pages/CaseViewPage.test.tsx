@@ -208,8 +208,8 @@ describe('CaseViewPage — GIS PDF', () => {
   });
 });
 
-describe('CaseViewPage — 4Ps compliance', () => {
-  it('shows the compliance section for a Pantawid case', async () => {
+describe('CaseViewPage — 4Ps', () => {
+  it('shows the 4Ps Program button for a Pantawid case', async () => {
     mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
@@ -228,7 +228,31 @@ describe('CaseViewPage — 4Ps compliance', () => {
 
     renderWithSWR(<CaseViewPage />);
 
-    expect(await screen.findByText('4Ps Compliance')).toBeInTheDocument();
+    // 4Ps monitoring lives on its own page; the case view only links to it.
+    expect(await screen.findByRole('button', { name: /4Ps Program/i })).toBeInTheDocument();
+  });
+
+  it('hides the 4Ps Program button for a non-Pantawid case', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('fourps')) return Promise.resolve({ total: 0, complied: 0, rate: 0, byType: {}, entries: [] });
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) {
+        return Promise.resolve({ ...mockCase, serviceRequested: ['Medical Assistance'], clientCategory: 'Indigent' });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+
+    await screen.findByRole('button', { name: /Back to Cases/i });
+    expect(screen.queryByRole('button', { name: /4Ps Program/i })).toBeNull();
   });
 });
 
