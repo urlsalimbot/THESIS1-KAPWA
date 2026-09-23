@@ -110,7 +110,9 @@ services:
     restart: unless-stopped
     ports:
       - "8090:80"
-      - "443:443"
+      # 443 is privileged; rootless Podman cannot bind it, so TLS is published
+      # on host 8443 instead (map back to 443 when running as root).
+      - "8443:443"
     volumes:
       - ../infra/Caddyfile:/etc/caddy/Caddyfile:ro,z
       - caddy-data:/data

@@ -26,3 +26,12 @@ services:
       EMAIL_PASS: mailhog
       EMAIL_FROM: "KAPWA MSWDO <noreply@mswdo.test>"
       APP_URL: "http://localhost:8090"
+      # The bundled Postgres serves plaintext; infra/.env.production sets
+      # DB_SSL=true for RDS, which makes the API fail every boot with
+      # "The server does not support SSL connections".
+      DB_SSL: "false"
+      # The compose file initialises Postgres from ${DB_PASSWORD:-kapwa}
+      # interpolated from the *shell*, while the API reads DB_PASSWORD from
+      # env_file — so pin the API to the password the bundled DB was created
+      # with, otherwise auth fails with "password authentication failed".
+      DB_PASSWORD: "kapwa"

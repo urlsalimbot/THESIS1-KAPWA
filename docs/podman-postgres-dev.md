@@ -125,6 +125,7 @@ Endpoints once the stack is healthy:
 | Service | URL |
 |---|---|
 | App (Caddy → client, `/api/*` → API) | http://localhost:8090 |
+| App TLS (Caddy, if enabled) | https://localhost:8443 |
 | MailHog inbox | http://localhost:8025 |
 | MailHog SMTP (from host) | localhost:1025 |
 | MinIO console | port `9001` (mapped inside the stack; front with Caddy or add a port) |
@@ -138,6 +139,27 @@ takes precedence over `env_file`, so the production credentials in
 Note: the API only creates an SMTP transporter when **both** `EMAIL_HOST` and
 `EMAIL_USER` are set; MailHog accepts any username/password, which is why a
 dummy `EMAIL_USER` is supplied.
+
+### Two settings that must differ from production
+
+`infra/.env.production` is written for RDS and the deployed database, so the
+bundled stack needs both of these overridden on the `api` service (the override
+already does it):
+
+- **`DB_SSL=false`** — production sets `DB_SSL=true` for RDS. The bundled
+  Postgres serves plaintext, so the API otherwise fails every boot with
+  `The server does not support SSL connections` and restart-loops.
+- **`DB_PASSWORD=kapwa`** — the compose file initialises Postgres from
+  `${DB_PASSWORD:-kapwa}` interpolated from the *shell*, while the API reads
+  `DB_PASSWORD` from `env_file`. Without pinning it, the API fails with
+  `password authentication failed for user "kapwa"`.
+
+### Caddy and privileged port 443
+
+Rootless Podman cannot bind port 443 (`rootlessport cannot expose privileged
+port 443`). The compose file therefore publishes Caddy's TLS port on host
+**8443**; map it back to 443 when running as root. Lowering
+`net.ipv4.ip_unprivileged_port_start` to 443 is the alternative.
 
 Teardown, including the fresh test database:
 
