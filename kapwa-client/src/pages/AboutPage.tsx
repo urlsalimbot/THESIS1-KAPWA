@@ -1,28 +1,30 @@
+import useSWR from 'swr';
+import { Link } from 'react-router-dom';
 import { TeamSection } from '@/components/TeamSection';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/public/PageContainer';
-import { Heart, Stethoscope, Cross, GraduationCap, Briefcase, ShieldAlert } from 'lucide-react';
+import { ProgramCard, type PublicProgram } from '@/components/public/ProgramsCarousel';
+import { api } from '@/lib/api';
+import { queryKeys } from '@/lib/query-keys';
+import { ArrowRight, Heart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-const programs = [
-  { title: 'Social Pension', description: 'Monthly stipend for senior citizens aged 60 and above.', icon: Heart },
-  { title: 'Medical Assistance', description: 'Financial support for medical treatment and hospitalization.', icon: Stethoscope },
-  { title: 'Burial Assistance', description: 'Financial aid for funeral expenses of qualified residents.', icon: Cross },
-  { title: 'Educational Assistance', description: 'Scholarship and educational support for deserving students.', icon: GraduationCap },
-  { title: 'Livelihood Programs', description: 'Skills training and seed capital for small business startups.', icon: Briefcase },
-  { title: 'Crisis Intervention', description: 'Emergency assistance for individuals and families in crisis.', icon: ShieldAlert },
-];
 
 export function AboutPage() {
   const { t } = useTranslation();
+  const { data, isLoading } = useSWR(
+    queryKeys.programs.publicList(),
+    (key) => api.get<PublicProgram[]>(key),
+  );
+  const programs = data || [];
 
-  // Facts drawn from the system's own configuration: the registration
-  // barangay list and the service catalogue above.
+  // Facts drawn from the system's own configuration: the office history and the
+  // live program catalogue (so "Core services" is the real count, not a
+  // hardcoded 6).
   const facts = [
     { label: t('about.established', 'Established'), value: '1995' },
     { label: t('about.barangaysServed', 'Barangays served'), value: '13' },
-    { label: t('about.coreServices', 'Core services'), value: String(programs.length) },
+    { label: t('about.coreServices', 'Core services'), value: data ? String(programs.length) : '—' },
   ];
 
   return (
@@ -97,7 +99,7 @@ export function AboutPage() {
         </PageContainer>
       </section>
 
-      {/* Programs */}
+      {/* Programs — the live catalogue from the database */}
       <section className="py-16 sm:py-20 lg:py-24">
         <PageContainer>
           <div className="mb-12 max-w-3xl">
@@ -107,30 +109,42 @@ export function AboutPage() {
             <h2 className="text-balance font-heading text-3xl font-semibold tracking-tight">
               Our Programs
             </h2>
+            <p className="mt-4 text-pretty text-muted-foreground">
+              {t(
+                'about.programsSubtitle',
+                'The assistance programs the office currently runs. Each lists its processing time and the documents you will need.',
+              )}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {programs.map((program) => {
-              const Icon = program.icon;
-              return (
-                <Card
-                  key={program.title}
-                  className="group border-border/60 hover:-translate-y-1 hover:border-accent/30"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 transition-colors duration-200 group-hover:bg-accent/20">
-                      <Icon size={24} className="text-accent" aria-hidden="true" />
-                    </div>
-                    <CardTitle className="font-heading text-lg font-semibold tracking-tight">
-                      {program.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="leading-relaxed text-muted-foreground">{program.description}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-56 animate-pulse rounded-2xl border border-border/60 bg-card"
+                />
+              ))}
+            </div>
+          ) : programs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t('services.empty', 'No programs are currently listed.')}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {programs.map((program) => (
+                <ProgramCard key={program.id} program={program} />
+              ))}
+            </div>
+          )}
+
+          <div className="mt-10">
+            <Button variant="outline" asChild>
+              <Link to="/programs">
+                {t('about.allPrograms', 'View all programs')}
+                <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            </Button>
           </div>
         </PageContainer>
       </section>

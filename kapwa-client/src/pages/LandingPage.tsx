@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { HandHeart, ArrowRight, CalendarClock, MapPin, Phone } from 'lucide-react';
-import { ServicesGrid } from '@/components/ServicesGrid';
+import { ProgramsCarousel } from '@/components/public/ProgramsCarousel';
 import { ContactInfo } from '@/components/ContactInfo';
 import { LatestAnnouncements } from '@/components/announcements/LatestAnnouncements';
 import { PageContainer } from '@/components/public/PageContainer';
@@ -136,13 +136,14 @@ export function LandingPage() {
 
       <LatestAnnouncements />
 
-      {/* 2. Services — full-bleed band, content inside the shared container */}
+      {/* 2. Services — the active programs from the database, in a carousel.
+          Full-bleed band, content inside the shared container. */}
       <section
         id="services"
         className="scroll-mt-20 border-y border-border/60 bg-muted/40 py-16 sm:py-20 lg:py-24"
       >
         <PageContainer>
-          <ServicesGrid />
+          <ProgramsCarousel />
         </PageContainer>
       </section>
 
