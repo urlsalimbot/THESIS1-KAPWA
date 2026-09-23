@@ -47,16 +47,19 @@ export class Person extends BaseEntity {
     const a = this.addresses?.find(x => x.addressType === 'current') ?? this.addresses?.[0];
     if (!a) return undefined;
     if (a.raw) return a.raw;
-    const parts = [a.barangay, a.city, a.province].filter(Boolean);
+    const parts = [a.street, a.barangay, a.city, a.province, a.region, a.postal].filter(Boolean);
     return parts.length ? parts.join(', ') : undefined;
   }
   @Expose() get currentAddress(): Record<string, string> | undefined {
     const a = this.addresses?.find(x => x.addressType === 'current');
-    if (!a || (!a.barangay && !a.city && !a.province)) return undefined;
+    if (!a || (!a.street && !a.barangay && !a.city && !a.province && !a.region && !a.postal)) return undefined;
     const out: Record<string, string> = {};
+    if (a.street) out.street = a.street;
     if (a.barangay) out.barangay = a.barangay;
     if (a.city) out.city = a.city;
     if (a.province) out.province = a.province;
+    if (a.region) out.region = a.region;
+    if (a.postal) out.postalCode = a.postal;
     return out;
   }
   @Expose() get age(): number | undefined {

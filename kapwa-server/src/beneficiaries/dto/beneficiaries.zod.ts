@@ -1,11 +1,19 @@
 import { z } from 'zod';
 
+// Real date, not in the future, at most 120 years ago.
+const dobSchema = z.string().datetime().or(z.string().date()).refine((d) => {
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return false;
+  const age = (Date.now() - date.getTime()) / 31557600000;
+  return age >= 0 && age <= 120;
+}, 'Date of birth must be a real date and at most 120 years ago');
+
 export const CreateBeneficiarySchema = z.object({
   surname: z.string().min(1),
   firstName: z.string().min(1),
   middleName: z.string().optional(),
   gender: z.enum(['Male', 'Female']),
-  dob: z.string().datetime().or(z.string().date()),
+  dob: dobSchema,
   address: z.string().optional(),
   phone: z.string().optional(),
   philsysNumber: z.string().optional(),

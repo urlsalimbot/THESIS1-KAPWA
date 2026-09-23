@@ -20,6 +20,12 @@ function csrfToken(): string | null {
   return match?.[1] ?? null;
 }
 
+/** Double-submit CSRF header for unsafe requests that bypass the api helpers. */
+export function csrfHeaders(): Record<string, string> {
+  const csrf = csrfToken();
+  return csrf ? { 'X-CSRF-Token': csrf } : {};
+}
+
 // SWR's global fetcher receives the full queryKey tuple from queryKeys.*.
 // Join array parts with '/' and serialize the last object element as query params.
 export type ApiPath = string | readonly unknown[];
@@ -220,6 +226,8 @@ export async function uploadWithProgress<T>(
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    const csrf = csrfToken();
+    if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
     if (opts?.signal) {
       opts.signal.addEventListener('abort', () => xhr.abort());
     }
@@ -252,7 +260,7 @@ async function rawUpload(path: string, file: Blob, fileName: string): Promise<st
   formData.append('file', file, fileName);
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...csrfHeaders() },
     body: formData,
   });
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);

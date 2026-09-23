@@ -1,4 +1,35 @@
-import { FamilyMemberSchema } from './intake.zod';
+import { FamilyMemberSchema, IntakeInputSchema } from './intake.zod';
+
+describe('PersonSchema (via IntakeInputSchema)', () => {
+  const address = { street: '12 Probe St', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: 'Region III', postalCode: '3013' };
+  const person = {
+    surname: 'Santos', firstName: 'Maria', gender: 'Female', dob: '1990-05-04',
+    placeOfBirth: 'Norzagaray', civilStatus: 'Single', cellularNumber: '09171234567',
+    email: 'maria@example.test', currentAddress: address, occupation: 'Vendor',
+    estimatedMonthlyIncome: 5000,
+  };
+  const intake = (over: Record<string, unknown>) => IntakeInputSchema.safeParse({
+    beneficiary: { ...person, ...over },
+    claimant: { ...person, ...over, relationshipToBeneficiary: 'Self' },
+    case: {},
+  });
+
+  it('accepts a valid adult dob', () => {
+    expect(intake({}).success).toBe(true);
+  });
+
+  it('rejects a future dob', () => {
+    expect(intake({ dob: '2030-01-01' }).success).toBe(false);
+  });
+
+  it('rejects an impossible calendar date', () => {
+    expect(intake({ dob: '2026-02-30' }).success).toBe(false);
+  });
+
+  it('rejects a dob more than 120 years ago', () => {
+    expect(intake({ dob: '1800-01-01' }).success).toBe(false);
+  });
+});
 
 describe('FamilyMemberSchema', () => {
   const base = {

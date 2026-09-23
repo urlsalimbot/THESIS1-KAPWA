@@ -326,8 +326,7 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
-  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_assistances_case ON case_assistances(case_id)`);
-  await q.query(`INSERT INTO case_assistances
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_assistances_case ON case_assistances(case_id)`);  await q.query(`INSERT INTO case_assistances
     (case_id, assistance_type, amount, mode, source_of_fund, legislator_specify, details)
     SELECT c.id, 'financial', c.amount_assistance, c.mode_financial_assistance,
            c.source_of_fund, c.legislator_specify, c.financial_subsidies
@@ -349,6 +348,26 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_follow_up_visits_case ON case_follow_up_visits(case_id)`);
+
+  // Atomic per-year control-number counter (replaces max+1, which reused numbers
+  // after a delete and collided under concurrency).
+  await q.query(`CREATE TABLE IF NOT EXISTS case_control_counters (
+    year INTEGER PRIMARY KEY,
+    last_seq INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`INSERT INTO case_control_counters (year, last_seq)
+    SELECT (split_part(control_no, '-', 2))::int AS year,
+           MAX((split_part(control_no, '-', 3))::int) AS max_seq
+      FROM cases
+     WHERE control_no ~ '^KAPWA-[0-9]{4}-[0-9]+$'
+     GROUP BY 1
+    ON CONFLICT (year) DO UPDATE
+      SET last_seq = GREATEST(case_control_counters.last_seq, EXCLUDED.last_seq)`);
+
+  // Address parts the intake schema requires but the table historically dropped.
+  await q.query(`ALTER TABLE person_addresses ADD COLUMN IF NOT EXISTS street TEXT`);
+  await q.query(`ALTER TABLE person_addresses ADD COLUMN IF NOT EXISTS region TEXT`);
 
   // Documentary-needs verification state: a remote upload is confirmed at the
   // office ("pass on-site"); staff uploads are treated as already on-site.

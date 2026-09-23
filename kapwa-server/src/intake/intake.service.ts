@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, HttpException, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';
@@ -228,16 +228,27 @@ export class IntakeService {
       await run(
         `WITH updated AS (
            UPDATE person_addresses SET
-             barangay = $2,
-             city = $3,
-             province = $4,
+             street = $2,
+             barangay = $3,
+             city = $4,
+             province = $5,
+             region = $6,
+             postal = $7,
              is_primary = TRUE
            WHERE person_id = $1 AND address_type = 'current' RETURNING id
          )
-         INSERT INTO person_addresses (person_id, address_type, barangay, city, province, is_primary)
-         SELECT $1, 'current', $2, $3, $4, TRUE
+         INSERT INTO person_addresses (person_id, address_type, street, barangay, city, province, region, postal, is_primary)
+         SELECT $1, 'current', $2, $3, $4, $5, $6, $7, TRUE
          WHERE NOT EXISTS (SELECT 1 FROM updated)`,
-        [personId, currentAddress.barangay ?? null, currentAddress.city ?? null, currentAddress.province ?? null],
+        [
+          personId,
+          currentAddress.street ?? null,
+          currentAddress.barangay ?? null,
+          currentAddress.city ?? null,
+          currentAddress.province ?? null,
+          currentAddress.region ?? null,
+          currentAddress.postalCode ?? null,
+        ],
       );
     }
   }
@@ -304,7 +315,7 @@ export class IntakeService {
 
     try {
       // 1. Find or create Person for BENEFICIARY (with dedup check)
-      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true, undefined, this.personExtras(data.beneficiary));
+      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true, { currentAddress: data.beneficiary.currentAddress }, this.personExtras(data.beneficiary));
 
       // 1b. Duplicate-case guard: if this person already has a Beneficiary + Household + a recent
       //     Case (30 days), reuse that household/case instead of creating duplicates. This mirrors
@@ -336,7 +347,7 @@ export class IntakeService {
         if (recentCase) {
           // Reuse: link claimant + family members into the existing household, then return the
           // existing case — no new Beneficiary / Household / Case is created.
-const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true, undefined, this.personExtras(data.claimant));
+const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true, { currentAddress: data.claimant.currentAddress }, this.personExtras(data.claimant));
           const existingClaimantLink = await queryRunner.manager.findOne(BeneficiaryClaimant, {
             where: { beneficiaryId: benPerson.id, isPrimary: true },
           });
@@ -516,6 +527,12 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
+      // Surface deliberate 4xx outcomes (duplicate referral, validation, …)
+      // instead of masking every failure as a generic 500.
+      if (error instanceof HttpException) {
+        this.logger.warn(`submitIntake rejected: ${error.message}`);
+        throw error;
+      }
       this.logger.error('submitIntake failed', error instanceof Error ? error.stack : undefined);
       throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
     } finally {
@@ -644,7 +661,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
     await queryRunner.query(`SELECT pg_advisory_xact_lock($1, $2)`, [lk1, lk2]);
 
     try {
-      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true, undefined, this.personExtras(data.beneficiary));
+      const benPerson = await this.findOrCreatePerson(this.personFromInput(data.beneficiary), queryRunner, true, { currentAddress: data.beneficiary.currentAddress }, this.personExtras(data.beneficiary));
 
       let savedBeneficiary = await queryRunner.manager.findOne(Beneficiary, {
         where: { personId: benPerson.id },
@@ -663,7 +680,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         );
       }
 
-      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true, undefined, this.personExtras(data.claimant));
+      const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.claimant), queryRunner, true, { currentAddress: data.claimant.currentAddress }, this.personExtras(data.claimant));
       const existingClaimantLink = await queryRunner.manager.findOne(BeneficiaryClaimant, {
         where: { beneficiaryId: benPerson.id, isPrimary: true },
       });
@@ -762,6 +779,10 @@ const caseEntity = this.caseRepo.create({
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
+      if (error instanceof HttpException) {
+        this.logger.warn(`confirmMatch rejected: ${error.message}`);
+        throw error;
+      }
       this.logger.error('confirmMatch failed', error instanceof Error ? error.stack : undefined);
       throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
     } finally {

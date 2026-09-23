@@ -15,6 +15,9 @@ export class PersonAddress extends BaseEntity {
   addressType!: string;
 
   @Column({ nullable: true })
+  street?: string;
+
+  @Column({ nullable: true })
   barangay?: string;
 
   @Column({ nullable: true })
@@ -22,6 +25,9 @@ export class PersonAddress extends BaseEntity {
 
   @Column({ nullable: true })
   province?: string;
+
+  @Column({ nullable: true })
+  region?: string;
 
   @Column({ nullable: true })
   postal?: string;

@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { csrfHeaders } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
 
 export type ExportFormat = 'csv';
@@ -51,6 +52,7 @@ export function BulkExportDialog({
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          ...csrfHeaders(),
         },
         body: JSON.stringify({
           ids: selectedIds,

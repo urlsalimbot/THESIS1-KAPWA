@@ -3,6 +3,15 @@ import { computeAgeFromDob } from '../compute-age';
 
 const NAME_EXTENSIONS = ['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV'] as const;
 
+// A real calendar date, not in the future, and at most 120 years ago. The regex
+// alone accepted impossible dates (2026-02-30) and future birthdays.
+const dobSchema = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
+  .refine((d) => {
+    const age = computeAgeFromDob(d);
+    return !Number.isNaN(age) && age >= 0 && age <= 120;
+  }, 'Date of birth must be a real date and at most 120 years ago');
+
 const AddressSchema = z.object({
   street: z.string().min(1, 'Street is required'),
   barangay: z.string().min(1, 'Barangay is required'),
@@ -19,7 +28,7 @@ const PersonSchema = z.object({
   middleName: z.string().optional(),
   extension: z.enum(NAME_EXTENSIONS).optional(),
   gender: z.enum(['Male', 'Female']),
-  dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+  dob: dobSchema,
   age: z.number().int().positive().optional(),
   placeOfBirth: z.string().min(1, 'Place of birth is required'),
   civilStatus: z.enum(['Single', 'Married', 'Widowed', 'Separated', 'Annulled']),
@@ -37,12 +46,7 @@ export const FamilyMemberSchema = z.object({
   middleName: z.string().optional(),
   extension: z.enum(NAME_EXTENSIONS).optional(),
   gender: z.enum(['Male', 'Female'], { message: 'Sex is required' }),
-  dob: z.string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
-    .refine((d) => {
-      const age = computeAgeFromDob(d);
-      return !Number.isNaN(age) && age >= 0 && age <= 120;
-    }, 'Date of birth must be a real date and at most 120 years ago'),
+  dob: dobSchema,
   age: z.number().int().min(0).optional(),
   relationship: z.string().min(1, 'Relationship is required'),
   occupation: z.string().optional(),

@@ -98,6 +98,24 @@ describe('CasesService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('generateControlNo', () => {
+    it('takes the next value from the atomic per-year counter', async () => {
+      repoMock.manager.query = jest.fn().mockResolvedValue([{ last_seq: 47 }]);
+      const year = new Date().getFullYear();
+      await expect(service.generateControlNo()).resolves.toBe(`KAPWA-${year}-00047`);
+      const [sql, params] = repoMock.manager.query.mock.calls[0];
+      expect(sql).toMatch(/INSERT INTO case_control_counters/);
+      expect(sql).toMatch(/ON CONFLICT \(year\) DO UPDATE/);
+      expect(params).toEqual([year]);
+    });
+
+    it('falls back to 1 when the counter returns no row', async () => {
+      repoMock.manager.query = jest.fn().mockResolvedValue([]);
+      const year = new Date().getFullYear();
+      await expect(service.generateControlNo()).resolves.toBe(`KAPWA-${year}-00001`);
+    });
+  });
+
   describe('approval document gate', () => {
     it('blocks in_review -> active when required documents are missing', async () => {
       const c = {

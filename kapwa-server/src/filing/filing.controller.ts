@@ -64,11 +64,12 @@ export class FilingController {
 
   @Get('case/:caseId/id-photo')
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Get the ID photo for a case' })
+  @ApiOperation({ summary: 'Get the ID photo for a case (null when none filed)' })
   async getCaseIdPhoto(@Param('caseId') caseId: string) {
-    const photo = await this.filingService.findIdPhotoByCase(caseId);
-    if (!photo) throw new NotFoundException('ID photo not found');
-    return photo;
+    // Returns null (200) rather than 404 when the case has no ID photo: a missing
+    // photo is a normal state, and a 404 here logged a network error on every
+    // case page load.
+    return this.filingService.findIdPhotoByCase(caseId);
   }
 
   @Patch(':id/verify')

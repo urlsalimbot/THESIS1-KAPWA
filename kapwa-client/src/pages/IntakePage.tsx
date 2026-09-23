@@ -608,6 +608,9 @@ export function IntakePage() {
       }
     } catch (err: unknown) {
       try {
+        // The duplicate check failed (network/rate-limit). Do not bypass it
+        // silently — tell the worker the dedup step was skipped.
+        toast.warning(t('intake.duplicateCheckSkipped', 'Duplicate check unavailable — submitting without it.'));
         clearDraft(userId);
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);

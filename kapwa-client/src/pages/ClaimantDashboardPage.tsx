@@ -2,7 +2,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { useSWRConfig } from 'swr';
 import { useTranslation } from 'react-i18next';
-import { api } from '../lib/api';
+import { api, csrfHeaders } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { Link } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
@@ -83,7 +83,7 @@ export function ClaimantDashboardPage() {
       const base = (import.meta as any).env?.VITE_API_URL || '/api/v1';
       const res = await fetch(`${base}/filing/upload`, {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...csrfHeaders() },
         body: fd,
       });
       if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
@@ -107,7 +107,7 @@ export function ClaimantDashboardPage() {
       const base = (import.meta as any).env?.VITE_API_URL || '/api/v1';
       const res = await fetch(`${base}/filing/upload`, {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...csrfHeaders() },
         body: fd,
       });
       if (!res.ok) throw new Error(`Upload failed: ${res.status}`);

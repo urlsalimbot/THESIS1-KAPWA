@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { FilingController } from './filing.controller';
 import { FilingService } from './filing.service';
@@ -26,9 +25,9 @@ describe('FilingController — case ID photo endpoint', () => {
     expect(service.findIdPhotoByCase).toHaveBeenCalledWith('c1');
   });
 
-  it('throws NotFoundException when no id_photo exists for a case', async () => {
+  it('returns null (not 404) when no id_photo exists for a case', async () => {
     service.findIdPhotoByCase.mockResolvedValue(null);
-    await expect(controller.getCaseIdPhoto('c1')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.getCaseIdPhoto('c1')).resolves.toBeNull();
   });
 
   it('is route-scoped to admin and social_worker', () => {

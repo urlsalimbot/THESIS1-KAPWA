@@ -39,28 +39,26 @@ export class CasesService {
     @Optional() private auditLog?: AuditLogService,
   ) {}
 
+  /**
+   * Next control number for the current year, e.g. KAPWA-2026-00047.
+   *
+   * Backed by an atomic per-year counter row (`case_control_counters`) rather
+   * than max+1 over existing rows: deleting the newest case no longer lets a
+   * later intake reuse its number, and concurrent intakes each get a distinct
+   * value (the ON CONFLICT UPDATE takes a row lock).
+   */
   async generateControlNo(): Promise<string> {
     const year = new Date().getFullYear();
-    const queryRunner = this.caseRepo.manager.connection.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction('SERIALIZABLE');
-    try {
-      const last = await queryRunner.manager
-        .createQueryBuilder(Case, 'c')
-        .where(`c.control_no LIKE :pattern`, { pattern: `KAPWA-${year}-%` })
-        .orderBy('c.control_no', 'DESC')
-        .getOne();
-      const lastSeq = last
-        ? parseInt(last.controlNo.split('-')[2] || '0', 10)
-        : 0;
-      await queryRunner.commitTransaction();
-      return `KAPWA-${year}-${String(lastSeq + 1).padStart(CONTROL_NO_PAD_WIDTH, '0')}`;
-    } catch (e) {
-      await queryRunner.rollbackTransaction();
-      throw e;
-    } finally {
-      await queryRunner.release();
-    }
+    const rows: Array<{ last_seq: number }> = await this.caseRepo.manager.query(
+      `INSERT INTO case_control_counters (year, last_seq)
+       VALUES ($1, 1)
+       ON CONFLICT (year) DO UPDATE
+         SET last_seq = case_control_counters.last_seq + 1, updated_at = NOW()
+       RETURNING last_seq`,
+      [year],
+    );
+    const seq = Number(rows[0]?.last_seq ?? 1);
+    return `KAPWA-${year}-${String(seq).padStart(CONTROL_NO_PAD_WIDTH, '0')}`;
   }
 
   async create(data: Partial<Case>, actorId?: string) {
