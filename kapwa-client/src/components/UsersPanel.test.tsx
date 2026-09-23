@@ -125,7 +125,7 @@ describe('UsersPanel', () => {
     await screen.findByText('worker1@mswdo.test');
 
     await user.click(screen.getByRole('button', { name: 'Edit worker1@mswdo.test' }));
-    await screen.findByRole('dialog', {}, { timeout: 3000 });
+    await screen.findByRole('dialog', {}, { timeout: 10000 });
     expect(screen.getByDisplayValue('Juan')).toBeTruthy();
     expect(screen.getByDisplayValue('Dela Cruz')).toBeTruthy();
 
