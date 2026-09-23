@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +7,7 @@ import { stepperStatus } from '@/components/case-view/CaseStepper';
 import { api } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { queryKeys } from '../lib/query-keys';
-import { getCurrentUser } from '../lib/auth-context';
+import { useAuth } from '../lib/auth-context';
 import SignaturePad from '../components/forms/SignaturePad';
 import { CheckCircle, ArrowRight, ListChecks, Check } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
@@ -48,7 +48,7 @@ export function ApprovalPipelinePage() {
   const { mutate: globalMutate } = useSWRConfig();
   const { data: rawCases, isLoading: loading } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list());
   const cases = Array.isArray(rawCases) ? rawCases : (rawCases?.data ?? []);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [selectedCase, setSelectedCase] = useState<ApprovalCase | null>(null);
   const [signature, setSignature] = useState<string>('');
   const [action, setAction] = useState<'approve' | 'disburse' | null>(null);
@@ -58,10 +58,6 @@ export function ApprovalPipelinePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkApproveDialogOpen, setBulkApproveDialogOpen] = useState(false);
   const [bulkExportDialogOpen, setBulkExportDialogOpen] = useState(false);
-
-  useEffect(() => {
-    getCurrentUser().then(setUser);
-  }, []);
 
   const toggleSelectMode = useCallback(() => {
     setSelectMode(prev => !prev);

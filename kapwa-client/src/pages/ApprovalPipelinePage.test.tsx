@@ -43,7 +43,7 @@ vi.mock('../lib/api', () => ({
 }));
 
 vi.mock('../lib/auth-context', () => ({
-  getCurrentUser: () => Promise.resolve({ id: 'user-1', role: 'admin', name: 'Admin User' }),
+  useAuth: () => ({ user: { id: 'user-1', role: 'admin', fullName: 'Admin User' }, token: 't', loading: false }),
 }));
 
 function renderWithSWR(ui: React.ReactNode) {

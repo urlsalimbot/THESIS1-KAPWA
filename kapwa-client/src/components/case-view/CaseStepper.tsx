@@ -10,9 +10,26 @@ export interface StepperProgressOpts {
   referralNotNeeded?: boolean;
 }
 
+// Minimum lifecycle position at which a step may be considered "done". Steps 3
+// (Evaluate Help Given) and 4 (Case Study & Closure) are Phase-Out work: prefilled
+// data on an earlier-status case must not make them look complete.
+const STATUS_INDEX: Record<string, number> = {
+  enrolled: 0, assessed: 1, in_review: 2, active: 3, transitioning: 4, closed: 5,
+};
+const STEP_MIN_STATUS = [0, 0, 0, 3, 4];
+
+function statusAtLeast(caseData: any, min: number): boolean {
+  const status = caseData?.status;
+  const index = status == null ? undefined : STATUS_INDEX[status];
+  // Unknown/missing status (e.g. a partial payload) does not cap the step.
+  if (index === undefined) return true;
+  return index >= min;
+}
+
 // Shared done-status per stepper step — reused by the case view stepper and
 // the approval pipeline cards so both surfaces show identical progress.
 export function stepperStepDone(i: number, caseData: any, interventionCount: number, opts: StepperProgressOpts = {}): boolean {
+  if (!statusAtLeast(caseData, STEP_MIN_STATUS[i] ?? 0)) return false;
   switch (i) {
     case 0: return !!caseData?.problemsPresented && !!caseData?.clientCategory;
     // Implement HIP: an intervention alone is not enough — every required

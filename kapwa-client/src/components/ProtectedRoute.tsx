@@ -1,66 +1,44 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import * as auth from '../lib/auth-context';
+import { useAuth } from '../lib/auth-context';
 import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 
+// Reads the session from AuthProvider instead of fetching /auth/me per mount.
+// The provider owns the single /auth/me call; navigating between routes no longer
+// issues another request (which previously fanned out into 429s).
 export function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { t } = useTranslation();
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const { user, token, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const checkingRef = useRef(false);
+  const roleKey = roles?.join(',') ?? '';
 
   useEffect(() => {
-    if (checkingRef.current) return;
-    checkAuth();
-  }, [navigate, roles]);
-
-  async function checkAuth() {
-    checkingRef.current = true;
-    const token = localStorage.getItem('kapwa_token');
+    if (loading) return;
     if (!token) {
-      checkingRef.current = false;
       navigate('/login', { replace: true });
       return;
     }
-
-    const user = await auth.getCurrentUser();
-    if (!user) {
-      const storedToken = localStorage.getItem('kapwa_token');
-      if (storedToken) {
-        // Token exists but /auth/me failed (429, 5xx, network).
-        // The api.ts interceptor will fire kapwa:auth:logout if refresh fails with 401.
-        // Keep the session alive — don't de-auth on transient errors.
-        setAuthorized(true);
-        checkingRef.current = false;
-        return;
-      }
-      checkingRef.current = false;
-      navigate('/login', { replace: true });
-      return;
-    }
-
+    // Token exists but /auth/me failed (429, 5xx, network): keep the session
+    // alive. The api client fires kapwa:auth:logout only when refresh fails 401.
+    if (!user) return;
     if (roles && roles.length > 0 && !roles.includes(user.role)) {
-      checkingRef.current = false;
       navigate(ROLE_REDIRECT_MAP[user.role] || '/dashboard', { replace: true });
       return;
     }
-
     // Staff-provisioned accounts carry a temporary password: block every route
     // except Settings (which hosts Change Password) until it is changed.
     if (user.mustChangePassword && location.pathname !== '/settings') {
-      setAuthorized(true);
-      checkingRef.current = false;
       navigate('/settings', { replace: true });
-      return;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, token, user, roleKey, location.pathname, navigate]);
 
-    setAuthorized(true);
-    checkingRef.current = false;
-  }
+  const roleMismatch = !!user && !!roles?.length && !roles.includes(user.role);
+  const mustChangeRedirect = !!user?.mustChangePassword && location.pathname !== '/settings';
 
-  if (authorized === null) {
+  if (loading || !token || roleMismatch || mustChangeRedirect) {
     return <div className="min-h-screen flex items-center justify-center text-gray-400">{t('shell.verifyingAccess', 'Verifying access...')}</div>;
   }
 

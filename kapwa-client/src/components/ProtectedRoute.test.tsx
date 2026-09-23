@@ -3,22 +3,25 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 
-const { mockGetCurrentUser } = vi.hoisted(() => ({
-  mockGetCurrentUser: vi.fn(),
+const { mockUseAuth } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
 }));
 
 vi.mock('../lib/auth-context', () => ({
-  getCurrentUser: (...args: unknown[]) => mockGetCurrentUser(...args),
+  useAuth: () => mockUseAuth(),
 }));
+
+function authState(over: Record<string, unknown> = {}) {
+  return { user: null, token: null, loading: false, ...over };
+}
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
-    mockGetCurrentUser.mockReset();
-    localStorage.clear();
+    mockUseAuth.mockReset();
   });
 
-  it('redirects to /login when no token is in localStorage', async () => {
-    localStorage.removeItem('kapwa_token');
+  it('redirects to /login when there is no token', async () => {
+    mockUseAuth.mockReturnValue(authState());
     render(
       <MemoryRouter>
         <ProtectedRoute>
@@ -32,13 +35,10 @@ describe('ProtectedRoute', () => {
   });
 
   it('renders children when authenticated with the right role', async () => {
-    localStorage.setItem('kapwa_token', 'test');
-    mockGetCurrentUser.mockResolvedValue({
-      id: '1',
-      email: 'a@b.com',
-      fullName: 'A B',
-      role: 'social_worker',
-    });
+    mockUseAuth.mockReturnValue(authState({
+      token: 'test',
+      user: { id: '1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' },
+    }));
     render(
       <MemoryRouter>
         <ProtectedRoute roles={['social_worker']}>
@@ -52,7 +52,7 @@ describe('ProtectedRoute', () => {
   });
 
   it('shows Verifying access while loading', () => {
-    mockGetCurrentUser.mockReturnValue(new Promise(() => {}));
+    mockUseAuth.mockReturnValue(authState({ loading: true, token: 'test' }));
     render(
       <MemoryRouter>
         <ProtectedRoute>
@@ -64,13 +64,10 @@ describe('ProtectedRoute', () => {
   });
 
   it('redirects when role does not match', async () => {
-    localStorage.setItem('kapwa_token', 'test');
-    mockGetCurrentUser.mockResolvedValue({
-      id: '1',
-      email: 'a@b.com',
-      fullName: 'A B',
-      role: 'claimant',
-    });
+    mockUseAuth.mockReturnValue(authState({
+      token: 'test',
+      user: { id: '1', email: 'a@b.com', fullName: 'A B', role: 'claimant' },
+    }));
     render(
       <MemoryRouter>
         <ProtectedRoute roles={['social_worker']}>
@@ -83,15 +80,26 @@ describe('ProtectedRoute', () => {
     });
   });
 
-  it('redirects a must-change-password user to /settings from any other route', async () => {
-    localStorage.setItem('kapwa_token', 'test');
-    mockGetCurrentUser.mockResolvedValue({
-      id: '1',
-      email: 'claimant@example.test',
-      fullName: 'Claimant',
-      role: 'claimant',
-      mustChangePassword: true,
+  it('keeps the session when the token exists but the user failed to load', async () => {
+    // Transient /auth/me failure (429/5xx): the api interceptor decides on 401.
+    mockUseAuth.mockReturnValue(authState({ token: 'test', user: null, loading: false }));
+    render(
+      <MemoryRouter>
+        <ProtectedRoute roles={['social_worker']}>
+          <div>Protected</div>
+        </ProtectedRoute>
+      </MemoryRouter>
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Protected')).toBeTruthy();
     });
+  });
+
+  it('redirects a must-change-password user to /settings from any other route', async () => {
+    mockUseAuth.mockReturnValue(authState({
+      token: 'test',
+      user: { id: '1', email: 'claimant@example.test', fullName: 'Claimant', role: 'claimant', mustChangePassword: true },
+    }));
     render(
       <MemoryRouter initialEntries={['/my-dashboard']}>
         <Routes>

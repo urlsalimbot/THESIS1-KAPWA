@@ -399,6 +399,33 @@ describe('FSM — close', () => {
     repoMock.findOne.mockResolvedValue(existing);
     await expect(service.close('1', CaseStatus.CLOSED, 'admin')).rejects.toThrow('Client signature and closure outcome are required');
   });
+
+  it('rejects closing a case straight from enrolled (no signature/outcome/case study)', async () => {
+    repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ENROLLED, updatedAt: new Date() } as Case);
+    await expect(service.close('1', CaseStatus.CLOSED, 'admin')).rejects.toThrow(/Invalid transition/);
+  });
+
+  it('rejects closing a case straight from active even with a signature and outcome', async () => {
+    const existing = { id: '1', status: CaseStatus.ACTIVE, clientSignature: 'sig', closureOutcome: 'graduated', updatedAt: new Date() } as Case;
+    repoMock.findOne.mockResolvedValue(existing);
+    await expect(service.updateStatus('1', CaseStatus.CLOSED, 'admin')).rejects.toThrow(/Invalid transition/);
+  });
+});
+
+describe('FSM — authorization precedes prerequisite validation', () => {
+  it('returns 403 (not a missing-document 400) for a social worker approving', async () => {
+    repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-1', updatedAt: new Date() } as Case);
+    (service as any).casesExport = { missingRequiredDocuments: jest.fn().mockResolvedValue(['Valid ID']) };
+    (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
+    await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'social_worker', 'u1'))
+      .rejects.toThrow(/cannot transition/);
+    expect((service as any).casesExport.missingRequiredDocuments).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 for a non-social-worker requesting review before checking case state', async () => {
+    repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ENROLLED, updatedAt: new Date() } as Case);
+    await expect(service.requestReview('1', 'admin')).rejects.toThrow(/cannot request review/);
+  });
 });
 
 describe('FSM — overrideStatus', () => {

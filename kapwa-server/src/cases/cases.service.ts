@@ -318,6 +318,16 @@ export class CasesService {
     if (!isValidTransition(c.status, newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
     }
+    if (newStatus === CaseStatus.CLOSED) {
+      // The FSM only allows transitioning -> closed, but guard here too so any
+      // future FSM change cannot close a case without the exit record.
+      if (c.status !== CaseStatus.TRANSITIONING) {
+        throw new BadRequestException('Case must be in transitioning status to close');
+      }
+      if (!c.clientSignature || !c.closureOutcome) {
+        throw new BadRequestException('Client signature and closure outcome are required for closure');
+      }
+    }
     if (c.status === CaseStatus.ENROLLED && newStatus === CaseStatus.ASSESSED && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
       throw new BadRequestException('Assessment must be completed before transitioning to assessed');
     }
@@ -344,19 +354,19 @@ export class CasesService {
         throw new BadRequestException('Record the inter-agency referral decision before transitioning');
       }
     }
-    if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && (!c.clientSignature || !c.closureOutcome)) {
-      throw new BadRequestException('Client signature and closure outcome are required for closure');
-    }
   }
 
   async transition(id: string, newStatus: CaseStatus, opts?: { signature?: string; userRole?: string; reason?: string; historyType?: 'standard' | 'override'; actorId?: string }) {
     const c = await this.findById(id);
     const oldStatus = c.status;
-    await this.validateTransition(c, newStatus);
 
+    // Authorize before validating prerequisites: an unauthorized role must get a
+    // 403 and must not learn which documents/fields are missing.
     if (opts?.userRole && !canTransition(c.status, opts.userRole)) {
       throw new ForbiddenException(`Role ${opts.userRole} cannot transition from ${c.status} to ${newStatus}`);
     }
+
+    await this.validateTransition(c, newStatus);
 
     c.status = newStatus;
     if (opts?.signature) c.approvedBySignature = opts.signature;
@@ -410,11 +420,12 @@ export class CasesService {
 
   async requestReview(id: string, userRole?: string, actorId?: string) {
     const c = await this.findById(id);
-    if (c.status !== CaseStatus.ENROLLED) {
-      throw new BadRequestException(`Cannot request review from ${c.status}`);
-    }
+    // Authorize first so an unauthorized role cannot probe the case's state.
     if (userRole !== 'social_worker') {
       throw new ForbiddenException(`Role ${userRole} cannot request review`);
+    }
+    if (c.status !== CaseStatus.ENROLLED) {
+      throw new BadRequestException(`Cannot request review from ${c.status}`);
     }
     if (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory) {
       throw new BadRequestException('Assessment must be completed before requesting review (problems presented, social worker assessment, and client category are required)');
@@ -591,12 +602,13 @@ export class CasesService {
 
   async updateClosure(id: string, data: ClosureInput, userRole?: string) {
     const c = await this.findById(id);
-    if (c.status !== CaseStatus.TRANSITIONING) {
-      throw new BadRequestException('Case must be in transitioning status to close');
-    }
+    // Authorize first so an unauthorized role cannot probe the case's state.
     const allowedRoles = ['admin', 'social_worker', 'coordinator'];
     if (!userRole || !allowedRoles.includes(userRole)) {
       throw new ForbiddenException(`Role ${userRole} cannot close case`);
+    }
+    if (c.status !== CaseStatus.TRANSITIONING) {
+      throw new BadRequestException('Case must be in transitioning status to close');
     }
     const oldStatus = c.status;
     Object.assign(c, {

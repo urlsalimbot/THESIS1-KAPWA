@@ -108,6 +108,25 @@ describe('CaseStepper rendering', () => {
   });
 });
 
+describe('stepperStepDone — Phase-Out steps require the case to reach Phase-Out', () => {
+  it('does not mark Evaluate Help Given done before the case is active', () => {
+    const prefilled = { status: 'in_review', selfRelianceLevel: 3, sustainabilityPlan: 'plan' };
+    expect(stepperStepDone(3, prefilled, 1, {})).toBe(false);
+    expect(stepperStepDone(3, { ...prefilled, status: 'active' }, 1, {})).toBe(true);
+  });
+
+  it('does not mark Case Study & Closure done before Phase-Out', () => {
+    const prefilled = { status: 'active', clientSignature: 'sig', closureOutcome: 'graduated' };
+    expect(stepperStepDone(4, prefilled, 1, {})).toBe(false);
+    expect(stepperStepDone(4, { ...prefilled, status: 'transitioning' }, 1, {})).toBe(true);
+    expect(stepperStepDone(4, { ...prefilled, status: 'closed' }, 1, {})).toBe(true);
+  });
+
+  it('does not cap steps when the status is unknown (partial payload)', () => {
+    expect(stepperStepDone(3, { selfRelianceLevel: 3, sustainabilityPlan: 'plan' }, 1, {})).toBe(true);
+  });
+});
+
 describe('stepperStatus', () => {
   it('maps each step through stepperStepDone with progress opts', () => {
     const status = stepperStatus({ status: 'assessed' }, 1, { requirementsMet: false, referralNotNeeded: true });
