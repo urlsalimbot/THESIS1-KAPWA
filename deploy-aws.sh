@@ -5,8 +5,9 @@
 # Deploys the AWS-managed stack documented in docs/DEPLOYMENT-AWS.md:
 #
 #   1. API  -> EC2, rebuilt from kapwa-server/docker-compose.aws.yml
-#   2. DB   -> fresh-boot bootstrap (idempotent) + pending migrations.
-#              NEVER seeds — seeds truncate data.
+#   2. DB   -> fresh-boot bootstrap (idempotent) + pending migrations, then
+#              reference-data seeds (programs always; accounts only on an empty
+#              DB). Demo/seed-demo data is NEVER loaded — it fabricates cases.
 #   3. SPA  -> built in place, synced to S3 with the correct cache
 #              headers, then invalidated on CloudFront.
 #
@@ -50,8 +51,8 @@ API_CONTAINER="kapwa-api"
 PUBLIC_URL="${PUBLIC_URL:-https://kapwa.software}"
 
 case "$MODE" in
-  all)      STEPS="Prepare|Sync repo|Validate env|Build API|Health|Migrate|Publish SPA" ;;
-  api)      STEPS="Prepare|Sync repo|Validate env|Build API|Health|Migrate" ;;
+  all)      STEPS="Prepare|Sync repo|Validate env|Build API|Health|Migrate|Seed|Publish SPA" ;;
+  api)      STEPS="Prepare|Sync repo|Validate env|Build API|Health|Migrate|Seed" ;;
   frontend) STEPS="Prepare|Publish SPA" ;;
 esac
 TOTAL_STEPS=$(echo "$STEPS" | tr '|' '\n' | wc -l | tr -d ' ')
@@ -138,13 +139,37 @@ if [ "$MODE" != "frontend" ]; then
   [ "$HEALTHY" = "1" ] || die "API did not become healthy in 120s — check: docker logs $API_CONTAINER"
 
   # ── 6. Apply schema ────────────────────────────────────────────────────────
-  step "Apply schema (bootstrap + incremental migrations, no seeding)"
+  step "Apply schema (bootstrap + incremental migrations, no demo data)"
   remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/migrate.js" >/dev/null \
     && log "fresh-boot bootstrap applied (idempotent)" \
     || log "WARNING: migrate.js failed — run manually: docker exec $API_CONTAINER node dist/database/migrate.js"
   remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/run-migrations.js" >/dev/null \
     && log "incremental migrations applied" \
     || log "WARNING: incremental migrations failed — run manually: docker exec $API_CONTAINER node dist/database/run-migrations.js"
+
+  # ── 7. Seed reference data (idempotent) ────────────────────────────────────
+  step "Seed reference data (programs + accounts)"
+  # Programs + required documents: seed-programs skips programs that already
+  # exist, so this is safe to run on every deploy and keeps the reference data
+  # current (new programs land, existing ones keep their mandatory flags, which
+  # the migration step above also normalises).
+  remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/seed-programs.js" >/dev/null \
+    && log "programs + required documents seeded (idempotent)" \
+    || log "WARNING: seed-programs failed — run manually: docker exec $API_CONTAINER node dist/database/seed-programs.js"
+
+  # Accounts: only when the users table is empty. seed-accounts is
+  # ON CONFLICT DO NOTHING, but inserting the documented test credentials into a
+  # populated production database is not acceptable, so gate it on an empty DB.
+  USERS=$(remote "docker exec $API_CONTAINER node -e 'const{AppDataSource}=require(\"./dist/database/data-source.js\");(async()=>{await AppDataSource.initialize();const c=await AppDataSource.query(\"SELECT COUNT(*)::int AS c FROM users\");console.log(c[0].c);await AppDataSource.destroy()})().catch(e=>{console.error(e.message);process.exit(1)})'" 2>/dev/null || echo "ERR")
+  if [ "$USERS" = "0" ]; then
+    remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/seed-accounts.js" >/dev/null \
+      && log "initial accounts seeded — change the test credentials before going live" \
+      || log "WARNING: seed-accounts failed — run manually: docker exec $API_CONTAINER node dist/database/seed-accounts.js"
+  elif [ "$USERS" = "ERR" ]; then
+    log "WARNING: could not read user count — account seed skipped"
+  else
+    log "users already exist ($USERS) — account seed skipped"
+  fi
 fi
 
 if [ "$MODE" != "api" ]; then

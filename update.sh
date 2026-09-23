@@ -77,6 +77,15 @@ else
   echo "  Manual: ${EXEC[@]} kapwa-api npm run migration:run"
 fi
 
+# Incremental TypeORM chain: a no-op on a migrate.js-bootstrapped DB, but it
+# applies pending upgrades on DBs whose chain is behind.
+if "${EXEC[@]}" kapwa-api node dist/database/run-migrations.js 2>/dev/null; then
+  echo "  Incremental migrations applied."
+else
+  echo "  WARNING: Incremental migration command failed."
+  echo "  Manual: ${EXEC[@]} kapwa-api node dist/database/run-migrations.js"
+fi
+
 echo ""
 echo "=== Update complete ==="
 echo "  App:    http://localhost:8090"
