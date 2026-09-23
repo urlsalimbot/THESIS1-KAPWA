@@ -15,14 +15,15 @@ export const CreateUserInputSchema = z.object({
   lastName: z.string().min(1).optional(),
   nameExtension: z.string().optional(),
   phone: z.string().optional(),
-  assigned_barangay: z.string().optional(),
-  permitted_barangays: z.array(z.string()).optional(),
-  agency_id: z.string().uuid().optional(),
+  // camelCase to match the admin UI payload and UsersService.createUser.
+  assignedBarangay: z.string().optional(),
+  permittedBarangays: z.array(z.string()).optional(),
+  agencyId: z.string().uuid().optional(),
 }).strict().superRefine((data, ctx) => {
-  if (data.role === 'agency_staff' && !data.agency_id) {
+  if (data.role === 'agency_staff' && !data.agencyId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ['agency_id'],
+      path: ['agencyId'],
       message: 'Agency is required for agency_staff users',
     });
   }
