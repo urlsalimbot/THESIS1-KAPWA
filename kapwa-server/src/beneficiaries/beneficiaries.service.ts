@@ -411,14 +411,13 @@ export class BeneficiariesService {
 
     const rows = await this.caseRepo.manager.query(
       `SELECT prd.document_key AS key,
-              prd.mandatory AS mandatory,
               COALESCE(cr.met, FALSE) AS met
          FROM case_interventions ci
          JOIN program_required_documents prd ON prd.program_id = ci.program_id
          LEFT JOIN case_requirements cr
                 ON cr.case_id::text = ci.case_id AND cr.requirement_key = prd.document_key
         WHERE ci.case_id = $1
-        GROUP BY prd.document_key, prd.mandatory, cr.met
+        GROUP BY prd.document_key, cr.met
         ORDER BY prd.document_key`,
       [latestCase.id],
     );
@@ -448,7 +447,9 @@ export class BeneficiariesService {
       const documents = documentsByKey.get(r.key) || [];
       return {
         key: r.key,
-        mandatory: Boolean(r.mandatory),
+        // All intervention documents are required; the legacy per-document
+        // mandatory flag is no longer used to relax this.
+        mandatory: true,
         met: Boolean(r.met),
         documents,
         pendingVerification: documents.some((d) => !d.verifiedAt),

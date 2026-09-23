@@ -78,4 +78,21 @@ describe('interventionRequirementsMet', () => {
   it('treats programs that have not loaded yet as imposing nothing', () => {
     expect(interventionRequirementsMet([{ id: 'i1', programId: 'p1' }], [], {})).toBe(true);
   });
+
+  it('requires every program document, including ones flagged non-mandatory', () => {
+    const interventions = [{ id: 'i1', programId: 'p1' }];
+    const programs = [{
+      id: 'p1',
+      name: 'p1',
+      requiredDocumentDetails: [
+        { key: 'Valid ID', mandatory: true },
+        { key: 'Death certificate (if applicable)', mandatory: false },
+      ],
+    }];
+    expect(interventionRequirementsMet(interventions, programs, { 'Valid ID': true })).toBe(false);
+    expect(interventionRequirementsMet(interventions, programs, {
+      'Valid ID': true,
+      'Death certificate (if applicable)': true,
+    })).toBe(true);
+  });
 });

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { FileCheck, CheckCircle2, Circle, FileText, ShieldCheck, Clock } from 'lucide-react';
 import { RequirementFileUpload } from './RequirementFileUpload';
-import { mandatoryDocumentKeys, optionalDocumentKeys } from '@/lib/case-progress';
+import { requiredDocumentKeys } from '@/lib/case-progress';
 
 interface Program {
   id: string;
@@ -49,11 +49,8 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
   const programIds = [...new Set(interventions.map((i: any) => i.programId).filter(Boolean))];
   const relevantPrograms = programs.filter((p) => programIds.includes(p.id));
   const allRequirements = [
-    ...new Set(relevantPrograms.flatMap((p) => mandatoryDocumentKeys(p))),
+    ...new Set(relevantPrograms.flatMap((p) => requiredDocumentKeys(p))),
   ];
-  const optionalRequirements = [
-    ...new Set(relevantPrograms.flatMap((p) => optionalDocumentKeys(p))),
-  ].filter((k) => !allRequirements.includes(k));
 
   const docsByRequirement: Record<string, any[]> = {};
   for (const d of docs) {
@@ -66,7 +63,7 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
   const canUpload = Boolean(userRole && ['admin', 'social_worker', 'coordinator', 'claimant'].includes(userRole));
   const canVerify = Boolean(userRole && ['admin', 'social_worker'].includes(userRole));
 
-  if (allRequirements.length === 0 && optionalRequirements.length === 0) return null;
+  if (allRequirements.length === 0) return null;
 
   const refresh = async () => {
     await globalMutate(queryKeys.cases.detail(caseId));
@@ -110,7 +107,7 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
       </div>
       <Separator />
       <div className="px-4 py-3 space-y-2">
-        {[...allRequirements.map((req) => ({ req, optional: false })), ...optionalRequirements.map((req) => ({ req, optional: true }))].map(({ req, optional }) => {
+        {allRequirements.map((req) => {
           const done = checklist[req] === true;
           const uploadedDocs = docsByRequirement[req] || [];
           return (
@@ -130,11 +127,6 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                     : <Circle size={18} className="text-muted-foreground shrink-0" />
                   }
                   <span className={`text-sm ${done ? 'text-muted-foreground' : ''}`}>{req}</span>
-                  {optional && (
-                    <Badge variant="outline" className="text-[10px]">
-                      {t('caseView.implement.optional', 'Optional')}
-                    </Badge>
-                  )}
                 </button>
                 {uploadedDocs.length > 0 && (
                   <Badge variant="outline" className="text-[10px] gap-1">

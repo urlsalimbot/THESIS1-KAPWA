@@ -305,21 +305,23 @@ export class CasesExportService {
     return buildPettyCashVoucherPdf(data);
   }
 
-  // Mandatory document keys contributed by the programs behind this case's
+  // Every document key contributed by the programs behind this case's
   // interventions, minus the requirements the social worker has satisfied.
   //
-  // A documentary need is satisfied when its `case_requirements` row is met —
-  // which happens when the document is confirmed on-site (staff upload or an
-  // explicit verification of a remote upload), or when the worker records that
-  // the client passed it on-site directly. Keying the gate on the requirement
-  // (not on a document's category) keeps the UI checklist, the stepper and this
-  // gate in agreement.
+  // All intervention documents are required: a program's document list is taken
+  // as-is, regardless of the legacy `mandatory` flag (conditional documents such
+  // as "... (if applicable)" are required too). A documentary need is satisfied
+  // when its `case_requirements` row is met — which happens when the document is
+  // confirmed on-site (staff upload or an explicit verification of a remote
+  // upload), or when the worker records that the client passed it on-site
+  // directly. Keying the gate on the requirement (not on a document's category)
+  // keeps the UI checklist, the stepper and this gate in agreement.
   async missingRequiredDocuments(caseId: string): Promise<string[]> {
     const required: Array<{ document_key: string }> = await this.caseRepo.manager.query(
       `SELECT DISTINCT prd.document_key
          FROM case_interventions ci
          JOIN program_required_documents prd ON prd.program_id = ci.program_id
-        WHERE ci.case_id = $1 AND prd.mandatory = TRUE`,
+        WHERE ci.case_id = $1`,
       [caseId],
     );
     const requiredKeys = required.map((r) => r.document_key).filter(Boolean);

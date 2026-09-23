@@ -43,9 +43,10 @@ export class Program extends BaseEntity {
     return this.requiredDocumentRows.map(d => d.documentKey);
   }
 
-  // Mandatory/optional split for the documentary-needs checklist. Conditional
-  // documents ("... (if applicable)") are non-mandatory and must not gate case
-  // activation, but are still shown so the client can submit them.
+  // Every documentary need of a program. All intervention documents are
+  // required, so the legacy per-document `mandatory` flag is reported for
+  // display only and never used to relax the checklist, stepper or activation
+  // gate.
   @Expose()
   get requiredDocumentDetails(): Array<{ key: string; mandatory: boolean }> | undefined {
     if (!this.requiredDocumentRows || this.requiredDocumentRows.length === 0) return undefined;

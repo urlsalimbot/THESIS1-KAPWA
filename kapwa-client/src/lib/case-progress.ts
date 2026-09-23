@@ -18,30 +18,24 @@ export function isAssessmentStepDone(caseData: any): boolean {
 }
 
 /**
- * Mandatory documentary needs of a program. Prefers the mandatory/optional split
- * (`requiredDocumentDetails`) and falls back to every listed document when the
- * program payload predates that field.
+ * Every documentary need of a program. All intervention documents are required,
+ * so the legacy `mandatory` flag is deliberately ignored: a conditional document
+ * ("... (if applicable)") counts exactly like any other and must be satisfied
+ * before the case can activate.
  */
-export function mandatoryDocumentKeys(program: any): string[] {
+export function requiredDocumentKeys(program: any): string[] {
   const details = program?.requiredDocumentDetails;
   if (Array.isArray(details) && details.length > 0) {
-    return details.filter((d: any) => d?.mandatory).map((d: any) => d.key).filter(Boolean);
+    return details.map((d: any) => d?.key).filter(Boolean);
   }
   return Array.isArray(program?.requiredDocuments) ? program.requiredDocuments : [];
 }
 
-/** Conditional documentary needs of a program (shown, but never gating). */
-export function optionalDocumentKeys(program: any): string[] {
-  const details = program?.requiredDocumentDetails;
-  if (!Array.isArray(details)) return [];
-  return details.filter((d: any) => !d?.mandatory).map((d: any) => d.key).filter(Boolean);
-}
-
 /**
- * Whether every mandatory document of the programs behind a case's interventions
- * has been satisfied. A documentary need is satisfied when its checklist entry is
- * met — which the worker records by confirming an upload on-site (or uploading it
- * at the office), or by marking that the client passed it on-site directly.
+ * Whether every document of the programs behind a case's interventions has been
+ * satisfied. A documentary need is satisfied when its checklist entry is met —
+ * which the worker records by confirming an upload on-site (or uploading it at
+ * the office), or by marking that the client passed it on-site directly.
  *
  * Keyed on `case_requirements` (the same source the server's activation gate
  * reads) so the stepper, the checklist and the gate never disagree.
@@ -56,7 +50,7 @@ export function interventionRequirementsMet(
     ...new Set(
       programs
         .filter((p: any) => programIds.includes(p.id))
-        .flatMap((p: any) => mandatoryDocumentKeys(p)),
+        .flatMap((p: any) => requiredDocumentKeys(p)),
     ),
   ];
   if (requiredKeys.length === 0) return true;

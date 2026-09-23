@@ -284,7 +284,7 @@ describe('CasesExportService — document field mapping', () => {
 });
 
 describe('CasesExportService — missingRequiredDocuments', () => {
-  it('returns only required keys not marked met, scoped to the case', async () => {
+  it('returns every program document key not marked met, scoped to the case', async () => {
     const query = jest.fn()
       .mockResolvedValueOnce([{ document_key: 'A' }, { document_key: 'B' }])
       .mockResolvedValueOnce([{ requirement_key: 'A' }, { requirement_key: 'Z' }]);
@@ -292,6 +292,9 @@ describe('CasesExportService — missingRequiredDocuments', () => {
     const svc = new (CasesExportService as any)(caseRepo as any, {} as any, {} as any, {} as any, {} as any);
     await expect(svc.missingRequiredDocuments('c1')).resolves.toEqual(['B']);
     expect(query.mock.calls[0][0]).toMatch(/WHERE ci\.case_id = \$1/);
+    // All intervention documents are required: the legacy mandatory flag must
+    // not relax the gate.
+    expect(query.mock.calls[0][0]).not.toMatch(/mandatory/);
     expect(query.mock.calls[0][1]).toEqual(['c1']);
     expect(query.mock.calls[1][0]).toMatch(/FROM case_requirements/);
     expect(query.mock.calls[1][0]).toMatch(/met = TRUE/);
