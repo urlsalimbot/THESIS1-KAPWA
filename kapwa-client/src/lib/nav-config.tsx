@@ -2,7 +2,7 @@ import {
   FilePlus, LayoutDashboard, Users, CheckCircle,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
   FileWarning, IdCard, ScrollText, BarChart3, History, Send, BadgeCheck,
-  Megaphone, Building2, FileText,
+  Megaphone, Building2,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -43,7 +43,6 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Operations',
     items: [
       { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
-      { path: '/physical-files', label: 'Physical Filing', icon: <FileText size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/approvals', label: 'Approvals', icon: <Stamp size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/announcements/manage', label: 'Announcements', icon: <Megaphone size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
     ],

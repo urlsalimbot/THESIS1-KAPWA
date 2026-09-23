@@ -654,18 +654,6 @@ export async function migrate() {
     created_at timestamp DEFAULT now(),
     updated_at timestamp DEFAULT now()
   )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS physical_files (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
-    intervention_id UUID UNIQUE NOT NULL REFERENCES case_interventions(id),
-    cabinet VARCHAR(50) NOT NULL,
-    folder VARCHAR(100) NOT NULL,
-    shelf VARCHAR(100) NOT NULL,
-    qr_hash VARCHAR(64) UNIQUE,
-    qr_data_url TEXT,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-  )`);
   // 4Ps conditionality + payout tracking (CreateFourPsTables migration)
   await q.query(`CREATE TABLE IF NOT EXISTS case_compliance_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
@@ -935,6 +923,9 @@ await q.query(`
   await q.query(`DROP TABLE IF EXISTS program_assignments CASCADE`);
   await q.query(`DROP TABLE IF EXISTS program_assignment_steps CASCADE`);
   await q.query(`DROP TABLE IF EXISTS intervention_types CASCADE`);
+  // Physical Filing feature removed — verification/on-site filing live in the
+  // case's required-documents checklist (DropPhysicalFilesTable chain migration).
+  await q.query(`DROP TABLE IF EXISTS physical_files CASCADE`);
 
   // -- case_history: drop enums, use TEXT (simpler than enum migration)
   //    (savepoint-guarded: each of these is best-effort and must not poison the txn)
