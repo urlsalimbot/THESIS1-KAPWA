@@ -21,8 +21,13 @@ export function SyncStatusBanner({ pendingCount, isOnline, onOpenQueue }: SyncSt
 
   return (
     <button
+      type="button"
       onClick={onOpenQueue}
-      className={`fixed top-0 left-0 right-0 z-50 px-4 py-1.5 text-center text-xs font-medium cursor-pointer ${bgClass}`}
+      // In-flow (not fixed): the strip pushes the topbar down instead of
+      // overlaying it, so the account badge and the rest of the header stay
+      // tappable while offline or syncing. `min-h-0` keeps it a thin strip —
+      // the global 44px button min-height would otherwise cover the header.
+      className={`no-print w-full shrink-0 min-h-0 px-4 py-1.5 text-center text-xs font-medium cursor-pointer ${bgClass}`}
       aria-label={t('sync.openQueue', 'Open sync queue')}
     >
       {bannerText}

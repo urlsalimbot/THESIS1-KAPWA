@@ -153,11 +153,11 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           {(isAdmin || isSocialWorker) && <GlobalSearch />}
         </div>
 
-        {/* Right action cluster. On small screens only the essential actions stay
-            visible (New Intake, Notifications, Messages, user menu); Approvals
-            and Help are hidden below md — they stay reachable via the drawer
-            navigation — so the bar never overflows or needs a scroll area. */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right action cluster. `ml-auto` keeps it pinned to the right on
+            mobile too, where the center search is hidden and there is no
+            flex-1 spacer — otherwise it packs left and can be pushed off
+            screen on narrow phones. */}
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
 
           {canIntake && (
             <Tooltip>
@@ -202,12 +202,12 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           <Separator orientation="vertical" className="h-6" />
 
           {!online && (
-            <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50" aria-label={t('topbar.offlineIndicator', 'Offline indicator')}>
+            <Badge variant="outline" className="hidden md:inline-flex border-amber-500 text-amber-600 bg-amber-50" aria-label={t('topbar.offlineIndicator', 'Offline indicator')}>
               <WifiOff size={12} className="mr-1" /> {t('topbar.offline', 'Offline')}
             </Badge>
           )}
           {pending > 0 && online && (
-            <Badge variant="outline" className="border-primary/40 text-primary bg-primary/5" aria-label={t('topbar.pendingSyncCount', 'Pending sync count')}>
+            <Badge variant="outline" className="hidden md:inline-flex border-primary/40 text-primary bg-primary/5" aria-label={t('topbar.pendingSyncCount', 'Pending sync count')}>
               {t('topbar.pendingSync', '{{count}} pending', { count: pending })}
             </Badge>
           )}
@@ -281,12 +281,6 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           </DropdownMenu>
         </div>
       </header>
-
-      {!online && pending > 0 && (
-        <div className="fixed top-[4.5rem] left-0 right-0 z-50 bg-amber-500 text-white px-4 py-1.5 text-center text-xs font-medium" role="alert">
-          {t('topbar.offlineBanner', 'You are offline — {{count}} change(s) pending sync. Do not clear app data.', { count: pending })}
-        </div>
-      )}
 
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent>

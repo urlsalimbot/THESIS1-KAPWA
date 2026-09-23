@@ -242,27 +242,4 @@ describe('offline and pending indicators', () => {
     renderWithRouter(<Topbar />);
     expect(screen.queryByLabelText('Pending sync count')).toBeNull();
   });
-
-  it('shows persistent banner when offline with pending changes', () => {
-    mockOnline.value = false;
-    mockPending.value = 2;
-    renderWithRouter(<Topbar />);
-    expect(screen.getByRole('alert')).toBeTruthy();
-    expect(screen.getByText(/You are offline/)).toBeTruthy();
-    expect(screen.getByText(/2 change\(s\) pending sync/)).toBeTruthy();
-  });
-
-  it('hides persistent banner when online', () => {
-    mockOnline.value = true;
-    mockPending.value = 2;
-    renderWithRouter(<Topbar />);
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('hides persistent banner when offline but no pending changes', () => {
-    mockOnline.value = false;
-    mockPending.value = 0;
-    renderWithRouter(<Topbar />);
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
 });
