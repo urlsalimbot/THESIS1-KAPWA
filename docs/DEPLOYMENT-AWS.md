@@ -26,7 +26,7 @@ kapwa.app (Route 53 alias record)
 CloudFront ── ACM cert (us-east-1), TLS terminates here
         │
         ├── default /*         → S3 frontend bucket (private + OAC)
-        │                        403/404 → 200 /index.html (SPA fallback)
+        │                        CloudFront Function rewrites deep links → /index.html
         ├── /api/*             → EC2 :3000 (NestJS API)
         ├── /socket.io/*       → EC2 :3000 (WebSockets)
         └── /health            → EC2 :3000
@@ -271,7 +271,36 @@ Behaviors (mirror the deleted `kapwa-client/nginx.conf`):
 | `/api/*` | API | Forward all query strings; **no caching** (TTL 0) |
 | `/socket.io/*` | API | WebSockets enabled, forward Upgrade headers, TTL 0, forward all query strings |
 | `/health` | API | TTL 0 |
-| `Default (*)` | S3 | **Custom error responses:** map `403` and `404` → `200`, `/index.html`, TTL 0. This is the SPA fallback (`try_files … /index.html`) for react-router deep links |
+| `Default (*)` | S3 | SPA fallback for react-router deep links — see the caveat below |
+
+> **Caveat — do not use a distribution-level custom-error response for the SPA
+> fallback.** CloudFront's distribution-level `CustomErrorResponses` (map `403`
+> and `404` → `200 /index.html`, TTL 0) applies to **every** cache behavior,
+> including `/api/*` and `/socket.io/*`. Any API `403` or `404` body is then
+> replaced by the SPA HTML with status `200` — RBAC denials, `Missing CSRF
+> token`, and unknown API routes all become invisible to the client.
+>
+> Instead, leave distribution-level `CustomErrorResponses` at `Quantity: 0` and
+> attach a **viewer-request CloudFront Function** to the default (S3) behavior
+> that rewrites extension-less paths (not starting with `/api/` or `/socket.io/`)
+> to `/index.html`. The deployed function is `kapwa-spa-rewrite`:
+>
+> ```js
+> function handler(event) {
+>   var req = event.request;
+>   var uri = req.uri || '/';
+>   if (uri.indexOf('/api/') === 0 || uri.indexOf('/socket.io/') === 0) return req;
+>   if (uri === '/') return req;
+>   var last = uri.substring(uri.lastIndexOf('/') + 1);
+>   if (last.indexOf('.') !== -1) return req;   // real asset → serve as-is
+>   req.uri = '/index.html';
+>   return req;
+> }
+> ```
+>
+> API paths are never rewritten, so their status codes reach the browser
+> unchanged. Verify after any change: `GET /physical-files` → `200` HTML, and
+> `GET /api/v1/does-not-exist` → `404` JSON.
 
 Viewer protocol policy: **Redirect HTTP → HTTPS** (mandatory for the
 HSTS-preloaded `.app` TLD). Apply CloudFront's managed
@@ -485,7 +514,7 @@ Total ≈ **$30–35/month** for a small deployment. Terminate `t3.small` / use
 | DB connection refused | `DB_SSL` not set / `DB_HOST` is the RDS endpoint, or `kapwa-rds-sg` not on the instance |
 | S3 uploads 403 | `MINIO_REGION` wrong (SigV4 signing) or bucket names not prefixed (taken globally) |
 | Chat/notifications don't connect | `NOTIF_WS_ORIGIN` missing → set to `https://kapwa.app`; chat gateway still hardcoded if §3.3 not applied |
-| Deep link 404s | CloudFront custom-error-response for 403/404 → `/index.html` not configured (§4.8) |
+| Deep link 404s | SPA fallback CloudFront Function (§4.8) not associated with the default cache behavior |
 | Stale frontend after deploy | `aws cloudfront create-invalidation --paths "/*"` not run, or `index.html` cached (must be `no-cache`) |
 | API health 503 via CloudFront | EC2 SG blocks port 3000 from CloudFront ranges, or the `api` container is down (`docker compose -f docker-compose.aws.yml logs api`) |
 
