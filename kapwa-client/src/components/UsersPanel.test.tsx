@@ -92,7 +92,7 @@ describe('UsersPanel', () => {
     renderWithSWR(<UsersPanel />);
     await screen.findByText('worker1@mswdo.test');
 
-    await user.click(screen.getByRole('button', { name: 'Disable worker1@mswdo.test' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Disable worker1@mswdo.test' }));
     await screen.findByText('Disable User?');
     await user.click(screen.getByRole('button', { name: 'Disable' }));
 
@@ -110,7 +110,7 @@ describe('UsersPanel', () => {
     expect(await screen.findByText('disabled@mswdo.test')).toBeTruthy();
     expect(screen.queryByText('worker1@mswdo.test')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: 'Enable disabled@mswdo.test' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enable disabled@mswdo.test' }));
     await screen.findByText('Enable User?');
     await user.click(screen.getByRole('button', { name: 'Enable' }));
 
