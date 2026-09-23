@@ -1,5 +1,5 @@
 import { DEFAULT_PAGE_SIZE } from '../common/constants';
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, UseInterceptors, Request } from '@nestjs/common';
 import { ClassSerializerInterceptor, SerializeOptions } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -7,6 +7,7 @@ import { UsersService } from './users.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ZodPipe } from '../common/pipes/zod.pipe';
+import { AuthenticatedRequest } from '../auth/types';
 import { CreateUserInputSchema, CreateUserInput, UpdateUserSchema, UpdateUserInput } from './dto/users.zod';
 
 @ApiTags('Users')
@@ -48,10 +49,19 @@ export class UsersController {
     return this.usersService.update(id, body);
   }
 
-  @Delete(':id')
+  // Accounts are never deleted — disabling removes all access while preserving
+  // the user's history (audit trail, case attribution).
+  @Patch(':id/disable')
   @Roles('admin')
-  @ApiOperation({ summary: 'Deactivate user (soft delete)' })
-  async remove(@Param('id') id: string) {
-    return this.usersService.deactivateUser(id);
+  @ApiOperation({ summary: 'Disable a user (no access, reversible)' })
+  async disable(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.usersService.setActive(id, false, req.user?.id);
+  }
+
+  @Patch(':id/enable')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Re-enable a disabled user' })
+  async enable(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.usersService.setActive(id, true, req.user?.id);
   }
 }

@@ -2,18 +2,18 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { mutate } from 'swr';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
-import { Search, RotateCcw, Pencil, Trash2 } from 'lucide-react';
+import { Search, RotateCcw, Pencil, Ban, UserCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
   DialogFooter, DialogClose,
@@ -23,7 +23,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 
 interface AppUser {
   id: string; email: string; fullName: string; role: string;
@@ -51,11 +50,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLE_OPTIONS = Object.keys(ROLE_LABELS);
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-] as const;
+type UserTab = 'active' | 'disabled';
 
 function EditableRoleCell({ user, onRoleChange, roleLabel }: { user: AppUser; onRoleChange: (user: AppUser, role: string) => void; roleLabel: (r: string) => string }) {
   return (
@@ -72,14 +67,6 @@ function EditableRoleCell({ user, onRoleChange, roleLabel }: { user: AppUser; on
   );
 }
 
-function StatusBadge({ isActive, t }: { isActive: boolean; t: TFunction }) {
-  return (
-    <Badge variant={isActive ? 'default' : 'secondary'} className="text-[10px]">
-      {isActive ? t('usersPanel.active', 'Active') : t('usersPanel.inactive', 'Inactive')}
-    </Badge>
-  );
-}
-
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-PH', {
     year: 'numeric', month: 'short', day: 'numeric',
@@ -89,13 +76,15 @@ function formatDate(dateStr: string) {
 export default function UsersPanel() {
   const { t } = useTranslation();
   const roleLabel = (r: string) => t(`usersPanel.role.${r}`, ROLE_LABELS[r] || r);
+  const [tab, setTab] = useState<UserTab>('active');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [editUser, setEditUser] = useState<AppUser | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  // Disable/enable is destructive enough to confirm, but reversible — accounts
+  // are never deleted.
+  const [confirm, setConfirm] = useState<{ id: string; email: string; action: 'disable' | 'enable' } | null>(null);
 
   // Edit form state
   const [editFirstName, setEditFirstName] = useState('');
@@ -109,17 +98,17 @@ export default function UsersPanel() {
   const [editSaving, setEditSaving] = useState(false);
 
   const effectiveRole = roleFilter === 'all' ? undefined : roleFilter;
-  const effectiveStatus = statusFilter === 'all' ? undefined : statusFilter;
+  const effectiveStatus = tab === 'active' ? 'active' : 'inactive';
 
   const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(queryKeys.agencies.list());
 
   const { data: response, isLoading } = useSWR<UsersResponse>(
     ['users', search, effectiveRole, effectiveStatus, pagination.pageIndex + 1, pagination.pageSize] as const,
-    ([_key, s, r, st, p, l]: readonly [string, string, string | undefined, string | undefined, number, number]) => {
+    ([_key, s, r, st, p, l]: readonly [string, string, string | undefined, string, number, number]) => {
       const params = new URLSearchParams();
       if (s) params.set('search', s);
       if (r) params.set('role', r);
-      if (st) params.set('status', st);
+      params.set('status', st);
       params.set('page', String(p));
       params.set('limit', String(l));
       return api.get(`/users?${params.toString()}`);
@@ -129,16 +118,17 @@ export default function UsersPanel() {
   const users = response?.data ?? [];
   const total = response?.total ?? 0;
 
-  async function toggleUserStatus(user: AppUser) {
-    try {
-      await api.put(`/users/${user.id}`, { isActive: !user.isActive });
-      await revalidate();
-    } catch (e) { console.error('UsersPanel:', e); }
+  async function revalidate() {
+    await mutate(
+      (key) => Array.isArray(key) && key[0] === 'users',
+      undefined,
+      { revalidate: true },
+    );
   }
 
   async function updateUserRole(user: AppUser, role: string) {
     try {
-      await api.put(`/users/${user.id}`, { role });
+      await api.patch(`/users/${user.id}`, { role });
       await revalidate();
     } catch (e) { console.error('UsersPanel:', e); }
   }
@@ -173,7 +163,7 @@ export default function UsersPanel() {
         body.permittedBarangays = [];
       }
       if (editAgencyId) body.agencyId = editAgencyId;
-      await api.put(`/users/${editUser.id}`, body);
+      await api.patch(`/users/${editUser.id}`, body);
       setEditUser(null);
       await revalidate();
     } catch (e) {
@@ -183,21 +173,18 @@ export default function UsersPanel() {
     }
   }
 
-  async function confirmDelete() {
-    if (!deleteId) return;
+  async function applyStatusChange() {
+    if (!confirm) return;
     try {
-      await api.del(`/users/${deleteId}`);
-      setDeleteId(null);
+      await api.patch(`/users/${confirm.id}/${confirm.action}`);
+      setConfirm(null);
       await revalidate();
     } catch (e) { console.error('UsersPanel:', e); }
   }
 
-  async function revalidate() {
-    await mutate(
-      (key) => Array.isArray(key) && key[0] === 'users',
-      undefined,
-      { revalidate: true },
-    );
+  function changeTab(next: string) {
+    setTab(next as UserTab);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
   }
 
   const columns: ColumnDef<AppUser>[] = [
@@ -230,15 +217,6 @@ export default function UsersPanel() {
       ),
     },
     {
-      accessorKey: 'isActive',
-      header: t('usersPanel.status', 'Status'),
-      cell: ({ row }) => (
-        <button onClick={() => toggleUserStatus(row.original)} className="hover:opacity-80 transition-opacity">
-          <StatusBadge isActive={row.original.isActive} t={t} />
-        </button>
-      ),
-    },
-    {
       accessorKey: 'createdAt',
       header: t('usersPanel.created', 'Created'),
       cell: ({ row }) => (
@@ -257,13 +235,23 @@ export default function UsersPanel() {
           >
             <Pencil size={14} />
           </button>
-          <button
-            onClick={() => setDeleteId(row.original.id)}
-            className="w-7 h-7 rounded flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
-            aria-label={t('usersPanel.deleteAria', 'Delete {{email}}', { email: row.original.email })}
-          >
-            <Trash2 size={14} />
-          </button>
+          {tab === 'active' ? (
+            <button
+              onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'disable' })}
+              className="w-7 h-7 rounded flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+              aria-label={t('usersPanel.disableAria', 'Disable {{email}}', { email: row.original.email })}
+            >
+              <Ban size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'enable' })}
+              className="w-7 h-7 rounded flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+              aria-label={t('usersPanel.enableAria', 'Enable {{email}}', { email: row.original.email })}
+            >
+              <UserCheck size={14} />
+            </button>
+          )}
         </div>
       ),
     },
@@ -301,22 +289,7 @@ export default function UsersPanel() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-36">
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => { setStatusFilter(v); setPagination(p => ({ ...p, pageIndex: 0 })); }}
-              >
-                <SelectTrigger aria-label={t('usersPanel.filterStatus', 'Filter by status')} className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{t(`usersPanel.statusFilter.${o.value}`, o.label)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button variant="outline" size="sm" className="h-9" onClick={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all'); setPagination(p => ({ ...p, pageIndex: 0 })); }}>
+            <Button variant="outline" size="sm" className="h-9" onClick={() => { setSearch(''); setRoleFilter('all'); setPagination(p => ({ ...p, pageIndex: 0 })); }}>
               <RotateCcw size={14} className="mr-1.5" />
               {t('usersPanel.reset', 'Reset')}
             </Button>
@@ -324,17 +297,39 @@ export default function UsersPanel() {
         </CardContent>
       </Card>
 
-      {/* User Table */}
-      <DataTable
-        columns={columns}
-        data={users}
-        rowCount={total}
-        loading={isLoading}
-        pagination={pagination}
-        sorting={sorting}
-        onPaginationChange={setPagination}
-        onSortingChange={setSorting}
-      />
+      {/* Active / Disabled split — disabled users are kept, never deleted */}
+      <Tabs value={tab} onValueChange={changeTab}>
+        <TabsList>
+          <TabsTrigger value="active">{t('usersPanel.tabActive', 'Active users')}</TabsTrigger>
+          <TabsTrigger value="disabled">{t('usersPanel.tabDisabled', 'Disabled users')}</TabsTrigger>
+        </TabsList>
+        {/* One table instance per panel (Radix mounts only the active panel), so
+            each tab has the aria-controls target axe expects. */}
+        <TabsContent value="active">
+          <DataTable
+            columns={columns}
+            data={users}
+            rowCount={total}
+            loading={isLoading}
+            pagination={pagination}
+            sorting={sorting}
+            onPaginationChange={setPagination}
+            onSortingChange={setSorting}
+          />
+        </TabsContent>
+        <TabsContent value="disabled">
+          <DataTable
+            columns={columns}
+            data={users}
+            rowCount={total}
+            loading={isLoading}
+            pagination={pagination}
+            sorting={sorting}
+            onPaginationChange={setPagination}
+            onSortingChange={setSorting}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null); }}>
@@ -400,21 +395,6 @@ export default function UsersPanel() {
               <Label htmlFor="edit-barangays">{t('usersPanel.permittedBarangays', 'Permitted Barangays (comma-separated)')}</Label>
               <Input id="edit-barangays" value={editPermittedBarangays} onChange={e => setEditPermittedBarangays(e.target.value)} />
             </div>
-            {editUser && (
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <span className="text-xs text-muted-foreground">{t('usersPanel.accountStatus', 'Account status')}</span>
-                <Button
-                  variant={editUser.isActive ? 'outline' : 'default'}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={async () => {
-                    await toggleUserStatus(editUser);
-                  }}
-                >
-                  {editUser.isActive ? t('usersPanel.deactivate', 'Deactivate') : t('usersPanel.activate', 'Activate')}
-                </Button>
-              </div>
-            )}
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -427,19 +407,30 @@ export default function UsersPanel() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+      {/* Disable / Enable confirmation */}
+      <AlertDialog open={!!confirm} onOpenChange={(open) => { if (!open) setConfirm(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('usersPanel.deleteTitle', 'Delete User?')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {confirm?.action === 'enable'
+                ? t('usersPanel.enableTitle', 'Enable User?')
+                : t('usersPanel.disableTitle', 'Disable User?')}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {t('usersPanel.deleteDesc', 'This will permanently remove this user from the system. This action cannot be undone.')}
+              {confirm?.action === 'enable'
+                ? t('usersPanel.enableDesc', 'This user will regain access to the system.')
+                : t('usersPanel.disableDesc', 'This user will lose access immediately and can no longer sign in. Their records and case history are kept, and the account can be re-enabled at any time.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('usersPanel.cancel', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t('usersPanel.delete', 'Delete')}
+            <AlertDialogAction
+              onClick={applyStatusChange}
+              className={confirm?.action === 'disable' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : undefined}
+            >
+              {confirm?.action === 'enable'
+                ? t('usersPanel.enable', 'Enable')
+                : t('usersPanel.disable', 'Disable')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

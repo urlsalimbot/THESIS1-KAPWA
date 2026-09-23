@@ -237,5 +237,23 @@ describe('AuthService', () => {
       (repoMock.findOne as jest.Mock).mockResolvedValue({ id: '1', email: 'a@a.com', role: 'admin', tokenVersion: 2 });
       await expect(service.refresh('stale-refresh')).rejects.toThrow('Refresh token has been revoked');
     });
+
+    it('rejects a refresh for a disabled account', async () => {
+      (jwtMock.verify as jest.Mock).mockReturnValue({ sub: '1', tokenVersion: 1 });
+      (repoMock.findOne as jest.Mock).mockResolvedValue({ id: '1', email: 'a@a.com', role: 'admin', tokenVersion: 1, isActive: false });
+      await expect(service.refresh('valid-refresh')).rejects.toThrow('disabled');
+    });
+  });
+
+  describe('disabled accounts', () => {
+    it('refuses to log in a disabled user', async () => {
+      await expect(service.login({ id: '1', email: 'a@a.com', role: 'admin', isActive: false } as User))
+        .rejects.toThrow('disabled');
+    });
+
+    it('does not issue tokens for a disabled user (MFA/OTP verify path)', () => {
+      expect(() => (service as any).issueTokens({ id: '1', email: 'a@a.com', role: 'admin', isActive: false, tokenVersion: 0 }))
+        .toThrow('disabled');
+    });
   });
 });

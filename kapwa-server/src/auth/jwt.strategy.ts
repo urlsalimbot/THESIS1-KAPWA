@@ -27,6 +27,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: { sub: string; role: string; barangay?: string }) {
     const user = await this.userRepo.findOne({ where: { id: payload.sub } });
     if (!user) throw new UnauthorizedException();
+    // A disabled account loses access immediately, even with a token that is
+    // still within its expiry window.
+    if (user.isActive === false) throw new UnauthorizedException('This account has been disabled');
     return user;
   }
 }

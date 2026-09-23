@@ -127,16 +127,40 @@ export class UsersService {
     return { ...safe, fullName: saved.fullName };
   }
 
-  async deactivateUser(id: string) {
+  /**
+   * Enable or disable an account. There is no hard delete: disabling keeps the
+   * user's history intact while removing all access.
+   *
+   * Disabling revokes every live session (tokenVersion bump) and is refused when
+   * it would lock the system out — an admin cannot disable their own account, and
+   * the last active administrator cannot be disabled.
+   */
+  async setActive(id: string, isActive: boolean, actorId?: string) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
-    user.isActive = false;
+
+    if (!isActive) {
+      if (actorId && actorId === user.id) {
+        throw new BadRequestException('You cannot disable your own account');
+      }
+      if (user.role === UserRole.ADMIN && user.isActive) {
+        const activeAdmins = await this.userRepo.count({ where: { role: UserRole.ADMIN, isActive: true } });
+        if (activeAdmins <= 1) {
+          throw new BadRequestException('At least one active administrator must remain');
+        }
+      }
+      // Invalidate refresh tokens so a disabled account cannot mint new sessions.
+      user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    }
+
+    user.isActive = isActive;
     const saved = await this.userRepo.save(user);
-    const { password, ...safe } = saved;
-    return safe;
+    this.logger.log(`User ${saved.email} ${isActive ? 'enabled' : 'disabled'}${actorId ? ` by ${actorId}` : ''}`);
+    const { password, tokens, mfaSecret, ...safe } = saved;
+    return { ...safe, fullName: saved.fullName, assignedBarangay: saved.assignedBarangay, permittedBarangays: saved.permittedBarangays };
   }
 
-  async update(id: string, data: { firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; role?: string; isActive?: boolean; assignedBarangay?: string; permittedBarangays?: string[]; agencyId?: string }) {
+  async update(id: string, data: { firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; role?: string; assignedBarangay?: string; permittedBarangays?: string[]; agencyId?: string }) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     if (data.role) user.role = data.role as UserRole;
@@ -144,7 +168,6 @@ export class UsersService {
     if (data.middleName !== undefined) user.middleName = data.middleName;
     if (data.lastName !== undefined) user.lastName = data.lastName;
     if (data.nameExtension !== undefined) user.nameExtension = data.nameExtension;
-    if (data.isActive !== undefined) user.isActive = data.isActive;
     if (data.agencyId !== undefined) user.agencyId = data.agencyId;
     if (data.assignedBarangay !== undefined || data.permittedBarangays !== undefined) {
       const assigned = data.assignedBarangay !== undefined ? data.assignedBarangay : user.assignedBarangay;
@@ -154,12 +177,5 @@ export class UsersService {
     await this.userRepo.save(user);
     const { password, ...safe } = user;
     return { ...safe, fullName: user.fullName };
-  }
-
-  async remove(id: string) {
-    const user = await this.userRepo.findOne({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
-    await this.userRepo.delete(id);
-    return { deleted: true };
   }
 }

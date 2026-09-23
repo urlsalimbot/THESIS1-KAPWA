@@ -217,6 +217,10 @@ export class AuthService {
   }
 
   async login(user: User) {
+    if (user.isActive === false) {
+      throw new UnauthorizedException('This account has been disabled. Contact the MSWDO administrator.');
+    }
+
     if (!user.emailVerified) {
       throw new UnauthorizedException('Please verify your email before logging in. Check your inbox for the verification link.');
     }
@@ -239,6 +243,11 @@ export class AuthService {
   }
 
   private issueTokens(user: User) {
+    // Single chokepoint for every token issuance path (login, MFA/OTP verify,
+    // refresh): a disabled account can never be issued a session.
+    if (user.isActive === false) {
+      throw new UnauthorizedException('This account has been disabled. Contact the MSWDO administrator.');
+    }
     const payload = { sub: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion };
     return {
       accessToken: this.jwtService.sign(payload),
@@ -252,7 +261,7 @@ export class AuthService {
   }
 
   async findByIdWithSecret(id: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'firstName', 'middleName', 'lastName', 'nameExtension', 'mfaSecret', 'mfaEnabled', 'mfaMethod', 'emailOtpCode', 'emailOtpExpiresAt', 'password', 'tokenVersion', 'emailVerified'] });
+    return this.userRepo.findOne({ where: { id }, select: ['id', 'email', 'role', 'firstName', 'middleName', 'lastName', 'nameExtension', 'mfaSecret', 'mfaEnabled', 'mfaMethod', 'emailOtpCode', 'emailOtpExpiresAt', 'password', 'tokenVersion', 'emailVerified', 'isActive'] });
   }
 
   async refresh(refreshToken: string) {

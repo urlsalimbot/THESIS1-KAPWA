@@ -33,6 +33,7 @@ describe('UsersService', () => {
       update: jest.fn(),
       findAndCount: jest.fn(),
       create: jest.fn(),
+      count: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -177,18 +178,54 @@ describe('UsersService', () => {
     });
   });
 
-  describe('deactivateUser', () => {
-    it('should set isActive to false and return updated user without password', async () => {
-      const activeUser = { ...mockUser, id: 'user-1', isActive: true };
+  describe('setActive', () => {
+    it('disables a user, revokes sessions and strips the password', async () => {
+      const activeUser = { ...mockUser, id: 'user-1', isActive: true, tokenVersion: 3 };
       mockRepo.findOne.mockResolvedValue(activeUser);
-      mockRepo.save.mockResolvedValue({ ...activeUser, isActive: false });
+      mockRepo.save.mockImplementation(async (u: any) => u);
 
-      const result = await service.deactivateUser('user-1');
+      const result = await service.setActive('user-1', false, 'admin-9');
 
       expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { id: 'user-1' } });
-      expect(mockRepo.save).toHaveBeenCalled();
       expect(result.isActive).toBe(false);
+      expect(result.tokenVersion).toBe(4);
       expect(result).not.toHaveProperty('password');
+    });
+
+    it('re-enables a disabled user', async () => {
+      const disabled = { ...mockUser, id: 'user-2', isActive: false };
+      mockRepo.findOne.mockResolvedValue(disabled);
+      mockRepo.save.mockImplementation(async (u: any) => u);
+
+      const result = await service.setActive('user-2', true, 'admin-9');
+
+      expect(result.isActive).toBe(true);
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('refuses an admin disabling their own account', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser, id: 'admin-1', role: UserRole.ADMIN, isActive: true });
+      await expect(service.setActive('admin-1', false, 'admin-1')).rejects.toThrow(BadRequestException);
+      expect(mockRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('refuses disabling the last active administrator', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser, id: 'admin-2', role: UserRole.ADMIN, isActive: true });
+      mockRepo.count.mockResolvedValue(1);
+      await expect(service.setActive('admin-2', false, 'admin-1')).rejects.toThrow(BadRequestException);
+      expect(mockRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('allows disabling an admin when another active admin remains', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser, id: 'admin-3', role: UserRole.ADMIN, isActive: true });
+      mockRepo.count.mockResolvedValue(2);
+      mockRepo.save.mockImplementation(async (u: any) => u);
+      await expect(service.setActive('admin-3', false, 'admin-1')).resolves.toMatchObject({ isActive: false });
+    });
+
+    it('throws NotFound for an unknown user', async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+      await expect(service.setActive('missing', false, 'admin-1')).rejects.toThrow('User not found');
     });
   });
 

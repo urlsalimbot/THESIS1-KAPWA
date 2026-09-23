@@ -36,7 +36,6 @@ export const UpdateUserSchema = z.object({
   lastName: z.string().optional(),
   nameExtension: z.string().optional(),
   role: z.string().optional(),
-  isActive: z.boolean().optional(),
   assignedBarangay: z.string().optional(),
   permittedBarangays: z.array(z.string()).optional(),
   agencyId: z.string().uuid().optional(),
