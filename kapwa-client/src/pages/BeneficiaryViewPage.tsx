@@ -22,6 +22,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
 import { api, uploadSignature, uploadReceipt, dataURItoBlob } from "../lib/api";
 import { queryKeys } from "../lib/query-keys";
 import { FamilyGraph } from "../components/family/FamilyGraph";
@@ -137,6 +138,13 @@ export function BeneficiaryViewPage() {
   const { data: ben } = useSWR<Record<string, unknown>>(
     id ? queryKeys.beneficiaries.detail(id) : null,
   );
+  // Breadcrumb should read the beneficiary's name, not the UUID.
+  useEffect(() => {
+    if (!id || !ben) return;
+    const name = `${ben.firstName || ''} ${ben.surname || ''}`.trim();
+    if (name) setBreadcrumbLabel(id, name);
+  }, [id, ben]);
+
   const { data: casesRes } = useSWR<{ data: Array<Record<string, unknown>>; total: number }>(
     queryKeys.cases.list(),
   );

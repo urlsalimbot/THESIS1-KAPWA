@@ -25,19 +25,23 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   '/settings': 'Settings',
 };
 
-// A case route carries the UUID, but the crumb should read the human-readable
-// control number (KAPWA-2026-00001). Pages that load the case register the label
-// here; the breadcrumb re-renders when the registry changes.
-const caseLabels = new Map<string, string>();
+// UUID-deep routes (a case, beneficiary, IRF, program, …) carry the id in the
+// URL, but the crumb should read something human (a control number, a name, a
+// blotter number). Pages register their label here after loading; the breadcrumb
+// re-renders when the registry changes.
+const entityLabels = new Map<string, string>();
 const listeners = new Set<() => void>();
 let registryVersion = 0;
 
-export function setCaseLabel(caseId: string, controlNo: string): void {
-  if (!caseId || !controlNo || caseLabels.get(caseId) === controlNo) return;
-  caseLabels.set(caseId, controlNo);
+export function setBreadcrumbLabel(id: string, label: string): void {
+  if (!id || !label || entityLabels.get(id) === label) return;
+  entityLabels.set(id, label);
   registryVersion++;
   listeners.forEach((l) => l());
 }
+
+/** @deprecated Use setBreadcrumbLabel — kept for existing case-view callers. */
+export const setCaseLabel = setBreadcrumbLabel;
 
 export function subscribeCaseLabels(listener: () => void): () => void {
   listeners.add(listener);
@@ -50,23 +54,37 @@ export function caseLabelVersion(): number {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Singular noun for the parent segment, so an unregistered UUID crumb reads
+// "Beneficiary 01a0cdc7" / "Incident Report 01a0cdd8" instead of always "Case …".
+const UUID_PARENT_NOUN: Record<string, string> = {
+  cases: 'Case',
+  beneficiaries: 'Beneficiary',
+  beneficiary: 'Access Card',
+  irf: 'Incident Report',
+  programs: 'Program',
+  messages: 'Message',
+  referrals: 'Referral',
+  users: 'User',
+  agencies: 'Agency',
+};
+
 export function createBreadcrumbs(pathname: string): BreadcrumbItem[] {
   const segments = pathname.split('/').filter(Boolean);
   const crumbs: BreadcrumbItem[] = [];
   let accumulated = '';
 
-  for (const segment of segments) {
+  segments.forEach((segment, i) => {
     accumulated += '/' + segment;
     if (UUID_RE.test(segment)) {
-      // Case UUID: show the control number, and keep the real href.
-      const label = caseLabels.get(segment) ?? `Case ${segment.slice(0, 8)}`;
+      const noun = UUID_PARENT_NOUN[segments[i - 1]] || 'Record';
+      const label = entityLabels.get(segment) ?? `${noun} ${segment.slice(0, 8)}`;
       crumbs.push({ label, href: accumulated });
-      continue;
+      return;
     }
     const label = BREADCRUMB_LABELS[accumulated]
       || segment.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     crumbs.push({ label, href: accumulated });
-  }
+  });
 
   return crumbs;
 }

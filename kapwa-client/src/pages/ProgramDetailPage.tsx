@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { humanizeError } from '@/lib/errors';
+import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,11 @@ export function ProgramDetailPage() {
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Breadcrumb should read the program name, not the UUID.
+  useEffect(() => {
+    if (id && program?.name) setBreadcrumbLabel(id, program.name);
+  }, [id, program]);
 
   async function handleDelete() {
     if (!id) return;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
 import { useTranslation } from 'react-i18next';
 import { Lock, Unlock, Download, FileJson, Shield, User, Hash, Calendar, ArrowLeft, Eye, EyeOff, ImageIcon } from 'lucide-react';
 import { api } from '../lib/api';
@@ -324,6 +325,11 @@ export function IrfDetailPage() {
   useEffect(() => {
     if (id && isAdmin) loadPhotos();
   }, [id, isAdmin]);
+
+  // Breadcrumb should read the blotter number, not the UUID.
+  useEffect(() => {
+    if (id && irf?.blotterEntryNumber) setBreadcrumbLabel(id, irf.blotterEntryNumber);
+  }, [id, irf]);
 
   async function loadPhotos() {
     if (!id) return;
