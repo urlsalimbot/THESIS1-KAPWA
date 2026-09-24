@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { api } from '@/lib/api';
 import { FileText, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 import SignaturePad from '../forms/SignaturePad';
 import { useTranslation } from 'react-i18next';
@@ -82,7 +83,7 @@ export function StepSignatures({ caseData }: StepSignaturesProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t('caseView.signatures.certificate', 'Certificate')}</span>
             {caseData?.certificateUrl ? (
-              <a href={caseData.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+              <a href={api.url(caseData.certificateUrl)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                 <FileText size={14} /> {t('caseView.signatures.view', 'View')} <ExternalLink size={10} />
               </a>
             ) : (
@@ -92,7 +93,7 @@ export function StepSignatures({ caseData }: StepSignaturesProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t('caseView.signatures.pettyCashVoucher', 'Petty Cash Voucher')}</span>
             {caseData?.pettyCashVoucherUrl ? (
-              <a href={caseData.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+              <a href={api.url(caseData.pettyCashVoucherUrl)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                 <FileText size={14} /> {t('caseView.signatures.view', 'View')} <ExternalLink size={10} />
               </a>
             ) : (

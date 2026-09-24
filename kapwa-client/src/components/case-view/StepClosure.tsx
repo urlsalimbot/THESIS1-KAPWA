@@ -215,7 +215,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
             <span className="text-muted-foreground">{t('caseView.closure.certificate', 'Certificate')}</span>
             {caseData?.certificateUrl ? (
               <a
-                href={caseData.certificateUrl}
+                href={api.url(caseData.certificateUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline flex items-center gap-1"
@@ -230,7 +230,7 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
             <span className="text-muted-foreground">{t('caseView.closure.pettyCashVoucher', 'Petty Cash Voucher')}</span>
             {caseData?.pettyCashVoucherUrl ? (
               <a
-                href={caseData.pettyCashVoucherUrl}
+                href={api.url(caseData.pettyCashVoucherUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline flex items-center gap-1"
