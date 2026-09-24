@@ -564,18 +564,21 @@ export class CasesService {
 
   async updateAssessmentV2(id: string, data: AssessmentV2Input, actorId?: string) {
     const c = await this.findById(id);
-    Object.assign(c, {
-      problemsPresented: data.problemsPresented,
-      socialWorkerAssessment: data.socialWorkerAssessment,
-      clientCategory: data.clientCategory,
-      frvaScore: data.frvaScore,
-      swdiScore: data.swdiScore,
-      familyDialogueNotes: data.familyDialogueNotes,
-      natureOfService: data.natureOfService,
-      interviewedBy: data.interviewedBy,
-      clientSignature: data.clientSignature,
-      updatedAt: new Date(),
-    });
+    // Only assign fields the payload actually provides. TypeORM skips
+    // `undefined` on save, so an unconditional Object.assign would *clear*
+    // scores when a later partial save (e.g. "Save Assessment" after
+    // "Save Assessment Tools") omits them.
+    const fields: Array<keyof AssessmentV2Input> = [
+      'problemsPresented', 'socialWorkerAssessment', 'clientCategory',
+      'frvaScore', 'swdiScore', 'familyDialogueNotes', 'natureOfService',
+      'interviewedBy', 'clientSignature',
+    ];
+    for (const key of fields) {
+      if (data[key] !== undefined) {
+        (c as any)[key] = data[key];
+      }
+    }
+    c.updatedAt = new Date();
 
     const assistances: CaseAssistance[] = [];
     const hasFinancial =
