@@ -1465,7 +1465,7 @@ const en = {
     "differentPerson": "No, different person",
     "done": "Done",
     "edit": "Edit",
-    "eligActiveCase": "Has an active case — info will be updated, no new case will be created.",
+    "eligActiveCase": "Has an active case — choosing \"Yes, update info\" will update it instead of creating a new case.",
     "eligLastCase": "Last case: {{date}} — eligible for a new case.",
     "eligNoPrior": "No prior case on record — a new case will be created.",
     "email": "Email *",

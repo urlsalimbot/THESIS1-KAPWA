@@ -42,7 +42,15 @@ function confidenceLabel(score: number, t: TFunction): { label: string; classNam
 
 function eligibilityNote(candidate: MatchCandidate, t: TFunction): { text: string; icon: 'check' | 'info' } {
   if (candidate.caseExistsWithin30Days) {
-    return { text: t('intake.eligActiveCase', 'Has an active case — info will be updated, no new case will be created.'), icon: 'info' };
+    // Conditional wording: the outcome depends on which action the worker picks,
+    // so state what each choice does rather than asserting one outcome.
+    return {
+      text: t(
+        'intake.eligActiveCase',
+        'Has an active case — choosing "Yes, update info" will update it instead of creating a new case.',
+      ),
+      icon: 'info',
+    };
   }
   if (candidate.lastApprovedCaseDate) {
     const d = new Date(candidate.lastApprovedCaseDate);

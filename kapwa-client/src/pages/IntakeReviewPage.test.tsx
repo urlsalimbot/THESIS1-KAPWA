@@ -163,6 +163,18 @@ describe('IntakeReviewPage', () => {
     expect(btns.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('states the active-case outcome conditionally, not as a fixed promise', async () => {
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    // The worker chooses the outcome, so the note must not assert that no new
+    // case will be created (a different household member may still register).
+    expect(screen.queryByText(/no new case will be created/i)).toBeNull();
+    expect(screen.getAllByText(/choosing "Yes, update info"/i).length).toBeGreaterThanOrEqual(1);
+  });
+
   it('should show "No, different person" buttons per card', async () => {
     render(
       <MemoryRouter>
