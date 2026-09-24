@@ -18,6 +18,12 @@ const STATUS_INDEX: Record<string, number> = {
 };
 const STEP_MIN_STATUS = [0, 0, 0, 3, 4];
 
+// Step 1 (Intervention & Requirements) is the step that *submits* an assessed
+// case for review, so its completion must not itself require a later status —
+// gating it on status >= in_review made "Submit for Review" unreachable and
+// trapped assessed cases. Steps 3-4 still require their Phase-Out status.
+const STEP_STATUS_INDEPENDENT = new Set([0, 1]);
+
 function statusAtLeast(caseData: any, min: number): boolean {
   const status = caseData?.status;
   const index = status == null ? undefined : STATUS_INDEX[status];
@@ -29,7 +35,7 @@ function statusAtLeast(caseData: any, min: number): boolean {
 // Shared done-status per stepper step — reused by the case view stepper and
 // the approval pipeline cards so both surfaces show identical progress.
 export function stepperStepDone(i: number, caseData: any, interventionCount: number, opts: StepperProgressOpts = {}): boolean {
-  if (!statusAtLeast(caseData, STEP_MIN_STATUS[i] ?? 0)) return false;
+  if (!STEP_STATUS_INDEPENDENT.has(i) && !statusAtLeast(caseData, STEP_MIN_STATUS[i] ?? 0)) return false;
   switch (i) {
     case 0: return !!caseData?.problemsPresented && !!caseData?.clientCategory;
     // Implement HIP: an intervention alone is not enough — every required

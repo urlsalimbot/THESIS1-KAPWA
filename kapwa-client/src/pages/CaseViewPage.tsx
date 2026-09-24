@@ -324,7 +324,7 @@ export function CaseViewPage() {
     <StepAssessment key="assessment" caseId={id!} caseData={caseData} assessment={assessment}
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
       userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />,
-    <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[1] || caseClosed} />,
+    <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
     <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[2] || caseClosed} />,
     <StepTransition key="transition" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[3] || caseClosed} />,
     <StepClosure key="closure" caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed} />,
