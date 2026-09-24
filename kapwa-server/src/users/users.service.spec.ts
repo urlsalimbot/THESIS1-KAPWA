@@ -238,5 +238,21 @@ describe('UsersService', () => {
 
       expect(user.agencyId).toBe('ag-rhu');
     });
+
+    it('refuses assigning the claimant role from the admin panel', async () => {
+      const user = { id: 'u1', role: UserRole.SW, save: jest.fn() };
+      mockRepo.findOne.mockResolvedValue(user);
+
+      await expect(service.update('u1', { role: UserRole.CLAIMANT })).rejects.toThrow(BadRequestException);
+      expect(user.save).not.toHaveBeenCalled();
+    });
+
+    it("refuses changing an existing claimant's role", async () => {
+      const user = { id: 'u2', role: UserRole.CLAIMANT, save: jest.fn() };
+      mockRepo.findOne.mockResolvedValue(user);
+
+      await expect(service.update('u2', { role: UserRole.ADMIN })).rejects.toThrow(BadRequestException);
+      expect(user.save).not.toHaveBeenCalled();
+    });
   });
 });

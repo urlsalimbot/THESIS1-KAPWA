@@ -2,14 +2,16 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { mutate } from 'swr';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
-import { Search, RotateCcw, Pencil, Ban, UserCheck } from 'lucide-react';
+import { Search, RotateCcw, Pencil, Ban, UserCheck, Lock } from 'lucide-react';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -50,16 +52,41 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLE_OPTIONS = Object.keys(ROLE_LABELS);
 
+// The claimant role is owned by beneficiary self-registration, not the admin
+// panel: it can neither be assigned to a user nor removed from an existing
+// claimant here. It stays in the role *filter* so admins can still find them.
+const CLAIMANT_ROLE = 'claimant';
+const ASSIGNABLE_ROLES = ROLE_OPTIONS.filter((r) => r !== CLAIMANT_ROLE);
+
 type UserTab = 'active' | 'disabled';
 
+function initialsOf(user: AppUser): string {
+  const source = user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`;
+  const parts = source.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return (parts[0][0] + (parts[parts.length - 1][0] ?? '')).toUpperCase();
+}
+
 function EditableRoleCell({ user, onRoleChange, roleLabel }: { user: AppUser; onRoleChange: (user: AppUser, role: string) => void; roleLabel: (r: string) => string }) {
+  if (user.role === CLAIMANT_ROLE) {
+    return (
+      <Badge
+        variant="secondary"
+        className="gap-1 font-normal"
+        title="Claimant accounts are created by beneficiary self-registration and their role cannot be changed here"
+      >
+        <Lock size={11} aria-hidden="true" />
+        {roleLabel(CLAIMANT_ROLE)}
+      </Badge>
+    );
+  }
   return (
     <Select defaultValue={user.role} onValueChange={(v) => onRoleChange(user, v)}>
       <SelectTrigger aria-label={`Role for ${user.email}`} className="h-7 w-36 text-xs">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {ROLE_OPTIONS.map((r) => (
+        {ASSIGNABLE_ROLES.map((r) => (
           <SelectItem key={r} value={r} className="text-xs">{roleLabel(r)}</SelectItem>
         ))}
       </SelectContent>
@@ -101,6 +128,18 @@ export default function UsersPanel() {
   const effectiveStatus = tab === 'active' ? 'active' : 'inactive';
 
   const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(queryKeys.agencies.list());
+
+  // Per-status totals for the tab labels (one cheap request each).
+  const { data: counts } = useSWR<{ active: number; disabled: number }>(
+    ['users', 'counts'],
+    async () => {
+      const [a, b] = await Promise.all([
+        api.get<UsersResponse>('/users?status=active&page=1&limit=1'),
+        api.get<UsersResponse>('/users?status=inactive&page=1&limit=1'),
+      ]);
+      return { active: a?.total ?? 0, disabled: b?.total ?? 0 };
+    },
+  );
 
   const { data: response, isLoading } = useSWR<UsersResponse>(
     ['users', search, effectiveRole, effectiveStatus, pagination.pageIndex + 1, pagination.pageSize] as const,
@@ -154,8 +193,9 @@ export default function UsersPanel() {
         middleName: editMiddleName,
         lastName: editLastName,
         nameExtension: editNameExtension,
-        role: editRole,
       };
+      // A claimant's role is fixed; omit it so the API never sees a role change.
+      if (editUser.role !== CLAIMANT_ROLE) body.role = editRole;
       if (editBarangay) body.assignedBarangay = editBarangay;
       if (editPermittedBarangays.trim()) {
         body.permittedBarangays = editPermittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
@@ -189,17 +229,21 @@ export default function UsersPanel() {
 
   const columns: ColumnDef<AppUser>[] = [
     {
-      accessorKey: 'email',
-      header: t('usersPanel.email', 'Email'),
+      id: 'user',
+      header: t('usersPanel.userCol', 'User'),
       cell: ({ row }) => (
-        <span className="text-sm font-medium">{row.original.email}</span>
-      ),
-    },
-    {
-      accessorKey: 'fullName',
-      header: t('usersPanel.name', 'Name'),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.fullName || '—'}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+          >
+            {initialsOf(row.original)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">{row.original.fullName || '—'}</p>
+            <p className="truncate text-xs text-muted-foreground">{row.original.email}</p>
+          </div>
+        </div>
       ),
     },
     {
@@ -230,6 +274,7 @@ export default function UsersPanel() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => openEdit(row.original)}
+            title={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
             className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
             aria-label={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
           >
@@ -238,6 +283,7 @@ export default function UsersPanel() {
           {tab === 'active' ? (
             <button
               onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'disable' })}
+              title={t('usersPanel.disableAria', 'Disable {{email}}', { email: row.original.email })}
               className="w-7 h-7 rounded flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
               aria-label={t('usersPanel.disableAria', 'Disable {{email}}', { email: row.original.email })}
             >
@@ -246,6 +292,7 @@ export default function UsersPanel() {
           ) : (
             <button
               onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'enable' })}
+              title={t('usersPanel.enableAria', 'Enable {{email}}', { email: row.original.email })}
               className="w-7 h-7 rounded flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
               aria-label={t('usersPanel.enableAria', 'Enable {{email}}', { email: row.original.email })}
             >
@@ -300,8 +347,14 @@ export default function UsersPanel() {
       {/* Active / Disabled split — disabled users are kept, never deleted */}
       <Tabs value={tab} onValueChange={changeTab}>
         <TabsList>
-          <TabsTrigger value="active">{t('usersPanel.tabActive', 'Active users')}</TabsTrigger>
-          <TabsTrigger value="disabled">{t('usersPanel.tabDisabled', 'Disabled users')}</TabsTrigger>
+          <TabsTrigger value="active">
+            {t('usersPanel.tabActive', 'Active users')}
+            {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.active}</span> : null}
+          </TabsTrigger>
+          <TabsTrigger value="disabled">
+            {t('usersPanel.tabDisabled', 'Disabled users')}
+            {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.disabled}</span> : null}
+          </TabsTrigger>
         </TabsList>
         {/* One table instance per panel (Radix mounts only the active panel), so
             each tab has the aria-controls target axe expects. */}
@@ -359,20 +412,30 @@ export default function UsersPanel() {
                 <Input id="edit-ext" value={editNameExtension} onChange={e => setEditNameExtension(e.target.value)} />
               </div>
             </div>
+
+            <Separator />
+
             <div className="space-y-1">
               <Label htmlFor="edit-role">{t('usersPanel.roleCol', 'Role')}</Label>
-              <Select value={editRole} onValueChange={setEditRole}>
-                <SelectTrigger id="edit-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLE_OPTIONS.map((r) => (
-                    <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {editUser?.role === CLAIMANT_ROLE ? (
+                <div className="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  <Lock size={14} aria-hidden="true" />
+                  {t('usersPanel.claimantLocked', 'Claimant — set by beneficiary self-registration and cannot be changed here')}
+                </div>
+              ) : (
+                <Select value={editRole} onValueChange={setEditRole}>
+                  <SelectTrigger id="edit-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSIGNABLE_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
-            {editRole === 'agency_staff' && (
+            {editRole === 'agency_staff' && editUser?.role !== CLAIMANT_ROLE && (
               <div className="space-y-1">
                 <Label htmlFor="edit-agency">{t('usersPanel.agency', 'Agency')}</Label>
                 <Select value={editAgencyId} onValueChange={setEditAgencyId}>

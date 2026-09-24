@@ -163,6 +163,15 @@ export class UsersService {
   async update(id: string, data: { firstName?: string; middleName?: string; lastName?: string; nameExtension?: string; role?: string; assignedBarangay?: string; permittedBarangays?: string[]; agencyId?: string }) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
+    // The claimant role is not managed from the admin panel: it is set when a
+    // beneficiary self-registers. Admins must not assign it, nor change an
+    // existing claimant's role.
+    if (data.role === UserRole.CLAIMANT) {
+      throw new BadRequestException('The claimant role cannot be assigned from the admin panel');
+    }
+    if (user.role === UserRole.CLAIMANT && data.role && data.role !== UserRole.CLAIMANT) {
+      throw new BadRequestException("A claimant's role cannot be changed");
+    }
     if (data.role) user.role = data.role as UserRole;
     if (data.firstName !== undefined) user.firstName = data.firstName;
     if (data.middleName !== undefined) user.middleName = data.middleName;

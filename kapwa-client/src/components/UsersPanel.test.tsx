@@ -142,4 +142,61 @@ describe('UsersPanel', () => {
       );
     });
   });
+
+  it('renders a claimant\'s role as locked — no inline role dropdown', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('agencies')) return Promise.resolve([]);
+      if (k.includes('status=inactive')) return Promise.resolve({ data: [], total: 0, page: 1, limit: 1 });
+      if (k.includes('users')) {
+        return Promise.resolve({
+          data: [{
+            id: 'c1', email: 'claimant@test.com', fullName: 'Pedro Claimant', role: 'claimant',
+            assignedBarangay: '', isActive: true, createdAt: '2026-01-01T00:00:00Z',
+          }],
+          total: 1, page: 1, limit: 10,
+        });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<UsersPanel />);
+    expect(await screen.findByText('claimant@test.com')).toBeTruthy();
+    expect(screen.getByText('Claimant')).toBeTruthy();
+    // No editable role control for a claimant.
+    expect(screen.queryByLabelText('Role for claimant@test.com')).toBeNull();
+  });
+
+  it('omits role when saving a claimant so the API never sees a role change', async () => {
+    const user = userEvent.setup();
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('agencies')) return Promise.resolve([]);
+      if (k.includes('status=inactive')) return Promise.resolve({ data: [], total: 0, page: 1, limit: 1 });
+      if (k.includes('users')) {
+        return Promise.resolve({
+          data: [{
+            id: 'c1', email: 'claimant@test.com', fullName: 'Pedro Claimant',
+            firstName: 'Pedro', lastName: 'Claimant', role: 'claimant',
+            assignedBarangay: '', isActive: true, createdAt: '2026-01-01T00:00:00Z',
+          }],
+          total: 1, page: 1, limit: 10,
+        });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<UsersPanel />);
+    await screen.findByText('claimant@test.com');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit claimant@test.com' }));
+    await screen.findByRole('dialog', {}, { timeout: 10000 });
+    expect(screen.getByText(/set by beneficiary self-registration/i)).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await vi.waitFor(() => {
+      expect(mockApiPatch).toHaveBeenCalledWith('/users/c1', expect.not.objectContaining({ role: expect.anything() }));
+    });
+  });
 });
