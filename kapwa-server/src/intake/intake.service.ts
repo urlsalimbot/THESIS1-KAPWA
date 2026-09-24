@@ -8,6 +8,7 @@ import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
+import { CaseHistory } from '../cases/case-history.entity';
 import { CaseRequirement } from '../cases/case-requirement.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
@@ -478,6 +479,21 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       });
       const savedCase = await queryRunner.manager.save(caseEntity);
 
+      // Record the intake in the case history so the Case History panel has an
+      // opening entry from the moment the case exists, instead of staying empty
+      // until the first status transition.
+      await queryRunner.manager.save(CaseHistory, {
+        caseId: savedCase.id,
+        fromStatus: undefined,
+        toStatus: CaseStatus.ENROLLED,
+        changedByRole: caller?.role,
+        changedById: caller?.id,
+        remarks: data.renewalOfCaseId
+          ? 'Case created by renewal intake'
+          : 'Case created by general intake',
+        transitionType: 'standard',
+      });
+
       if (data.case?.requirementsChecklist) {
         for (const [requirementKey, met] of Object.entries(data.case.requirementsChecklist)) {
           await queryRunner.manager.save(CaseRequirement, {
@@ -739,6 +755,17 @@ const caseEntity = this.caseRepo.create({
           assignedWorkerId: caller && isCaseWorker(caller.role) ? caller.id : undefined,
         });
         savedCase = await queryRunner.manager.save(caseEntity);
+
+        // Opening history entry for the confirmed-match intake (see submitIntake).
+        await queryRunner.manager.save(CaseHistory, {
+          caseId: savedCase.id,
+          fromStatus: undefined,
+          toStatus: CaseStatus.ENROLLED,
+          changedByRole: caller?.role,
+          changedById: caller?.id,
+          remarks: 'Case created from a confirmed prior-records match',
+          transitionType: 'standard',
+        });
 
         if (data.case?.requirementsChecklist) {
           for (const [requirementKey, met] of Object.entries(data.case.requirementsChecklist)) {

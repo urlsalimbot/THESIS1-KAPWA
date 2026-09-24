@@ -217,9 +217,16 @@ export function CaseViewPage() {
   useEffect(() => {
     if (caseData?.id && caseData?.controlNo) setCaseLabel(caseData.id, caseData.controlNo);
   }, [caseData?.id, caseData?.controlNo]);
-  const { data: history, isLoading: historyLoading } = useSWR<any[]>(
+  const { data: history, isLoading: historyLoading, mutate: mutateHistory } = useSWR<any[]>(
     id ? queryKeys.cases.detail(`${id}/history`) : null,
   );
+  // Case history lives under its own SWR key, so the exact-key mutations that
+  // follow transitions / approvals / rejections never touch it and the panel
+  // stayed stale until a full reload. Revalidate it whenever the case itself
+  // changes.
+  useEffect(() => {
+    if (id && caseData?.updatedAt) mutateHistory();
+  }, [id, caseData?.updatedAt, mutateHistory]);
   const benId = caseData?.beneficiary?.id;
   const { data: famGraph, isLoading: famLoading } = useSWR<{ members: Array<Record<string, unknown>>; primary: Record<string, unknown> }>(
     benId ? queryKeys.beneficiaries.familyGraph(benId) : null,

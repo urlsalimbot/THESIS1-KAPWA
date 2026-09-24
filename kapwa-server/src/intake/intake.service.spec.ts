@@ -13,6 +13,7 @@ import { BeneficiaryRole } from '../beneficiaries/beneficiary-role.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { Case, CaseStatus } from '../cases/case.entity';
+import { CaseHistory } from '../cases/case-history.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { CasesService } from '../cases/cases.service';
 import { Referral } from '../referrals/referral.entity';
@@ -216,6 +217,23 @@ describe('IntakeService', () => {
           assignedWorkerId: 'caller-1',
           controlNo: 'KAPWA-2026-00001',
           status: CaseStatus.ENROLLED,
+        }),
+      );
+    });
+
+    it('records an opening case-history entry so the panel is never blank', async () => {
+      const saveMock = mockSaveSequence();
+      stubCreates();
+
+      await service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW });
+
+      const historyCall = saveMock.mock.calls.find(([entity]) => entity === CaseHistory);
+      expect(historyCall).toBeTruthy();
+      expect(historyCall![1]).toEqual(
+        expect.objectContaining({
+          toStatus: CaseStatus.ENROLLED,
+          remarks: 'Case created by general intake',
+          transitionType: 'standard',
         }),
       );
     });
