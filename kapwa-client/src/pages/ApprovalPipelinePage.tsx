@@ -46,8 +46,16 @@ export function ApprovalPipelinePage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
-  const { data: rawCases, isLoading: loading } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list());
-  const cases = Array.isArray(rawCases) ? rawCases : (rawCases?.data ?? []);
+  // Fetch each pipeline status explicitly: the default `/cases` list is
+  // paginated (newest 10) and ordered by createdAt, so in-review / transitioning
+  // cases were routinely missing from their columns.
+  const { data: rawInReview, isLoading: loadingInReview } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'in_review', limit: 200 }));
+  const { data: rawActive, isLoading: loadingActive } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'active', limit: 200 }));
+  const { data: rawTransitioning, isLoading: loadingTransitioning } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'transitioning', limit: 200 }));
+  const unwrapCases = (d: ApprovalCase[] | { data: ApprovalCase[] } | undefined): ApprovalCase[] =>
+    Array.isArray(d) ? d : (d?.data ?? []);
+  const cases = [...unwrapCases(rawInReview), ...unwrapCases(rawActive), ...unwrapCases(rawTransitioning)];
+  const loading = loadingInReview || loadingActive || loadingTransitioning;
   const { user } = useAuth();
   const [selectedCase, setSelectedCase] = useState<ApprovalCase | null>(null);
   const [signature, setSignature] = useState<string>('');
@@ -92,6 +100,10 @@ export function ApprovalPipelinePage() {
     items: cases.filter(c => phase.statuses.includes(c.status)),
   }));
 
+  const revalidateCases = useCallback(() => {
+    globalMutate((key) => Array.isArray(key) && key[0] === 'cases');
+  }, [globalMutate]);
+
   // FormData uploads stay on raw fetch (D-10 deferred — JSON-only api client).
   async function handleApprove(caseId: string) {
     setSaving(true);
@@ -101,7 +113,7 @@ export function ApprovalPipelinePage() {
       setSelectedCase(null);
       setAction(null);
       setSignature('');
-      globalMutate(queryKeys.cases.all);
+      revalidateCases();
     } catch (e) { console.error('Approve failed', e); }
     setSaving(false);
   }
@@ -111,7 +123,7 @@ export function ApprovalPipelinePage() {
     await showBulkProgress(ids, async (id) => {
       await api.patch(`/cases/${id}/approve`, { status: 'active', signature: reason || '' });
     }, t('approvals.approving', 'Approving'));
-    globalMutate(queryKeys.cases.all);
+    revalidateCases();
     clearSelection();
   }
 

@@ -151,19 +151,6 @@ const ROUTE_HELP: Record<string, RouteHelp> = {
     ],
   },
 
-  '/irf': {
-    title: 'Incident Report Forms (IRF)',
-    tips: [
-      'IRFs are for VAWC/RA 9262 cases — handle with sensitivity.',
-      'Attach blotter entry numbers for cross-referencing police records.',
-      'All IRF data is PII-protected and access-restricted.',
-    ],
-    faqs: [
-      { q: 'Who can view IRF records?', a: 'Access is restricted to authorized social workers and administrators handling VAWC cases.' },
-      { q: 'Can I print an IRF?', a: 'Yes — use the Print option in the IRF detail view for a formatted copy.' },
-    ],
-  },
-
   '/admin/programs': {
     title: 'Programs & Assignments',
     tips: [

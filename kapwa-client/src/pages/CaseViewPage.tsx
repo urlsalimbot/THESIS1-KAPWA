@@ -61,6 +61,16 @@ const STATUS_LABELS: Record<string, string> = {
   closed: 'Closed',
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'MSWDO Admin',
+  social_worker: 'MSWDO Social Worker',
+  coordinator: 'Barangay Coordinator',
+  claimant: 'Claimant',
+  mayor: "Mayor's Office",
+  auditor: 'Auditor',
+  agency_staff: 'Agency Staff',
+};
+
 export function CaseViewPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -136,6 +146,20 @@ export function CaseViewPage() {
   );
 
   const { data: programs } = useSWR<any[]>(queryKeys.programs.list());
+
+  // "Service Requested" reflects what is actually being delivered: the latest
+  // intervention or inter-agency referral, whichever is newer. Falls back to the
+  // intake's serviceRequested when neither exists yet.
+  const latestService = useMemo(() => {
+    const ints = (interventions || []).map((i: any) => ({ label: i?.serviceName, at: i?.deliveryDate || i?.createdAt }));
+    const refs = (iarReferrals || []).map((r: any) => ({ label: r?.reason, at: r?.createdAt }));
+    const dated = [...ints, ...refs].filter((x) => x.label && x.at);
+    if (dated.length > 0) {
+      dated.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+      return String(dated[0].label);
+    }
+    return (caseData?.serviceRequested || []).join(', ') || '—';
+  }, [interventions, iarReferrals, caseData]);
 
   const requirementsMet = useMemo(
     () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
@@ -372,10 +396,18 @@ export function CaseViewPage() {
           <section className="rounded-lg border bg-card" aria-label={t('cases.caseDetails', 'Case details')}>
             <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
               <dl className="grid flex-1 min-w-[15rem] grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <Meta label={t('cases.serviceRequested', 'Service Requested')} value={(caseData.serviceRequested || []).join(', ') || '—'} />
+                <Meta label={t('cases.serviceRequested', 'Service Requested')} value={latestService} />
                 <Meta label={t('cases.assignedWorker', 'Assigned Worker')} value={caseData.assignedWorker?.fullName || '—'} />
-                {caseData.approvedByRole && (
-                  <Meta label={t('cases.approvedBy', 'Approved By')} value={caseData.approvedByRole} />
+                {(caseData.approvedByName || caseData.approvedByRole) && (
+                  <Meta
+                    label={t('cases.approvedBy', 'Approved By')}
+                    value={[
+                      caseData.approvedByName,
+                      caseData.approvedByRole
+                        ? (ROLE_LABELS[caseData.approvedByRole] || String(caseData.approvedByRole).replace(/_/g, ' '))
+                        : null,
+                    ].filter(Boolean).join(' — ')}
+                  />
                 )}
                 <Meta
                   label={t('cases.createdUpdatedLabel', 'Created · Updated')}
@@ -474,12 +506,12 @@ export function CaseViewPage() {
             <div className="rounded-lg border bg-card px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
               <span className="text-sm font-semibold">{t('caseView.generatedDocs', 'Generated Documents')}</span>
               {caseData.certificateUrl && (
-                <a href={caseData.certificateUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <a href={api.url(caseData.certificateUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
                   <FileText size={14} /> {t('caseView.viewCertificate', 'View Certificate of Eligibility')}
                 </a>
               )}
               {caseData.pettyCashVoucherUrl && (
-                <a href={caseData.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <a href={api.url(caseData.pettyCashVoucherUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
                   <FileText size={14} /> {t('caseView.viewVoucher', 'View Petty Cash Voucher')}
                 </a>
               )}

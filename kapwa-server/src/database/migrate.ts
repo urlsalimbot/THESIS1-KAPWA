@@ -275,6 +275,7 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS closure_outcome VARCHAR`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS closure_date DATE`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS follow_up_visits JSONB`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_name TEXT`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS case_requirements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),

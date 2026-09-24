@@ -115,12 +115,12 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
           <h3 className="text-sm font-semibold mb-2">{t('caseView.implement.generatedDocs', 'Generated Documents')}</h3>
           <div className="flex flex-wrap gap-x-5 gap-y-1.5">
             {caseData.certificateUrl && (
-              <a href={caseData.certificateUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <a href={api.url(caseData.certificateUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
                 <FileText size={14} /> {t('caseView.implement.viewCertificate', 'View Certificate of Eligibility')}
               </a>
             )}
             {caseData.pettyCashVoucherUrl && (
-              <a href={caseData.pettyCashVoucherUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <a href={api.url(caseData.pettyCashVoucherUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
                 <FileText size={14} /> {t('caseView.implement.viewVoucher', 'View Petty Cash Voucher')}
               </a>
             )}

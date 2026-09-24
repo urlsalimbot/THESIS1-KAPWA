@@ -55,7 +55,6 @@ const AnnouncementDetailPage = lazy(() => import('./components/announcements/Ann
 const ClaimantAccessCardPage = lazy(() => import('./pages/ClaimantAccessCardPage').then(m => ({ default: m.ClaimantAccessCardPage })));
 const MayorReportsPage = lazy(() => import('./pages/MayorReportsPage').then(m => ({ default: m.MayorReportsPage })));
 const AuditorPage = lazy(() => import('./pages/AuditorPage').then(m => ({ default: m.AuditorPage })));
-const IrfPage = lazy(() => import('./pages/IrfPage').then(m => ({ default: m.IrfPage })));
 const IrfDetailPage = lazy(() => import('./pages/IrfDetailPage').then(m => ({ default: m.IrfDetailPage })));
 const CreateIrfPage = lazy(() => import('./pages/CreateIrfPage').then(m => ({ default: m.CreateIrfPage })));
 const CreateProgramPage = lazy(() => import('./pages/CreateProgramPage').then(m => ({ default: m.CreateProgramPage })));
@@ -129,7 +128,6 @@ const router = createBrowserRouter([
   { path: '/settings/mfa', element: <Navigate to="/settings" replace /> },
   { path: '/settings', element: <Private><SettingsPage /></Private> },
   { path: '/irf/new', element: <Private roles={['admin','social_worker']}><CreateIrfPage /></Private> },
-  { path: '/irf', element: <Private roles={['admin','social_worker']}><IrfPage /></Private> },
   { path: '/irf/:id', element: <Private roles={['admin','social_worker']}><IrfDetailPage /></Private> },
 
   { path: '/admin/programs/new', element: <Private roles={['admin']}><CreateProgramPage /></Private> },

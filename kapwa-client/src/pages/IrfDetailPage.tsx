@@ -362,7 +362,7 @@ export function IrfDetailPage() {
 
   if (!irf) {
     return (
-      <PageShell title={t('irf.notFoundTitle', 'Not Found')} description="" backTo={{ label: t('irf.irfList', 'IRF List'), onClick: () => navigate('/irf') }}>
+      <PageShell title={t('irf.notFoundTitle', 'Not Found')} description="" backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}>
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <FileJson size={40} className="mb-3 opacity-30" />
           <p className="text-sm">{t('irf.notFound', 'IRF case not found.')}</p>

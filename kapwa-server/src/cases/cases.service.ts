@@ -369,11 +369,25 @@ export class CasesService {
     c.status = newStatus;
     if (opts?.signature) c.approvedBySignature = opts.signature;
     if (opts?.userRole) c.approvedByRole = opts.userRole;
+    // Resolve the actor's display name so the case view can show
+    // "Approved by {name — role}" rather than a bare role slug.
+    if (opts?.actorId) {
+      const rows = await this.caseRepo.manager.query(
+        `SELECT first_name, middle_name, last_name, name_extension FROM users WHERE id = $1 LIMIT 1`,
+        [opts.actorId],
+      );
+      const u = rows[0];
+      if (u) {
+        c.approvedByName = [u.first_name, u.middle_name, u.last_name, u.name_extension]
+          .filter(Boolean)
+          .join(' ');
+      }
+    }
     if (newStatus === CaseStatus.CLOSED) c.closureDate = new Date().toISOString().split('T')[0];
     c.updatedAt = new Date();
     await this.caseRepo.save(c);
 
-    await this.logHistory(id, oldStatus, newStatus, opts?.userRole, undefined, opts?.reason || `Transitioned by ${opts?.userRole || 'system'}`, opts?.historyType);
+    await this.logHistory(id, oldStatus, newStatus, opts?.userRole, opts?.actorId, opts?.reason || `Transitioned by ${opts?.userRole || 'system'}`, opts?.historyType);
 
     await this.auditLog?.log('case.transition', id, opts?.actorId, { from: oldStatus, to: newStatus, by: opts?.userRole, controlNo: c.controlNo });
 

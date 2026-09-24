@@ -61,7 +61,16 @@ describe('ApprovalPipelinePage', () => {
     mockApiPut.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
-      if (k.includes('cases')) return Promise.resolve({ data: mockCases, total: 2 });
+      if (k.includes('cases')) {
+        // The pipeline fetches each status separately; return only the cases
+        // for the requested status so a case does not land in every column.
+        const status = k.includes('in_review') ? 'in_review'
+          : k.includes('transitioning') ? 'transitioning'
+            : k.includes('active') ? 'active'
+              : null;
+        const data = status ? mockCases.filter((c) => c.status === status) : mockCases;
+        return Promise.resolve({ data, total: data.length });
+      }
       return Promise.resolve(null);
     });
     await mutate(() => true, undefined, { revalidate: false });

@@ -14,7 +14,6 @@ import { ReferralCard } from '@/components/referrals/ReferralCard';
 import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
-import { StepInterventions } from './StepInterventions';
 import { useTranslation } from 'react-i18next';
 
 interface StepIntegratedDeliveryProps {
@@ -41,6 +40,8 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
   const initialBeneficiary = ben?.id
     ? { beneficiaryId: ben.id as string, label: `${ben.firstName || ''} ${ben.surname || ''}`.trim() }
     : undefined;
+
+  const hasReferrals = (referrals || []).length > 0;
 
   async function transition(id: string, action: string, body?: Record<string, string>) {
     setTransitioning(true);
@@ -102,9 +103,10 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
         </div>
       </div>
 
-      {/* Referral decision — Service Delivery is complete when a referral is
-          issued OR the social worker records that no referral is needed. */}
-      {(userRole === 'admin' || userRole === 'social_worker') && (
+      {/* Referral decision — only when no referral has been issued. Once a
+          referral exists, Service Delivery is complete on that referral and the
+          "mark not needed" prompt no longer applies. */}
+      {!hasReferrals && (userRole === 'admin' || userRole === 'social_worker') && (
         <div className="rounded-lg border bg-card">
           <div className="px-4 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -143,9 +145,6 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
           </div>
         </div>
       )}
-
-      {/* Interventions Record */}
-      <StepInterventions caseId={caseId} caseData={caseData} userRole={userRole} readOnly={readOnly} />
 
       {/* Status transitions */}
       {caseData?.status === 'in_review' && userRole === 'admin' && (
