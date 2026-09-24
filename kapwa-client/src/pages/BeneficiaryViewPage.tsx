@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useSWRConfig } from "swr";
 import useSWR from "swr";
 import { useTranslation } from "react-i18next";
-import { statusLabel } from "@/i18n/display";
+import { statusLabel, categoryLabel } from "@/i18n/display";
 import {
   ArrowLeft,
   User,
   MapPin,
   Users as UsersIcon,
-  Gift,
   FileText,
   Plus,
   ChevronDown,
@@ -60,13 +59,10 @@ interface BeneficiaryDetail {
     date: string;
     amount?: string;
   }[];
-  interventions: {
-    id: string;
-    type: string;
-    description: string;
-    date: string;
-    fundSource?: string;
-  }[];
+  /** Client category of the latest case — drives program eligibility. */
+  latestClientCategory?: string;
+  latestControlNo?: string;
+  latestCaseStatus?: string;
 }
 
 interface FamilyMember {
@@ -246,7 +242,21 @@ export function BeneficiaryViewPage() {
               : "",
           };
         }),
-        interventions: [],
+        // Most recently created case drives the client category shown beside the
+        // case list. Mirrors the "Client Category" column on the beneficiaries
+        // list, so both surfaces agree.
+        ...(() => {
+          const latest = [...beneficiaryCases].sort(
+            (a, b) =>
+              new Date((b.createdAt as string) || 0).getTime() -
+              new Date((a.createdAt as string) || 0).getTime(),
+          )[0];
+          return {
+            latestClientCategory: (latest?.clientCategory as string) || (b.category as string) || "",
+            latestControlNo: (latest?.controlNo as string) || "",
+            latestCaseStatus: (latest?.status as string) || "",
+          };
+        })(),
       });
     }
     if (famGraph?.members) setFamily(famGraph.members);
@@ -535,23 +545,31 @@ export function BeneficiaryViewPage() {
 
             <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
               <div className="flex items-center gap-2 text-primary mb-3">
-                <Gift size={16} />
-                <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.interventions", "Interventions")}</h3>
+                <Tag size={16} />
+                <h3 className="text-xs font-semibold uppercase tracking-wider">{t("beneficiaries.clientCategory", "Client Category")}</h3>
               </div>
-              {beneficiary.interventions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("beneficiaries.noInterventions", "No interventions recorded")}</p>
-              ) : (
-                <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                  {beneficiary.interventions.map((intv) => (
-                    <div key={intv.id} className="rounded bg-muted/50 px-2.5 py-2 text-sm">
-                      <p className="font-medium text-foreground">{intv.type}</p>
-                      <p className="text-xs text-muted-foreground">{intv.description}</p>
-                      {intv.fundSource && <p className="text-xs font-medium text-primary">{t("beneficiaries.fundLabel", "Fund: {{source}}", { source: intv.fundSource })}</p>}
-                      <p className="text-xs text-muted-foreground">{intv.date}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="space-y-2">
+                <p className={`text-sm font-medium ${beneficiary.latestClientCategory ? "text-foreground" : "text-muted-foreground"}`}>
+                  {beneficiary.latestClientCategory
+                    ? categoryLabel(t, beneficiary.latestClientCategory)
+                    : t("beneficiaries.noCategory", "No category recorded")}
+                </p>
+                {beneficiary.latestControlNo && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("beneficiaries.latestCase", "Latest case: {{controlNo}}", { controlNo: beneficiary.latestControlNo })}
+                  </p>
+                )}
+                {beneficiary.latestCaseStatus && (
+                  <div className="pt-1">
+                    <StatusBadge status={beneficiary.latestCaseStatus} />
+                  </div>
+                )}
+                {!beneficiary.latestClientCategory && !beneficiary.latestControlNo && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("beneficiaries.categoryAfterAssessment", "Set during the case assessment.")}
+                  </p>
+                )}
+              </div>
             </div>
 
 
