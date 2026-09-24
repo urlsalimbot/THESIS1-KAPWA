@@ -4,7 +4,7 @@ import { exportFileName } from './export-filename';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'kapwa_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
+export const REFRESH_TOKEN_KEY = 'refresh_token';
 export const LOGOUT_REASON_KEY = 'kapwa:logout-reason';
 const TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 3;
@@ -109,10 +109,34 @@ async function rawRequest<T>(
 
 let refreshInFlight: Promise<boolean> | null = null;
 
+/**
+ * Ends a session that can no longer be recovered: clears the tokens and tells
+ * the auth context, which drops the user and lets ProtectedRoute redirect to
+ * /login. Idempotent — it only fires when a token is actually present, so an
+ * unauthenticated 401 (a stale background request after logout) cannot trigger
+ * a spurious logout.
+ */
+function endSession(reason: string): void {
+  const hadToken = Boolean(
+    localStorage.getItem(TOKEN_KEY) || localStorage.getItem(REFRESH_TOKEN_KEY),
+  );
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  if (!hadToken) return;
+  localStorage.setItem(LOGOUT_REASON_KEY, reason);
+  window.dispatchEvent(
+    new CustomEvent(KAPWA_AUTH_LOGOUT_EVENT, { detail: { reason } }),
+  );
+}
+
 async function refreshToken(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight;
   const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
   if (!refresh) {
+    // Nothing to refresh with, so the session is already over. End it
+    // explicitly: returning false alone left a dead access token in place and
+    // the app stayed in the authenticated layout until a manual logout.
+    endSession('session_expired');
     return false;
   }
   refreshInFlight = (async () => {
@@ -123,12 +147,7 @@ async function refreshToken(): Promise<boolean> {
         body: JSON.stringify({ refreshToken: refresh }),
       });
       if (!res.ok) {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-        localStorage.setItem(LOGOUT_REASON_KEY, 'session_expired');
-        window.dispatchEvent(
-          new CustomEvent(KAPWA_AUTH_LOGOUT_EVENT, { detail: { reason: 'refresh_failed' } }),
-        );
+        endSession('session_expired');
         return false;
       }
       const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
@@ -136,12 +155,7 @@ async function refreshToken(): Promise<boolean> {
       if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
       return true;
     } catch {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.setItem(LOGOUT_REASON_KEY, 'network_error');
-      window.dispatchEvent(
-        new CustomEvent(KAPWA_AUTH_LOGOUT_EVENT, { detail: { reason: 'refresh_network_error' } }),
-      );
+      endSession('network_error');
       return false;
     } finally {
       refreshInFlight = null;
@@ -167,11 +181,17 @@ async function executeWithRetry<T>(
      * Concurrent 401s share the same refresh promise.
      * See SECURITY.md for the full flow.
      */
-    if (err instanceof ApiError && err.status === 401 && !isRetry) {
-      const refreshed = await refreshToken();
-      if (refreshed) {
-        return executeWithRetry<T>(method, normalized, body, signal, true, attempt);
+    if (err instanceof ApiError && err.status === 401) {
+      if (!isRetry) {
+        const refreshed = await refreshToken();
+        if (refreshed) {
+          return executeWithRetry<T>(method, normalized, body, signal, true, attempt);
+        }
       }
+      // Unrecoverable 401: no refresh token, refresh rejected, or the retried
+      // request was rejected again (e.g. the account was disabled). End the
+      // session so the app leaves the authenticated layout and shows /login.
+      endSession('session_expired');
       throw err;
     }
     const isRetryableError =

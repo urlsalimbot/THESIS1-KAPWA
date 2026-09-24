@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { api } from './api';
+import { api, REFRESH_TOKEN_KEY } from './api';
 import { clearDraft } from '../hooks/useIntakeAutosave';
 import { clearPendingIdPhoto } from './intake-id-photo';
 
@@ -154,6 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userIdRef.current) clearDraft(userIdRef.current);
     clearPendingIdPhoto();
     localStorage.removeItem('kapwa_token');
+    // Also drop the refresh token: leaving it behind let a background 401
+    // silently mint a new access token for an already logged-out user.
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     setToken(null);
     setUser(null);
   }

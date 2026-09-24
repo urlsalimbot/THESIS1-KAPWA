@@ -224,6 +224,43 @@ describe('token refresh + retry', () => {
     expect(localStorage.getItem('refresh_token')).toBeNull();
   });
 
+  it('ends the session on a 401 when no refresh token is available', async () => {
+    // A stale access token with no refresh token used to be rethrown as a plain
+    // 401, leaving the dead token in place so the app stayed in the
+    // authenticated layout until a manual logout.
+    localStorage.setItem('kapwa_token', 'stale');
+    localStorage.removeItem('refresh_token');
+    const listener = vi.fn();
+    window.addEventListener(KAPWA_AUTH_LOGOUT_EVENT, listener);
+    const fetchMock = vi.fn(() => Promise.resolve(jsonRes({}, 401)));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(api.get('/protected')).rejects.toBeTruthy();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('kapwa_token')).toBeNull();
+  });
+
+  it('ends the session when the retried request is rejected again', async () => {
+    localStorage.setItem('kapwa_token', 'old');
+    localStorage.setItem('refresh_token', 'rt');
+    const listener = vi.fn();
+    window.addEventListener(KAPWA_AUTH_LOGOUT_EVENT, listener);
+    // Refresh succeeds but every data request still 401s (account disabled).
+    const fetchMock = vi.fn((url: string) =>
+      String(url).includes('/auth/refresh')
+        ? Promise.resolve(jsonRes({ accessToken: 'new' }))
+        : Promise.resolve(jsonRes({}, 401)),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(api.get('/protected')).rejects.toBeTruthy();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('kapwa_token')).toBeNull();
+    expect(localStorage.getItem('refresh_token')).toBeNull();
+  });
+
   it('retries GET on transient network errors (TypeError) then succeeds', async () => {
     vi.useFakeTimers();
     try {
