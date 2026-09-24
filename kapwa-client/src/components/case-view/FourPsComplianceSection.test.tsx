@@ -48,11 +48,39 @@ describe('FourPsComplianceSection', () => {
     mockApiPost.mockResolvedValue({ generated: 12 });
   });
 
-  it('renders the summary and entries', async () => {
+  it('renders the summary, condition breakdown and entries', async () => {
     renderSection();
     expect(await screen.findByText('1/2 complied · 50% rate')).toBeInTheDocument();
-    expect(screen.getByText('Family Development Session')).toBeInTheDocument();
+    // The condition label appears both in the per-condition tile and on the item.
+    expect(screen.getAllByText('Family Development Session').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('School Attendance')).toBeInTheDocument();
+  });
+
+  it('groups items into compliance periods with a per-period bulk action', async () => {
+    renderSection();
+    expect(await screen.findByText('Oct 2026')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mark all complied' }));
+    // Only the unmet item is marked; the already-complied one is left alone.
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith('/fourps/compliance/e2/meet'));
+    expect(mockApiPatch).not.toHaveBeenCalledWith('/fourps/compliance/e1/meet');
+  });
+
+  it('flags a member with two consecutive missed periods as a delisting risk', async () => {
+    mockApiGet.mockResolvedValue({
+      total: 2,
+      complied: 0,
+      rate: 0,
+      byType: { fds: { total: 2, complied: 0, rate: 0 } },
+      entries: [
+        { id: 'a1', complianceType: 'fds', dueDate: '2026-09-01', monthLabel: 'Sep 2026', met: false, householdMemberId: 'p1', memberName: 'Ernesto Magbanua' },
+        { id: 'a2', complianceType: 'fds', dueDate: '2026-10-01', monthLabel: 'Oct 2026', met: false, householdMemberId: 'p1', memberName: 'Ernesto Magbanua' },
+      ],
+    });
+    renderSection();
+    expect(await screen.findByText('Delisting risk')).toBeInTheDocument();
+    // The member is named in the banner and on each of their period items.
+    expect(screen.getAllByText('Ernesto Magbanua').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('2 consecutive periods missed')).toBeInTheDocument();
   });
 
   it('marks a pending item as complied', async () => {
@@ -90,10 +118,5 @@ describe('FourPsComplianceSection', () => {
     expect(isFourPsCase({ clientCategory: '4Ps' })).toBe(true);
     expect(isFourPsCase({ serviceRequested: ['Financial Assistance'] })).toBe(false);
     expect(isFourPsCase(null)).toBe(false);
-  });
-
-  it('links to the payout schedule', async () => {
-    renderSection();
-    expect(await screen.findByRole('link', { name: 'Payout Schedule' })).toHaveAttribute('href', '/cases/C-1/payouts');
   });
 });

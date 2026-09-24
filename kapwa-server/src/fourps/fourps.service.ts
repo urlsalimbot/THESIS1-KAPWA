@@ -119,7 +119,20 @@ export class FourPsService {
     complied: number;
     rate: number;
     byType: Record<string, { total: number; complied: number; rate: number }>;
-    entries: CaseComplianceItem[];
+    // Plain shape (not the entity class): the rows are enriched with the member
+    // they belong to, and spreading an entity drops its methods.
+    entries: Array<{
+      id: string;
+      complianceType?: ComplianceType;
+      dueDate: string;
+      monthLabel?: string;
+      met: boolean;
+      metAt?: Date | null;
+      metBy?: string | null;
+      householdMemberId?: string;
+      memberName?: string;
+      memberRelationship?: string;
+    }>;
   }> {
     if (caller?.role === 'claimant') {
       const owned = await this.complianceRepo.query(
@@ -141,6 +154,29 @@ export class FourPsService {
       where: { caseId },
       order: { dueDate: 'ASC' },
     });
+
+    // Attribute each item to the household member it belongs to. The UI needs
+    // this to show whose condition an item is; `household_member_id` stores a
+    // person id, which is not the id the case payload exposes for members.
+    const memberIds = [...new Set(entries.map(e => e.householdMemberId).filter(Boolean))] as string[];
+    const memberRows: Array<{ id: string; full_name: string; relationship: string | null }> = memberIds.length
+      ? await this.complianceRepo.query(
+          `SELECT p.id,
+                  TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
+                  hm.relationship
+             FROM persons p
+             LEFT JOIN household_memberships hm ON hm.person_id = p.id
+            WHERE p.id = ANY($1::uuid[])`,
+          [memberIds],
+        )
+      : [];
+    const memberById = new Map(memberRows.map(r => [r.id, r]));
+    const enriched = entries.map(e => ({
+      ...e,
+      memberName: e.householdMemberId ? memberById.get(e.householdMemberId)?.full_name : undefined,
+      memberRelationship: e.householdMemberId ? memberById.get(e.householdMemberId)?.relationship ?? undefined : undefined,
+    }));
+
     const total = entries.length;
     const complied = entries.filter(e => e.met).length;
     const byType: Record<string, { total: number; complied: number; rate: number }> = {};
@@ -153,7 +189,7 @@ export class FourPsService {
     for (const value of Object.values(byType)) {
       value.rate = value.total > 0 ? value.complied / value.total : 0;
     }
-    return { total, complied, rate: total > 0 ? complied / total : 0, byType, entries };
+    return { total, complied, rate: total > 0 ? complied / total : 0, byType, entries: enriched };
   }
 
   async markComplied(id: string, userId: string): Promise<void> {

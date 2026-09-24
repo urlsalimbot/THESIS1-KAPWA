@@ -78,35 +78,63 @@ export function FourPsCompliancePage() {
 
           <TabsContent value="household">
             <section className="rounded-lg border bg-card">
-              <header className="flex items-center gap-2 px-4 py-3">
+              <header className="flex flex-wrap items-center gap-2 px-4 py-3">
                 <Users size={16} className="text-primary" aria-hidden="true" />
                 <h2 className="text-sm font-semibold">{t('fourps.householdMembers', 'Household Members')}</h2>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {t('fourps.memberCount', '{{count}} member(s)', { count: members.length })}
                 </span>
               </header>
-              <div className="border-t px-4 py-3 space-y-2">
+              <p className="border-t px-4 py-2 text-xs text-muted-foreground">
+                {t(
+                  'fourps.conditionsHint',
+                  'Conditions apply by age: health for children 0–5 and pregnant women, education for children 3–18, and FDS for the household head and spouse.',
+                )}
+              </p>
+              <div className="space-y-2 px-4 py-3">
                 {members.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     {t('fourps.noMembers', 'No household members recorded for this case.')}
                   </p>
                 ) : (
-                  members.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between gap-3 text-sm border-b last:border-0 py-2">
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{m.fullName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {[m.relationship, m.occupation, m.income != null ? `₱${Number(m.income).toLocaleString()}/mo` : null]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
+                  members.map((m) => {
+                    // Which conditionalities this member is monitored against —
+                    // mirrors the server's generation rule so the page explains
+                    // why a member does or does not have items.
+                    const age = m.age ?? 0;
+                    const relationship = (m.relationship || '').toLowerCase();
+                    const conditions: string[] = [];
+                    if (age < 6) conditions.push(t('fourps.type.health_checkup', 'Health Check-up'));
+                    if (age >= 3 && age <= 18) conditions.push(t('fourps.type.school_attendance', 'School Attendance'));
+                    if (m.isPrimary || relationship === 'spouse') conditions.push(t('fourps.type.fds', 'Family Development Session'));
+                    return (
+                      <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 border-b py-2 text-sm last:border-0">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{m.fullName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[m.relationship, m.occupation, m.income != null ? `₱${Number(m.income).toLocaleString()}/mo` : null]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                          {m.age != null && <Badge variant="outline" className="text-[10px]">{t('fourps.age', '{{age}} y/o', { age: m.age })}</Badge>}
+                          {m.isPrimary && <Badge variant="secondary" className="text-[10px]">{t('fourps.primary', 'Primary')}</Badge>}
+                          {conditions.length > 0 ? (
+                            conditions.map(condition => (
+                              <Badge key={condition} variant="outline" className="border-primary/30 text-[10px] text-primary">
+                                {condition}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">
+                              {t('fourps.noConditions', 'No conditions apply')}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {m.age != null && <Badge variant="outline" className="text-[10px]">{t('fourps.age', '{{age}} y/o', { age: m.age })}</Badge>}
-                        {m.isPrimary && <Badge variant="secondary" className="text-[10px]">{t('fourps.primary', 'Primary')}</Badge>}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </section>
