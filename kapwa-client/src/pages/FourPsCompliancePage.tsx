@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -9,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/lib/query-keys';
+import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
 
 interface HouseholdMember {
   id: string;
@@ -33,6 +35,11 @@ export function FourPsCompliancePage() {
   const { caseId } = useParams<{ caseId: string }>();
   const { t } = useTranslation();
   const { data: caseData } = useSWR<any>(caseId ? queryKeys.cases.detail(caseId) : null);
+
+  // Deep links to this route are not covered by the case view's registration.
+  useEffect(() => {
+    if (caseId && caseData?.controlNo) setBreadcrumbLabel(caseId, caseData.controlNo);
+  }, [caseId, caseData]);
 
   const household = caseData?.beneficiary?.household;
   const members: HouseholdMember[] = household?.familyMembers ?? [];

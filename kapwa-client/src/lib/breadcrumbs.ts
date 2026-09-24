@@ -64,6 +64,7 @@ const UUID_PARENT_NOUN: Record<string, string> = {
   programs: 'Program',
   messages: 'Message',
   referrals: 'Referral',
+  announcements: 'Announcement',
   users: 'User',
   agencies: 'Agency',
 };
