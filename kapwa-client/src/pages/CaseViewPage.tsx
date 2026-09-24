@@ -252,8 +252,15 @@ export function CaseViewPage() {
   async function saveAssessment() {
     setSavingAssessment(true);
     try {
+      // Empty strings must be omitted, not sent: the API rejects "" for the
+      // enum ('Cash' | 'Cheque') and numeric fields ("Please check the
+      // highlighted fields" / 400).
+      const payload: Record<string, unknown> = { ...assessment };
+      for (const key of ['modeFinancialAssistance', 'sourceOfFund', 'legislatorSpecify', 'clientSignature', 'familyDialogueNotes']) {
+        if (payload[key] === '') delete payload[key];
+      }
       await api.patch(`/cases/${id}/assessment`, {
-        ...assessment,
+        ...payload,
         interviewedBy: user?.fullName || '',
         amountAssistance: typeof assessment.amountAssistance === 'string'
           ? (assessment.amountAssistance === '' ? undefined : parseFloat(assessment.amountAssistance.replace(/,/g, '')))
