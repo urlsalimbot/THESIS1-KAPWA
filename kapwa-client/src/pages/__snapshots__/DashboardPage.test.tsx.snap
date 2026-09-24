@@ -34,11 +34,13 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
         >
           <button
             class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
+            type="button"
           >
             Review Referrals
           </button>
           <button
             class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
+            type="button"
           >
             <svg
               aria-hidden="true"
@@ -881,6 +883,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
               </p>
               <button
                 class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3 w-full"
+                type="button"
               >
                 View Cases
               </button>
@@ -932,6 +935,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
         </h2>
         <button
           class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
+          type="button"
         >
           <svg
             aria-hidden="true"
@@ -1086,6 +1090,7 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                     <button
                       aria-label="View Case"
                       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm h-9 rounded-md px-3"
+                      type="button"
                     >
                       <svg
                         aria-hidden="true"

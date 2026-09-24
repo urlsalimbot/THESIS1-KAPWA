@@ -266,6 +266,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
         </div>
         <button
           class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:shadow-sm h-9 rounded-md px-3"
+          type="button"
         >
           Search
         </button>
@@ -399,6 +400,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                   >
                     <button
                       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm h-9 rounded-md px-3"
+                      type="button"
                     >
                       <svg
                         aria-hidden="true"
