@@ -6,8 +6,12 @@ import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import {
   User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning,
-  Plus, Lock, Send, ExternalLink, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList,
+  Plus, Lock, Send, ExternalLink, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
 } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useCaseActions } from '../hooks/useCaseActions';
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
@@ -34,6 +38,13 @@ import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDel
 import { StepTransition } from '@/components/case-view/StepTransition';
 import { StepClosure } from '@/components/case-view/StepClosure';
 import { InterAgencyReferral } from '@/components/referrals/referral-utils';
+
+/** Decimal columns arrive from the API as strings ("78.00"); coerce or drop. */
+function toNumberOrUndefined(v: unknown): number | undefined {
+  if (v === '' || v === null || v === undefined) return undefined;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   enrolled: 'outline',
@@ -78,6 +89,26 @@ export function CaseViewPage() {
   const { mutate } = useSWRConfig();
   const { user } = useAuth();
   const [issuing, setIssuing] = useState<'coe' | 'pcv' | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
+
+  async function handleReject() {
+    if (!id || !rejectReason.trim()) return;
+    setRejecting(true);
+    try {
+      await api.patch(`/cases/${id}/reject`, { reason: rejectReason.trim() });
+      await mutate(queryKeys.cases.detail(id));
+      await mutate(queryKeys.cases.all);
+      toast.success(t('cases.rejected', 'Case rejected'));
+      setRejectOpen(false);
+      setRejectReason('');
+    } catch (e) {
+      toast.error(t('cases.rejectFailed', 'Could not reject case'), { description: humanizeError(e) });
+    } finally {
+      setRejecting(false);
+    }
+  }
 
   async function issueDoc(type: 'coe' | 'pcv') {
     setIssuing(type);
@@ -148,11 +179,15 @@ export function CaseViewPage() {
   const { data: programs } = useSWR<any[]>(queryKeys.programs.list());
 
   // "Service Requested" reflects what is actually being delivered: the latest
-  // intervention or inter-agency referral, whichever is newer. Falls back to the
-  // intake's serviceRequested when neither exists yet.
+  // intervention or inter-agency referral, whichever is newer. A referral shows
+  // the agency it went to ("Referred to PESO"). Falls back to the intake's
+  // serviceRequested when neither exists yet.
   const latestService = useMemo(() => {
     const ints = (interventions || []).map((i: any) => ({ label: i?.serviceName, at: i?.deliveryDate || i?.createdAt }));
-    const refs = (iarReferrals || []).map((r: any) => ({ label: r?.reason, at: r?.createdAt }));
+    const refs = (iarReferrals || []).map((r: any) => {
+      const agency = r?.toAgency?.code || r?.toAgency?.name || r?.toAgencyCode;
+      return { label: agency ? `Referred to ${agency}` : r?.reason, at: r?.createdAt };
+    });
     const dated = [...ints, ...refs].filter((x) => x.label && x.at);
     if (dated.length > 0) {
       dated.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
@@ -265,8 +300,10 @@ export function CaseViewPage() {
         amountAssistance: typeof assessment.amountAssistance === 'string'
           ? (assessment.amountAssistance === '' ? undefined : parseFloat(assessment.amountAssistance.replace(/,/g, '')))
           : assessment.amountAssistance,
-        frvaScore: assessment.frvaScore || undefined,
-        swdiScore: assessment.swdiScore || undefined,
+        // Decimal columns come back from the API as strings ("78.00"); the
+        // schema requires numbers, so coerce before sending.
+        frvaScore: toNumberOrUndefined(assessment.frvaScore),
+        swdiScore: toNumberOrUndefined(assessment.swdiScore),
         familyDialogueNotes: assessment.familyDialogueNotes || undefined,
       });
       await mutate(queryKeys.cases.detail(id!));
@@ -332,7 +369,7 @@ export function CaseViewPage() {
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
       userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />,
     <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
-    <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[2] || caseClosed} />,
+    <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
     <StepTransition key="transition" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[3] || caseClosed} />,
     <StepClosure key="closure" caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed} />,
   ];
@@ -361,6 +398,10 @@ export function CaseViewPage() {
   const canRequestReview = caseData.status === 'enrolled'
     && caseData.problemsPresented && caseData.socialWorkerAssessment && caseData.clientCategory
     && user?.role === 'social_worker';
+
+  // Rejection is a Phase-In triage decision, available to both case roles.
+  const canReject = ['admin', 'social_worker'].includes(user?.role ?? '')
+    && ['enrolled', 'assessed', 'in_review'].includes(caseData.status);
 
   // `assessed` cases are submitted for admin review from the case view. Mirrors
   // the StepImplementHIP gate (interventions must exist before review because
@@ -473,6 +514,16 @@ export function CaseViewPage() {
                     <DropdownMenuItem onSelect={renewCase}>
                       <Plus size={14} className="mr-2" aria-hidden="true" /> {t('cases.renewCase', 'Renew Case')}
                     </DropdownMenuItem>
+                    {/* Rejection is a triage decision for the case workers while
+                        the case is still in Phase-In. */}
+                    {canReject && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => setRejectOpen(true)} className="text-destructive focus:text-destructive">
+                          <Ban size={14} className="mr-2" aria-hidden="true" /> {t('cases.rejectCase', 'Reject Case')}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     {caseData.status === 'closed' && (
                       <>
                         <DropdownMenuSeparator />
@@ -802,6 +853,46 @@ export function CaseViewPage() {
           </SectionCard>
         </aside>
       </div>
+
+      {/* Reject Case — a documented Phase-In triage decision. */}
+      <Dialog open={rejectOpen} onOpenChange={(o) => { if (!o) { setRejectOpen(false); setRejectReason(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('cases.rejectTitle', 'Reject this case?')}</DialogTitle>
+            <DialogDescription>
+              {t(
+                'cases.rejectDescription',
+                'The case is closed as incomplete and will not proceed to service delivery. A reason is recorded in the case history and audit log.',
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1">
+            <label htmlFor="reject-reason" className="text-xs font-medium text-muted-foreground">
+              {t('cases.rejectReason', 'Reason for rejection *')}
+            </label>
+            <Textarea
+              id="reject-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder={t('cases.rejectReasonPlaceholder', 'e.g. Duplicate intake; client already has an active case.')}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setRejectOpen(false); setRejectReason(''); }}>
+              {t('cases.cancel', 'Cancel')}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={!rejectReason.trim() || rejecting}
+              onClick={handleReject}
+            >
+              {rejecting ? t('cases.rejecting', 'Rejecting…') : t('cases.rejectConfirm', 'Reject Case')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
     );
 }

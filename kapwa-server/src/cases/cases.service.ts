@@ -459,6 +459,42 @@ export class CasesService {
     return this.transition(id, newStatus, { userRole, actorId, reason: 'Case closed' });
   }
 
+  // Reject a case: a terminal outcome for an intake that must not proceed to
+  // service delivery. Distinct from the admin-only override because it is a
+  // documented decision (reason required) available to the case workers who
+  // actually triage intakes, and it only applies while the case is still in
+  // Phase-In (enrolled / assessed / in_review).
+  async reject(id: string, reason: string, userRole?: string, actorId?: string) {
+    const c = await this.findById(id);
+    if (userRole !== 'admin' && userRole !== 'social_worker') {
+      throw new ForbiddenException(`Role ${userRole} cannot reject a case`);
+    }
+    if (!reason || reason.trim().length === 0) {
+      throw new BadRequestException('Rejection reason is required');
+    }
+    const rejectable: CaseStatus[] = [CaseStatus.ENROLLED, CaseStatus.ASSESSED, CaseStatus.IN_REVIEW];
+    if (!rejectable.includes(c.status)) {
+      throw new BadRequestException(`A case in ${c.status} cannot be rejected`);
+    }
+    const oldStatus = c.status;
+    c.status = CaseStatus.CLOSED;
+    c.closureOutcome = 'incomplete';
+    c.closureDate = new Date().toISOString().split('T')[0];
+    c.updatedAt = new Date();
+    await this.caseRepo.save(c);
+    await this.logHistory(
+      id,
+      oldStatus,
+      CaseStatus.CLOSED,
+      userRole,
+      actorId,
+      `Case rejected: ${reason}`,
+      'standard',
+    );
+    await this.auditLog?.log('case.reject', id, actorId, { from: oldStatus, reason, controlNo: c.controlNo });
+    return c;
+  }
+
   async overrideStatus(id: string, targetStatus: CaseStatus, reason: string, userRole?: string) {
     const c = await this.findById(id);
     if (userRole !== 'admin') {

@@ -116,7 +116,7 @@ export function AnnouncementDetailPage() {
         </div>
       }
     >
-      <div className="max-w-3xl space-y-4">
+      <div className="mx-auto w-full max-w-3xl space-y-4">
         <Card>
           <CardContent className="space-y-4 pt-6">
             <div>

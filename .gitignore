@@ -71,3 +71,6 @@ __pycache__/
 # Local test artifacts
 *.png
 !docs/**/*.png
+
+# local production-DB debug env (never commit)
+.env.prodlocal

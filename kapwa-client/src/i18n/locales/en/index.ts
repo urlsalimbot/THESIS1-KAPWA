@@ -246,6 +246,8 @@ const en = {
       "phaseIn": "Phase-In",
       "phaseOut": "Phase-Out",
       "serviceDelivery": "Inter-agency Referrals",
+      "documentsRequired": "Upload the required documents first",
+      "documentsRequiredDesc": "Step 2 (Intervention & Requirements) still has unmet documentary needs. Upload or verify each required document, or mark it passed on-site, before continuing.",
       "serviceDeliveryDesc": "Referral needed: yes or no",
       "stepNotAvailable": "Step not available",
       "transition": "Evaluate Help Given",
@@ -779,7 +781,6 @@ const en = {
     "write": "Write",
   },
   "approvals": {
-    "docsGeneratedNote": "Certificate of Eligibility and Petty Cash Voucher are generated automatically upon approval.",
     "phaseIn": "Phase-In",
     "phaseImplementation": "Implementation",
     "phaseOut": "Phase-Out",

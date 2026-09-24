@@ -85,11 +85,30 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
 
   function handleClick(i: number) {
     const done = stepperStepDone(i, caseData, interventionCount, progress);
-    if (done || i <= highestReachable + 1) {
+    // Intervention (step 1) and referral (step 2) are issued in parallel: with
+    // an intervention logged, Service Delivery is reachable regardless of
+    // documentary status, because referrals do not depend on it.
+    const parallelImplementation = i === 2 && interventionCount > 0;
+    if (done || i <= highestReachable + 1 || parallelImplementation) {
       onStepClick(i);
-    } else {
-      toast.error(t('caseView.stepper.stepNotAvailable', 'Step not available'), { description: t('caseView.stepper.accomplishStepFirst', 'Accomplish current step first.') });
+      return;
     }
+    // Explain *why* the step is locked instead of a bare "not available":
+    // step 1 (Intervention & Requirements) is the usual blocker, and it needs
+    // every program document satisfied before review can proceed.
+    if (i >= 2 && !progress.requirementsMet) {
+      toast.error(
+        t('caseView.stepper.documentsRequired', 'Upload the required documents first'),
+        {
+          description: t(
+            'caseView.stepper.documentsRequiredDesc',
+            'Step 2 (Intervention & Requirements) still has unmet documentary needs. Upload or verify each required document, or mark it passed on-site, before continuing.',
+          ),
+        },
+      );
+      return;
+    }
+    toast.error(t('caseView.stepper.stepNotAvailable', 'Step not available'), { description: t('caseView.stepper.accomplishStepFirst', 'Accomplish current step first.') });
   }
 
   // Group steps by phase

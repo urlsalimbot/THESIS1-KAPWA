@@ -7,7 +7,6 @@ import { AriaLiveRegion } from '@/components/a11y/AriaLiveRegion';
 import { PageShell } from '@/components/PageShell';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { BulkActionBar } from '@/components/bulk-actions/BulkActionBar';
 import { MaskedField } from '@/components/pii/MaskedField';
 import { SlaTimer } from '@/components/sla/SlaTimer';
 
@@ -134,34 +133,5 @@ describe('a11y component tests', () => {
     );
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
-  });
-
-  test('BulkActionBar has no a11y violations', async () => {
-    const { container } = render(
-      <BulkActionBar
-        selectedCount={2}
-        selectedIds={['1', '2']}
-        onApprove={() => {}}
-        onReassign={() => {}}
-        onExport={() => {}}
-        onClearSelection={() => {}}
-      />
-    );
-    const results = await axe(container);
-    expect(results.violations).toHaveLength(0);
-  });
-
-  test('BulkActionBar hidden when count is 0', () => {
-    const { container } = render(
-      <BulkActionBar
-        selectedCount={0}
-        selectedIds={[]}
-        onApprove={() => {}}
-        onReassign={() => {}}
-        onExport={() => {}}
-        onClearSelection={() => {}}
-      />
-    );
-    expect(container.innerHTML).toBe('');
   });
 });

@@ -32,6 +32,8 @@ export interface DataTableProps<TData, TValue> {
   onSortingChange?: (updater: Updater<SortingState>) => void;
   pagination: PaginationState;
   sorting: SortingState;
+  /** Hide the pagination footer (e.g. a fixed "recent" list on the dashboard). */
+  showPagination?: boolean;
   children?: React.ReactNode;
   enableRowSelection?: boolean;
   rowSelection?: RowSelectionState;
@@ -48,6 +50,7 @@ export function DataTable<TData, TValue>({
   onSortingChange,
   pagination,
   sorting,
+  showPagination = true,
   children,
   enableRowSelection = false,
   rowSelection,
@@ -185,7 +188,7 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table} total={rowCount} />
+      {showPagination && <DataTablePagination table={table} total={rowCount} />}
     </div>
   );
 }

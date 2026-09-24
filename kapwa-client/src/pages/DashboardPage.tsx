@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import { downloadMonthlyFunds } from '@/lib/api';
-import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { ClaimantWidgets } from '@/components/dashboard/widgets/ClaimantWidgets';
 import { MayorWidgets } from '@/components/dashboard/widgets/MayorWidgets';
 import { AuditorWidgets } from '@/components/dashboard/widgets/AuditorWidgets';
@@ -70,7 +70,6 @@ const WORKER_ROLES = ['social_worker', 'admin'];
 export function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const { user } = useAuth();
   const role = user?.role || '';
 
@@ -222,7 +221,7 @@ export function DashboardPage() {
             <ListChecks size={14} className="mr-1.5" /> {t('dashboard.openTracker', 'Open Tracker')}
           </Button>
         </div>
-        <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
+        <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={{ pageIndex: 0, pageSize: cases.length || 1 }} sorting={[]} showPagination={false} />
       </div>
     </PageShell>
   );

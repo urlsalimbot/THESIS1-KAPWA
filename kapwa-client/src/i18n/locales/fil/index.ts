@@ -511,7 +511,6 @@ const fil: EnLocale = {
     "viewAll": "Tingnan ang lahat ng abiso"
   },
   "approvals": {
-    "docsGeneratedNote": "Ang Certificate of Eligibility at Petty Cash Voucher ay awtomatikong binuo kapag naaprubahan ang kaso.",
     "phaseIn": "Phase-In",
     "phaseImplementation": "Implementasyon",
     "phaseOut": "Phase-Out",
@@ -1706,6 +1705,8 @@ const fil: EnLocale = {
       "phaseIn": "Phase-In",
       "phaseOut": "Phase-Out",
       "serviceDelivery": "Mga Inter-Agency Referral",
+      "documentsRequired": "I-upload muna ang mga kinakailangang dokumento",
+      "documentsRequiredDesc": "May mga hindi pa natutugunang pangangailangang dokumentaryo ang Hakbang 2 (Interbensyon at mga Kinakailangan). I-upload o i-verify ang bawat kinakailangang dokumento, o markahan na naipasa ito sa opisina, bago magpatuloy.",
       "serviceDeliveryDesc": "Kailangan ba ng referral: oo o hindi",
       "stepNotAvailable": "Hindi available ang hakbang",
       "transition": "Suriin ang Tulong na Naibigay",

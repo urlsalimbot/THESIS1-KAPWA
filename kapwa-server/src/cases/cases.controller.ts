@@ -26,7 +26,7 @@ function mapStatus(s: string): CaseStatus {
 
 import {
   CreateCaseSchema, UpdateStatusSchema, ApproveCaseSchema,
-  UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema,
+  UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema, RejectCaseSchema,
   AssessmentV2Schema, TransitionPlanSchema, RequirementsSchema, ClosureSchema,
   ReferralDecisionSchema,
   CreateCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
@@ -170,6 +170,15 @@ export class CasesController {
   @Roles('admin', 'social_worker')
   async close(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.casesService.close(id, CaseStatus.CLOSED, req.user?.role, req.user?.id);
+  }
+
+  // Rejecting an intake is a documented triage decision, so both case roles
+  // can perform it (unlike the admin-only override).
+  @Patch(':id/reject')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Reject a Phase-In case with a reason' })
+  async reject(@Param('id') id: string, @Body(new ZodPipe(RejectCaseSchema)) body: { reason: string }, @Request() req: AuthenticatedRequest) {
+    return this.casesService.reject(id, body.reason, req.user?.role, req.user?.id);
   }
 
   @Patch(':id/override-status')

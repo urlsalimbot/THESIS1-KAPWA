@@ -472,6 +472,36 @@ describe('FSM — overrideStatus', () => {
   });
 });
 
+describe('FSM — rejectCase', () => {
+  it('closes a Phase-In case as incomplete and records the reason', async () => {
+    const existing = { id: '1', status: CaseStatus.ASSESSED, updatedAt: new Date() } as Case;
+    repoMock.findOne.mockResolvedValue(existing);
+    repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.CLOSED });
+
+    const result = await service.reject('1', 'Duplicate intake', 'social_worker');
+
+    expect(result.status).toBe(CaseStatus.CLOSED);
+    expect(historyRepoMock.save).toHaveBeenCalledWith(
+      expect.objectContaining({ toStatus: CaseStatus.CLOSED, remarks: 'Case rejected: Duplicate intake' }),
+    );
+  });
+
+  it('requires a reason', async () => {
+    repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ASSESSED } as Case);
+    await expect(service.reject('1', '   ', 'admin')).rejects.toThrow('Rejection reason is required');
+  });
+
+  it('refuses roles other than admin / social_worker', async () => {
+    repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ASSESSED } as Case);
+    await expect(service.reject('1', 'Not eligible', 'mayor')).rejects.toThrow('cannot reject a case');
+  });
+
+  it('refuses to reject a case that already left Phase-In', async () => {
+    repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ACTIVE } as Case);
+    await expect(service.reject('1', 'Too late', 'admin')).rejects.toThrow('cannot be rejected');
+  });
+});
+
 describe('FSM — backward transitions', () => {
   it('should throw when moving active back to assessed via updateStatus', async () => {
     const existing = { id: '1', status: CaseStatus.ACTIVE, updatedAt: new Date() } as Case;

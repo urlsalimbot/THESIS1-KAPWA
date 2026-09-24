@@ -31,6 +31,10 @@ export const DisburseSchema = z.object({
   status: z.nativeEnum(CaseStatus),
 });
 
+export const RejectCaseSchema = z.object({
+  reason: z.string().min(1, 'Rejection reason is required'),
+});
+
 export const AssessmentSchema = z.object({
   problemsPresented: z.string().min(1, 'Problem/s presented is required'),
   socialWorkerAssessment: z.string().min(1, 'Social worker assessment is required'),
@@ -61,6 +65,7 @@ export type UpdateStatusInput = z.infer<typeof UpdateStatusSchema>;
 export type ApproveCaseInput = z.infer<typeof ApproveCaseSchema>;
 export type UpdateDocumentsInput = z.infer<typeof UpdateDocumentsSchema>;
 export type OverrideStatusInput = z.infer<typeof OverrideStatusSchema>;
+export type RejectCaseInput = z.infer<typeof RejectCaseSchema>;
 export type DisburseInput = z.infer<typeof DisburseSchema>;
 export type AssessmentInput = z.infer<typeof AssessmentSchema>;
 

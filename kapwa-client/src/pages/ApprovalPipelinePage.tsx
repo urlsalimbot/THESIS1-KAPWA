@@ -1,25 +1,14 @@
-import { useState, useCallback } from 'react';
-import { useSWRConfig } from 'swr';
-import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 import { statusLabel } from '@/i18n/display';
 import { stepperStatus } from '@/components/case-view/CaseStepper';
-import { api } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { queryKeys } from '../lib/query-keys';
-import { useAuth } from '../lib/auth-context';
-import SignaturePad from '../components/forms/SignaturePad';
-import { CheckCircle, ArrowRight, ListChecks, Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { BulkActionBar } from '@/components/bulk-actions/BulkActionBar';
-import { BulkApproveDialog } from '@/components/bulk-actions/BulkApproveDialog';
-import { BulkExportDialog } from '@/components/bulk-actions/BulkExportDialog';
-import { showBulkProgress } from '@/components/bulk-actions/BulkProgressToast';
 
 interface ApprovalCase {
   id: string;
@@ -45,7 +34,6 @@ interface ApprovalCase {
 export function ApprovalPipelinePage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { mutate: globalMutate } = useSWRConfig();
   // Fetch each pipeline status explicitly: the default `/cases` list is
   // paginated (newest 10) and ordered by createdAt, so in-review / transitioning
   // cases were routinely missing from their columns.
@@ -56,37 +44,7 @@ export function ApprovalPipelinePage() {
     Array.isArray(d) ? d : (d?.data ?? []);
   const cases = [...unwrapCases(rawInReview), ...unwrapCases(rawActive), ...unwrapCases(rawTransitioning)];
   const loading = loadingInReview || loadingActive || loadingTransitioning;
-  const { user } = useAuth();
-  const [selectedCase, setSelectedCase] = useState<ApprovalCase | null>(null);
-  const [signature, setSignature] = useState<string>('');
-  const [action, setAction] = useState<'approve' | 'disburse' | null>(null);
-  const [saving, setSaving] = useState(false);
   const lastSync = cases.length > 0 ? Date.now() : null;
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkApproveDialogOpen, setBulkApproveDialogOpen] = useState(false);
-  const [bulkExportDialogOpen, setBulkExportDialogOpen] = useState(false);
-
-  const toggleSelectMode = useCallback(() => {
-    setSelectMode(prev => !prev);
-    setSelectedIds(new Set());
-  }, []);
-
-  const toggleSelectId = useCallback((id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-
-  const clearSelection = useCallback(() => {
-    setSelectedIds(new Set());
-  }, []);
 
   // Aligned with the case stepper: Phase-In (Assessment) → Implementation
   // (Implement HIP + Service Delivery) → Phase-Out (Transition + Closure).
@@ -99,42 +57,6 @@ export function ApprovalPipelinePage() {
     ...phase,
     items: cases.filter(c => phase.statuses.includes(c.status)),
   }));
-
-  const revalidateCases = useCallback(() => {
-    globalMutate((key) => Array.isArray(key) && key[0] === 'cases');
-  }, [globalMutate]);
-
-  // FormData uploads stay on raw fetch (D-10 deferred — JSON-only api client).
-  async function handleApprove(caseId: string) {
-    setSaving(true);
-    try {
-      const targetStatus = action === 'disburse' ? 'transitioning' : 'active';
-      await api.patch(`/cases/${caseId}/approve`, { status: targetStatus, signature });
-      setSelectedCase(null);
-      setAction(null);
-      setSignature('');
-      revalidateCases();
-    } catch (e) { console.error('Approve failed', e); }
-    setSaving(false);
-  }
-
-  async function handleBulkApprove(reason?: string) {
-    const ids = Array.from(selectedIds);
-    await showBulkProgress(ids, async (id) => {
-      await api.patch(`/cases/${id}/approve`, { status: 'active', signature: reason || '' });
-    }, t('approvals.approving', 'Approving'));
-    revalidateCases();
-    clearSelection();
-  }
-
-  function openApproval(c: ApprovalCase, act: 'approve' | 'disburse') {
-    setSelectedCase(c);
-    setAction(act);
-    setSignature('');
-  }
-
-  const selectAllChecked = cases.length > 0 && cases.every(c => selectedIds.has(c.id));
-  const selectSomeChecked = cases.some(c => selectedIds.has(c.id)) && !selectAllChecked;
 
   if (loading) {
     return (
@@ -151,36 +73,7 @@ export function ApprovalPipelinePage() {
       title={t('approvals.title', 'Approval Pipeline')}
       description={t('approvals.description', 'Certificate of Eligibility review, Petty Cash Voucher management, and sign-off.')}
       cachedAt={lastSync ?? undefined}
-      actions={
-        <Button
-          variant={selectMode ? 'default' : 'outline'}
-          size="sm"
-          onClick={toggleSelectMode}
-        >
-          <ListChecks size={16} className="mr-1.5" />
-          {selectMode ? t('approvals.exitSelectMode', 'Exit Select Mode') : t('approvals.selectMode', 'Select Mode')}
-        </Button>
-      }
     >
-      {selectMode && cases.length > 0 && (
-        <div className="flex items-center gap-2 px-1 mb-2">
-          <Checkbox
-            checked={selectAllChecked || (selectSomeChecked ? 'indeterminate' : false)}
-            onCheckedChange={() => {
-              if (selectAllChecked) {
-                setSelectedIds(new Set());
-              } else {
-                setSelectedIds(new Set(cases.map(c => c.id)));
-              }
-            }}
-            aria-label={t('approvals.selectAllCases', 'Select all cases')}
-          />
-          <span className="text-sm text-muted-foreground">
-            {t('approvals.selectAllCases', 'Select all cases')}
-          </span>
-        </div>
-      )}
-
       {allEmpty ? (
         <EmptyState variant="no-data" />
       ) : (
@@ -199,24 +92,15 @@ export function ApprovalPipelinePage() {
                     className="border border-border rounded-lg p-3 hover:shadow-sm transition-shadow cursor-pointer"
                     onClick={() => navigate(`/cases/${c.id}`)}
                   >
-                    {selectMode && (
-                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
-                        <Checkbox
-                          checked={selectedIds.has(c.id)}
-                          onCheckedChange={() => toggleSelectId(c.id)}
-                          aria-label={t('approvals.selectCaseAria', 'Select {{controlNo}}', { controlNo: c.controlNo })}
-                        />
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {selectedIds.has(c.id) ? t('approvals.selected', 'Selected') : t('approvals.select', 'Select')}
-                        </span>
-                      </div>
-                    )}
                     <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <span className="font-medium text-sm text-foreground">{c.controlNo}</span>
-                        {c.beneficiary && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{c.beneficiary.surname}, {c.beneficiary.firstName}</p>
-                        )}
+                      <div className="min-w-0">
+                        <span className="font-medium text-sm text-foreground block truncate">
+                          {[
+                            c.beneficiary ? `${c.beneficiary.firstName || ''} ${c.beneficiary.surname || ''}`.trim() : '',
+                            (c.serviceRequested || []).join(', '),
+                          ].filter(Boolean).join(' - ') || c.controlNo}
+                        </span>
+                        <p className="text-xs text-muted-foreground mt-0.5">{c.controlNo}</p>
                       </div>
                       <Badge variant={
                         c.status === 'in_review' ? 'secondary' :
@@ -247,28 +131,13 @@ export function ApprovalPipelinePage() {
                       <span className="text-[10px] text-muted-foreground ml-1">{t('approvals.caseProgress', 'Case progress')}</span>
                     </div>
 
-                    {group.key === 'phase-in' && (
-                      <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
-                        <p className="text-xs text-muted-foreground">
-                          {t('approvals.docsGeneratedNote', 'Certificate of Eligibility and Petty Cash Voucher are generated automatically upon approval.')}
-                        </p>
-                        {user?.role === 'admin' && (
-                          <Button onClick={() => openApproval(c, 'approve')} size="sm" className="w-full mt-1">
-                            <CheckCircle size={14} /> {t('approvals.approveAndSign', 'Approve & Sign')}
-                          </Button>
-                        )}
-                      </div>
-                    )}
-
-                    {group.key !== 'phase-in' && (
-                      <div className="space-y-1.5 mt-2 pt-2 border-t border-border">
-                        {c.status === 'active' && user?.role === 'admin' && (
-                          <Button onClick={() => openApproval(c, 'disburse')} size="sm" variant="secondary" className="w-full mt-1">
-                            <ArrowRight size={14} /> {t('approvals.markTransitioned', 'Mark Transitioned')}
-                          </Button>
-                        )}
-                      </div>
-                    )}
+                    {/* Transitions (approve / disburse) are performed in the
+                        case view only — this page is a read-only overview.
+                        Clicking a card opens the case. */}
+                    <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent">
+                      {t('approvals.openCase', 'Open case to act')}
+                      <ArrowRight size={12} aria-hidden="true" />
+                    </span>
                   </div>
                 ))}
                 {group.items.length === 0 && (
@@ -280,65 +149,6 @@ export function ApprovalPipelinePage() {
         </div>
       )}
 
-      {/* Bulk Action Bar */}
-      <BulkActionBar
-        selectedCount={selectedIds.size}
-        selectedIds={Array.from(selectedIds)}
-        onApprove={() => selectedIds.size > 0 && setBulkApproveDialogOpen(true)}
-        onReassign={() => {}}
-        onExport={() => selectedIds.size > 0 && setBulkExportDialogOpen(true)}
-        onClearSelection={clearSelection}
-      />
-
-      {/* Bulk Approve Dialog */}
-      <BulkApproveDialog
-        open={bulkApproveDialogOpen}
-        onOpenChange={setBulkApproveDialogOpen}
-        selectedCount={selectedIds.size}
-        selectedIds={Array.from(selectedIds)}
-        onConfirm={handleBulkApprove}
-      />
-
-      {/* Bulk Export Dialog */}
-      <BulkExportDialog
-        open={bulkExportDialogOpen}
-        onOpenChange={setBulkExportDialogOpen}
-        selectedIds={Array.from(selectedIds)}
-        onComplete={() => {
-          clearSelection();
-          setSelectMode(false);
-        }}
-      />
-
-      {/* Signature Modal */}
-      {selectedCase && action && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-card rounded-xl shadow-xl p-6 w-full max-w-md border border-border">
-            <h3 className="font-semibold text-foreground mb-1">
-              {action === 'approve' ? t('approvals.approveCase', 'Approve Case') : t('approvals.markDisbursed', 'Mark as Disbursed')}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">{selectedCase.controlNo}</p>
-
-            <SignaturePad onSave={setSignature} label={t('approvals.signatureLabel', 'Authorized Signatory E-Signature')} />
-
-            {signature && (
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-1">{t('approvals.signaturePreview', 'Signature Preview:')}</p>
-                <img src={signature} alt={t('approvals.signatureAlt', 'Signature')} className="h-12 border rounded bg-card" />
-              </div>
-            )}
-
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => { setSelectedCase(null); setAction(null); }} disabled={saving}>
-                {t('approvals.cancel', 'Cancel')}
-              </Button>
-              <Button onClick={() => handleApprove(selectedCase.id)} disabled={!signature || saving}>
-                {saving ? t('approvals.saving', 'Saving...') : <><CheckCircle size={16} /> {action === 'approve' ? t('approvals.approve', 'Approve') : t('approvals.disburse', 'Disburse')}</>}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </PageShell>
   );
 }
