@@ -210,7 +210,10 @@ export function CasesPage() {
     { id: 'actions', header: t('cases.actions', 'Actions'), cell: ({ row }) => <ActionsCell c={row.original} /> },
   ], [t]);
 
-  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+  const pagination: PaginationState = useMemo(
+    () => ({ pageIndex: urlPage - 1, pageSize: urlLimit }),
+    [urlPage, urlLimit],
+  );
 
   const onPaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {

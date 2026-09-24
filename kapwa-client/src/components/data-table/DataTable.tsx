@@ -110,6 +110,12 @@ export function DataTable<TData, TValue>({
     ...(enableRowSelection ? { enableRowSelection: true } : {}),
     manualPagination: !selfOwnsData,
     manualSorting: !selfOwnsData,
+    // Pagination is fully controlled by the caller (URL-driven). Letting
+    // TanStack auto-reset the page index makes it call onPaginationChange
+    // outside a user action; with a single page of rows that loops
+    // onPaginationChange -> setSearchParams -> render and trips the browser's
+    // navigation throttle.
+    autoResetPageIndex: false,
     getCoreRowModel: getCoreRowModel(),
     ...(selfOwnsData ? {
       getPaginationRowModel: getPaginationRowModel(),

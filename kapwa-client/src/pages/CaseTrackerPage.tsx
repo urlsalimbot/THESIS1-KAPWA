@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import useSWR from 'swr';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -64,7 +64,10 @@ export function CaseTrackerPage() {
     }, { replace: true });
   }, [setSearchParams]);
 
-  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+  const pagination: PaginationState = useMemo(
+    () => ({ pageIndex: urlPage - 1, pageSize: urlLimit }),
+    [urlPage, urlLimit],
+  );
 
   const onPaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {

@@ -38,7 +38,10 @@ export function AuditorPage() {
     }, { replace: true });
   }, [setSearchParams]);
 
-  const pagination: PaginationState = { pageIndex: urlPage - 1, pageSize: urlLimit };
+  const pagination: PaginationState = useMemo(
+    () => ({ pageIndex: urlPage - 1, pageSize: urlLimit }),
+    [urlPage, urlLimit],
+  );
 
   const onPaginationChange = useCallback(
     (updater: Updater<PaginationState>) => {
