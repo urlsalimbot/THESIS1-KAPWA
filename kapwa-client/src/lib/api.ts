@@ -202,7 +202,7 @@ export const api = {
     const url = `${API_BASE}${normalizePath(path)}`;
     const res = await fetch(url, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...csrfHeaders() },
       body: formData,
       signal: opts?.signal,
     });
@@ -376,6 +376,7 @@ export async function exportIrfPdf(id: string, legalBasis: string, password: str
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...csrfHeaders(),
       },
       body: JSON.stringify({ legalBasis, password }),
     },
@@ -402,6 +403,7 @@ export async function downloadCertificate(
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...csrfHeaders(),
     },
     body: JSON.stringify({ type, ...data }),
   });
