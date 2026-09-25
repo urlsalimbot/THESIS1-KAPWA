@@ -38,9 +38,10 @@ describe('ClusteringService', () => {
       save: jest.fn(async (d: any) => ({ id: 'run-1', ...d })),
       findOne: jest.fn(),
       find: jest.fn(),
+      update: jest.fn(),
     };
-    clusterRepo = { create: jest.fn((d: any) => d), save: jest.fn(), insert: jest.fn(), find: jest.fn() };
-    memberRepo = { insert: jest.fn() };
+    clusterRepo = { create: jest.fn((d: any) => d), save: jest.fn(), insert: jest.fn(), find: jest.fn(), delete: jest.fn() };
+    memberRepo = { insert: jest.fn(), delete: jest.fn() };
     features = { getHouseholdFeatures: jest.fn(), getRunMembers: jest.fn() };
     audit = { log: jest.fn() };
     const module = await Test.createTestingModule({
@@ -87,16 +88,25 @@ describe('ClusteringService', () => {
     expect(memberRepo.insert.mock.calls[0][0]).toHaveLength(60);
   });
 
-  it('persists a failed run and rethrows', async () => {
+  it('rejects an empty valid feature set before fetching data', async () => {
+    await expect(service.createRun({ features: ['nope' as any] })).rejects.toThrow(UnprocessableEntityException);
+    expect(features.getHouseholdFeatures).not.toHaveBeenCalled();
+  });
+
+  it('marks the single run row failed when persistence fails midway', async () => {
     features.getHouseholdFeatures.mockResolvedValue(rows(60));
     runRepo.save
-      .mockImplementationOnce(async (d: any) => ({ id: 'run-failed', ...d }))
+      .mockImplementationOnce(async (d: any) => ({ id: 'run-1', ...d }))
       .mockImplementation(async (d: any) => d);
     clusterRepo.save.mockRejectedValue(new Error('db down'));
 
     await expect(service.createRun({ kRange: [2, 2] }, 'user-1')).rejects.toThrow('db down');
-    const failed = runRepo.create.mock.calls.find((c: any) => c[0].status === 'failed');
-    expect(failed?.[0].error).toContain('db down');
+    expect(runRepo.create).toHaveBeenCalledTimes(1);
+    expect(runRepo.update).toHaveBeenCalledWith('run-1', expect.objectContaining({
+      status: 'failed', error: expect.stringContaining('db down'),
+    }));
+    expect(clusterRepo.delete).toHaveBeenCalledWith({ runId: 'run-1' });
+    expect(memberRepo.delete).toHaveBeenCalledWith({ runId: 'run-1' });
   });
 
   it('throws NotFound for unknown runs', async () => {

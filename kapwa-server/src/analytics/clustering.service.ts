@@ -46,10 +46,16 @@ export class ClusteringService {
       .filter(key => FEATURE_KEYS.includes(key));
     const kRange: [number, number] = input.kRange ?? [2, 8];
 
+    if (featureKeys.length === 0) {
+      throw new UnprocessableEntityException({ code: 'invalid_features', features: input.features ?? [] });
+    }
+
     const rows = await this.features.getHouseholdFeatures({ from: input.from, to: input.to, barangay: input.barangay });
     if (rows.length < MIN_DATASET) {
       throw new UnprocessableEntityException({ code: 'insufficient_data', required: MIN_DATASET, actual: rows.length });
     }
+
+    let run: AnalysisRun | undefined;
 
     try {
       const prep = prepareMatrix(rows, featureKeys);
@@ -82,7 +88,7 @@ export class ClusteringService {
         });
       });
 
-      const run = await this.runRepo.save(this.runRepo.create({
+      run = await this.runRepo.save(this.runRepo.create({
         model: 'household_clustering',
         status: 'completed',
         params: {
@@ -100,11 +106,13 @@ export class ClusteringService {
         createdBy: userId,
       }));
 
+      const savedRun: AnalysisRun = run;
+
       for (const cluster of clusterRows) {
-        await this.clusterRepo.save({ ...cluster, runId: run.id });
+        await this.clusterRepo.save({ ...cluster, runId: savedRun.id });
       }
       await this.memberRepo.insert(rows.map((row, i) => ({
-        runId: run.id,
+        runId: savedRun.id,
         householdId: row.householdId,
         clusterIndex: chosen.assignments[i],
         distance: Number(
@@ -115,14 +123,24 @@ export class ClusteringService {
         ),
       })));
 
-      return run;
+      return savedRun;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      await this.runRepo.save(this.runRepo.create({
-        model: 'household_clustering', status: 'failed',
-        params: { features: featureKeys, k_range: kRange, seed, filters: { from: input.from ?? null, to: input.to ?? null, barangay: input.barangay ?? null } },
-        startedAt, completedAt: new Date(), createdBy: userId, error: message,
-      }));
+      try {
+        if (run?.id) {
+          await this.clusterRepo.delete({ runId: run.id });
+          await this.memberRepo.delete({ runId: run.id });
+          await this.runRepo.update(run.id, { status: 'failed', error: message });
+        } else {
+          await this.runRepo.save(this.runRepo.create({
+            model: 'household_clustering', status: 'failed',
+            params: { features: featureKeys, k_range: kRange, seed, filters: { from: input.from ?? null, to: input.to ?? null, barangay: input.barangay ?? null } },
+            startedAt, completedAt: new Date(), createdBy: userId, error: message,
+          }));
+        }
+      } catch {
+        // recovery is best-effort; never mask the original error
+      }
       throw err;
     }
   }
