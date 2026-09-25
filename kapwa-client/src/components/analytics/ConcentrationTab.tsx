@@ -11,8 +11,8 @@ interface ConcentrationResponse {
   hhiCasesLabel: HhiLabel | null;
   hhiAssistance: number | null;
   hhiAssistanceLabel: HhiLabel | null;
-  totalCases: number;
-  totalAmount: number;
+  totalCases: number | null;
+  totalAmount: number | null;
   barangays: Array<{ barangay: string; cases: Cell; interventions: Cell; amount: Cell; caseShare: Cell; amountShare: Cell }>;
 }
 

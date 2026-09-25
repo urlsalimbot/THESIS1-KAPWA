@@ -185,8 +185,12 @@ export class ClusteringService {
     }
   }
 
-  async listRuns(limit = 20): Promise<AnalysisRun[]> {
-    return this.runRepo.find({ order: { createdAt: 'DESC' }, take: Math.min(limit, 100) });
+  async listRuns(limit = 20): Promise<Array<Omit<AnalysisRun, 'metrics'>>> {
+    return this.runRepo.find({
+      select: ['id', 'model', 'status', 'params', 'startedAt', 'completedAt', 'createdBy', 'createdAt', 'updatedAt'],
+      order: { createdAt: 'DESC' },
+      take: Math.min(limit, 100),
+    });
   }
 
   async getRun(id: string): Promise<RunDetail> {

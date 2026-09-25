@@ -180,7 +180,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
                   <Badge variant={run.status === 'completed' ? 'default' : 'destructive'} className="text-[10px]">{run.status}</Badge>
                 </span>
                 <span className="text-muted-foreground">
-                  {t('analytics.clustering.chosenK', 'Chosen k')}: {(run.params as { chosen_k?: number })?.chosen_k ?? '—'} · {t('analytics.clustering.datasetSize', 'Households')}: {(run.metrics as { dataset_size?: number })?.dataset_size ?? '—'}
+                  {t('analytics.clustering.chosenK', 'Chosen k')}: {(run.params as { chosen_k?: number })?.chosen_k ?? '—'}
                 </span>
               </button>
             ))}

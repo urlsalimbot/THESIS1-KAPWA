@@ -55,6 +55,8 @@ describe('ClusteringTab', () => {
     renderTab();
     expect(await screen.findByText(/Chosen k/i)).toBeTruthy();
     expect(screen.getByText(/Chosen k: 2/)).toBeTruthy();
+    // list rows no longer carry metrics; the card shows chosen k only
+    expect(screen.getByText(/Chosen k: 2/).textContent).not.toMatch(/Households/);
     expect(screen.getAllByText(/Segment|Segments/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1); // suppressed small cluster size
   });

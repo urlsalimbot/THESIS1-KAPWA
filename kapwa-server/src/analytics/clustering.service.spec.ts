@@ -142,6 +142,21 @@ describe('ClusteringService', () => {
     await expect(service.getRun('missing')).rejects.toThrow(NotFoundException);
   });
 
+  it('lists runs without the metrics column so sizes stay hidden', async () => {
+    runRepo.find.mockResolvedValue([
+      { id: 'run-1', model: 'household_clustering', status: 'completed', params: { chosen_k: 2 }, createdAt: new Date() },
+    ]);
+
+    const rows = await service.listRuns(10);
+
+    const options = runRepo.find.mock.calls[0][0];
+    expect(options.select).not.toContain('metrics');
+    expect(options.select).toEqual(expect.arrayContaining(['id', 'model', 'status', 'params', 'createdAt']));
+    expect(options.order).toEqual({ createdAt: 'DESC' });
+    expect(options.take).toBe(10);
+    expect(rows[0]).not.toHaveProperty('metrics');
+  });
+
   it('suppresses sub-5 cluster sizes, the complementary cell, and derived cells in run detail', async () => {
     const runMock = { id: 'run-1', metrics: { dataset_size: 53 } };
     runRepo.findOne.mockResolvedValue(runMock);
