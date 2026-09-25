@@ -17,13 +17,24 @@ interface DemographicsResponse {
   philhealthCoverage: SuppressedCell;
 }
 
-function cellText(cell: SuppressedCell | undefined): string {
-  if (!cell) return '—';
-  return 'value' in cell ? String(cell.value) : '—';
-}
-
 function isSuppressed(cell: SuppressedCell | undefined): boolean {
   return !cell || 'suppressed' in cell;
+}
+
+export function toPyramidRows(ageSex: DemographicsResponse['ageSex']): Array<{ bracket: string; male: number | null; female: number | null }> {
+  return ageSex.map(row => ({
+    bracket: row.bracket,
+    male: 'value' in row.male ? row.male.value : null,
+    female: 'value' in row.female ? row.female.value : null,
+  }));
+}
+
+function Cell({ cell }: { cell: SuppressedCell | undefined }) {
+  const { t } = useTranslation();
+  if (!cell || 'suppressed' in cell) {
+    return <span title={t('analytics.suppressed', 'Suppressed (<5)')}>—</span>;
+  }
+  return <>{cell.value.toLocaleString()}</>;
 }
 
 export function DemographicsTab({ filters }: { filters: Record<string, unknown> }) {
@@ -39,11 +50,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
   }
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">{t('analytics.loading', 'Loading…')}</p>;
 
-  const pyramid = data.ageSex.map(row => ({
-    bracket: row.bracket,
-    male: isSuppressed(row.male) ? 0 : (row.male as { value: number }).value,
-    female: isSuppressed(row.female) ? 0 : (row.female as { value: number }).value,
-  }));
+  const pyramid = toPyramidRows(data.ageSex);
 
   return (
     <div className="space-y-4">
@@ -56,7 +63,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
           <Card key={card.label}>
             <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">{card.label}</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-2xl font-semibold">{cellText(card.cell)}</p>
+              <p className="text-2xl font-semibold"><Cell cell={card.cell} /></p>
               {isSuppressed(card.cell) && <p className="text-xs text-muted-foreground">{t('analytics.suppressed', 'Suppressed (<5)')}</p>}
             </CardContent>
           </Card>
@@ -70,7 +77,10 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
             <BarChart data={pyramid} layout="vertical">
               <XAxis type="number" tick={{ fontSize: 10 }} />
               <YAxis type="category" dataKey="bracket" tick={{ fontSize: 10 }} width={50} />
-              <Tooltip contentStyle={{ fontSize: '12px' }} />
+              <Tooltip
+                contentStyle={{ fontSize: '12px' }}
+                formatter={(value, name) => [value == null ? '—' : value, name]}
+              />
               <Legend wrapperStyle={{ fontSize: '11px' }} />
               <Bar dataKey="male" name={t('analytics.demographics.male', 'Male')} fill="#3b82f6" />
               <Bar dataKey="female" name={t('analytics.demographics.female', 'Female')} fill="#ec4899" />
@@ -85,7 +95,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
           <CardContent className="space-y-1">
             {data.civilStatus.map(row => (
               <div key={row.label} className="flex justify-between text-sm">
-                <span>{row.label}</span><span className="font-medium">{cellText(row.count)}</span>
+                <span>{row.label}</span><span className="font-medium"><Cell cell={row.count} /></span>
               </div>
             ))}
           </CardContent>
@@ -96,7 +106,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
             {data.occupation.length === 0 && <p className="text-xs text-muted-foreground">{t('analytics.suppressed', 'Suppressed (<5)')}</p>}
             {data.occupation.map(row => (
               <div key={row.label} className="flex justify-between text-sm">
-                <span>{row.label}</span><span className="font-medium">{cellText(row.count)}</span>
+                <span>{row.label}</span><span className="font-medium"><Cell cell={row.count} /></span>
               </div>
             ))}
           </CardContent>
@@ -106,7 +116,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
           <CardContent className="space-y-1">
             {data.incomeBands.map(row => (
               <div key={row.label} className="flex justify-between text-sm">
-                <span>{row.label}</span><span className="font-medium">{cellText(row.count)}</span>
+                <span>{row.label}</span><span className="font-medium"><Cell cell={row.count} /></span>
               </div>
             ))}
             <p className="pt-1 text-xs text-muted-foreground">{t('analytics.demographics.incomeNote', 'Relative bands, not official poverty thresholds')}</p>
@@ -116,7 +126,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
           <CardHeader className="pb-1"><CardTitle className="text-sm">{t('analytics.demographics.dependency', 'Dependency ratio')}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <p className="text-2xl font-semibold">{data.dependencyRatio != null ? data.dependencyRatio.toFixed(2) : '—'}</p>
-            <p className="text-sm text-muted-foreground">{t('analytics.demographics.philhealth', 'PhilHealth coverage')}: {cellText(data.philhealthCoverage)}</p>
+            <p className="text-sm text-muted-foreground">{t('analytics.demographics.philhealth', 'PhilHealth coverage')}: <Cell cell={data.philhealthCoverage} /></p>
           </CardContent>
         </Card>
         <Card>
@@ -124,7 +134,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
           <CardContent className="space-y-1">
             {data.householdSize.map(row => (
               <div key={row.label} className="flex justify-between text-sm">
-                <span>{row.label}</span><span className="font-medium">{cellText(row.count)}</span>
+                <span>{row.label}</span><span className="font-medium"><Cell cell={row.count} /></span>
               </div>
             ))}
           </CardContent>

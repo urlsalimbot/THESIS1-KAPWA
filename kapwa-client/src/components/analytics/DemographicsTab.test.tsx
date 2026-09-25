@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';
-import { DemographicsTab } from './DemographicsTab';
+import { DemographicsTab, toPyramidRows } from './DemographicsTab';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 vi.mock('../../lib/api', () => ({ api: { get: (...a: unknown[]) => mockApiGet(...a) } }));
@@ -34,6 +34,18 @@ describe('DemographicsTab', () => {
     expect(await screen.findByText('120')).toBeTruthy();
     expect(screen.getByText('40')).toBeTruthy();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTitle('Suppressed (<5)').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('maps suppressed pyramid cells to null instead of fabricating zero', () => {
+    const rows = toPyramidRows([
+      { bracket: '0-5', male: { value: 12 }, female: { suppressed: true } },
+      { bracket: '60+', male: { suppressed: true }, female: { value: 9 } },
+    ]);
+    expect(rows).toEqual([
+      { bracket: '0-5', male: 12, female: null },
+      { bracket: '60+', male: null, female: 9 },
+    ]);
   });
 
   it('renders the no-data state on error', async () => {
