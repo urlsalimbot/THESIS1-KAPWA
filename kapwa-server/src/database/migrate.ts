@@ -375,24 +375,6 @@ export async function migrate() {
   await q.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`);
   await q.query(`ALTER TABLE document_vault ADD COLUMN IF NOT EXISTS verified_by UUID`);
 
-  // Conditional program documents are not mandatory; the seed historically
-  // inserted every document as mandatory, which blocked routine activations.
-  await q.query(`UPDATE program_required_documents SET mandatory = FALSE WHERE document_key IN (
-    'Death certificate (for burial-adjacent medical claims)',
-    'Medical appointment slip / referral (if medical-related)',
-    'Affidavit of need (if emergency travel)',
-    'Supporting documents depending on purpose (hospital bill, quotation, assessment)',
-    'Bank account details / GCash account (if applicable)',
-    'Skills training certificate (if applicable)',
-    'Referral letter (if from other agency)',
-    'Referral letter (if any)',
-    'Medical assessment (if medical-related)',
-    'Social case study report (if available)',
-    'Medical certificate / hospital bill / quotation (depending on need)',
-    'Barangay Certificate of Indigency (for household grantees)',
-    'Grades / class card (for continuing)'
-  )`);
-
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_person_id UUID`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS person_link_code VARCHAR`);
   await q.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS person_link_code_expires_at TIMESTAMP`);
@@ -494,6 +476,24 @@ export async function migrate() {
         WHERE p.required_documents IS NOT NULL;
     END IF;
   END $$;`);
+
+  // Conditional program documents are not mandatory; the seed historically
+  // inserted every document as mandatory, which blocked routine activations.
+  await q.query(`UPDATE program_required_documents SET mandatory = FALSE WHERE document_key IN (
+    'Death certificate (for burial-adjacent medical claims)',
+    'Medical appointment slip / referral (if medical-related)',
+    'Affidavit of need (if emergency travel)',
+    'Supporting documents depending on purpose (hospital bill, quotation, assessment)',
+    'Bank account details / GCash account (if applicable)',
+    'Skills training certificate (if applicable)',
+    'Referral letter (if from other agency)',
+    'Referral letter (if any)',
+    'Medical assessment (if medical-related)',
+    'Social case study report (if available)',
+    'Medical certificate / hospital bill / quotation (depending on need)',
+    'Barangay Certificate of Indigency (for household grantees)',
+    'Grades / class card (for continuing)'
+  )`);
 
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_wraps JSONB`);
   await q.query(`ALTER TABLE irf_cases ADD COLUMN IF NOT EXISTS key_version INT DEFAULT 1`);
