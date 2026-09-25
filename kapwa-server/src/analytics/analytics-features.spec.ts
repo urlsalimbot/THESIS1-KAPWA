@@ -52,6 +52,7 @@ describe('AnalyticsFeaturesService', () => {
     const [sql, params] = repoMock.query.mock.calls[0];
     expect(String(sql)).toContain('FROM households h');
     expect(String(sql)).toContain('COUNT(DISTINCT p.id)');
+    expect(String(sql)).toContain('ci.case_id = c.id::text');
     expect(String(sql)).toContain('role_flags');
     expect(String(sql)).toContain("ILIKE '%pwd%'");
     expect(String(sql)).toContain("ILIKE '%solo%parent%'");

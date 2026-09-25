@@ -71,7 +71,7 @@ export class AnalyticsFeaturesService {
          LEFT JOIN cases c ON c.beneficiary_id = b.id
            AND ($1::date IS NULL OR c.created_at::date >= $1::date)
            AND ($2::date IS NULL OR c.created_at::date <= $2::date)
-         LEFT JOIN case_interventions ci ON ci.case_id = c.id
+         LEFT JOIN case_interventions ci ON ci.case_id = c.id::text
            AND ($1::date IS NULL OR ci.delivery_date >= $1::date)
            AND ($2::date IS NULL OR ci.delivery_date <= $2::date)
          WHERE b.household_id IS NOT NULL

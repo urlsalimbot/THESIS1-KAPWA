@@ -40,10 +40,10 @@ export class AnalyticsService {
 
   async getDemographics(filters: AnalyticsFilters) {
     const rows: Array<{
-      gender: string | null; age: number | null; civil_status: string | null; occupation: string | null;
+      person_id: string; gender: string | null; age: number | null; civil_status: string | null; occupation: string | null;
       has_philhealth: boolean; household_income: string | null; household_id: string | null; barangay: string | null;
     }> = await this.caseRepo.query(
-      `SELECT p.gender, EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob))::int AS age,
+      `SELECT p.id AS person_id, p.gender, EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob))::int AS age,
               p.civil_status, p.occupation,
               (p.philhealth_number IS NOT NULL AND p.philhealth_number <> '') AS has_philhealth,
               ph.estimated_income AS household_income, b.household_id, ph.barangay
@@ -53,7 +53,7 @@ export class AnalyticsService {
        WHERE (($1::date IS NULL AND $2::date IS NULL)
               OR EXISTS (
                 SELECT 1 FROM cases c
-                JOIN case_interventions ci ON ci.case_id = c.id
+                JOIN case_interventions ci ON ci.case_id = c.id::text
                 WHERE c.beneficiary_id = b.id
                   AND ($1::date IS NULL OR ci.delivery_date >= $1::date)
                   AND ($2::date IS NULL OR ci.delivery_date <= $2::date)
@@ -62,7 +62,11 @@ export class AnalyticsService {
       [filters.from ?? null, filters.to ?? null, filters.barangay ?? null],
     );
 
-    const persons = rows ?? [];
+    const dedupedPersons = new Map<string, (typeof rows)[number]>();
+    (rows ?? []).forEach(r => {
+      if (!dedupedPersons.has(r.person_id)) dedupedPersons.set(r.person_id, r);
+    });
+    const persons = [...dedupedPersons.values()];
     const personCount = (n: number): Suppressed<number> => suppressCount(n);
 
     const ageSex = AGE_BRACKETS.map(({ bracket, min, max }) => {
@@ -98,7 +102,7 @@ export class AnalyticsService {
     const ages = persons.map(p => p.age).filter((a): a is number => a != null);
     const dependents = ages.filter(a => a <= 14 || a >= 60).length;
     const working = ages.filter(a => a >= 15 && a <= 59).length;
-    const dependencyRatio = working > 0 ? dependents / working : null;
+    const dependencyRatio = persons.length >= 5 && working > 0 ? dependents / working : null;
 
     const covered = persons.filter(p => p.has_philhealth).length;
     const philhealthCoverage = persons.length >= 5 ? { value: covered / persons.length } : { suppressed: true as const };
@@ -126,7 +130,7 @@ export class AnalyticsService {
                 COUNT(ci.id) AS interventions,
                 COALESCE(SUM(ci.amount), 0) AS amount
          FROM case_interventions ci
-         JOIN cases c ON c.id = ci.case_id
+         JOIN cases c ON c.id::text = ci.case_id
          JOIN beneficiaries b ON b.id = c.beneficiary_id
          LEFT JOIN households h ON h.id = b.household_id
          WHERE ($1::date IS NULL OR ci.delivery_date >= $1::date)
@@ -165,12 +169,14 @@ export class AnalyticsService {
         `SELECT COALESCE(h.barangay, 'Unspecified') AS barangay,
                 COUNT(DISTINCT b.household_id) AS served_households,
                 COALESCE(SUM(ci.amount), 0) AS assistance,
-                COUNT(DISTINCT b.household_id) FILTER (WHERE br.category = '4Ps') AS four_ps
+                COUNT(DISTINCT b.household_id) FILTER (WHERE EXISTS (
+                  SELECT 1 FROM beneficiary_roles br
+                  WHERE br.person_id = b.person_id AND br.category ILIKE '%4ps%'
+                )) AS four_ps
          FROM case_interventions ci
-         JOIN cases c ON c.id = ci.case_id
+         JOIN cases c ON c.id::text = ci.case_id
          JOIN beneficiaries b ON b.id = c.beneficiary_id
          LEFT JOIN households h ON h.id = b.household_id
-         LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
          WHERE ($1::date IS NULL OR ci.delivery_date >= $1::date)
            AND ($2::date IS NULL OR ci.delivery_date <= $2::date)
          GROUP BY 1`,
