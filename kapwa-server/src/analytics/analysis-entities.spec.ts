@@ -25,4 +25,11 @@ describe('analytics entities', () => {
     const cols = storage.columns.filter(c => c.target === AnalysisRunMember).map(c => c.propertyName);
     expect(cols).toEqual(expect.arrayContaining(['runId', 'householdId', 'clusterIndex', 'distance']));
   });
+
+  it('pins uuid column types on foreign keys', () => {
+    expect(storage.columns.find(c => c.target === AnalysisRun && c.propertyName === 'createdBy')?.options.type).toBe('uuid');
+    expect(storage.columns.find(c => c.target === AnalysisRunCluster && c.propertyName === 'runId')?.options.type).toBe('uuid');
+    expect(storage.columns.find(c => c.target === AnalysisRunMember && c.propertyName === 'runId')?.options.type).toBe('uuid');
+    expect(storage.columns.find(c => c.target === AnalysisRunMember && c.propertyName === 'householdId')?.options.type).toBe('uuid');
+  });
 });

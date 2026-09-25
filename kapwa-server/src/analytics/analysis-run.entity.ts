@@ -21,7 +21,7 @@ export class AnalysisRun extends BaseEntity {
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt?: Date;
 
-  @Column({ name: 'created_by', nullable: true })
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
   createdBy?: string;
 
   @Column({ type: 'text', nullable: true })

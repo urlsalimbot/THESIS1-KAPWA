@@ -3,7 +3,7 @@ import { BaseEntity } from '../common/base.entity';
 
 @Entity('analysis_run_clusters')
 export class AnalysisRunCluster extends BaseEntity {
-  @Column({ name: 'run_id' })
+  @Column({ name: 'run_id', type: 'uuid' })
   runId!: string;
 
   @Column({ name: 'cluster_index', type: 'int' })
