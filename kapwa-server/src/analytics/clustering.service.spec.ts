@@ -114,21 +114,44 @@ describe('ClusteringService', () => {
     await expect(service.getRun('missing')).rejects.toThrow(NotFoundException);
   });
 
-  it('suppresses sub-5 cluster sizes and derived cells in run detail', async () => {
+  it('suppresses sub-5 cluster sizes, the complementary cell, and derived cells in run detail', async () => {
     runRepo.findOne.mockResolvedValue({ id: 'run-1' });
     clusterRepo.find.mockResolvedValue([
       { clusterIndex: 0, size: 3, centroid: { standardized: [1] }, profile: { household_income_median: 12345 } },
-      { clusterIndex: 1, size: 30, centroid: { standardized: [2] }, profile: { household_income_median: 20000 } },
+      { clusterIndex: 1, size: 20, centroid: { standardized: [2] }, profile: { household_income_median: 18000 } },
+      { clusterIndex: 2, size: 30, centroid: { standardized: [3] }, profile: { household_income_median: 20000 } },
     ]);
 
     const { clusters } = await service.getRun('run-1');
 
+    // Size 3 is small, so the smallest remaining size (20) is hidden with it.
     expect(clusters[0].size).toEqual({ suppressed: true });
     expect(clusters[0].profile).toBeUndefined();
     expect(clusters[0].centroid).toBeUndefined();
-    expect(clusters[1].size).toBe(30);
-    expect(clusters[1].profile).toEqual({ household_income_median: 20000 });
-    expect(clusters[1].centroid).toEqual({ standardized: [2] });
+    expect(clusters[1].size).toEqual({ suppressed: true });
+    expect(clusters[1].profile).toBeUndefined();
+    expect(clusters[2].size).toBe(30);
+    expect(clusters[2].profile).toEqual({ household_income_median: 20000 });
+    expect(clusters[2].centroid).toEqual({ standardized: [3] });
+  });
+
+  it('leaves cluster sizes untouched when zero or two-plus cells are suppressed', async () => {
+    runRepo.findOne.mockResolvedValue({ id: 'run-1' });
+    clusterRepo.find.mockResolvedValueOnce([
+      { clusterIndex: 0, size: 20, profile: { household_income_median: 18000 } },
+      { clusterIndex: 1, size: 30, profile: { household_income_median: 20000 } },
+    ]);
+    const noSmall = await service.getRun('run-1');
+    expect(noSmall.clusters.map(c => c.size)).toEqual([20, 30]);
+
+    clusterRepo.find.mockResolvedValueOnce([
+      { clusterIndex: 0, size: 3, profile: { household_income_median: 12345 } },
+      { clusterIndex: 1, size: 2, profile: { household_income_median: 8000 } },
+      { clusterIndex: 2, size: 30, profile: { household_income_median: 20000 } },
+    ]);
+    const twoSmall = await service.getRun('run-1');
+    expect(twoSmall.clusters[2].size).toBe(30);
+    expect(twoSmall.clusters[2].profile).toEqual({ household_income_median: 20000 });
   });
 
   it('audits member drill-down access', async () => {
@@ -157,23 +180,44 @@ describe('ClusteringService', () => {
     expect(filename).toMatch(/^analytics-clusters-.*\.csv$/);
   });
 
-  it('suppresses sub-5 cluster cells in the aggregate CSV', async () => {
+  it('suppresses sub-5 cluster cells and the complementary size cell in the aggregate CSV', async () => {
     runRepo.findOne.mockResolvedValue({
       id: 'run-1', status: 'completed',
-      params: { chosen_k: 2, seed: 5, dataset_size: 33 },
-      metrics: { dataset_size: 33 },
+      params: { chosen_k: 3, seed: 5, dataset_size: 53 },
+      metrics: { dataset_size: 53 },
       createdAt: new Date('2026-09-25T00:00:00Z'),
     });
     clusterRepo.find.mockResolvedValue([
       { clusterIndex: 0, size: 3, profile: { household_income_median: 987654 } },
-      { clusterIndex: 1, size: 30, profile: { household_income_median: 15000 } },
+      { clusterIndex: 1, size: 20, profile: { household_income_median: 12000 } },
+      { clusterIndex: 2, size: 30, profile: { household_income_median: 15000 } },
     ]);
 
     const { buffer } = await service.exportRunCsv('run-1');
     const text = buffer.toString('utf8');
     const rows = text.split('\n');
+    // Size 3 is small, so the smallest remaining size (20) is written suppressed too.
     expect(rows.find(r => r.startsWith('0,'))).toBe('0,suppressed,suppressed');
-    expect(rows.find(r => r.startsWith('1,'))).toBe('1,30,15000');
+    expect(rows.find(r => r.startsWith('1,'))).toBe('1,suppressed,suppressed');
+    expect(rows.find(r => r.startsWith('2,'))).toBe('2,30,15000');
     expect(text).not.toContain('987654');
+  });
+
+  it('leaves CSV size cells untouched when the family is already non-invertible', async () => {
+    runRepo.findOne.mockResolvedValue({
+      id: 'run-1', status: 'completed',
+      params: { chosen_k: 3, seed: 5, dataset_size: 35 },
+      metrics: { dataset_size: 35 },
+      createdAt: new Date('2026-09-25T00:00:00Z'),
+    });
+    clusterRepo.find.mockResolvedValue([
+      { clusterIndex: 0, size: 3, profile: { household_income_median: 3000 } },
+      { clusterIndex: 1, size: 2, profile: { household_income_median: 8000 } },
+      { clusterIndex: 2, size: 30, profile: { household_income_median: 15000 } },
+    ]);
+
+    const { buffer } = await service.exportRunCsv('run-1');
+    const rows = buffer.toString('utf8').split('\n');
+    expect(rows.find(r => r.startsWith('2,'))).toBe('2,30,15000');
   });
 });

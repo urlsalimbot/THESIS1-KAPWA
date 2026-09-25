@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case } from '../cases/case.entity';
 import { hhi } from './models/stats';
-import { suppressCount, suppressRatio, Suppressed } from './suppression';
+import { complementSuppression, suppressCount, suppressRatio, Suppressed } from './suppression';
 
 export interface AnalyticsFilters {
   from?: string;
@@ -69,18 +69,25 @@ export class AnalyticsService {
     const persons = [...dedupedPersons.values()];
     const personCount = (n: number): Suppressed<number> => suppressCount(n);
 
-    const ageSex = AGE_BRACKETS.map(({ bracket, min, max }) => {
-      const inBracket = persons.filter(p => p.age != null && p.age >= min && p.age <= max);
-      return {
-        bracket,
-        male: personCount(inBracket.filter(p => p.gender === 'Male').length),
-        female: personCount(inBracket.filter(p => p.gender === 'Female').length),
-      };
-    });
+    // Each count family is suppressed and then complementarily suppressed
+    // before mapping to rows, so a published total cannot isolate one cell.
+    const bracketPersons = AGE_BRACKETS.map(({ min, max }) =>
+      persons.filter(p => p.age != null && p.age >= min && p.age <= max),
+    );
+    const maleCells = complementSuppression(
+      bracketPersons.map(inBracket => personCount(inBracket.filter(p => p.gender === 'Male').length)),
+    );
+    const femaleCells = complementSuppression(
+      bracketPersons.map(inBracket => personCount(inBracket.filter(p => p.gender === 'Female').length)),
+    );
+    const ageSex = AGE_BRACKETS.map(({ bracket }, i) => ({ bracket, male: maleCells[i], female: femaleCells[i] }));
 
     const civilStatuses = [...new Set(persons.map(p => p.civil_status || 'Unspecified'))];
+    const civilStatusCells = complementSuppression(
+      civilStatuses.map(label => personCount(persons.filter(p => (p.civil_status || 'Unspecified') === label).length)),
+    );
     const civilStatus = civilStatuses
-      .map(label => ({ label, count: personCount(persons.filter(p => (p.civil_status || 'Unspecified') === label).length) }))
+      .map((label, i) => ({ label, count: civilStatusCells[i] }))
       .sort((a, b) => ('value' in b.count ? b.count.value : 0) - ('value' in a.count ? a.count.value : 0));
 
     const occupationCounts = new Map<string, number>();
@@ -94,18 +101,23 @@ export class AnalyticsService {
       .filter(([, count]) => count >= 5)
       .map(([label, count]) => ({ label, count: suppressCount(count) }));
 
-    const incomeBands = INCOME_BANDS.map(band => ({
-      label: band.label,
-      count: personCount(persons.filter(p => band.test(p.household_income != null ? Number(p.household_income) : null)).length),
-    }));
+    const incomeBandCells = complementSuppression(
+      INCOME_BANDS.map(band =>
+        personCount(persons.filter(p => band.test(p.household_income != null ? Number(p.household_income) : null)).length),
+      ),
+    );
+    const incomeBands = INCOME_BANDS.map((band, i) => ({ label: band.label, count: incomeBandCells[i] }));
 
     const householdMembers = new Map<string, number>();
     persons.forEach(p => {
       if (p.household_id) householdMembers.set(p.household_id, (householdMembers.get(p.household_id) ?? 0) + 1);
     });
-    const householdSize = Array.from({ length: 8 }, (_, i) => i + 1).map(size => ({
-      label: size === 8 ? '8+' : String(size),
-      count: personCount([...householdMembers.values()].filter(n => Math.min(n, 8) === size).length),
+    const householdSizeCells = complementSuppression(
+      Array.from({ length: 8 }, (_, i) => personCount([...householdMembers.values()].filter(n => Math.min(n, 8) === i + 1).length)),
+    );
+    const householdSize = Array.from({ length: 8 }, (_, i) => ({
+      label: i + 1 === 8 ? '8+' : String(i + 1),
+      count: householdSizeCells[i],
     }));
 
     const ages = persons.map(p => p.age).filter((a): a is number => a != null);
@@ -157,6 +169,8 @@ export class AnalyticsService {
     const totalAmount = barangays.reduce((acc, r) => acc + Number(r.amount), 0);
     const caseShares = barangays.map(r => (totalCases > 0 ? Number(r.cases) / totalCases : 0));
     const amountShares = barangays.map(r => (totalAmount > 0 ? Number(r.amount) / totalAmount : 0));
+    const caseCells = complementSuppression(barangays.map(r => suppressCount(Number(r.cases))));
+    const amountCells = complementSuppression(barangays.map(r => suppressCount(Math.round(Number(r.amount)))));
     return {
       hhiCases: hhi(caseShares),
       hhiAssistance: hhi(amountShares),
@@ -164,9 +178,9 @@ export class AnalyticsService {
       totalAmount,
       barangays: barangays.map((r, i) => ({
         barangay: r.barangay,
-        cases: suppressCount(Number(r.cases)),
+        cases: caseCells[i],
         interventions: suppressCount(Number(r.interventions)),
-        amount: suppressCount(Math.round(Number(r.amount))),
+        amount: amountCells[i],
         caseShare: suppressRatio(caseShares[i], Number(r.cases)),
         amountShare: suppressRatio(amountShares[i], Number(r.cases)),
       })),

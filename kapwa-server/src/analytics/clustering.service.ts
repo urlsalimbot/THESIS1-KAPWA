@@ -9,7 +9,7 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { FEATURE_KEYS, FeatureKey } from './analytics.types';
 import { prepareMatrix, evaluateCandidates, chooseK } from './models/kmeans';
 import { median } from './models/stats';
-import { MIN_CELL } from './suppression';
+import { complementSuppression, MIN_CELL } from './suppression';
 
 const MIN_DATASET = 20;
 
@@ -153,10 +153,13 @@ export class ClusteringService {
   async getRun(id: string) {
     const run = await this.runRepo.findOne({ where: { id } });
     if (!run) throw new NotFoundException('Analysis run not found');
-    const clusters = (await this.clusterRepo.find({ where: { runId: id }, order: { clusterIndex: 'ASC' } }))
-      .map(cluster => cluster.size < MIN_CELL
-        ? { ...cluster, size: { suppressed: true as const }, centroid: undefined, profile: undefined }
-        : cluster);
+    const stored = await this.clusterRepo.find({ where: { runId: id }, order: { clusterIndex: 'ASC' } });
+    const sizeCells = complementSuppression(
+      stored.map(cluster => (cluster.size < MIN_CELL ? { suppressed: true as const } : { value: cluster.size })),
+    );
+    const clusters = stored.map((cluster, i) => ('suppressed' in sizeCells[i]
+      ? { ...cluster, size: { suppressed: true as const }, centroid: undefined, profile: undefined }
+      : cluster));
     return { run, clusters };
   }
 
@@ -172,6 +175,9 @@ export class ClusteringService {
     const run = await this.runRepo.findOne({ where: { id } });
     if (!run) throw new NotFoundException('Analysis run not found');
     const clusters = await this.clusterRepo.find({ where: { runId: id }, order: { clusterIndex: 'ASC' } });
+    const sizeCells = complementSuppression(
+      clusters.map(cluster => (cluster.size < MIN_CELL ? { suppressed: true as const } : { value: cluster.size })),
+    );
     const profileKeys = [...new Set(clusters.flatMap(c => Object.keys(c.profile ?? {})))]
       .filter(key => key !== 'barangay_mix');
     const lines: string[] = [
@@ -182,7 +188,7 @@ export class ClusteringService {
       `# dataset_size,${(run.metrics as any)?.dataset_size ?? ''}`,
       `# generated_at,${new Date().toISOString()}`,
       ['cluster_index', 'size', ...profileKeys].join(','),
-      ...clusters.map(c => (c.size < MIN_CELL
+      ...clusters.map((c, i) => ('suppressed' in sizeCells[i]
         ? [c.clusterIndex, 'suppressed', ...profileKeys.map(() => 'suppressed')]
         : [c.clusterIndex, c.size, ...profileKeys.map(key => csvEscape((c.profile as any)?.[key]))]
       ).join(',')),
