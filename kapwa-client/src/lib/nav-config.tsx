@@ -64,6 +64,13 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 
   {
+    label: 'Insights',
+    items: [
+      { path: '/analytics', label: 'Analytics', icon: <BarChart3 size={20} />, roles: ['admin', 'social_worker', 'mayor'] },
+    ],
+  },
+
+  {
     label: 'Mayor',
     items: [
       { path: '/reports', label: 'Reports', icon: <BarChart3 size={20} />, roles: ['mayor'] },

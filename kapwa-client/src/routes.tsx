@@ -74,6 +74,7 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 const FourPsCompliancePage = lazy(() => import('./pages/FourPsCompliancePage').then(m => ({ default: m.FourPsCompliancePage })));
 const PayoutSchedulePage = lazy(() => import('./pages/PayoutSchedulePage').then(m => ({ default: m.PayoutSchedulePage })));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
 function Private({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -119,6 +120,7 @@ const router = createBrowserRouter([
   { path: '/cases/:id', element: <Private roles={['admin','social_worker']}><CaseViewPage /></Private> },
   { path: '/cases/:caseId/4ps-compliance', element: <Private roles={['admin','social_worker','coordinator']}><FourPsCompliancePage /></Private> },
   { path: '/cases/:caseId/payouts', element: <Private roles={['admin','social_worker','coordinator']}><PayoutSchedulePage /></Private> },
+  { path: '/analytics', element: <Private roles={['admin','social_worker','mayor']}><AnalyticsPage /></Private> },
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker','mayor','auditor']}><CaseTrackerPage /></Private> },
