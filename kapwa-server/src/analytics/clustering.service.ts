@@ -9,6 +9,7 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { FEATURE_KEYS, FeatureKey } from './analytics.types';
 import { prepareMatrix, evaluateCandidates, chooseK } from './models/kmeans';
 import { median } from './models/stats';
+import { MIN_CELL } from './suppression';
 
 const MIN_DATASET = 20;
 
@@ -149,10 +150,13 @@ export class ClusteringService {
     return this.runRepo.find({ order: { createdAt: 'DESC' }, take: Math.min(limit, 100) });
   }
 
-  async getRun(id: string): Promise<{ run: AnalysisRun; clusters: AnalysisRunCluster[] }> {
+  async getRun(id: string) {
     const run = await this.runRepo.findOne({ where: { id } });
     if (!run) throw new NotFoundException('Analysis run not found');
-    const clusters = await this.clusterRepo.find({ where: { runId: id }, order: { clusterIndex: 'ASC' } });
+    const clusters = (await this.clusterRepo.find({ where: { runId: id }, order: { clusterIndex: 'ASC' } }))
+      .map(cluster => cluster.size < MIN_CELL
+        ? { ...cluster, size: { suppressed: true as const }, centroid: undefined, profile: undefined }
+        : cluster);
     return { run, clusters };
   }
 
@@ -178,7 +182,10 @@ export class ClusteringService {
       `# dataset_size,${(run.metrics as any)?.dataset_size ?? ''}`,
       `# generated_at,${new Date().toISOString()}`,
       ['cluster_index', 'size', ...profileKeys].join(','),
-      ...clusters.map(c => [c.clusterIndex, c.size, ...profileKeys.map(key => csvEscape((c.profile as any)?.[key]))].join(',')),
+      ...clusters.map(c => (c.size < MIN_CELL
+        ? [c.clusterIndex, 'suppressed', ...profileKeys.map(() => 'suppressed')]
+        : [c.clusterIndex, c.size, ...profileKeys.map(key => csvEscape((c.profile as any)?.[key]))]
+      ).join(',')),
     ];
     const date = new Date().toISOString().slice(0, 10);
     return { buffer: Buffer.from(lines.join('\n'), 'utf8'), filename: `analytics-clusters-${run.id.slice(0, 8)}-${date}.csv` };

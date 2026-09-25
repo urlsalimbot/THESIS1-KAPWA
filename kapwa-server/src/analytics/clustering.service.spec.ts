@@ -114,6 +114,23 @@ describe('ClusteringService', () => {
     await expect(service.getRun('missing')).rejects.toThrow(NotFoundException);
   });
 
+  it('suppresses sub-5 cluster sizes and derived cells in run detail', async () => {
+    runRepo.findOne.mockResolvedValue({ id: 'run-1' });
+    clusterRepo.find.mockResolvedValue([
+      { clusterIndex: 0, size: 3, centroid: { standardized: [1] }, profile: { household_income_median: 12345 } },
+      { clusterIndex: 1, size: 30, centroid: { standardized: [2] }, profile: { household_income_median: 20000 } },
+    ]);
+
+    const { clusters } = await service.getRun('run-1');
+
+    expect(clusters[0].size).toEqual({ suppressed: true });
+    expect(clusters[0].profile).toBeUndefined();
+    expect(clusters[0].centroid).toBeUndefined();
+    expect(clusters[1].size).toBe(30);
+    expect(clusters[1].profile).toEqual({ household_income_median: 20000 });
+    expect(clusters[1].centroid).toEqual({ standardized: [2] });
+  });
+
   it('audits member drill-down access', async () => {
     runRepo.findOne.mockResolvedValue({ id: 'run-1' });
     features.getRunMembers.mockResolvedValue({ rows: [], total: 0 });
@@ -138,5 +155,25 @@ describe('ClusteringService', () => {
     expect(text).toContain('cluster_index,size');
     expect(text).toContain('0,30');
     expect(filename).toMatch(/^analytics-clusters-.*\.csv$/);
+  });
+
+  it('suppresses sub-5 cluster cells in the aggregate CSV', async () => {
+    runRepo.findOne.mockResolvedValue({
+      id: 'run-1', status: 'completed',
+      params: { chosen_k: 2, seed: 5, dataset_size: 33 },
+      metrics: { dataset_size: 33 },
+      createdAt: new Date('2026-09-25T00:00:00Z'),
+    });
+    clusterRepo.find.mockResolvedValue([
+      { clusterIndex: 0, size: 3, profile: { household_income_median: 987654 } },
+      { clusterIndex: 1, size: 30, profile: { household_income_median: 15000 } },
+    ]);
+
+    const { buffer } = await service.exportRunCsv('run-1');
+    const text = buffer.toString('utf8');
+    const rows = text.split('\n');
+    expect(rows.find(r => r.startsWith('0,'))).toBe('0,suppressed,suppressed');
+    expect(rows.find(r => r.startsWith('1,'))).toBe('1,30,15000');
+    expect(text).not.toContain('987654');
   });
 });
