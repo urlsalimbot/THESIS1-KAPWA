@@ -32,6 +32,7 @@ import { AgenciesModule } from './agencies/agencies.module';
 import { InterAgencyReferralsModule } from './inter-agency-referrals/inter-agency-referrals.module';
 import { AgencyPortalModule } from './agency-portal/agency-portal.module';
 import { ContactMessagesModule } from './contact-messages/contact-messages.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { FourPsModule } from './fourps/fourps.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -103,6 +104,7 @@ import { AppController } from './app.controller';
     InterAgencyReferralsModule,
     AgencyPortalModule,
     ContactMessagesModule,
+    AnalyticsModule,
     FourPsModule,
   ],
   controllers: [AppController],
