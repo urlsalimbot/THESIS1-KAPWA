@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AnalysisRun } from './analysis-run.entity';
@@ -71,8 +71,6 @@ export class ClusteringService {
       throw new UnprocessableEntityException({ code: 'insufficient_data', required: MIN_DATASET, actual: rows.length });
     }
 
-    let run: AnalysisRun | undefined;
-
     try {
       const prep = prepareMatrix(rows, featureKeys);
       const candidates = evaluateCandidates(prep.X, kRange, seed);
@@ -97,38 +95,14 @@ export class ClusteringService {
           const rawCentroid = centroid[dim] * prep.stds[dim] + prep.means[dim];
           profile[`${key}_centroid`] = Number(rawCentroid.toFixed(4));
         });
-        return this.clusterRepo.create({
-          runId: '', clusterIndex, size: members.length,
+        return {
+          clusterIndex, size: members.length,
           centroid: { standardized: centroid.map(v => Number(v.toFixed(6))), features: featureKeys },
           profile,
-        });
+        };
       });
 
-      run = await this.runRepo.save(this.runRepo.create({
-        model: 'household_clustering',
-        status: 'completed',
-        params: {
-          features: featureKeys, k_range: kRange, chosen_k: chosen.k, seed,
-          filters: { from: input.from ?? null, to: input.to ?? null, barangay: input.barangay ?? null },
-          imputation: prep.imputed,
-        },
-        metrics: {
-          dataset_size: rows.length,
-          candidates: candidates.map(c => ({ k: c.k, inertia: Number(c.inertia.toFixed(6)), silhouette: Number(c.silhouette.toFixed(6)) })),
-          chosen: { k: chosen.k, inertia: chosen.inertia, silhouette: chosen.silhouette },
-          feature_means: prep.means, feature_stds: prep.stds,
-        },
-        startedAt, completedAt: new Date(),
-        createdBy: userId,
-      }));
-
-      const savedRun: AnalysisRun = run;
-
-      for (const cluster of clusterRows) {
-        await this.clusterRepo.save({ ...cluster, runId: savedRun.id });
-      }
-      await this.memberRepo.insert(rows.map((row, i) => ({
-        runId: savedRun.id,
+      const memberRows = rows.map((row, i) => ({
         householdId: row.householdId,
         clusterIndex: chosen.assignments[i],
         distance: Number(
@@ -137,23 +111,45 @@ export class ClusteringService {
             return acc + (x - chosen.centroids[chosen.assignments[i]][dim]) ** 2;
           }, 0)).toFixed(6),
         ),
-      })));
+      }));
 
-      return savedRun;
+      // One transaction: a run is either fully persisted (run + clusters +
+      // members) or not persisted at all.
+      const saved = await this.runRepo.manager.transaction(async manager => {
+        const run = await manager.save(manager.create(AnalysisRun, {
+          model: 'household_clustering',
+          status: 'completed',
+          params: {
+            features: featureKeys, k_range: kRange, chosen_k: chosen.k, seed,
+            filters: { from: input.from ?? null, to: input.to ?? null, barangay: input.barangay ?? null },
+            imputation: prep.imputed,
+          },
+          metrics: {
+            dataset_size: rows.length,
+            candidates: candidates.map(c => ({ k: c.k, inertia: Number(c.inertia.toFixed(6)), silhouette: Number(c.silhouette.toFixed(6)) })),
+            chosen: { k: chosen.k, inertia: chosen.inertia, silhouette: chosen.silhouette },
+            feature_means: prep.means, feature_stds: prep.stds,
+          },
+          startedAt, completedAt: new Date(),
+          createdBy: userId,
+        }));
+        for (const cluster of clusterRows) {
+          await manager.save(manager.create(AnalysisRunCluster, { ...cluster, runId: run.id }));
+        }
+        await manager.insert(AnalysisRunMember, memberRows.map(member => ({ ...member, runId: run.id })));
+        return run;
+      });
+
+      return saved;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      new Logger(ClusteringService.name).warn(`Clustering run failed: ${message}`);
       try {
-        if (run?.id) {
-          await this.clusterRepo.delete({ runId: run.id });
-          await this.memberRepo.delete({ runId: run.id });
-          await this.runRepo.update(run.id, { status: 'failed', error: message });
-        } else {
-          await this.runRepo.save(this.runRepo.create({
-            model: 'household_clustering', status: 'failed',
-            params: { features: featureKeys, k_range: kRange, seed, filters: { from: input.from ?? null, to: input.to ?? null, barangay: input.barangay ?? null } },
-            startedAt, completedAt: new Date(), createdBy: userId, error: message,
-          }));
-        }
+        await this.runRepo.save(this.runRepo.create({
+          model: 'household_clustering', status: 'failed',
+          params: { features: featureKeys, k_range: kRange, seed, filters: { from: input.from ?? null, to: input.to ?? null, barangay: input.barangay ?? null } },
+          startedAt, completedAt: new Date(), createdBy: userId, error: message,
+        }));
       } catch {
         // recovery is best-effort; never mask the original error
       }

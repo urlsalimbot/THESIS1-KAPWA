@@ -29,6 +29,7 @@ describe('ClusteringService', () => {
   let runRepo: any;
   let clusterRepo: any;
   let memberRepo: any;
+  let manager: any;
   let features: any;
   let audit: any;
 
@@ -42,6 +43,12 @@ describe('ClusteringService', () => {
     };
     clusterRepo = { create: jest.fn((d: any) => d), save: jest.fn(), insert: jest.fn(), find: jest.fn(), delete: jest.fn() };
     memberRepo = { insert: jest.fn(), delete: jest.fn() };
+    manager = {
+      create: jest.fn((_entity: any, d: any) => d),
+      save: jest.fn(async (d: any) => (d.model === 'household_clustering' ? { id: 'run-1', ...d } : d)),
+      insert: jest.fn(),
+    };
+    runRepo.manager = { transaction: jest.fn(async (cb: any) => cb(manager)) };
     features = { getHouseholdFeatures: jest.fn(), getRunMembers: jest.fn() };
     audit = { log: jest.fn() };
     const module = await Test.createTestingModule({
@@ -62,30 +69,30 @@ describe('ClusteringService', () => {
     await expect(service.createRun({})).rejects.toThrow(UnprocessableEntityException);
   });
 
-  it('persists a completed run with candidates, clusters, and members', async () => {
+  it('persists a completed run with candidates, clusters, and members in one transaction', async () => {
     features.getHouseholdFeatures.mockResolvedValue(rows(60));
-    runRepo.save
-      .mockImplementationOnce(async (d: any) => ({ id: 'run-1', ...d }))
-      .mockImplementation(async (d: any) => d);
-    clusterRepo.save.mockImplementation(async (d: any) => d);
-    memberRepo.insert.mockResolvedValue({ identifiers: [] });
+    manager.insert.mockResolvedValue({ identifiers: [] });
 
     const run = await service.createRun({ kRange: [2, 3], seed: 99 }, 'user-1');
 
     expect(run.id).toBe('run-1');
-    expect(runRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+    expect(runRepo.manager.transaction).toHaveBeenCalledTimes(1);
+    const runPayload = manager.create.mock.calls.find((call: any[]) => call[0] === AnalysisRun)?.[1];
+    expect(runPayload).toEqual(expect.objectContaining({
       model: 'household_clustering', status: 'completed', createdBy: 'user-1',
     }));
-    const params = runRepo.create.mock.calls[0][0].params;
+    const params = runPayload.params;
     expect(params.seed).toBe(99);
     expect(params.chosen_k).toBeGreaterThanOrEqual(2);
-    const metrics = runRepo.create.mock.calls[0][0].metrics;
+    const metrics = runPayload.metrics;
     expect(metrics.dataset_size).toBe(60);
     expect(metrics.candidates.map((c: any) => c.k)).toEqual([2, 3]);
-    expect(clusterRepo.save).toHaveBeenCalled();
-    expect(clusterRepo.save).toHaveBeenCalledTimes(params.chosen_k);
-    expect(memberRepo.insert).toHaveBeenCalled();
-    expect(memberRepo.insert.mock.calls[0][0]).toHaveLength(60);
+    expect(manager.create).toHaveBeenCalledWith(AnalysisRunCluster, expect.objectContaining({ runId: 'run-1' }));
+    const clusterSaves = manager.save.mock.calls.filter((call: any[]) => call[0].clusterIndex != null);
+    expect(clusterSaves).toHaveLength(params.chosen_k);
+    expect(manager.insert).toHaveBeenCalledWith(AnalysisRunMember, expect.any(Array));
+    expect(manager.insert.mock.calls[0][1]).toHaveLength(60);
+    expect(manager.insert.mock.calls[0][1][0].runId).toBe('run-1');
   });
 
   it('rejects an empty valid feature set before fetching data', async () => {
@@ -93,20 +100,20 @@ describe('ClusteringService', () => {
     expect(features.getHouseholdFeatures).not.toHaveBeenCalled();
   });
 
-  it('marks the single run row failed when persistence fails midway', async () => {
+  it('marks the single run row failed when the transaction fails midway', async () => {
     features.getHouseholdFeatures.mockResolvedValue(rows(60));
-    runRepo.save
-      .mockImplementationOnce(async (d: any) => ({ id: 'run-1', ...d }))
-      .mockImplementation(async (d: any) => d);
-    clusterRepo.save.mockRejectedValue(new Error('db down'));
+    manager.insert.mockRejectedValue(new Error('db down'));
 
     await expect(service.createRun({ kRange: [2, 2] }, 'user-1')).rejects.toThrow('db down');
-    expect(runRepo.create).toHaveBeenCalledTimes(1);
-    expect(runRepo.update).toHaveBeenCalledWith('run-1', expect.objectContaining({
+    // One failed run row is persisted; the rolled-back completed run leaves no
+    // partial children to update or delete.
+    expect(runRepo.save).toHaveBeenCalledTimes(1);
+    expect(runRepo.create).toHaveBeenCalledWith(expect.objectContaining({
       status: 'failed', error: expect.stringContaining('db down'),
     }));
-    expect(clusterRepo.delete).toHaveBeenCalledWith({ runId: 'run-1' });
-    expect(memberRepo.delete).toHaveBeenCalledWith({ runId: 'run-1' });
+    expect(runRepo.update).not.toHaveBeenCalled();
+    expect(clusterRepo.delete).not.toHaveBeenCalled();
+    expect(memberRepo.delete).not.toHaveBeenCalled();
   });
 
   it('suppresses sub-5 counts in the barangay mix of a visible cluster', async () => {
