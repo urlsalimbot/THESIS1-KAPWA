@@ -2184,6 +2184,7 @@ en (inside the top-level object, before `} as const;`):
       "income": "Household income bands",
       "incomeNote": "Relative bands, not official poverty thresholds",
       "dependency": "Dependency ratio",
+      "householdSize": "Household size",
       "philhealth": "PhilHealth coverage",
       "male": "Male",
       "female": "Female"
@@ -2225,6 +2226,7 @@ en (inside the top-level object, before `} as const;`):
       "servedShare": "Served share",
       "assistanceShare": "Assistance share",
       "coverageRatio": "Coverage ratio",
+      "coverageQuartile": "Coverage quartile",
       "fourPsShare": "4Ps household share",
       "note": "Ratios compare each barangay's served share with its share of all households"
     }
@@ -2269,6 +2271,7 @@ fil (same shape; values differ):
       "income": "Antas ng kita ng sambahayan",
       "incomeNote": "Relatibong antas, hindi opisyal na poverty threshold",
       "dependency": "Dependency ratio",
+      "householdSize": "Laki ng sambahayan",
       "philhealth": "Saklaw ng PhilHealth",
       "male": "Lalaki",
       "female": "Babae"
@@ -2310,6 +2313,7 @@ fil (same shape; values differ):
       "servedShare": "Bahagi ng naserbisyuhan",
       "assistanceShare": "Bahagi ng tulong",
       "coverageRatio": "Coverage ratio",
+      "coverageQuartile": "Quartile ng coverage",
       "fourPsShare": "Bahagi ng 4Ps na sambahayan",
       "note": "Inihahambing ng ratio ang bahagi ng naserbisyuhan sa bahagi ng lahat ng sambahayan"
     }
@@ -2451,6 +2455,7 @@ describe('DemographicsTab', () => {
       civilStatus: [{ label: 'Married', count: { value: 60 } }, { label: 'Widowed', count: { suppressed: true } }],
       occupation: [{ label: 'Farmer', count: { value: 30 } }],
       incomeBands: [{ label: '<5k', count: { value: 20 } }],
+      householdSize: [{ label: '1', count: { value: 10 } }, { label: '8+', count: { suppressed: true } }],
       dependencyRatio: 0.8,
       philhealthCoverage: { value: 0.55 },
     });
@@ -2493,6 +2498,7 @@ interface DemographicsResponse {
   civilStatus: Array<{ label: string; count: SuppressedCell }>;
   occupation: Array<{ label: string; count: SuppressedCell }>;
   incomeBands: Array<{ label: string; count: SuppressedCell }>;
+  householdSize: Array<{ label: string; count: SuppressedCell }>;
   dependencyRatio: number | null;
   philhealthCoverage: SuppressedCell;
 }
@@ -2597,6 +2603,16 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
           <CardContent className="space-y-2">
             <p className="text-2xl font-semibold">{data.dependencyRatio != null ? data.dependencyRatio.toFixed(2) : '—'}</p>
             <p className="text-sm text-muted-foreground">{t('analytics.demographics.philhealth', 'PhilHealth coverage')}: {cellText(data.philhealthCoverage)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-sm">{t('analytics.demographics.householdSize', 'Household size')}</CardTitle></CardHeader>
+          <CardContent className="space-y-1">
+            {data.householdSize.map(row => (
+              <div key={row.label} className="flex justify-between text-sm">
+                <span>{row.label}</span><span className="font-medium">{cellText(row.count)}</span>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
@@ -3078,7 +3094,7 @@ import { queryKeys } from '../../lib/query-keys';
 
 type Cell = { value: number } | { suppressed: true };
 interface EquityResponse {
-  barangays: Array<{ barangay: string; householdsShare: Cell; servedShare: Cell; assistanceShare: Cell; coverageRatio: Cell; fourPsShare: Cell }>;
+  barangays: Array<{ barangay: string; householdsShare: Cell; servedShare: Cell; assistanceShare: Cell; coverageRatio: Cell; coverageQuartile: Cell; fourPsShare: Cell }>;
 }
 
 function cellText(cell: Cell | undefined): string {
@@ -3107,6 +3123,7 @@ export function EquityTab({ filters }: { filters: Record<string, unknown> }) {
               <th>{t('analytics.equity.servedShare', 'Served share')}</th>
               <th>{t('analytics.equity.assistanceShare', 'Assistance share')}</th>
               <th>{t('analytics.equity.coverageRatio', 'Coverage ratio')}</th>
+              <th>{t('analytics.equity.coverageQuartile', 'Coverage quartile')}</th>
               <th>{t('analytics.equity.fourPsShare', '4Ps household share')}</th>
             </tr>
           </thead>
@@ -3118,6 +3135,7 @@ export function EquityTab({ filters }: { filters: Record<string, unknown> }) {
                 <td>{cellText(row.servedShare)}</td>
                 <td>{cellText(row.assistanceShare)}</td>
                 <td>{cellText(row.coverageRatio)}</td>
+                <td>{cellText(row.coverageQuartile)}</td>
                 <td>{cellText(row.fourPsShare)}</td>
               </tr>
             ))}
