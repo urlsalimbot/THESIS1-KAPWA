@@ -42,6 +42,34 @@ function csvEscape(value: unknown): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+/**
+ * Response shape for run detail: cluster sizes (and the derived dataset size)
+ * may be replaced with suppressed-cell wrappers on read.
+ */
+export interface RunDetailCluster {
+  clusterIndex: number;
+  size: number | { suppressed: true };
+  centroid?: Record<string, unknown>;
+  profile?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+export interface RunDetail {
+  run: {
+    id: string;
+    model: string;
+    status: string;
+    params?: Record<string, unknown>;
+    metrics?: Record<string, unknown>;
+    startedAt?: Date;
+    completedAt?: Date;
+    createdBy?: string;
+    error?: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  clusters: RunDetailCluster[];
+}
+
 @Injectable()
 export class ClusteringService {
   constructor(
@@ -161,7 +189,7 @@ export class ClusteringService {
     return this.runRepo.find({ order: { createdAt: 'DESC' }, take: Math.min(limit, 100) });
   }
 
-  async getRun(id: string) {
+  async getRun(id: string): Promise<RunDetail> {
     const run = await this.runRepo.findOne({ where: { id } });
     if (!run) throw new NotFoundException('Analysis run not found');
     const stored = await this.clusterRepo.find({ where: { runId: id }, order: { clusterIndex: 'ASC' } });
@@ -170,8 +198,15 @@ export class ClusteringService {
     );
     const clusters = stored.map((cluster, i) => ('suppressed' in sizeCells[i]
       ? { ...cluster, size: { suppressed: true as const }, centroid: undefined, profile: undefined }
-      : { ...cluster, profile: suppressProfileMix(cluster.profile) }));
-    return { run, clusters };
+      : { ...cluster, profile: suppressProfileMix(cluster.profile) ?? undefined }));
+    // The persisted dataset size equals the sum of the (possibly suppressed)
+    // cluster sizes, so it is suppressed in the response when any size is
+    // hidden. The stored row is left untouched.
+    const anySizeSuppressed = sizeCells.some(cell => 'suppressed' in cell);
+    const runResponse = anySizeSuppressed
+      ? { ...run, metrics: { ...(run.metrics ?? {}), dataset_size: { suppressed: true as const } } }
+      : run;
+    return { run: runResponse, clusters };
   }
 
   async getRunMembers(id: string, clusterIndex: number, page: number, limit: number, userId?: string) {
@@ -189,6 +224,7 @@ export class ClusteringService {
     const sizeCells = complementSuppression(
       clusters.map(cluster => (cluster.size < MIN_CELL ? { suppressed: true as const } : { value: cluster.size })),
     );
+    const anySizeSuppressed = sizeCells.some(cell => 'suppressed' in cell);
     const profileKeys = [...new Set(clusters.flatMap(c => Object.keys(c.profile ?? {})))]
       .filter(key => key !== 'barangay_mix' && key !== 'size');
     const lines: string[] = [
@@ -196,7 +232,7 @@ export class ClusteringService {
       `# status,${run.status}`,
       `# chosen_k,${(run.params as any)?.chosen_k ?? ''}`,
       `# seed,${(run.params as any)?.seed ?? ''}`,
-      `# dataset_size,${(run.metrics as any)?.dataset_size ?? ''}`,
+      `# dataset_size,${anySizeSuppressed ? 'suppressed' : ((run.metrics as any)?.dataset_size ?? '')}`,
       `# generated_at,${new Date().toISOString()}`,
       ['cluster_index', 'size', ...profileKeys].join(','),
       ...clusters.map((c, i) => ('suppressed' in sizeCells[i]

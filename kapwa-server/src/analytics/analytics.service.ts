@@ -148,10 +148,18 @@ export class AnalyticsService {
       ? { value: covered / persons.length }
       : { suppressed: true as const };
 
+    // A family's published total can pin a hidden member when combined with
+    // the visible cells, so suppress the total whenever any member is hidden.
+    const personsPartitionSuppressed =
+      civilStatusCells.some(cell => 'suppressed' in cell) || incomeBandCells.some(cell => 'suppressed' in cell);
+    const householdsPartitionSuppressed = householdSizeCells.some(cell => 'suppressed' in cell);
+
     return {
       summary: {
-        personsServed: personCount(persons.length),
-        householdsCovered: personCount(new Set(persons.map(p => p.household_id).filter(Boolean)).size),
+        personsServed: personsPartitionSuppressed ? { suppressed: true as const } : personCount(persons.length),
+        householdsCovered: householdsPartitionSuppressed
+          ? { suppressed: true as const }
+          : personCount(new Set(persons.map(p => p.household_id).filter(Boolean)).size),
         barangaysCovered: personCount(new Set(persons.map(p => p.barangay).filter(Boolean)).size),
       },
       ageSex,
@@ -198,19 +206,22 @@ export class AnalyticsService {
     const amountShares = barangays.map(r => (totalAmount > 0 ? Number(r.amount) / totalAmount : 0));
     const caseCells = complementSuppression(barangays.map(r => suppressCount(Number(r.cases))));
     const amountCells = complementSuppression(barangays.map(r => suppressCount(Math.round(Number(r.amount)))));
-    // Any suppressed cell makes the family total invertible, so the HHI (a
-    // function of every share) must not be published either. A barangay-filtered
-    // response has a single row whose HHI would always be 1, so it is null too.
+    // Any suppressed cell makes the family total invertible (hidden sum + the
+    // published cells can pin exact values), so the total is suppressed too.
+    const anyCaseSuppressed = caseCells.some(cell => 'suppressed' in cell);
+    const anyAmountSuppressed = amountCells.some(cell => 'suppressed' in cell);
+    // The HHI is a function of every share, so it follows the same rule; a
+    // barangay-filtered response has a single row whose HHI would always be 1.
     const singleBarangay = Boolean(filters.barangay);
-    const hhiCases = singleBarangay || caseCells.some(cell => 'suppressed' in cell) ? null : hhi(caseShares);
-    const hhiAssistance = singleBarangay || amountCells.some(cell => 'suppressed' in cell) ? null : hhi(amountShares);
+    const hhiCases = singleBarangay || anyCaseSuppressed ? null : hhi(caseShares);
+    const hhiAssistance = singleBarangay || anyAmountSuppressed ? null : hhi(amountShares);
     return {
       hhiCases,
       hhiCasesLabel: hhiCases == null ? null : hhiLabel(hhiCases),
       hhiAssistance,
       hhiAssistanceLabel: hhiAssistance == null ? null : hhiLabel(hhiAssistance),
-      totalCases,
-      totalAmount,
+      totalCases: anyCaseSuppressed ? null : totalCases,
+      totalAmount: anyAmountSuppressed ? null : totalAmount,
       barangays: barangays.map((r, i) => ({
         barangay: r.barangay,
         cases: caseCells[i],

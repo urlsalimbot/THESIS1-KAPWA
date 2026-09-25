@@ -31,7 +31,9 @@ describe('AnalyticsService', () => {
         { person_id: 'p5', gender: 'Male', age: 30, civil_status: 'Married', occupation: null, has_philhealth: false, household_income: null, household_id: 'h3', barangay: null },
       ]);
       const result = await service.getDemographics({});
-      expect(result.summary.personsServed).toEqual({ value: 5 });
+      // civilStatus and incomeBands both contain suppressed cells here, so the
+      // published persons total is withheld with them.
+      expect(result.summary.personsServed).toEqual({ suppressed: true });
       expect(result.summary.householdsCovered).toEqual({ suppressed: true });
       expect(result.summary.barangaysCovered).toEqual({ suppressed: true });
       expect(result.ageSex.find(b => b.bracket === '0-5')?.male).toEqual({ suppressed: true });
@@ -51,8 +53,10 @@ describe('AnalyticsService', () => {
       ];
       repoMock.query.mockResolvedValue(rows);
       const result = await service.getDemographics({});
-      expect(result.summary.personsServed).toEqual({ value: 20 });
-      expect(result.summary.householdsCovered).toEqual({ value: 20 });
+      // Empty income bands (<5) suppress the persons total; 20 one-person
+      // household-size buckets leave the household total suppressed too.
+      expect(result.summary.personsServed).toEqual({ suppressed: true });
+      expect(result.summary.householdsCovered).toEqual({ suppressed: true });
       expect(result.summary.barangaysCovered).toEqual({ suppressed: true });
       expect(result.ageSex.find(b => b.bracket === '0-5')?.male).toEqual({ value: 8 });
       expect(result.occupation).toEqual([
@@ -205,7 +209,8 @@ describe('AnalyticsService', () => {
         { person_id: 'p5', gender: 'Male', age: 30, civil_status: 'Married', occupation: null, has_philhealth: false, household_income: null, household_id: 'h3', barangay: null },
       ]);
       const result = await service.getDemographics({});
-      expect(result.summary.personsServed).toEqual({ value: 5 });
+      // three civil-status values (all <5) keep the persons total hidden
+      expect(result.summary.personsServed).toEqual({ suppressed: true });
       // working-age denominator (2) is below MIN_CELL, so the ratio is suppressed
       expect(result.dependencyRatio).toBeNull();
     });
@@ -268,6 +273,46 @@ describe('AnalyticsService', () => {
       expect(enoughCovered.philhealthCoverage).toEqual({ value: 0.5 });
     });
 
+    it('suppresses the persons total when a civil-status cell is suppressed', async () => {
+      const statuses = [
+        ...Array.from({ length: 7 }, (_, i) => ({ status: 'Single', id: `s${i}` })),
+        ...Array.from({ length: 7 }, (_, i) => ({ status: 'Married', id: `m${i}` })),
+        ...Array.from({ length: 7 }, (_, i) => ({ status: 'Widowed', id: `w${i}` })),
+        ...Array.from({ length: 7 }, (_, i) => ({ status: 'Separated', id: `sp${i}` })),
+        ...Array.from({ length: 7 }, (_, i) => ({ status: 'Divorced', id: `d${i}` })),
+        { status: 'Annulled', id: 'a0' },
+      ];
+      const incomes = ['4000', '7000', '12000', '30000', '45000', null];
+      repoMock.query.mockResolvedValue(statuses.map((entry, i) => ({
+        person_id: entry.id, gender: 'Male', age: 40, civil_status: entry.status, occupation: null,
+        has_philhealth: true, household_income: incomes[i % incomes.length], household_id: `h_${entry.id}`, barangay: 'Poblacion',
+      })));
+      const result = await service.getDemographics({});
+      // Each income band holds six people, so only civil status can trigger.
+      expect(result.incomeBands.every(b => 'value' in b.count)).toBe(true);
+      expect(result.civilStatus.some(s => 'suppressed' in s.count)).toBe(true);
+      expect(result.summary.personsServed).toEqual({ suppressed: true });
+    });
+
+    it('suppresses the household total when a household-size cell is suppressed', async () => {
+      const incomes = ['4000', '7000', '12000', '30000', '45000', null];
+      const buildRow = (id: string, householdId: string, index: number) => ({
+        person_id: id, gender: 'Male', age: 40, civil_status: 'Married', occupation: null,
+        has_philhealth: true, household_income: incomes[Math.floor(index / 5)], household_id: householdId, barangay: 'Poblacion',
+      });
+      const rows: Array<Record<string, unknown>> = [];
+      for (let h = 0; h < 5; h++) rows.push(buildRow(`one_${h}`, `one_${h}`, h));
+      for (let h = 0; h < 5; h++) {
+        for (let m = 0; m < 5; m++) rows.push(buildRow(`five_${h}_${m}`, `five_${h}`, 5 + h * 5 + m));
+      }
+      repoMock.query.mockResolvedValue(rows);
+      const result = await service.getDemographics({});
+      // 30 people: five per income band, civil status is one visible cell.
+      expect(result.incomeBands.every(b => 'value' in b.count)).toBe(true);
+      expect(result.summary.personsServed).toEqual({ value: 30 });
+      expect(result.summary.householdsCovered).toEqual({ suppressed: true });
+    });
+
     it('casts the case intervention join to text for the uuid case id', async () => {
       repoMock.query.mockResolvedValue([]);
       await service.getDemographics({});
@@ -289,6 +334,8 @@ describe('AnalyticsService', () => {
       expect(result.hhiCasesLabel).toBeNull();
       expect(result.hhiAssistance).toBeNull();
       expect(result.hhiAssistanceLabel).toBeNull();
+      expect(result.totalCases).toBeNull();
+      expect(result.totalAmount).toBeNull();
       // The zero-case Matictic cell is suppressed, so the smallest remaining
       // case cell (Poblacion, first of the 6s) is suppressed with it.
       expect(result.barangays[0].cases).toEqual({ suppressed: true });
@@ -314,6 +361,8 @@ describe('AnalyticsService', () => {
       const result = await service.getConcentration({});
       expect(result.barangays.map(b => b.cases)).toEqual([{ value: 6 }, { value: 7 }, { value: 8 }]);
       expect(result.barangays.map(b => b.amount)).toEqual([{ value: 6000 }, { value: 7000 }, { value: 8000 }]);
+      expect(result.totalCases).toBe(21);
+      expect(result.totalAmount).toBe(21000);
       expect(result.hhiCases).toBeCloseTo(149 / 441);
       expect(result.hhiCasesLabel).toBe('concentrated');
       expect(result.hhiAssistance).toBeCloseTo(149 / 441);
@@ -329,6 +378,8 @@ describe('AnalyticsService', () => {
       const result = await service.getConcentration({});
       expect(result.hhiCases).toBeNull();
       expect(result.hhiAssistance).toBeNull();
+      expect(result.totalCases).toBeNull();
+      expect(result.totalAmount).toBeNull();
       expect(result.barangays[0].cases).toEqual({ value: 6 });
       expect(result.barangays.filter(b => 'suppressed' in b.cases)).toHaveLength(2);
       expect(result.barangays.filter(b => 'suppressed' in b.amount)).toHaveLength(2);
@@ -366,11 +417,30 @@ describe('AnalyticsService', () => {
       expect(result.barangays[0].barangay).toBe('Bigte');
       expect(result.barangays[0].cases).toEqual({ value: 6 });
       expect(result.barangays[0].caseShare).toEqual({ value: 1 });
+      expect(result.totalCases).toBe(6);
+      expect(result.totalAmount).toBe(6000);
       expect(result.hhiCases).toBeNull();
       expect(result.hhiCasesLabel).toBeNull();
       expect(result.hhiAssistance).toBeNull();
       expect(result.hhiAssistanceLabel).toBeNull();
     });
+
+    it('suppresses the case total independently from the amount total', async () => {
+      repoMock.query.mockResolvedValue([
+        { barangay: 'Poblacion', cases: '6', interventions: '10', amount: '6000' },
+        { barangay: 'Bigte', cases: '6', interventions: '8', amount: '6000' },
+        { barangay: 'Matictic', cases: '0', interventions: '2', amount: '6000' },
+      ]);
+      const result = await service.getConcentration({});
+      // Cases: zero-case Matictic suppresses the family (and its total/HHI).
+      expect(result.totalCases).toBeNull();
+      expect(result.hhiCases).toBeNull();
+      // Amounts: every cell is 6000, so the amount family is fully published.
+      expect(result.totalAmount).toBe(18000);
+      expect(result.hhiAssistance).toBeCloseTo(1 / 3);
+      expect(result.hhiAssistanceLabel).toBe('concentrated');
+    });
+
 
     it('throws insufficient_data with required 1 when a barangay filter matches nothing', async () => {
       repoMock.query.mockResolvedValue([]);

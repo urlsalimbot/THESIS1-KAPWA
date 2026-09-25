@@ -143,14 +143,15 @@ describe('ClusteringService', () => {
   });
 
   it('suppresses sub-5 cluster sizes, the complementary cell, and derived cells in run detail', async () => {
-    runRepo.findOne.mockResolvedValue({ id: 'run-1' });
+    const runMock = { id: 'run-1', metrics: { dataset_size: 53 } };
+    runRepo.findOne.mockResolvedValue(runMock);
     clusterRepo.find.mockResolvedValue([
       { clusterIndex: 0, size: 3, centroid: { standardized: [1] }, profile: { household_income_median: 12345 } },
       { clusterIndex: 1, size: 20, centroid: { standardized: [2] }, profile: { household_income_median: 18000 } },
       { clusterIndex: 2, size: 30, centroid: { standardized: [3] }, profile: { household_income_median: 20000 } },
     ]);
 
-    const { clusters } = await service.getRun('run-1');
+    const { run, clusters } = await service.getRun('run-1');
 
     // Size 3 is small, so the smallest remaining size (20) is hidden with it.
     expect(clusters[0].size).toEqual({ suppressed: true });
@@ -161,17 +162,23 @@ describe('ClusteringService', () => {
     expect(clusters[2].size).toBe(30);
     expect(clusters[2].profile).toEqual({ household_income_median: 20000 });
     expect(clusters[2].centroid).toEqual({ standardized: [3] });
+    // The response hides the dataset size (sum of the hidden sizes) but does
+    // not mutate the stored row.
+    expect(run.metrics?.dataset_size).toEqual({ suppressed: true });
+    expect(runMock.metrics.dataset_size).toBe(53);
   });
 
-  it('leaves cluster sizes untouched when zero or two-plus cells are suppressed', async () => {
-    runRepo.findOne.mockResolvedValue({ id: 'run-1' });
+  it('leaves cluster sizes and the dataset size untouched when zero or two-plus cells are suppressed', async () => {
+    runRepo.findOne.mockResolvedValue({ id: 'run-1', metrics: { dataset_size: 50 } });
     clusterRepo.find.mockResolvedValueOnce([
       { clusterIndex: 0, size: 20, profile: { household_income_median: 18000 } },
       { clusterIndex: 1, size: 30, profile: { household_income_median: 20000 } },
     ]);
     const noSmall = await service.getRun('run-1');
     expect(noSmall.clusters.map(c => c.size)).toEqual([20, 30]);
+    expect(noSmall.run.metrics?.dataset_size).toBe(50);
 
+    runRepo.findOne.mockResolvedValue({ id: 'run-1', metrics: { dataset_size: 35 } });
     clusterRepo.find.mockResolvedValueOnce([
       { clusterIndex: 0, size: 3, profile: { household_income_median: 12345 } },
       { clusterIndex: 1, size: 2, profile: { household_income_median: 8000 } },
@@ -180,6 +187,7 @@ describe('ClusteringService', () => {
     const twoSmall = await service.getRun('run-1');
     expect(twoSmall.clusters[2].size).toBe(30);
     expect(twoSmall.clusters[2].profile).toEqual({ household_income_median: 20000 });
+    expect(twoSmall.run.metrics?.dataset_size).toEqual({ suppressed: true });
   });
 
   it('audits member drill-down access', async () => {
@@ -203,6 +211,7 @@ describe('ClusteringService', () => {
     const { buffer, filename } = await service.exportRunCsv('run-1');
     const text = buffer.toString('utf8');
     expect(text).toContain('# run_id,run-1');
+    expect(text).toContain('# dataset_size,60');
     const header = text.split('\n').find(line => line.startsWith('cluster_index,'));
     expect(header).toBe('cluster_index,size,household_income_median');
     expect(header?.split(',').filter(key => key === 'size')).toHaveLength(1);
@@ -227,6 +236,7 @@ describe('ClusteringService', () => {
     const text = buffer.toString('utf8');
     const rows = text.split('\n');
     // Size 3 is small, so the smallest remaining size (20) is written suppressed too.
+    expect(text).toContain('# dataset_size,suppressed');
     expect(rows.find(r => r.startsWith('0,'))).toBe('0,suppressed,suppressed');
     expect(rows.find(r => r.startsWith('1,'))).toBe('1,suppressed,suppressed');
     expect(rows.find(r => r.startsWith('2,'))).toBe('2,30,15000');
