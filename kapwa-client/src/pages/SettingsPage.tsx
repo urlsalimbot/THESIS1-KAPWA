@@ -505,30 +505,63 @@ function SecurityTab() {
 function NotificationsTab() {
   const { t } = useTranslation();
   const { data: prefs, isLoading, mutate: revalidatePrefs } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
-  const [toggling, setToggling] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Record<string, boolean>>({});
+  const [draftSynced, setDraftSynced] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  async function handleToggle(channel: string, category: string) {
-    const key = `${channel}:${category}`;
-    setToggling(key);
-    try {
-      const pref = Array.isArray(prefs) ? prefs.find(p => p.channel === channel && p.category === category) : null;
-      await api.put('/notifications/preferences', {
-        channel,
-        category,
-        optedIn: pref ? !pref.optedIn : true,
-      });
-      await revalidatePrefs();
-    } catch {
-      toast.error(t('settings.prefUpdateFailed', 'Failed to update preference'), { description: t('settings.tryAgain', 'Please try again.') });
-    } finally {
-      setToggling(null);
+  // Seed the draft from server preferences once they load. Toggles only stage
+  // changes locally; they are applied via a deliberate "Save preferences" action
+  // (single bulk write to the preferences API — the opt-in/opt-out mechanism).
+  useEffect(() => {
+    if (draftSynced || !Array.isArray(prefs)) return;
+    const next: Record<string, boolean> = {};
+    for (const cat of CATEGORIES) {
+      for (const channel of CHANNELS) {
+        const pref = prefs.find(p => p.channel === channel && p.category === cat);
+        next[`${channel}:${cat}`] = pref ? pref.optedIn : false;
+      }
     }
-  }
+    setDraft(next);
+    setDraftSynced(true);
+  }, [prefs, draftSynced]);
 
-  function isOptedIn(channel: string, category: string): boolean {
+  function serverValue(channel: string, category: string): boolean {
     if (!Array.isArray(prefs)) return false;
     const pref = prefs.find(p => p.channel === channel && p.category === category);
     return pref ? pref.optedIn : false;
+  }
+
+  function isOptedIn(channel: string, category: string): boolean {
+    return draft[`${channel}:${category}`] ?? serverValue(channel, category);
+  }
+
+  const hasChanges = CATEGORIES.some(cat =>
+    CHANNELS.some(ch => isOptedIn(ch, cat) !== serverValue(ch, cat)),
+  );
+
+  function handleToggle(channel: string, category: string) {
+    const key = `${channel}:${category}`;
+    setDraft(prev => ({ ...prev, [key]: !isOptedIn(channel, category) }));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const rows = CATEGORIES.flatMap(cat =>
+        CHANNELS.map(ch => ({ channel: ch, category: cat, optedIn: isOptedIn(ch, cat) })),
+      );
+      await api.put('/notifications/preferences/bulk', rows);
+      await revalidatePrefs();
+      toast.success(t('settings.prefsSaved', 'Preferences saved'), {
+        description: t('settings.prefsSavedDesc', 'Your notification preferences have been updated.'),
+      });
+    } catch {
+      toast.error(t('settings.prefSaveFailed', 'Failed to save preferences'), {
+        description: t('settings.tryAgain', 'Please try again.'),
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   const categoryIcons: Record<string, string> = {
@@ -589,7 +622,7 @@ function NotificationsTab() {
                     <td key={channel} className="px-4 py-3 text-center">
                       <button
                         onClick={() => handleToggle(channel, cat)}
-                        disabled={toggling === `${channel}:${cat}`}
+                        disabled={saving}
                         className={`inline-flex h-6 w-10 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                           isOptedIn(channel, cat) ? 'bg-primary' : 'bg-input'
                         }`}
@@ -609,6 +642,13 @@ function NotificationsTab() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t bg-muted/20 px-4 py-3">
+          <p className="text-xs text-muted-foreground">{t('settings.prefsHint', 'Changes apply after you save.')}</p>
+          <Button size="sm" onClick={handleSave} disabled={!hasChanges || saving}>
+            <Save size={14} className="mr-1.5" aria-hidden="true" />
+            {saving ? t('settings.saving', 'Saving...') : t('settings.prefsSave', 'Save preferences')}
+          </Button>
         </div>
       </div>
     </div>
