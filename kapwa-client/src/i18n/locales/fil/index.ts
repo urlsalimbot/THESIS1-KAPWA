@@ -2342,6 +2342,8 @@ const fil: EnLocale = {
     "suppressed": "Nakubli (<5)",
     "noData": "Walang datos para sa napiling filter",
     "insufficientData": "Kulang ang datos (kailangan {{required}}, nahanap {{actual}})",
+    "invalidInput": "Suriin ang saklaw ng k (2–10) at halaga ng seed.",
+    "actionFailed": "Nabigo ang aksyon. Subukang muli.",
     "loading": "Naglo-load…",
     "methodology": "Paano ito kinakalkula",
     "export": "I-export ang CSV",

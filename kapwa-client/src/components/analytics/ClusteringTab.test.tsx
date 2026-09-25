@@ -61,4 +61,19 @@ describe('ClusteringTab', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: /View households/i }))[0]);
     expect(await screen.findByText(/h1/)).toBeTruthy();
   });
+
+  it('rejects an invalid k range before posting', async () => {
+    renderTab();
+    fireEvent.change(await screen.findByLabelText(/Candidate k range/i), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: /Run clustering/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Check the k range/i);
+    expect(mockApiPost).not.toHaveBeenCalled();
+  });
+
+  it('surfaces insufficient-data details from a failed run', async () => {
+    mockApiPost.mockRejectedValueOnce(Object.assign(new Error('boom'), { body: { code: 'insufficient_data', required: 20, actual: 4 } }));
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: /Run clustering/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Not enough data \(needs 20, found 4\)/);
+  });
 });

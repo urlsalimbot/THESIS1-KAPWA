@@ -2339,6 +2339,8 @@ const en = {
     "suppressed": "Suppressed (<5)",
     "noData": "No data for the selected filters",
     "insufficientData": "Not enough data (needs {{required}}, found {{actual}})",
+    "invalidInput": "Check the k range (2–10) and seed values.",
+    "actionFailed": "Action failed. Please try again.",
     "loading": "Loading…",
     "methodology": "How this is computed",
     "export": "Export CSV",

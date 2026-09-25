@@ -70,15 +70,28 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
   }, [detail]);
 
   async function runClustering() {
+    const validK = Number.isInteger(kMin) && Number.isInteger(kMax)
+      && kMin >= 2 && kMin <= 10 && kMax >= 2 && kMax <= 10 && kMin <= kMax;
+    const trimmedSeed = seed.trim();
+    const validSeed = trimmedSeed === '' || /^\d+$/.test(trimmedSeed);
+    if (!validK || !validSeed) {
+      setError(t('analytics.invalidInput', 'Check the k range (2–10) and seed values.'));
+      return;
+    }
     setRunning(true);
     setError('');
     try {
       const body: Record<string, unknown> = { kRange: [kMin, kMax], ...filters };
-      if (seed.trim() !== '') body.seed = Number(seed);
+      if (trimmedSeed !== '') body.seed = Number(trimmedSeed);
       await api.post('/analytics/clustering/runs', body);
       await mutateRuns();
-    } catch {
-      setError(t('analytics.noData', 'No data for the selected filters'));
+    } catch (err) {
+      const errorBody = (err as { body?: { code?: string; required?: number; actual?: number } }).body;
+      if (errorBody?.code === 'insufficient_data') {
+        setError(t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: errorBody.required, actual: errorBody.actual }));
+      } else {
+        setError(t('analytics.actionFailed', 'Action failed. Please try again.'));
+      }
     } finally {
       setRunning(false);
     }
@@ -194,7 +207,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
         </div>
       )}
 
-      {memberCluster != null && members && (
+      {canDrill && memberCluster != null && members && (
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-sm">{t('analytics.clustering.membersTitle', 'Households in segment {{index}}', { index: memberCluster + 1 })}</CardTitle>
