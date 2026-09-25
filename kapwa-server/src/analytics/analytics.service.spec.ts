@@ -57,6 +57,20 @@ describe('AnalyticsService', () => {
       ]);
       expect(result.dependencyRatio).toBeCloseTo(8 / 12);
       expect(result.philhealthCoverage).toEqual({ value: 0.4 });
+      expect(result.householdSize.find(b => b.label === '1')?.count).toEqual({ value: 20 });
+    });
+
+    it('buckets households by size, capping at 8+, and suppresses small buckets', async () => {
+      const rows = [
+        { person_id: 's1p1', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philhealth: true, household_income: '4000', household_id: 'small', barangay: 'Poblacion' },
+        ...Array.from({ length: 9 }, (_, i) => ({ person_id: `s9p${i}`, gender: 'Female', age: 30, civil_status: 'Married', occupation: 'Teacher', has_philhealth: true, household_income: '12000', household_id: 'large', barangay: 'Bigte' })),
+      ];
+      repoMock.query.mockResolvedValue(rows);
+      const result = await service.getDemographics({});
+      expect(result.householdSize.map(b => b.label)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8+']);
+      // one household of size 1 and one of size 9 (capped to 8+): both below MIN_CELL
+      expect(result.householdSize.find(b => b.label === '1')?.count).toEqual({ suppressed: true });
+      expect(result.householdSize.find(b => b.label === '8+')?.count).toEqual({ suppressed: true });
     });
 
     it('returns an empty state when there are no persons', async () => {
@@ -168,6 +182,32 @@ describe('AnalyticsService', () => {
       expect(sql).toContain('FROM beneficiary_roles br');
       expect(sql).toContain("ILIKE '%4ps%'");
       expect(sql).not.toContain('JOIN beneficiary_roles');
+    });
+
+    it('assigns coverage quartiles from the non-suppressed ratios in ascending order', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([
+          { barangay: 'A', served_households: '6', assistance: '600', four_ps: '0' },
+          { barangay: 'B', served_households: '6', assistance: '600', four_ps: '0' },
+          { barangay: 'C', served_households: '6', assistance: '600', four_ps: '0' },
+          { barangay: 'D', served_households: '6', assistance: '600', four_ps: '0' },
+          { barangay: 'E', served_households: '2', assistance: '100', four_ps: '0' },
+        ])
+        .mockResolvedValueOnce([
+          { barangay: 'A', households: '48' },
+          { barangay: 'B', households: '24' },
+          { barangay: 'C', households: '16' },
+          { barangay: 'D', households: '12' },
+          { barangay: 'E', households: '60' },
+        ]);
+      const result = await service.getEquity({});
+      const byName = (name: string) => result.barangays.find(b => b.barangay === name);
+      // quartile = Math.min(3, Math.floor((rankIndex / n) * 4)) + 1 over ascending non-suppressed coverage ratios
+      expect(byName('A')?.coverageQuartile).toEqual({ value: 1 });
+      expect(byName('B')?.coverageQuartile).toEqual({ value: 2 });
+      expect(byName('C')?.coverageQuartile).toEqual({ value: 3 });
+      expect(byName('D')?.coverageQuartile).toEqual({ value: 4 });
+      expect(byName('E')?.coverageQuartile).toEqual({ suppressed: true });
     });
   });
 });

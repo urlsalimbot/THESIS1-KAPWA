@@ -99,6 +99,15 @@ export class AnalyticsService {
       count: personCount(persons.filter(p => band.test(p.household_income != null ? Number(p.household_income) : null)).length),
     }));
 
+    const householdMembers = new Map<string, number>();
+    persons.forEach(p => {
+      if (p.household_id) householdMembers.set(p.household_id, (householdMembers.get(p.household_id) ?? 0) + 1);
+    });
+    const householdSize = Array.from({ length: 8 }, (_, i) => i + 1).map(size => ({
+      label: size === 8 ? '8+' : String(size),
+      count: personCount([...householdMembers.values()].filter(n => Math.min(n, 8) === size).length),
+    }));
+
     const ages = persons.map(p => p.age).filter((a): a is number => a != null);
     const dependents = ages.filter(a => a <= 14 || a >= 60).length;
     const working = ages.filter(a => a >= 15 && a <= 59).length;
@@ -117,6 +126,7 @@ export class AnalyticsService {
       civilStatus,
       occupation,
       incomeBands,
+      householdSize,
       dependencyRatio,
       philhealthCoverage,
     };
@@ -192,20 +202,36 @@ export class AnalyticsService {
     const totalHouseholds = (householdRows ?? []).reduce((acc, r) => acc + Number(r.households), 0);
     const householdsByBarangay = new Map((householdRows ?? []).map(r => [r.barangay, Number(r.households)]));
 
-    const barangays = (served ?? []).map(r => {
+    const equityRows = (served ?? []).map(r => {
       const households = householdsByBarangay.get(r.barangay) ?? 0;
       const servedCount = Number(r.served_households);
       const householdsShare = totalHouseholds > 0 ? households / totalHouseholds : 0;
       const servedShare = totalServed > 0 ? servedCount / totalServed : 0;
       return {
-        barangay: r.barangay,
-        householdsShare: suppressRatio(householdsShare, households),
-        servedShare: suppressRatio(servedShare, servedCount),
-        assistanceShare: suppressRatio(totalAssistance > 0 ? Number(r.assistance) / totalAssistance : 0, servedCount),
+        r,
+        households,
+        servedCount,
+        householdsShare,
+        servedShare,
         coverageRatio: householdsShare > 0 ? suppressRatio(servedShare / householdsShare, servedCount) : { suppressed: true as const },
-        fourPsShare: suppressRatio(households > 0 ? Number(r.four_ps) / households : 0, Number(r.four_ps)),
       };
     });
+    const coverageRatios = equityRows
+      .map(row => ('value' in row.coverageRatio ? row.coverageRatio.value : null))
+      .filter((v): v is number => v != null)
+      .sort((a, b) => a - b);
+    // quartile = Math.min(3, Math.floor((rankIndex / n) * 4)) + 1; ties share the lowest rank index
+    const quartileFor = (ratio: number) =>
+      Math.min(3, Math.floor((coverageRatios.indexOf(ratio) / coverageRatios.length) * 4)) + 1;
+    const barangays = equityRows.map(row => ({
+      barangay: row.r.barangay,
+      householdsShare: suppressRatio(row.householdsShare, row.households),
+      servedShare: suppressRatio(row.servedShare, row.servedCount),
+      assistanceShare: suppressRatio(totalAssistance > 0 ? Number(row.r.assistance) / totalAssistance : 0, row.servedCount),
+      coverageRatio: row.coverageRatio,
+      coverageQuartile: 'value' in row.coverageRatio ? { value: quartileFor(row.coverageRatio.value) } : { suppressed: true as const },
+      fourPsShare: suppressRatio(row.households > 0 ? Number(row.r.four_ps) / row.households : 0, Number(row.r.four_ps)),
+    }));
     return { barangays };
   }
 }
