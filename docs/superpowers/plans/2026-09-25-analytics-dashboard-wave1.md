@@ -2694,7 +2694,7 @@ describe('ClusteringTab', () => {
       const k = JSON.stringify(key);
       if (k.includes('"runs"')) return Promise.resolve([RUN]);
       if (k.includes('members')) return Promise.resolve({ rows: [{ householdId: 'h1', clusterIndex: 0, distance: 0.4, barangay: 'Bigte' }], total: 1 });
-      if (k.includes('"run"')) return Promise.resolve({ run: RUN, clusters: [{ clusterIndex: 0, size: 30, profile: { household_income_median: 5000 } }, { clusterIndex: 1, size: 30, profile: { household_income_median: 15000 } }] });
+      if (k.includes('"run"')) return Promise.resolve({ run: RUN, clusters: [{ clusterIndex: 0, size: 30, profile: { household_income_median: 5000 } }, { clusterIndex: 1, size: 30, profile: { household_income_median: 15000 } }, { clusterIndex: 2, size: { suppressed: true }, profile: {} }] });
       return Promise.resolve(null);
     });
     mockApiPost.mockResolvedValue(RUN);
@@ -2705,6 +2705,7 @@ describe('ClusteringTab', () => {
     expect(await screen.findByText(/Chosen k/i)).toBeTruthy();
     expect(screen.getByText(/Chosen k: 2/)).toBeTruthy();
     expect(screen.getAllByText(/Segment|Segments/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1); // suppressed small cluster size
   });
 
   it('triggers a run and shows members only for worker roles', async () => {
@@ -2752,11 +2753,15 @@ interface RunDetail {
   clusters: Array<{ clusterIndex: number; size: number; profile?: Record<string, unknown> }>;
 }
 
-function CellValue({ value }: { value: unknown }) {
-  if (value == null) return <>—</>;
-  if (typeof value === 'object' && 'suppressed' in (value as object)) return <>—</>;
+function cellValueText(value: unknown): string {
+  if (value == null) return '—';
+  if (typeof value === 'object' && 'suppressed' in (value as object)) return '—';
   const num = typeof value === 'number' ? value : Number(value);
-  return <>{Number.isFinite(num) ? num.toLocaleString() : String(value)}</>;
+  return Number.isFinite(num) ? num.toLocaleString() : String(value);
+}
+
+function CellValue({ value }: { value: unknown }) {
+  return <>{cellValueText(value)}</>;
 }
 
 export function ClusteringTab({ filters }: { filters: Record<string, unknown> }) {
@@ -2877,7 +2882,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
               <CardHeader className="pb-1">
                 <CardTitle className="flex items-center justify-between text-sm">
                   <span>{t('analytics.clustering.clusters', 'Segments')} #{cluster.clusterIndex + 1}</span>
-                  <Badge variant="secondary" className="text-[10px]">{cluster.size}</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{cellValueText(cluster.size)}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-xs">
