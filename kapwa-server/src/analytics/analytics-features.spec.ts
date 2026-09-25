@@ -51,6 +51,10 @@ describe('AnalyticsFeaturesService', () => {
     });
     const [sql, params] = repoMock.query.mock.calls[0];
     expect(String(sql)).toContain('FROM households h');
+    expect(String(sql)).toContain('COUNT(DISTINCT p.id)');
+    expect(String(sql)).toContain('role_flags');
+    expect(String(sql)).toContain("ILIKE '%pwd%'");
+    expect(String(sql)).toContain("ILIKE '%solo%parent%'");
     expect(params).toEqual([null, null, null]);
   });
 
@@ -61,11 +65,18 @@ describe('AnalyticsFeaturesService', () => {
   });
 
   it('pages run members', async () => {
-    repoMock.query.mockResolvedValue([{ household_id: 'h1', cluster_index: 1, distance: '0.5', barangay: 'Bigte', total: '7' }]);
+    repoMock.query
+      .mockResolvedValueOnce([{ total: 7 }])
+      .mockResolvedValueOnce([{ household_id: 'h1', cluster_index: 1, distance: '0.5', barangay: 'Bigte' }]);
     const page = await service.getRunMembers('run-1', 1, 2, 20);
     expect(page.total).toBe(7);
     expect(page.rows[0]).toEqual({ householdId: 'h1', clusterIndex: 1, distance: 0.5, barangay: 'Bigte' });
-    const [sql, params] = repoMock.query.mock.calls[0];
+    expect(repoMock.query).toHaveBeenCalledTimes(2);
+    const [countSql, countParams] = repoMock.query.mock.calls[0];
+    expect(String(countSql)).toContain('COUNT(*)::int');
+    expect(String(countSql)).not.toContain('LIMIT');
+    expect(countParams).toEqual(['run-1', 1]);
+    const [sql, params] = repoMock.query.mock.calls[1];
     expect(String(sql)).toContain('FROM analysis_run_members m');
     expect(params).toEqual(['run-1', 1, 20, 20]);
   });

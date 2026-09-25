@@ -37,19 +37,28 @@ export class AnalyticsFeaturesService {
 
   async getHouseholdFeatures(filters: FeatureFilters): Promise<HouseholdFeatureRow[]> {
     const rows: RawFeatureRow[] = await this.householdRepo.query(
-      `WITH member_rollup AS (
+      `WITH role_flags AS (
+         SELECT person_id,
+                BOOL_OR(category ILIKE '%pwd%' OR category ILIKE '%disab%') AS pwd,
+                BOOL_OR(category ILIKE '%solo%parent%') AS solo_parent,
+                BOOL_OR(category ILIKE '%4ps%') AS four_ps
+         FROM beneficiary_roles
+         WHERE category IS NOT NULL
+         GROUP BY person_id
+       ),
+       member_rollup AS (
          SELECT hm.household_id,
-                COUNT(*) AS household_size,
-                COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) <= 5) AS children_0_5,
-                COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) BETWEEN 6 AND 17) AS children_6_17,
-                COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) BETWEEN 18 AND 59) AS adults_18_59,
-                COUNT(*) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) >= 60) AS seniors_60,
-                BOOL_OR(br.category = 'PWD') AS has_pwd,
-                BOOL_OR(br.category = 'Solo Parent') AS has_solo_parent,
-                BOOL_OR(br.category = '4Ps') AS has_4ps
+                COUNT(DISTINCT p.id) AS household_size,
+                COUNT(DISTINCT p.id) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) <= 5) AS children_0_5,
+                COUNT(DISTINCT p.id) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) BETWEEN 6 AND 17) AS children_6_17,
+                COUNT(DISTINCT p.id) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) BETWEEN 18 AND 59) AS adults_18_59,
+                COUNT(DISTINCT p.id) FILTER (WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob)) >= 60) AS seniors_60,
+                COALESCE(BOOL_OR(rf.pwd), FALSE) AS has_pwd,
+                COALESCE(BOOL_OR(rf.solo_parent), FALSE) AS has_solo_parent,
+                COALESCE(BOOL_OR(rf.four_ps), FALSE) AS has_4ps
          FROM household_memberships hm
          JOIN persons p ON p.id = hm.person_id
-         LEFT JOIN beneficiary_roles br ON br.person_id = p.id
+         LEFT JOIN role_flags rf ON rf.person_id = p.id
          GROUP BY hm.household_id
        ),
        case_rollup AS (
@@ -115,18 +124,21 @@ export class AnalyticsFeaturesService {
     limit: number,
   ): Promise<{ rows: Array<{ householdId: string; clusterIndex: number; distance: number | null; barangay: string | null }>; total: number }> {
     const offset = (page - 1) * limit;
+    const countRows = await this.householdRepo.query(
+      `SELECT COUNT(*)::int AS total FROM analysis_run_members WHERE run_id = $1 AND cluster_index = $2`,
+      [runId, clusterIndex],
+    );
     const rows = await this.householdRepo.query(
-      `SELECT m.household_id, m.cluster_index, m.distance, h.barangay,
-              COUNT(*) OVER() AS total
+      `SELECT m.household_id, m.cluster_index, m.distance, h.barangay
        FROM analysis_run_members m
        JOIN households h ON h.id = m.household_id
        WHERE m.run_id = $1 AND m.cluster_index = $2
-       ORDER BY m.distance ASC
+       ORDER BY m.distance ASC, m.household_id ASC
        LIMIT $3 OFFSET $4`,
       [runId, clusterIndex, limit, offset],
     );
     return {
-      total: rows?.[0]?.total != null ? Number(rows[0].total) : 0,
+      total: Number(countRows?.[0]?.total ?? 0),
       rows: (rows ?? []).map((r: any) => ({
         householdId: r.household_id,
         clusterIndex: Number(r.cluster_index),
