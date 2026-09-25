@@ -50,10 +50,10 @@ export const queryKeys = {
     equity: (filters: Record<string, unknown>) =>
       memo(`analytics.equity.${JSON.stringify(filters)}`, () => ['analytics', 'equity', filters] as const),
     runs: (limit: number) =>
-      memo(`analytics.runs.${limit}`, () => ['analytics', 'runs', { limit }] as const),
-    run: (id: string) => memo(`analytics.run.${id}`, () => ['analytics', 'run', id] as const),
+      memo(`analytics.clustering.runs.${limit}`, () => ['analytics', 'clustering', 'runs', { limit }] as const),
+    run: (id: string) => memo(`analytics.clustering.run.${id}`, () => ['analytics', 'clustering', 'runs', id] as const),
     runMembers: (id: string, clusterIndex: number, page: number) =>
-      memo(`analytics.runMembers.${id}.${clusterIndex}.${page}`, () => ['analytics', 'run', id, 'members', { clusterIndex, page }] as const),
+      memo(`analytics.clustering.runMembers.${id}.${clusterIndex}.${page}`, () => ['analytics', 'clustering', 'runs', id, 'members', { clusterIndex, page }] as const),
   },
   dashboard: {
     all: ['dashboard'] as const,

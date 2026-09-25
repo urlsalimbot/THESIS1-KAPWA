@@ -29,6 +29,16 @@ describe('queryKeys factory', () => {
     expect(params.barangay).toBe('b1');
   });
 
+  it('analytics clustering keys resolve to the /analytics/clustering/runs server routes', () => {
+    // api.normalizePath joins tuple parts as URL segments, so these prefixes
+    // must mirror the controller routes or every clustering request 404s.
+    expect(queryKeys.analytics.runs(20).slice(0, 3)).toEqual(['analytics', 'clustering', 'runs']);
+    expect(queryKeys.analytics.run('r1').slice(0, 4)).toEqual(['analytics', 'clustering', 'runs', 'r1']);
+    expect(queryKeys.analytics.runMembers('r1', 2, 1).slice(0, 5)).toEqual([
+      'analytics', 'clustering', 'runs', 'r1', 'members',
+    ]);
+  });
+
   it('uses as const — tuples are readonly (TypeScript compile + push fails)', () => {
     // The @ts-expect-error directive proves TypeScript rejects mutating a readonly tuple.
     // If `as const` were missing, this would compile successfully and the test would fail the
