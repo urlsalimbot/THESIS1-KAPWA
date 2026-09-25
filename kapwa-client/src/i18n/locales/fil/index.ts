@@ -2342,6 +2342,7 @@ const fil: EnLocale = {
     "suppressed": "Nakubli (<5)",
     "noData": "Walang datos para sa napiling filter",
     "insufficientData": "Kulang ang datos (kailangan {{required}}, nahanap {{actual}})",
+    "loading": "Naglo-load…",
     "methodology": "Paano ito kinakalkula",
     "export": "I-export ang CSV",
     "demographics": {

@@ -2339,6 +2339,7 @@ const en = {
     "suppressed": "Suppressed (<5)",
     "noData": "No data for the selected filters",
     "insufficientData": "Not enough data (needs {{required}}, found {{actual}})",
+    "loading": "Loading…",
     "methodology": "How this is computed",
     "export": "Export CSV",
     "demographics": {
