@@ -7,10 +7,10 @@ import { MethodologyNote } from './MethodologyNote';
 type Cell = { value: number } | { suppressed: true };
 type HhiLabel = 'dispersed' | 'moderate' | 'concentrated';
 interface ConcentrationResponse {
-  hhiCases: number;
-  hhiCasesLabel: HhiLabel;
-  hhiAssistance: number;
-  hhiAssistanceLabel: HhiLabel;
+  hhiCases: number | null;
+  hhiCasesLabel: HhiLabel | null;
+  hhiAssistance: number | null;
+  hhiAssistanceLabel: HhiLabel | null;
   totalCases: number;
   totalAmount: number;
   barangays: Array<{ barangay: string; cases: Cell; interventions: Cell; amount: Cell; caseShare: Cell; amountShare: Cell }>;
@@ -21,14 +21,14 @@ function cellText(cell: Cell | undefined): string {
   return typeof cell.value === 'number' ? cell.value.toLocaleString() : String(cell.value);
 }
 
-function HhiCard({ title, value, label }: { title: string; value: number; label: HhiLabel }) {
+function HhiCard({ title, value, label }: { title: string; value: number | null; label: HhiLabel | null }) {
   const { t } = useTranslation();
   return (
     <Card>
       <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">{title}</CardTitle></CardHeader>
       <CardContent>
-        <p className="text-2xl font-semibold">{value.toFixed(3)}</p>
-        <p className="text-xs text-muted-foreground">{t(`analytics.hhi.${label}`, label)}</p>
+        <p className="text-2xl font-semibold">{value == null ? '—' : value.toFixed(3)}</p>
+        {label != null && <p className="text-xs text-muted-foreground">{t(`analytics.hhi.${label}`, label)}</p>}
       </CardContent>
     </Card>
   );

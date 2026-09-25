@@ -40,7 +40,7 @@ describe('ClusteringTab', () => {
       if (k.includes(RUN.id)) return Promise.resolve({
         run: RUN,
         clusters: [
-          { clusterIndex: 0, size: 30, profile: { household_income_median: 5000, barangay_mix: [{ barangay: 'Poblacion', count: 28 }, { barangay: 'Unspecified', count: { suppressed: true } }] } },
+          { clusterIndex: 0, size: 30, profile: { household_income_median: 5000, barangay_mix: [{ barangay: 'Bigte', count: { value: 28 } }, { barangay: 'Poblacion', count: { suppressed: true } }] } },
           { clusterIndex: 1, size: 30, profile: { household_income_median: 15000 } },
           { clusterIndex: 2, size: { suppressed: true }, profile: {} },
         ],
@@ -63,9 +63,10 @@ describe('ClusteringTab', () => {
     renderTab();
     expect(await screen.findByText(/How this is computed/i)).toBeTruthy();
     expect(screen.getByText(/Barangay mix/i)).toBeTruthy();
-    expect(screen.getByText('Poblacion')).toBeTruthy();
+    expect(screen.getByText('Bigte')).toBeTruthy();
     expect(screen.getByText('28')).toBeTruthy();
-    expect(screen.getByText('Unspecified')).toBeTruthy();
+    expect(screen.getByText('Poblacion')).toBeTruthy();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
 
   it('triggers a run and shows members only for worker roles', async () => {

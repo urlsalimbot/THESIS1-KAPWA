@@ -39,6 +39,25 @@ describe('ConcentrationTab', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
   });
 
+  it('renders a dash and no label when the HHI is null (one or more suppressed cells)', async () => {
+    mockApiGet.mockResolvedValue({
+      hhiCases: null,
+      hhiCasesLabel: null,
+      hhiAssistance: null,
+      hhiAssistanceLabel: null,
+      totalCases: 6, totalAmount: 6000,
+      barangays: [
+        { barangay: 'Bigte', cases: { value: 6 }, interventions: { value: 10 }, amount: { value: 6000 }, caseShare: { value: 1 }, amountShare: { value: 1 } },
+      ],
+    });
+    renderTab();
+    expect(await screen.findByText('Bigte')).toBeTruthy();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('dispersed')).toBeNull();
+    expect(screen.queryByText('moderate')).toBeNull();
+    expect(screen.queryByText('concentrated')).toBeNull();
+  });
+
   it('renders the methodology note', async () => {
     renderTab();
     expect(await screen.findByText(/How this is computed/i)).toBeTruthy();

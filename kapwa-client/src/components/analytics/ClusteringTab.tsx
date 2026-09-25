@@ -19,7 +19,8 @@ interface RunSummary {
   metrics?: Record<string, unknown>;
   createdAt: string;
 }
-interface BarangayMixEntry { barangay: string; count: number | { suppressed: true } }
+interface BarangayMixEntry { barangay: string; count: MixCount }
+type MixCount = number | { value: number } | { suppressed: true };
 interface ClusterProfile { barangay_mix?: BarangayMixEntry[]; [key: string]: unknown }
 interface RunDetail {
   run: RunSummary;
@@ -47,26 +48,35 @@ function CellValue({ value }: { value: unknown }) {
   return <>{cellValueText(value)}</>;
 }
 
+/** Server mix counts arrive as raw numbers or suppressed-cell wrappers. */
+function mixCountValue(count: MixCount): number | null {
+  if (typeof count === 'number') return count;
+  return 'value' in count ? count.value : null;
+}
+
 /** Compact stacked-list rendering of a cluster's top-3 barangay mix. */
 function BarangayMix({ entries }: { entries: BarangayMixEntry[] }) {
   const { t } = useTranslation();
-  const max = Math.max(1, ...entries.map(entry => (typeof entry.count === 'number' ? entry.count : 0)));
+  const max = Math.max(1, ...entries.map(entry => mixCountValue(entry.count) ?? 0));
   return (
     <div className="pt-1">
       <p className="text-[10px] font-medium text-muted-foreground">{t('analytics.clustering.barangayMix', 'Barangay mix')}</p>
       <div className="space-y-0.5">
-        {entries.map(entry => (
-          <div key={entry.barangay} className="flex items-center gap-1">
-            <span className="w-20 truncate text-[10px] text-muted-foreground" title={entry.barangay}>{entry.barangay}</span>
-            <span className="h-1.5 flex-1 rounded bg-muted">
-              <span
-                className="block h-1.5 rounded bg-primary"
-                style={{ width: `${typeof entry.count === 'number' ? (entry.count / max) * 100 : 0}%` }}
-              />
-            </span>
-            <span className="w-6 text-right text-[10px] font-medium">{typeof entry.count === 'number' ? entry.count : '—'}</span>
-          </div>
-        ))}
+        {entries.map(entry => {
+          const count = mixCountValue(entry.count);
+          return (
+            <div key={entry.barangay} className="flex items-center gap-1">
+              <span className="w-20 truncate text-[10px] text-muted-foreground" title={entry.barangay}>{entry.barangay}</span>
+              <span className="h-1.5 flex-1 rounded bg-muted">
+                <span
+                  className="block h-1.5 rounded bg-primary"
+                  style={{ width: `${count != null ? (count / max) * 100 : 0}%` }}
+                />
+              </span>
+              <span className="w-6 text-right text-[10px] font-medium">{count != null ? count : '—'}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
