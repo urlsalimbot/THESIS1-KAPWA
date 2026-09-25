@@ -4,12 +4,14 @@ import * as nodemailer from 'nodemailer';
 import { CircuitBreakerService } from '../common/circuit-breaker.service';
 
 // ---------------------------------------------------------------------------
-// KAPWA brand tokens (mirrors the client theme in kapwa-client/src/index.css)
+// KAPWA brand tokens (mirrors the client theme in kapwa-client/src/index.css;
+// accent uses the orange #E07A5F value of the client's --accent token so email
+// accents read orange, matching the brand accent on the public pages)
 // ---------------------------------------------------------------------------
 const BRAND = {
   primary: '#1B3A5C', // deep navy
   secondary: '#3D5A80', // slate blue
-  accent: '#C8553D', // terracotta
+  accent: '#E07A5F', // orange accent (client --accent)
   bg: '#F8F7F4', // warm off-white
   card: '#FFFFFF',
   fg: '#0D1B2A',
