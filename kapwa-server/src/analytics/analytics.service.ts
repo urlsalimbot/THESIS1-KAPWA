@@ -1,7 +1,8 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, Optional, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case } from '../cases/case.entity';
+import { CacheService } from '../common/cache.service';
 import { hhi } from './models/stats';
 import { complementSuppression, MIN_CELL, suppressCount, suppressRatio, Suppressed } from './suppression';
 
@@ -45,9 +46,15 @@ export class AnalyticsService {
   constructor(
     @InjectRepository(Case)
     private caseRepo: Repository<Case>,
+    @Optional() private cache?: CacheService,
   ) {}
 
   async getDemographics(filters: AnalyticsFilters) {
+    const compute = () => this.computeDemographics(filters);
+    return this.cache?.wrap(`analytics:demographics:${JSON.stringify(filters)}`, compute, 5 * 60 * 1000) ?? compute();
+  }
+
+  private async computeDemographics(filters: AnalyticsFilters) {
     const rows: Array<{
       person_id: string; gender: string | null; age: number | null; civil_status: string | null; occupation: string | null;
       has_philhealth: boolean; household_income: string | null; household_id: string | null; barangay: string | null;
@@ -154,6 +161,11 @@ export class AnalyticsService {
   }
 
   async getConcentration(filters: AnalyticsFilters) {
+    const compute = () => this.computeConcentration(filters);
+    return this.cache?.wrap(`analytics:concentration:${JSON.stringify(filters)}`, compute, 5 * 60 * 1000) ?? compute();
+  }
+
+  private async computeConcentration(filters: AnalyticsFilters) {
     const rows: Array<{ barangay: string; cases: string; interventions: string; amount: string }> =
       await this.caseRepo.query(
         `SELECT COALESCE(h.barangay, 'Unspecified') AS barangay,
@@ -202,6 +214,11 @@ export class AnalyticsService {
   }
 
   async getEquity(filters: AnalyticsFilters) {
+    const compute = () => this.computeEquity(filters);
+    return this.cache?.wrap(`analytics:equity:${JSON.stringify(filters)}`, compute, 5 * 60 * 1000) ?? compute();
+  }
+
+  private async computeEquity(filters: AnalyticsFilters) {
     const served: Array<{ barangay: string; served_households: string; assistance: string; four_ps: string }> =
       await this.caseRepo.query(
         `SELECT COALESCE(h.barangay, 'Unspecified') AS barangay,

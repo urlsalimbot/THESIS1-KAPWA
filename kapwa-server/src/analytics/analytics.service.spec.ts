@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { UnprocessableEntityException } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { Case } from '../cases/case.entity';
+import { CacheService } from '../common/cache.service';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -435,6 +436,62 @@ describe('AnalyticsService', () => {
       expect(repoMock.query.mock.calls[0][1]).toEqual([null, null, 'Bigte']);
       expect(String(repoMock.query.mock.calls[1][0])).toContain("($1::text IS NULL OR COALESCE(barangay, 'Unspecified') = $1)");
       expect(repoMock.query.mock.calls[1][1]).toEqual(['Bigte']);
+    });
+  });
+
+  describe('caching', () => {
+    async function buildCachedService(wrapImpl: (key: string, fn: () => Promise<unknown>, ttlMs?: number) => Promise<unknown>) {
+      const repo = { query: jest.fn() };
+      const cache = { wrap: jest.fn(wrapImpl) };
+      const module = await Test.createTestingModule({
+        providers: [
+          AnalyticsService,
+          { provide: getRepositoryToken(Case), useValue: repo },
+          { provide: CacheService, useValue: cache },
+        ],
+      }).compile();
+      return { service: module.get(AnalyticsService), repo, cache };
+    }
+
+    it('keys demographics by model and filters and serves the second identical call from cache', async () => {
+      const store = new Map<string, unknown>();
+      const keys: string[] = [];
+      const { service: cachedService, repo, cache } = await buildCachedService(async (key, fn) => {
+        keys.push(key);
+        if (store.has(key)) return store.get(key);
+        const value = await fn();
+        store.set(key, value);
+        return value;
+      });
+      repo.query.mockResolvedValue([]);
+
+      await cachedService.getDemographics({ from: '2026-01-01', to: '2026-02-01', barangay: 'Bigte' });
+      await cachedService.getDemographics({ from: '2026-01-01', to: '2026-02-01', barangay: 'Bigte' });
+      expect(repo.query).toHaveBeenCalledTimes(1);
+      expect(keys[0]).toBe('analytics:demographics:{"from":"2026-01-01","to":"2026-02-01","barangay":"Bigte"}');
+
+      await cachedService.getDemographics({ barangay: 'Poblacion' });
+      expect(repo.query).toHaveBeenCalledTimes(2);
+      expect(keys[2]).toBe('analytics:demographics:{"barangay":"Poblacion"}');
+      expect(cache.wrap.mock.calls[0][2]).toBe(5 * 60 * 1000);
+    });
+
+    it('uses model-specific cache keys for concentration and equity', async () => {
+      const { service: cachedService, repo, cache } = await buildCachedService(async (_key, fn) => fn());
+      repo.query
+        .mockResolvedValueOnce([
+          { barangay: 'Poblacion', cases: '6', interventions: '10', amount: '6000' },
+          { barangay: 'Bigte', cases: '7', interventions: '9', amount: '7000' },
+          { barangay: 'Matictic', cases: '8', interventions: '11', amount: '8000' },
+        ])
+        .mockResolvedValueOnce([{ barangay: 'Bigte', served_households: '8', assistance: '8000', four_ps: '6' }])
+        .mockResolvedValueOnce([{ barangay: 'Bigte', households: '60' }]);
+
+      await cachedService.getConcentration({ barangay: 'Bigte' });
+      await cachedService.getEquity({ from: '2026-01-01' });
+
+      expect(cache.wrap.mock.calls[0][0]).toBe('analytics:concentration:{"barangay":"Bigte"}');
+      expect(cache.wrap.mock.calls[1][0]).toBe('analytics:equity:{"from":"2026-01-01"}');
     });
   });
 });
