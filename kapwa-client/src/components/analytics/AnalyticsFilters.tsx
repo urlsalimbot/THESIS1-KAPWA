@@ -7,15 +7,29 @@ export interface AnalyticsFilterValue {
   barangay: string;
 }
 
+function monthsAgo(base: Date, months: number): Date {
+  const month = base.getMonth() - months;
+  const targetYear = base.getFullYear() + Math.floor(month / 12);
+  const targetMonth = ((month % 12) + 12) % 12;
+  const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+  return new Date(targetYear, targetMonth, Math.min(base.getDate(), lastDay));
+}
+
+function toLocalIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function rangeToDates(range: AnalyticsFilterValue['range']): { from?: string; to?: string } {
   if (range === 'all') return {};
   const now = new Date();
-  const from = new Date(now);
-  if (range === '30d') from.setDate(from.getDate() - 30);
-  if (range === '90d') from.setDate(from.getDate() - 90);
-  if (range === '6m') from.setMonth(from.getMonth() - 6);
-  if (range === '1y') from.setFullYear(from.getFullYear() - 1);
-  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) };
+  const from = range === '30d' ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30)
+    : range === '90d' ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90)
+    : range === '6m' ? monthsAgo(now, 6)
+    : monthsAgo(now, 12);
+  return { from: toLocalIso(from), to: toLocalIso(now) };
 }
 
 export function AnalyticsFilters({
