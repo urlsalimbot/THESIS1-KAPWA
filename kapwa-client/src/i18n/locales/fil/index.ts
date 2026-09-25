@@ -2345,7 +2345,18 @@ const fil: EnLocale = {
     "invalidInput": "Suriin ang saklaw ng k (2–10) at halaga ng seed.",
     "actionFailed": "Nabigo ang aksyon. Subukang muli.",
     "loading": "Naglo-load…",
-    "methodology": "Paano ito kinakalkula",
+    "methodology": {
+      "title": "Paano ito kinakalkula",
+      "demographics": "Mula sa mga nagsilbiang tao (bawat taong may kaso na may interbensyon sa saklaw ng petsa), binibilang isang beses kada tao. Ang edad at kasarian, katayuang sibil, antas ng kita, at laki ng sambahayan ay mga hati na may supresyon ng maliliit na bilang (wala pang 5) at komplementaryong supresyon. Ang mga antas ng kita ay relatibo lamang, hindi opisyal na poverty threshold. Ang dependency ratio = (0-14 + 60+) / (15-59) at ipinapakita lamang kapag parehong umabot sa minimum na laki ng selda ang mga grupo.",
+      "clustering": "Inilalarawan ang mga sambahayan gamit ang napiling mga katangian, isinastandardize, at pinagsasama-sama sa seeded k-means para sa mga kandidatong k mula 2 hanggang 8. Pinipili ang k sa elbow (inertia) at silhouette; naka-save ang bawat run at reproduksible sa seed. Nakubli ang mga segment na wala pang 5 sambahayan, at isa pang segment kapag maibubunyag ng kabuuan ang maliit na isa.",
+      "concentration": "Ang bahagi ng bawat barangay sa mga kaso at sa tulong. HHI = kabuuan ng mga parisukat ng bahagi, may tatak na nakakalat kung wala pang 0.15, katamtaman mula 0.15 hanggang 0.25, at konsentrado kung higit sa 0.25. Kailangan ang hindi bababa sa tatlong barangay na may datos; nakubli ang maliliit na selda at isa pang komplementaryong selda.",
+      "equity": "Inihahambing ang bahagi ng naserbisyuhang sambahayan ng bawat barangay sa bahagi nito sa lahat ng sambahayan. Ang coverage ratio = bahagi ng naserbisyuhan na hinati sa bahagi ng sambahayan, at ang mga quartile ay nagraranggo ng mga ratio sa mga barangay. Lumalabas ang mga barangay na walang naserbisyuhan na may nakubling ratio. Nakubli ang mga ratio na batay sa wala pang 5 sambahayan o naserbisyuhang sambahayan."
+    },
+    "hhi": {
+      "dispersed": "nakakalat",
+      "moderate": "katamtaman",
+      "concentrated": "konsentrado"
+    },
     "export": "I-export ang CSV",
     "demographics": {
       "personsServed": "Naserbisyuhan",

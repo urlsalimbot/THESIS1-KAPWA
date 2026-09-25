@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { queryKeys } from '@/lib/query-keys';
+import { MethodologyNote } from './MethodologyNote';
 
 export type SuppressedCell = { value: number } | { suppressed: true };
 
@@ -54,6 +55,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
 
   return (
     <div className="space-y-4">
+      <MethodologyNote textKey="analytics.methodology.demographics" />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: t('analytics.demographics.personsServed', 'Persons served'), cell: data.summary.personsServed },

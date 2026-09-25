@@ -2342,7 +2342,18 @@ const en = {
     "invalidInput": "Check the k range (2–10) and seed values.",
     "actionFailed": "Action failed. Please try again.",
     "loading": "Loading…",
-    "methodology": "How this is computed",
+    "methodology": {
+      "title": "How this is computed",
+      "demographics": "Counts come from served persons (each person linked to a case with an intervention in the date range), deduplicated by person. Age and sex, civil status, income bands, and household size are partitions with small-cell suppression (under 5) and complementary suppression. Income bands are relative, not official poverty thresholds. The dependency ratio = (0-14 + 60+) / (15-59) and is shown only when both groups reach the minimum cell size.",
+      "clustering": "Households are described by the selected features, standardized, and grouped with seeded k-means across candidate k values from 2 to 8. k is chosen with the elbow (inertia) and silhouette scores; every run is saved and reproducible by seed. Segments below 5 households, and one additional segment when the totals would reveal a small one, are suppressed.",
+      "concentration": "Each barangay's share of cases and of assistance. HHI = sum of squared shares, labelled dispersed below 0.15, moderate from 0.15 to 0.25, and concentrated above 0.25. At least three barangays with data are required; small cells and one complementary cell are suppressed.",
+      "equity": "Compares each barangay's share of served households with its share of all households. The coverage ratio = served share divided by household share, and quartiles rank the ratios across barangays. Barangays with no served households appear with suppressed ratios. Ratios based on fewer than 5 households or served households are suppressed."
+    },
+    "hhi": {
+      "dispersed": "dispersed",
+      "moderate": "moderate",
+      "concentrated": "concentrated"
+    },
     "export": "Export CSV",
     "demographics": {
       "personsServed": "Persons served",

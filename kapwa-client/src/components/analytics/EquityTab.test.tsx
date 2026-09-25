@@ -33,4 +33,24 @@ describe('EquityTab', () => {
     expect(screen.getByText('4')).toBeTruthy();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(6);
   });
+
+  it('renders the methodology note', async () => {
+    renderTab();
+    expect(await screen.findByText(/How this is computed/i)).toBeTruthy();
+    expect(screen.getByText(/zero-served|no served households/i)).toBeTruthy();
+  });
+
+  it('renders the insufficient-data message with counts for a 422 response', async () => {
+    mockApiGet.mockRejectedValue(Object.assign(new Error('nope'), {
+      body: { code: 'insufficient_data', required: 3, actual: 2 },
+    }));
+    renderTab();
+    expect(await screen.findByText(/Not enough data \(needs 3, found 2\)/)).toBeTruthy();
+  });
+
+  it('renders the no-data message for other errors', async () => {
+    mockApiGet.mockRejectedValue(new Error('nope'));
+    renderTab();
+    expect(await screen.findByText(/No data for the selected filters/i)).toBeTruthy();
+  });
 });

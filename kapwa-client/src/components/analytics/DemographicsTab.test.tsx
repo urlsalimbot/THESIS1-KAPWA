@@ -35,6 +35,8 @@ describe('DemographicsTab', () => {
     expect(screen.getByText('40')).toBeTruthy();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByTitle('Suppressed (<5)').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/How this is computed/i)).toBeTruthy();
+    expect(screen.getAllByText(/not official poverty thresholds/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('maps suppressed pyramid cells to null instead of fabricating zero', () => {

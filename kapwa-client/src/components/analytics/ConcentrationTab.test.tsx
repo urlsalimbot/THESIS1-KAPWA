@@ -18,7 +18,11 @@ describe('ConcentrationTab', () => {
   beforeEach(() => {
     mockApiGet.mockReset();
     mockApiGet.mockResolvedValue({
-      hhiCases: 0.31, hhiAssistance: 0.4, totalCases: 120, totalAmount: 50000,
+      hhiCases: 0.31,
+      hhiCasesLabel: 'concentrated',
+      hhiAssistance: 0.2,
+      hhiAssistanceLabel: 'moderate',
+      totalCases: 120, totalAmount: 50000,
       barangays: [
         { barangay: 'Poblacion', cases: { value: 60 }, interventions: { value: 90 }, amount: { value: 30000 }, caseShare: { value: 0.5 }, amountShare: { value: 0.6 } },
         { barangay: 'Bigte', cases: { suppressed: true }, interventions: { suppressed: true }, amount: { suppressed: true }, caseShare: { suppressed: true }, amountShare: { suppressed: true } },
@@ -26,10 +30,32 @@ describe('ConcentrationTab', () => {
     });
   });
 
-  it('renders HHI cards and suppressed rows', async () => {
+  it('renders HHI cards with dispersion labels and suppressed rows', async () => {
     renderTab();
     expect(await screen.findByText(/0\.31/)).toBeTruthy();
+    expect(screen.getByText('concentrated')).toBeTruthy();
+    expect(screen.getByText('moderate')).toBeTruthy();
     expect(screen.getByText('Poblacion')).toBeTruthy();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders the methodology note', async () => {
+    renderTab();
+    expect(await screen.findByText(/How this is computed/i)).toBeTruthy();
+    expect(screen.getByText(/sum of squared shares/i)).toBeTruthy();
+  });
+
+  it('renders the insufficient-data message with counts for a 422 response', async () => {
+    mockApiGet.mockRejectedValue(Object.assign(new Error('nope'), {
+      body: { code: 'insufficient_data', required: 3, actual: 1 },
+    }));
+    renderTab();
+    expect(await screen.findByText(/Not enough data \(needs 3, found 1\)/)).toBeTruthy();
+  });
+
+  it('renders the no-data message for other errors', async () => {
+    mockApiGet.mockRejectedValue(new Error('nope'));
+    renderTab();
+    expect(await screen.findByText(/No data for the selected filters/i)).toBeTruthy();
   });
 });

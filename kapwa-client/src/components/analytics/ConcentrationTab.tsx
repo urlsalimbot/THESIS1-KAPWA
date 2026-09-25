@@ -2,11 +2,15 @@ import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { queryKeys } from '../../lib/query-keys';
+import { MethodologyNote } from './MethodologyNote';
 
 type Cell = { value: number } | { suppressed: true };
+type HhiLabel = 'dispersed' | 'moderate' | 'concentrated';
 interface ConcentrationResponse {
   hhiCases: number;
+  hhiCasesLabel: HhiLabel;
   hhiAssistance: number;
+  hhiAssistanceLabel: HhiLabel;
   totalCases: number;
   totalAmount: number;
   barangays: Array<{ barangay: string; cases: Cell; interventions: Cell; amount: Cell; caseShare: Cell; amountShare: Cell }>;
@@ -17,23 +21,37 @@ function cellText(cell: Cell | undefined): string {
   return typeof cell.value === 'number' ? cell.value.toLocaleString() : String(cell.value);
 }
 
+function HhiCard({ title, value, label }: { title: string; value: number; label: HhiLabel }) {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">{title}</CardTitle></CardHeader>
+      <CardContent>
+        <p className="text-2xl font-semibold">{value.toFixed(3)}</p>
+        <p className="text-xs text-muted-foreground">{t(`analytics.hhi.${label}`, label)}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ConcentrationTab({ filters }: { filters: Record<string, unknown> }) {
   const { t } = useTranslation();
   const { data, error, isLoading } = useSWR<ConcentrationResponse>(queryKeys.analytics.concentration(filters));
-  if (error) return <p className="text-sm text-muted-foreground">{t('analytics.noData', 'No data for the selected filters')}</p>;
+  if (error) {
+    const body = (error as { body?: { code?: string; required?: number; actual?: number } }).body;
+    if (body?.code === 'insufficient_data') {
+      return <p className="text-sm text-muted-foreground">{t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: body.required, actual: body.actual })}</p>;
+    }
+    return <p className="text-sm text-muted-foreground">{t('analytics.noData', 'No data for the selected filters')}</p>;
+  }
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">{t('analytics.loading', 'Loading…')}</p>;
 
   return (
     <div className="space-y-4">
+      <MethodologyNote textKey="analytics.methodology.concentration" />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">{t('analytics.concentration.hhiCases', 'Case concentration (HHI)')}</CardTitle></CardHeader>
-          <CardContent><p className="text-2xl font-semibold">{data.hhiCases.toFixed(3)}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">{t('analytics.concentration.hhiAssistance', 'Assistance concentration (HHI)')}</CardTitle></CardHeader>
-          <CardContent><p className="text-2xl font-semibold">{data.hhiAssistance.toFixed(3)}</p></CardContent>
-        </Card>
+        <HhiCard title={t('analytics.concentration.hhiCases', 'Case concentration (HHI)')} value={data.hhiCases} label={data.hhiCasesLabel} />
+        <HhiCard title={t('analytics.concentration.hhiAssistance', 'Assistance concentration (HHI)')} value={data.hhiAssistance} label={data.hhiAssistanceLabel} />
       </div>
       <Card>
         <CardHeader className="pb-1"><CardTitle className="text-sm">{t('analytics.concentration.barangay', 'Barangay')}</CardTitle></CardHeader>

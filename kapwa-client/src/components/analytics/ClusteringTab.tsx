@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { MethodologyNote } from './MethodologyNote';
 
 interface RunSummary {
   id: string;
@@ -18,9 +19,11 @@ interface RunSummary {
   metrics?: Record<string, unknown>;
   createdAt: string;
 }
+interface BarangayMixEntry { barangay: string; count: number | { suppressed: true } }
+interface ClusterProfile { barangay_mix?: BarangayMixEntry[]; [key: string]: unknown }
 interface RunDetail {
   run: RunSummary;
-  clusters: Array<{ clusterIndex: number; size: number | { suppressed: true }; profile?: Record<string, unknown> }>;
+  clusters: Array<{ clusterIndex: number; size: number | { suppressed: true }; profile?: ClusterProfile }>;
 }
 interface MemberRow {
   householdId: string;
@@ -44,10 +47,36 @@ function CellValue({ value }: { value: unknown }) {
   return <>{cellValueText(value)}</>;
 }
 
+/** Compact stacked-list rendering of a cluster's top-3 barangay mix. */
+function BarangayMix({ entries }: { entries: BarangayMixEntry[] }) {
+  const { t } = useTranslation();
+  const max = Math.max(1, ...entries.map(entry => (typeof entry.count === 'number' ? entry.count : 0)));
+  return (
+    <div className="pt-1">
+      <p className="text-[10px] font-medium text-muted-foreground">{t('analytics.clustering.barangayMix', 'Barangay mix')}</p>
+      <div className="space-y-0.5">
+        {entries.map(entry => (
+          <div key={entry.barangay} className="flex items-center gap-1">
+            <span className="w-20 truncate text-[10px] text-muted-foreground" title={entry.barangay}>{entry.barangay}</span>
+            <span className="h-1.5 flex-1 rounded bg-muted">
+              <span
+                className="block h-1.5 rounded bg-primary"
+                style={{ width: `${typeof entry.count === 'number' ? (entry.count / max) * 100 : 0}%` }}
+              />
+            </span>
+            <span className="w-6 text-right text-[10px] font-medium">{typeof entry.count === 'number' ? entry.count : '—'}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ClusteringTab({ filters }: { filters: Record<string, unknown> }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const canDrill = user?.role === 'admin' || user?.role === 'social_worker';
+  const canRun = user?.role === 'admin' || user?.role === 'social_worker';
+  const canDrill = canRun;
   const [kMin, setKMin] = useState(2);
   const [kMax, setKMax] = useState(8);
   const [seed, setSeed] = useState('');
@@ -99,28 +128,31 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-1"><CardTitle className="text-sm">{t('analytics.clustering.runTitle', 'New clustering run')}</CardTitle></CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground" htmlFor="k-min">{t('analytics.clustering.kRange', 'Candidate k range')}</label>
-            <div className="flex items-center gap-1">
-              <Input id="k-min" type="number" min={2} max={10} className="h-9 w-16" value={kMin} onChange={e => setKMin(Number(e.target.value))} />
-              <span className="text-xs">–</span>
-              <Input id="k-max" type="number" min={2} max={10} className="h-9 w-16" value={kMax} onChange={e => setKMax(Number(e.target.value))} />
+      <MethodologyNote textKey="analytics.methodology.clustering" />
+      {canRun && (
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-sm">{t('analytics.clustering.runTitle', 'New clustering run')}</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground" htmlFor="k-min">{t('analytics.clustering.kRange', 'Candidate k range')}</label>
+              <div className="flex items-center gap-1">
+                <Input id="k-min" type="number" min={2} max={10} className="h-9 w-16" value={kMin} onChange={e => setKMin(Number(e.target.value))} />
+                <span className="text-xs">–</span>
+                <Input id="k-max" type="number" min={2} max={10} className="h-9 w-16" value={kMax} onChange={e => setKMax(Number(e.target.value))} />
+              </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground" htmlFor="seed">{t('analytics.clustering.seed', 'Seed (optional)')}</label>
-            <Input id="seed" type="number" className="h-9 w-32" value={seed} onChange={e => setSeed(e.target.value)} placeholder={t('analytics.clustering.seedHint', 'Leave blank for a random seed; runs are reproducible by seed')} />
-          </div>
-          <Button size="sm" onClick={runClustering} disabled={running}>
-            <Play size={14} className="mr-1" />
-            {running ? t('analytics.clustering.running', 'Running…') : t('analytics.clustering.run', 'Run clustering')}
-          </Button>
-          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
-        </CardContent>
-      </Card>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground" htmlFor="seed">{t('analytics.clustering.seed', 'Seed (optional)')}</label>
+              <Input id="seed" type="number" className="h-9 w-32" value={seed} onChange={e => setSeed(e.target.value)} placeholder={t('analytics.clustering.seedHint', 'Leave blank for a random seed; runs are reproducible by seed')} />
+            </div>
+            <Button size="sm" onClick={runClustering} disabled={running}>
+              <Play size={14} className="mr-1" />
+              {running ? t('analytics.clustering.running', 'Running…') : t('analytics.clustering.run', 'Run clustering')}
+            </Button>
+            {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
@@ -170,32 +202,36 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
 
       {detail && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {detail.clusters.map(cluster => (
-            <Card key={cluster.clusterIndex}>
-              <CardHeader className="pb-1">
-                <CardTitle className="flex items-center justify-between text-sm">
-                  <span>{t('analytics.clustering.clusters', 'Segments')} #{cluster.clusterIndex + 1}</span>
-                  <Badge variant="secondary" className="text-[10px]">{cellValueText(cluster.size)}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1 text-xs">
-                {Object.entries(cluster.profile ?? {})
-                  .filter(([key]) => key !== 'barangay_mix')
-                  .slice(0, 5)
-                  .map(([key, value]) => (
-                    <div key={key} className="flex justify-between gap-2">
-                      <span className="truncate text-muted-foreground">{key.replace(/_/g, ' ')}</span>
-                      <span className="font-medium"><CellValue value={value} /></span>
-                    </div>
-                  ))}
-                {canDrill && (
-                  <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => { setMemberCluster(cluster.clusterIndex); setMemberPage(1); }}>
-                    <Users size={14} className="mr-1" /> {t('analytics.clustering.viewMembers', 'View households')}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {detail.clusters.map(cluster => {
+            const mix = Array.isArray(cluster.profile?.barangay_mix) ? cluster.profile.barangay_mix : [];
+            return (
+              <Card key={cluster.clusterIndex}>
+                <CardHeader className="pb-1">
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    <span>{t('analytics.clustering.clusters', 'Segments')} #{cluster.clusterIndex + 1}</span>
+                    <Badge variant="secondary" className="text-[10px]">{cellValueText(cluster.size)}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1 text-xs">
+                  {Object.entries(cluster.profile ?? {})
+                    .filter(([key]) => key !== 'barangay_mix')
+                    .slice(0, 5)
+                    .map(([key, value]) => (
+                      <div key={key} className="flex justify-between gap-2">
+                        <span className="truncate text-muted-foreground">{key.replace(/_/g, ' ')}</span>
+                        <span className="font-medium"><CellValue value={value} /></span>
+                      </div>
+                    ))}
+                  {mix.length > 0 && <BarangayMix entries={mix} />}
+                  {canDrill && (
+                    <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => { setMemberCluster(cluster.clusterIndex); setMemberPage(1); }}>
+                      <Users size={14} className="mr-1" /> {t('analytics.clustering.viewMembers', 'View households')}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

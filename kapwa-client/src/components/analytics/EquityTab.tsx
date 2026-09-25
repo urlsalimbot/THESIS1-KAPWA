@@ -2,6 +2,7 @@ import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { queryKeys } from '../../lib/query-keys';
+import { MethodologyNote } from './MethodologyNote';
 
 type Cell = { value: number } | { suppressed: true };
 interface EquityResponse {
@@ -16,7 +17,13 @@ function cellText(cell: Cell | undefined): string {
 export function EquityTab({ filters }: { filters: Record<string, unknown> }) {
   const { t } = useTranslation();
   const { data, error, isLoading } = useSWR<EquityResponse>(queryKeys.analytics.equity(filters));
-  if (error) return <p className="text-sm text-muted-foreground">{t('analytics.noData', 'No data for the selected filters')}</p>;
+  if (error) {
+    const body = (error as { body?: { code?: string; required?: number; actual?: number } }).body;
+    if (body?.code === 'insufficient_data') {
+      return <p className="text-sm text-muted-foreground">{t('analytics.insufficientData', 'Not enough data (needs {{required}}, found {{actual}})', { required: body.required, actual: body.actual })}</p>;
+    }
+    return <p className="text-sm text-muted-foreground">{t('analytics.noData', 'No data for the selected filters')}</p>;
+  }
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">{t('analytics.loading', 'Loading…')}</p>;
 
   return (
@@ -24,6 +31,7 @@ export function EquityTab({ filters }: { filters: Record<string, unknown> }) {
       <CardHeader className="pb-1">
         <CardTitle className="text-sm">{t('analytics.tabs.equity', 'Equity')}</CardTitle>
         <p className="text-xs text-muted-foreground">{t('analytics.equity.note', "Ratios compare each barangay's served share with its share of all households")}</p>
+        <div className="pt-1"><MethodologyNote textKey="analytics.methodology.equity" /></div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <table className="w-full text-sm">

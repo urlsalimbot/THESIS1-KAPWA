@@ -33,7 +33,7 @@ describe('AnalyticsPage', () => {
         return Promise.resolve({ run: { id: 'r1', status: 'completed', params: {}, metrics: {}, createdAt: '2026-09-25T00:00:00Z' }, clusters: [] });
       }
       if (k.includes('concentration')) {
-        return Promise.resolve({ hhiCases: 0.2, hhiAssistance: 0.3, totalCases: 0, totalAmount: 0, barangays: [] });
+        return Promise.resolve({ hhiCases: 0.2, hhiCasesLabel: 'moderate', hhiAssistance: 0.3, hhiAssistanceLabel: 'concentrated', totalCases: 0, totalAmount: 0, barangays: [] });
       }
       if (k.includes('equity')) {
         return Promise.resolve({ barangays: [] });
@@ -59,7 +59,7 @@ describe('AnalyticsPage', () => {
     expect(await screen.findByRole('heading', { name: /Analytics/i })).toBeTruthy();
 
     fireEvent.mouseDown(screen.getByRole('tab', { name: /Demographics/i }), { button: 0 });
-    expect(await screen.findByText(/Age and sex/i)).toBeTruthy();
+    expect((await screen.findAllByText(/Age and sex/i)).length).toBeGreaterThanOrEqual(1);
 
     fireEvent.mouseDown(screen.getByRole('tab', { name: /Clustering/i }), { button: 0 });
     expect(await screen.findByText(/New clustering run/i)).toBeTruthy();
