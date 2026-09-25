@@ -1,8 +1,8 @@
 import { DEFAULT_NOTIF_LIMIT } from '../common/constants';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification, NotificationCategory } from './notification.entity';
+import { Notification, NotificationCategory, NotificationType } from './notification.entity';
 import { NotificationPreference } from './notification-preference.entity';
 import { SmsGatewayService } from '../otp/sms-gateway.service';
 import { renderTemplate, SmsTemplateKey } from './sms-templates';
@@ -12,6 +12,8 @@ import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     @InjectRepository(Notification) private notifRepo: Repository<Notification>,
     @InjectRepository(NotificationPreference) private notifPrefRepo: Repository<NotificationPreference>,
@@ -124,7 +126,7 @@ export class NotificationsService {
   }
 
   async notifyCaseUpdate(recipientId: string, caseId: string, controlNo: string, status: string) {
-    return this.create({
+    const notif = await this.create({
       recipientId,
       title: 'Case Update',
       message: `Case ${controlNo} status changed to ${this.statusLabel(status)}`,
@@ -133,6 +135,44 @@ export class NotificationsService {
       // control number rides in the message instead.
       referenceId: caseId,
     });
+
+    // The notification email's real trigger: case-update notifications also
+    // deliver by email (in addition to the in-app row above) whenever the
+    // recipient has opted into email delivery for case updates — toggled in
+    // Settings → Notifications (PUT /notifications/preferences).
+    await this.deliverByConsent(recipientId, notif.id, NotificationType.EMAIL, NotificationCategory.CASE_UPDATE, notif.title, notif.message);
+    return notif;
+  }
+
+  /**
+   * Best-effort out-of-band delivery for an auto-created in-app notification.
+   * Only fires when the recipient opted into the given channel for the
+   * category; in-app delivery is never affected. Failures are logged, never
+   * thrown, so notification creation and case transitions stay resilient.
+   */
+  private async deliverByConsent(
+    recipientId: string,
+    notifId: string | undefined,
+    channel: NotificationType,
+    category: NotificationCategory,
+    title: string,
+    message: string,
+  ): Promise<void> {
+    try {
+      if (!(await this.checkConsent(recipientId, channel, category))) return;
+      const rows = await this.notifRepo.manager.query(
+        `SELECT email FROM users WHERE id = $1 AND is_active = TRUE LIMIT 1`,
+        [recipientId],
+      );
+      const email = rows?.[0]?.email as string | undefined;
+      if (!email || !notifId) return;
+      const sent = await this.emailService.sendNotificationEmail(email, title, message);
+      await this.notifRepo.update(notifId, { email, sent: !!sent, sentAt: sent ? new Date() : undefined });
+    } catch (err) {
+      this.logger.warn(
+        `Email delivery skipped for ${channel} notification to ${recipientId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   async notifySyncConflict(recipientId: string, tableName: string, reason: string) {

@@ -12,6 +12,7 @@ describe('NotificationsService', () => {
   let repoMock: any;
   let prefRepoMock: any;
   let gatewayMock: any;
+  let emailMock: any;
 
   const smsMock = {
     sendSms: jest.fn().mockResolvedValue({ success: true, provider: 'log', messageId: 'm1' }),
@@ -27,6 +28,7 @@ describe('NotificationsService', () => {
       update: jest.fn().mockResolvedValue({ affected: 1 }),
       count: jest.fn().mockResolvedValue(0),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      manager: { query: jest.fn().mockResolvedValue([]) },
     };
 
     prefRepoMock = {
@@ -41,8 +43,8 @@ describe('NotificationsService', () => {
       emitToAgencyStaff: jest.fn(),
       emitToRole: jest.fn(),
     };
-    const emailMock = {
-      sendNotificationEmail: jest.fn().mockResolvedValue({ success: true }),
+    emailMock = {
+      sendNotificationEmail: jest.fn().mockResolvedValue(true),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -109,6 +111,32 @@ describe('NotificationsService', () => {
       referenceId: 'case-uuid-1',
       message: expect.stringContaining('NORZ-001'),
     }));
+  });
+
+  it('case update auto-delivers email when recipient opted into email case updates (real trigger)', async () => {
+    prefRepoMock.findOne.mockResolvedValue({ optedIn: true });
+    repoMock.create.mockImplementation((x: any) => ({ id: 'n-cu-1', ...x }));
+    repoMock.save.mockImplementation(async (x: any) => ({ id: 'n-cu-1', ...x }));
+    (repoMock.manager.query as jest.Mock).mockResolvedValue([{ email: 'recipient@example.com' }]);
+
+    await service.notifyCaseUpdate('u1', 'case-uuid-1', 'NORZ-001', 'approved');
+
+    expect(emailMock.sendNotificationEmail).toHaveBeenCalledWith(
+      'recipient@example.com',
+      'Case Update',
+      expect.stringContaining('NORZ-001'),
+    );
+    expect(repoMock.update).toHaveBeenCalledWith('n-cu-1', expect.objectContaining({ email: 'recipient@example.com', sent: true }));
+  });
+
+  it('case update does NOT email without opt-in', async () => {
+    prefRepoMock.findOne.mockResolvedValue(null);
+    repoMock.create.mockImplementation((x: any) => ({ id: 'n-cu-2', ...x }));
+    repoMock.save.mockImplementation(async (x: any) => ({ id: 'n-cu-2', ...x }));
+
+    await service.notifyCaseUpdate('u1', 'case-uuid-1', 'NORZ-001', 'approved');
+
+    expect(emailMock.sendNotificationEmail).not.toHaveBeenCalled();
   });
 
   it('creates sync conflict notification', async () => {
