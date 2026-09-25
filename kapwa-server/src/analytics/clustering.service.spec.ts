@@ -109,6 +109,27 @@ describe('ClusteringService', () => {
     expect(memberRepo.delete).toHaveBeenCalledWith({ runId: 'run-1' });
   });
 
+  it('suppresses sub-5 counts in the barangay mix of a visible cluster', async () => {
+    runRepo.findOne.mockResolvedValue({ id: 'run-1' });
+    clusterRepo.find.mockResolvedValue([
+      {
+        clusterIndex: 0, size: 30, centroid: { standardized: [1] },
+        profile: {
+          barangay_mix: [{ barangay: 'Poblacion', count: 28 }, { barangay: 'Unspecified', count: 2 }],
+          household_income_median: 20000,
+        },
+      },
+    ]);
+
+    const { clusters } = await service.getRun('run-1');
+
+    expect((clusters[0].profile as any).barangay_mix).toEqual([
+      { barangay: 'Poblacion', count: { value: 28 } },
+      { barangay: 'Unspecified', count: { suppressed: true } },
+    ]);
+    expect((clusters[0].profile as any).household_income_median).toBe(20000);
+  });
+
   it('throws NotFound for unknown runs', async () => {
     runRepo.findOne.mockResolvedValue(null);
     await expect(service.getRun('missing')).rejects.toThrow(NotFoundException);
@@ -161,7 +182,7 @@ describe('ClusteringService', () => {
     expect(audit.log).toHaveBeenCalledWith('analytics.drilldown', 'run-1', 'user-7', expect.objectContaining({ clusterIndex: 0, page: 1 }));
   });
 
-  it('exports an aggregate CSV with run metadata', async () => {
+  it('exports an aggregate CSV with run metadata and a single size column', async () => {
     runRepo.findOne.mockResolvedValue({
       id: 'run-1', status: 'completed',
       params: { chosen_k: 2, seed: 5, dataset_size: 60 },
@@ -169,14 +190,16 @@ describe('ClusteringService', () => {
       createdAt: new Date('2026-09-25T00:00:00Z'),
     });
     clusterRepo.find.mockResolvedValue([
-      { clusterIndex: 0, size: 30, profile: { household_income_median: 6000 } },
-      { clusterIndex: 1, size: 30, profile: { household_income_median: 15000 } },
+      { clusterIndex: 0, size: 30, profile: { size: 30, household_income_median: 6000 } },
+      { clusterIndex: 1, size: 30, profile: { size: 30, household_income_median: 15000 } },
     ]);
     const { buffer, filename } = await service.exportRunCsv('run-1');
     const text = buffer.toString('utf8');
     expect(text).toContain('# run_id,run-1');
-    expect(text).toContain('cluster_index,size');
-    expect(text).toContain('0,30');
+    const header = text.split('\n').find(line => line.startsWith('cluster_index,'));
+    expect(header).toBe('cluster_index,size,household_income_median');
+    expect(header?.split(',').filter(key => key === 'size')).toHaveLength(1);
+    expect(text).toContain('0,30,6000');
     expect(filename).toMatch(/^analytics-clusters-.*\.csv$/);
   });
 

@@ -36,7 +36,8 @@ describe('AnalyticsService', () => {
       expect(result.civilStatus.find(s => s.label === 'Married')?.count).toEqual({ suppressed: true });
       expect(result.occupation).toEqual([]);
       expect(result.incomeBands.find(b => b.label === '<5k')?.count).toEqual({ suppressed: true });
-      expect(result.dependencyRatio).toBeCloseTo(1.5);
+      // working-age denominator (2) is below MIN_CELL, so the ratio is suppressed
+      expect(result.dependencyRatio).toBeNull();
       expect(result.philhealthCoverage).toEqual({ value: 0.4 });
     });
 
@@ -202,7 +203,8 @@ describe('AnalyticsService', () => {
       ]);
       const result = await service.getDemographics({});
       expect(result.summary.personsServed).toEqual({ value: 5 });
-      expect(result.dependencyRatio).toBeCloseTo(1.5);
+      // working-age denominator (2) is below MIN_CELL, so the ratio is suppressed
+      expect(result.dependencyRatio).toBeNull();
     });
 
     it('suppresses the dependency ratio for cohorts below the cell minimum', async () => {
@@ -214,6 +216,26 @@ describe('AnalyticsService', () => {
       ]);
       const result = await service.getDemographics({});
       expect(result.dependencyRatio).toBeNull();
+    });
+
+    it('suppresses the dependency ratio when the working-age denominator is below the cell minimum', async () => {
+      const person = (id: string, age: number) => ({
+        person_id: id, gender: 'Male', age, civil_status: 'Single', occupation: null,
+        has_philhealth: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
+      });
+      repoMock.query.mockResolvedValue([
+        ...Array.from({ length: 6 }, (_, i) => person(`d${i}`, 4)),
+        ...Array.from({ length: 2 }, (_, i) => person(`w${i}`, 30)),
+      ]);
+      const smallDenominator = await service.getDemographics({});
+      expect(smallDenominator.dependencyRatio).toBeNull();
+
+      repoMock.query.mockResolvedValue([
+        ...Array.from({ length: 5 }, (_, i) => person(`w2_${i}`, 30)),
+        person('d2', 4),
+      ]);
+      const visibleDenominator = await service.getDemographics({});
+      expect(visibleDenominator.dependencyRatio).toBeCloseTo(1 / 5);
     });
 
     it('casts the case intervention join to text for the uuid case id', async () => {
@@ -233,7 +255,9 @@ describe('AnalyticsService', () => {
       const result = await service.getConcentration({});
       expect(result.barangays).toHaveLength(3);
       expect(result.hhiCases).toBeCloseTo(0.5);
+      expect(result.hhiCasesLabel).toBe('concentrated');
       expect(result.hhiAssistance).toBeCloseTo(0.36 + 0.16);
+      expect(result.hhiAssistanceLabel).toBe('concentrated');
       // The zero-case Matictic cell is suppressed, so the smallest remaining
       // case cell (Poblacion, first of the 6s) is suppressed with it.
       expect(result.barangays[0].cases).toEqual({ suppressed: true });
@@ -282,6 +306,36 @@ describe('AnalyticsService', () => {
       ]);
       await service.getConcentration({});
       expect(String(repoMock.query.mock.calls[0][0])).toContain('c.id::text = ci.case_id');
+    });
+
+    it('applies the barangay filter to the concentration query', async () => {
+      repoMock.query.mockResolvedValue([
+        { barangay: 'Bigte', cases: '6', interventions: '10', amount: '6000' },
+        { barangay: 'Bigte', cases: '7', interventions: '8', amount: '4000' },
+        { barangay: 'Bigte', cases: '8', interventions: '9', amount: '5000' },
+      ]);
+      await service.getConcentration({ barangay: 'Bigte' });
+      const [sql, params] = repoMock.query.mock.calls[0];
+      expect(String(sql)).toContain("($3::text IS NULL OR COALESCE(h.barangay, 'Unspecified') = $3)");
+      expect(params).toEqual([null, null, 'Bigte']);
+    });
+
+    it('labels the HHI with the spec dispersion heuristic', async () => {
+      repoMock.query.mockResolvedValue(
+        Array.from({ length: 10 }, (_, i) => ({ barangay: `B${i}`, cases: '10', interventions: '10', amount: '1000' })),
+      );
+      const dispersed = await service.getConcentration({});
+      expect(dispersed.hhiCases).toBeCloseTo(0.1);
+      expect(dispersed.hhiCasesLabel).toBe('dispersed');
+      expect(dispersed.hhiAssistanceLabel).toBe('dispersed');
+
+      repoMock.query.mockResolvedValue(
+        Array.from({ length: 5 }, (_, i) => ({ barangay: `B${i}`, cases: '20', interventions: '20', amount: '2000' })),
+      );
+      const moderate = await service.getConcentration({});
+      expect(moderate.hhiCases).toBeCloseTo(0.2);
+      expect(moderate.hhiCasesLabel).toBe('moderate');
+      expect(moderate.hhiAssistanceLabel).toBe('moderate');
     });
   });
 
@@ -347,6 +401,40 @@ describe('AnalyticsService', () => {
       expect(byName('C')?.coverageQuartile).toEqual({ value: 3 });
       expect(byName('D')?.coverageQuartile).toEqual({ value: 4 });
       expect(byName('E')?.coverageQuartile).toEqual({ suppressed: true });
+    });
+
+    it('keeps zero-served barangays in the table with suppressed shares', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([
+          { barangay: 'Poblacion', served_households: '8', assistance: '8000', four_ps: '6' },
+        ])
+        .mockResolvedValueOnce([
+          { barangay: 'Poblacion', households: '40' },
+          { barangay: 'Bigte', households: '60' },
+        ]);
+      const result = await service.getEquity({});
+      expect(result.barangays.map(b => b.barangay)).toEqual(['Poblacion', 'Bigte']);
+      const bigte = result.barangays.find(b => b.barangay === 'Bigte');
+      expect(bigte?.householdsShare).toEqual({ value: 0.6 });
+      expect(bigte?.servedShare).toEqual({ suppressed: true });
+      expect(bigte?.assistanceShare).toEqual({ suppressed: true });
+      expect(bigte?.coverageRatio).toEqual({ suppressed: true });
+      expect(bigte?.coverageQuartile).toEqual({ suppressed: true });
+      expect(bigte?.fourPsShare).toEqual({ suppressed: true });
+    });
+
+    it('applies the barangay filter to both equity queries', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([
+          { barangay: 'Bigte', served_households: '8', assistance: '8000', four_ps: '6' },
+        ])
+        .mockResolvedValueOnce([{ barangay: 'Bigte', households: '60' }]);
+      await service.getEquity({ barangay: 'Bigte' });
+      const predicate = "($3::text IS NULL OR COALESCE(h.barangay, 'Unspecified') = $3)";
+      expect(String(repoMock.query.mock.calls[0][0])).toContain(predicate);
+      expect(repoMock.query.mock.calls[0][1]).toEqual([null, null, 'Bigte']);
+      expect(String(repoMock.query.mock.calls[1][0])).toContain("($1::text IS NULL OR COALESCE(barangay, 'Unspecified') = $1)");
+      expect(repoMock.query.mock.calls[1][1]).toEqual(['Bigte']);
     });
   });
 });

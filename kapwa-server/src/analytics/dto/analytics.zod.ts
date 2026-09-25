@@ -18,7 +18,7 @@ export const ClusteringRunSchema = z.object({
   to: isoDate.optional(),
   barangay: z.string().min(1).max(120).optional(),
   seed: z.number().int().min(0).max(2 ** 31 - 1).optional(),
-});
+}).refine(v => !v.from || !v.to || v.from <= v.to, { message: 'from must be on or before to' });
 
 export const RunMembersQuerySchema = z.object({
   clusterIndex: z.coerce.number().int().min(0),

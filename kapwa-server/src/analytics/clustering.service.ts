@@ -9,9 +9,24 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { FEATURE_KEYS, FeatureKey } from './analytics.types';
 import { prepareMatrix, evaluateCandidates, chooseK } from './models/kmeans';
 import { median } from './models/stats';
-import { complementSuppression, MIN_CELL } from './suppression';
+import { complementSuppression, suppressCount, MIN_CELL } from './suppression';
 
 const MIN_DATASET = 20;
+
+/**
+ * Per-cell suppression for the display-only barangay mix (a top-3 list, not a
+ * partition), so sub-5 counts never leave the API.
+ */
+function suppressProfileMix(profile: Record<string, unknown> | null | undefined): Record<string, unknown> | null | undefined {
+  if (!profile || !Array.isArray(profile.barangay_mix)) return profile;
+  return {
+    ...profile,
+    barangay_mix: (profile.barangay_mix as Array<{ barangay: string; count: number }>).map(entry => ({
+      ...entry,
+      count: suppressCount(Number(entry.count)),
+    })),
+  };
+}
 
 export interface CreateRunInput {
   kRange?: [number, number];
@@ -159,7 +174,7 @@ export class ClusteringService {
     );
     const clusters = stored.map((cluster, i) => ('suppressed' in sizeCells[i]
       ? { ...cluster, size: { suppressed: true as const }, centroid: undefined, profile: undefined }
-      : cluster));
+      : { ...cluster, profile: suppressProfileMix(cluster.profile) }));
     return { run, clusters };
   }
 
@@ -179,7 +194,7 @@ export class ClusteringService {
       clusters.map(cluster => (cluster.size < MIN_CELL ? { suppressed: true as const } : { value: cluster.size })),
     );
     const profileKeys = [...new Set(clusters.flatMap(c => Object.keys(c.profile ?? {})))]
-      .filter(key => key !== 'barangay_mix');
+      .filter(key => key !== 'barangay_mix' && key !== 'size');
     const lines: string[] = [
       `# run_id,${run.id}`,
       `# status,${run.status}`,

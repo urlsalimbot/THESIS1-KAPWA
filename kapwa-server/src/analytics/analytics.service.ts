@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case } from '../cases/case.entity';
 import { hhi } from './models/stats';
-import { complementSuppression, suppressCount, suppressRatio, Suppressed } from './suppression';
+import { complementSuppression, MIN_CELL, suppressCount, suppressRatio, Suppressed } from './suppression';
 
 export interface AnalyticsFilters {
   from?: string;
@@ -30,6 +30,15 @@ const INCOME_BANDS: Array<{ label: string; test: (v: number | null) => boolean }
   { label: '>=40k', test: v => v != null && v >= 40000 },
   { label: 'Unspecified', test: v => v == null },
 ];
+
+export type HhiLabel = 'dispersed' | 'moderate' | 'concentrated';
+
+// Spec §5.4 heuristic: <0.15 dispersed, 0.15–0.25 moderate, >0.25 concentrated.
+export function hhiLabel(value: number): HhiLabel {
+  if (value < 0.15) return 'dispersed';
+  if (value <= 0.25) return 'moderate';
+  return 'concentrated';
+}
 
 @Injectable()
 export class AnalyticsService {
@@ -123,7 +132,7 @@ export class AnalyticsService {
     const ages = persons.map(p => p.age).filter((a): a is number => a != null);
     const dependents = ages.filter(a => a <= 14 || a >= 60).length;
     const working = ages.filter(a => a >= 15 && a <= 59).length;
-    const dependencyRatio = persons.length >= 5 && working > 0 ? dependents / working : null;
+    const dependencyRatio = persons.length >= MIN_CELL && working >= MIN_CELL ? dependents / working : null;
 
     const covered = persons.filter(p => p.has_philhealth).length;
     const philhealthCoverage = persons.length >= 5 ? { value: covered / persons.length } : { suppressed: true as const };
@@ -157,9 +166,10 @@ export class AnalyticsService {
          LEFT JOIN households h ON h.id = b.household_id
          WHERE ($1::date IS NULL OR ci.delivery_date >= $1::date)
            AND ($2::date IS NULL OR ci.delivery_date <= $2::date)
+           AND ($3::text IS NULL OR COALESCE(h.barangay, 'Unspecified') = $3)
          GROUP BY 1
          ORDER BY cases DESC`,
-        [filters.from ?? null, filters.to ?? null],
+        [filters.from ?? null, filters.to ?? null, filters.barangay ?? null],
       );
     const barangays = (rows ?? []).filter(r => Number(r.cases) > 0 || Number(r.interventions) > 0);
     if (barangays.length < 3) {
@@ -171,9 +181,13 @@ export class AnalyticsService {
     const amountShares = barangays.map(r => (totalAmount > 0 ? Number(r.amount) / totalAmount : 0));
     const caseCells = complementSuppression(barangays.map(r => suppressCount(Number(r.cases))));
     const amountCells = complementSuppression(barangays.map(r => suppressCount(Math.round(Number(r.amount)))));
+    const hhiCases = hhi(caseShares);
+    const hhiAssistance = hhi(amountShares);
     return {
-      hhiCases: hhi(caseShares),
-      hhiAssistance: hhi(amountShares),
+      hhiCases,
+      hhiCasesLabel: hhiLabel(hhiCases),
+      hhiAssistance,
+      hhiAssistanceLabel: hhiLabel(hhiAssistance),
       totalCases,
       totalAmount,
       barangays: barangays.map((r, i) => ({
@@ -203,21 +217,30 @@ export class AnalyticsService {
          LEFT JOIN households h ON h.id = b.household_id
          WHERE ($1::date IS NULL OR ci.delivery_date >= $1::date)
            AND ($2::date IS NULL OR ci.delivery_date <= $2::date)
+           AND ($3::text IS NULL OR COALESCE(h.barangay, 'Unspecified') = $3)
          GROUP BY 1`,
-        [filters.from ?? null, filters.to ?? null],
+        [filters.from ?? null, filters.to ?? null, filters.barangay ?? null],
       );
     const householdRows: Array<{ barangay: string; households: string }> = await this.caseRepo.query(
       `SELECT COALESCE(barangay, 'Unspecified') AS barangay, COUNT(*) AS households
-       FROM households GROUP BY 1`,
+       FROM households
+       WHERE ($1::text IS NULL OR COALESCE(barangay, 'Unspecified') = $1)
+       GROUP BY 1`,
+      [filters.barangay ?? null],
     );
 
     const totalServed = (served ?? []).reduce((acc, r) => acc + Number(r.served_households), 0);
     const totalAssistance = (served ?? []).reduce((acc, r) => acc + Number(r.assistance), 0);
     const totalHouseholds = (householdRows ?? []).reduce((acc, r) => acc + Number(r.households), 0);
-    const householdsByBarangay = new Map((householdRows ?? []).map(r => [r.barangay, Number(r.households)]));
+    const servedByBarangay = new Map((served ?? []).map(r => [r.barangay, r]));
 
-    const equityRows = (served ?? []).map(r => {
-      const households = householdsByBarangay.get(r.barangay) ?? 0;
+    // Rows are driven by every barangay in the household universe, so barangays
+    // with no served households in range still appear (with suppressed ratios)
+    // instead of silently vanishing from the table.
+    const equityRows = (householdRows ?? []).map(h => {
+      const r = servedByBarangay.get(h.barangay)
+        ?? { barangay: h.barangay, served_households: '0', assistance: '0', four_ps: '0' };
+      const households = Number(h.households);
       const servedCount = Number(r.served_households);
       const householdsShare = totalHouseholds > 0 ? households / totalHouseholds : 0;
       const servedShare = totalServed > 0 ? servedCount / totalServed : 0;
