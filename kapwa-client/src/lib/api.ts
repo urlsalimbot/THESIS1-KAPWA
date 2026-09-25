@@ -457,3 +457,18 @@ export async function downloadMonthlyFunds(month: string, startDate?: string, en
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export async function downloadAnalyticsCsv(path: string, fallbackFilename: string) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Analytics export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = dispositionFilename(res, fallbackFilename);
+  a.click();
+  URL.revokeObjectURL(url);
+}

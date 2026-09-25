@@ -2316,6 +2316,88 @@ const en = {
     "cancel": "Cancel",
     "notSet": "Not set"
   },
+  "analytics": {
+    "title": "Analytics",
+    "description": "Demographics, household clustering, concentration, and equity",
+    "filters": {
+      "range": "Date range",
+      "range30d": "Last 30 days",
+      "range90d": "Last 90 days",
+      "range6m": "Last 6 months",
+      "range1y": "Last year",
+      "rangeAll": "All time",
+      "barangay": "Barangay",
+      "allBarangays": "All barangays",
+      "apply": "Apply"
+    },
+    "tabs": {
+      "demographics": "Demographics",
+      "clustering": "Clustering",
+      "concentration": "Concentration",
+      "equity": "Equity"
+    },
+    "suppressed": "Suppressed (<5)",
+    "noData": "No data for the selected filters",
+    "insufficientData": "Not enough data (needs {{required}}, found {{actual}})",
+    "methodology": "How this is computed",
+    "export": "Export CSV",
+    "demographics": {
+      "personsServed": "Persons served",
+      "households": "Households",
+      "barangays": "Barangays",
+      "ageSex": "Age and sex",
+      "civilStatus": "Civil status",
+      "occupation": "Occupation (top 10)",
+      "income": "Household income bands",
+      "incomeNote": "Relative bands, not official poverty thresholds",
+      "dependency": "Dependency ratio",
+      "householdSize": "Household size",
+      "philhealth": "PhilHealth coverage",
+      "male": "Male",
+      "female": "Female"
+    },
+    "clustering": {
+      "runTitle": "New clustering run",
+      "kRange": "Candidate k range",
+      "seed": "Seed (optional)",
+      "seedHint": "Leave blank for a random seed; runs are reproducible by seed",
+      "run": "Run clustering",
+      "running": "Running…",
+      "runs": "Runs",
+      "chosenK": "Chosen k",
+      "datasetSize": "Households",
+      "candidates": "k selection (elbow and silhouette)",
+      "inertia": "Inertia",
+      "silhouette": "Silhouette",
+      "clusters": "Segments",
+      "size": "Households",
+      "profile": "Profile",
+      "barangayMix": "Barangay mix",
+      "viewMembers": "View households",
+      "membersTitle": "Households in segment {{index}}",
+      "household": "Household",
+      "distance": "Distance"
+    },
+    "concentration": {
+      "hhiCases": "Case concentration (HHI)",
+      "hhiAssistance": "Assistance concentration (HHI)",
+      "barangay": "Barangay",
+      "cases": "Cases",
+      "interventions": "Interventions",
+      "amount": "Assistance",
+      "caseShare": "Case share",
+      "amountShare": "Assistance share"
+    },
+    "equity": {
+      "householdsShare": "Household share",
+      "servedShare": "Served share",
+      "assistanceShare": "Assistance share",
+      "coverageRatio": "Coverage ratio",
+      "coverageQuartile": "Coverage quartile",
+      "fourPsShare": "4Ps household share",
+      "note": "Ratios compare each barangay's served share with its share of all households"
+    }
+  },
 } as const;
 
 export default en;

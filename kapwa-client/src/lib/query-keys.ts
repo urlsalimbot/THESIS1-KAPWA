@@ -42,6 +42,19 @@ export const queryKeys = {
     payouts: (caseId: string) =>
       memo(`fourps.payouts.${caseId}`, () => ['fourps', caseId, 'payouts'] as const),
   },
+  analytics: {
+    demographics: (filters: Record<string, unknown>) =>
+      memo(`analytics.demographics.${JSON.stringify(filters)}`, () => ['analytics', 'demographics', filters] as const),
+    concentration: (filters: Record<string, unknown>) =>
+      memo(`analytics.concentration.${JSON.stringify(filters)}`, () => ['analytics', 'concentration', filters] as const),
+    equity: (filters: Record<string, unknown>) =>
+      memo(`analytics.equity.${JSON.stringify(filters)}`, () => ['analytics', 'equity', filters] as const),
+    runs: (limit: number) =>
+      memo(`analytics.runs.${limit}`, () => ['analytics', 'runs', { limit }] as const),
+    run: (id: string) => memo(`analytics.run.${id}`, () => ['analytics', 'run', id] as const),
+    runMembers: (id: string, clusterIndex: number, page: number) =>
+      memo(`analytics.runMembers.${id}.${clusterIndex}.${page}`, () => ['analytics', 'run', id, 'members', { clusterIndex, page }] as const),
+  },
   dashboard: {
     all: ['dashboard'] as const,
     stats: () => memo('dashboard.stats', () => ['dashboard'] as const),

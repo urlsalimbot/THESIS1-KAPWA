@@ -2318,6 +2318,88 @@ const fil: EnLocale = {
     "saveLabel": "I-save ang ID ng Listahanan",
     "cancel": "Kanselahin",
     "notSet": "Hindi nakatakda"
+  },
+  "analytics": {
+    "title": "Analitika",
+    "description": "Demografia, pag-cluster ng sambahayan, konsentrasyon, at pagkakapantay-pantay",
+    "filters": {
+      "range": "Saklaw ng petsa",
+      "range30d": "Huling 30 araw",
+      "range90d": "Huling 90 araw",
+      "range6m": "Huling 6 na buwan",
+      "range1y": "Huling taon",
+      "rangeAll": "Lahat ng panahon",
+      "barangay": "Barangay",
+      "allBarangays": "Lahat ng barangay",
+      "apply": "Ilapat"
+    },
+    "tabs": {
+      "demographics": "Demografia",
+      "clustering": "Pag-cluster",
+      "concentration": "Konsentrasyon",
+      "equity": "Pagkakapantay-pantay"
+    },
+    "suppressed": "Nakubli (<5)",
+    "noData": "Walang datos para sa napiling filter",
+    "insufficientData": "Kulang ang datos (kailangan {{required}}, nahanap {{actual}})",
+    "methodology": "Paano ito kinakalkula",
+    "export": "I-export ang CSV",
+    "demographics": {
+      "personsServed": "Naserbisyuhan",
+      "households": "Sambahayan",
+      "barangays": "Barangay",
+      "ageSex": "Edad at kasarian",
+      "civilStatus": "Katayuang sibil",
+      "occupation": "Trabaho (top 10)",
+      "income": "Antas ng kita ng sambahayan",
+      "incomeNote": "Relatibong antas, hindi opisyal na poverty threshold",
+      "dependency": "Dependency ratio",
+      "householdSize": "Laki ng sambahayan",
+      "philhealth": "Saklaw ng PhilHealth",
+      "male": "Lalaki",
+      "female": "Babae"
+    },
+    "clustering": {
+      "runTitle": "Bagong clustering run",
+      "kRange": "Saklaw ng k",
+      "seed": "Seed (opsyonal)",
+      "seedHint": "Iwanang blangko para sa random na seed; reproduksible ang run sa pamamagitan ng seed",
+      "run": "Patakbuhin ang clustering",
+      "running": "Tumatakbo…",
+      "runs": "Mga run",
+      "chosenK": "Napiling k",
+      "datasetSize": "Sambahayan",
+      "candidates": "Pagpili ng k (elbow at silhouette)",
+      "inertia": "Inertia",
+      "silhouette": "Silhouette",
+      "clusters": "Mga segment",
+      "size": "Sambahayan",
+      "profile": "Profile",
+      "barangayMix": "Halo ng barangay",
+      "viewMembers": "Tingnan ang sambahayan",
+      "membersTitle": "Mga sambahayan sa segment {{index}}",
+      "household": "Sambahayan",
+      "distance": "Distansya"
+    },
+    "concentration": {
+      "hhiCases": "Konsentrasyon ng kaso (HHI)",
+      "hhiAssistance": "Konsentrasyon ng tulong (HHI)",
+      "barangay": "Barangay",
+      "cases": "Kaso",
+      "interventions": "Interbensyon",
+      "amount": "Tulong",
+      "caseShare": "Bahagi ng kaso",
+      "amountShare": "Bahagi ng tulong"
+    },
+    "equity": {
+      "householdsShare": "Bahagi ng sambahayan",
+      "servedShare": "Bahagi ng naserbisyuhan",
+      "assistanceShare": "Bahagi ng tulong",
+      "coverageRatio": "Coverage ratio",
+      "coverageQuartile": "Quartile ng coverage",
+      "fourPsShare": "Bahagi ng 4Ps na sambahayan",
+      "note": "Inihahambing ng ratio ang bahagi ng naserbisyuhan sa bahagi ng lahat ng sambahayan"
+    }
   }
 };
 

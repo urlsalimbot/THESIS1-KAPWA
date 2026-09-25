@@ -29,6 +29,16 @@ const ALLOWED_IDENTICAL = new Set([
   'admin.lcrImport',
   'agency.catReferral',
   'agency.catSeminar',
+  // analytics.*: statistical/methodological terms (inertia, silhouette,
+  // dependency/coverage ratio), the loanword profile, and Barangay as a
+  // proper noun — the fil copy deliberately keeps these identical.
+  'analytics.clustering.inertia',
+  'analytics.clustering.profile',
+  'analytics.clustering.silhouette',
+  'analytics.concentration.barangay',
+  'analytics.demographics.dependency',
+  'analytics.equity.coverageRatio',
+  'analytics.filters.barangay',
   'announcements.bold',
   'announcements.footer',
   'announcements.heading2',
