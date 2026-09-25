@@ -4,6 +4,7 @@ import { UnprocessableEntityException } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { Case } from '../cases/case.entity';
 import { CacheService } from '../common/cache.service';
+import { complementSuppression } from './suppression';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -39,7 +40,8 @@ describe('AnalyticsService', () => {
       expect(result.incomeBands.find(b => b.label === '<5k')?.count).toEqual({ suppressed: true });
       // working-age denominator (2) is below MIN_CELL, so the ratio is suppressed
       expect(result.dependencyRatio).toBeNull();
-      expect(result.philhealthCoverage).toEqual({ value: 0.4 });
+      // covered (2) is below MIN_CELL even though the cohort is not
+      expect(result.philhealthCoverage).toEqual({ suppressed: true });
     });
 
     it('computes non-suppressed values for a larger cohort', async () => {
@@ -219,7 +221,7 @@ describe('AnalyticsService', () => {
       expect(result.dependencyRatio).toBeNull();
     });
 
-    it('suppresses the dependency ratio when the working-age denominator is below the cell minimum', async () => {
+    it('suppresses the dependency ratio when either age group is below the cell minimum', async () => {
       const person = (id: string, age: number) => ({
         person_id: id, gender: 'Male', age, civil_status: 'Single', occupation: null,
         has_philhealth: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
@@ -233,10 +235,37 @@ describe('AnalyticsService', () => {
 
       repoMock.query.mockResolvedValue([
         ...Array.from({ length: 5 }, (_, i) => person(`w2_${i}`, 30)),
-        person('d2', 4),
+        ...Array.from({ length: 2 }, (_, i) => person(`d2_${i}`, 4)),
       ]);
-      const visibleDenominator = await service.getDemographics({});
-      expect(visibleDenominator.dependencyRatio).toBeCloseTo(1 / 5);
+      const smallNumerator = await service.getDemographics({});
+      expect(smallNumerator.dependencyRatio).toBeNull();
+
+      repoMock.query.mockResolvedValue([
+        ...Array.from({ length: 5 }, (_, i) => person(`w3_${i}`, 30)),
+        ...Array.from({ length: 5 }, (_, i) => person(`d3_${i}`, 4)),
+      ]);
+      const visible = await service.getDemographics({});
+      expect(visible.dependencyRatio).toBeCloseTo(1);
+    });
+
+    it('suppresses PhilHealth coverage when the covered count is below the cell minimum', async () => {
+      const person = (id: string, covered: boolean) => ({
+        person_id: id, gender: 'Male', age: 30, civil_status: 'Single', occupation: null,
+        has_philhealth: covered, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
+      });
+      repoMock.query.mockResolvedValue([
+        ...Array.from({ length: 6 }, (_, i) => person(`p${i}`, false)),
+        ...Array.from({ length: 4 }, (_, i) => person(`c${i}`, true)),
+      ]);
+      const fewCovered = await service.getDemographics({});
+      expect(fewCovered.philhealthCoverage).toEqual({ suppressed: true });
+
+      repoMock.query.mockResolvedValue([
+        ...Array.from({ length: 5 }, (_, i) => person(`p2_${i}`, false)),
+        ...Array.from({ length: 5 }, (_, i) => person(`c2_${i}`, true)),
+      ]);
+      const enoughCovered = await service.getDemographics({});
+      expect(enoughCovered.philhealthCoverage).toEqual({ value: 0.5 });
     });
 
     it('casts the case intervention join to text for the uuid case id', async () => {
@@ -247,7 +276,7 @@ describe('AnalyticsService', () => {
   });
 
   describe('getConcentration', () => {
-    it('computes shares and HHI per barangay and complementarily suppresses one small family', async () => {
+    it('computes shares and complementarily suppresses one small family, hiding the HHI', async () => {
       repoMock.query.mockResolvedValue([
         { barangay: 'Poblacion', cases: '6', interventions: '10', amount: '6000' },
         { barangay: 'Bigte', cases: '6', interventions: '8', amount: '4000' },
@@ -255,10 +284,11 @@ describe('AnalyticsService', () => {
       ]);
       const result = await service.getConcentration({});
       expect(result.barangays).toHaveLength(3);
-      expect(result.hhiCases).toBeCloseTo(0.5);
-      expect(result.hhiCasesLabel).toBe('concentrated');
-      expect(result.hhiAssistance).toBeCloseTo(0.36 + 0.16);
-      expect(result.hhiAssistanceLabel).toBe('concentrated');
+      // Any suppressed cell makes the shares (and therefore the HHI) invertible.
+      expect(result.hhiCases).toBeNull();
+      expect(result.hhiCasesLabel).toBeNull();
+      expect(result.hhiAssistance).toBeNull();
+      expect(result.hhiAssistanceLabel).toBeNull();
       // The zero-case Matictic cell is suppressed, so the smallest remaining
       // case cell (Poblacion, first of the 6s) is suppressed with it.
       expect(result.barangays[0].cases).toEqual({ suppressed: true });
@@ -266,6 +296,13 @@ describe('AnalyticsService', () => {
       // The zero-amount Matictic cell is suppressed, so Bigte's 4000 goes too.
       expect(result.barangays[0].amount).toEqual({ value: 6000 });
       expect(result.barangays[1].amount).toEqual({ suppressed: true });
+      // Suppressed count cells carry suppressed shares; visible cells keep theirs.
+      expect(result.barangays[0].caseShare).toEqual({ suppressed: true });
+      expect(result.barangays[1].caseShare).toEqual({ value: 0.5 });
+      expect(result.barangays[2].caseShare).toEqual({ suppressed: true });
+      expect(result.barangays[0].amountShare).toEqual({ value: 0.6 });
+      expect(result.barangays[1].amountShare).toEqual({ suppressed: true });
+      expect(result.barangays[2].amountShare).toEqual({ suppressed: true });
     });
 
     it('leaves case and amount cells untouched when no cell is small', async () => {
@@ -277,18 +314,26 @@ describe('AnalyticsService', () => {
       const result = await service.getConcentration({});
       expect(result.barangays.map(b => b.cases)).toEqual([{ value: 6 }, { value: 7 }, { value: 8 }]);
       expect(result.barangays.map(b => b.amount)).toEqual([{ value: 6000 }, { value: 7000 }, { value: 8000 }]);
+      expect(result.hhiCases).toBeCloseTo(149 / 441);
+      expect(result.hhiCasesLabel).toBe('concentrated');
+      expect(result.hhiAssistance).toBeCloseTo(149 / 441);
+      expect(result.hhiAssistanceLabel).toBe('concentrated');
     });
 
-    it('leaves the case family untouched when two or more cells are already suppressed', async () => {
+    it('keeps visible non-complemented cells untouched when two or more cells are suppressed', async () => {
       repoMock.query.mockResolvedValue([
         { barangay: 'Poblacion', cases: '6', interventions: '10', amount: '6000' },
         { barangay: 'Bigte', cases: '2', interventions: '3', amount: '0' },
         { barangay: 'Matictic', cases: '1', interventions: '2', amount: '1' },
       ]);
       const result = await service.getConcentration({});
+      expect(result.hhiCases).toBeNull();
+      expect(result.hhiAssistance).toBeNull();
       expect(result.barangays[0].cases).toEqual({ value: 6 });
       expect(result.barangays.filter(b => 'suppressed' in b.cases)).toHaveLength(2);
       expect(result.barangays.filter(b => 'suppressed' in b.amount)).toHaveLength(2);
+      // Poblacion's case cell is visible, so its share is published.
+      expect(result.barangays[0].caseShare).toEqual({ value: 6 / 9 });
     });
 
     it('throws insufficient_data when fewer than three barangays have data', async () => {
@@ -309,16 +354,32 @@ describe('AnalyticsService', () => {
       expect(String(repoMock.query.mock.calls[0][0])).toContain('c.id::text = ci.case_id');
     });
 
-    it('applies the barangay filter to the concentration query', async () => {
+    it('returns a single filtered barangay without the three-barangay guard and with null HHI', async () => {
       repoMock.query.mockResolvedValue([
         { barangay: 'Bigte', cases: '6', interventions: '10', amount: '6000' },
-        { barangay: 'Bigte', cases: '7', interventions: '8', amount: '4000' },
-        { barangay: 'Bigte', cases: '8', interventions: '9', amount: '5000' },
       ]);
-      await service.getConcentration({ barangay: 'Bigte' });
+      const result = await service.getConcentration({ barangay: 'Bigte' });
       const [sql, params] = repoMock.query.mock.calls[0];
       expect(String(sql)).toContain("($3::text IS NULL OR COALESCE(h.barangay, 'Unspecified') = $3)");
       expect(params).toEqual([null, null, 'Bigte']);
+      expect(result.barangays).toHaveLength(1);
+      expect(result.barangays[0].barangay).toBe('Bigte');
+      expect(result.barangays[0].cases).toEqual({ value: 6 });
+      expect(result.barangays[0].caseShare).toEqual({ value: 1 });
+      expect(result.hhiCases).toBeNull();
+      expect(result.hhiCasesLabel).toBeNull();
+      expect(result.hhiAssistance).toBeNull();
+      expect(result.hhiAssistanceLabel).toBeNull();
+    });
+
+    it('throws insufficient_data with required 1 when a barangay filter matches nothing', async () => {
+      repoMock.query.mockResolvedValue([]);
+      const promise = service.getConcentration({ barangay: 'Nonexistent' });
+      await expect(promise).rejects.toThrow(UnprocessableEntityException);
+      await promise.catch(err => {
+        expect((err.getResponse() as { required?: number; actual?: number }).required).toBe(1);
+        expect((err.getResponse() as { required?: number; actual?: number }).actual).toBe(0);
+      });
     });
 
     it('labels the HHI with the spec dispersion heuristic', async () => {
@@ -492,6 +553,27 @@ describe('AnalyticsService', () => {
 
       expect(cache.wrap.mock.calls[0][0]).toBe('analytics:concentration:{"barangay":"Bigte"}');
       expect(cache.wrap.mock.calls[1][0]).toBe('analytics:equity:{"from":"2026-01-01"}');
+    });
+  });
+
+  describe('complementSuppression', () => {
+    it('returns a new array and leaves its input untouched', () => {
+      const input: Array<{ value: number } | { suppressed: true }> = [
+        { value: 2 }, { value: 6 }, { suppressed: true },
+      ];
+      const result = complementSuppression(input);
+      expect(result).not.toBe(input);
+      expect(result).toEqual([{ suppressed: true }, { value: 6 }, { suppressed: true }]);
+      expect(input).toEqual([{ value: 2 }, { value: 6 }, { suppressed: true }]);
+    });
+
+    it('returns the family unchanged when zero or two-plus cells are suppressed', () => {
+      const none = [{ value: 6 }, { value: 7 }];
+      expect(complementSuppression(none)).toEqual(none);
+      const two: Array<{ value: number } | { suppressed: true }> = [
+        { suppressed: true }, { value: 6 }, { suppressed: true },
+      ];
+      expect(complementSuppression(two)).toEqual(two);
     });
   });
 });

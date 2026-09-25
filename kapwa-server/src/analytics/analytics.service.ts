@@ -139,10 +139,14 @@ export class AnalyticsService {
     const ages = persons.map(p => p.age).filter((a): a is number => a != null);
     const dependents = ages.filter(a => a <= 14 || a >= 60).length;
     const working = ages.filter(a => a >= 15 && a <= 59).length;
-    const dependencyRatio = persons.length >= MIN_CELL && working >= MIN_CELL ? dependents / working : null;
+    const dependencyRatio = persons.length >= MIN_CELL && dependents >= MIN_CELL && working >= MIN_CELL
+      ? dependents / working
+      : null;
 
     const covered = persons.filter(p => p.has_philhealth).length;
-    const philhealthCoverage = persons.length >= 5 ? { value: covered / persons.length } : { suppressed: true as const };
+    const philhealthCoverage = persons.length >= MIN_CELL && covered >= MIN_CELL
+      ? { value: covered / persons.length }
+      : { suppressed: true as const };
 
     return {
       summary: {
@@ -184,8 +188,9 @@ export class AnalyticsService {
         [filters.from ?? null, filters.to ?? null, filters.barangay ?? null],
       );
     const barangays = (rows ?? []).filter(r => Number(r.cases) > 0 || Number(r.interventions) > 0);
-    if (barangays.length < 3) {
-      throw new UnprocessableEntityException({ code: 'insufficient_data', required: 3, actual: barangays.length });
+    const minBarangays = filters.barangay ? 1 : 3;
+    if (barangays.length < minBarangays) {
+      throw new UnprocessableEntityException({ code: 'insufficient_data', required: minBarangays, actual: barangays.length });
     }
     const totalCases = barangays.reduce((acc, r) => acc + Number(r.cases), 0);
     const totalAmount = barangays.reduce((acc, r) => acc + Number(r.amount), 0);
@@ -193,13 +198,17 @@ export class AnalyticsService {
     const amountShares = barangays.map(r => (totalAmount > 0 ? Number(r.amount) / totalAmount : 0));
     const caseCells = complementSuppression(barangays.map(r => suppressCount(Number(r.cases))));
     const amountCells = complementSuppression(barangays.map(r => suppressCount(Math.round(Number(r.amount)))));
-    const hhiCases = hhi(caseShares);
-    const hhiAssistance = hhi(amountShares);
+    // Any suppressed cell makes the family total invertible, so the HHI (a
+    // function of every share) must not be published either. A barangay-filtered
+    // response has a single row whose HHI would always be 1, so it is null too.
+    const singleBarangay = Boolean(filters.barangay);
+    const hhiCases = singleBarangay || caseCells.some(cell => 'suppressed' in cell) ? null : hhi(caseShares);
+    const hhiAssistance = singleBarangay || amountCells.some(cell => 'suppressed' in cell) ? null : hhi(amountShares);
     return {
       hhiCases,
-      hhiCasesLabel: hhiLabel(hhiCases),
+      hhiCasesLabel: hhiCases == null ? null : hhiLabel(hhiCases),
       hhiAssistance,
-      hhiAssistanceLabel: hhiLabel(hhiAssistance),
+      hhiAssistanceLabel: hhiAssistance == null ? null : hhiLabel(hhiAssistance),
       totalCases,
       totalAmount,
       barangays: barangays.map((r, i) => ({
@@ -207,8 +216,8 @@ export class AnalyticsService {
         cases: caseCells[i],
         interventions: suppressCount(Number(r.interventions)),
         amount: amountCells[i],
-        caseShare: suppressRatio(caseShares[i], Number(r.cases)),
-        amountShare: suppressRatio(amountShares[i], Number(r.cases)),
+        caseShare: 'suppressed' in caseCells[i] ? { suppressed: true as const } : suppressRatio(caseShares[i], Number(r.cases)),
+        amountShare: 'suppressed' in amountCells[i] ? { suppressed: true as const } : suppressRatio(amountShares[i], Number(r.cases)),
       })),
     };
   }

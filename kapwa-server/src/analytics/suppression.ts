@@ -20,11 +20,12 @@ export function suppressRatio(ratio: number, baseCount: number): Suppressed<numb
  */
 export function complementSuppression(cells: Suppressed<number>[]): Suppressed<number>[] {
   if (cells.filter(c => 'suppressed' in c).length !== 1) return cells;
+  const out = [...cells];
   let smallestIdx = -1;
   let smallest = Infinity;
-  cells.forEach((cell, i) => {
+  out.forEach((cell, i) => {
     if ('value' in cell && cell.value < smallest) { smallest = cell.value; smallestIdx = i; }
   });
-  if (smallestIdx >= 0) cells[smallestIdx] = { suppressed: true };
-  return cells;
+  if (smallestIdx >= 0) out[smallestIdx] = { suppressed: true };
+  return out;
 }
