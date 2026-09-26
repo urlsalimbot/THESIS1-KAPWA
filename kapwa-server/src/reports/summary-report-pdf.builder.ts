@@ -6,19 +6,47 @@ const LEFT = M;
 const RIGHT = PAGE[0] - M;
 const WIDTH = RIGHT - LEFT;
 
-const CASE_COLS = [
-  { key: 'no', label: 'No.', w: 0.03 },
-  { key: 'date', label: 'Date', w: 0.07 },
-  { key: 'surname', label: 'SURNAME', w: 0.12 },
-  { key: 'firstName', label: 'FIRST NAME', w: 0.12 },
-  { key: 'middleName', label: 'MIDDLE NAME', w: 0.11 },
-  { key: 'gender', label: 'GENDER', w: 0.06 },
-  { key: 'clientCategory', label: 'CLIENT CATEGORY', w: 0.27 },
-  { key: 'barangay', label: 'Barangay', w: 0.10 },
-  { key: 'intervention', label: 'Intervention/Remarks', w: 0.12 },
-] as const;
+interface CaseLeaf {
+  key: string;
+  label: string;
+  w: number;
+  group: string;
+  vertical?: boolean;
+}
 
-const CLIENTS = ['CEDC', 'WEDC', 'PWD', 'SR. CITIZEN', 'INDIGENT', '4Ps', 'IP'] as const;
+// Page-3 case list. Columns are grouped into NAME / GENDER / CLIENT CATEGORY
+// super-bands; the client-category labels are rotated and drawn once in the
+// header (rows carry only the '/' tick).
+const CASE_LEAVES: ReadonlyArray<CaseLeaf> = [
+  { key: 'no', label: 'No.', w: 0.030, group: '' },
+  { key: 'date', label: 'Date', w: 0.062, group: '' },
+  { key: 'surname', label: 'SURNAME', w: 0.100, group: 'NAME' },
+  { key: 'firstName', label: 'FIRST NAME', w: 0.100, group: 'NAME' },
+  { key: 'middleName', label: 'MIDDLE NAME', w: 0.092, group: 'NAME' },
+  { key: 'genderM', label: 'M', w: 0.028, group: 'GENDER' },
+  { key: 'genderF', label: 'F', w: 0.028, group: 'GENDER' },
+  { key: 'cedc', label: 'CEDC', w: 0.042, group: 'CLIENT CATEGORY', vertical: true },
+  { key: 'wedc', label: 'WEDC', w: 0.042, group: 'CLIENT CATEGORY', vertical: true },
+  { key: 'pwd', label: 'PWD', w: 0.040, group: 'CLIENT CATEGORY', vertical: true },
+  { key: 'senior', label: 'SR. CITIZEN', w: 0.058, group: 'CLIENT CATEGORY', vertical: true },
+  { key: 'indigent', label: 'INDIGENT', w: 0.055, group: 'CLIENT CATEGORY', vertical: true },
+  { key: 'fourPs', label: '4Ps', w: 0.036, group: 'CLIENT CATEGORY', vertical: true },
+  { key: 'ip', label: 'IP', w: 0.032, group: 'CLIENT CATEGORY', vertical: true },
+  { key: 'barangay', label: 'Barangay', w: 0.092, group: '' },
+  { key: 'intervention', label: 'Intervention/Remarks', w: 0.153, group: '' },
+];
+
+// Header tier heights for the grouped summary table. The label tier is tall
+// enough to hold the two-line labels without spilling into the data row.
+const GROUP_H = 12;
+const SUBGROUP_H = 11;
+const LABEL_H = 19;
+const LABEL_LINE_H = 8;
+
+// Header tier heights for the page-3 case list. Tier 2 is tall enough to hold
+// the rotated client-category labels without spilling into the data rows.
+const CASE_GROUP_H = 16;
+const CASE_LABEL_H = 38;
 
 export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Buffer> {
   const PDFDocument = require('pdfkit');
@@ -30,6 +58,7 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
   drawLetterhead(doc, data, true);
   drawTitle(doc, data.annual.title, `GAD DATABASE CASE TRACKER`);
   drawGroupedTable(doc, data.annual);
+  drawSignatories(doc, data);
 
   doc.addPage();
   drawLetterhead(doc, data, false);
@@ -80,10 +109,16 @@ function drawTitle(doc: any, line1: string, line2: string) {
 }
 
 function drawSectionTitle(doc: any, title: string) {
-  doc.y += 8;
+  doc.y += 6;
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
     .text(title, LEFT, doc.y, { width: WIDTH, align: 'center', lineBreak: false });
-  doc.y += 14;
+  doc.y += 13;
+}
+
+// The reference form renders OTHERS outside the TECHNICAL group band (it has
+// its own empty top cell), even though SUMMARY_COLUMNS tags it as TECHNICAL.
+function effectiveGroup(key: string, group: string): string {
+  return key === 'OTHERS_TECHNICAL' ? '' : group;
 }
 
 function drawGroupedTable(doc: any, table: SummaryTable) {
@@ -95,52 +130,74 @@ function drawGroupedTable(doc: any, table: SummaryTable) {
   for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
   colX.push(RIGHT);
 
-  // Header tiers: row 1 = groups, row 2 = sub-groups, row 3 = column labels.
-  const tierH = [13, 13, 15];
-  const headerH = tierH[0] + tierH[1] + tierH[2];
-  const groups = [...new Set(SUMMARY_COLUMNS.map((c) => c.group).filter(Boolean))];
+  const groupTop = topOfTable;
+  const subTop = topOfTable + GROUP_H;
+  const labelTop = subTop + SUBGROUP_H;
+  const headerBottom = labelTop + LABEL_H;
+
+  // Tier 1: one spanning cell per group.
+  const groups = [...new Set(SUMMARY_COLUMNS.map((c) => effectiveGroup(c.key, c.group)).filter(Boolean))];
   const groupStart: Record<string, number> = {};
   const groupEnd: Record<string, number> = {};
   SUMMARY_COLUMNS.forEach((c, i) => {
-    if (!c.group) return;
-    groupStart[c.group] = groupStart[c.group] ?? i;
-    groupEnd[c.group] = i;
+    const g = effectiveGroup(c.key, c.group);
+    if (!g) return;
+    groupStart[g] = groupStart[g] ?? i;
+    groupEnd[g] = i;
   });
   groups.forEach((g) => {
     const x1 = colX[groupStart[g]];
     const x2 = colX[groupEnd[g] + 1];
-    doc.rect(x1, topOfTable, x2 - x1, tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
+    doc.rect(x1, groupTop, x2 - x1, GROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
     doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
-      .text(g, x1 + 2, topOfTable + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+      .text(g, x1 + 2, groupTop + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
   });
-  doc.rect(colX[SUMMARY_COLUMNS.findIndex((c) => c.key === 'TOTAL')], topOfTable, RIGHT - colX[SUMMARY_COLUMNS.findIndex((c) => c.key === 'TOTAL')], tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
-
+  // Ungrouped columns (OTHERS, TOTAL) get an empty top cell.
   SUMMARY_COLUMNS.forEach((c, i) => {
-    if (c.subGroup) {
-      const x1 = colX[i];
-      const x2 = colX[i + 1];
-      doc.rect(x1, topOfTable + tierH[0], x2 - x1, tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
-      doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
-        .text(c.subGroup, x1 + 1, topOfTable + tierH[0] + 2, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
-    }
+    if (effectiveGroup(c.key, c.group)) return;
+    doc.rect(colX[i], groupTop, colX[i + 1] - colX[i], GROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
   });
 
-  const labelTop = topOfTable + tierH[0] + tierH[1];
+  // Tier 2: a single merged cell per distinct sub-group (FINANCIAL ASSISTANCE,
+  // REFERRAL), never one cell per sub-column.
+  const subGroups = [...new Set(SUMMARY_COLUMNS.map((c) => c.subGroup).filter(Boolean))] as string[];
+  const subStart: Record<string, number> = {};
+  const subEnd: Record<string, number> = {};
+  SUMMARY_COLUMNS.forEach((c, i) => {
+    if (!c.subGroup) return;
+    subStart[c.subGroup] = subStart[c.subGroup] ?? i;
+    subEnd[c.subGroup] = i;
+  });
+  subGroups.forEach((s) => {
+    const x1 = colX[subStart[s]];
+    const x2 = colX[subEnd[s] + 1];
+    doc.rect(x1, subTop, x2 - x1, SUBGROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
+    doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
+      .text(s, x1 + 1, subTop + 3, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+  });
+
+  // Tier 3: leaf labels. Columns with a sub-group occupy tier 3 only; columns
+  // without one span tiers 2-3 so their label lands on the bottom tier.
   SUMMARY_COLUMNS.forEach((c, i) => {
     const x1 = colX[i];
     const x2 = colX[i + 1];
-    const spanTop = c.labels.length === 1 && !c.subGroup ? topOfTable + tierH[0] : labelTop;
-    doc.rect(x1, spanTop, x2 - x1, (topOfTable + headerH) - spanTop).lineWidth(0.6).strokeColor('#111').stroke();
+    const spanTop = c.subGroup ? labelTop : subTop;
+    doc.rect(x1, spanTop, x2 - x1, headerBottom - spanTop).lineWidth(0.6).strokeColor('#111').stroke();
     const size = c.labels.some((l) => l.length > 9) ? 5.2 : 6;
+    const lines = c.labels.length;
+    let base: number;
+    if (lines === 1) base = labelTop + 6; // single labels sit on the bottom tier
+    else if (c.subGroup) base = labelTop + 2;
+    else base = subTop + (SUBGROUP_H + LABEL_H - lines * LABEL_LINE_H) / 2 - 1;
     c.labels.forEach((label, li) => {
       doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
-        .text(label, x1 + 1, spanTop + 3 + li * 9, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+        .text(label, x1 + 1, base + li * LABEL_LINE_H, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
     });
   });
 
   // Single data row.
-  const rowH = 20;
-  const rowY = topOfTable + headerH;
+  const rowH = 18;
+  const rowY = headerBottom;
   doc.rect(LEFT, rowY, WIDTH, rowH).lineWidth(0.6).strokeColor('#111').stroke();
   SUMMARY_COLUMNS.forEach((c, i) => {
     let value = '';
@@ -149,43 +206,100 @@ function drawGroupedTable(doc: any, table: SummaryTable) {
     else if (c.key === 'TOTAL') value = String(table.counts.total);
     else value = String(table.counts.byCategory[c.key as keyof typeof table.counts.byCategory] ?? 0);
     doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-      .text(value, colX[i] + 1, rowY + 5, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
+      .text(value, colX[i] + 1, rowY + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
   });
-  doc.y = rowY + rowH + 6;
+  doc.y = rowY + rowH + 4;
 }
 
 function drawSignatories(doc: any, data: SummaryReportData) {
-  doc.y += 18;
+  const base = doc.y + 12;
   doc.font('Helvetica').fontSize(8).fillColor('#111')
-    .text('Prepared by:', LEFT + 10, doc.y, { lineBreak: false });
+    .text('Prepared by:', LEFT + 10, base, { lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-    .text(data.preparedBy, LEFT + 10, doc.y + 26, { lineBreak: false });
+    .text(data.preparedBy, LEFT + 10, base + 26, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#333')
-    .text(data.preparedByRole, LEFT + 10, doc.y + 38, { lineBreak: false });
+    .text(data.preparedByRole, LEFT + 10, base + 38, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#111')
-    .text('Noted by:', LEFT + WIDTH / 2, doc.y, { lineBreak: false });
+    .text('Noted by:', LEFT + WIDTH / 2, base, { lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-    .text(data.notedBy, LEFT + WIDTH / 2, doc.y + 26, { lineBreak: false });
+    .text(data.notedBy, LEFT + WIDTH / 2, base + 26, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#333')
-    .text(data.notedByRole, LEFT + WIDTH / 2, doc.y + 38, { lineBreak: false });
+    .text(data.notedByRole, LEFT + WIDTH / 2, base + 38, { lineBreak: false });
+  doc.y = base + 50;
+}
+
+function caseCellValue(r: CaseListRow, key: string): string {
+  switch (key) {
+    case 'no': return String(r.no);
+    case 'date': return r.date;
+    case 'surname': return r.surname;
+    case 'firstName': return r.firstName;
+    case 'middleName': return r.middleName;
+    case 'genderM': return r.gender === 'M' ? '/' : '';
+    case 'genderF': return r.gender === 'F' ? '/' : '';
+    case 'cedc': return r.categories.cedc ? '/' : '';
+    case 'wedc': return r.categories.wedc ? '/' : '';
+    case 'pwd': return r.categories.pwd ? '/' : '';
+    case 'senior': return r.categories.senior ? '/' : '';
+    case 'indigent': return r.categories.indigent ? '/' : '';
+    case 'fourPs': return r.categories.fourPs ? '/' : '';
+    case 'ip': return r.categories.ip ? '/' : '';
+    case 'barangay': return r.barangay;
+    case 'intervention': return r.intervention;
+    default: return '';
+  }
 }
 
 function drawCaseList(doc: any, rows: CaseListRow[]) {
-  const weights = CASE_COLS.map((c) => c.w);
+  const weights = CASE_LEAVES.map((c) => c.w);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const colX: number[] = [];
   let x = LEFT;
   for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
   colX.push(RIGHT);
 
-  const headerH = 26;
+  const headerH = CASE_GROUP_H + CASE_LABEL_H;
   const rowH = 15;
 
   const drawHeader = (top: number) => {
-    doc.rect(LEFT, top, WIDTH, headerH).lineWidth(0.6).strokeColor('#111').stroke();
-    CASE_COLS.forEach((c, i) => {
-      doc.font('Helvetica-Bold').fontSize(5.6).fillColor('#111')
-        .text(c.label, colX[i] + 1, top + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
+    const labelTop = top + CASE_GROUP_H;
+    // Super-bands (NAME / GENDER / CLIENT CATEGORY) in tier 1.
+    const grouped = [...new Set(CASE_LEAVES.map((c) => c.group).filter(Boolean))];
+    grouped.forEach((g) => {
+      const first = CASE_LEAVES.findIndex((c) => c.group === g);
+      let last = first;
+      CASE_LEAVES.forEach((c, i) => { if (c.group === g) last = i; });
+      const x1 = colX[first];
+      const x2 = colX[last + 1];
+      doc.rect(x1, top, x2 - x1, CASE_GROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
+      doc.font('Helvetica-Bold').fontSize(7).fillColor('#111')
+        .text(g, x1 + 1, top + 4, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+    });
+
+    CASE_LEAVES.forEach((c, i) => {
+      const x1 = colX[i];
+      const x2 = colX[i + 1];
+      if (!c.group) {
+        // Ungrouped columns span the full header height.
+        doc.rect(x1, top, x2 - x1, headerH).lineWidth(0.6).strokeColor('#111').stroke();
+        doc.font('Helvetica-Bold').fontSize(c.key === 'intervention' ? 6.2 : 6.8).fillColor('#111')
+          .text(c.label, x1 + 2, top + headerH / 2 - 4, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+        return;
+      }
+      // Grouped leaf cells live in tier 2.
+      doc.rect(x1, labelTop, x2 - x1, CASE_LABEL_H).lineWidth(0.6).strokeColor('#111').stroke();
+      if (c.vertical) {
+        const cx = x1 + (x2 - x1) / 2 + 2;
+        const baseY = labelTop + CASE_LABEL_H - 4;
+        doc.save();
+        doc.rotate(-90, { origin: [cx, baseY] });
+        doc.font('Helvetica-Bold').fontSize(5.6).fillColor('#111')
+          .text(c.label, cx, baseY, { lineBreak: false });
+        doc.restore();
+      } else {
+        doc.font('Helvetica-Bold').fontSize(6.8).fillColor('#111')
+          .text(c.label, x1 + 1, labelTop + CASE_LABEL_H / 2 - 4, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+      }
     });
   };
 
@@ -201,26 +315,16 @@ function drawCaseList(doc: any, rows: CaseListRow[]) {
       y = top + headerH;
     }
     doc.rect(LEFT, y, WIDTH, rowH).lineWidth(0.4).strokeColor('#444').stroke();
-    const cells = [
-      String(r.no), r.date, r.surname, r.firstName, r.middleName,
-      r.gender, '', r.barangay, r.intervention,
-    ];
-    cells.forEach((v, i) => {
-      if (i === 6) return; // client category drawn as ticks
-      doc.font('Helvetica').fontSize(6.4).fillColor('#111')
-        .text(v, colX[i] + 2, y + 4, { width: colX[i + 1] - colX[i] - 4, lineBreak: false, ellipsis: true });
-    });
-    const flags = [r.categories.cedc, r.categories.wedc, r.categories.pwd, r.categories.senior, r.categories.indigent, r.categories.fourPs, r.categories.ip];
-    const catX = colX[6];
-    const catW = colX[7] - colX[6];
-    const step = catW / CLIENTS.length;
-    CLIENTS.forEach((label, i) => {
-      doc.font('Helvetica-Bold').fontSize(4.8).fillColor('#111')
-        .text(label, catX + i * step + 1, y + 2, { width: step - 2, align: 'center', lineBreak: false });
-      if (flags[i]) {
-        doc.font('Helvetica').fontSize(7).fillColor('#111')
-          .text('/', catX + i * step + step / 2 - 2, y + 7, { lineBreak: false });
+    CASE_LEAVES.forEach((c, i) => {
+      const value = caseCellValue(r, c.key);
+      if (!value) return;
+      if (c.vertical || c.key === 'genderM' || c.key === 'genderF') {
+        doc.font('Helvetica-Bold').fontSize(7).fillColor('#111')
+          .text(value, colX[i] + 1, y + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
+        return;
       }
+      doc.font('Helvetica').fontSize(6.4).fillColor('#111')
+        .text(value, colX[i] + 2, y + 4, { width: colX[i + 1] - colX[i] - 4, lineBreak: false, ellipsis: true });
     });
     y += rowH;
   }

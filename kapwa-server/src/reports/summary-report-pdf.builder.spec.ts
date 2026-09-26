@@ -22,6 +22,10 @@ function searchableText(buf: Buffer): string {
   return `${raw}\n${decoded}`;
 }
 
+function countOf(haystack: string, needle: string): number {
+  return haystack.split(needle).length - 1;
+}
+
 const emptyTable = (title: string): SummaryTable => ({
   title,
   counts: { male: 0, female: 0, total: 0, byCategory: {} as any },
@@ -59,10 +63,38 @@ describe('buildSummaryReportPdf', () => {
     ]) expect(text).toContain(s);
   });
 
+  it('prints page-1 and page-2 signatories', async () => {
+    const text = searchableText(await buildSummaryReportPdf(data));
+    expect(countOf(text, 'Prepared by:')).toBeGreaterThanOrEqual(2);
+    expect(countOf(text, 'Noted by:')).toBeGreaterThanOrEqual(2);
+  });
+
+  it('merges the FINANCIAL ASSISTANCE and REFERRAL header bands once per table', async () => {
+    const text = searchableText(await buildSummaryReportPdf(data));
+    // 5 grouped tables: 1 annual + 3 monthly + 1 quarter summary.
+    expect(countOf(text, 'FINANCIAL ASSISTANCE')).toBe(5);
+    expect(countOf(text, 'REFERRAL')).toBe(5);
+  });
+
+  it('draws the page-3 NAME/GENDER super-bands and client-category header labels', async () => {
+    const text = searchableText(await buildSummaryReportPdf(data));
+    for (const s of ['NAME', 'GENDER', 'CEDC', 'SR. CITIZEN']) expect(text).toContain(s);
+  });
+
   it('paginates a long case list without crashing', async () => {
     const many = Array.from({ length: 120 }, (_, i) => ({ ...data.caseList[0], no: i + 1 }));
     const doc = await PDFDocument.load(await buildSummaryReportPdf({ ...data, caseList: many }));
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(4);
+  });
+
+  it('repeats the client-category header once per case-list page, never per row', async () => {
+    const many = Array.from({ length: 120 }, (_, i) => ({ ...data.caseList[0], no: i + 1 }));
+    const doc = await PDFDocument.load(await buildSummaryReportPdf({ ...data, caseList: many }));
+    const pages = doc.getPageCount();
+    const casePages = pages - 2; // pages 1-2 are the aggregate pages; no case list there
+    const text = searchableText(await buildSummaryReportPdf({ ...data, caseList: many }));
+    expect(countOf(text, 'SR. CITIZEN')).toBe(casePages);
+    expect(countOf(text, 'SR. CITIZEN')).toBeLessThan(120);
   });
 
   it('renders with zero counts (empty year)', async () => {
