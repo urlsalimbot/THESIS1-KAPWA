@@ -333,7 +333,7 @@ export async function buildPettyCashVoucherPdf(
 
   // Column heights (pt). Left stack defines the form height; the right stack is
   // ruled independently so its subsections keep their paper proportions.
-  const H = { header: 46, payee: 20, address: 20, req: 16, thead: 15, tbody: 96, approved: 76, paid: 38, cash: 50 };
+  const H = { header: 46, payee: 20, address: 20, req: 16, thead: 15, tbody: 84, approved: 84, paid: 40, cash: 54 };
   const leftRows: number[] = [];
   let ly = TOP;
   for (const key of ['header', 'payee', 'address', 'req', 'thead', 'tbody', 'approved', 'paid'] as const) {
