@@ -97,6 +97,22 @@ describe('buildPettyCashVoucherPdf', () => {
   });
 });
 
+describe('Petty Cash Voucher structure', () => {
+  it('prints the reference section labels', async () => {
+    const text = searchableText(await buildPettyCashVoucherPdf(pcvData));
+    for (const label of [
+      'PETTY CASH VOUCHER', 'Norzagaray, Bulacan', 'LGU',
+      'Payee:', 'Address:', 'I. To be filled up upon request',
+      'To payment of', 'Particular', 'Amount',
+      'Approved by:', 'HON. MARIA ELENA L. GERMAR', 'MUNICIPAL MAYOR',
+      'Paid by:', 'Disbursing Officer', 'Cash received by:',
+      'Signature Over Printed Name of Payee',
+    ]) {
+      expect(text).toContain(label);
+    }
+  });
+});
+
 describe('Certificate of Eligibility letterhead parity', () => {
   it('prints the province and municipality lines in reference order', async () => {
     const text = searchableText(await buildCertificateOfEligibilityPdf(coeData));
