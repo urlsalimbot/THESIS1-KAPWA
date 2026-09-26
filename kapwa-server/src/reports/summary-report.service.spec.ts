@@ -85,6 +85,14 @@ describe('SummaryReportService.build', () => {
     expect((params[1] as Date).toISOString()).toBe('2025-12-31T16:00:00.000Z');
   });
 
+  it('renders the case-list date in Manila local time', async () => {
+    const { service } = makeService([
+      row({ case_id: 'm', created_at: new Date('2025-04-01T00:30:00+08:00') }),
+    ]);
+    const data = await service.build(2025, 2);
+    expect(data.caseList[0].date).toBe('04-01-25');
+  });
+
   it('classifies case-list categories and intervention code', async () => {
     const { service } = makeService([
       row({ case_id: 'c9', gender: 'Female', client_category: 'IP', service_text: 'Certification', has_csr: true }),

@@ -174,6 +174,9 @@ export class SummaryReportService {
 
   private toCaseListRow(r: RawCaseRow, no: number): CaseListRow {
     const created = new Date(r.created_at);
+    // The case list prints the local Philippines calendar day: shift the
+    // instant by the fixed +08:00 offset and read its UTC fields.
+    const manila = new Date(created.getTime() + 8 * 60 * 60 * 1000);
     const dob = r.dob ? new Date(r.dob) : undefined;
     const age = dob ? Math.floor((Date.now() - new Date(dob).getTime()) / 31557600000) : undefined;
     const cat = (r.client_category ?? '').toLowerCase();
@@ -183,7 +186,7 @@ export class SummaryReportService {
     };
     return {
       no,
-      date: `${String(created.getUTCMonth() + 1).padStart(2, '0')}-${String(created.getUTCDate()).padStart(2, '0')}-${String(created.getUTCFullYear()).slice(2)}`,
+      date: `${String(manila.getUTCMonth() + 1).padStart(2, '0')}-${String(manila.getUTCDate()).padStart(2, '0')}-${String(manila.getUTCFullYear()).slice(2)}`,
       surname: r.surname ?? '', firstName: r.first_name ?? '', middleName: r.middle_name ?? '',
       gender: r.gender === 'Female' ? 'F' : r.gender === 'Male' ? 'M' : '',
       categories: {
