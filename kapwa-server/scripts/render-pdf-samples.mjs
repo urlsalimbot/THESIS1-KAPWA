@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Committed sample renderer for the document-parity effort.
 //
-// Renders the five PDF builders changed by the document-parity plan to
+// Renders the six PDF builders changed by the document-parity plan to
 // pdf/outputs/ and audits each layout with `pdftotext -bbox`:
 //
 //   1. overlapping words — any pairwise word-rectangle intersection larger
@@ -77,6 +77,7 @@ const { buildCertificateOfEligibilityPdf, buildPettyCashVoucherPdf } =
 const { buildIrfPdf } = loadBuilder('irf/irf-pdf.builder.js');
 const { buildGisPdf } = loadBuilder('gis/gis-pdf.builder.js');
 const { buildAccessCardPdf } = loadBuilder('access-cards/access-card-pdf.builder.js');
+const { buildSummaryReportPdf } = loadBuilder('reports/summary-report-pdf.builder.js');
 
 // Fixtures mirror the spec files' `fullData` / `coeData` / `pcvData` objects.
 
@@ -215,6 +216,50 @@ const accessCardData = {
   ],
 };
 
+// Mirrors the `data` object in summary-report-pdf.builder.spec.ts.
+const summaryEmptyTable = (title) => ({
+  title,
+  counts: { male: 0, female: 0, total: 0, byCategory: {} },
+});
+
+const summaryReportData = {
+  year: 2025,
+  quarter: 2,
+  annual: summaryEmptyTable('SUMMARY REPORT 2025'),
+  monthly: [
+    summaryEmptyTable('April 1-30, 2025'),
+    summaryEmptyTable('May 1-31, 2025'),
+    summaryEmptyTable('June 1-30, 2025'),
+  ],
+  quarterSummary: summaryEmptyTable('2nd QUARTER SUMMARY'),
+  caseList: [
+    {
+      no: 1,
+      date: '01-02-25',
+      surname: 'Magno',
+      firstName: 'Michael',
+      middleName: 'H',
+      gender: 'M',
+      categories: {
+        cedc: false,
+        wedc: false,
+        pwd: false,
+        senior: false,
+        indigent: true,
+        fourPs: false,
+        ip: false,
+      },
+      barangay: 'Poblacion',
+      intervention: 'PWD ID',
+    },
+  ],
+  officeName: 'Municipal Social Welfare and Development Office',
+  preparedBy: 'ARLYNDA F. GAMUTIA',
+  preparedByRole: 'MSWD - STAFF',
+  notedBy: 'ANNALYN JOY C. SAN PEDRO, RSW',
+  notedByRole: 'MSWD-HEAD',
+};
+
 const documents = [
   {
     n: '01',
@@ -255,6 +300,14 @@ const documents = [
     source: 'access-cards/access-card-pdf.builder.ts',
     paper: 'A4',
     build: () => buildAccessCardPdf(accessCardData),
+  },
+  {
+    n: '14',
+    slug: '14-summary-report',
+    label: 'GAD Summary Report (annual/quarter/case list)',
+    source: 'reports/summary-report-pdf.builder.ts',
+    paper: 'A4 landscape',
+    build: () => buildSummaryReportPdf(summaryReportData),
   },
 ];
 
