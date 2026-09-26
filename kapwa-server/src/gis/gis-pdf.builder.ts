@@ -34,6 +34,9 @@ const DECLARATION_TEXT =
 const FOOTER_TEXT =
   'DSWD Field Office III, Diosdado Macapagal Government Center, Maimpis, City of San Fernando, Pampanga, Philippines 2000  |  ' +
   'Website: http://www.dswd.gov.ph Tel No. (045) 961-2143';
+// Second footer line: the MSWDO office line (spec §10). Exact wording can be
+// swapped in one place once verified against the physical copy.
+const FOOTER_TEXT_2 = 'Municipal Social Welfare and Development Office (MSWDO) - Norzagaray, Bulacan';
 
 // Signing authority printed on the form.
 const APPROVER_NAME = 'MARLON A. MALLARI,RSW';
@@ -183,7 +186,11 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- beneficiary / representative blocks -------------------------------
 
-  const personBlock = (heading: string, p: GisPdfData['beneficiary'], relationship?: string) => {
+  const personBlock = (
+    heading: string,
+    p: GisPdfData['beneficiary'],
+    opts: { relationship?: string; unangBisita?: string } = {},
+  ) => {
     banner(y, 11, heading, 'gray', 6.5);
     y += 11;
     cells(y, 19, [
@@ -211,18 +218,28 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
       { frac: 0.19, label: 'Buwanang Kita (Monthly Salary)', value: p.income != null ? String(p.income) : '' },
     ]);
     y += 19;
-    if (relationship !== undefined) {
+    cells(y, 19, [
+      { frac: 0.26, label: 'Lugar ng Kapanganakan (Place of Birth)', value: p.placeOfBirth ?? '' },
+      { frac: 0.26, label: 'Kalagayan ng Kalusugan (Health Status)', value: '' },
+      { frac: 0.24, label: 'Unang Bisita (First Visit)', value: opts.unangBisita ?? '' },
+      { frac: 0.24, label: 'Time Start', value: '' },
+    ]);
+    y += 19;
+    if (opts.relationship !== undefined) {
       cells(y, 17, [
-        { frac: 0.6, label: 'Relasyon sa Benepisyaryo (Relationship to the Beneficiary)', value: relationship },
+        { frac: 0.6, label: 'Relasyon sa Benepisyaryo (Relationship to the Beneficiary)', value: opts.relationship },
         { frac: 0.4, label: 'Time End', value: '' },
       ]);
       y += 17;
     }
   };
 
-  personBlock('IMPORMASYON NG BENEPISYARYO (Beneficiary’s Identifying Information)', data.beneficiary);
-  personBlock('IMPORMASYON NG KINATAWAN (Representative’s Identifying Information)', data.claimant,
-    data.claimant.relationshipToBeneficiary ?? '');
+  personBlock('IMPORMASYON NG BENEPISYARYO (Beneficiary’s Identifying Information)', data.beneficiary,
+    { unangBisita: fmtDate(data.createdAt) });
+  personBlock('IMPORMASYON NG KINATAWAN (Representative’s Identifying Information)', data.claimant, {
+    relationship: data.claimant.relationshipToBeneficiary ?? '',
+    unangBisita: fmtDate(data.createdAt),
+  });
 
   banner(y, 11, RED_BANNER_TEXT, 'red', 6);
   y += 11;
@@ -408,7 +425,8 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   y += blockH + 20;
   hline(y);
   doc.font('Helvetica').fontSize(5).fillColor('#555')
-    .text(FOOTER_TEXT, LEFT, y + 3, { width: WIDTH, align: 'center', lineBreak: false, ellipsis: true });
+    .text(FOOTER_TEXT, LEFT, y + 3, { width: WIDTH, align: 'center', lineBreak: false, ellipsis: true })
+    .text(FOOTER_TEXT_2, LEFT, y + 8, { width: WIDTH, align: 'center', lineBreak: false, ellipsis: true });
 
   doc.end();
   return done;
