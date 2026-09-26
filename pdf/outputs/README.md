@@ -13,7 +13,7 @@ data and rendered to PNG so the output can be reviewed without a running stack.
 | # | Export | Source | Paper | Pages | Size |
 |---|---|---|---|---|---|
 | 01 | Certificate of Eligibility | `cases/case-documents.builder.ts` | 21 × 7 cm strip | 1 | 84,265 B |
-| 02 | Petty Cash Voucher | `cases/case-documents.builder.ts` | 21 × 14 cm strip | 1 | 2,923 B |
+| 02 | Petty Cash Voucher | `cases/case-documents.builder.ts` | 21 × 14 cm strip | 1 | 2,878 B |
 | 03 | Incident Report Form (Blotter) | `irf/irf-pdf.builder.ts` | A4 | 1 | 239,662 B |
 | 04 | General Intake Sheet (GIS) | `gis/gis-pdf.builder.ts` | A4 | 1 | 88,797 B |
 | 05 | Family Access Card | `access-cards/access-card-pdf.builder.ts` | A4 | 2 | 242,416 B |

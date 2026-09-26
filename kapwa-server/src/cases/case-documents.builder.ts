@@ -402,37 +402,30 @@ export async function buildPettyCashVoucherPdf(
   text('Signature Over Printed Name of Payee', lc - 115, cashY + 36, 230, { size: 7, align: 'center' });
 
   // ---- Right: liquidation block (PART II) — left blank for liquidation ----
-  let ry = TOP + H.header;
-  const rSep = (delta: number) => {
-    ry += delta;
-    hline(MID, RIGHT, ry);
-    return ry;
-  };
-  text('II. to be filled up upon liquidation', MID + 6, ry + 4, RW - 12, { size: 7.5 });
+  // The right column shares the left column's row boundaries so the ruled
+  // liquidation sections line up with the printed form: the refund checklist
+  // sits in the "Approved by:" row, the submission checklist in the "Paid by:"
+  // row, and the "Cash received by:" rule closes the block.
+  const TOPROW = TOP + H.header;
+  text('II. to be filled up upon liquidation', MID + 6, TOPROW + 4, RW - 12, { size: 7.5 });
+  text('Total Amount Granted', MID + 6, TOPROW + 18, RW - 12, { size: 7.5 });
+  text('Total Amount Paid per', MID + 6, TOPROW + 32, RW - 12, { size: 7.5 });
+  text('OR No. ______________________', MID + 6, TOPROW + 46, RW - 12, { size: 7.5 });
+  text('Amount Refunded/', MID + 6, TOPROW + 60, RW - 12, { size: 7 });
+  text('(Reimbursed)', MID + 6, TOPROW + 72, RW - 12, { size: 7 });
 
-  const grantedY = rSep(14);
-  text('Total Amount Granted', MID + 6, grantedY + 5, RW - 12, { size: 7.5 });
+  const checksY = leftRows[5]; // "Approved by:" row
+  hline(MID, RIGHT, checksY);
+  text('______  Received Refund', MID + 8, checksY + 7, RW - 16, { size: 7 });
+  text('______  Reimbursement Paid', MID + 8, checksY + 19, RW - 16, { size: 7 });
+  text('______  Disbursing Officer', MID + 8, checksY + 31, RW - 16, { size: 7 });
 
-  const paidPerY = rSep(17);
-  text('Total Amount Paid per', MID + 6, paidPerY + 5, RW - 12, { size: 7.5 });
+  const liqY = leftRows[6]; // "Paid by:" row
+  hline(MID, RIGHT, liqY);
+  text('______  Liquidation Submitted:', MID + 8, liqY + 7, RW - 16, { size: 7 });
+  text('______  Reimbursement received by:', MID + 8, liqY + 19, RW - 16, { size: 7 });
 
-  const orY = rSep(17);
-  text('OR No. ______________________', MID + 6, orY + 5, RW - 12, { size: 7.5 });
-
-  const refY = rSep(17);
-  text('Amount Refunded/', MID + 6, refY + 3, RW - 12, { size: 7 });
-
-  const reimbY = rSep(12);
-  text('(Reimbursed)', MID + 6, reimbY + 3, RW - 12, { size: 7 });
-
-  const checksY = rSep(12);
-  text('______  Received Refund', MID + 8, checksY + 5, RW - 16, { size: 7 });
-  text('______  Reimbursement Paid', MID + 8, checksY + 17, RW - 16, { size: 7 });
-  text('______  Disbursing Officer', MID + 8, checksY + 29, RW - 16, { size: 7 });
-
-  const liqY = rSep(47);
-  text('______  Liquidation Submitted:', MID + 8, liqY + 5, RW - 16, { size: 7 });
-  text('______  Reimbursement received by:', MID + 8, liqY + 17, RW - 16, { size: 7 });
+  hline(MID, RIGHT, leftRows[7]); // "Cash received by:" row
 
   // Bottom signature over printed name of payee (right column).
   const sigY = BOTTOM - 34;
