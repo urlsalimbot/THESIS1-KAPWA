@@ -115,12 +115,7 @@ function drawSectionTitle(doc: any, title: string) {
   doc.y += 13;
 }
 
-// The reference form renders OTHERS outside the TECHNICAL group band (it has
-// its own empty top cell), even though SUMMARY_COLUMNS tags it as TECHNICAL.
-function effectiveGroup(key: string, group: string): string {
-  return key === 'OTHERS_TECHNICAL' ? '' : group;
-}
-
+// Columns without a group (only TOTAL) get an empty tier-1 cell.
 function drawGroupedTable(doc: any, table: SummaryTable) {
   const topOfTable = doc.y;
   const weights = SUMMARY_COLUMNS.map((c) => c.weight);
@@ -135,12 +130,12 @@ function drawGroupedTable(doc: any, table: SummaryTable) {
   const labelTop = subTop + SUBGROUP_H;
   const headerBottom = labelTop + LABEL_H;
 
-  // Tier 1: one spanning cell per group.
-  const groups = [...new Set(SUMMARY_COLUMNS.map((c) => effectiveGroup(c.key, c.group)).filter(Boolean))];
+  // Tier 1: one spanning cell per group (TECHNICAL spans through OTHERS).
+  const groups = [...new Set(SUMMARY_COLUMNS.map((c) => c.group).filter(Boolean))];
   const groupStart: Record<string, number> = {};
   const groupEnd: Record<string, number> = {};
   SUMMARY_COLUMNS.forEach((c, i) => {
-    const g = effectiveGroup(c.key, c.group);
+    const g = c.group;
     if (!g) return;
     groupStart[g] = groupStart[g] ?? i;
     groupEnd[g] = i;
@@ -152,9 +147,9 @@ function drawGroupedTable(doc: any, table: SummaryTable) {
     doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
       .text(g, x1 + 2, groupTop + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
   });
-  // Ungrouped columns (OTHERS, TOTAL) get an empty top cell.
+  // Ungrouped columns (TOTAL) get an empty top cell.
   SUMMARY_COLUMNS.forEach((c, i) => {
-    if (effectiveGroup(c.key, c.group)) return;
+    if (c.group) return;
     doc.rect(colX[i], groupTop, colX[i + 1] - colX[i], GROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
   });
 
@@ -282,8 +277,15 @@ function drawCaseList(doc: any, rows: CaseListRow[]) {
       if (!c.group) {
         // Ungrouped columns span the full header height.
         doc.rect(x1, top, x2 - x1, headerH).lineWidth(0.6).strokeColor('#111').stroke();
-        doc.font('Helvetica-Bold').fontSize(c.key === 'intervention' ? 6.2 : 6.8).fillColor('#111')
-          .text(c.label, x1 + 2, top + headerH / 2 - 4, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+        if (c.key === 'intervention') {
+          doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
+            .text(c.label, x1 + 2, top + headerH / 2 - 8, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+          doc.font('Helvetica').fontSize(5.6).fillColor('#111')
+            .text('(FA/C/CSR/R/H/HV/ etc.)', x1 + 2, top + headerH / 2 + 2, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+        } else {
+          doc.font('Helvetica-Bold').fontSize(6.8).fillColor('#111')
+            .text(c.label, x1 + 2, top + headerH / 2 - 4, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+        }
         return;
       }
       // Grouped leaf cells live in tier 2.

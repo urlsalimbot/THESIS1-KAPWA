@@ -78,7 +78,7 @@ describe('buildSummaryReportPdf', () => {
 
   it('draws the page-3 NAME/GENDER super-bands and client-category header labels', async () => {
     const text = searchableText(await buildSummaryReportPdf(data));
-    for (const s of ['NAME', 'GENDER', 'CEDC', 'SR. CITIZEN']) expect(text).toContain(s);
+    for (const s of ['NAME', 'GENDER', 'CEDC', 'SR. CITIZEN', '(FA/C/CSR/R/H/HV/ etc.)']) expect(text).toContain(s);
   });
 
   it('paginates a long case list without crashing', async () => {
