@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Query, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Inject, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -26,7 +26,13 @@ export class ReportsController {
   @ApiQuery({ name: 'year', required: false, example: 2025 })
   @ApiQuery({ name: 'quarter', required: false, example: 2 })
   async summary(@Query('year') year: string, @Query('quarter') quarter: string, @Res() res: Response) {
-    const { year: y, quarter: q } = SummaryReportQuerySchema.parse({ year, quarter });
+    let parsed: { year: number; quarter: number };
+    try {
+      parsed = SummaryReportQuerySchema.parse({ year, quarter });
+    } catch {
+      throw new BadRequestException('year must be 2000-2100 and quarter must be 1-4');
+    }
+    const { year: y, quarter: q } = parsed;
     const data = await this.summaryReport.build(y, q);
     const buffer = await this.builder.build(data);
     res.set({
