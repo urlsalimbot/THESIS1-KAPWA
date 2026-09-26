@@ -45,6 +45,15 @@ export const MUNICIPAL_MAYOR = {
   title: 'MUNICIPAL MAYOR',
 } as const;
 
+// Fallback signatories for generated reports when no matching user exists
+// (fresh/empty database). Live users take precedence — see SummaryReportService.
+export const REPORT_FALLBACK_SIGNATORIES = {
+  preparedBy: 'ARLYNDA F. GAMUTIA',
+  preparedByRole: 'MSWD - STAFF',
+  notedBy: 'ANNALYN JOY C. SAN PEDRO, RSW',
+  notedByRole: 'MSWD-HEAD',
+} as const;
+
 // --- Auth / security ---
 export const BCRYPT_SALT_ROUNDS = 12;
 export const MIN_PASSWORD_LENGTH = 8;
