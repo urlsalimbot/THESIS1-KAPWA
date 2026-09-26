@@ -77,9 +77,21 @@ function addTo(counts: SummaryCounts, gender: string | null, key: CategoryKey) {
   counts.byCategory[key] += 1;
 }
 
+// The Philippines has no DST, so a fixed +08:00 offset is an exact
+// representation of Asia/Manila. Report windows are built from explicit
+// offset ISO strings (never bare `Date.UTC`) so they do not depend on the
+// host process timezone and never shift by the +8h offset in the `pg` driver.
+const MANILA_OFFSET = '+08:00';
+
+function manilaDate(year: number, monthIndex: number): Date {
+  const month = String(monthIndex + 1).padStart(2, '0');
+  return new Date(`${year}-${month}-01T00:00:00${MANILA_OFFSET}`);
+}
+
 function monthRange(year: number, monthIndex: number): { start: Date; end: Date; label: string } {
-  const start = new Date(Date.UTC(year, monthIndex, 1));
-  const end = new Date(Date.UTC(year, monthIndex + 1, 1));
+  const start = manilaDate(year, monthIndex);
+  const endYear = monthIndex === 11 ? year + 1 : year;
+  const end = manilaDate(endYear, (monthIndex + 1) % 12);
   const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
   return { start, end, label: `${MONTH_NAMES[monthIndex]} 1-${lastDay}, ${year}` };
 }
@@ -94,13 +106,19 @@ export class SummaryReportService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
-  async build(year = new Date().getFullYear(), quarter = Math.floor(new Date().getMonth() / 3) + 1): Promise<SummaryReportData> {
-    const yearStart = new Date(Date.UTC(year, 0, 1));
-    const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+  async build(year?: number, quarter?: number): Promise<SummaryReportData> {
+    // Default to the current Manila date, not the host timezone: shift the
+    // epoch by +8h and read the UTC fields of the shifted instant.
+    const manila = new Date(Date.now() + 8 * 60 * 60 * 1000);
+    const reportYear = year ?? manila.getUTCFullYear();
+    const reportQuarter = quarter ?? Math.floor(manila.getUTCMonth() / 3) + 1;
+
+    const yearStart = new Date(`${reportYear}-01-01T00:00:00${MANILA_OFFSET}`);
+    const yearEnd = new Date(`${reportYear + 1}-01-01T00:00:00${MANILA_OFFSET}`);
     const rows: RawCaseRow[] = (await this.dataSource.query(CASES_SQL, [yearStart, yearEnd])) ?? [];
 
     const annual = emptyCounts();
-    const monthly = [0, 1, 2].map((i) => monthRange(year, (quarter - 1) * 3 + i));
+    const monthly = [0, 1, 2].map((i) => monthRange(reportYear, (reportQuarter - 1) * 3 + i));
     const monthlyCounts = monthly.map(() => emptyCounts());
     const caseList: CaseListRow[] = [];
 
@@ -133,10 +151,10 @@ export class SummaryReportService {
     ]);
 
     return {
-      year, quarter,
-      annual: { title: `SUMMARY REPORT ${year}`, counts: annual },
+      year: reportYear, quarter: reportQuarter,
+      annual: { title: `SUMMARY REPORT ${reportYear}`, counts: annual },
       monthly: monthly.map((m, i) => ({ title: m.label, counts: monthlyCounts[i] })),
-      quarterSummary: { title: `${ORDINAL[quarter - 1]} QUARTER SUMMARY`, counts: quarterSummary },
+      quarterSummary: { title: `${ORDINAL[reportQuarter - 1]} QUARTER SUMMARY`, counts: quarterSummary },
       caseList,
       officeName,
       preparedBy: prepared?.fullName || REPORT_FALLBACK_SIGNATORIES.preparedBy,
