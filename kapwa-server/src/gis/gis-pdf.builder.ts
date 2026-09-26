@@ -4,7 +4,7 @@ import { GisPdfData } from './gis-export.types';
 import { ORG_LOCATION } from '../common/constants';
 
 // General Intake Sheet — single-page reproduction of DSWD FO3 form
-// DSWD-PMB-FO3-07-011 | REV 01 / 30 SEPT 2022.
+// DSWD-PMB-GF-011 | REV 01 / 30 SEPT 2022.
 //
 // The printed form is a dense one-page grid: every field lives in a fixed cell
 // whose label sits at the top and whose value sits beneath it. Labels are
@@ -12,7 +12,7 @@ import { ORG_LOCATION } from '../common/constants';
 // own cell. Every cell owns a fixed height, so no two blocks can collide no
 // matter how long the loaded data is.
 
-const FORM_NUMBER = 'DSWD PMB-FO3-07-011 | REV 01 / 30 SEPT 2022';
+const FORM_NUMBER = 'DSWD-PMB-GF-011 | REV 01 / 30 SEPT 2022';
 const BANNER_TEXT = 'MAARING MAGPATULONG SUMAGOT SA DSWD PERSONNEL';
 const RED_BANNER_TEXT =
   'Huwag susulatan ang DSWD lamang ang pwede gumamit! (Do not write below this part - for DSWD’s use only)';
@@ -34,9 +34,6 @@ const DECLARATION_TEXT =
 const FOOTER_TEXT =
   'DSWD Field Office III, Diosdado Macapagal Government Center, Maimpis, City of San Fernando, Pampanga, Philippines 2000  |  ' +
   'Website: http://www.dswd.gov.ph Tel No. (045) 961-2143';
-// Second footer line: the MSWDO office line (spec §10). Exact wording can be
-// swapped in one place once verified against the physical copy.
-const FOOTER_TEXT_2 = 'Municipal Social Welfare and Development Office (MSWDO) - Norzagaray, Bulacan';
 
 // Signing authority printed on the form.
 const APPROVER_NAME = 'MARLON A. MALLARI,RSW';
@@ -149,7 +146,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
     .text(FORM_NUMBER, RIGHT - 240, 36, { width: 240, align: 'right', lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(13).fillColor('#111')
     .text('GENERAL INTAKE SHEET', LEFT, 44, { width: WIDTH, align: 'center' });
-  banner(62, 11, BANNER_TEXT, 'red', 6.5);
+  banner(62, 11, BANNER_TEXT, 'gray', 6.5);
 
   // ---- case identification strip ----------------------------------------
 
@@ -318,9 +315,6 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- needs assessment ---------------------------------------------------
 
-  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111')
-    .text('Needs Assessment', LEFT, y + 3, { lineBreak: false });
-  y += 11;
   const needsH = 78;
   const needsCols: Array<{ title: string; items: string[] }> = [
     { title: 'Financial Assistance', items: ['Medical', 'Funeral', 'Transportation', 'Educational', 'Cash Assistance for'] },
@@ -425,8 +419,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   y += blockH + 20;
   hline(y);
   doc.font('Helvetica').fontSize(5).fillColor('#555')
-    .text(FOOTER_TEXT, LEFT, y + 3, { width: WIDTH, align: 'center', lineBreak: false, ellipsis: true })
-    .text(FOOTER_TEXT_2, LEFT, y + 8, { width: WIDTH, align: 'center', lineBreak: false, ellipsis: true });
+    .text(FOOTER_TEXT, LEFT, y + 3, { width: WIDTH, align: 'center', lineBreak: false, ellipsis: true });
 
   doc.end();
   return done;

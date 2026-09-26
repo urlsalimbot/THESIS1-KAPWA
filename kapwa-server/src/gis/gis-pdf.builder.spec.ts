@@ -70,6 +70,15 @@ describe('buildGisPdf', () => {
     expect(pageCount).toBe(1);
   });
 
+  it('prints the reference form number and omits the added footer/heading', async () => {
+    const buf = await buildGisPdf(fullData);
+    const text = searchableText(buf);
+    expect(text).toContain('DSWD-PMB-GF-011');
+    expect(text).not.toContain('DSWD-PMB-FO3-07-011');
+    expect(text).not.toContain('Needs Assessment');
+    expect(text).not.toContain('Municipal Social Welfare and Development Office (MSWDO) - Norzagaray, Bulacan');
+  });
+
   it('never crashes on minimal data (blanks)', async () => {
     const bare: GisPdfData = {
       controlNo: 'KAPWA-X',
