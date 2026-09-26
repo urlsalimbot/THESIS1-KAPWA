@@ -1,0 +1,228 @@
+import { CaseListRow, SummaryReportData, SummaryTable, SUMMARY_COLUMNS } from './summary-report.types';
+
+const PAGE: [number, number] = [841.89, 595.28]; // A4 landscape
+const M = 28;
+const LEFT = M;
+const RIGHT = PAGE[0] - M;
+const WIDTH = RIGHT - LEFT;
+
+const CASE_COLS = [
+  { key: 'no', label: 'No.', w: 0.03 },
+  { key: 'date', label: 'Date', w: 0.07 },
+  { key: 'surname', label: 'SURNAME', w: 0.12 },
+  { key: 'firstName', label: 'FIRST NAME', w: 0.12 },
+  { key: 'middleName', label: 'MIDDLE NAME', w: 0.11 },
+  { key: 'gender', label: 'GENDER', w: 0.06 },
+  { key: 'clientCategory', label: 'CLIENT CATEGORY', w: 0.27 },
+  { key: 'barangay', label: 'Barangay', w: 0.10 },
+  { key: 'intervention', label: 'Intervention/Remarks', w: 0.12 },
+] as const;
+
+const CLIENTS = ['CEDC', 'WEDC', 'PWD', 'SR. CITIZEN', 'INDIGENT', '4Ps', 'IP'] as const;
+
+export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Buffer> {
+  const PDFDocument = require('pdfkit');
+  const doc = new PDFDocument({ size: PAGE, margins: { top: M, bottom: M, left: M, right: M }, info: { Title: `Summary Report ${data.year} Q${data.quarter}`, Author: data.officeName, Subject: 'GAD Database Case Tracker' } });
+  const chunks: Buffer[] = [];
+  doc.on('data', (c: Buffer) => chunks.push(c));
+  const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));
+
+  drawLetterhead(doc, data, true);
+  drawTitle(doc, data.annual.title, `GAD DATABASE CASE TRACKER`);
+  drawGroupedTable(doc, data.annual);
+
+  doc.addPage();
+  drawLetterhead(doc, data, false);
+  drawTitle(doc, `${data.year}`, `${ordinal(data.quarter)} QUARTER REPORT`);
+  data.monthly.forEach((m) => { drawSectionTitle(doc, m.title); drawGroupedTable(doc, m); });
+  drawSectionTitle(doc, data.quarterSummary.title);
+  drawGroupedTable(doc, data.quarterSummary);
+  drawSignatories(doc, data);
+
+  doc.addPage();
+  drawLetterhead(doc, data, false);
+  drawTitle(doc, 'GAD DATABASE CASE LIST', '');
+  drawCaseList(doc, data.caseList);
+
+  doc.end();
+  return done;
+}
+
+function ordinal(q: number): string { return ['1st', '2nd', '3rd', '4th'][q - 1] ?? `${q}th`; }
+
+function drawLetterhead(doc: any, data: SummaryReportData, full: boolean) {
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111');
+  if (full) {
+    doc.text('Republic of the Philippines', LEFT, M, { width: WIDTH, align: 'center', lineBreak: false });
+    doc.font('Helvetica').fontSize(8);
+    doc.text('Province of Bulacan', LEFT, M + 11, { width: WIDTH, align: 'center', lineBreak: false });
+    doc.text('Municipality of Norzagaray', LEFT, M + 21, { width: WIDTH, align: 'center', lineBreak: false });
+  } else {
+    doc.text('Municipality of Norzagaray', LEFT, M, { width: WIDTH, align: 'center', lineBreak: false });
+  }
+  const officeY = full ? M + 32 : M + 12;
+  doc.font('Helvetica-Bold').fontSize(8.5)
+    .text(data.officeName.toUpperCase(), LEFT, officeY, { width: WIDTH, align: 'center', lineBreak: false });
+  doc.font('Helvetica').fontSize(7.5)
+    .text(`ACCOMPLISHMENT REPORT (Services) ${data.year}`, LEFT, officeY + 10, { width: WIDTH, align: 'center', lineBreak: false });
+  doc.y = officeY + 24;
+}
+
+function drawTitle(doc: any, line1: string, line2: string) {
+  doc.font('Helvetica-Bold').fontSize(13).fillColor('#111')
+    .text(line1, LEFT, doc.y, { width: WIDTH, align: 'center', lineBreak: false });
+  doc.y += 20;
+  if (line2) {
+    doc.font('Helvetica-Bold').fontSize(11)
+      .text(line2, LEFT, doc.y, { width: WIDTH, align: 'center', lineBreak: false });
+    doc.y += 20;
+  }
+}
+
+function drawSectionTitle(doc: any, title: string) {
+  doc.y += 8;
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
+    .text(title, LEFT, doc.y, { width: WIDTH, align: 'center', lineBreak: false });
+  doc.y += 14;
+}
+
+function drawGroupedTable(doc: any, table: SummaryTable) {
+  const topOfTable = doc.y;
+  const weights = SUMMARY_COLUMNS.map((c) => c.weight);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const colX: number[] = [];
+  let x = LEFT;
+  for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
+  colX.push(RIGHT);
+
+  // Header tiers: row 1 = groups, row 2 = sub-groups, row 3 = column labels.
+  const tierH = [13, 13, 15];
+  const headerH = tierH[0] + tierH[1] + tierH[2];
+  const groups = [...new Set(SUMMARY_COLUMNS.map((c) => c.group).filter(Boolean))];
+  const groupStart: Record<string, number> = {};
+  const groupEnd: Record<string, number> = {};
+  SUMMARY_COLUMNS.forEach((c, i) => {
+    if (!c.group) return;
+    groupStart[c.group] = groupStart[c.group] ?? i;
+    groupEnd[c.group] = i;
+  });
+  groups.forEach((g) => {
+    const x1 = colX[groupStart[g]];
+    const x2 = colX[groupEnd[g] + 1];
+    doc.rect(x1, topOfTable, x2 - x1, tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
+    doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
+      .text(g, x1 + 2, topOfTable + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+  });
+  doc.rect(colX[SUMMARY_COLUMNS.findIndex((c) => c.key === 'TOTAL')], topOfTable, RIGHT - colX[SUMMARY_COLUMNS.findIndex((c) => c.key === 'TOTAL')], tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
+
+  SUMMARY_COLUMNS.forEach((c, i) => {
+    if (c.subGroup) {
+      const x1 = colX[i];
+      const x2 = colX[i + 1];
+      doc.rect(x1, topOfTable + tierH[0], x2 - x1, tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
+      doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
+        .text(c.subGroup, x1 + 1, topOfTable + tierH[0] + 2, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+    }
+  });
+
+  const labelTop = topOfTable + tierH[0] + tierH[1];
+  SUMMARY_COLUMNS.forEach((c, i) => {
+    const x1 = colX[i];
+    const x2 = colX[i + 1];
+    const spanTop = c.labels.length === 1 && !c.subGroup ? topOfTable + tierH[0] : labelTop;
+    doc.rect(x1, spanTop, x2 - x1, (topOfTable + headerH) - spanTop).lineWidth(0.6).strokeColor('#111').stroke();
+    const size = c.labels.some((l) => l.length > 9) ? 5.2 : 6;
+    c.labels.forEach((label, li) => {
+      doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
+        .text(label, x1 + 1, spanTop + 3 + li * 9, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+    });
+  });
+
+  // Single data row.
+  const rowH = 20;
+  const rowY = topOfTable + headerH;
+  doc.rect(LEFT, rowY, WIDTH, rowH).lineWidth(0.6).strokeColor('#111').stroke();
+  SUMMARY_COLUMNS.forEach((c, i) => {
+    let value = '';
+    if (c.key === 'MALE') value = String(table.counts.male);
+    else if (c.key === 'FEMALE') value = String(table.counts.female);
+    else if (c.key === 'TOTAL') value = String(table.counts.total);
+    else value = String(table.counts.byCategory[c.key as keyof typeof table.counts.byCategory] ?? 0);
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
+      .text(value, colX[i] + 1, rowY + 5, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
+  });
+  doc.y = rowY + rowH + 6;
+}
+
+function drawSignatories(doc: any, data: SummaryReportData) {
+  doc.y += 18;
+  doc.font('Helvetica').fontSize(8).fillColor('#111')
+    .text('Prepared by:', LEFT + 10, doc.y, { lineBreak: false });
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
+    .text(data.preparedBy, LEFT + 10, doc.y + 26, { lineBreak: false });
+  doc.font('Helvetica').fontSize(8).fillColor('#333')
+    .text(data.preparedByRole, LEFT + 10, doc.y + 38, { lineBreak: false });
+  doc.font('Helvetica').fontSize(8).fillColor('#111')
+    .text('Noted by:', LEFT + WIDTH / 2, doc.y, { lineBreak: false });
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
+    .text(data.notedBy, LEFT + WIDTH / 2, doc.y + 26, { lineBreak: false });
+  doc.font('Helvetica').fontSize(8).fillColor('#333')
+    .text(data.notedByRole, LEFT + WIDTH / 2, doc.y + 38, { lineBreak: false });
+}
+
+function drawCaseList(doc: any, rows: CaseListRow[]) {
+  const weights = CASE_COLS.map((c) => c.w);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const colX: number[] = [];
+  let x = LEFT;
+  for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
+  colX.push(RIGHT);
+
+  const headerH = 26;
+  const rowH = 15;
+
+  const drawHeader = (top: number) => {
+    doc.rect(LEFT, top, WIDTH, headerH).lineWidth(0.6).strokeColor('#111').stroke();
+    CASE_COLS.forEach((c, i) => {
+      doc.font('Helvetica-Bold').fontSize(5.6).fillColor('#111')
+        .text(c.label, colX[i] + 1, top + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
+    });
+  };
+
+  let top = doc.y;
+  drawHeader(top);
+  let y = top + headerH;
+
+  for (const r of rows) {
+    if (y + rowH > PAGE[1] - M - 20) {
+      doc.addPage();
+      top = M + 20;
+      drawHeader(top);
+      y = top + headerH;
+    }
+    doc.rect(LEFT, y, WIDTH, rowH).lineWidth(0.4).strokeColor('#444').stroke();
+    const cells = [
+      String(r.no), r.date, r.surname, r.firstName, r.middleName,
+      r.gender, '', r.barangay, r.intervention,
+    ];
+    cells.forEach((v, i) => {
+      if (i === 6) return; // client category drawn as ticks
+      doc.font('Helvetica').fontSize(6.4).fillColor('#111')
+        .text(v, colX[i] + 2, y + 4, { width: colX[i + 1] - colX[i] - 4, lineBreak: false, ellipsis: true });
+    });
+    const flags = [r.categories.cedc, r.categories.wedc, r.categories.pwd, r.categories.senior, r.categories.indigent, r.categories.fourPs, r.categories.ip];
+    const catX = colX[6];
+    const catW = colX[7] - colX[6];
+    const step = catW / CLIENTS.length;
+    CLIENTS.forEach((label, i) => {
+      doc.font('Helvetica-Bold').fontSize(4.8).fillColor('#111')
+        .text(label, catX + i * step + 1, y + 2, { width: step - 2, align: 'center', lineBreak: false });
+      if (flags[i]) {
+        doc.font('Helvetica').fontSize(7).fillColor('#111')
+          .text('/', catX + i * step + step / 2 - 2, y + 7, { lineBreak: false });
+      }
+    });
+    y += rowH;
+  }
+  doc.y = y;
+}
