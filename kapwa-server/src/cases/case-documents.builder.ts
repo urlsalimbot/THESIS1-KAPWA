@@ -14,6 +14,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs';
+import { ORG_LOCATION } from '../common/constants';
 
 const CM = 28.3465; // points per centimetre
 export const COE_PAGE: [number, number] = [21 * CM, 7 * CM]; // 595.28 x 198.43
@@ -207,12 +208,13 @@ export async function buildCertificateOfEligibilityPdf(
       .text(text, LEFT, ly, { align: 'center', width: WIDTH, lineBreak: false });
   };
   line('Republic of the Philippines', y, { size: 7 });
-  line(data.officeName.toUpperCase(), y + 8, { size: 8.5, bold: true });
-  line('Norzagaray, Bulacan', y + 17, { size: 7 });
-  doc.moveTo(LEFT, y + 27).lineTo(RIGHT, y + 27).lineWidth(0.8).strokeColor('#111').stroke();
+  line(`Province of ${ORG_LOCATION.province}`, y + 8, { size: 7 });
+  line(`Municipality of ${ORG_LOCATION.municipality}`, y + 16, { size: 7 });
+  line(data.officeName.toUpperCase(), y + 25, { size: 8.5, bold: true });
+  doc.moveTo(LEFT, y + 35).lineTo(RIGHT, y + 35).lineWidth(0.8).strokeColor('#111').stroke();
 
   // ---- Title ----
-  line('CERTIFICATE OF ELIGIBILITY', y + 32, { size: 11, bold: true });
+  line('CERTIFICATE OF ELIGIBILITY', y + 40, { size: 11, bold: true });
 
   // ---- Body: underlined values are matched to the database ----
   const spans: RichSpan[] = [
@@ -234,7 +236,7 @@ export async function buildCertificateOfEligibilityPdf(
     { text: money(data.amount), underline: true },
     { text: '.' },
   ];
-  drawRichParagraph(doc, spans, LEFT, y + 54, WIDTH, 7.5, 10.5);
+  drawRichParagraph(doc, spans, LEFT, y + 62, WIDTH, 7.5, 10.5);
 
   // ---- Interviewer- Designation (right) ----
   const iw = 190;

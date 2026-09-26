@@ -1,3 +1,4 @@
+import * as zlib from 'zlib';
 import { PDFDocument } from 'pdf-lib';
 import {
   buildCertificateOfEligibilityPdf,
@@ -6,6 +7,18 @@ import {
   CertificateOfEligibilityData,
   PettyCashVoucherData,
 } from './case-documents.builder';
+
+function searchableText(buf: Buffer): string {
+  const raw = buf.toString('latin1');
+  const streams: string[] = [];
+  const re = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    try { streams.push(zlib.inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1')); } catch { /* not FlateDecode */ }
+  }
+  const hex = streams.join('\n').match(/<([0-9A-Fa-f]+)>/g) ?? [];
+  return `${raw}\n${hex.map(h => Buffer.from(h.slice(1, -1), 'hex').toString('latin1')).join('')}`;
+}
 
 const coeData: CertificateOfEligibilityData = {
   controlNo: 'KAPWA-2026-0001',
@@ -81,5 +94,19 @@ describe('buildPettyCashVoucherPdf', () => {
   it('falls back to the "Assistance" particular when none is given', async () => {
     const buf = await buildPettyCashVoucherPdf({ ...pcvData, particulars: '' });
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+});
+
+describe('Certificate of Eligibility letterhead parity', () => {
+  it('prints the province and municipality lines in reference order', async () => {
+    const text = searchableText(await buildCertificateOfEligibilityPdf(coeData));
+    const republic = text.indexOf('Republic of the Philippines');
+    const province = text.indexOf('Province of Bulacan');
+    const municipality = text.indexOf('Municipality of Norzagaray');
+    const office = text.indexOf('MUNICIPAL SOCIAL WELFARE AND DEVELOPMENT OFFICE');
+    expect(republic).toBeGreaterThanOrEqual(0);
+    expect(province).toBeGreaterThan(republic);
+    expect(municipality).toBeGreaterThan(province);
+    expect(office).toBeGreaterThan(municipality);
   });
 });
