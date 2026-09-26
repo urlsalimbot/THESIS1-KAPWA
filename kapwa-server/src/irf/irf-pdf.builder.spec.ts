@@ -1,5 +1,25 @@
+import * as zlib from 'zlib';
 import { PDFDocument } from 'pdf-lib';
 import { buildIrfPdf, IrfPdfData } from './irf-pdf.builder';
+
+// pdfkit stores page content in FlateDecode streams and encodes text as
+// hex-encoded TJ arrays, so decode both before asserting on text.
+function searchableText(buf: Buffer): string {
+  const raw = buf.toString('latin1');
+  const streams: string[] = [];
+  const re = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    try {
+      streams.push(zlib.inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1'));
+    } catch {
+      // stream not FlateDecode; ignore
+    }
+  }
+  const hex = streams.join('\n').match(/<([0-9A-Fa-f]+)>/g) ?? [];
+  const decoded = hex.map(h => Buffer.from(h.slice(1, -1), 'hex').toString('latin1')).join('');
+  return `${raw}\n${decoded}`;
+}
 
 const fullData: IrfPdfData = {
   blotterEntryNumber: 'BLT-2026-0001',
@@ -76,5 +96,18 @@ describe('buildIrfPdf', () => {
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
     const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
     expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('does not print a generated/legal-basis footer', async () => {
+    const buf = await buildIrfPdf({
+      blotterEntryNumber: 'BLT-2026-0001',
+      caseCategory: 'Abuse',
+      officeName: 'Municipal Social Welfare and Development Office',
+      generatedAt: new Date('2026-09-23T07:34:00Z'),
+      legalBasis: 'RA 9262',
+    });
+    const text = searchableText(buf);
+    expect(text).not.toContain('Legal basis: RA 9262');
+    expect(text).not.toContain('generated');
   });
 });

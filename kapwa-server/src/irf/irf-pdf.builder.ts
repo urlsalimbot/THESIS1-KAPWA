@@ -377,14 +377,6 @@ export async function buildIrfPdf(data: IrfPdfData, opts: IrfPdfOptions = {}): P
       });
   }
 
-  // ---- Footer: legal basis / audit trail ----
-  doc.font('Helvetica-Oblique').fontSize(6.5).fillColor('#666')
-    .text(
-      `${data.officeName} — generated ${formatDateTime(data.generatedAt ?? new Date())}` +
-        (data.legalBasis ? ` | Legal basis: ${data.legalBasis}` : ''),
-      LEFT, BOTTOM + 8, { width: WIDTH, align: 'center', lineBreak: false },
-    );
-
   doc.end();
   return done;
 }
