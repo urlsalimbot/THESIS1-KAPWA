@@ -60,6 +60,18 @@ describe('buildAccessCardPdf', () => {
     expect(pageCount).toBe(2);
   });
 
+  it('orders the cover side before the PAALALA side and prints cover furniture', async () => {
+    const text = searchableText(await buildAccessCardPdf(fullData));
+    const coverIdx = text.indexOf('FAMILY COMPOSITION');
+    const paalalaIdx = text.indexOf('PAALALA AT GABAY');
+    expect(coverIdx).toBeGreaterThanOrEqual(0);
+    expect(paalalaIdx).toBeGreaterThanOrEqual(0);
+    expect(coverIdx).toBeLessThan(paalalaIdx);
+    expect(text).toContain('Municipality of Norzagaray');
+    expect(text).toContain('Barangay Captain');
+    expect(text).toContain('Municipal Mayor');
+  });
+
   it('never crashes on minimal data (blanks)', async () => {
     const bare: AccessCardPdfData = {
       code: 'NORZ-AC-X', barangay: '', contact: '',

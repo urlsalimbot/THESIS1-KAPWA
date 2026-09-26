@@ -1,10 +1,22 @@
+import * as path from 'path';
+import * as fs from 'fs';
 import { AccessCardPdfData } from './access-card-pdf.types';
-import { ORG_LOCATION } from '../common/constants';
+import { MUNICIPAL_MAYOR, ORG_LOCATION } from '../common/constants';
 
 const PAGE_BOTTOM = 790;
 const LEFT = 50;
 const RIGHT = 545;
 const WIDTH = RIGHT - LEFT; // 495
+const HALF = WIDTH / 2; // 247.5
+
+// Pre-printed signature names on the Family Access Card (reference form
+// ACCESS-CARD-COVER). The worker is stamped on the card itself; the mayor
+// reuses the system-wide MUNICIPAL_MAYOR constant (honorific stripped to match
+// the printed form). Mirrors APPROVER_NAME/APPROVER_ROLE in gis-pdf.builder.ts.
+const SOCIAL_WORKER_NAME = 'ANNALYN JOY C. SAN PEDRO, RSW';
+const SOCIAL_WORKER_ROLE = 'SWO - V (MSWDO)';
+const MAYOR_NAME = MUNICIPAL_MAYOR.name.replace(/^HON\.\s*/i, '');
+const MAYOR_ROLE = 'Municipal Mayor';
 
 const PAALALA_LINES = [
   '1. Ang FAMILY ACCESS CARD ay para sa 1 pamilya o sambahayan (household) na naninirahan sa Norzagaray',
@@ -78,6 +90,169 @@ function drawServiceRows(doc: any, x: number, y: number, rows: AccessCardPdfData
   return y;
 }
 
+// Client's Record of Services Availed table (title + header + fixed rows).
+function drawServicesPanel(doc: any, x: number, y: number, services: AccessCardPdfData['services'], minRows: number): void {
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
+    .text("CLIENT'S RECORD OF SERVICES AVAILED", x + 1, y, { width: HALF - 2 });
+  const headerY = drawServicesHeader(doc, x, y + 11);
+  drawServiceRows(doc, x, headerY, services, minRows);
+}
+
+// PAALALA AT GABAY — boxed heading followed by the numbered reminders.
+function drawPaalala(doc: any, x: number, y: number): void {
+  doc.rect(x, y, HALF, 18).lineWidth(0.8).strokeColor('#111').stroke();
+  doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#111')
+    .text('PAALALA AT GABAY', x, y + 4, { width: HALF, align: 'center' });
+
+  let py = y + 18 + 10;
+  PAALALA_LINES.forEach(line => {
+    doc.font(line.startsWith('-') ? 'Helvetica' : 'Helvetica-Bold')
+      .fontSize(8).fillColor('#111')
+      .text(line, x + 4, py, { width: HALF - 14 });
+    py = doc.y + 6;
+  });
+}
+
+// Cover side of the card: photo box, seals, letterhead, client details,
+// family composition and the signature block.
+function drawClientCover(doc: any, x: number, data: AccessCardPdfData): void {
+  const officeName = data.officeName ?? 'Municipal Social Welfare and Development Office';
+
+  // Photo box + label
+  doc.rect(x + 10, 40, 66, 66).lineWidth(0.6).strokeColor('#111').stroke();
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text('CLIENT', x + 10, 107, { width: 66 });
+
+  // Municipal seal + DSWD logo to the right of the photo box
+  const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
+  const dswdPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
+  if (fs.existsSync(sealPath)) {
+    try { doc.image(sealPath, x + 80, 42, { fit: [42, 42] }); } catch { /* header renders without the seal */ }
+  }
+  if (fs.existsSync(dswdPath)) {
+    try { doc.image(dswdPath, x + 124, 42, { fit: [42, 42] }); } catch { /* header renders without the logo */ }
+  }
+
+  // Letterhead (right of the seals)
+  const lhX = x + 170;
+  const lhW = RIGHT - lhX;
+  doc.font('Helvetica-Bold').fontSize(5).fillColor('#111').text(ORG_LOCATION.country, lhX, 40, { width: lhW, align: 'right' });
+  doc.font('Helvetica').fontSize(5).fillColor('#111')
+    .text(`Province of ${ORG_LOCATION.province}`, lhX, 48, { width: lhW, align: 'right' })
+    .text(`Municipality of ${ORG_LOCATION.municipality}`, lhX, 56, { width: lhW, align: 'right' });
+  doc.font('Helvetica-Bold').fontSize(5).fillColor('#222')
+    .text(officeName.toUpperCase(), lhX, 64, { width: lhW, align: 'right' });
+
+  // Code number (below the letterhead, right-aligned)
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111')
+    .text(`Code # ${data.code}`, lhX, 90, { width: lhW, align: 'right', lineBreak: false });
+
+  // Barangay / contact strip
+  doc.font('Helvetica-Bold').fontSize(7).fillColor('#111').text('Barangay:', x + 10, 120, { width: 50 });
+  doc.font('Helvetica').fontSize(7.5).text(data.barangay, x + 60, 120, { width: 72, lineBreak: false });
+  doc.font('Helvetica-Bold').fontSize(7).fillColor('#111').text('Contact #', x + 140, 120, { width: 55 });
+  doc.font('Helvetica').fontSize(7.5).text(data.contact, x + 195, 120, { width: 50, lineBreak: false });
+
+  doc.moveTo(x, 134).lineTo(RIGHT, 134).lineWidth(0.8).strokeColor('#111').stroke();
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text('CLIENT', x + 10, 137);
+
+  const fieldRow = (fx: number, fy: number, w: number, label: string, value: string): void => {
+    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
+      .text(label, fx + 2, fy + 1, { width: w - 4, ellipsis: true });
+    doc.moveTo(fx, fy + 16).lineTo(fx + w, fy + 16).lineWidth(0.5).strokeColor('#999').stroke();
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
+      .text(value || '', fx + 2, fy - 8, { width: w - 2, ellipsis: true });
+  };
+
+  let cy = 156;
+  fieldRow(x + 10, cy, 80, 'Surname', data.client.surname);
+  fieldRow(x + 95, cy, 90, 'First Name', data.client.firstName);
+  fieldRow(x + 190, cy, 55, 'Middle Name', data.client.middleName ?? '');
+  cy += 24;
+
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555').text('Gender:', x + 10, cy, { width: 60 });
+  doc.rect(x + 60, cy, 7, 7).lineWidth(0.5).strokeColor('#111').stroke();
+  if (data.client.gender === 'Male') doc.rect(x + 61, cy + 1, 5, 5).fillColor('#111').fill();
+  doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('MALE', x + 70, cy, { width: 60 });
+  doc.rect(x + 115, cy, 7, 7).lineWidth(0.5).strokeColor('#111').stroke();
+  if (data.client.gender === 'Female') doc.rect(x + 116, cy + 1, 5, 5).fillColor('#111').fill();
+  doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('FEMALE', x + 125, cy, { width: 70 });
+
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
+    .text('Date of Birth:', x + 10, cy + 14, { width: 70 });
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
+    .text(fmtDate(data.client.dob), x + 70, cy + 14, { width: 100 });
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
+    .text('Address:', x + 10, cy + 28, { width: 60 });
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
+    .text(data.client.address || '', x + 60, cy + 28, { width: HALF - 70, ellipsis: true });
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
+    .text('NHTS-PR / Listahanan ID:', x + 10, cy + 40, { width: 95 });
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
+    .text(data.nhtsPrId || '', x + 95, cy + 40, { width: HALF - 105, ellipsis: true });
+
+  cy += 64;
+
+  // Family Composition
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('FAMILY COMPOSITION', x + 10, cy);
+  cy += 12;
+  const famCols = [
+    { label: 'Family Members', w: 90 },
+    { label: 'Relationship', w: 55 },
+    { label: 'Age', w: 20 },
+    { label: 'Status / Income', w: 60 },
+  ];
+  let fx = x + 10;
+  doc.rect(x + 10, cy, 225, 12).fillColor('#e6e6e6').fill();
+  famCols.forEach(c => {
+    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text(c.label, fx + 2, cy + 2.5, { width: c.w - 4, ellipsis: true });
+    doc.rect(fx, cy, c.w, 12).lineWidth(0.5).strokeColor('#999').stroke();
+    fx += c.w;
+  });
+  cy += 12;
+  const totalFam = Math.max(8, data.familyMembers.length);
+  for (let i = 0; i < totalFam; i++) {
+    const m = data.familyMembers[i];
+    const vals = [
+      m?.fullName ?? '', m?.relationship ?? '',
+      m?.age != null ? String(m.age) : '',
+      m?.status ? `${m.status}${m.income != null ? ` (${m.income})` : ''}` : (m?.income != null ? String(m.income) : ''),
+    ];
+    fx = x + 10;
+    famCols.forEach((c, ci) => {
+      doc.rect(fx, cy, c.w, 16).lineWidth(0.5).strokeColor('#999').stroke();
+      doc.font('Helvetica').fontSize(7.5).fillColor('#111')
+        .text(vals[ci] || '', fx + 2, cy + 4, { width: c.w - 4, ellipsis: true });
+      fx += c.w;
+    });
+    cy += 16;
+  }
+
+  // Signature block
+  const sigY = Math.max(cy + 16, 690);
+  const sigLine = (sx: number, sy: number, w: number): void => {
+    doc.moveTo(sx, sy).lineTo(sx + w, sy).lineWidth(0.5).strokeColor('#111').stroke();
+  };
+
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111')
+    .text('Signature of\nApplicant or Thumbmark', x + 8, sigY - 30, { width: 70 });
+  sigLine(x + 8, sigY, 70);
+  doc.font('Helvetica').fontSize(6.5).fillColor('#555').text('Barangay Captain', x + 8, sigY + 4, { width: 70, align: 'center' });
+
+  doc.rect(x + 115, sigY - 30, 30, 30).lineWidth(0.5).strokeColor('#111').stroke();
+  doc.font('Helvetica-Bold').fontSize(5.5).fillColor('#111')
+    .text(SOCIAL_WORKER_NAME, x + 82, sigY + 4, { width: 96, align: 'center' });
+  doc.font('Helvetica').fontSize(5).fillColor('#555')
+    .text(SOCIAL_WORKER_ROLE, x + 82, sigY + 12, { width: 96, align: 'center' });
+
+  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111')
+    .text('Name and Signature\nof Social Worker', x + 182, sigY - 30, { width: 63 });
+  sigLine(x + 182, sigY, 63);
+  doc.font('Helvetica-Bold').fontSize(4.5).fillColor('#111')
+    .text(MAYOR_NAME, x + 182, sigY + 4, { width: 63, align: 'center' });
+  doc.font('Helvetica').fontSize(4.5).fillColor('#555')
+    .text(MAYOR_ROLE, x + 182, sigY + 11, { width: 63, align: 'center' });
+}
+
 export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffer> {
   const PDFDocument = require('pdfkit');
   const doc = new PDFDocument({
@@ -94,146 +269,16 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
   const buffers: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => buffers.push(chunk));
 
-  // ================= PAGE 1: PAALALA AT GABAY (left) + services table start (right) =================
-  doc.font('Helvetica-Bold').fontSize(10).fillColor('#111')
-    .text('PAALALA AT GABAY', LEFT + 2, 48);
-  doc.moveTo(LEFT, 62).lineTo(LEFT + WIDTH, 62).lineWidth(0.8).strokeColor('#111').stroke();
+  // ================= PAGE 1 (cover side): services left, client cover right =================
+  drawServicesPanel(doc, LEFT, 48, data.services, 14);
+  drawClientCover(doc, LEFT + WIDTH / 2, data);
 
-  let py = 72;
-  PAALALA_LINES.forEach(line => {
-    doc.font(line.startsWith('-') ? 'Helvetica' : 'Helvetica-Bold')
-      .fontSize(8).fillColor('#111')
-      .text(line, LEFT + 4, py, { width: WIDTH / 2 - 14 });
-    py = doc.y + 6;
-  });
-
-  // Right column: services table start
-  let sy = 48;
-  sy = drawServicesHeader(doc, LEFT + WIDTH / 2, sy);
-  drawServiceRows(doc, LEFT + WIDTH / 2, sy, data.services, 8);
-
-  // ================= PAGE 2: services continuation (left) + client info (right) =================
+  // ================= PAGE 2 (inner side): PAALALA left, services right =================
   doc.addPage();
+  drawPaalala(doc, LEFT, 48);
+  drawServicesPanel(doc, LEFT + WIDTH / 2, 48, data.services, 14);
 
-  // Left column: continue services table
-  let sy2 = 48;
-  sy2 = drawServicesHeader(doc, LEFT, sy2);
-  drawServiceRows(doc, LEFT, sy2, data.services, 12);
-
-  // Right column: header + client + family composition + signatures
-  const rx = LEFT + WIDTH / 2;
   const officeName = data.officeName ?? 'Municipal Social Welfare and Development Office';
-  doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#111')
-    .text(ORG_LOCATION.country, rx + 10, 42, { align: 'right', width: WIDTH / 2 - 20 });
-  doc.font('Helvetica').fontSize(8)
-    .text(`Province of ${ORG_LOCATION.province}`, rx + 10, 52, { align: 'right', width: WIDTH / 2 - 20 });
-  doc.text(`Municipality of ${ORG_LOCATION.municipality}`, rx + 10, 60, { align: 'right', width: WIDTH / 2 - 20 });
-  doc.font('Helvetica-Bold').fontSize(7).fillColor('#222')
-    .text(officeName.toUpperCase(), rx + 10, 68, { align: 'right', width: WIDTH / 2 - 20 });
-
-  doc.moveTo(rx, 80).lineTo(RIGHT, 80).lineWidth(0.8).strokeColor('#111').stroke();
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
-    .text('Code #', rx + 10, 84, { width: 60 });
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-    .text(data.code, rx + 60, 84, { width: WIDTH / 2 - 70 });
-  doc.font('Helvetica-Bold').fontSize(7.5)
-    .text('Barangay:', rx + 10, 96, { width: 60 });
-  doc.font('Helvetica').fontSize(8)
-    .text(data.barangay, rx + 60, 96, { width: WIDTH / 2 - 70 });
-  doc.font('Helvetica-Bold').fontSize(7.5)
-    .text('Contact #', rx + 10, 108, { width: 60 });
-  doc.font('Helvetica').fontSize(8)
-    .text(data.contact, rx + 60, 108, { width: WIDTH / 2 - 70 });
-
-  doc.font('Helvetica-Bold').fontSize(10).fillColor('#111').text('CLIENT', rx + 10, 124);
-  doc.moveTo(rx, 134).lineTo(RIGHT, 134).lineWidth(0.8).strokeColor('#111').stroke();
-
-  let cy = 140;
-  const fieldRow = (x: number, y: number, w: number, label: string, value: string): void => {
-    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
-      .text(label, x + 2, y + 1, { width: w - 4, ellipsis: true });
-    doc.moveTo(x, y + 16).lineTo(x + w, y + 16).lineWidth(0.5).strokeColor('#999').stroke();
-    doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-      .text(value || '', x + 2, y - 8, { width: w - 2, ellipsis: true });
-  };
-
-  fieldRow(rx + 10, cy, 80, 'Surname', data.client.surname);
-  fieldRow(rx + 95, cy, 90, 'First Name', data.client.firstName);
-  fieldRow(rx + 190, cy, 55, 'Middle Name', data.client.middleName ?? '');
-  cy += 24;
-
-  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555').text('Gender:', rx + 10, cy, { width: 60 });
-  doc.rect(rx + 60, cy, 7, 7).lineWidth(0.5).strokeColor('#111').stroke();
-  if (data.client.gender === 'Male') doc.rect(rx + 61, cy + 1, 5, 5).fillColor('#111').fill();
-  doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('MALE', rx + 70, cy, { width: 60 });
-  doc.rect(rx + 115, cy, 7, 7).lineWidth(0.5).strokeColor('#111').stroke();
-  if (data.client.gender === 'Female') doc.rect(rx + 116, cy + 1, 5, 5).fillColor('#111').fill();
-  doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('FEMALE', rx + 125, cy, { width: 70 });
-
-  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
-    .text('Date of Birth:', rx + 10, cy + 14, { width: 70 });
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
-    .text(fmtDate(data.client.dob), rx + 70, cy + 14, { width: 100 });
-  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
-    .text('Address:', rx + 10, cy + 28, { width: 60 });
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
-    .text(data.client.address || '', rx + 60, cy + 28, { width: WIDTH / 2 - 70, ellipsis: true });
-  doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#555')
-    .text('NHTS-PR / Listahanan ID:', rx + 10, cy + 40, { width: 95 });
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111')
-    .text(data.nhtsPrId || '', rx + 95, cy + 40, { width: WIDTH / 2 - 105, ellipsis: true });
-
-  cy += 64;
-
-  // Family Composition
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('FAMILY COMPOSITION', rx + 10, cy);
-  cy += 12;
-  const famCols = [
-    { label: 'Family Members', w: 90 },
-    { label: 'Relationship', w: 55 },
-    { label: 'Age', w: 20 },
-    { label: 'Status / Income', w: 60 },
-  ];
-  let fx = rx + 10;
-  doc.rect(rx + 10, cy, 225, 12).fillColor('#e6e6e6').fill();
-  famCols.forEach(c => {
-    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text(c.label, fx + 2, cy + 2.5, { width: c.w - 4, ellipsis: true });
-    doc.rect(fx, cy, c.w, 12).lineWidth(0.5).strokeColor('#999').stroke();
-    fx += c.w;
-  });
-  cy += 12;
-  const totalFam = Math.max(4, data.familyMembers.length);
-  for (let i = 0; i < totalFam; i++) {
-    const m = data.familyMembers[i];
-    const vals = [
-      m?.fullName ?? '', m?.relationship ?? '',
-      m?.age != null ? String(m.age) : '',
-      m?.status ? `${m.status}${m.income != null ? ` (${m.income})` : ''}` : (m?.income != null ? String(m.income) : ''),
-    ];
-    fx = rx + 10;
-    famCols.forEach((c, ci) => {
-      doc.rect(fx, cy, c.w, 16).lineWidth(0.5).strokeColor('#999').stroke();
-      doc.font('Helvetica').fontSize(7.5).fillColor('#111')
-        .text(vals[ci] || '', fx + 2, cy + 4, { width: c.w - 4, ellipsis: true });
-      fx += c.w;
-    });
-    cy += 16;
-  }
-
-  cy += 16;
-  const sigY = Math.max(cy, 700);
-  // Signature line helper
-  const sigLine = (x: number, y: number, w: number, role: string): void => {
-    doc.moveTo(x, y).lineTo(x + w, y).lineWidth(0.5).strokeColor('#111').stroke();
-    doc.font('Helvetica').fontSize(7).fillColor('#555').text(role, x, y + 4, { width: w, align: 'center' });
-  };
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
-    .text('Signature of Applicant\nor Thumbmark', rx + 10, sigY - 30, { width: 110 });
-  sigLine(rx + 10, sigY, 110, 'Barangay Captain');
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
-    .text('Name and Signature of\nSocial Worker', rx + 140, sigY - 30, { width: 105 });
-  sigLine(rx + 140, sigY, 105, 'Municipal Mayor');
-
   doc.font('Helvetica').fontSize(5.5).fillColor('#888')
     .text(
       `${officeName} | ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`,
