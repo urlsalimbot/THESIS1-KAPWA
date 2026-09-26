@@ -458,6 +458,26 @@ export async function downloadMonthlyFunds(month: string, startDate?: string, en
   URL.revokeObjectURL(url);
 }
 
+export async function downloadSummaryReport(year?: number, quarter?: number): Promise<void> {
+  const token = getToken();
+  const params = new URLSearchParams();
+  if (year) params.set('year', String(year));
+  if (quarter) params.set('quarter', String(quarter));
+  const res = await fetch(`${API_BASE}/reports/summary?${params.toString()}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error((await res.text()) || `Export failed (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `summary-report-${year ?? 'current'}-Q${quarter ?? ''}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export async function downloadAnalyticsCsv(path: string, fallbackFilename: string) {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE}${path}`, {

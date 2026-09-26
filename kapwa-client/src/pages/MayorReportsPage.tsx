@@ -13,7 +13,7 @@ import { DataTable } from '@/components/data-table';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
 import { queryKeys } from '../lib/query-keys';
 import { api } from '../lib/api';
-import { downloadMonthlyFunds } from '../lib/api';
+import { downloadMonthlyFunds, downloadSummaryReport } from '../lib/api';
 import { DataTableColumnHeader } from '@/components/data-table/DataTableColumnHeader';
 import { cn } from '@/lib/utils';
 
@@ -88,6 +88,8 @@ export function MayorReportsPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [summaryYear, setSummaryYear] = useState(new Date().getFullYear());
+  const [summaryQuarter, setSummaryQuarter] = useState(Math.floor(new Date().getMonth() / 3) + 1);
 
   const isCustom = Boolean(customFrom || customTo);
   const range = isCustom
@@ -112,6 +114,20 @@ export function MayorReportsPage() {
   const periodLabel = range.from || range.to
     ? `${fmtLabel(range.from)} – ${fmtLabel(range.to)}`
     : t('reports.allTime', 'All time');
+
+  async function handleExportSummary() {
+    if (exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      await downloadSummaryReport(summaryYear, summaryQuarter);
+    } catch (err: any) {
+      setExportError(err.message || t('dashboard.exportFailed', 'Export failed'));
+      setTimeout(() => setExportError(null), 4000);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleExportFundUtilization() {
     if (exporting) return;
@@ -246,6 +262,25 @@ export function MayorReportsPage() {
         <Button size="sm" onClick={handleExportFundUtilization} disabled={exporting}>
           <Download size={14} className="mr-1" /> {exporting ? t('dashboard.generating', 'Generating...') : t('dashboard.exportFundUtilization', 'Export Fund Utilization')}
         </Button>
+        <Button size="sm" variant="outline" onClick={handleExportSummary} disabled={exporting}>
+          <Download size={14} className="mr-1" /> {t('reports.exportSummary', 'Export Summary Report')}
+        </Button>
+        <select
+          aria-label={t('reports.summaryYear', 'Summary report year')}
+          value={summaryYear}
+          onChange={(e) => setSummaryYear(Number(e.target.value))}
+          className="h-8 rounded-md border bg-background px-2 text-xs"
+        >
+          {[0, 1, 2, 3].map((d) => { const y = new Date().getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}
+        </select>
+        <select
+          aria-label={t('reports.summaryQuarter', 'Summary report quarter')}
+          value={summaryQuarter}
+          onChange={(e) => setSummaryQuarter(Number(e.target.value))}
+          className="h-8 rounded-md border bg-background px-2 text-xs"
+        >
+          {[1, 2, 3, 4].map((q) => <option key={q} value={q}>Q{q}</option>)}
+        </select>
         <span className="text-xs text-muted-foreground">{periodLabel}</span>
         {exportError && <span className="text-xs text-destructive">{exportError}</span>}
       </div>

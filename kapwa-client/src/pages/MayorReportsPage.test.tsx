@@ -82,6 +82,11 @@ describe('MayorReportsPage', () => {
     });
   });
 
+  it('offers a GAD Summary Report export', async () => {
+    renderWithSWR(<MayorReportsPage />);
+    expect(await screen.findByRole('button', { name: /summary report/i })).toBeInTheDocument();
+  });
+
   it('has no a11y violations', async () => {
     const { container } = renderWithSWR(<MayorReportsPage />);
     await screen.findByRole('heading', { name: /Reports|Mayor/i });
