@@ -15,7 +15,7 @@ import { ORG_LOCATION } from "../common/constants";
 const FORM_NUMBER = "DSWD-PMB-GF-011 | REV 01 / 30 SEPT 2022";
 const BANNER_TEXT = "MAARING MAGPATULONG SUMAGOT SA DSWD PERSONNEL";
 const RED_BANNER_TEXT =
-  "Huwag susulatan ang DSWD lamang ang pwede gumamit! (Do not write below this part - for DSWD’s use only)";
+  "Huwag susulatan ang DSWD lamang ang pwede gumamit! (Do not write below this part for DSWD’s use only)";
 const DECLARATION_TEXT =
   "I declare under oath that I personally accomplished the GIS Form and all the " +
   "information herein stated is TRUE, CORRECT, VALID, and COMPLETE pursuant to " +
@@ -265,12 +265,12 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
 
   // ---- header -----------------------------------------------------------
   const logoPath = path.join(__dirname, "assets", "DSWD-Banner.png");
-  const logoY = 16;
-  const logoH = 120;
+  const logoY = 26;
+  const logoH = 60;
 
   if (fs.existsSync(logoPath)) {
     try {
-      doc.image(logoPath, LEFT + 4, logoY, { fit: [200, logoH] });
+      doc.image(logoPath, LEFT + 4, logoY, { fit: [110, logoH] });
     } catch {
       /* header renders without the seal */
     }
@@ -281,12 +281,12 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
     .font("Times-Roman")
     .fontSize(8)
     .fillColor("#111")
-    .text("PROTECTIVE SERVICES DIVISION", RIGHT - 200, 18, {
+    .text("PROTECTIVE SERVICES DIVISION", RIGHT - 200, 28, {
       width: 240,
       align: "center",
       lineBreak: false,
     })
-    .text("FIELD OFFICE III", RIGHT - 200, 27, {
+    .text("FIELD OFFICE III", RIGHT - 200, 37, {
       width: 240,
       align: "center",
       lineBreak: false,
@@ -295,7 +295,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
     .font("Helvetica")
     .fontSize(5.5)
     .fillColor("#333")
-    .text(FORM_NUMBER, RIGHT - 200, 36, {
+    .text(FORM_NUMBER, RIGHT - 200, 46, {
       width: 240,
       align: "center",
       lineBreak: false,
@@ -303,7 +303,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   let y = 44;
   doc
     .font(F.black)
-    .fontSize(15)
+    .fontSize(12)
     .fillColor("#111")
     .text("GENERAL INTAKE SHEET", LEFT, y + 23, {
       width: WIDTH,
