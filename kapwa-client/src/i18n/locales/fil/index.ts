@@ -1658,6 +1658,13 @@ const fil: EnLocale = {
       "serviceNamePlaceholder": "hal., Counseling Session, Home Visit",
       "submitForReview": "Isumite para sa Review →",
       "submitForReviewHint": "Isumite para sa review ng admin upang ma-activate ang kaso.",
+      "interventionDecision": "Desisyon sa Interbensyon",
+      "interventionNotNeededBadge": "Hindi kailangan ang interbensyon",
+      "interventionNotNeededActive": "Walang interbensyon na ibibigay para sa kasong ito; ang referral ang sumasaklaw sa serbisyo.",
+      "interventionNotNeededHint": "Kung ang kaso ay pagsisilbihan sa pamamagitan lamang ng referral, itala ang desisyon upang laktawan ang paghahatid ng interbensyon.",
+      "markInterventionNotNeeded": "Markahan na hindi kailangan ang interbensyon",
+      "undoInterventionNotNeeded": "Bawiin ang desisyon",
+      "noInterventionRecorded": "Walang interbensyon na kailangan — referral-only na kaso",
       "total": "kabuuan",
       "fundSourceLabel": "Pinagmulan ng Pondo",
       "modeOfDeliveryLabel": "Paraan ng Paghahatid"

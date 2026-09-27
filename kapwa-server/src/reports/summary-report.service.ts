@@ -21,6 +21,8 @@ interface RawCaseRow {
   case_id: string; created_at: Date; client_category: string | null; gender: string | null;
   surname: string | null; first_name: string | null; middle_name: string | null;
   dob: Date | null; barangay: string | null; service_text: string | null; referral_text: string | null;
+  referral_agencies: string | null;
+  latest_intervention_at: Date | null; latest_referral_at: Date | null;
   has_csr: boolean; has_visit: boolean;
 }
 
@@ -36,6 +38,9 @@ const CASES_SQL = `
          pa.barangay AS barangay,
          COALESCE(ci.text, '') AS service_text,
          COALESCE(cr.text, '') AS referral_text,
+         COALESCE(cr.agencies, '') AS referral_agencies,
+         (SELECT MAX(ci2.created_at) FROM case_interventions ci2 WHERE ci2.case_id = c.id::text) AS latest_intervention_at,
+         (SELECT MAX(cr2.created_at) FROM case_referrals cr2 WHERE cr2.case_id = c.id) AS latest_referral_at,
          (csr.case_id IS NOT NULL) AS has_csr,
          (fv.case_id IS NOT NULL) AS has_visit
   FROM cases c
@@ -54,7 +59,9 @@ const CASES_SQL = `
     WHERE ci2.case_id = c.id::text
   ) ci ON TRUE
   LEFT JOIN LATERAL (
-    SELECT string_agg(COALESCE(cr2.reason, '') || ' ' || COALESCE(cr2.agency, ''), ' ') AS text
+    SELECT
+      string_agg(COALESCE(cr2.reason, '') || ' ' || COALESCE(cr2.agency, ''), ' ') AS text,
+      string_agg(COALESCE(cr2.agency, ''), ', ') AS agencies
     FROM case_referrals cr2 WHERE cr2.case_id = c.id
   ) cr ON TRUE
   LEFT JOIN LATERAL (SELECT csr2.case_id FROM csr_reports csr2 WHERE csr2.case_id = c.id LIMIT 1) csr ON TRUE
@@ -199,8 +206,28 @@ export class SummaryReportService {
         ip: /\bip\b|indigenous/.test(cat),
       },
       barangay: r.barangay ?? '',
-      intervention: this.interventionCode(classifyCase(input)),
+      // Referrals to other/higher agencies are the case's FINAL remark: when a
+      // referral exists, print the agency target instead of the intervention
+      // code so the case list records where the client was handed off.
+      intervention: this.finalRemark(r),
     };
+  }
+
+  private finalRemark(r: RawCaseRow): string {
+    const agencies = (r.referral_agencies ?? '').trim();
+    if (agencies) {
+      // Precedence = recency: the referral is the final remark only when it is
+      // the LATEST addition; if an intervention was added afterwards, the
+      // derived intervention code is the remark.
+      const iv = r.latest_intervention_at ? new Date(r.latest_intervention_at).getTime() : 0;
+      const rv = r.latest_referral_at ? new Date(r.latest_referral_at).getTime() : 0;
+      if (rv >= iv) return `Referred to ${agencies}`;
+    }
+    const input: CaseClassificationInput = {
+      clientCategory: r.client_category, serviceText: r.service_text ?? '',
+      referralText: r.referral_text ?? '', hasCsr: !!r.has_csr, hasVisit: !!r.has_visit,
+    };
+    return this.interventionCode(classifyCase(input));
   }
 
   private interventionCode(key: CategoryKey): string {

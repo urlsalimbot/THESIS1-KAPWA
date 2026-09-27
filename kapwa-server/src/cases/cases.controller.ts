@@ -240,6 +240,15 @@ export class CasesController {
     return this.casesService.updateReferralDecision(id, body.notNeeded);
   }
 
+  @Patch(':id/intervention-decision')
+  @Roles('admin', 'social_worker')
+  async updateInterventionDecision(
+    @Param('id') id: string,
+    @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
+  ) {
+    return this.casesService.updateInterventionDecision(id, body.notNeeded);
+  }
+
   @Get('csr/:controlNo/pdf')
   @Roles('admin', 'social_worker', 'coordinator')
   async downloadCsrByControlNo(@Param('controlNo') controlNo: string, @Res() res: any) {

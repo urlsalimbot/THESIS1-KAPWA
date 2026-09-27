@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Calendar, DollarSign, FileText, Lock, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, Calendar, DollarSign, FileText, Lock, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
 import { CaseRequirements } from './CaseRequirements';
 import { FileUploadList } from './FileUploadList';
 import { useTranslation } from 'react-i18next';
@@ -59,6 +59,8 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
     notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const [savingDecision, setSavingDecision] = useState(false);
+  const interventionNotNeeded = Boolean(caseData?.interventionNotNeeded);
 
   const { data: docs = [] } = useSWR<any[]>(
     caseId ? queryKeys.filing.byCase(caseId) : null,
@@ -102,6 +104,19 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
       await mutate();
     } catch (e) {
       console.error('Failed to delete intervention:', e);
+    }
+  }
+
+  async function saveDecision(notNeeded: boolean) {
+    setSavingDecision(true);
+    try {
+      await api.patch(`/cases/${caseId}/intervention-decision`, { notNeeded });
+      globalMutate(queryKeys.cases.detail(caseId));
+      globalMutate(queryKeys.cases.list());
+    } catch (e) {
+      console.error('Failed to save intervention decision:', e);
+    } finally {
+      setSavingDecision(false);
     }
   }
 
@@ -310,13 +325,57 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
       {/* Requirements Checklist */}
       <CaseRequirements caseId={caseId} caseData={caseData} userRole={userRole} />
 
+      {/* Intervention decision — only when no intervention has been issued.
+          Recording "no intervention" is required before an assessed case may
+          proceed on referrals only (mirrors the referral decision below). */}
+      {interventions.length === 0 && (userRole === 'admin' || userRole === 'social_worker') && (
+        <div className="rounded-lg border bg-card">
+          <div className="px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {interventionNotNeeded
+                ? <CheckCircle2 size={16} className="text-primary" />
+                : <Ban size={16} className="text-muted-foreground" />}
+              <h3 className="text-sm font-semibold">{t('caseView.implement.interventionDecision', 'Intervention Decision')}</h3>
+            </div>
+            {interventionNotNeeded && (
+              <Badge variant="outline" className="text-[10px]">{t('caseView.implement.interventionNotNeededBadge', 'Intervention not needed')}</Badge>
+            )}
+          </div>
+          <Separator />
+          <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              {interventionNotNeeded
+                ? t('caseView.implement.interventionNotNeededActive', 'No intervention is issued for this case; referrals cover the service.')
+                : t('caseView.implement.interventionNotNeededHint', 'If the case is served through referrals only, record the decision to skip intervention delivery.')}
+            </p>
+            {(!readOnly || interventionNotNeeded) && (
+              <Button
+                variant={interventionNotNeeded ? 'outline' : 'secondary'}
+                size="sm"
+                disabled={savingDecision}
+                onClick={() => saveDecision(!interventionNotNeeded)}
+              >
+                {interventionNotNeeded
+                  ? t('caseView.implement.undoInterventionNotNeeded', 'Undo decision')
+                  : (
+                    <>
+                      <Ban size={14} className="mr-1" /> {t('caseView.implement.markInterventionNotNeeded', 'Mark intervention not needed')}
+                    </>
+                  )}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Status transition — visible even when readOnly so a worker who has already
-          logged interventions can still submit the assessed case for admin review. */}
-      {interventions.length > 0 && caseData?.status === 'assessed' && userRole === 'social_worker' && (
+          logged interventions (or recorded that none are needed) can still submit
+          the assessed case for admin review. */}
+      {(interventions.length > 0 || interventionNotNeeded) && caseData?.status === 'assessed' && userRole === 'social_worker' && (
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary">{t('caseView.implement.recorded', 'Interventions recorded')}</p>
+              <p className="text-sm font-medium text-primary">{interventions.length > 0 ? t('caseView.implement.recorded', 'Interventions recorded') : t('caseView.implement.noInterventionRecorded', 'No intervention needed — referral-only case')}</p>
               <p className="text-xs text-muted-foreground">{t('caseView.implement.submitForReviewHint', 'Submit for admin review to activate the case.')}</p>
             </div>
             <ReviewButton caseId={caseId} mutate={mutate} />

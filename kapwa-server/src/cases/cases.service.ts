@@ -334,14 +334,27 @@ export class CasesService {
     }
     if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
       const interventionCount = await this.getInterventionCount(c.id);
-      if (interventionCount === 0) {
-        throw new BadRequestException('At least one intervention must be logged before activating');
+      const hasReferral = (c.referrals?.length || 0) > 0;
+      // At least one of the two service channels must be real: either an
+      // intervention was issued, or — when no intervention is issued — a
+      // referral exists. Recording "no referral needed" still demands an
+      // intervention (and vice versa), so a case can never be empty on both.
+      if (interventionCount === 0 && !c.interventionNotNeeded) {
+        throw new BadRequestException('At least one intervention must be logged (or record that no intervention is issued) before activating');
       }
-      const missing = await this.casesExport.missingRequiredDocuments(c.id);
-      if (missing.length > 0) {
-        throw new BadRequestException(
-          `Cannot activate: missing required document(s): ${missing.join(', ')}`,
-        );
+      if (c.interventionNotNeeded && !hasReferral) {
+        throw new BadRequestException('No intervention is issued — record at least one referral before activating');
+      }
+      if (c.referralNotNeeded && interventionCount === 0) {
+        throw new BadRequestException('No referral will be issued — log at least one intervention before activating');
+      }
+      if (interventionCount > 0) {
+        const missing = await this.casesExport.missingRequiredDocuments(c.id);
+        if (missing.length > 0) {
+          throw new BadRequestException(
+            `Cannot activate: missing required document(s): ${missing.join(', ')}`,
+          );
+        }
       }
     }
     if (c.status === CaseStatus.ACTIVE && newStatus === CaseStatus.TRANSITIONING) {
@@ -583,6 +596,13 @@ export class CasesService {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
     caseEntity.referralNotNeeded = notNeeded;
+    return this.caseRepo.save(caseEntity);
+  }
+
+  async updateInterventionDecision(id: string, notNeeded: boolean) {
+    const caseEntity = await this.caseRepo.findOne({ where: { id } });
+    if (!caseEntity) throw new NotFoundException('Case not found');
+    caseEntity.interventionNotNeeded = notNeeded;
     return this.caseRepo.save(caseEntity);
   }
 

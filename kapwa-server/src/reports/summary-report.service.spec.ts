@@ -6,7 +6,8 @@ function row(over: Partial<Record<string, unknown>> = {}) {
     case_id: 'c1', created_at: new Date('2025-04-10T02:00:00Z'),
     client_category: null, gender: 'Male',
     surname: 'Magno', first_name: 'Michael', middle_name: 'H',
-    barangay: 'Poblacion', service_text: 'Burial Assistance', referral_text: '',
+    barangay: 'Poblacion', service_text: 'Burial Assistance', referral_text: '', referral_agencies: '',
+    latest_intervention_at: null, latest_referral_at: null,
     has_csr: false, has_visit: false, ...over,
   };
 }
@@ -102,5 +103,42 @@ describe('SummaryReportService.build', () => {
     expect(r.gender).toBe('F');
     expect(r.categories.ip).toBe(true);
     expect(r.intervention).toBe('CSR');
+  });
+
+  it('uses a referral to another agency as the final remark', async () => {
+    const { service } = makeService([
+      row({ case_id: 'c10', referral_agencies: 'PAO' }),
+      row({ case_id: 'c11', referral_agencies: 'DSWD Field Office III, PCSO' }),
+      row({ case_id: 'c12', referral_agencies: '' }),
+    ]);
+    const data: SummaryReportData = await service.build(2025, 2);
+    expect(data.caseList[0].intervention).toBe('Referred to PAO');
+    expect(data.caseList[1].intervention).toBe('Referred to DSWD Field Office III, PCSO');
+    // No referral → falls back to the derived intervention code.
+    expect(data.caseList[2].intervention).toBe('FA');
+  });
+
+  it('applies recency precedence: referral is the final remark only when added last', async () => {
+    const { service } = makeService([
+      // Referral added AFTER the intervention → referral remark.
+      row({
+        case_id: 'c13', referral_agencies: 'PAO',
+        latest_intervention_at: new Date('2025-04-01T01:00:00Z'),
+        latest_referral_at: new Date('2025-04-02T01:00:00Z'),
+      }),
+      // Intervention added AFTER the referral → derived intervention code.
+      row({
+        case_id: 'c14', referral_agencies: 'PCSO',
+        service_text: 'Burial Assistance',
+        latest_intervention_at: new Date('2025-04-03T01:00:00Z'),
+        latest_referral_at: new Date('2025-04-01T01:00:00Z'),
+      }),
+      // Tie (unknown timestamps) → referral wins.
+      row({ case_id: 'c15', referral_agencies: 'DSWD FO3' }),
+    ]);
+    const data: SummaryReportData = await service.build(2025, 2);
+    expect(data.caseList[0].intervention).toBe('Referred to PAO');
+    expect(data.caseList[1].intervention).toBe('FA');
+    expect(data.caseList[2].intervention).toBe('Referred to DSWD FO3');
   });
 });

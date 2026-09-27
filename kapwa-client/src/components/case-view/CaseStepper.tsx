@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 export interface StepperProgressOpts {
   requirementsMet?: boolean;
   referralNotNeeded?: boolean;
+  interventionNotNeeded?: boolean;
 }
 
 // Minimum lifecycle position at which a step may be considered "done". Steps 3
@@ -38,9 +39,11 @@ export function stepperStepDone(i: number, caseData: any, interventionCount: num
   if (!STEP_STATUS_INDEPENDENT.has(i) && !statusAtLeast(caseData, STEP_MIN_STATUS[i] ?? 0)) return false;
   switch (i) {
     case 0: return !!caseData?.problemsPresented && !!caseData?.clientCategory;
-    // Implement HIP: an intervention alone is not enough — every required
-    // document of the linked program must be uploaded to the case filing.
-    case 1: return interventionCount > 0 && (opts.requirementsMet ?? true);
+    // Implement HIP: an intervention (or the recorded "no intervention"
+    // decision) is required; when interventions exist, every required document
+    // of the linked program must be uploaded to the case filing.
+    case 1: return (interventionCount > 0 || Boolean(opts.interventionNotNeeded))
+      && (interventionCount === 0 || (opts.requirementsMet ?? true));
     // Service Delivery: a referral is issued, or the social worker recorded
     // that no referral is needed.
     case 2: return (caseData?.referrals?.length || 0) > 0 || Boolean(opts.referralNotNeeded);
@@ -61,14 +64,16 @@ interface CaseStepperProps {
   interventionCount: number;
   requirementsMet?: boolean;
   referralNotNeeded?: boolean;
+  interventionNotNeeded?: boolean;
 }
 
-export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, requirementsMet, referralNotNeeded: referralNotNeededProp }: CaseStepperProps) {
+export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, requirementsMet, referralNotNeeded: referralNotNeededProp, interventionNotNeeded: interventionNotNeededProp }: CaseStepperProps) {
   const { t } = useTranslation();
   // Fall back to the case row so surfaces that only pass caseData (e.g. the
   // approval pipeline cards) still reflect a recorded not-needed decision.
   const referralNotNeeded = referralNotNeededProp ?? Boolean(caseData?.referralNotNeeded);
-  const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded };
+  const interventionNotNeeded = interventionNotNeededProp ?? Boolean(caseData?.interventionNotNeeded);
+  const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded };
   const STEPS = [
     { label: t('caseView.stepper.assessment', 'Assess & Interview'), description: t('caseView.stepper.assessmentDesc', 'Interview and FRVA/SWDI analysis'), phase: t('caseView.stepper.phaseIn', 'Phase-In') },
     { label: t('caseView.stepper.implementHip', 'Intervention & Requirements'), description: t('caseView.stepper.implementHipDesc', 'Select intervention; client documents; COE/PCV release'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
@@ -86,10 +91,10 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
   function handleClick(i: number) {
     const done = stepperStepDone(i, caseData, interventionCount, progress);
     // Intervention (step 1) and referral (step 2) are issued in parallel: with
-    // an intervention logged, Service Delivery is reachable regardless of
-    // documentary status, because referrals do not depend on it.
-    const parallelImplementation = i === 2 && interventionCount > 0;
-    if (done || i <= highestReachable + 1 || parallelImplementation) {
+    // the assessment done, Service Delivery is reachable regardless of whether
+    // an intervention exists, because a case may be referral-only.
+    const implementationReachable = stepperStepDone(0, caseData, interventionCount, progress);
+    if (done || i <= highestReachable + 1 || (i === 2 && implementationReachable)) {
       onStepClick(i);
       return;
     }

@@ -201,7 +201,7 @@ export function CaseViewPage() {
     [interventions, programs, caseData],
   );
   const progressOpts: StepperProgressOpts = useMemo(
-    () => ({ requirementsMet, referralNotNeeded: !!caseData?.referralNotNeeded }),
+    () => ({ requirementsMet, referralNotNeeded: !!caseData?.referralNotNeeded, interventionNotNeeded: !!caseData?.interventionNotNeeded }),
     [requirementsMet, caseData],
   );
 
@@ -411,11 +411,12 @@ export function CaseViewPage() {
     && ['enrolled', 'assessed', 'in_review'].includes(caseData.status);
 
   // `assessed` cases are submitted for admin review from the case view. Mirrors
-  // the StepImplementHIP gate (interventions must exist before review because
-  // activation requires at least one). Also rendered in the header so the
-  // action is discoverable without switching to the Implement HIP step.
+  // the StepImplementHIP gate (an intervention — or the recorded "no
+  // intervention" decision — must exist before review because activation
+  // requires at least one of intervention or referral). Also rendered in the
+  // header so the action is discoverable without switching steps.
   const canSubmitReview = caseData.status === 'assessed'
-    && interventions.length > 0
+    && (interventions.length > 0 || !!caseData?.interventionNotNeeded)
     && user?.role === 'social_worker';
 
   return (
@@ -562,7 +563,7 @@ export function CaseViewPage() {
 
           {/* Stepper — sticky so step switching stays reachable on long cases */}
           <div className="sticky top-2 z-10 rounded-lg border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
-            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} referralNotNeeded={!!caseData?.referralNotNeeded} />
+            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} referralNotNeeded={!!caseData?.referralNotNeeded} interventionNotNeeded={!!caseData?.interventionNotNeeded} />
           </div>
 
           {/* Generated approval documents — COE + PCV produced at approval,
