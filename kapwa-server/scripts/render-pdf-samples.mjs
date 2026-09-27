@@ -216,15 +216,35 @@ const accessCardData = {
   ],
 };
 
-// Mirrors the `data` object in summary-report-pdf.builder.spec.ts.
-const summaryEmptyTable = (title) => ({
-  title,
-  counts: { male: 0, female: 0, total: 0, byCategory: {} },
-});
+// Mirrors the fixture in summary-report-pdf.builder.spec.ts (program-driven):
+// columns = SEX + a small seeded-program set + UNASSIGNED + TOTAL.
+const SUMMARY_PROG_COLUMNS = [
+  { key: 'MALE', label: 'MALE', band: 'SEX' },
+  { key: 'FEMALE', label: 'FEMALE', band: 'SEX' },
+  { key: 'p-burial', label: 'Burial Assistance', band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' },
+  { key: 'p-med', label: 'Medical Assistance', band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' },
+  { key: 'p-pwd', label: 'PWD Assistance', band: 'FINANCIAL' },
+  { key: 'p-pao', label: 'Legal Referral (PAO)', band: 'LEGAL', subBand: 'REFERRAL' },
+  { key: 'p-ref', label: 'Referral – Others', band: 'LEGAL', subBand: 'REFERRAL' },
+  { key: 'p-csr', label: 'Case Study Report (CSR)', band: 'TECHNICAL' },
+  { key: 'p-hv', label: 'Home Visit', band: 'TECHNICAL' },
+  { key: 'UNASSIGNED', label: 'UNASSIGNED', band: '' },
+  { key: 'TOTAL', label: 'TOTAL', band: '' },
+];
+
+const summaryEmptyTable = (title) => {
+  const byColumn = {};
+  for (const c of SUMMARY_PROG_COLUMNS) {
+    if (c.key === 'MALE' || c.key === 'FEMALE' || c.key === 'TOTAL') continue;
+    byColumn[c.key] = 0;
+  }
+  return { title, counts: { male: 0, female: 0, total: 0, byColumn } };
+};
 
 const summaryReportData = {
   year: 2025,
   quarter: 2,
+  columns: SUMMARY_PROG_COLUMNS,
   annual: summaryEmptyTable('SUMMARY REPORT 2025'),
   monthly: [
     summaryEmptyTable('April 1-30, 2025'),

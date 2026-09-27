@@ -5,15 +5,9 @@ import { User } from '../auth/user.entity';
 import { OrgService } from '../common/org.service';
 import { REPORT_FALLBACK_SIGNATORIES } from '../common/constants';
 import {
-  CaseClassificationInput, CaseListRow, CategoryKey, SummaryCounts, SummaryReportData,
-  classifyCase,
+  CaseClassificationInput, CaseListRow, ReportColumn, SummaryCounts, SummaryReportData,
+  SummaryTable, buildColumns, selectCaseColumn,
 } from './summary-report.types';
-
-const CATEGORY_KEYS: CategoryKey[] = [
-  'BURIAL', 'MEDICAL', 'ASSISTIVE', 'PWD', 'BIRTH_DISCREPANCY', 'TRAVEL', 'CSR',
-  'COUNSELLING', 'PHILHEALTH', 'CUSTODY', 'HOME_VISIT', 'BALIK_PROBINSYA',
-  'LEGAL_PAO', 'LEGAL_OTHERS', 'OTHERS_TECHNICAL',
-];
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -23,6 +17,7 @@ interface RawCaseRow {
   dob: Date | null; barangay: string | null; service_text: string | null; referral_text: string | null;
   referral_agencies: string | null;
   latest_intervention_at: Date | null; latest_referral_at: Date | null;
+  program_id: string | null; program_name: string | null;
   has_csr: boolean; has_visit: boolean;
 }
 
@@ -41,6 +36,15 @@ const CASES_SQL = `
          COALESCE(cr.agencies, '') AS referral_agencies,
          (SELECT MAX(ci2.created_at) FROM case_interventions ci2 WHERE ci2.case_id = c.id::text) AS latest_intervention_at,
          (SELECT MAX(cr2.created_at) FROM case_referrals cr2 WHERE cr2.case_id = c.id) AS latest_referral_at,
+         (SELECT ci2.program_id FROM case_interventions ci2
+            WHERE ci2.case_id = c.id::text
+            ORDER BY COALESCE(ci2.delivery_date, ci2.created_at) ASC NULLS LAST, ci2.created_at ASC
+            LIMIT 1) AS program_id,
+         (SELECT pr2.name FROM case_interventions ci2
+            LEFT JOIN programs pr2 ON pr2.id = ci2.program_id
+            WHERE ci2.case_id = c.id::text
+            ORDER BY COALESCE(ci2.delivery_date, ci2.created_at) ASC NULLS LAST, ci2.created_at ASC
+            LIMIT 1) AS program_name,
          (csr.case_id IS NOT NULL) AS has_csr,
          (fv.case_id IS NOT NULL) AS has_visit
   FROM cases c
@@ -70,38 +74,9 @@ const CASES_SQL = `
   ORDER BY c.created_at ASC
 `;
 
-function emptyCounts(): SummaryCounts {
-  return {
-    male: 0, female: 0, total: 0,
-    byCategory: Object.fromEntries(CATEGORY_KEYS.map((k) => [k, 0])) as Record<CategoryKey, number>,
-  };
-}
-
-function addTo(counts: SummaryCounts, gender: string | null, key: CategoryKey) {
-  if (gender === 'Female') counts.female += 1;
-  else counts.male += 1;
-  counts.total += 1;
-  counts.byCategory[key] += 1;
-}
-
-// The Philippines has no DST, so a fixed +08:00 offset is an exact
-// representation of Asia/Manila. Report windows are built from explicit
-// offset ISO strings (never bare `Date.UTC`) so they do not depend on the
-// host process timezone and never shift by the +8h offset in the `pg` driver.
-const MANILA_OFFSET = '+08:00';
-
-function manilaDate(year: number, monthIndex: number): Date {
-  const month = String(monthIndex + 1).padStart(2, '0');
-  return new Date(`${year}-${month}-01T00:00:00${MANILA_OFFSET}`);
-}
-
-function monthRange(year: number, monthIndex: number): { start: Date; end: Date; label: string } {
-  const start = manilaDate(year, monthIndex);
-  const endYear = monthIndex === 11 ? year + 1 : year;
-  const end = manilaDate(endYear, (monthIndex + 1) % 12);
-  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  return { start, end, label: `${MONTH_NAMES[monthIndex]} 1-${lastDay}, ${year}` };
-}
+const PROGRAMS_SQL = `
+  SELECT id, name, category FROM programs WHERE is_active = TRUE ORDER BY created_at ASC
+`;
 
 const ORDINAL = ['1st', '2nd', '3rd', '4th'];
 
@@ -113,43 +88,45 @@ export class SummaryReportService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
-  async build(year?: number, quarter?: number): Promise<SummaryReportData> {
-    // Default to the current Manila date, not the host timezone: shift the
-    // epoch by +8h and read the UTC fields of the shifted instant.
-    const manila = new Date(Date.now() + 8 * 60 * 60 * 1000);
-    const reportYear = year ?? manila.getUTCFullYear();
-    const reportQuarter = quarter ?? Math.floor(manila.getUTCMonth() / 3) + 1;
+  async build(year = new Date().getFullYear(), quarter = Math.floor(new Date().getMonth() / 3) + 1): Promise<SummaryReportData> {
+    const yearStart = new Date(`${year}-01-01T00:00:00+08:00`);
+    const yearEnd = new Date(`${year + 1}-01-01T00:00:00+08:00`);
+    const [rows, programRows] = await Promise.all([
+      this.dataSource.query(CASES_SQL, [yearStart, yearEnd]),
+      this.dataSource.query(PROGRAMS_SQL),
+    ]);
+    const programs = (programRows ?? []) as Array<{ id: string; name: string; category?: string | null }>;
+    const columns = buildColumns(programs);
 
-    const yearStart = new Date(`${reportYear}-01-01T00:00:00${MANILA_OFFSET}`);
-    const yearEnd = new Date(`${reportYear + 1}-01-01T00:00:00${MANILA_OFFSET}`);
-    const rows: RawCaseRow[] = (await this.dataSource.query(CASES_SQL, [yearStart, yearEnd])) ?? [];
-
-    const annual = emptyCounts();
-    const monthly = [0, 1, 2].map((i) => monthRange(reportYear, (reportQuarter - 1) * 3 + i));
-    const monthlyCounts = monthly.map(() => emptyCounts());
+    const annual = emptyCounts(columns);
+    const monthly = [0, 1, 2].map((i) => monthRange(year, (quarter - 1) * 3 + i));
+    const monthlyCounts = monthly.map(() => emptyCounts(columns));
     const caseList: CaseListRow[] = [];
 
-    rows.forEach((r, index) => {
+    (rows ?? []).forEach((r: RawCaseRow, index: number) => {
       const input: CaseClassificationInput = {
         clientCategory: r.client_category,
         serviceText: r.service_text ?? '',
         referralText: r.referral_text ?? '',
         hasCsr: !!r.has_csr,
         hasVisit: !!r.has_visit,
+        programId: r.program_id,
+        programName: r.program_name,
       };
-      const key = classifyCase(input);
+      const col = selectCaseColumn(input, programs);
+      const key = annual.byColumn[col.key] !== undefined ? col.key : 'UNASSIGNED';
       addTo(annual, r.gender, key);
       const created = new Date(r.created_at);
       const mIdx = monthly.findIndex((m) => created >= m.start && created < m.end);
       if (mIdx >= 0) addTo(monthlyCounts[mIdx], r.gender, key);
-      caseList.push(this.toCaseListRow(r, index + 1));
+      caseList.push(this.toCaseListRow(r, index + 1, col.code));
     });
 
     const quarterSummary = monthlyCounts.reduce((acc, c) => {
       acc.male += c.male; acc.female += c.female; acc.total += c.total;
-      CATEGORY_KEYS.forEach((k) => { acc.byCategory[k] += c.byCategory[k]; });
+      for (const k of Object.keys(c.byColumn)) acc.byColumn[k] += c.byColumn[k];
       return acc;
-    }, emptyCounts());
+    }, emptyCounts(columns));
 
     const [officeName, prepared, noted] = await Promise.all([
       this.org.officeName(),
@@ -158,10 +135,10 @@ export class SummaryReportService {
     ]);
 
     return {
-      year: reportYear, quarter: reportQuarter,
-      annual: { title: `SUMMARY REPORT ${reportYear}`, counts: annual },
+      year, quarter, columns,
+      annual: { title: `SUMMARY REPORT ${year}`, counts: annual },
       monthly: monthly.map((m, i) => ({ title: m.label, counts: monthlyCounts[i] })),
-      quarterSummary: { title: `${ORDINAL[reportQuarter - 1]} QUARTER SUMMARY`, counts: quarterSummary },
+      quarterSummary: { title: `${ORDINAL[quarter - 1]} QUARTER SUMMARY`, counts: quarterSummary },
       caseList,
       officeName,
       preparedBy: prepared?.fullName || REPORT_FALLBACK_SIGNATORIES.preparedBy,
@@ -179,7 +156,7 @@ export class SummaryReportService {
     }
   }
 
-  private toCaseListRow(r: RawCaseRow, no: number): CaseListRow {
+  private toCaseListRow(r: RawCaseRow, no: number, fallbackCode: string): CaseListRow {
     const created = new Date(r.created_at);
     // The case list prints the local Philippines calendar day: shift the
     // instant by the fixed +08:00 offset and read its UTC fields.
@@ -187,10 +164,6 @@ export class SummaryReportService {
     const dob = r.dob ? new Date(r.dob) : undefined;
     const age = dob ? Math.floor((Date.now() - new Date(dob).getTime()) / 31557600000) : undefined;
     const cat = (r.client_category ?? '').toLowerCase();
-    const input: CaseClassificationInput = {
-      clientCategory: r.client_category, serviceText: r.service_text ?? '',
-      referralText: r.referral_text ?? '', hasCsr: !!r.has_csr, hasVisit: !!r.has_visit,
-    };
     return {
       no,
       date: `${String(manila.getUTCMonth() + 1).padStart(2, '0')}-${String(manila.getUTCDate()).padStart(2, '0')}-${String(manila.getUTCFullYear()).slice(2)}`,
@@ -206,38 +179,46 @@ export class SummaryReportService {
         ip: /\bip\b|indigenous/.test(cat),
       },
       barangay: r.barangay ?? '',
-      // Referrals to other/higher agencies are the case's FINAL remark: when a
-      // referral exists, print the agency target instead of the intervention
-      // code so the case list records where the client was handed off.
-      intervention: this.finalRemark(r),
+      // Referrals to other/higher agencies are the case's FINAL remark when
+      // the referral is the LATEST addition; otherwise the derived code.
+      intervention: this.finalRemark(r, fallbackCode),
     };
   }
 
-  private finalRemark(r: RawCaseRow): string {
+  private finalRemark(r: RawCaseRow, fallbackCode: string): string {
     const agencies = (r.referral_agencies ?? '').trim();
     if (agencies) {
-      // Precedence = recency: the referral is the final remark only when it is
-      // the LATEST addition; if an intervention was added afterwards, the
-      // derived intervention code is the remark.
       const iv = r.latest_intervention_at ? new Date(r.latest_intervention_at).getTime() : 0;
       const rv = r.latest_referral_at ? new Date(r.latest_referral_at).getTime() : 0;
       if (rv >= iv) return `Referred to ${agencies}`;
     }
-    const input: CaseClassificationInput = {
-      clientCategory: r.client_category, serviceText: r.service_text ?? '',
-      referralText: r.referral_text ?? '', hasCsr: !!r.has_csr, hasVisit: !!r.has_visit,
-    };
-    return this.interventionCode(classifyCase(input));
+    return fallbackCode;
   }
+}
 
-  private interventionCode(key: CategoryKey): string {
-    switch (key) {
-      case 'BURIAL': case 'MEDICAL': case 'ASSISTIVE': case 'PWD': return 'FA';
-      case 'CSR': return 'CSR';
-      case 'HOME_VISIT': return 'HV';
-      case 'LEGAL_PAO': case 'LEGAL_OTHERS': return 'R';
-      case 'OTHERS_TECHNICAL': return 'C';
-      default: return 'H';
-    }
+function monthRange(year: number, monthIndex: number): { start: Date; end: Date; label: string } {
+  const mm = String(monthIndex + 1).padStart(2, '0');
+  const next = monthIndex === 11 ? `${year + 1}-01-01` : `${year}-${String(monthIndex + 2).padStart(2, '0')}-01`;
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  return {
+    start: new Date(`${year}-${mm}-01T00:00:00+08:00`),
+    end: new Date(`${next}T00:00:00+08:00`),
+    label: `${MONTH_NAMES[monthIndex]} 1-${lastDay}, ${year}`,
+  };
+}
+
+function emptyCounts(columns: ReportColumn[]): SummaryCounts {
+  const byColumn: Record<string, number> = {};
+  for (const c of columns) {
+    if (c.key === 'MALE' || c.key === 'FEMALE' || c.key === 'TOTAL') continue;
+    byColumn[c.key] = 0;
   }
+  return { male: 0, female: 0, total: 0, byColumn };
+}
+
+function addTo(counts: SummaryCounts, gender: string | null, key: string) {
+  if (gender === 'Female') counts.female += 1;
+  else counts.male += 1;
+  counts.total += 1;
+  if (counts.byColumn[key] !== undefined) counts.byColumn[key] += 1;
 }

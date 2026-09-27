@@ -1,8 +1,17 @@
-export type CategoryKey =
-  | 'BURIAL' | 'MEDICAL' | 'ASSISTIVE' | 'PWD'
-  | 'BIRTH_DISCREPANCY' | 'TRAVEL' | 'CSR' | 'COUNSELLING' | 'PHILHEALTH'
-  | 'CUSTODY' | 'HOME_VISIT' | 'BALIK_PROBINSYA'
-  | 'LEGAL_PAO' | 'LEGAL_OTHERS' | 'OTHERS_TECHNICAL';
+// Summary report types — PROGRAM-DRIVEN columns.
+//
+// The report's columns derive from the `programs` table (plus fixed SEX,
+// UNASSIGNED and TOTAL columns). Each case counts once: its first
+// program-linked intervention decides the column; referral-only cases map to
+// the legal referral programs; CSR/visit-only cases map by name; everything
+// else lands in UNASSIGNED. Bands mirror the reference GAD form.
+
+export interface ReportColumn {
+  key: string;      // program id, 'MALE', 'FEMALE', 'UNASSIGNED' or 'TOTAL'
+  label: string;    // printable header (program name or fixed label)
+  band: string;     // SEX | FINANCIAL | LEGAL | TECHNICAL | OTHER PROGRAMS | '' (TOTAL/UNASSIGNED)
+  subBand?: string; // e.g. 'FINANCIAL ASSISTANCE' / 'REFERRAL'
+}
 
 export interface CaseClassificationInput {
   clientCategory?: string | null;
@@ -10,34 +19,26 @@ export interface CaseClassificationInput {
   referralText: string;
   hasCsr: boolean;
   hasVisit: boolean;
+  /** Program of the case's first intervention (id + resolved name). */
+  programId?: string | null;
+  programName?: string | null;
 }
 
-const RULES: ReadonlyArray<{ key: CategoryKey; test: (i: CaseClassificationInput) => boolean }> = [
-  { key: 'BURIAL', test: (i) => /burial/i.test(i.serviceText) },
-  { key: 'MEDICAL', test: (i) => /medical|hospital|medicine/i.test(i.serviceText) },
-  { key: 'ASSISTIVE', test: (i) => /assistive|device|prosthes|wheelchair/i.test(i.serviceText) },
-  { key: 'PWD', test: (i) => /pwd|person with disabilit/i.test(`${i.clientCategory ?? ''} ${i.serviceText}`) },
-  { key: 'BIRTH_DISCREPANCY', test: (i) => /birth discrepancy/i.test(i.serviceText) },
-  { key: 'TRAVEL', test: (i) => /travel/i.test(i.serviceText) },
-  { key: 'CSR', test: (i) => i.hasCsr || /case study|\bcsr\b/i.test(i.serviceText) },
-  { key: 'COUNSELLING', test: (i) => /counsel|psychosocial/i.test(i.serviceText) },
-  { key: 'PHILHEALTH', test: (i) => /philhealth/i.test(i.serviceText) },
-  { key: 'CUSTODY', test: (i) => /custody/i.test(i.serviceText) },
-  { key: 'HOME_VISIT', test: (i) => i.hasVisit || /home visit|\bhv\b/i.test(i.serviceText) },
-  { key: 'BALIK_PROBINSYA', test: (i) => /balik probinsya/i.test(i.serviceText) },
-  { key: 'LEGAL_PAO', test: (i) => /legal|\bpao\b|public attorney/i.test(i.referralText) },
-  { key: 'LEGAL_OTHERS', test: (i) => i.referralText.trim().length > 0 },
-];
+export interface ProgramResolution {
+  programs: Array<{ id: string; name: string; category?: string | null }>;
+}
 
-export function classifyCase(input: CaseClassificationInput): CategoryKey {
-  return RULES.find((r) => r.test(input))?.key ?? 'OTHERS_TECHNICAL';
+/** Selected column + case-list remark code for one case. */
+export interface CaseColumn {
+  key: string;
+  code: string;
 }
 
 export interface SummaryCounts {
   male: number;
   female: number;
   total: number;
-  byCategory: Record<CategoryKey, number>;
+  byColumn: Record<string, number>;
 }
 
 export interface SummaryTable { title: string; counts: SummaryCounts }
@@ -59,6 +60,7 @@ export interface CaseListRow {
 export interface SummaryReportData {
   year: number;
   quarter: number;
+  columns: ReportColumn[];
   annual: SummaryTable;
   monthly: SummaryTable[];
   quarterSummary: SummaryTable;
@@ -70,29 +72,115 @@ export interface SummaryReportData {
   notedByRole: string;
 }
 
-export const SUMMARY_COLUMNS: ReadonlyArray<{
-  key: CategoryKey | 'MALE' | 'FEMALE' | 'TOTAL';
-  labels: readonly string[];
-  group: string;
-  subGroup?: string;
-  weight: number;
-}> = [
-  { key: 'MALE', labels: ['MALE'], group: 'SEX', weight: 0.5 },
-  { key: 'FEMALE', labels: ['FEMALE'], group: 'SEX', weight: 0.5 },
-  { key: 'BURIAL', labels: ['BURIAL'], group: 'FINANCIAL', subGroup: 'FINANCIAL ASSISTANCE', weight: 0.6 },
-  { key: 'MEDICAL', labels: ['MEDICAL'], group: 'FINANCIAL', subGroup: 'FINANCIAL ASSISTANCE', weight: 0.7 },
-  { key: 'ASSISTIVE', labels: ['ASSISTIVE', 'DEVICES'], group: 'FINANCIAL', subGroup: 'FINANCIAL ASSISTANCE', weight: 0.7 },
-  { key: 'PWD', labels: ['PWD'], group: 'FINANCIAL', weight: 0.4 },
-  { key: 'LEGAL_PAO', labels: ['LEGAL/', 'PAO'], group: 'LEGAL', subGroup: 'REFERRAL', weight: 0.5 },
-  { key: 'LEGAL_OTHERS', labels: ['OTHERS'], group: 'LEGAL', subGroup: 'REFERRAL', weight: 0.5 },
-  { key: 'BIRTH_DISCREPANCY', labels: ['BIRTH', 'DISCREPANCY'], group: 'TECHNICAL', weight: 0.8 },
-  { key: 'TRAVEL', labels: ['TRAVEL', 'ASSESSMENT'], group: 'TECHNICAL', weight: 0.8 },
-  { key: 'CSR', labels: ['CASE STUDY', 'REPORT'], group: 'TECHNICAL', weight: 0.8 },
-  { key: 'COUNSELLING', labels: ['COUNSELLING'], group: 'TECHNICAL', weight: 0.7 },
-  { key: 'PHILHEALTH', labels: ['PHILHEALTH'], group: 'TECHNICAL', weight: 0.7 },
-  { key: 'CUSTODY', labels: ['CHILD', 'CUSTODY'], group: 'TECHNICAL', weight: 0.7 },
-  { key: 'HOME_VISIT', labels: ['HOME', 'VISIT'], group: 'TECHNICAL', weight: 0.5 },
-  { key: 'BALIK_PROBINSYA', labels: ['BALIK', 'PROBINSYA'], group: 'TECHNICAL', weight: 0.8 },
-  { key: 'OTHERS_TECHNICAL', labels: ['OTHERS'], group: 'TECHNICAL', weight: 0.6 },
-  { key: 'TOTAL', labels: ['TOTAL'], group: '', weight: 0.6 },
-];
+// ---------------------------------------------------------------------------
+// Band mapping — program name/category → reference band
+// ---------------------------------------------------------------------------
+
+export function programBand(name: string, category?: string | null): { band: string; subBand?: string } {
+  const n = name.toLowerCase();
+  const c = (category ?? '').toLowerCase();
+
+  if (/burial/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' };
+  if (/medical|philhealth/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' };
+  if (/assistive/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' };
+  if (c.startsWith('pwd welfare') || /^pwd\b/.test(n)) return { band: 'FINANCIAL' };
+  if (/legal|referral/.test(n)) return { band: 'LEGAL', subBand: 'REFERRAL' };
+  if (/birth discrepancy|travel|case study|csr|home visit|child custody|balik probinsya|counsel|psychosocial/.test(n)) {
+    return { band: 'TECHNICAL' };
+  }
+  return { band: 'OTHER PROGRAMS' };
+}
+
+/** Case-list remark code for a selected column. */
+export function codeForProgram(name: string, band: string): string {
+  const n = name.toLowerCase();
+  if (/case study|\bcsr\b/.test(n)) return 'CSR';
+  if (/home visit/.test(n)) return 'HV';
+  if (band === 'FINANCIAL') return 'FA';
+  if (band === 'LEGAL') return 'R';
+  if (band === 'TECHNICAL') return 'H';
+  if (band === 'OTHER PROGRAMS') return 'C';
+  return '';
+}
+
+function norm(s: string): string {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+/** Find a program column by normalized name (used by referral/CSR/visit fallbacks). */
+export function findProgramColumn(
+  programs: ProgramResolution['programs'],
+  name: string,
+): { id: string; name: string; category?: string | null } | undefined {
+  const target = norm(name);
+  return programs.find((p) => norm(p.name) === target);
+}
+
+/**
+ * One column per case, precedence:
+ *  1. first program-linked intervention,
+ *  2. referral → Legal Referral (PAO) when legal, else Referral – Others,
+ *  3. CSR report → Case Study Report (CSR),
+ *  4. follow-up visit → Home Visit,
+ *  5. UNASSIGNED.
+ */
+export function selectCaseColumn(
+  input: CaseClassificationInput,
+  programs: ProgramResolution['programs'],
+): CaseColumn {
+  // 1. Program-linked intervention (by id, else by resolved name).
+  const progName = input.programName ?? '';
+  if (input.programId || progName) {
+    const linked =
+      (input.programId ? programs.find((p) => p.id === input.programId) : undefined) ??
+      (progName ? programs.find((p) => norm(p.name) === norm(progName)) : undefined);
+    if (linked) {
+      const band = programBand(linked.name, linked.category).band;
+      return { key: linked.id, code: codeForProgram(linked.name, band) };
+    }
+    return { key: 'UNASSIGNED', code: '' };
+  }
+
+  // 2. Referral-only cases.
+  if (input.referralText.trim().length > 0) {
+    const isLegal = /legal|\bpao\b|public attorney/i.test(input.referralText);
+    const ref = findProgramColumn(programs, isLegal ? 'Legal Referral (PAO)' : 'Referral – Others');
+    if (ref) return { key: ref.id, code: 'R' };
+    return { key: 'UNASSIGNED', code: 'R' };
+  }
+
+  // 3. CSR-only.
+  if (input.hasCsr) {
+    const csr = findProgramColumn(programs, 'Case Study Report (CSR)');
+    if (csr) return { key: csr.id, code: 'CSR' };
+    return { key: 'UNASSIGNED', code: 'CSR' };
+  }
+
+  // 4. Home-visit-only.
+  if (input.hasVisit) {
+    const hv = findProgramColumn(programs, 'Home Visit');
+    if (hv) return { key: hv.id, code: 'HV' };
+    return { key: 'UNASSIGNED', code: 'HV' };
+  }
+
+  // 5. Nothing recordable.
+  return { key: 'UNASSIGNED', code: '' };
+}
+
+// Column ordering used by the builder: fixed SEX/TOTAL slots plus every program
+// in list order, UNASSIGNED immediately before TOTAL.
+export function buildColumns(programs: ProgramResolution['programs']): ReportColumn[] {
+  const out: ReportColumn[] = [
+    { key: 'MALE', label: 'MALE', band: 'SEX' },
+    { key: 'FEMALE', label: 'FEMALE', band: 'SEX' },
+  ];
+  for (const p of programs) {
+    const b = programBand(p.name, p.category);
+    out.push({ key: p.id, label: p.name, band: b.band, subBand: b.subBand });
+  }
+  out.push({ key: 'UNASSIGNED', label: 'UNASSIGNED', band: '' });
+  out.push({ key: 'TOTAL', label: 'TOTAL', band: '' });
+  return out;
+}
+
+export const PLACEHOLDER_UNASSIGNED = 'UNASSIGNED';

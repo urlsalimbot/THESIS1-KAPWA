@@ -1,4 +1,4 @@
-import { CaseListRow, SummaryReportData, SummaryTable, SUMMARY_COLUMNS } from './summary-report.types';
+import { CaseListRow, ReportColumn, SummaryReportData, SummaryTable } from './summary-report.types';
 
 const PAGE: [number, number] = [841.89, 595.28]; // A4 landscape
 const M = 28;
@@ -6,47 +6,19 @@ const LEFT = M;
 const RIGHT = PAGE[0] - M;
 const WIDTH = RIGHT - LEFT;
 
-interface CaseLeaf {
-  key: string;
-  label: string;
-  w: number;
-  group: string;
-  vertical?: boolean;
-}
+const CASE_COLS = [
+  { key: 'no', label: 'No.', w: 0.03 },
+  { key: 'date', label: 'Date', w: 0.07 },
+  { key: 'surname', label: 'SURNAME', w: 0.12 },
+  { key: 'firstName', label: 'FIRST NAME', w: 0.12 },
+  { key: 'middleName', label: 'MIDDLE NAME', w: 0.11 },
+  { key: 'gender', label: 'GENDER', w: 0.06 },
+  { key: 'clientCategory', label: 'CLIENT CATEGORY', w: 0.27 },
+  { key: 'barangay', label: 'Barangay', w: 0.10 },
+  { key: 'intervention', label: 'Intervention/Remarks', w: 0.12 },
+] as const;
 
-// Page-3 case list. Columns are grouped into NAME / GENDER / CLIENT CATEGORY
-// super-bands; the client-category labels are rotated and drawn once in the
-// header (rows carry only the '/' tick).
-const CASE_LEAVES: ReadonlyArray<CaseLeaf> = [
-  { key: 'no', label: 'No.', w: 0.030, group: '' },
-  { key: 'date', label: 'Date', w: 0.062, group: '' },
-  { key: 'surname', label: 'SURNAME', w: 0.100, group: 'NAME' },
-  { key: 'firstName', label: 'FIRST NAME', w: 0.100, group: 'NAME' },
-  { key: 'middleName', label: 'MIDDLE NAME', w: 0.092, group: 'NAME' },
-  { key: 'genderM', label: 'M', w: 0.028, group: 'GENDER' },
-  { key: 'genderF', label: 'F', w: 0.028, group: 'GENDER' },
-  { key: 'cedc', label: 'CEDC', w: 0.042, group: 'CLIENT CATEGORY', vertical: true },
-  { key: 'wedc', label: 'WEDC', w: 0.042, group: 'CLIENT CATEGORY', vertical: true },
-  { key: 'pwd', label: 'PWD', w: 0.040, group: 'CLIENT CATEGORY', vertical: true },
-  { key: 'senior', label: 'SR. CITIZEN', w: 0.058, group: 'CLIENT CATEGORY', vertical: true },
-  { key: 'indigent', label: 'INDIGENT', w: 0.055, group: 'CLIENT CATEGORY', vertical: true },
-  { key: 'fourPs', label: '4Ps', w: 0.036, group: 'CLIENT CATEGORY', vertical: true },
-  { key: 'ip', label: 'IP', w: 0.032, group: 'CLIENT CATEGORY', vertical: true },
-  { key: 'barangay', label: 'Barangay', w: 0.092, group: '' },
-  { key: 'intervention', label: 'Intervention/Remarks', w: 0.153, group: '' },
-];
-
-// Header tier heights for the grouped summary table. The label tier is tall
-// enough to hold the two-line labels without spilling into the data row.
-const GROUP_H = 12;
-const SUBGROUP_H = 11;
-const LABEL_H = 19;
-const LABEL_LINE_H = 8;
-
-// Header tier heights for the page-3 case list. Tier 2 is tall enough to hold
-// the rotated client-category labels without spilling into the data rows.
-const CASE_GROUP_H = 16;
-const CASE_LABEL_H = 38;
+const CLIENTS = ['CEDC', 'WEDC', 'PWD', 'SR. CITIZEN', 'INDIGENT', '4Ps', 'IP'] as const;
 
 export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Buffer> {
   const PDFDocument = require('pdfkit');
@@ -57,15 +29,14 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
 
   drawLetterhead(doc, data, true);
   drawTitle(doc, data.annual.title, `GAD DATABASE CASE TRACKER`);
-  drawGroupedTable(doc, data.annual);
-  drawSignatories(doc, data);
+  drawGroupedTable(doc, data.annual, data.columns);
 
   doc.addPage();
   drawLetterhead(doc, data, false);
   drawTitle(doc, `${data.year}`, `${ordinal(data.quarter)} QUARTER REPORT`);
-  data.monthly.forEach((m) => { drawSectionTitle(doc, m.title); drawGroupedTable(doc, m); });
+  data.monthly.forEach((m) => { drawSectionTitle(doc, m.title); drawGroupedTable(doc, m, data.columns); });
   drawSectionTitle(doc, data.quarterSummary.title);
-  drawGroupedTable(doc, data.quarterSummary);
+  drawGroupedTable(doc, data.quarterSummary, data.columns);
   drawSignatories(doc, data);
 
   doc.addPage();
@@ -109,199 +80,134 @@ function drawTitle(doc: any, line1: string, line2: string) {
 }
 
 function drawSectionTitle(doc: any, title: string) {
-  doc.y += 6;
+  doc.y += 8;
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
     .text(title, LEFT, doc.y, { width: WIDTH, align: 'center', lineBreak: false });
-  doc.y += 13;
+  doc.y += 14;
 }
 
-// Columns without a group (only TOTAL) get an empty tier-1 cell.
-function drawGroupedTable(doc: any, table: SummaryTable) {
+// ---------------------------------------------------------------------------
+// Program-driven grouped table (pages 1–2)
+// ---------------------------------------------------------------------------
+
+function colWeight(c: ReportColumn): number {
+  if (c.band === 'SEX' || c.key === 'TOTAL') return 8;
+  if (c.key === 'UNASSIGNED') return 6;
+  return 5 + Math.min(c.label.length, 14);
+}
+
+function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]) {
   const topOfTable = doc.y;
-  const weights = SUMMARY_COLUMNS.map((c) => c.weight);
+  const weights = columns.map(colWeight);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const colX: number[] = [];
   let x = LEFT;
   for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
   colX.push(RIGHT);
 
-  const groupTop = topOfTable;
-  const subTop = topOfTable + GROUP_H;
-  const labelTop = subTop + SUBGROUP_H;
-  const headerBottom = labelTop + LABEL_H;
+  const tierH = [13, 13, 15];
+  const headerH = tierH[0] + tierH[1] + tierH[2];
 
-  // Tier 1: one spanning cell per group (TECHNICAL spans through OTHERS).
-  const groups = [...new Set(SUMMARY_COLUMNS.map((c) => c.group).filter(Boolean))];
-  const groupStart: Record<string, number> = {};
-  const groupEnd: Record<string, number> = {};
-  SUMMARY_COLUMNS.forEach((c, i) => {
-    const g = c.group;
-    if (!g) return;
-    groupStart[g] = groupStart[g] ?? i;
-    groupEnd[g] = i;
+  // Tier 1: bands (merged per distinct band; empty band = no cell).
+  const bandOrder: string[] = [];
+  for (const c of columns) { if (c.band && !bandOrder.includes(c.band)) bandOrder.push(c.band); }
+  const bandStart: Record<string, number> = {};
+  const bandEnd: Record<string, number> = {};
+  columns.forEach((c, i) => {
+    if (!c.band) return;
+    if (bandStart[c.band] === undefined) bandStart[c.band] = i;
+    bandEnd[c.band] = i;
   });
-  groups.forEach((g) => {
-    const x1 = colX[groupStart[g]];
-    const x2 = colX[groupEnd[g] + 1];
-    doc.rect(x1, groupTop, x2 - x1, GROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
+  for (const b of bandOrder) {
+    const x1 = colX[bandStart[b]];
+    const x2 = colX[bandEnd[b] + 1];
+    doc.rect(x1, topOfTable, x2 - x1, tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
     doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
-      .text(g, x1 + 2, groupTop + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
-  });
-  // Ungrouped columns (TOTAL) get an empty top cell.
-  SUMMARY_COLUMNS.forEach((c, i) => {
-    if (c.group) return;
-    doc.rect(colX[i], groupTop, colX[i + 1] - colX[i], GROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
-  });
+      .text(b, x1 + 2, topOfTable + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+  }
 
-  // Tier 2: a single merged cell per distinct sub-group (FINANCIAL ASSISTANCE,
-  // REFERRAL), never one cell per sub-column.
-  const subGroups = [...new Set(SUMMARY_COLUMNS.map((c) => c.subGroup).filter(Boolean))] as string[];
-  const subStart: Record<string, number> = {};
-  const subEnd: Record<string, number> = {};
-  SUMMARY_COLUMNS.forEach((c, i) => {
-    if (!c.subGroup) return;
-    subStart[c.subGroup] = subStart[c.subGroup] ?? i;
-    subEnd[c.subGroup] = i;
-  });
-  subGroups.forEach((s) => {
-    const x1 = colX[subStart[s]];
-    const x2 = colX[subEnd[s] + 1];
-    doc.rect(x1, subTop, x2 - x1, SUBGROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
+  // Tier 2: sub-bands (merged per consecutive same-subBand run).
+  let runStart = -1;
+  const flushSub = (end: number) => {
+    if (runStart < 0) return;
+    const sub = columns[runStart].subBand!;
+    const x1 = colX[runStart];
+    const x2 = colX[end + 1];
+    doc.rect(x1, topOfTable + tierH[0], x2 - x1, tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
     doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
-      .text(s, x1 + 1, subTop + 3, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+      .text(sub, x1 + 1, topOfTable + tierH[0] + 2, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+    runStart = -1;
+  };
+  columns.forEach((c, i) => {
+    if (c.subBand) { if (runStart < 0) runStart = i; }
+    else flushSub(i - 1);
   });
+  flushSub(columns.length - 1);
 
-  // Tier 3: leaf labels. Columns with a sub-group occupy tier 3 only; columns
-  // without one span tiers 2-3 so their label lands on the bottom tier.
-  SUMMARY_COLUMNS.forEach((c, i) => {
+  // Tier 3: column labels. SEX/TOTAL/UNASSIGNED labels span tiers 1–3.
+  const labelTop = topOfTable + tierH[0] + tierH[1];
+  columns.forEach((c, i) => {
+    const spanTop = (c.band === 'SEX' || c.band === '') ? topOfTable : labelTop;
     const x1 = colX[i];
     const x2 = colX[i + 1];
-    const spanTop = c.subGroup ? labelTop : subTop;
-    doc.rect(x1, spanTop, x2 - x1, headerBottom - spanTop).lineWidth(0.6).strokeColor('#111').stroke();
-    const size = c.labels.some((l) => l.length > 9) ? 5.2 : 6;
-    const lines = c.labels.length;
-    let base: number;
-    if (lines === 1) base = labelTop + 6; // single labels sit on the bottom tier
-    else if (c.subGroup) base = labelTop + 2;
-    else base = subTop + (SUBGROUP_H + LABEL_H - lines * LABEL_LINE_H) / 2 - 1;
-    c.labels.forEach((label, li) => {
-      doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
-        .text(label, x1 + 1, base + li * LABEL_LINE_H, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
-    });
+    doc.rect(x1, spanTop, x2 - x1, (topOfTable + headerH) - spanTop).lineWidth(0.6).strokeColor('#111').stroke();
+    const size = c.label.length > 9 ? 5.2 : 6;
+    doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
+      .text(c.label, x1 + 1, spanTop + 4, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
   });
 
   // Single data row.
-  const rowH = 18;
-  const rowY = headerBottom;
+  const rowH = 20;
+  const rowY = topOfTable + headerH;
   doc.rect(LEFT, rowY, WIDTH, rowH).lineWidth(0.6).strokeColor('#111').stroke();
-  SUMMARY_COLUMNS.forEach((c, i) => {
+  columns.forEach((c, i) => {
     let value = '';
     if (c.key === 'MALE') value = String(table.counts.male);
     else if (c.key === 'FEMALE') value = String(table.counts.female);
     else if (c.key === 'TOTAL') value = String(table.counts.total);
-    else value = String(table.counts.byCategory[c.key as keyof typeof table.counts.byCategory] ?? 0);
+    else value = String(table.counts.byColumn[c.key] ?? 0);
     doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-      .text(value, colX[i] + 1, rowY + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
+      .text(value, colX[i] + 1, rowY + 5, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
   });
-  doc.y = rowY + rowH + 4;
+  doc.y = rowY + rowH + 6;
 }
 
 function drawSignatories(doc: any, data: SummaryReportData) {
-  const base = doc.y + 12;
+  doc.y += 18;
   doc.font('Helvetica').fontSize(8).fillColor('#111')
-    .text('Prepared by:', LEFT + 10, base, { lineBreak: false });
+    .text('Prepared by:', LEFT + 10, doc.y, { lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-    .text(data.preparedBy, LEFT + 10, base + 26, { lineBreak: false });
+    .text(data.preparedBy, LEFT + 10, doc.y + 26, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#333')
-    .text(data.preparedByRole, LEFT + 10, base + 38, { lineBreak: false });
+    .text(data.preparedByRole, LEFT + 10, doc.y + 38, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#111')
-    .text('Noted by:', LEFT + WIDTH / 2, base, { lineBreak: false });
+    .text('Noted by:', LEFT + WIDTH / 2, doc.y, { lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-    .text(data.notedBy, LEFT + WIDTH / 2, base + 26, { lineBreak: false });
+    .text(data.notedBy, LEFT + WIDTH / 2, doc.y + 26, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#333')
-    .text(data.notedByRole, LEFT + WIDTH / 2, base + 38, { lineBreak: false });
-  doc.y = base + 50;
+    .text(data.notedByRole, LEFT + WIDTH / 2, doc.y + 38, { lineBreak: false });
 }
 
-function caseCellValue(r: CaseListRow, key: string): string {
-  switch (key) {
-    case 'no': return String(r.no);
-    case 'date': return r.date;
-    case 'surname': return r.surname;
-    case 'firstName': return r.firstName;
-    case 'middleName': return r.middleName;
-    case 'genderM': return r.gender === 'M' ? '/' : '';
-    case 'genderF': return r.gender === 'F' ? '/' : '';
-    case 'cedc': return r.categories.cedc ? '/' : '';
-    case 'wedc': return r.categories.wedc ? '/' : '';
-    case 'pwd': return r.categories.pwd ? '/' : '';
-    case 'senior': return r.categories.senior ? '/' : '';
-    case 'indigent': return r.categories.indigent ? '/' : '';
-    case 'fourPs': return r.categories.fourPs ? '/' : '';
-    case 'ip': return r.categories.ip ? '/' : '';
-    case 'barangay': return r.barangay;
-    case 'intervention': return r.intervention;
-    default: return '';
-  }
-}
+// ---------------------------------------------------------------------------
+// Case list (page 3+)
+// ---------------------------------------------------------------------------
 
 function drawCaseList(doc: any, rows: CaseListRow[]) {
-  const weights = CASE_LEAVES.map((c) => c.w);
+  const weights = CASE_COLS.map((c) => c.w);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const colX: number[] = [];
   let x = LEFT;
   for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
   colX.push(RIGHT);
 
-  const headerH = CASE_GROUP_H + CASE_LABEL_H;
+  const headerH = 26;
   const rowH = 15;
 
   const drawHeader = (top: number) => {
-    const labelTop = top + CASE_GROUP_H;
-    // Super-bands (NAME / GENDER / CLIENT CATEGORY) in tier 1.
-    const grouped = [...new Set(CASE_LEAVES.map((c) => c.group).filter(Boolean))];
-    grouped.forEach((g) => {
-      const first = CASE_LEAVES.findIndex((c) => c.group === g);
-      let last = first;
-      CASE_LEAVES.forEach((c, i) => { if (c.group === g) last = i; });
-      const x1 = colX[first];
-      const x2 = colX[last + 1];
-      doc.rect(x1, top, x2 - x1, CASE_GROUP_H).lineWidth(0.6).strokeColor('#111').stroke();
-      doc.font('Helvetica-Bold').fontSize(7).fillColor('#111')
-        .text(g, x1 + 1, top + 4, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
-    });
-
-    CASE_LEAVES.forEach((c, i) => {
-      const x1 = colX[i];
-      const x2 = colX[i + 1];
-      if (!c.group) {
-        // Ungrouped columns span the full header height.
-        doc.rect(x1, top, x2 - x1, headerH).lineWidth(0.6).strokeColor('#111').stroke();
-        if (c.key === 'intervention') {
-          doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
-            .text(c.label, x1 + 2, top + headerH / 2 - 8, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
-          doc.font('Helvetica').fontSize(5.6).fillColor('#111')
-            .text('(FA/C/CSR/R/H/HV/ etc.)', x1 + 2, top + headerH / 2 + 2, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
-        } else {
-          doc.font('Helvetica-Bold').fontSize(6.8).fillColor('#111')
-            .text(c.label, x1 + 2, top + headerH / 2 - 4, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
-        }
-        return;
-      }
-      // Grouped leaf cells live in tier 2.
-      doc.rect(x1, labelTop, x2 - x1, CASE_LABEL_H).lineWidth(0.6).strokeColor('#111').stroke();
-      if (c.vertical) {
-        const cx = x1 + (x2 - x1) / 2 + 2;
-        const baseY = labelTop + CASE_LABEL_H - 4;
-        doc.save();
-        doc.rotate(-90, { origin: [cx, baseY] });
-        doc.font('Helvetica-Bold').fontSize(5.6).fillColor('#111')
-          .text(c.label, cx, baseY, { lineBreak: false });
-        doc.restore();
-      } else {
-        doc.font('Helvetica-Bold').fontSize(6.8).fillColor('#111')
-          .text(c.label, x1 + 1, labelTop + CASE_LABEL_H / 2 - 4, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
-      }
+    doc.rect(LEFT, top, WIDTH, headerH).lineWidth(0.6).strokeColor('#111').stroke();
+    CASE_COLS.forEach((c, i) => {
+      doc.font('Helvetica-Bold').fontSize(5.6).fillColor('#111')
+        .text(c.label, colX[i] + 1, top + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
     });
   };
 
@@ -317,16 +223,26 @@ function drawCaseList(doc: any, rows: CaseListRow[]) {
       y = top + headerH;
     }
     doc.rect(LEFT, y, WIDTH, rowH).lineWidth(0.4).strokeColor('#444').stroke();
-    CASE_LEAVES.forEach((c, i) => {
-      const value = caseCellValue(r, c.key);
-      if (!value) return;
-      if (c.vertical || c.key === 'genderM' || c.key === 'genderF') {
-        doc.font('Helvetica-Bold').fontSize(7).fillColor('#111')
-          .text(value, colX[i] + 1, y + 4, { width: colX[i + 1] - colX[i] - 2, align: 'center', lineBreak: false });
-        return;
-      }
+    const cells = [
+      String(r.no), r.date, r.surname, r.firstName, r.middleName,
+      r.gender, '', r.barangay, r.intervention,
+    ];
+    cells.forEach((v, i) => {
+      if (i === 6) return; // client category drawn as ticks
       doc.font('Helvetica').fontSize(6.4).fillColor('#111')
-        .text(value, colX[i] + 2, y + 4, { width: colX[i + 1] - colX[i] - 4, lineBreak: false, ellipsis: true });
+        .text(v, colX[i] + 2, y + 4, { width: colX[i + 1] - colX[i] - 4, lineBreak: false, ellipsis: true });
+    });
+    const flags = [r.categories.cedc, r.categories.wedc, r.categories.pwd, r.categories.senior, r.categories.indigent, r.categories.fourPs, r.categories.ip];
+    const catX = colX[6];
+    const catW = colX[7] - colX[6];
+    const step = catW / CLIENTS.length;
+    CLIENTS.forEach((label, i) => {
+      doc.font('Helvetica-Bold').fontSize(4.8).fillColor('#111')
+        .text(label, catX + i * step + 1, y + 2, { width: step - 2, align: 'center', lineBreak: false });
+      if (flags[i]) {
+        doc.font('Helvetica').fontSize(7).fillColor('#111')
+          .text('/', catX + i * step + step / 2 - 2, y + 7, { lineBreak: false });
+      }
     });
     y += rowH;
   }
