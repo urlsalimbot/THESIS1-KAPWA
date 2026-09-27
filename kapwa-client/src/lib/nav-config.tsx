@@ -4,6 +4,7 @@ import {
   FileWarning, IdCard, ScrollText, BarChart3, History, Send, BadgeCheck,
   Megaphone, Building2,
 } from 'lucide-react';
+import { FEATURE_ANALYTICS_ENABLED } from './feature-flags';
 
 export interface NavItem {
   path: string;
@@ -63,12 +64,14 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 
-  {
-    label: 'Insights',
-    items: [
-      { path: '/analytics', label: 'Analytics', icon: <BarChart3 size={20} />, roles: ['admin', 'social_worker', 'mayor'] },
-    ],
-  },
+  ...(FEATURE_ANALYTICS_ENABLED
+      ? [{
+          label: 'Insights',
+          items: [
+            { path: '/analytics', label: 'Analytics', icon: <BarChart3 size={20} />, roles: ['admin', 'social_worker', 'mayor'] },
+          ],
+        }]
+      : []),
 
   {
     label: 'Mayor',

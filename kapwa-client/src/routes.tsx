@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/lib/theme-context';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { SWRConfig } from 'swr';
 import { api } from './lib/api';
+import { FEATURE_ANALYTICS_ENABLED } from './lib/feature-flags';
 import { ApiError } from './lib/api-error';
 import { AuthProvider, useAuth } from './lib/auth-context';
 import { ROLE_REDIRECT_MAP } from './lib/role-access';
@@ -120,7 +121,9 @@ const router = createBrowserRouter([
   { path: '/cases/:id', element: <Private roles={['admin','social_worker']}><CaseViewPage /></Private> },
   { path: '/cases/:caseId/4ps-compliance', element: <Private roles={['admin','social_worker','coordinator']}><FourPsCompliancePage /></Private> },
   { path: '/cases/:caseId/payouts', element: <Private roles={['admin','social_worker','coordinator']}><PayoutSchedulePage /></Private> },
-  { path: '/analytics', element: <Private roles={['admin','social_worker','mayor']}><AnalyticsPage /></Private> },
+  ...(FEATURE_ANALYTICS_ENABLED
+    ? [{ path: '/analytics', element: <Private roles={['admin','social_worker','mayor']}><AnalyticsPage /></Private> }]
+    : []),
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker','mayor','auditor']}><CaseTrackerPage /></Private> },
