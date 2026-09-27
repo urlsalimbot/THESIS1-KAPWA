@@ -92,6 +92,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
     referrals: (c.referralRows || []).map((r: any) => ({ reason: asText(r.reason) })),
     assignedWorkerName: asText(c.assignedWorkerName) || c.assignedWorker?.fullName || null,
     approvedByRole: asText(c.approvedByRole) || null,
+    assessment: asText(c.socialWorkerAssessment) || undefined,
     beneficiary: {
       surname: asText(person?.surname),
       firstName: asText(person?.firstName),

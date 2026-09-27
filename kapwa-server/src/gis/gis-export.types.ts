@@ -48,6 +48,8 @@ export interface GisPdfData {
   assignedWorkerName?: string | null;
   approvedByRole?: string | null;
   officeName?: string | null;
+  /** Social worker's assessment (cases.social_worker_assessment). */
+  assessment?: string;
   beneficiary: GisPersonData;
   claimant: GisPersonData;
   familyMembers: GisFamilyMemberData[];
