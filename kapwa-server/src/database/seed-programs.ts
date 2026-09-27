@@ -221,7 +221,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Referral and Linkage Services',
-    category: 'Social Services',
+    category: 'Legal',
     waitingPeriodDays: 0,
     requiredDocuments: [
       'Valid ID of client',
@@ -388,7 +388,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Legal Referral (PAO)',
-    category: 'Social Services',
+    category: 'Legal',
     waitingPeriodDays: 0,
     requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
     fundSources: ['LGU - Municipal'],
@@ -398,7 +398,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Referral – Others',
-    category: 'Social Services',
+    category: 'Legal',
     waitingPeriodDays: 0,
     requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
     fundSources: ['LGU - Municipal'],
@@ -408,7 +408,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Birth Discrepancy Assistance',
-    category: 'Civil Registration',
+    category: 'Technical',
     waitingPeriodDays: 15,
     requiredDocuments: [
       'Valid ID of client / parent (if minor)',
@@ -422,7 +422,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Case Study Report (CSR)',
-    category: 'Social Services',
+    category: 'Technical',
     waitingPeriodDays: 0,
     requiredDocuments: ['Valid ID of client', 'Referral letter (if any)'],
     fundSources: ['LGU - Municipal'],
@@ -432,7 +432,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Home Visit',
-    category: 'Family Welfare',
+    category: 'Technical',
     waitingPeriodDays: 0,
     requiredDocuments: ['Valid ID of client'],
     fundSources: ['LGU - Municipal'],
@@ -456,7 +456,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Child Custody Support',
-    category: 'Family Welfare',
+    category: 'Technical',
     waitingPeriodDays: 0,
     requiredDocuments: ['Valid ID of parent / guardian', 'Referral letter (if any)'],
     fundSources: ['LGU - Municipal', 'DSWD'],
@@ -466,7 +466,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Balik Probinsya Assistance',
-    category: 'Community Development',
+    category: 'Technical',
     waitingPeriodDays: 7,
     requiredDocuments: [
       'Valid ID of claimant',
@@ -480,7 +480,7 @@ export const PROGRAMS: ProgramSeed[] = [  {
   {
     id: uuidv7(),
     name: 'Travel Assessment',
-    category: 'Transportation',
+    category: 'Technical',
     waitingPeriodDays: 7,
     requiredDocuments: ['Valid ID of claimant', 'Medical appointment slip / referral (if medical-related)'],
     fundSources: ['LGU - Municipal'],
