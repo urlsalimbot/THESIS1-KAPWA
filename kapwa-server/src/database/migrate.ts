@@ -1,4 +1,21 @@
 import { DataSource } from 'typeorm';
+import { seedPrograms } from './seed-programs';
+
+// Mirrors migration ZBackfillInterventionPrograms…0063: links historical
+// interventions that have no program to the (just-seeded) programme catalogue
+// so the program-driven summary report counts past delivery. Fills NULLs only.
+const BACKFILL_INTERVENTION_PROGRAMS_SQL = `
+  UPDATE case_interventions ci
+  SET program_id = p.id
+  FROM programs p
+  WHERE ci.program_id IS NULL
+    AND (
+          LOWER(ci.service_name) = LOWER(p.name)
+       OR LOWER(ci.category) = LOWER(p.name)
+       OR LOWER(ci.service_name) LIKE '%' || LOWER(p.name) || '%'
+       OR LOWER(p.name) LIKE LOWER(ci.service_name) || '%'
+    )
+`;
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -1010,6 +1027,21 @@ await q.query(`
 
   await q.commitTransaction();
   console.log('Migrations + RLS policies applied');
+
+  // -- Program catalogue (2026-09-28): seed on EVERY boot (idempotent) so fresh
+  //    deployments and existing DBs both get the full programme list that the
+  //    summary report derives its columns from. Must run AFTER the transaction
+  //    commits — seedPrograms uses its own connection and would deadlock on the
+  //    bootstrap's DDL locks otherwise. The backfill then links historical
+  //    interventions to the seeded programmes (fills NULL program_id only).
+  try {
+    await seedPrograms(dataSource);
+    await dataSource.query(BACKFILL_INTERVENTION_PROGRAMS_SQL);
+    console.log('Program catalogue seeded; historical interventions backfilled');
+  } catch (err) {
+    const em = err instanceof Error ? err.message : String(err);
+    console.warn(`Program seed/backfill skipped (app still boots; run npm run seed:programs to retry): ${em}`);
+  }
   } catch (err) {
     try { await q.rollbackTransaction(); } catch { /* already rolled back */ }
     const error = err instanceof Error ? err : new Error(String(err));
