@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
-import { downloadMonthlyFunds } from '@/lib/api';
+import { downloadMonthlyFunds, downloadSummaryReport } from '@/lib/api';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ClaimantWidgets } from '@/components/dashboard/widgets/ClaimantWidgets';
 import { MayorWidgets } from '@/components/dashboard/widgets/MayorWidgets';
@@ -91,6 +91,41 @@ export function DashboardPage() {
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [summaryYear, setSummaryYear] = useState(now.getFullYear());
+  const [summaryQuarter, setSummaryQuarter] = useState(Math.floor(now.getMonth() / 3) + 1);
+  const [summaryExporting, setSummaryExporting] = useState(false);
+
+  async function handleExportSummary() {
+    if (summaryExporting) return;
+    setSummaryExporting(true);
+    setExportError(null);
+    try {
+      await downloadSummaryReport(summaryYear, summaryQuarter);
+    } catch (err: any) {
+      setExportError(err.message || t('dashboard.exportFailed', 'Export failed'));
+      setTimeout(() => setExportError(null), 4000);
+    } finally {
+      setSummaryExporting(false);
+    }
+  }
+
+  const summaryExportControls = (
+    <>
+      <select aria-label={t('reports.summaryYear', 'Summary report year')} value={summaryYear}
+        onChange={(e) => setSummaryYear(Number(e.target.value))}
+        className="h-8 rounded-md border bg-background px-2 text-xs">
+        {[0, 1, 2, 3].map((d) => { const y = now.getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}
+      </select>
+      <select aria-label={t('reports.summaryQuarter', 'Summary report quarter')} value={summaryQuarter}
+        onChange={(e) => setSummaryQuarter(Number(e.target.value))}
+        className="h-8 rounded-md border bg-background px-2 text-xs">
+        {[1, 2, 3, 4].map((q) => <option key={q} value={q}>Q{q}</option>)}
+      </select>
+      <Button size="sm" variant="outline" onClick={handleExportSummary} disabled={summaryExporting}>
+        <Download size={14} className="mr-1" /> {summaryExporting ? t('dashboard.generating', 'Generating...') : t('reports.exportSummary', 'Export Summary Report')}
+      </Button>
+    </>
+  );
 
   async function handleExportFundUtilization() {
     if (exporting) return;
@@ -162,6 +197,7 @@ export function DashboardPage() {
           ['mayor', 'auditor'].includes(role) ? (
             <div className="flex gap-2">
               {fundUtilizationButton}
+              {role === 'mayor' && summaryExportControls}
               {exportError && <span className="text-xs text-destructive self-center">{exportError}</span>}
             </div>
           ) : undefined
@@ -185,6 +221,7 @@ export function DashboardPage() {
               {exportError && <span className="text-xs text-destructive self-center">{exportError}</span>}
             </>
           )}
+          {(role === 'admin' || role === 'social_worker') && summaryExportControls}
           <Button size="sm" variant="outline" onClick={() => navigate('/intake/referrals')}>
             {t('dashboard.reviewReferrals', 'Review Referrals')}
           </Button>

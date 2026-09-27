@@ -32,6 +32,90 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
         <div
           class="flex gap-2"
         >
+          <select
+            aria-label="Summary report year"
+            class="h-8 rounded-md border bg-background px-2 text-xs"
+          >
+            <option
+              value="2026"
+            >
+              2026
+            </option>
+            <option
+              value="2025"
+            >
+              2025
+            </option>
+            <option
+              value="2024"
+            >
+              2024
+            </option>
+            <option
+              value="2023"
+            >
+              2023
+            </option>
+          </select>
+          <select
+            aria-label="Summary report quarter"
+            class="h-8 rounded-md border bg-background px-2 text-xs"
+          >
+            <option
+              value="1"
+            >
+              Q
+              1
+            </option>
+            <option
+              value="2"
+            >
+              Q
+              2
+            </option>
+            <option
+              value="3"
+            >
+              Q
+              3
+            </option>
+            <option
+              value="4"
+            >
+              Q
+              4
+            </option>
+          </select>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download mr-1"
+              fill="none"
+              height="14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="14"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+             
+            Export Summary Report
+          </button>
           <button
             class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
             type="button"
