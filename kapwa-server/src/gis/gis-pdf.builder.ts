@@ -165,7 +165,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
         .font("Helvetica")
         .fontSize(s.size ?? 7)
         .fillColor("#111")
-        .text(s.value, x + 2, y + (h - (s.size ?? 7) * 1.2) / 2, {
+        .text(s.value, x + 2, y + 6 + (h - (s.size ?? 7) * 1.5) / 2, {
           width: w - 4,
           height: h - 2,
           align: "center",
@@ -264,7 +264,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   };
 
   // ---- header -----------------------------------------------------------
-  const logoPath = path.join(__dirname, "assets", "DSWD-Logo.png");
+  const logoPath = path.join(__dirname, "assets", "DSWD-Banner.png");
   const logoY = 16;
   const logoH = 120;
 
