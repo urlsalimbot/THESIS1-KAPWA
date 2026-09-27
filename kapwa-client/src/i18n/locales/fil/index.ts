@@ -1761,6 +1761,7 @@ const fil: EnLocale = {
       }
     },
     "documents": {
+      "actions": "Mga aksyon sa file",
       "cancel": "Kanselahin",
       "download": "I-download",
       "downloadFailed": "Nabigo ang pag-download",

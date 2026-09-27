@@ -135,19 +135,29 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                 )}
               </div>
 
-              {uploadedDocs.length > 0 && (
-                <div className="px-3 pb-1 space-y-1">
-                  {uploadedDocs.map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-2 text-xs text-muted-foreground pl-9">
-                      <FileText size={14} className="shrink-0" />
-                      <span className="truncate flex-1">{doc.originalName || doc.id}</span>
-                      {doc.verifiedAt ? (
-                        <Badge variant="secondary" className="text-[10px] gap-1">
-                          <ShieldCheck size={10} /> {t('caseView.implement.verifiedOnSite', 'Verified on-site')}
+              {/* The file list is the single place an uploaded document appears.
+                  Its status and on-site verification ride along in the file row
+                  (renderDocExtras) instead of a second, near-identical listing. */}
+              <RequirementFileUpload
+                caseId={caseId}
+                requirementKey={req}
+                canUpload={canUpload}
+                docs={uploadedDocs}
+                onChanged={refresh}
+                renderDocExtras={(doc) => {
+                  const verifiedAt = (doc as { verifiedAt?: string | null }).verifiedAt;
+                  const statusLabel = verifiedAt
+                    ? t('caseView.implement.verifiedOnSite', 'Verified on-site')
+                    : t('caseView.implement.pendingOnSite', 'Pending on-site');
+                  return (
+                    <div className="flex shrink-0 items-center gap-1.5" title={statusLabel}>
+                      {verifiedAt ? (
+                        <Badge variant="secondary" className="gap-1 text-[10px]">
+                          <ShieldCheck size={10} /> <span className="hidden sm:inline">{statusLabel}</span>
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] gap-1">
-                          <Clock size={10} /> {t('caseView.implement.pendingOnSite', 'Pending on-site')}
+                        <Badge variant="outline" className="gap-1 text-[10px]">
+                          <Clock size={10} /> <span className="hidden sm:inline">{statusLabel}</span>
                         </Badge>
                       )}
                       {canVerify && (
@@ -156,24 +166,16 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                           size="sm"
                           className="h-6 px-1.5"
                           disabled={saving}
-                          onClick={() => setVerified(doc.id, !doc.verifiedAt)}
+                          onClick={() => setVerified(doc.id, !verifiedAt)}
                         >
-                          {doc.verifiedAt
+                          {verifiedAt
                             ? t('caseView.implement.unverify', 'Undo')
                             : t('caseView.implement.verify', 'Verify on-site')}
                         </Button>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              <RequirementFileUpload
-                caseId={caseId}
-                requirementKey={req}
-                canUpload={canUpload}
-                docs={uploadedDocs}
-                onChanged={refresh}
+                  );
+                }}
               />
             </div>
           );

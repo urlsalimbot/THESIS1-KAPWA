@@ -149,6 +149,7 @@ const en = {
     },
     "completing": "Completing...",
     "documents": {
+      "actions": "File actions",
       "cancel": "Cancel",
       "download": "Download",
       "downloadFailed": "Download failed",

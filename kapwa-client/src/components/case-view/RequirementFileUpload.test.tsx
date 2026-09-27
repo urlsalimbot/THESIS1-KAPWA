@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RequirementFileUpload, type FilingDoc } from './RequirementFileUpload';
 import { api } from '@/lib/api';
 
@@ -75,9 +76,11 @@ describe('RequirementFileUpload', () => {
   });
 
   it('confirming remove deletes the document', async () => {
+    const user = userEvent.setup();
     const { onChanged } = renderUpload();
-    fireEvent.click(screen.getAllByLabelText('Remove')[0]);
-    fireEvent.click(await screen.findByText('Remove'));
+    await user.click(screen.getAllByLabelText('File actions')[0]);
+    await user.click(await screen.findByRole('menuitem', { name: 'Remove' }));
+    await user.click(await screen.findByRole('button', { name: 'Remove' }));
     expect(mockDel).toHaveBeenCalledWith(['filing', 'd1']);
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });

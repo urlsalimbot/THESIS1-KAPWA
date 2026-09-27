@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { api, uploadWithProgress, downloadFilingDoc, getFilingObjectUrl } from '@/lib/api';
@@ -11,7 +11,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { FileText, Upload, Download, Trash2, Loader2 } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { FileText, Upload, Download, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
 
 export interface FilingDoc {
   id: string;
@@ -28,6 +31,12 @@ export interface FileUploadListProps {
   accept?: string;
   maxBytes?: number;
   compact?: boolean;
+  /**
+   * Extra controls rendered inside the single file row (on-site status, verify
+   * toggle). Injected by callers that own per-document workflow state, so a
+   * document is never listed twice just to carry that state.
+   */
+  renderDocExtras?: (doc: FilingDoc) => ReactNode;
 }
 
 const DEFAULT_ACCEPT = '.pdf,.jpg,.jpeg,.png,.gif,.doc,.docx';
@@ -46,6 +55,7 @@ export function FileUploadList({
   accept = DEFAULT_ACCEPT,
   maxBytes = DEFAULT_MAX_BYTES,
   compact = false,
+  renderDocExtras,
 }: FileUploadListProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -150,42 +160,54 @@ export function FileUploadList({
           {docs.map(doc => {
             const isImage = doc.mimeType?.startsWith('image/');
             return (
-              <div key={doc.id} className={`flex items-center gap-2 text-xs text-muted-foreground ${indent}`}>
+              <div key={doc.id} className={`flex items-center gap-1.5 text-xs ${indent}`}>
                 {isImage ? (
-                  <img src={thumbs[doc.id]} alt="" className="h-8 w-8 rounded border object-cover" />
+                  <img src={thumbs[doc.id]} alt="" className="h-8 w-8 rounded border object-cover shrink-0" />
                 ) : (
                   <FileText size={16} className="shrink-0" />
                 )}
+                {/* The row itself is the preview target — no link styling, so it
+                    cannot be mistaken for one of several similar-looking links. */}
                 <button
                   onClick={() => setPreview(doc)}
-                  className="min-w-0 flex-1 text-left hover:underline"
+                  className="min-w-0 flex-1 cursor-pointer rounded px-1 py-0.5 text-left transition-colors hover:bg-muted/50"
                   title={t('caseView.documents.preview', 'Preview')}
                 >
-                  <span className="block truncate">{doc.originalName || doc.id}</span>
-                  <span className="text-[10px]">{(doc.fileSize / 1024).toFixed(0)} KB</span>
+                  <span className="block truncate font-medium text-foreground">{doc.originalName || doc.id}</span>
+                  <span className="block text-[10px] text-muted-foreground">{(doc.fileSize / 1024).toFixed(0)} KB</span>
                 </button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-1.5"
-                  onClick={() => downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() =>
-                    toast.error(t('caseView.documents.downloadFailed', 'Download failed')),
-                  )}
-                  aria-label={t('caseView.documents.download', 'Download')}
-                >
-                  <Download size={12} />
-                </Button>
-                {canUpload && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-1.5 text-destructive"
-                    onClick={() => setRemoveId(doc.id)}
-                    aria-label={t('caseView.documents.remove', 'Remove')}
-                  >
-                    <Trash2 size={12} />
-                  </Button>
-                )}
+                {renderDocExtras?.(doc)}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 shrink-0 px-0"
+                      aria-label={t('caseView.documents.actions', 'Actions')}
+                    >
+                      <MoreHorizontal size={12} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onSelect={() => { downloadFilingDoc(doc.id, doc.originalName || 'document').catch(() =>
+                        toast.error(t('caseView.documents.downloadFailed', 'Download failed')),
+                      ); }}
+                    >
+                      <Download size={12} className="mr-1.5" aria-hidden="true" />
+                      {t('caseView.documents.download', 'Download')}
+                    </DropdownMenuItem>
+                    {canUpload && (
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={() => setRemoveId(doc.id)}
+                      >
+                        <Trash2 size={12} className="mr-1.5" aria-hidden="true" />
+                        {t('caseView.documents.remove', 'Remove')}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             );
           })}
