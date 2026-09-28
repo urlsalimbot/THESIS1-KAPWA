@@ -1,3 +1,4 @@
+import { BARANGAY_NAMES } from '../../common/constants';
 import { z } from 'zod';
 
 export const UserRoleEnum = z.enum([
@@ -16,8 +17,10 @@ export const CreateUserInputSchema = z.object({
   nameExtension: z.string().optional(),
   phone: z.string().optional(),
   // camelCase to match the admin UI payload and UsersService.createUser.
-  assignedBarangay: z.string().optional(),
-  permittedBarangays: z.array(z.string()).optional(),
+  // Enum-checked against the Norzagaray barangay list: a typo here is copied
+  // into access_card_services.source_barangay and silently orphans the rows.
+  assignedBarangay: z.enum(BARANGAY_NAMES).optional(),
+  permittedBarangays: z.array(z.enum(BARANGAY_NAMES)).optional(),
   agencyId: z.string().uuid().optional(),
 }).strict().superRefine((data, ctx) => {
   if (data.role === 'agency_staff' && !data.agencyId) {
@@ -37,8 +40,8 @@ export const UpdateUserSchema = z.object({
   lastName: z.string().optional(),
   nameExtension: z.string().optional(),
   role: z.string().optional(),
-  assignedBarangay: z.string().optional(),
-  permittedBarangays: z.array(z.string()).optional(),
+  assignedBarangay: z.enum(BARANGAY_NAMES).optional(),
+  permittedBarangays: z.array(z.enum(BARANGAY_NAMES)).optional(),
   agencyId: z.string().uuid().optional(),
 });
 

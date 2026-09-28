@@ -21,7 +21,8 @@
     "seed": "npx ts-node src/database/seed-accounts.ts",
     "seed:programs": "npx ts-node src/database/seed-programs.ts",
     "test:unit": "jest --testPathPattern=unit",
-    "seed:demo": "npx ts-node src/database/seed-demo.ts"
+    "seed:demo": "npx ts-node src/database/seed-demo.ts",
+    "check:barangay-drift": "npx ts-node --transpile-only scripts/check-barangay-drift.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

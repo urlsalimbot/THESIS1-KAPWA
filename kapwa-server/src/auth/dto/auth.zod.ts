@@ -1,4 +1,4 @@
-import { MIN_PASSWORD_LENGTH } from '../../common/constants';
+import { BARANGAY_NAMES, MIN_PASSWORD_LENGTH } from '../../common/constants';
 import { z } from 'zod';
 
 export const UserCreateSchema = z.object({
@@ -16,8 +16,8 @@ export const UserCreateSchema = z.object({
   fullName: z.string().optional(),
   phone: z.string().optional(),
   dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
-  assignedBarangay: z.string().optional(),
-  permittedBarangays: z.array(z.string()).optional()
+  assignedBarangay: z.enum(BARANGAY_NAMES).optional(),
+  permittedBarangays: z.array(z.enum(BARANGAY_NAMES)).optional()
 });
 
 export const LoginSchema = z.object({

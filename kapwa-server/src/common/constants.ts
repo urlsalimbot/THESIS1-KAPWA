@@ -27,6 +27,58 @@ export function exportFileName(caseType: string, caseNumber: string, date: Date 
   return `${caseType} ${caseNumber}-${y}-${m}-${d}.pdf`;
 }
 
+// --- Barangay vocabulary ---
+//
+// MSWDO Norzagaray operates 13 barangays — no more, no less. This list is the
+// enforcement point for `users.assigned_barangay` and `users.permitted_barangays`.
+//
+// It matters beyond user management: the access-card write path copies the
+// acting user's assigned barangay straight into
+// `access_card_services.source_barangay` (AccessCardsController.logService,
+// FourPsService.logToCard), and the coordinator's history query filters on that
+// same column. A misspelled assignment therefore produces ledger rows that no
+// list query can match, and the coordinator never sees their own work.
+//
+// Declared as an `as const` tuple rather than derived from BARANGAYS so
+// `z.enum` accepts it directly and `Barangay` stays a real 13-member union
+// instead of collapsing to `string`. `name` in BARANGAYS is typed as Barangay,
+// so a typo in a seeded entry is a compile error.
+export const BARANGAY_NAMES = [
+  'Bangkal',
+  'Baraka',
+  'Bigte',
+  'Bitungol',
+  'Friendship Village Resources (FVR)',
+  'Matictic',
+  'Minuyan',
+  'Partida',
+  'Pinagtulayan',
+  'Poblacion',
+  'San Lorenzo',
+  'San Mateo',
+  'Tigbe',
+] as const;
+
+export type Barangay = (typeof BARANGAY_NAMES)[number];
+
+// Slug/name pairs, used by the account seeder to mint per-barangay coordinator
+// logins. One entry per name above, no more.
+export const BARANGAYS: readonly { slug: string; name: Barangay }[] = [
+  { slug: 'bangkal', name: 'Bangkal' },
+  { slug: 'baraka', name: 'Baraka' },
+  { slug: 'bigte', name: 'Bigte' },
+  { slug: 'bitungol', name: 'Bitungol' },
+  { slug: 'fvr', name: 'Friendship Village Resources (FVR)' },
+  { slug: 'matictic', name: 'Matictic' },
+  { slug: 'minuyan', name: 'Minuyan' },
+  { slug: 'partida', name: 'Partida' },
+  { slug: 'pinagtulayan', name: 'Pinagtulayan' },
+  { slug: 'poblacion', name: 'Poblacion' },
+  { slug: 'sanlorenzo', name: 'San Lorenzo' },
+  { slug: 'sanmateo', name: 'San Mateo' },
+  { slug: 'tigbe', name: 'Tigbe' },
+];
+
 // Static geographic parts of the official letterhead stamped on every generated
 // PDF. The office name itself is NOT here — it is resolved from the agencies
 // table (MSWDO row) via OrgService so exports always print system data.

@@ -1,24 +1,13 @@
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AppDataSource } from './data-source';
+import { BARANGAYS } from '../common/constants';
 
 const SALT_ROUNDS = 12;
 
-const BARANGAYS: { slug: string; name: string }[] = [
-  { slug: 'bigte', name: 'Bigte' },
-  { slug: 'matictic', name: 'Matictic' },
-  { slug: 'partida', name: 'Partida' },
-  { slug: 'sanmateo', name: 'San Mateo' },
-  { slug: 'pinagtulayan', name: 'Pinagtulayan' },
-  { slug: 'bitungol', name: 'Bitungol' },
-  { slug: 'bangkal', name: 'Bangkal' },
-  { slug: 'poblacion', name: 'Poblacion' },
-  { slug: 'fvr', name: 'Friendship Village Resources (FVR)' },
-  { slug: 'tigbe', name: 'Tigbe' },
-  { slug: 'minuyan', name: 'Minuyan' },
-  { slug: 'sanlorenzo', name: 'San Lorenzo' },
-  { slug: 'baraka', name: 'Baraka' },
-];
+// The 13 Norzagaray barangays now live in common/constants.ts, which is also
+// what the user DTOs validate against. Defining them here as well is how the
+// seed and the enforcement point drifted apart before.
 
 const AGENCIES: { code: string; email: string; password: string; firstName: string; lastName: string; phone: string }[] = [
   { code: 'RHU', email: 'rhu.staff@norzagaray.test', password: 'rhu123', firstName: 'RHU', lastName: 'Staff', phone: '09179999001' },

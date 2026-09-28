@@ -1,4 +1,4 @@
-import { CreateUserInputSchema } from './users.zod';
+import { CreateUserInputSchema, UpdateUserSchema } from './users.zod';
 
 describe('CreateUserInputSchema', () => {
   const uiPayload = {
@@ -38,5 +38,40 @@ describe('CreateUserInputSchema', () => {
   it('rejects unknown keys (strict)', () => {
     const r = CreateUserInputSchema.safeParse({ ...uiPayload, nope: true });
     expect(r.success).toBe(false);
+  });
+
+  it('rejects a misspelled barangay', () => {
+    const r = CreateUserInputSchema.safeParse({ ...uiPayload, assignedBarangay: 'bigte' });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects a barangay outside Norzagaray', () => {
+    const r = CreateUserInputSchema.safeParse({ ...uiPayload, assignedBarangay: 'Quezon City' });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects a permitted scope containing an unknown barangay', () => {
+    const r = CreateUserInputSchema.safeParse({ ...uiPayload, permittedBarangays: ['Bigte', 'Antipolo'] });
+    expect(r.success).toBe(false);
+  });
+
+  it('accepts the longest barangay name verbatim', () => {
+    const r = CreateUserInputSchema.safeParse({
+      ...uiPayload,
+      assignedBarangay: 'Friendship Village Resources (FVR)',
+    });
+    expect(r.success).toBe(true);
+  });
+});
+
+describe('UpdateUserSchema', () => {
+  it('rejects a misspelled barangay on update too', () => {
+    const r = UpdateUserSchema.safeParse({ assignedBarangay: 'bigte' });
+    expect(r.success).toBe(false);
+  });
+
+  it('accepts a real barangay on update', () => {
+    const r = UpdateUserSchema.safeParse({ assignedBarangay: 'Bigte' });
+    expect(r.success).toBe(true);
   });
 });
