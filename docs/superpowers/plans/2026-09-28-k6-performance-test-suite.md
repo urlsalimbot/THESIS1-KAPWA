@@ -1104,8 +1104,10 @@ Expected: exit 0; smoke + 20-VU profile complete (~5 min); all four thresholds P
 Append to the README under "Thesis notes":
 
 ```markdown
-Validated run: local disposable stack (Postgres :5433, server :3100, 20-VU full profile);
-results in `perf/results/<timestamp>/` (summary.json, summary.html, run-meta.json, server.log).
+Validated run: local disposable stack (Postgres :5433, server :3100), full profile
+(reads ramping to 20 VUs + 2 write VUs + 1 smoke VU — max concurrent 23), k6 via podman
+(`--userns=keep-id`); measured thresholds and results in `perf/results/<timestamp>/`
+(summary.json, summary.html, run-meta.json, server.log).
 ```
 
 - [ ] **Step 3: Confirm no application code changed and existing gates stay green**
