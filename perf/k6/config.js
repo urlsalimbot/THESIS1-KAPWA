@@ -10,13 +10,31 @@ export const ACCOUNTS = {
 
 export function profileConfig(profile) {
   const smoke = { executor: 'per-vu-iterations', vus: 1, iterations: 1, exec: 'smoke' };
-  const reads = { executor: 'constant-vus', vus: 5, duration: '20s', startTime: '1s', exec: 'reads' };
+  const readsQuick = { executor: 'constant-vus', vus: 5, duration: '20s', startTime: '1s', exec: 'reads' };
+  const writesQuick = { executor: 'constant-vus', vus: 1, duration: '20s', startTime: '1s', exec: 'writes' };
+  const readsFull = {
+    executor: 'ramping-vus',
+    startVUs: 0,
+    stages: [
+      { duration: '1m', target: 20 },
+      { duration: '3m', target: 20 },
+      { duration: '30s', target: 0 },
+    ],
+    startTime: '5s',
+    exec: 'reads',
+  };
+  const writesFull = { executor: 'constant-vus', vus: 2, duration: '4m', startTime: '5s', exec: 'writes' };
   switch (profile) {
     case 'smoke':
       return { smoke };
     case 'reads':
-      return { smoke, reads };
+      return { smoke, reads: readsQuick };
+    case 'writes':
+      return { smoke, writes: writesQuick };
+    case 'quick':
+      return { smoke, reads: readsQuick, writes: writesQuick };
+    case 'full':
     default:
-      return { smoke, reads };
+      return { smoke, reads: readsFull, writes: writesFull };
   }
 }

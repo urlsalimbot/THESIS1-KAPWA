@@ -1,8 +1,8 @@
 import http from 'k6/http';
 import { check } from 'k6';
-import { BASE_URL, PROFILE, profileConfig, ACCOUNTS } from './config.js';
-import { login, authHeaders } from './lib/auth.js';
-import { get, getAllow422, think } from './lib/requests.js';
+import { BASE_URL, PROFILE, profileConfig, ACCOUNTS, UPLOAD } from './config.js';
+import { login, authHeaders, csrfToken } from './lib/auth.js';
+import { get, getAllow422, postJson, think } from './lib/requests.js';
 
 const thresholds = {
   http_req_failed: ['rate<0.01'],
@@ -10,7 +10,12 @@ const thresholds = {
 };
 if (PROFILE !== 'smoke') {
   thresholds['http_req_duration{scenario:reads}'] = ['p(95)<500'];
+  thresholds['http_req_duration{scenario:writes}'] = ['p(95)<1500'];
 }
+
+// k6 v2 only allows open() in the init context; load the upload fixture here
+// (path resolves relative to this script) so the writes VU can reuse it.
+const samplePdf = UPLOAD ? open('./assets/sample.pdf', 'b') : null;
 
 export const options = {
   scenarios: profileConfig(PROFILE),
@@ -58,4 +63,59 @@ export function reads(data) {
   get('/analytics/clustering/runs', token);
 
   think();
+}
+
+export function writes(data) {
+  const token = data.worker.accessToken;
+  const suffix = `${__VU}-${__ITER}-${Date.now()}`;
+  const address = { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: '03', postalCode: '3012' };
+  const digits = String((__VU * 1000 + __ITER) % 10000000).padStart(7, '0');
+  const payload = {
+    beneficiary: {
+      surname: `Perf${suffix}`,
+      firstName: 'Load',
+      gender: 'Male',
+      dob: '1990-05-15',
+      placeOfBirth: 'Norzagaray, Bulacan',
+      civilStatus: 'Married',
+      cellularNumber: `0917${digits}`,
+      email: `perf-${suffix}@example.test`,
+      currentAddress: address,
+      occupation: 'Farmer',
+      estimatedMonthlyIncome: 8000,
+    },
+    claimant: {
+      surname: `PerfClaim${suffix}`,
+      firstName: 'Load',
+      gender: 'Female',
+      dob: '1992-08-20',
+      placeOfBirth: 'Norzagaray, Bulacan',
+      civilStatus: 'Married',
+      cellularNumber: `0918${digits}`,
+      email: `perf-claim-${suffix}@example.test`,
+      currentAddress: address,
+      occupation: 'Housewife',
+      estimatedMonthlyIncome: 1000,
+      relationshipToBeneficiary: 'Spouse',
+    },
+    familyMembers: [],
+    case: {},
+  };
+
+  const res = postJson('/intake', token, payload);
+  const ok = check(res, { 'intake 200/201': r => r.status === 200 || r.status === 201 });
+
+  if (ok && UPLOAD) {
+    const caseId = res.json('caseId');
+    if (caseId) {
+      const file = http.file(samplePdf, 'perf-sample.pdf', 'application/pdf');
+      const upload = http.post(`${BASE_URL}/filing/upload`, { caseId, category: 'perf', file }, {
+        headers: { Authorization: `Bearer ${token}`, [ 'X-CSRF-Token' ]: csrfToken() },
+        tags: { endpoint: 'filing-upload' },
+      });
+      check(upload, { 'upload 200/201': r => r.status === 200 || r.status === 201 });
+    }
+  }
+
+  think(1, 2);
 }
