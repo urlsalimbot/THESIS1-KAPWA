@@ -647,3 +647,107 @@ describe('AnalyticsService', () => {
     });
   });
 });
+
+describe('AnalyticsService wave 2', () => {
+  let service: AnalyticsService;
+  let repoMock: any;
+
+  beforeEach(async () => {
+    repoMock = { query: jest.fn() };
+    const module = await Test.createTestingModule({
+      providers: [
+        AnalyticsService,
+        { provide: getRepositoryToken(Case), useValue: repoMock },
+      ],
+    }).compile();
+    service = module.get(AnalyticsService);
+  });
+
+  describe('getInequality', () => {
+    it('computes Gini, Lorenz, top-10 share, and deciles for known incomes', async () => {
+      repoMock.query.mockResolvedValue([
+        { estimated_income: '1000' }, { estimated_income: '2000' }, { estimated_income: '3000' },
+        { estimated_income: '4000' }, { estimated_income: '5000' }, { estimated_income: '6000' },
+        { estimated_income: '7000' }, { estimated_income: '8000' }, { estimated_income: '9000' },
+        { estimated_income: '10000' }, { estimated_income: '11000' }, { estimated_income: '12000' },
+        { estimated_income: '13000' }, { estimated_income: '14000' }, { estimated_income: '15000' },
+        { estimated_income: '16000' }, { estimated_income: '17000' }, { estimated_income: '18000' },
+        { estimated_income: '19000' }, { estimated_income: '20000' },
+      ]);
+      const result = await service.getInequality({});
+      expect(result.count).toBe(20);
+      expect(result.gini).toBeGreaterThan(0.2);
+      expect(result.lorenz[0]).toEqual({ p: 0, share: 0 });
+      expect(result.lorenz[result.lorenz.length - 1]).toEqual({ p: 1, share: 1 });
+      expect(result.top10Share).toBeCloseTo((19000 + 20000) / 210000);
+      expect(result.deciles).toHaveLength(9);
+    });
+
+    it('throws insufficient_data below 20 incomes', async () => {
+      repoMock.query.mockResolvedValue([{ estimated_income: '1000' }]);
+      await expect(service.getInequality({})).rejects.toThrow(UnprocessableEntityException);
+    });
+  });
+
+  describe('getForecast', () => {
+    it('returns history, fitted, forecast with a widening band, and both MAPE metrics', async () => {
+      // Build the same 24-month window the service computes, so every month matches.
+      const months: string[] = [];
+      const now = new Date();
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+        months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+      }
+      repoMock.query.mockResolvedValue(months.map((month, i) => ({ month, value: String(5 + i) })));
+      const result = await service.getForecast({ metric: 'cases', horizon: 3 });
+      expect(result.history).toHaveLength(24);
+      expect(result.forecast).toHaveLength(3);
+      expect(result.forecast[0].upper).toBeGreaterThanOrEqual(result.forecast[0].value);
+      expect(result.forecast[2].upper - result.forecast[2].value)
+        .toBeGreaterThanOrEqual(result.forecast[0].upper - result.forecast[0].value);
+      expect(result.mape).not.toBeNull();
+      expect(result.baselineMape).not.toBeNull();
+      expect(result.metric).toBe('cases');
+    });
+
+    it('handles an all-zero series without NaN', async () => {
+      repoMock.query.mockResolvedValue([]);
+      const result = await service.getForecast({ metric: 'disbursement', horizon: 2 });
+      expect(result.history.every(h => h.value === 0)).toBe(true);
+      expect(result.forecast.every(f => Number.isFinite(f.value) && Number.isFinite(f.lower) && Number.isFinite(f.upper))).toBe(true);
+    });
+  });
+
+  describe('getAssociations', () => {
+    function txRows(pairs: Array<[string, string]>) {
+      return pairs.map(([case_id, service_name]) => ({ case_id, service_name }));
+    }
+
+    it('computes rules and suppresses counts below 5 with their ratios', async () => {
+      const pairs: Array<[string, string]> = [];
+      for (let i = 0; i < 40; i++) pairs.push([`c${i}`, 'Medical']);
+      for (let i = 0; i < 35; i++) pairs.push([`c${i}`, 'Food']);
+      for (let i = 0; i < 3; i++) pairs.push([`c${i}`, 'Transport']);
+      repoMock.query.mockResolvedValue(txRows(pairs));
+      const result = await service.getAssociations({ minSupport: 0.05, minConfidence: 0.5 });
+      expect(result.totalTransactions).toBe(40);
+      const medicalFood = result.rules.find(r => r.a === 'Food' && r.b === 'Medical');
+      expect(medicalFood).toBeDefined();
+      expect(medicalFood!.countBoth).toEqual({ value: 35 });
+      expect('value' in medicalFood!.support).toBe(true);
+      const transportRule = result.rules.find(r => r.a === 'Transport' || r.b === 'Transport');
+      if (transportRule) {
+        expect(transportRule.countBoth).toEqual({ suppressed: true });
+        expect('suppressed' in transportRule.support).toBe(true);
+        expect('suppressed' in transportRule.confidence).toBe(true);
+        expect('suppressed' in transportRule.lift).toBe(true);
+      }
+    });
+
+    it('throws insufficient_data below 30 transactions', async () => {
+      repoMock.query.mockResolvedValue(txRows([['c1', 'Medical']]));
+      await expect(service.getAssociations({ minSupport: 0.05, minConfidence: 0.5 }))
+        .rejects.toThrow(UnprocessableEntityException);
+    });
+  });
+});

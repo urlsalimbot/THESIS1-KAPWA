@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case } from '../cases/case.entity';
 import { CacheService } from '../common/cache.service';
-import { hhi } from './models/stats';
+import { gini, hhi, lorenzPoints, quantile } from './models/stats';
+import { holtLinear, movingAverageForecast, mape } from './models/forecast';
+import { pairwiseRules } from './models/associations';
 import { complementSuppression, MIN_CELL, suppressCount, suppressRatio, Suppressed } from './suppression';
 
 export interface AnalyticsFilters {
@@ -307,5 +309,151 @@ export class AnalyticsService {
       fourPsShare: suppressRatio(row.households > 0 ? Number(row.r.four_ps) / row.households : 0, Number(row.r.four_ps)),
     }));
     return { barangays };
+  }
+
+  async getInequality(filters: AnalyticsFilters) {
+    const compute = () => this.computeInequality(filters);
+    return this.cache?.wrap(`analytics:inequality:${JSON.stringify(filters)}`, compute, 5 * 60 * 1000) ?? compute();
+  }
+
+  private async computeInequality(filters: AnalyticsFilters) {
+    const rows: Array<{ estimated_income: string | null }> = await this.caseRepo.query(
+      `SELECT estimated_income FROM households
+       WHERE estimated_income IS NOT NULL AND estimated_income > 0
+         AND ($1::text IS NULL OR COALESCE(barangay, 'Unspecified') = $1)`,
+      [filters.barangay ?? null],
+    );
+    const incomes = (rows ?? [])
+      .map(r => Number(r.estimated_income))
+      .filter(v => Number.isFinite(v) && v > 0);
+    const MIN_INCOME_SAMPLE = 20;
+    if (incomes.length < MIN_INCOME_SAMPLE) {
+      throw new UnprocessableEntityException({ code: 'insufficient_data', required: MIN_INCOME_SAMPLE, actual: incomes.length });
+    }
+    const sorted = [...incomes].sort((a, b) => a - b);
+    const total = sorted.reduce((a, b) => a + b, 0);
+    const topCount = Math.max(1, Math.ceil(sorted.length * 0.1));
+    const top10Share = total > 0 ? sorted.slice(-topCount).reduce((a, b) => a + b, 0) / total : 0;
+    return {
+      gini: gini(sorted),
+      lorenz: lorenzPoints(sorted, 10),
+      top10Share,
+      deciles: Array.from({ length: 9 }, (_, i) => quantile(sorted, (i + 1) / 10)),
+      count: sorted.length,
+    };
+  }
+
+  async getForecast(params: { metric: 'cases' | 'disbursement'; horizon: number }) {
+    const compute = () => this.computeForecast(params);
+    return this.cache?.wrap(`analytics:forecast:${params.metric}:${params.horizon}`, compute, 5 * 60 * 1000) ?? compute();
+  }
+
+  private async computeForecast({ metric, horizon }: { metric: 'cases' | 'disbursement'; horizon: number }) {
+    const rows: Array<{ month: string; value: string | number }> = await this.caseRepo.query(
+      metric === 'cases'
+        ? `SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month, COUNT(*)::int AS value
+           FROM cases
+           WHERE created_at >= date_trunc('month', CURRENT_DATE) - interval '23 months'
+           GROUP BY 1 ORDER BY 1`
+        : `SELECT to_char(date_trunc('month', delivery_date), 'YYYY-MM') AS month, COALESCE(SUM(amount), 0) AS value
+           FROM case_interventions
+           WHERE delivery_date >= date_trunc('month', CURRENT_DATE) - interval '23 months'
+           GROUP BY 1 ORDER BY 1`,
+    );
+
+    const months: string[] = [];
+    const now = new Date();
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    }
+    const byMonth = new Map((rows ?? []).map(r => [r.month, Number(r.value)]));
+    const history = months.map(month => ({ month, value: byMonth.get(month) ?? 0 }));
+    const values = history.map(h => h.value);
+
+    const holdout = Math.min(6, Math.max(1, values.length - 3));
+    const train = values.slice(0, values.length - holdout);
+    const actualHoldout = values.slice(values.length - holdout);
+    const modelHoldout = holtLinear(train, { horizon: holdout }).forecast;
+    const mapeValue = mape(actualHoldout, modelHoldout);
+    const baselineMape = mape(actualHoldout, movingAverageForecast(train, holdout));
+
+    const model = holtLinear(values, { horizon });
+    const lastMonth = months[months.length - 1];
+    const forecast = model.forecast.map((value, i) => {
+      const h = i + 1;
+      const band = 1.96 * model.residualStd * Math.sqrt(h);
+      const [year, month] = lastMonth.split('-').map(Number);
+      const d = new Date(Date.UTC(year, month - 1 + h, 1));
+      const label = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      return {
+        month: label,
+        value: Math.max(0, Number(value.toFixed(2))),
+        lower: Math.max(0, Number((value - band).toFixed(2))),
+        upper: Number((value + band).toFixed(2)),
+      };
+    });
+
+    return {
+      metric,
+      months: history.length,
+      history,
+      fitted: model.fitted.map((value, i) => ({ month: history[i].month, value: Math.max(0, Number(value.toFixed(2))) })),
+      forecast,
+      mape: mapeValue,
+      baselineMape,
+      alpha: model.alpha,
+      beta: model.beta,
+    };
+  }
+
+  async getAssociations(filters: AnalyticsFilters & { minSupport: number; minConfidence: number }) {
+    const compute = () => this.computeAssociations(filters);
+    return this.cache?.wrap(`analytics:associations:${JSON.stringify(filters)}`, compute, 5 * 60 * 1000) ?? compute();
+  }
+
+  private async computeAssociations(filters: AnalyticsFilters & { minSupport: number; minConfidence: number }) {
+    const rows: Array<{ case_id: string; service_name: string }> = await this.caseRepo.query(
+      `SELECT ci.case_id, ci.service_name
+       FROM case_interventions ci
+       JOIN cases c ON c.id::text = ci.case_id
+       JOIN beneficiaries b ON b.id = c.beneficiary_id
+       LEFT JOIN households h ON h.id = b.household_id
+       WHERE ci.service_name IS NOT NULL AND ci.service_name <> ''
+         AND ($1::date IS NULL OR ci.delivery_date >= $1::date)
+         AND ($2::date IS NULL OR ci.delivery_date <= $2::date)
+         AND ($3::text IS NULL OR COALESCE(h.barangay, 'Unspecified') = $3)
+       GROUP BY 1, 2`,
+      [filters.from ?? null, filters.to ?? null, filters.barangay ?? null],
+    );
+    const byCase = new Map<string, string[]>();
+    for (const row of rows ?? []) {
+      byCase.set(row.case_id, [...(byCase.get(row.case_id) ?? []), row.service_name]);
+    }
+    const transactions = [...byCase.values()];
+    const MIN_TRANSACTIONS = 30;
+    if (transactions.length < MIN_TRANSACTIONS) {
+      throw new UnprocessableEntityException({ code: 'insufficient_data', required: MIN_TRANSACTIONS, actual: transactions.length });
+    }
+    const rules = pairwiseRules(transactions, { minSupport: filters.minSupport, minConfidence: filters.minConfidence });
+    return {
+      totalTransactions: transactions.length,
+      rules: rules.map(rule => {
+        const countA = suppressCount(rule.countA);
+        const countB = suppressCount(rule.countB);
+        const countBoth = suppressCount(rule.countBoth);
+        const anySuppressed = [countA, countB, countBoth].some(cell => 'suppressed' in cell);
+        return {
+          a: rule.a,
+          b: rule.b,
+          countA,
+          countB,
+          countBoth,
+          support: anySuppressed ? { suppressed: true as const } : { value: rule.support },
+          confidence: anySuppressed ? { suppressed: true as const } : { value: rule.confidence },
+          lift: anySuppressed ? { suppressed: true as const } : { value: rule.lift },
+        };
+      }),
+    };
   }
 }
