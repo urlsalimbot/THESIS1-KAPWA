@@ -14,6 +14,7 @@ import { Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
 import { InterAgencyReferral, StatusTimeline, referralIntakeState, referralFullName } from '@/components/referrals/referral-utils';
 import { ReferralActions } from '@/components/referrals/ReferralActions';
 import { referralStatusLabel } from '@/i18n/display';
+import { formatDate } from '../lib/format';
 
 export function AgencyReferralDetailPage() {
   const { t } = useTranslation();
@@ -113,7 +114,7 @@ export function AgencyReferralDetailPage() {
               </div>
               <div>
                 <span className="text-xs text-muted-foreground font-medium">{t('referral.date', 'Date')}</span>
-                <p className="font-medium">{new Date(data.createdAt).toLocaleDateString()}</p>
+                <p className="font-medium">{formatDate(data.createdAt)}</p>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground font-medium">{t('referrals.linkedCase', 'Linked Case')}</span>

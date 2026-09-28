@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Inbox, ClipboardCheck, IdCard, ArrowLeftRight } from 'lucide-react';
 import { InterAgencyReferral, Agency } from '@/components/referrals/referral-utils';
+import { formatDate } from '../lib/format';
 
 interface DashboardData {
   agency: Agency;
@@ -91,7 +92,7 @@ export function AgencyDashboardPage() {
               <p className="text-sm">{r.reason}</p>
               <p className="text-xs text-muted-foreground">
                 {(r.fromAgency?.name || r.fromAgencyId)} → {(r.toAgency?.name || r.toAgencyId)} ·{' '}
-                {new Date(r.createdAt).toLocaleDateString()}
+                {formatDate(r.createdAt)}
               </p>
             </div>
           ))}

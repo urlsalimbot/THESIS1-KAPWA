@@ -6,7 +6,9 @@ function activeLocale(): string {
 
 export function formatDate(d: string | Date | null | undefined): string {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString(activeLocale(), {
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString(activeLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -15,16 +17,24 @@ export function formatDate(d: string | Date | null | undefined): string {
 
 export function formatDateTime(d: string | Date | null | undefined): string {
   if (!d) return '—';
-  // Fixed format: MMM DD, YYYY, HH:mm AM/PM (e.g. "Sep 10, 2026, 10:30 AM").
-  return new Date(d).toLocaleString('en-US', {
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return '—';
+  // Fixed format: MMM DD, YYYY at h:mm AM/PM (e.g. "Sep 10, 2026 at 10:30 AM").
+  // Two explicit calls (not toLocaleString) so the " at " separator is ours and
+  // the output cannot drift with runtime ICU punctuation.
+  const datePart = date.toLocaleDateString('en-US', {
     timeZone: 'Asia/Manila',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  });
+  const timePart = date.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Manila',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
+  return `${datePart} at ${timePart.replace(/\u202f/g, ' ')}`;
 }
 
 export function formatTimestamp(iso: string): string {

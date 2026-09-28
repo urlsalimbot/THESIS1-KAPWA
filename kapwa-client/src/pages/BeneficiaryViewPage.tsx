@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addressNames } from "@/lib/psgc";
+import { formatDate } from '../lib/format';
 
 interface BeneficiaryDetail {
   id: string;
@@ -238,7 +239,7 @@ export function BeneficiaryViewPage() {
             program: Array.isArray(sr) ? sr.join(", ") : (c.controlNo as string) || "",
             status: (c.status as string) || "pending",
             date: c.createdAt
-              ? new Date(c.createdAt as string).toLocaleDateString()
+              ? formatDate(c.createdAt as string)
               : "",
           };
         }),

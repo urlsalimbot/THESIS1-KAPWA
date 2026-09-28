@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { PageContainer } from '@/components/public/PageContainer';
 import { PageHero } from '@/components/public/PageHero';
 import { cn } from '@/lib/utils';
+import { formatDate } from '../lib/format';
 
 interface PublicAnnouncement {
   id: string;
@@ -18,14 +19,6 @@ interface PublicAnnouncement {
   publishedAt: string | null;
   photoCount: number;
   coverPhotoId: string | null;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 export function PublicAnnouncementsPage() {

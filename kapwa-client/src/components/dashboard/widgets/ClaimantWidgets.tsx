@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { queryKeys } from '@/lib/query-keys';
 import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
+import { formatDate } from '../../../lib/format';
 
 interface ServiceRecord {
   id: string;
@@ -93,7 +94,7 @@ export function ClaimantWidgets() {
                 <div>
                   <p className="text-sm font-medium">{s.type}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(s.date).toLocaleDateString()}
+                    {formatDate(s.date)}
                   </p>
                 </div>
                 <div className="text-right">

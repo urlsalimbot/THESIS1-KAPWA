@@ -22,9 +22,15 @@ describe('format helpers', () => {
     expect(formatDate(undefined)).toBe('—');
   });
 
-  it('formats datetimes with Asia/Manila timezone', () => {
-    const iso = new Date('2026-08-03T00:30:00Z').toISOString();
-    expect(formatDateTime(iso)).toMatch(/2026/);
+  it('formats datetimes as "MMM DD, YYYY at h:mm AM/PM" in Asia/Manila', () => {
+    expect(formatDateTime('2026-08-03T00:30:00Z')).toBe('Aug 3, 2026 at 8:30 AM');
+    expect(formatDateTime('2026-09-28T06:30:00Z')).toBe('Sep 28, 2026 at 2:30 PM');
+  });
+
+  it('returns em dash for missing or invalid dates', () => {
+    expect(formatDateTime(null)).toBe('—');
+    expect(formatDateTime('not-a-date')).toBe('—');
+    expect(formatDate('not-a-date')).toBe('—');
   });
 
   it('localizes relative timestamps', () => {

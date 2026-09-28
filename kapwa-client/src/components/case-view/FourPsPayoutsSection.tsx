@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatDate, formatDateTime } from '../../lib/format';
 
 interface Payout {
   id: string;
@@ -144,12 +145,7 @@ export function FourPsPayoutsSection({ caseId }: { caseId: string }) {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-semibold">
-                    {new Date(payout.scheduledAt).toLocaleDateString('en-PH', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {formatDate(payout.scheduledAt)}
                   </span>
                   {payout.cycleNo && <span className="ml-3 text-xs text-muted-foreground">{payout.cycleNo}</span>}
                   {payout.amount != null && (
@@ -179,7 +175,7 @@ export function FourPsPayoutsSection({ caseId }: { caseId: string }) {
                 )}
                 {payout.notifiedAt && (
                   <span className="text-xs text-muted-foreground">
-                    {t('payouts.notified', 'Notified: {{date}}', { date: new Date(payout.notifiedAt).toLocaleString() })}
+                    {t('payouts.notified', 'Notified: {{date}}', { date: formatDateTime(payout.notifiedAt) })}
                   </span>
                 )}
               </div>

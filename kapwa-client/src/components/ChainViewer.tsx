@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Shield, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '../lib/format';
 
 interface ChainEntry {
   id: string;
@@ -65,7 +66,7 @@ export function ChainViewer({ caseId }: { caseId: string }) {
             <div className="text-gray-500">#{idx + 1} - {entry.interventionType} (₱{entry.amount})</div>
             <div className="text-gray-400">{t('chain.hash', 'Hash:')} <span className="text-gray-700">{entry.hash.slice(0, 20)}...</span></div>
             <div className="text-gray-400">{t('chain.prev', 'Prev:')} <span className="text-gray-700">{entry.prevHash.slice(0, 20)}...</span></div>
-            <div className="text-gray-400">{new Date(entry.loggedAt).toLocaleString()}</div>
+            <div className="text-gray-400">{formatDateTime(entry.loggedAt)}</div>
           </div>
         ))}
       </div>

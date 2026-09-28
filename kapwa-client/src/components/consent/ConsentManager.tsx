@@ -3,6 +3,7 @@ import { Shield, ShieldOff, AlertTriangle, X, Check, Loader2, History, Info } fr
 import { api } from '../../lib/api';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { formatDate } from '../../lib/format';
 
 interface ConsentLedgerEntry {
   id: string;
@@ -195,7 +196,7 @@ export function ConsentManager({ beneficiaryId, currentConsentStatus, onConsentC
                 {ledger.map((entry) => (
                   <tr key={entry.id} className="border-b border-gray-100">
                     <td className="py-2 pr-4 text-gray-700">
-                      {new Date(entry.grantedAt).toLocaleDateString()}
+                      {formatDate(entry.grantedAt)}
                     </td>
                     <td className="py-2 pr-4">
                       <span

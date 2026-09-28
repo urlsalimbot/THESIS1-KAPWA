@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { api } from '../lib/api';
+import { formatDate } from '../lib/format';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -54,7 +55,7 @@ function eligibilityNote(candidate: MatchCandidate, t: TFunction): { text: strin
   }
   if (candidate.lastApprovedCaseDate) {
     const d = new Date(candidate.lastApprovedCaseDate);
-    return { text: t('intake.eligLastCase', 'Last case: {{date}} — eligible for a new case.', { date: d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) }), icon: 'check' };
+    return { text: t('intake.eligLastCase', 'Last case: {{date}} — eligible for a new case.', { date: formatDate(d) }), icon: 'check' };
   }
   return { text: t('intake.eligNoPrior', 'No prior case on record — a new case will be created.'), icon: 'check' };
 }

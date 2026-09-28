@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { statusLabel } from '@/i18n/display';
+import { formatDate } from '../lib/format';
 
 interface ServiceRecord {
   id: string; type: string; date: string; amount: number; status: string;
@@ -231,7 +232,7 @@ export function ClaimantDashboardPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">{t('claims.dateFiled', 'Date Filed')}</p>
-                <p className="text-sm font-medium">{new Date(myCase.createdAt).toLocaleDateString()}</p>
+                <p className="text-sm font-medium">{formatDate(myCase.createdAt)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('claims.assignedWorker', 'Assigned Worker')}</p>
@@ -245,7 +246,7 @@ export function ClaimantDashboardPage() {
               )}
               <div>
                 <p className="text-xs text-muted-foreground">{t('claims.lastUpdated', 'Last Updated')}</p>
-                <p className="text-sm font-medium">{myCase.updatedAt ? new Date(myCase.updatedAt).toLocaleDateString() : '—'}</p>
+                <p className="text-sm font-medium">{myCase.updatedAt ? formatDate(myCase.updatedAt) : '—'}</p>
               </div>
             </div>
             {myCase.serviceRequested.length > 0 && (
@@ -342,7 +343,7 @@ export function ClaimantDashboardPage() {
               <div key={s.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{s.type}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(s.date).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(s.date)}</p>
                 </div>
                 <div className="text-right">
                   {s.amount > 0 && <p className="text-sm font-semibold">₱{s.amount.toLocaleString()}</p>}
@@ -371,7 +372,7 @@ export function ClaimantDashboardPage() {
                 <div>
                   <p className="text-sm font-medium">{d.serviceName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {d.controlNo}{d.date ? ` · ${new Date(d.date).toLocaleDateString()}` : ''}{d.fundSource ? ` · ${d.fundSource}` : ''}
+                    {d.controlNo}{d.date ? ` · ${formatDate(d.date)}` : ''}{d.fundSource ? ` · ${d.fundSource}` : ''}
                   </p>
                 </div>
                 <p className="text-sm font-semibold">₱{Number(d.amount).toLocaleString()}</p>
@@ -425,7 +426,7 @@ export function ClaimantDashboardPage() {
               <div key={c.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{c.purpose}</p>
-                  <p className="text-xs text-muted-foreground">{t('claims.viaChannel', 'Via {{channel}}', { channel: c.channel })} · {new Date(c.grantedAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">{t('claims.viaChannel', 'Via {{channel}}', { channel: c.channel })} · {formatDate(c.grantedAt)}</p>
                 </div>
                 <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>{c.status}</Badge>
               </div>

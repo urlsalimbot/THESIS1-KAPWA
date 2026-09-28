@@ -10,6 +10,7 @@ import { PageShell } from '@/components/PageShell';
 import { FileUploadList, type FilingDoc } from '@/components/case-view/FileUploadList';
 import { toast } from 'sonner';
 import { Loader2, Pin, PinOff, Pencil, Trash2, Eye, ExternalLink, ImageIcon } from 'lucide-react';
+import { formatDate } from '../../lib/format';
 
 interface AnnouncementDetail {
   id: string;
@@ -133,8 +134,8 @@ export function AnnouncementDetailPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {published
-                  ? `${t('announcements.publishedOn', 'Published')} ${new Date(data.publishedAt!).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`
-                  : `${t('announcements.updatedOn', 'Updated')} ${new Date(data.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`}
+                  ? `${t('announcements.publishedOn', 'Published')} ${formatDate(data.publishedAt!)}`
+                  : `${t('announcements.updatedOn', 'Updated')} ${formatDate(data.updatedAt)}`}
               </p>
             </div>
 

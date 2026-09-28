@@ -6,6 +6,7 @@ import { InterAgencyReferral, StatusTimeline } from './referral-utils';
 import { ReferralActions } from './ReferralActions';
 import { useTranslation } from 'react-i18next';
 import { referralStatusLabel } from '@/i18n/display';
+import { formatDate } from '../../lib/format';
 
 export function ReferralCard({
   referral,
@@ -51,7 +52,7 @@ export function ReferralCard({
       </div>
       <p className="text-sm">{referral.reason}</p>
       <p className="text-xs text-muted-foreground">
-        {t('referrals.basis', 'Basis: {{code}}', { code: referral.legalBasisCode })} · {new Date(referral.createdAt).toLocaleDateString()}
+        {t('referrals.basis', 'Basis: {{code}}', { code: referral.legalBasisCode })} · {formatDate(referral.createdAt)}
       </p>
       {referral.notes && <p className="text-xs text-muted-foreground">{t('referrals.notesLabel', 'Notes: {{notes}}', { notes: referral.notes })}</p>}
       {referral.outcome && <p className="text-xs text-muted-foreground">{t('referrals.outcomeLabel', 'Outcome: {{outcome}}', { outcome: referral.outcome })}</p>}

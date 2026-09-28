@@ -6,6 +6,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { Pin, ArrowLeft, Megaphone, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/public/PageContainer';
+import { formatDate } from '../lib/format';
 
 interface AnnouncementDetail {
   id: string;
@@ -20,14 +21,6 @@ interface AnnouncementDetail {
 interface PublicPhoto {
   id: string;
   originalName: string;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 export function AnnouncementPage() {

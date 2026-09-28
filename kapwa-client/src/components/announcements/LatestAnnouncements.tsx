@@ -7,6 +7,7 @@ import { Pin, ArrowRight, Megaphone, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/public/PageContainer';
+import { formatDate } from '../../lib/format';
 
 interface PublicAnnouncement {
   id: string;
@@ -17,14 +18,6 @@ interface PublicAnnouncement {
   publishedAt: string | null;
   photoCount: number;
   coverPhotoId: string | null;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 export function LatestAnnouncements() {

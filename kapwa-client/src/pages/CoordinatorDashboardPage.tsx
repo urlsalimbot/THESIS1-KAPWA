@@ -8,6 +8,7 @@ import { QuickScanCard } from '@/components/QuickScanCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '../lib/api';
+import { formatDateTime } from '../lib/format';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 
 export function CoordinatorDashboardPage() {
@@ -44,7 +45,7 @@ export function CoordinatorDashboardPage() {
   }
 
   const entryColumns: ColumnDef<any>[] = [
-    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
+    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDateTime(row.original.date)}</span> },
     { id: 'name', header: t('dashboard.name', 'Name'), cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
     { accessorKey: 'category', header: t('dashboard.category', 'Category') },
     { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
@@ -105,10 +106,10 @@ export function CoordinatorDashboardPage() {
 
       <div className="mt-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">{t('dashboard.todayTrackerEntries', "Today's Tracker Entries")}</h2>
+          <h2 className="text-sm font-semibold">{t('dashboard.trackerEntries', 'Tracker Entries')}</h2>
         </div>
         {recentEntries.length === 0 ? (
-          <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg bg-card">{t('dashboard.noEntriesToday', 'No entries today')}</div>
+          <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg bg-card">{t('dashboard.noTrackerEntries', 'No tracker entries')}</div>
         ) : (
           <DataTable
             columns={entryColumns}
@@ -119,7 +120,7 @@ export function CoordinatorDashboardPage() {
             sorting={[]}
           />
         )}
-        <div className="text-sm text-muted-foreground mt-2">{t('dashboard.entriesToday', '{{count}} entries today', { count: recentEntries.length })}</div>
+        <div className="text-sm text-muted-foreground mt-2">{t('dashboard.trackerEntriesCount', '{{count}} entries', { count: recentEntries.length })}</div>
       </div>
     </PageShell>
   );

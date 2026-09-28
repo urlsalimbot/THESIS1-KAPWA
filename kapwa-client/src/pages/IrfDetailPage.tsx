@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatDate } from '../lib/format';
 
 const DISPOSITION_STATES = ['Under Investigation', 'Referred to PNP', 'Referred to WCPD', 'Dismissed', 'Closed'];
 
@@ -421,8 +422,8 @@ export function IrfDetailPage() {
             <div className="px-4 py-3 space-y-2 text-sm">
               <div><span className="text-muted-foreground text-xs">{t('irf.blotterNumber', 'Blotter Number')}</span><p className="font-medium">{irf.blotterEntryNumber}</p></div>
               <div><span className="text-muted-foreground text-xs">{t('irf.category', 'Category')}</span><p className="font-medium">{irf.caseCategory}</p></div>
-              <div><span className="text-muted-foreground text-xs">{t('irf.reported', 'Reported')}</span><p className="font-medium">{irf.datetimeReported ? new Date(irf.datetimeReported).toLocaleDateString() : '—'}</p></div>
-              <div><span className="text-muted-foreground text-xs">{t('irf.incident', 'Incident')}</span><p className="font-medium">{irf.datetimeIncident ? new Date(irf.datetimeIncident).toLocaleDateString() : '—'}</p></div>
+              <div><span className="text-muted-foreground text-xs">{t('irf.reported', 'Reported')}</span><p className="font-medium">{irf.datetimeReported ? formatDate(irf.datetimeReported) : '—'}</p></div>
+              <div><span className="text-muted-foreground text-xs">{t('irf.incident', 'Incident')}</span><p className="font-medium">{irf.datetimeIncident ? formatDate(irf.datetimeIncident) : '—'}</p></div>
               {irf.dismissalReason && (
                 <><Separator /><div><span className="text-muted-foreground text-xs">{t('irf.dismissalReason', 'Dismissal Reason')}</span><p className="font-medium text-amber-700">{irf.dismissalReason}</p></div></>
               )}

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Calendar, DollarSign } from 'lucide-react';
 import { CaseRequirements } from './CaseRequirements';
 import { useTranslation } from 'react-i18next';
+import { formatDate } from '../../lib/format';
 
 interface Intervention {
   id: string;
@@ -226,7 +227,7 @@ export function StepInterventions({ caseId, caseData, userRole, readOnly = false
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     {intv.deliveryDate && (
                       <span className="flex items-center gap-1">
-                        <Calendar size={12} /> {new Date(intv.deliveryDate).toLocaleDateString()}
+                        <Calendar size={12} /> {formatDate(intv.deliveryDate)}
                       </span>
                     )}
                     {intv.amount && (

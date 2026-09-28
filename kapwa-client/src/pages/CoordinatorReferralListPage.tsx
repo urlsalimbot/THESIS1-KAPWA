@@ -14,6 +14,7 @@ import {
 import { DataTable } from '@/components/data-table';
 import { Plus, Eye, Send, AlertCircle } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import { formatDate } from '../lib/format';
 
 interface Referral {
   id: string;
@@ -80,7 +81,7 @@ export function CoordinatorReferralListPage() {
     {
       accessorKey: 'createdAt',
       header: t('coordinator.date', 'Date'),
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+      cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
       id: 'actions',
@@ -167,7 +168,7 @@ export function CoordinatorReferralListPage() {
             </div>
             <div>
               <span className="text-xs text-muted-foreground font-medium">{t('coordinator.date', 'Date')}</span>
-              <p className="font-medium">{selected && new Date(selected.createdAt).toLocaleDateString()}</p>
+              <p className="font-medium">{selected && formatDate(selected.createdAt)}</p>
             </div>
             <div className="col-span-2">
               <span className="text-xs text-muted-foreground font-medium">{t('coordinator.reason', 'Reason')}</span>

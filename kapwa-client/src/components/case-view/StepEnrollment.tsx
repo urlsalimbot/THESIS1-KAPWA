@@ -2,6 +2,7 @@ import { Separator } from '@/components/ui/separator';
 import { User, Calendar, Briefcase, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { addressNames } from '@/lib/psgc';
+import { formatDate } from '../../lib/format';
 
 interface StepEnrollmentProps {
   caseData: any;
@@ -10,7 +11,7 @@ interface StepEnrollmentProps {
 export function StepEnrollment({ caseData }: StepEnrollmentProps) {
   const { t } = useTranslation();
   const ben = caseData?.beneficiary;
-  const createdAt = caseData?.createdAt ? new Date(caseData.createdAt).toLocaleDateString() : '—';
+  const createdAt = caseData?.createdAt ? formatDate(caseData.createdAt) : '—';
 
   return (
     <div className="space-y-4">
@@ -98,7 +99,7 @@ export function StepEnrollment({ caseData }: StepEnrollmentProps) {
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">{t('caseView.enrollment.dateOfBirth', 'Date of Birth')}</span>
-                <p>{ben.dob ? new Date(ben.dob).toLocaleDateString() : '—'}</p>
+                <p>{ben.dob ? formatDate(ben.dob) : '—'}</p>
               </div>
             </div>
             <div>

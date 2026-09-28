@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { connectNotificationSocket, disconnectNotificationSocket } from '../lib/notification-socket';
+import { formatDate } from '../lib/format';
 
 interface Notification {
   id: string; title: string; message: string; category: string;
@@ -230,7 +231,7 @@ export function NotificationsPage() {
                         <ExternalLink size={12} className="text-muted-foreground/40 shrink-0" />
                       </span>
                       <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatDate(n.createdAt, t)}
+                        {formatNotificationTime(n.createdAt, t)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground/80 mt-0.5">{n.message}</p>
@@ -251,7 +252,7 @@ export function NotificationsPage() {
   );
 }
 
-function formatDate(dateStr: string, t: TFunction) {
+function formatNotificationTime(dateStr: string, t: TFunction) {
   const d = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
@@ -260,5 +261,5 @@ function formatDate(dateStr: string, t: TFunction) {
   if (diffMins < 60) return t('notifications.minutesAgo', '{{count}}m ago', { count: diffMins });
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return t('notifications.hoursAgo', '{{count}}h ago', { count: diffHours });
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return formatDate(d);
 }

@@ -4,6 +4,7 @@ import { mutate } from 'swr';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
 import { Search, RotateCcw, Pencil, Ban, UserCheck, Lock } from 'lucide-react';
 import { api } from '../lib/api';
+import { formatDate } from '../lib/format';
 import { queryKeys } from '../lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
 import { Button } from '@/components/ui/button';
@@ -92,12 +93,6 @@ function EditableRoleCell({ user, onRoleChange, roleLabel }: { user: AppUser; on
       </SelectContent>
     </Select>
   );
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-PH', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
 }
 
 export default function UsersPanel() {

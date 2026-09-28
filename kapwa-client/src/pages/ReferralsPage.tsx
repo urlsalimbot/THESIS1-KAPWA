@@ -18,6 +18,7 @@ import { referralIntakeState, referralListName } from '@/components/referrals/re
 import { Plus, Send, Check, X, Inbox, Loader2, ArrowUpRight, ClipboardList } from 'lucide-react';
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { formatDate } from '../lib/format';
 
 interface Referral {
   id: string;
@@ -128,7 +129,7 @@ function CoordinatorReferralView() {
   const columns: ColumnDef<Referral>[] = [
     {
       accessorKey: 'createdAt', header: t('referral.date', 'Date'),
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+      cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
       id: 'name', header: t('referral.name', 'Name'),
@@ -198,7 +199,7 @@ function CoordinatorReferralView() {
             </div>
             <div>
               <span className="text-xs text-muted-foreground font-medium">{t('referral.date', 'Date')}</span>
-              <p className="font-medium">{selected && new Date(selected.createdAt).toLocaleDateString()}</p>
+              <p className="font-medium">{selected && formatDate(selected.createdAt)}</p>
             </div>
             <div className="col-span-2">
               <span className="text-xs text-muted-foreground font-medium">{t('referral.reason', 'Reason')}</span>
@@ -295,7 +296,7 @@ function WorkerReferralView() {
   const columns: ColumnDef<Referral>[] = [
     {
       accessorKey: 'createdAt', header: t('referral.date', 'Date'),
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+      cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
       id: 'name', header: t('referral.name', 'Name'),

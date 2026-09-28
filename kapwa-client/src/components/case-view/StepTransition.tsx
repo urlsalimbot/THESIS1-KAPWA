@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Calendar, FileText, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { isSelfSufficient } from '@/lib/self-reliance';
+import { formatDate } from '../../lib/format';
 
 interface FollowUpVisit {
   date: string;
@@ -245,7 +246,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-muted-foreground" />
                     <span className="font-medium">
-                      {new Date(visit.date).toLocaleDateString()}
+                      {formatDate(visit.date)}
                     </span>
                     <span className="text-muted-foreground">·</span>
                     <span>{visit.type}</span>

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { api } from '../lib/api';
+import { formatDateTime } from '../lib/format';
 import { queryKeys } from '../lib/query-keys';
 import { connectNotificationSocket, disconnectNotificationSocket } from '../lib/notification-socket';
 import { useTranslation } from 'react-i18next';
@@ -174,13 +175,10 @@ export default function NotificationsDropdown() {
                 <div className="flex items-center justify-between gap-2">
                   <p className={cn('text-sm truncate', !n.isRead && 'font-semibold')}>{n.title}</p>
                   <span className="text-[10px] text-muted-foreground shrink-0">
-                    {new Date(n.createdAt).toLocaleDateString()}
+                    {formatDateTime(n.createdAt)}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                  {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
               </button>
               {!n.isRead && (
                 <button

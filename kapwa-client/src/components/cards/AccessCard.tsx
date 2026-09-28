@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { formatDate } from '../../lib/format';
 
 interface AccessCardProps {
   beneficiary: {
@@ -54,7 +55,7 @@ export function AccessCard({ beneficiary, services, printable = false }: AccessC
             {services.map((s, i) => (
               <tr key={s.id} className="hover:bg-table-hover even:bg-table-stripe">
                 <td className="py-2 pr-2 text-muted-foreground">{i + 1}</td>
-                <td className="py-2 pr-2">{new Date(s.serviceDate).toLocaleDateString()}</td>
+                <td className="py-2 pr-2">{formatDate(s.serviceDate)}</td>
                 <td className="py-2 pr-2">{s.serviceRendered}</td>
                 <td className="py-2 pr-2">{s.cost != null ? `₱${s.cost.toLocaleString()}` : '-'}</td>
                 <td className="py-2">{s.agency || '-'}</td>

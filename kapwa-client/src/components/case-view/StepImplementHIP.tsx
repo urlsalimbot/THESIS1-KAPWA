@@ -10,6 +10,7 @@ import { Plus, Trash2, Calendar, DollarSign, FileText, Lock, FolderOpen, Ban, Ch
 import { CaseRequirements } from './CaseRequirements';
 import { FileUploadList } from './FileUploadList';
 import { useTranslation } from 'react-i18next';
+import { formatDate } from '../../lib/format';
 
 interface Intervention {
   id: string;
@@ -276,7 +277,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     {intv.deliveryDate && (
                       <span className="flex items-center gap-1">
-                        <Calendar size={12} /> {new Date(intv.deliveryDate).toLocaleDateString()}
+                        <Calendar size={12} /> {formatDate(intv.deliveryDate)}
                       </span>
                     )}
                     {intv.amount && (

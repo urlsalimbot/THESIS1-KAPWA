@@ -7,6 +7,7 @@ import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatDate } from '../lib/format';
 
 interface SearchResult {
   id: string;
@@ -132,7 +133,7 @@ export function SearchResultsPage() {
                       <div className="flex items-center gap-3 text-xs">
                         <span className="text-muted-foreground">{t('search.interventionCount', '{{count}} interventions', { count: item.interventionCount })}</span>
                         {item.lastInterventionDate && (
-                          <span className="text-muted-foreground">{t('search.last', 'Last: {{date}}', { date: new Date(item.lastInterventionDate).toLocaleDateString() })}</span>
+                          <span className="text-muted-foreground">{t('search.last', 'Last: {{date}}', { date: formatDate(item.lastInterventionDate) })}</span>
                         )}
                       </div>
                     </div>

@@ -19,6 +19,7 @@ import {
   Calendar, CheckCircle, Coins, FileText, Landmark, Power, ScrollText, Shield, Trash2, XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDate } from '../lib/format';
 
 interface ApprovalStep {
   stepName: string;
@@ -274,8 +275,8 @@ export function ProgramDetailPage() {
             </header>
             <Separator />
             <div className="px-4 py-2">
-              <InfoRow label={t('programs.created', 'Created')}>{new Date(program.createdAt).toLocaleDateString()}</InfoRow>
-              <InfoRow label={t('programs.updated', 'Updated')}>{new Date(program.updatedAt).toLocaleDateString()}</InfoRow>
+              <InfoRow label={t('programs.created', 'Created')}>{formatDate(program.createdAt)}</InfoRow>
+              <InfoRow label={t('programs.updated', 'Updated')}>{formatDate(program.updatedAt)}</InfoRow>
               <InfoRow label={t('programs.waitingShort', 'Waiting')}>
                 {program.waitingPeriodDays != null ? t('programs.days', '{{count}} days', { count: program.waitingPeriodDays }) : '—'}
               </InfoRow>

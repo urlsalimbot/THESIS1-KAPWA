@@ -4,6 +4,7 @@ import { MainRoutes } from './routes';
 import './index.css';
 import './i18n';
 import { getInitialLang, localeLangTag } from './i18n';
+import { formatDate } from './lib/format';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -14,5 +15,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 document.documentElement.lang = localeLangTag(getInitialLang());
 
 window.addEventListener('beforeprint', () => {
-  document.documentElement.style.setProperty('--print-date', new Date().toLocaleDateString());
+  document.documentElement.style.setProperty('--print-date', formatDate(new Date()));
 });

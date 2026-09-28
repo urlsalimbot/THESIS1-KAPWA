@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MethodologyNote } from './MethodologyNote';
+import { formatDateTime } from '../../lib/format';
 
 interface RunSummary {
   id: string;
@@ -176,7 +177,7 @@ export function ClusteringTab({ filters }: { filters: Record<string, unknown> })
                 className={`w-full rounded-md border px-2 py-1.5 text-left text-xs ${run.id === activeRunId ? 'border-primary bg-primary/5' : 'border-border'}`}
               >
                 <span className="flex items-center justify-between">
-                  <span>{new Date(run.createdAt).toLocaleString()}</span>
+                  <span>{formatDateTime(run.createdAt)}</span>
                   <Badge variant={run.status === 'completed' ? 'default' : 'destructive'} className="text-[10px]">{run.status}</Badge>
                 </span>
                 <span className="text-muted-foreground">

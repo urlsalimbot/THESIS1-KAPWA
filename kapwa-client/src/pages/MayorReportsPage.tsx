@@ -16,6 +16,7 @@ import { api } from '../lib/api';
 import { downloadMonthlyFunds, downloadSummaryReport } from '../lib/api';
 import { DataTableColumnHeader } from '@/components/data-table/DataTableColumnHeader';
 import { cn } from '@/lib/utils';
+import { formatDate } from '../lib/format';
 
 const fmtPeso = (n: number | string | undefined | null) =>
   `₱${Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
@@ -24,7 +25,7 @@ const isoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const fmtLabel = (d?: string) =>
-  d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  d ? formatDate(d + 'T00:00:00') : '';
 
 type Preset = 'all' | 'ytd' | '6m' | '3m' | 'thisMonth' | 'lastMonth';
 

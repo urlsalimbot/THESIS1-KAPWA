@@ -10,6 +10,7 @@ import { queryKeys } from '../lib/query-keys';
 import { api } from '../lib/api';
 import { DataTableColumnHeader } from '@/components/data-table/DataTableColumnHeader';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
+import { formatDate, formatDateTime } from '../lib/format';
 
 interface AuditRow {
   id: string; action: string; reference_id: string | null; user_id: string | null;
@@ -68,7 +69,7 @@ export function AuditorPage() {
   );
 
   const consentColumns: ColumnDef<any>[] = [
-    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span>{new Date(row.original.grantedAt || row.original.createdAt).toLocaleDateString()}</span> },
+    { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span>{formatDate(row.original.grantedAt || row.original.createdAt)}</span> },
     { accessorKey: 'channel', header: t('dashboard.channel', 'Channel') },
     { accessorKey: 'purpose', header: t('dashboard.purpose', 'Purpose') },
     {
@@ -94,7 +95,7 @@ export function AuditorPage() {
   const ACTION_OPTIONS = ['beneficiary', 'case', 'irf', 'access_card', 'announcement', 'user'];
 
   const trailColumns: ColumnDef<AuditRow>[] = useMemo(() => [
-    { accessorKey: 'created_at', header: ({ column }) => <DataTableColumnHeader column={column} title={t('audit.dateTime', 'Date / Time')} />, cell: ({ row }) => <span className="text-xs tabular-nums">{new Date(row.original.created_at).toLocaleString()}</span> },
+    { accessorKey: 'created_at', header: ({ column }) => <DataTableColumnHeader column={column} title={t('audit.dateTime', 'Date / Time')} />, cell: ({ row }) => <span className="text-xs tabular-nums">{formatDateTime(row.original.created_at)}</span> },
     { accessorKey: 'action', header: ({ column }) => <DataTableColumnHeader column={column} title={t('audit.action', 'Action')} />, cell: ({ row }) => <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium font-mono">{row.original.action}</span> },
     { accessorKey: 'user', header: t('audit.user', 'User'), cell: ({ row }) => row.original.user_name ? <span className="text-sm">{row.original.user_name}</span> : <span className="text-xs text-muted-foreground italic">system</span> },
     { accessorKey: 'user_email', header: t('audit.email', 'Email'), cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.user_email || '—'}</span> },

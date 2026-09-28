@@ -16,6 +16,7 @@ import { referralIntakeState, referralListName } from '@/components/referrals/re
 import { Check, X, Loader2, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import { formatDate } from '../lib/format';
 
 interface Referral {
   id: string;
@@ -122,7 +123,7 @@ export function ReferralReviewPage() {
     {
       accessorKey: 'createdAt',
       header: t('referral.date', 'Date'),
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+      cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
       id: 'status',

@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PageShell } from '@/components/PageShell';
 import { Plus, Pin, Megaphone, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatDate } from '../../lib/format';
 
 interface Announcement {
   id: string;
@@ -21,14 +22,6 @@ interface Announcement {
   updatedAt: string;
   photoCount: number;
   coverPhotoId: string | null;
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 export function AnnouncementsPage() {

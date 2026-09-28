@@ -18,6 +18,7 @@ import { DataTable } from '@/components/data-table/DataTable';
 import { api } from '../lib/api';
 import UsersPanel from '@/components/UsersPanel';
 import { Activity, Database, Users, Clock, AlertCircle, CheckCircle2, XCircle, UserPlus, RefreshCw, Mail } from 'lucide-react';
+import { formatDateTime } from '../lib/format';
 
 interface SyncEntry {
   id: string; deviceId: string; tableName: string; operation: string;
@@ -82,7 +83,7 @@ export function AdminPage() {
     {
       accessorKey: 'created_at',
       header: t('audit.dateTime', 'Date / Time'),
-      cell: ({ row }) => <span className="text-xs tabular-nums">{new Date(row.original.created_at).toLocaleString()}</span>,
+      cell: ({ row }) => <span className="text-xs tabular-nums">{formatDateTime(row.original.created_at)}</span>,
     },
     {
       accessorKey: 'action',
@@ -291,7 +292,7 @@ export function AdminPage() {
                             {m.name} <span className="font-normal text-muted-foreground">&lt;{m.email}&gt;</span>
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {new Date(m.createdAt).toLocaleString()}
+                            {formatDateTime(m.createdAt)}
                             {m.status === 'new' && (
                               <Badge variant="secondary" className="ml-2 text-[10px]">{t('admin.contactNew', 'New')}</Badge>
                             )}
