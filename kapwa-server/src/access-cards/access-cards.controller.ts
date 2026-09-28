@@ -24,7 +24,13 @@ export class AccessCardsController {
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Generate and assign access card to beneficiary' })
   async assignCard(@Param('beneficiaryId', new ParseUUIDPipe()) beneficiaryId: string) {
-    const accessCardCode = await this.svc.generateAndAssign(beneficiaryId);
+    // ensureHouseholdCard, not generateAndAssign: an access card is created at
+    // enrollment and only when the household has none (intake.service
+    // submitIntake calls the same method). This endpoint is the manual backfill
+    // for households enrolled before cards existed, so it returns the existing
+    // code rather than minting a replacement — a new code would orphan that
+    // household's service history and burn a sequence number.
+    const accessCardCode = await this.svc.ensureHouseholdCard(beneficiaryId);
     return { accessCardCode };
   }
 

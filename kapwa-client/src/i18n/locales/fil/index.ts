@@ -1074,9 +1074,7 @@ const fil: EnLocale = {
   "accessCard": {
     "addEntry": "Idagdag ang Entry",
     "agency": "Ahensya *",
-    "assign": "Italaga",
     "assignCard": "Italaga ang Card",
-    "assignFailed": "Hindi maitalaga ang card. Pakisubukan muli.",
     "assigning": "Ina-assign...",
     "back": "Bumalik",
     "barangay": "Barangay",
@@ -1124,7 +1122,6 @@ const fil: EnLocale = {
     "search": "Maghanap",
     "searchBeneficiary": "Maghanap ng Benepisyaryo",
     "searchByName": "Maghanap ayon sa pangalan...",
-    "searchFailed": "Nabigo ang paghahanap. Pakisubukan muli.",
     "selectAgency": "Pumili ng ahensya...",
     "service": "Serbisyo",
     "serviceDate": "Petsa ng Serbisyo *",

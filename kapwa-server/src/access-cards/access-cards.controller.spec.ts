@@ -9,6 +9,8 @@ describe('AccessCardsController', () => {
   const svc = {
     generateAccessCardPdf: jest.fn(),
     accessCardCodeFor: jest.fn(),
+    ensureHouseholdCard: jest.fn(),
+    generateAndAssign: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -22,6 +24,8 @@ describe('AccessCardsController', () => {
     controller = module.get(AccessCardsController);
     svc.generateAccessCardPdf.mockReset();
     svc.accessCardCodeFor.mockReset();
+    svc.ensureHouseholdCard.mockReset();
+    svc.generateAndAssign.mockReset();
   });
 
   it('streams the access card PDF with attachment headers', async () => {
@@ -37,5 +41,21 @@ describe('AccessCardsController', () => {
       'Content-Disposition': `attachment; filename="${exportFileName('ACCESS CARD', 'NORZ-AC-2026-0001')}"`,
     }));
     expect(res.end).toHaveBeenCalledWith(expect.any(Buffer));
+  });
+
+  describe('POST /assign/:beneficiaryId', () => {
+    // Access cards are minted by intake (intake.service submitIntake calls
+    // ensureHouseholdCard) and only when the household has none. This endpoint
+    // is the manual backfill for households enrolled before cards existed, and
+    // BeneficiaryViewPage only shows its button when there is no card. So it
+    // must never replace a live code — that orphans the household's service
+    // history and consumes a sequence number.
+    it('returns the existing card and does not mint a new one', async () => {
+      svc.ensureHouseholdCard.mockResolvedValue('NORZ-AC-2026-0007');
+      const res = await controller.assignCard('b1');
+      expect(res).toEqual({ accessCardCode: 'NORZ-AC-2026-0007' });
+      expect(svc.ensureHouseholdCard).toHaveBeenCalledWith('b1');
+      expect(svc.generateAndAssign).not.toHaveBeenCalled();
+    });
   });
 });

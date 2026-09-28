@@ -77,12 +77,25 @@ describe('CoordinatorAccessCardsPage', () => {
     expect(screen.queryByText(/Showing access cards for/i)).not.toBeInTheDocument();
   });
 
-  it('exposes the three panels as real tabs', async () => {
+  it('offers no way to assign a card', () => {
+    // Access cards are created at enrollment, and only when the household has
+    // none. The Assign tab listed beneficiaries with no "does this household
+    // already have a card?" check and posted to an endpoint that minted a
+    // replacement unconditionally, so a coordinator could orphan a live
+    // household's service history.
+    renderPage();
+    const tabStrip = screen.getAllByRole('tab').map(t => t.textContent?.trim());
+    expect(tabStrip).toContain('Verify');
+    expect(tabStrip).toContain('History');
+    expect(tabStrip).not.toContain('Assign');
+  });
+
+  it('exposes the two panels as real tabs', async () => {
     const user = userEvent.setup();
     renderPage();
     const tablist = screen.getByRole('tablist');
     const tabs = within(tablist).getAllByRole('tab');
-    expect(tabs.map(t => t.textContent?.trim())).toEqual(['Verify', 'Assign', 'History']);
+    expect(tabs.map(t => t.textContent?.trim())).toEqual(['Verify', 'History']);
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
 
     await user.click(within(tablist).getByRole('tab', { name: /History/i }));
@@ -263,62 +276,5 @@ describe('CoordinatorAccessCardsPage', () => {
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/failed to log/i));
     expect(screen.getByLabelText(/remarks/i)).toHaveValue('Pantry pack');
-  });
-
-  it('reports a failed beneficiary search and does not claim there are no results', async () => {
-    mockApiGet.mockImplementation((key: unknown) => {
-      const k = JSON.stringify(key);
-      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      return Promise.reject(new Error('boom'));
-    });
-
-    const user = userEvent.setup();
-    renderPage();
-    await user.click(screen.getByRole('tab', { name: /Assign/i }));
-    await user.type(screen.getByLabelText(/search by name/i), 'Reyes');
-    await user.click(screen.getByRole('button', { name: /^Search$/i }));
-
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/search failed/i));
-    expect(screen.queryByText(/no beneficiaries matched/i)).not.toBeInTheDocument();
-  });
-
-  it('distinguishes an empty search result from a failed one', async () => {
-    mockApiGet.mockImplementation((key: unknown) => {
-      const k = JSON.stringify(key);
-      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      return Promise.resolve({ data: [], total: 0 });
-    });
-
-    const user = userEvent.setup();
-    renderPage();
-    await user.click(screen.getByRole('tab', { name: /Assign/i }));
-    await user.type(screen.getByLabelText(/search by name/i), 'Nobody');
-    await user.click(screen.getByRole('button', { name: /^Search$/i }));
-
-    await waitFor(() => expect(screen.getByText(/no beneficiaries matched/i)).toBeInTheDocument());
-  });
-
-  it('updates the row in place after assigning a card', async () => {
-    mockApiGet.mockImplementation((key: unknown) => {
-      const k = JSON.stringify(key);
-      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('beneficiaries')) {
-        return Promise.resolve([{ id: 'b1', surname: 'Reyes', first_name: 'Pedro', access_card_code: null }]);
-      }
-      return Promise.resolve({ data: [], total: 0 });
-    });
-    mockApiPost.mockResolvedValue({ accessCardCode: 'NORZ-AC-2026-0009' });
-
-    const user = userEvent.setup();
-    renderPage();
-    await user.click(screen.getByRole('tab', { name: /Assign/i }));
-    await user.type(screen.getByLabelText(/search by name/i), 'Reyes');
-    await user.click(screen.getByRole('button', { name: /^Search$/i }));
-
-    await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
-    await user.click(screen.getByRole('button', { name: /assign card/i }));
-
-    await waitFor(() => expect(screen.getByText('NORZ-AC-2026-0009')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: /has card/i })).toBeDisabled();
   });
 });

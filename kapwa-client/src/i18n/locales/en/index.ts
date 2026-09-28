@@ -542,9 +542,7 @@ const en = {
   "accessCard": {
     "addEntry": "Add Entry",
     "agency": "Agency *",
-    "assign": "Assign",
     "assignCard": "Assign Card",
-    "assignFailed": "Could not assign a card. Please try again.",
     "assigning": "Assigning...",
     "back": "Back",
     "barangay": "Barangay",
@@ -592,7 +590,6 @@ const en = {
     "search": "Search",
     "searchBeneficiary": "Search Beneficiary",
     "searchByName": "Search by name...",
-    "searchFailed": "Search failed. Please try again.",
     "selectAgency": "Select agency...",
     "service": "Service",
     "serviceDate": "Service Date *",

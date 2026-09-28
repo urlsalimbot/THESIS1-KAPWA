@@ -13,11 +13,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DataTable } from '@/components/data-table';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
 import type { AccessCardCategory } from '@/lib/constants';
-import { Search, Check, Plus, History, BadgeCheck, Loader2, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, Check, History, BadgeCheck, Loader2, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { formatDate } from '../lib/format';
 
-type Tab = 'verify' | 'assign' | 'history';
+type Tab = 'verify' | 'history';
 
 interface AccessCardService {
   id: string;
@@ -31,13 +31,6 @@ interface AccessCardService {
   sourceBarangay?: string;
 }
 
-interface BeneficiaryResult {
-  id: string;
-  surname?: string;
-  first_name?: string;
-  access_card_code?: string | null;
-}
-
 /** The API's shape for the paged history endpoint. */
 interface HistoryResponse {
   data: AccessCardService[];
@@ -46,7 +39,6 @@ interface HistoryResponse {
 
 const TABS: { key: Tab; labelKey: string; labelDefault: string; icon: typeof BadgeCheck }[] = [
   { key: 'verify', labelKey: 'accessCard.verify', labelDefault: 'Verify', icon: BadgeCheck },
-  { key: 'assign', labelKey: 'accessCard.assign', labelDefault: 'Assign', icon: Plus },
   { key: 'history', labelKey: 'accessCard.history', labelDefault: 'History', icon: History },
 ];
 
@@ -86,9 +78,6 @@ export function CoordinatorAccessCardsPage() {
 
           <TabsContent value="verify" className="mt-6">
             <VerifyTab />
-          </TabsContent>
-          <TabsContent value="assign" className="mt-6">
-            <AssignTab />
           </TabsContent>
           <TabsContent value="history" className="mt-6">
             <HistoryTab />
@@ -361,142 +350,6 @@ function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () =
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-function AssignTab() {
-  const { t } = useTranslation();
-  const [search, setSearch] = useState('');
-  const [results, setResults] = useState<BeneficiaryResult[] | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [assigning, setAssigning] = useState<string | null>(null);
-  const [assignedCode, setAssignedCode] = useState<string | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [assignError, setAssignError] = useState<string | null>(null);
-
-  async function handleSearch(e: FormEvent) {
-    e.preventDefault();
-    if (!search.trim()) return;
-    setSearching(true);
-    setAssignedCode(null);
-    setSearchError(null);
-    setAssignError(null);
-    try {
-      const res: any = await api.get(`/beneficiaries?search=${encodeURIComponent(search.trim())}`);
-      const rows = Array.isArray(res) ? res : res?.data || [];
-      setResults(rows);
-    } catch {
-      setResults(null);
-      setSearchError(t('accessCard.searchFailed', 'Search failed. Please try again.'));
-    } finally {
-      setSearching(false);
-    }
-  }
-
-  async function handleAssign(beneficiaryId: string) {
-    setAssigning(beneficiaryId);
-    setAssignError(null);
-    try {
-      const result: any = await api.post(`/access-cards/assign/${beneficiaryId}`);
-      setAssignedCode(result.accessCardCode);
-      // Reflect the new code in the row without forcing a second search.
-      setResults(prev => prev?.map(r => (r.id === beneficiaryId ? { ...r, access_card_code: result.accessCardCode } : r)) ?? prev);
-    } catch {
-      setAssignError(t('accessCard.assignFailed', 'Could not assign a card. Please try again.'));
-    } finally {
-      setAssigning(null);
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <div className="border-b px-4 py-3">
-          <h3 className="text-sm font-semibold">{t('accessCard.searchBeneficiary', 'Search Beneficiary')}</h3>
-        </div>
-        <CardContent className="p-4 space-y-3">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <label htmlFor="access-card-beneficiary-search" className="sr-only">
-                {t('accessCard.searchByName', 'Search by name')}
-              </label>
-              <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <Input
-                id="access-card-beneficiary-search"
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder={t('accessCard.searchByName', 'Search by name...')}
-                className="w-full pl-8"
-              />
-            </div>
-            <Button type="submit" disabled={searching || !search.trim()}>
-              {searching ? <Loader2 size={14} className="animate-spin mr-1" /> : <Search size={14} className="mr-1" />}
-              {t('accessCard.search', 'Search')}
-            </Button>
-          </form>
-          <FormError>{searchError}</FormError>
-        </CardContent>
-      </Card>
-
-      {assignedCode && (
-        <div
-          role="status"
-          className="rounded-md border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950"
-        >
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-            {t('accessCard.cardAssigned', 'Card assigned!')}
-          </p>
-          <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
-            {t('accessCard.codeLabel', 'Code: {{code}}', { code: assignedCode })}
-          </p>
-        </div>
-      )}
-
-      <FormError>{assignError}</FormError>
-
-      {results && (
-        <Card>
-          <div className="border-b px-4 py-3">
-            <h3 className="text-sm font-semibold">{t('accessCard.results', 'Results')}</h3>
-          </div>
-          {results.length === 0 ? (
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">
-                {t('accessCard.noBeneficiaries', 'No beneficiaries matched that search.')}
-              </p>
-            </CardContent>
-          ) : (
-            <div className="divide-y">
-              {results.map((r: BeneficiaryResult) => (
-                <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {r.surname}, {r.first_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {r.access_card_code || t('accessCard.noCardAssigned', 'No card assigned')}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => handleAssign(r.id)}
-                    disabled={assigning === r.id || !!r.access_card_code}
-                    variant={r.access_card_code ? 'outline' : 'default'}
-                  >
-                    {r.access_card_code
-                      ? t('accessCard.hasCard', 'Has Card')
-                      : assigning === r.id
-                        ? t('accessCard.assigning', 'Assigning...')
-                        : t('accessCard.assignCard', 'Assign Card')}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      )}
-    </div>
   );
 }
 
