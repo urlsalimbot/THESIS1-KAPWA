@@ -1,15 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { AccessCardViewPage } from './AccessCardViewPage';
+import { ApiError } from '../lib/api-error';
 import {
   ACCESS_CARD_CATEGORIES,
   ACCESS_CARD_CATEGORY_TABS,
 } from '../lib/constants';
 
-const { mockApiGet, mockDownloadAccessCardPdf, mockUseAuth } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockDownloadAccessCardPdf, mockUseAuth } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
   mockDownloadAccessCardPdf: vi.fn(),
   mockUseAuth: vi.fn(),
 }));
@@ -21,7 +24,7 @@ vi.mock('../lib/auth-context', () => ({
 vi.mock('../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
-    post: vi.fn(),
+    post: (...args: unknown[]) => mockApiPost(...args),
     patch: vi.fn(),
     put: vi.fn(),
     del: vi.fn(),
@@ -64,6 +67,7 @@ describe('ACCESS_CARD_CATEGORY_TABS', () => {
 describe('AccessCardViewPage', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();
+    mockApiPost.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue({ user: { id: '1', role: 'admin' }, loading: false });
     mockApiGet.mockImplementation((key: unknown) => {
@@ -192,6 +196,30 @@ describe('AccessCardViewPage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('says why an entry was rejected instead of only logging it to the console', async () => {
+    // The 400 went into console.error and nowhere else: the form stayed full and
+    // no message appeared, so a rejected entry was indistinguishable from a
+    // saved one. A bad category or an expired CSRF token both land here.
+    mockApiPost.mockRejectedValueOnce(
+      new ApiError(400, {
+        message: 'Invalid access card service entry: category Invalid enum value',
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithSWR(<AccessCardViewPage />);
+    (await screen.findByRole('button', { name: /Add Entry/ })).click();
+
+    await user.type(await screen.findByLabelText('Service Rendered *'), 'Medical Referral');
+    await user.selectOptions(await screen.findByLabelText('Agency *'), 'ag-1');
+    await user.click(screen.getByRole('button', { name: /Save Entry/ }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/Invalid access card service entry/);
+    // The entry is still on screen to be corrected, not silently discarded.
+    expect(screen.getByLabelText('Service Rendered *')).toHaveValue('Medical Referral');
   });
 });
 

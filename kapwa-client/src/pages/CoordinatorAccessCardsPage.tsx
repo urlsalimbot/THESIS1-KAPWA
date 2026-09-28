@@ -12,8 +12,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DataTable } from '@/components/data-table';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
 import { CategoryBadge } from '@/components/cards/CategoryBadge';
+import { FormError } from '@/components/FormError';
 import type { AccessCardCategory } from '@/lib/constants';
-import { Search, Check, History, BadgeCheck, Loader2, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, Check, History, BadgeCheck, Loader2, MapPin, CheckCircle2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { formatDate, todayInManila } from '../lib/format';
 
@@ -85,18 +86,6 @@ export function CoordinatorAccessCardsPage() {
         </Tabs>
       </div>
     </PageShell>
-  );
-}
-
-/** Inline error line. Previously these were bare `catch {}` blocks, so a failed
- *  lookup looked identical to a card that simply had no name on file. */
-function FormError({ children }: { children?: string | null }) {
-  if (!children) return null;
-  return (
-    <p role="alert" className="flex items-start gap-1.5 text-sm text-destructive">
-      <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-      <span>{children}</span>
-    </p>
   );
 }
 

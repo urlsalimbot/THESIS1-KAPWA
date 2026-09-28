@@ -13,9 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
 import { CategoryBadge } from '@/components/cards/CategoryBadge';
+import { FormError } from '@/components/FormError';
 import { ACCESS_CARD_CATEGORY_TABS, type AccessCardCategory } from '@/lib/constants';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
 import { formatDate, todayInManila } from '../lib/format';
+import { humanizeError } from '../lib/errors';
 
 interface AccessCardService {
   id: string;
@@ -107,6 +109,8 @@ export function AccessCardViewPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState(blankAddForm);
   const [adding, setAdding] = useState(false);
+  // A rejected entry used to go to console.error and nowhere else.
+  const [addError, setAddError] = useState<string | null>(null);
 
   const { data: ben } = useSWR<Record<string, unknown>>(
     id ? queryKeys.beneficiaries.detail(id) : null,
@@ -131,6 +135,7 @@ export function AccessCardViewPage() {
     e.preventDefault();
     if (!cardData?.code) return;
     setAdding(true);
+    setAddError(null);
     try {
       await api.post('/access-cards/log', {
         accessCardCode: cardData.code,
@@ -145,7 +150,10 @@ export function AccessCardViewPage() {
       setShowAddForm(false);
       setAddForm(blankAddForm());
     } catch (err) {
-      console.error('Failed to add entry:', err);
+      // `humanizeError` keeps the API's own message when it is short enough to
+      // read and falls back to plain copy for the status otherwise, so a
+      // rejected category says which value was wrong instead of "Failed".
+      setAddError(humanizeError(err, t('accessCard.logFailed', 'Failed to log activity. Please try again.')));
     } finally {
       setAdding(false);
     }
@@ -237,7 +245,7 @@ export function AccessCardViewPage() {
             <CreditCard size={16} className="text-primary" />
             <h3 className="text-sm font-semibold">{t('accessCard.servicesRendered', 'Services Rendered')}</h3>
           </div>
-          <Button size="sm" onClick={() => setShowAddForm(true)}>
+          <Button size="sm" onClick={() => { setAddError(null); setShowAddForm(true); }}>
             <Plus size={14} className="mr-1" /> {t('accessCard.addEntry', 'Add Entry')}
           </Button>
         </div>
@@ -318,6 +326,7 @@ export function AccessCardViewPage() {
                 <input id="access-card-worker" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.workerNameSign} onChange={e => setAddForm(f => ({ ...f, workerNameSign: e.target.value }))} />
               </div>
             </div>
+            <FormError>{addError}</FormError>
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={adding}>{adding ? t('accessCard.saving', 'Saving...') : t('accessCard.saveEntry', 'Save Entry')}</Button>
               <Button variant="outline" size="sm" type="button" onClick={() => setShowAddForm(false)}>{t('accessCard.cancel', 'Cancel')}</Button>
