@@ -658,6 +658,9 @@ if (PROFILE !== 'smoke') {
   thresholds['http_req_duration{scenario:reads}'] = ['p(95)<500'];
 }
 
+// k6 v2 only allows open() in the init context.
+const SAMPLE_PDF = UPLOAD ? open('./assets/sample.pdf', 'b') : null;
+
 export const options = {
   scenarios: profileConfig(PROFILE),
   thresholds,
@@ -840,7 +843,7 @@ export function writes(data) {
   if (ok && UPLOAD) {
     const caseId = res.json('caseId');
     if (caseId) {
-      const file = http.file(open('./assets/sample.pdf', 'b'), 'perf-sample.pdf', 'application/pdf');
+      const file = http.file(SAMPLE_PDF, 'perf-sample.pdf', 'application/pdf');
       const upload = http.post(`${BASE_URL}/filing/upload`, { caseId, category: 'perf', file }, {
         headers: { Authorization: `Bearer ${token}`, [ 'X-CSRF-Token' ]: csrfToken() },
         tags: { endpoint: 'filing-upload' },
