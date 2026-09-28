@@ -1,4 +1,4 @@
-import { programBand, selectCaseColumn, buildColumns, codeForProgram } from './summary-report.types';
+import { programBand, selectCaseColumn, buildColumns, codeForProgram, gadLabelFor } from './summary-report.types';
 
 const PROGRAMS = [
   { id: 'p-burial', name: 'Burial Assistance', category: 'Burial' },
@@ -88,6 +88,20 @@ describe('buildColumns', () => {
     expect(cols[cols.length - 2]).toMatchObject({ key: 'UNASSIGNED', band: '' });
     expect(cols[cols.length - 1]).toMatchObject({ key: 'TOTAL', band: '' });
     const burial = cols.find((c) => c.key === 'p-burial');
-    expect(burial).toMatchObject({ label: 'Burial Assistance', band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' });
+    expect(burial).toMatchObject({ label: 'BURIAL', band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' });
+  });
+});
+
+describe('gadLabelFor', () => {
+  it('maps reference programmes to the GAD short labels and leaves others named', () => {
+    expect(gadLabelFor('Burial Assistance')).toBe('BURIAL');
+    expect(gadLabelFor('Medical Equipment Loan')).toBe('MEDICAL');
+    expect(gadLabelFor('Assistive Device Support')).toBe('ASSISTIVE DEVICES');
+    expect(gadLabelFor('PWD Assistance')).toBe('PWD');
+    expect(gadLabelFor('Legal Referral (PAO)')).toBe('LEGAL/PAO');
+    expect(gadLabelFor('Psychosocial Counseling')).toBe('COUNSELLING');
+    expect(gadLabelFor('PhilHealth Assistance')).toBe('PHILHEALTH');
+    expect(gadLabelFor('Balik Probinsya Assistance')).toBe('BALIK PROBINSYA');
+    expect(gadLabelFor('Educational Assistance')).toBeUndefined();
   });
 });

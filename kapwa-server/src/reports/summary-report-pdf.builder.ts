@@ -102,9 +102,10 @@ function drawSectionTitle(doc: any, title: string) {
 function colWeight(c: ReportColumn): number {
   if (c.key === 'TOTAL' || c.key === 'UNASSIGNED') return 18;
   if (c.band === 'SEX') return 9;
-  // Cap program columns so name-length never starves UNASSIGNED/TOTAL into
-  // unreadable slivers (labels wrap/ellipsise within their cell instead).
-  return Math.min(5 + c.label.length, 10);
+  // Reference-mapped GAD columns get more width than the filler programmes
+  // (OTHER PROGRAMS) so their labels survive the production-width table.
+  if (c.mapped) return 13;
+  return 7;
 }
 
 function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]) {
@@ -164,8 +165,9 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
   columns.forEach((c, i) => {
     if (row3(c)) return;
     const cellW = colX[i + 1] - colX[i] - 2;
-    const size = c.label.length > 12 ? 4.6 : c.label.length > 9 ? 5.2 : 6;
-    wrapLabelLines(doc, c.label, cellW, size, 2).forEach((ln, li) => {
+    const size = labelSize(doc, c.label, cellW, c.label.length > 12 ? 4.6 : c.label.length > 9 ? 5.2 : 6);
+    // The R2 tier spans two rows, so three short lines fit comfortably.
+    wrapLabelLines(doc, c.label, cellW, size, 3).forEach((ln, li) => {
       doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
         .text(ln, colX[i] + 1, R2top + 3 + li * (size + 1.2), { width: cellW, align: 'center', lineBreak: false });
     });
@@ -175,7 +177,7 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
   columns.forEach((c, i) => {
     if (!row3(c)) return;
     const cellW = colX[i + 1] - colX[i] - 2;
-    const size = c.label.length > 12 ? 4.6 : c.label.length > 9 ? 5.2 : 6;
+    const size = labelSize(doc, c.label, cellW, c.label.length > 12 ? 4.6 : c.label.length > 9 ? 5.2 : 6);
     wrapLabelLines(doc, c.label, cellW, size, 2).forEach((ln, li) => {
       doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
         .text(ln, colX[i] + 1, R3top + 3 + li * (size + 1.2), { width: cellW, align: 'center', lineBreak: false });
@@ -220,6 +222,18 @@ function drawSignatories(doc: any, data: SummaryReportData) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// Choose a label size that fits the cell's longest word, then wrap to at most
+// two lines. Guarantees the word is never ellipsised away in narrow columns
+// (production catalogue puts ~33 columns across landscape A4).
+function labelSize(doc: any, text: string, cellW: number, preferred: number): number {
+  const longest = text.split(/\s+/).reduce((a, b) => (b.length > a.length ? b : a), '');
+  let size = preferred;
+  while (size > 3.0 && doc.font('Helvetica-Bold').fontSize(size).widthOfString(longest) > cellW) {
+    size -= 0.2;
+  }
+  return size;
+}
 
 // Word-wrap `text` into at most `maxLines` lines at `size`. Lines that still
 // exceed `maxWidth` after wrapping are truncated with an ellipsis so narrow

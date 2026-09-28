@@ -8,9 +8,11 @@
 
 export interface ReportColumn {
   key: string;      // program id, 'MALE', 'FEMALE', 'UNASSIGNED' or 'TOTAL'
-  label: string;    // printable header (program name or fixed label)
+  label: string;    // printable header (GAD short label or programme name)
   band: string;     // SEX | FINANCIAL | LEGAL | TECHNICAL | OTHER PROGRAMS | '' (TOTAL/UNASSIGNED)
   subBand?: string; // e.g. 'FINANCIAL ASSISTANCE' / 'REFERRAL'
+  /** True when the label is a reference GAD label (gets layout priority). */
+  mapped?: boolean;
 }
 
 export interface CaseClassificationInput {
@@ -215,6 +217,30 @@ export function selectCaseColumn(
   return { key: 'UNASSIGNED', code: '' };
 }
 
+/**
+ * Reference GAD column label for a programme. Mapped programmes print the
+ * short label used on the printed form (BURIAL, LEGAL/PAO, COUNSELLING, …);
+ * unmapped programmes keep their own name (OTHER PROGRAMS band).
+ */
+export function gadLabelFor(name: string): string | undefined {
+  const n = name.toLowerCase();
+  if (/burial/.test(n)) return 'BURIAL';
+  if (/assistive/.test(n)) return 'ASSISTIVE DEVICES';
+  if (/medical/.test(n)) return 'MEDICAL';
+  if (/^pwd\b/.test(n) || /pwd assistance/.test(n)) return 'PWD';
+  if (/legal|\bpao\b/.test(n)) return 'LEGAL/PAO';
+  if (/referral/.test(n)) return 'OTHERS';
+  if (/birth discrepancy/.test(n)) return 'BIRTH DISCREPANCY';
+  if (/travel/.test(n)) return 'TRAVEL ASSESSMENT';
+  if (/case study|\bcsr\b/.test(n)) return 'CASE STUDY REPORT';
+  if (/counsel|psychosocial/.test(n)) return 'COUNSELLING';
+  if (/philhealth/.test(n)) return 'PHILHEALTH';
+  if (/child custody/.test(n)) return 'CHILD CUSTODY';
+  if (/home visit/.test(n)) return 'HOME VISIT';
+  if (/balik probinsya/.test(n)) return 'BALIK PROBINSYA';
+  return undefined;
+}
+
 // Column ordering used by the builder: SEX | FINANCIAL (BURIAL, MEDICAL,
 // ASSISTIVE, PWD) | LEGAL (PAO, OTHERS) | TECHNICAL (reference order) |
 // OTHER PROGRAMS | UNASSIGNED | TOTAL — matching the reference GAD header
@@ -235,7 +261,8 @@ export function buildColumns(programs: ProgramResolution['programs']): ReportCol
   ];
   for (const p of rest) {
     const b = programBand(p.name, p.category);
-    out.push({ key: p.id, label: p.name, band: b.band, subBand: b.subBand });
+    const gad = gadLabelFor(p.name);
+    out.push({ key: p.id, label: gad ?? p.name, band: b.band, subBand: b.subBand, mapped: !!gad });
   }
   out.push({ key: 'UNASSIGNED', label: 'UNASSIGNED', band: '' });
   out.push({ key: 'TOTAL', label: 'TOTAL', band: '' });

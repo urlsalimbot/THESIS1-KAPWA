@@ -217,20 +217,13 @@ const accessCardData = {
 };
 
 // Mirrors the fixture in summary-report-pdf.builder.spec.ts (program-driven):
-// columns = SEX + a small seeded-program set + UNASSIGNED + TOTAL.
-const SUMMARY_PROG_COLUMNS = [
-  { key: 'MALE', label: 'MALE', band: 'SEX' },
-  { key: 'FEMALE', label: 'FEMALE', band: 'SEX' },
-  { key: 'p-burial', label: 'Burial Assistance', band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' },
-  { key: 'p-med', label: 'Medical Assistance', band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' },
-  { key: 'p-pwd', label: 'PWD Assistance', band: 'FINANCIAL' },
-  { key: 'p-pao', label: 'Legal Referral (PAO)', band: 'LEGAL', subBand: 'REFERRAL' },
-  { key: 'p-ref', label: 'Referral – Others', band: 'LEGAL', subBand: 'REFERRAL' },
-  { key: 'p-csr', label: 'Case Study Report (CSR)', band: 'TECHNICAL' },
-  { key: 'p-hv', label: 'Home Visit', band: 'TECHNICAL' },
-  { key: 'UNASSIGNED', label: 'UNASSIGNED', band: '' },
-  { key: 'TOTAL', label: 'TOTAL', band: '' },
-];
+// columns come from the FULL seeded programme catalogue (as production does),
+// built through buildColumns so labels/bands match the server exactly.
+const { PROGRAMS } = loadBuilder('database/seed-programs.js');
+const { buildColumns } = loadBuilder('reports/summary-report.types.js');
+const SUMMARY_PROG_COLUMNS = buildColumns(
+  PROGRAMS.map((p) => ({ id: p.id, name: p.name, category: p.category })),
+);
 
 const summaryEmptyTable = (title) => {
   const byColumn = {};
