@@ -535,9 +535,36 @@ describe('IntakeService', () => {
       );
 
       expect(dataSourceMock.query).toHaveBeenCalledWith(
-        expect.stringContaining('similarity'),
+        expect.stringContaining('sim_surname'),
         ['Dela Cruz', 'Juan', null],
       );
+      // Regression guard: one matching name part must never stand in for a full match.
+      expect((dataSourceMock.query as jest.Mock).mock.calls[0][0]).not.toContain('GREATEST');
+    });
+
+    it('keeps only households that pass the two-part name rule, ranked by score', async () => {
+      dataSourceMock.query = jest.fn().mockResolvedValue([
+        {
+          household_id: 'hh-surname-only', sim_surname: 1, sim_first: 0, family_score: 0,
+          ben_id: 'ben-1', surname: 'Santos', first_name: 'Lorna', gender: 'Female', age: 40,
+          all_beneficiaries: [], family_members: [], case_exists_30d: false, last_case_date: null,
+        },
+        {
+          household_id: 'hh-identical', sim_surname: 1, sim_first: 1, family_score: 0,
+          ben_id: 'ben-2', surname: 'Santos', first_name: 'Josh', gender: 'Male', age: 30,
+          all_beneficiaries: [], family_members: [], case_exists_30d: true, last_case_date: null,
+        },
+        {
+          household_id: 'hh-weak', sim_surname: 0.3, sim_first: 0.1, family_score: 0.5,
+          ben_id: 'ben-3', surname: 'Sntos', first_name: 'Lorn', gender: 'Female', age: 41,
+          all_beneficiaries: [], family_members: [], case_exists_30d: false, last_case_date: null,
+        },
+      ]);
+
+      const result = await service.matchCheck({ surname: 'Santos', firstName: 'Josh' }, []);
+
+      expect(result.candidates.map(c => c.householdId)).toEqual(['hh-identical']);
+      expect(result.candidates[0].score).toBeCloseTo(0.6, 5);
     });
 
     it('should return empty candidates when no matches', async () => {

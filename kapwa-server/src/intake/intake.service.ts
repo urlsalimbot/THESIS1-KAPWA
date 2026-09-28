@@ -17,6 +17,7 @@ import { AccountProvisioningService } from '../accounts/account-provisioning.ser
 import { Referral, ReferralStatus } from '../referrals/referral.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { memberToPerson } from './member-person';
+import { assessMatchCandidate } from './match-scoring';
 import { User, UserRole } from '../auth/user.entity';
 import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse } from './dto/intake.zod';
 
@@ -559,14 +560,14 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
   async matchCheck(data: MatchCheckInput, workerBarangays: string[]): Promise<{ candidates: MatchCandidate[] }> {
     const familyNames = (data.familyMembers || []).map(f => `${f.surname}, ${f.firstName}`).filter(Boolean);
 
+    // Score in SQL (pg_trgm), decide in assessMatchCandidate: the coarse WHERE
+    // keeps every row that could still qualify under either branch of the rule.
     const raw = await this.dataSource.query(
       `WITH household_scores AS (
         SELECT
           h.id,
-          GREATEST(
-            similarity(p.surname, $1),
-            similarity(p.first_name, $2)
-          ) AS ben_score,
+          similarity(p.surname, $1) AS sim_surname,
+          similarity(p.first_name, $2) AS sim_first,
           CASE WHEN $3::text[] IS NOT NULL AND array_length($3::text[], 1) > 0 THEN (
             SELECT COALESCE(AVG(sub.best), 0)
             FROM (
@@ -584,7 +585,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       )
       SELECT
         hs.id AS household_id,
-        (0.6 * COALESCE(hs.ben_score, 0) + 0.4 * COALESCE(hs.family_score, 0)) AS score,
+        hs.sim_surname, hs.sim_first, hs.family_score,
         b.id AS ben_id, p.surname, p.first_name,
         (SELECT pa2.raw FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' LIMIT 1) AS address,
         (SELECT pc2.value FROM person_contacts pc2 WHERE pc2.person_id = p.id AND pc2.contact_type = 'phone' LIMIT 1) AS phone,
@@ -619,22 +620,33 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       JOIN beneficiaries b ON b.id = h.primary_beneficiary_id
       JOIN persons p ON p.id = b.person_id
       LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
-      WHERE (0.6 * COALESCE(hs.ben_score, 0) + 0.4 * COALESCE(hs.family_score, 0)) >= 0.6
-      ORDER BY (0.6 * COALESCE(hs.ben_score, 0) + 0.4 * COALESCE(hs.family_score, 0)) DESC
-      LIMIT 10`,
+      WHERE hs.sim_surname >= 0.4 OR hs.sim_first >= 0.4 OR hs.family_score >= 0.6
+      ORDER BY (0.6 * ((hs.sim_surname + hs.sim_first) / 2) + 0.4 * hs.family_score) DESC
+      LIMIT 50`,
       [data.surname, data.firstName, familyNames.length > 0 ? familyNames : null],
     );
 
     const candidates: MatchCandidate[] = (raw as any[])
-      .filter(r => {
+      .map(r => ({
+        row: r,
+        assessment: assessMatchCandidate({
+          simSurname: parseFloat(r.sim_surname) || 0,
+          simFirstName: parseFloat(r.sim_first) || 0,
+          familyScore: parseFloat(r.family_score) || 0,
+        }),
+      }))
+      .filter(({ assessment, row }) => {
+        if (!assessment.isMatch) return false;
         if (workerBarangays.length === 0) return true;
-        const addr = r.current_address as Record<string, string> | null;
+        const addr = row.current_address as Record<string, string> | null;
         const barangay = addr?.barangay || '';
         return workerBarangays.includes(barangay);
       })
-      .map(r => ({
+      .sort((a, b) => b.assessment.score - a.assessment.score)
+      .slice(0, 10)
+      .map(({ row: r, assessment }) => ({
         householdId: r.household_id,
-        score: parseFloat(r.score) || 0,
+        score: assessment.score,
         caseExistsWithin30Days: Boolean(r.case_exists_30d),
         primaryBeneficiary: {
           id: r.ben_id,
