@@ -5,9 +5,18 @@ describe('forecast models', () => {
     const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     const result = holtLinear(values, { horizon: 3 });
     expect(result.forecast).toHaveLength(3);
-    expect(result.forecast[0]).toBeCloseTo(11, 0);
-    expect(result.forecast[2]).toBeCloseTo(13, 0);
-    expect(result.fitted[9]).toBeCloseTo(10, 0);
+    expect(result.forecast[0]).toBeCloseTo(11, 6);
+    expect(result.forecast[2]).toBeCloseTo(13, 6);
+    expect(result.fitted[9]).toBeCloseTo(10, 6);
+    expect(result.residualStd).toBeCloseTo(0, 6);
+  });
+
+  it('fits a noiseless linear series exactly from the second point', () => {
+    const result = holtLinear([2, 4, 6, 8], { horizon: 1, alpha: 0.5, beta: 0.5 });
+    expect(result.fitted[0]).toBe(2);
+    expect(result.fitted[1]).toBeCloseTo(4, 6);
+    expect(result.residualStd).toBeCloseTo(0, 6);
+    expect(result.forecast[0]).toBeCloseTo(10, 6);
   });
 
   it('reports zero MAPE for exact predictions and null when nothing is comparable', () => {

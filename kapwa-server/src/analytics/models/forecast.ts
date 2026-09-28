@@ -26,9 +26,10 @@ function holtWithParams(values: number[], alpha: number, beta: number, horizon: 
   }
   let level = values[0];
   let trend = values.length > 1 ? values[1] - values[0] : 0;
-  const fitted: number[] = [];
+  // The seed level is the first fitted value; one-step residuals exist from t=1.
+  const fitted: number[] = [values[0]];
   const residuals: number[] = [];
-  for (let i = 0; i < values.length; i++) {
+  for (let i = 1; i < values.length; i++) {
     const prediction = level + trend;
     fitted.push(prediction);
     residuals.push(values[i] - prediction);
