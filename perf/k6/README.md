@@ -34,7 +34,7 @@ Exit code is non-zero when a threshold fails.
 | `run.sh --stop` | Tear down a `--stack-only` stack |
 | `run.sh --profile smoke\|reads\|writes\|quick\|full` | Pick scenario set |
 | `run.sh --reset-db` | Drop/recreate `kapwa_perf` first |
-| `run.sh --no-build` | Skip the server build step |
+| `run.sh --no-build` | Skip the server build step (still builds when `dist/main.js` is missing) |
 | `run.sh --upload` | Enable the MinIO upload scenario (requires MinIO running) |
 
 ## Scenarios
@@ -57,9 +57,9 @@ Exit code is non-zero when a threshold fails.
 
 ## Interpreting results
 
-- Analytics and dashboard endpoints are cached for 5 minutes; a second run without a
-  data change will mostly measure the cache. Restart the server (or vary filters) for
-  cold-path numbers.
+- Analytics and dashboard *trends* are cached for 5 minutes and `/dashboard/metrics`
+  for 30 s; a second run without a data change will mostly measure the cache. Restart
+  the server (or vary filters) for cold-path numbers.
 - The writes scenario grows the `kapwa_perf` database by design; use `--reset-db` to
   start clean and to keep run-to-run comparisons honest. **Repeat seeding without a
   reset currently fails** because a repeated intake for an existing person hits an app

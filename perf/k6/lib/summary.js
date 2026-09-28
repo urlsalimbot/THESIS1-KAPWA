@@ -5,8 +5,9 @@ function esc(value) {
 function metricRow(name, metric) {
   const values = metric.values || {};
   let value = '';
-  if (metric.type === 'rate') value = `${(values.rate * 100).toFixed(2)}%`;
+  if (metric.type === 'rate') value = `${((values.rate ?? 0) * 100).toFixed(2)}%`;
   else if (metric.type === 'trend') value = values['p(95)'] !== undefined ? `${Number(values['p(95)']).toFixed(1)} ms` : '';
+  else if (metric.type === 'gauge') value = `${values.value ?? ''}`;
   else value = `${values.count ?? ''}${values.rate !== undefined ? ` (${Number(values.rate).toFixed(1)}/s)` : ''}`;
   return `<tr><td>${esc(name)}</td><td>${esc(metric.type)}</td><td>${esc(value)}</td><td>${esc(values.avg !== undefined ? Number(values.avg).toFixed(1) : '')}</td></tr>`;
 }
@@ -42,8 +43,4 @@ h2{margin-top:2rem}
 <h2>Key metrics</h2>
 <table><thead><tr><th>Metric</th><th>Type</th><th>Value</th><th>Avg</th></tr></thead><tbody>${keyMetrics.map(name => metricRow(name, metrics[name])).join('')}</tbody></table>
 </body></html>`;
-}
-
-export function writeSummary(data) {
-  return { summaryJson: JSON.stringify(data, null, 2), summaryHtml: renderHtml(data) };
 }
