@@ -53,12 +53,12 @@ function searchableText(buf: Buffer): string {
 }
 
 describe('buildSummaryReportPdf', () => {
-  it('produces three landscape A4 pages', async () => {
+  it('produces three US Legal landscape pages', async () => {
     const doc = await PDFDocument.load(await buildSummaryReportPdf(data));
     expect(doc.getPageCount()).toBe(3);
     const { width, height } = doc.getPage(0).getSize();
-    expect(Math.round(width)).toBe(842);
-    expect(Math.round(height)).toBe(595);
+    expect(Math.round(width)).toBe(936);
+    expect(Math.round(height)).toBe(612);
   });
 
   it('prints page titles, program-driven bands, signatories, and case rows', async () => {
@@ -67,7 +67,7 @@ describe('buildSummaryReportPdf', () => {
       'SUMMARY REPORT 2025', 'GAD DATABASE CASE TRACKER', '2nd QUARTER REPORT',
       'April 1-30, 2025', 'May 1-31, 2025', 'June 1-30, 2025', '2nd QUARTER SUMMARY',
       'GAD DATABASE CASE LIST', 'SR. CITIZEN', 'INDIGENT', 'Intervention/Remarks',
-      'FINANCIAL', 'LEGAL', 'TECHNICAL', 'Burial Assistance', 'Case Study Report (CSR)',
+      'FINANCIAL', 'LEGAL', 'TECHNICAL', 'BURIAL', 'MEDICAL', 'CASE STUDY REPORT',
       'UNASSIGNED', 'Prepared by:', 'Noted by:', 'ARLYNDA F. GAMUTIA', 'ANNALYN JOY C. SAN PEDRO',
       'Magno', 'Poblacion',
     ]) expect(text).toContain(s);

@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { CaseListRow, ReportColumn, SummaryReportData, SummaryTable } from './summary-report.types';
 
-const PAGE: [number, number] = [841.89, 595.28]; // A4 landscape
+const PAGE: [number, number] = [936, 612]; // US Legal landscape (8.5in x 13in)
 const M = 28;
 const LEFT = M;
 const RIGHT = PAGE[0] - M;
@@ -29,12 +29,12 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
   doc.on('data', (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));
 
-  drawLetterhead(doc, data, true);
+  drawLetterhead(doc, data);
   drawTitle(doc, data.annual.title, `GAD DATABASE CASE TRACKER`);
   drawGroupedTable(doc, data.annual, data.columns);
 
   doc.addPage();
-  drawLetterhead(doc, data, false);
+  drawLetterhead(doc, data);
   drawTitle(doc, `${data.year}`, `${ordinal(data.quarter)} QUARTER REPORT`);
   data.monthly.forEach((m) => { drawSectionTitle(doc, m.title); drawGroupedTable(doc, m, data.columns); });
   drawSectionTitle(doc, data.quarterSummary.title);
@@ -42,7 +42,7 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
   drawSignatories(doc, data);
 
   doc.addPage();
-  drawLetterhead(doc, data, false);
+  drawLetterhead(doc, data);
   drawTitle(doc, 'GAD DATABASE CASE LIST', '');
   drawCaseList(doc, data.caseList);
 
@@ -52,25 +52,20 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
 
 function ordinal(q: number): string { return ['1st', '2nd', '3rd', '4th'][q - 1] ?? `${q}th`; }
 
-function drawLetterhead(doc: any, data: SummaryReportData, full: boolean) {
+function drawLetterhead(doc: any, data: SummaryReportData) {
   const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
   const dswdPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
   const BADGE = 46;
   const GAP = 20; // keep the seals 20pt from the letterhead text
 
-  // Letterhead lines (font/size/text) — used both to render the text and to
-  // place the badges at a fixed 20pt gap from its edges.
-  const lines: Array<{ text: string; size: number; bold: boolean }> = full
-    ? [
-        { text: 'Republic of the Philippines', size: 9, bold: true },
-        { text: 'Province of Bulacan', size: 8, bold: false },
-        { text: 'Municipality of Norzagaray', size: 8, bold: false },
-      ]
-    : [{ text: 'Municipality of Norzagaray', size: 9, bold: true }];
-  lines.push(
+  // Every page carries the same full letterhead.
+  const lines: Array<{ text: string; size: number; bold: boolean }> = [
+    { text: 'Republic of the Philippines', size: 9, bold: true },
+    { text: 'Province of Bulacan', size: 8, bold: false },
+    { text: 'Municipality of Norzagaray', size: 8, bold: false },
     { text: data.officeName.toUpperCase(), size: 8.5, bold: true },
     { text: `ACCOMPLISHMENT REPORT (Services) ${data.year}`, size: 7.5, bold: false },
-  );
+  ];
 
   const widest = lines.reduce((w, l) => {
     doc.font(l.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(l.size);
@@ -79,7 +74,7 @@ function drawLetterhead(doc: any, data: SummaryReportData, full: boolean) {
   const textLeft = (LEFT + RIGHT) / 2 - widest / 2;
   const textRight = (LEFT + RIGHT) / 2 + widest / 2;
   const textTop = M;
-  const textBottom = (full ? M + 32 : M + 12) + 10;
+  const textBottom = M + 42;
   const badgeY = Math.max(M - BADGE / 2 + 8, (textTop + textBottom) / 2 - BADGE / 2);
 
   const sealX = Math.max(LEFT, textLeft - GAP - BADGE);
@@ -87,21 +82,16 @@ function drawLetterhead(doc: any, data: SummaryReportData, full: boolean) {
   if (fs.existsSync(sealPath)) { try { doc.image(sealPath, sealX, badgeY, { fit: [BADGE, BADGE] }); } catch { /* seal omitted */ } }
   if (fs.existsSync(dswdPath)) { try { doc.image(dswdPath, dswdX, badgeY, { fit: [BADGE, BADGE] }); } catch { /* seal omitted */ } }
 
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111');
-  if (full) {
-    doc.text('Republic of the Philippines', LEFT, M, { width: WIDTH, align: 'center', lineBreak: false });
-    doc.font('Helvetica').fontSize(8);
-    doc.text('Province of Bulacan', LEFT, M + 11, { width: WIDTH, align: 'center', lineBreak: false });
-    doc.text('Municipality of Norzagaray', LEFT, M + 21, { width: WIDTH, align: 'center', lineBreak: false });
-  } else {
-    doc.text('Municipality of Norzagaray', LEFT, M, { width: WIDTH, align: 'center', lineBreak: false });
-  }
-  const officeY = full ? M + 32 : M + 12;
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
+    .text(lines[0].text, LEFT, M, { width: WIDTH, align: 'center', lineBreak: false });
+  doc.font('Helvetica').fontSize(8)
+    .text(lines[1].text, LEFT, M + 11, { width: WIDTH, align: 'center', lineBreak: false })
+    .text(lines[2].text, LEFT, M + 21, { width: WIDTH, align: 'center', lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(8.5)
-    .text(data.officeName.toUpperCase(), LEFT, officeY, { width: WIDTH, align: 'center', lineBreak: false });
+    .text(lines[3].text, LEFT, M + 32, { width: WIDTH, align: 'center', lineBreak: false });
   doc.font('Helvetica').fontSize(7.5)
-    .text(`ACCOMPLISHMENT REPORT (Services) ${data.year}`, LEFT, officeY + 10, { width: WIDTH, align: 'center', lineBreak: false });
-  doc.y = officeY + 24;
+    .text(lines[4].text, LEFT, M + 42, { width: WIDTH, align: 'center', lineBreak: false });
+  doc.y = M + 56;
 }
 
 function drawTitle(doc: any, line1: string, line2: string) {

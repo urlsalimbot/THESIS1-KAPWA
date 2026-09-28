@@ -319,7 +319,7 @@ const documents = [
     slug: '14-summary-report',
     label: 'GAD Summary Report (annual/quarter/case list)',
     source: 'reports/summary-report-pdf.builder.ts',
-    paper: 'A4 landscape',
+    paper: 'US Legal landscape',
     build: () => buildSummaryReportPdf(summaryReportData),
   },
 ];
