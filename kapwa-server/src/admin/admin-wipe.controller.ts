@@ -20,13 +20,6 @@ export class AdminWipeController {
     return this.svc.wipeDevice(deviceId);
   }
 
-  @Post('user/:userId')
-  @Roles('admin')
-  @ApiOperation({ summary: 'Remote wipe all sessions for a user' })
-  async wipeUser(@Param('userId') userId: string) {
-    return this.svc.wipeUser(userId);
-  }
-
   @Get('devices')
   @Roles('admin')
   @ApiOperation({ summary: 'List all devices bound to user accounts' })

@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { BottomNav } from '@/components/BottomNav';
 import { SyncStatusBanner } from '@/components/SyncStatusBanner';
+import { AccessDeniedBanner } from '@/components/AccessDeniedBanner';
 import { SyncQueuePanel } from '@/components/SyncQueuePanel';
 import { startPendingSyncWatcher } from '@/lib/sync';
 import { SkipToContent } from '@/components/a11y/SkipToContent';
@@ -70,6 +71,8 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         isOnline={isOnline}
         onOpenQueue={() => setQueueOpen(true)}
       />
+
+      <AccessDeniedBanner routeKey={location.pathname} />
 
       <div className="no-print shrink-0">
         <Topbar onMenuToggle={() => setSheetOpen(s => !s)} />

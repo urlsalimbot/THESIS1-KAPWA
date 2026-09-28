@@ -10,6 +10,28 @@ const TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 3;
 const BASE_DELAYS_MS = [500, 1500, 4500] as const;
 export const KAPWA_AUTH_LOGOUT_EVENT = 'kapwa:auth:logout';
+export const KAPWA_ACCESS_DENIED_EVENT = 'kapwa:access:denied';
+
+export interface AccessDeniedDetail {
+  message: string;
+  path: string;
+}
+
+/**
+ * A 403 is a policy decision, not a transport failure, and it is otherwise
+ * invisible: SWR hands the error to its onError handler, and a page that only
+ * renders `data` shows an empty table. Broadcast the refusal so a persistent
+ * banner can say so on the user's behalf. Dispatched once at the request
+ * boundary, which covers every caller including raw fetch/upload paths.
+ */
+function announceAccessDenied(err: ApiError, path: string): void {
+  if (err.status !== 403) return;
+  window.dispatchEvent(
+    new CustomEvent<AccessDeniedDetail>(KAPWA_ACCESS_DENIED_EVENT, {
+      detail: { message: err.message, path },
+    }),
+  );
+}
 
 function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -99,7 +121,9 @@ async function rawRequest<T>(
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => null);
-      throw new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
+      const err = new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
+      announceAccessDenied(err, normalized);
+      throw err;
     }
     return (await res.json()) as T;
   } finally {
@@ -228,7 +252,9 @@ export const api = {
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => null);
-      throw new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
+      const err = new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
+      announceAccessDenied(err, url);
+      throw err;
     }
     return res.json();
   },

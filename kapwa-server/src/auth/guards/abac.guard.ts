@@ -48,31 +48,43 @@ export class AbacGuard implements CanActivate {
 
     // Coordinator scoping
     if (user.role === 'coordinator') {
-      if (resourceSensitivity !== 'public' && resourceSensitivity !== 'internal') return false;
+      if (resourceSensitivity !== 'public' && resourceSensitivity !== 'internal') {
+        throw new ForbiddenException(
+          `Barangay coordinators cannot access ${resourceSensitivity} records.`,
+        );
+      }
       const barangay = query?.barangay || params?.barangay || body?.barangay;
-      if (barangay && barangay !== user.assignedBarangay) return false;
+      if (barangay && barangay !== user.assignedBarangay) {
+        throw new ForbiddenException(
+          `You are not assigned to ${barangay}. Your assignment is ${user.assignedBarangay}.`,
+        );
+      }
       if (!barangay && isBeneficiaryRoute && user.assignedBarangay) {
         query.barangay = user.assignedBarangay;
       }
       return true;
     }
 
-    // Social worker scoping
+    // Social worker scoping: MSWDO staff are city-wide, so a worker is in scope
+    // for every barangay. Access to *restricted* records is still gated on a
+    // legal basis, which is a data-access rule rather than a geographic one.
     if (user.role === 'social_worker') {
       const legalBasis = query?.legalBasis || body?.legalBasis;
-      if (resourceSensitivity === 'restricted' && !legalBasis) return false;
-      const barangay = query?.barangay || params?.barangay || body?.barangay;
-      if (barangay) {
-        const inPermitted = user.permittedBarangays?.includes(barangay);
-        const isPrimary = barangay === user.assignedBarangay;
-        if (!inPermitted && !isPrimary) return false;
+      if (resourceSensitivity === 'restricted' && !legalBasis) {
+        throw new ForbiddenException(
+          'This record is restricted. A legal basis is required to access it.',
+        );
       }
       return true;
     }
 
     // Client/claimant scoping
     if (user.role === 'claimant') {
-      if (resourceSensitivity !== 'public') return false;
+      if (resourceSensitivity !== 'public') {
+        throw new ForbiddenException(
+          `This record is ${resourceSensitivity} and is not available to claimants.`,
+        );
+      }
       // Consent-ledger ABAC for the self-scoped /me/* surface (the param-based
       // branch above only covers /beneficiaries/:id routes).
       if (/\/me(\/|$)/.test(routePath) || /\/dashboard$/.test(routePath)) {
@@ -92,10 +104,15 @@ export class AbacGuard implements CanActivate {
       return true;
     }
 
-    // Mayor/auditor: treat as social_worker scope + restricted access requires legal basis
+    // Mayor/auditor: unrestricted geographic scope; restricted access still
+    // requires a legal basis.
     if (user.role === 'mayor' || user.role === 'auditor') {
       const legalBasis = query?.legalBasis || body?.legalBasis;
-      if (resourceSensitivity === 'restricted' && !legalBasis) return false;
+      if (resourceSensitivity === 'restricted' && !legalBasis) {
+        throw new ForbiddenException(
+          'This record is restricted. A legal basis is required to access it.',
+        );
+      }
       return true;
     }
 

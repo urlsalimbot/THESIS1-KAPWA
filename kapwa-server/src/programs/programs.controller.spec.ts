@@ -57,7 +57,8 @@ describe('ProgramsController — read access for staff', () => {
       getClass: () => ProgramsController,
       switchToHttp: () => ({ getRequest: () => ({ user: { role: 'coordinator' } }) }),
     } as any;
-    expect(guard.canActivate(ctx)).toBe(false);
+    // Throws rather than returning false so the client receives the reason.
+    expect(() => guard.canActivate(ctx)).toThrow(/coordinator/i);
   });
 
   it('RolesGuard rejects a claimant from listing programs', () => {
@@ -67,7 +68,7 @@ describe('ProgramsController — read access for staff', () => {
       getClass: () => ProgramsController,
       switchToHttp: () => ({ getRequest: () => ({ user: { role: 'claimant' } }) }),
     } as any;
-    expect(guard.canActivate(ctx)).toBe(false);
+    expect(() => guard.canActivate(ctx)).toThrow(/claimant/i);
   });
 
   it('RolesGuard rejects a social_worker from creating programs', () => {
@@ -77,6 +78,6 @@ describe('ProgramsController — read access for staff', () => {
       getClass: () => ProgramsController,
       switchToHttp: () => ({ getRequest: () => ({ user: { role: 'social_worker' } }) }),
     } as any;
-    expect(guard.canActivate(ctx)).toBe(false);
+    expect(() => guard.canActivate(ctx)).toThrow(/social_worker/i);
   });
 });

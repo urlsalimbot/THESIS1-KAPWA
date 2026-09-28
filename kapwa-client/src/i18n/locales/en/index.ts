@@ -636,6 +636,10 @@ const en = {
     "userManagement": "User Management",
     "users": "Users",
   },
+  "accessDenied": {
+    "dismiss": "Dismiss access denied notice",
+    "title": "Access denied — you do not have permission to view this."
+  },
   "adminWipe": {
     "cancel": "Cancel",
     "confirmDescription": "This will invalidate all sessions and unlink the device for {{email}}. The user will be forced to re-authenticate. This action cannot be undone. Type WIPE to confirm.",

@@ -75,6 +75,12 @@ function buildAccounts(): SeedAccount[] {
       lastName: a.lastName,
       nameExtension: a.nameExtension,
       phone: a.phone,
+      // Social workers staff the city-wide MSWDO office, so their scope is
+      // every barangay and they hold no single primary assignment. Barangay
+      // coordinators, by contrast, are assigned exactly one barangay below.
+      ...(a.role === 'social_worker'
+        ? { permittedBarangays: BARANGAYS.map(b => b.name) }
+        : {}),
     });
   }
 
@@ -138,8 +144,12 @@ async function seedAccounts(dataSource: DataSource) {
       );
     }
 
-    // 3NF: seed barangay assignments into the child table instead of legacy columns.
-    const seededBarangays = hashed.filter(h => h.acct.assignedBarangay);
+    // 3NF: seed barangay assignments into the child table instead of legacy
+    // columns. Accounts with only permitted (non-primary) assignments count too
+    // — social workers are city-wide and deliberately have no primary.
+    const seededBarangays = hashed.filter(
+      h => h.acct.assignedBarangay || h.acct.permittedBarangays?.length,
+    );
     for (const { acct } of seededBarangays) {
       const rows = await q.query(
         `SELECT id FROM users WHERE email = $1 LIMIT 1`,

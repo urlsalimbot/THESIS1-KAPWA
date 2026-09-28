@@ -33,13 +33,9 @@ export function AdminWipePage() {
     setLoading(false);
   }
 
-  async function handleWipe(type: 'user' | 'device', id: string, label: string) {
+  async function handleWipe(deviceId: string, label: string) {
     try {
-      if (type === 'device') {
-        await api.post(`/admin/wipe/device/${id}`);
-      } else {
-        await api.post(`/admin/wipe/user/${id}`);
-      }
+      await api.post(`/admin/wipe/device/${deviceId}`);
       setMsg(t('adminWipe.wipeSuccess', 'Remote wipe initiated for {{label}}', { label }));
       load();
     } catch (err: unknown) {
@@ -97,7 +93,7 @@ export function AdminWipePage() {
                     <AlertDialogAction
                       disabled={(wipeInputs[d.id] ?? '') !== 'WIPE'}
                       onClick={async () => {
-                        await handleWipe('device', d.deviceId, d.email);
+                        await handleWipe(d.deviceId, d.email);
                         setWipeDialogOpen(prev => ({ ...prev, [d.id]: false }));
                         setWipeInputs(prev => ({ ...prev, [d.id]: '' }));
                       }}

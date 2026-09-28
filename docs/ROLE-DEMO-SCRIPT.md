@@ -59,14 +59,16 @@ narrative thread in the film, and it only works if both sides are Bigte.
    toggle, off unless you build with `VITE_ENABLE_ANALYTICS=true`
    (`kapwa-client/src/lib/feature-flags.ts`). Either set it before filming or cut the
    optional analytics beat in Appendix B. Do not promise a screen that will not load.
-2. **The seeded social worker has no barangay assigned.** `seed-accounts.ts` assigns
-   barangays to coordinators only. If the presenter uses the **barangay filter dropdown**
-   on the Cases list, the social worker is denied — the guard finds no permitted barangay
-   to match. Either film shot **1.13**, which assigns worker1 to Bigte (recommended — it
-   is itself a filmable admin capability), or do not touch that filter on camera.
-3. **Do not film the admin wipe.** `POST /admin/wipe/user/:userId` and
-   `POST /admin/wipe/device/:deviceId` are real and irreversible. The Admin Panel has a
-   wipe screen. Keep it closed. There is no honest way to show it without a re-seed.
+2. **Social workers are city-wide; do not film them as barangay-scoped.** MSWDO field
+   staff are in scope for every barangay and hold no single primary assignment. The
+   social worker can filter the Cases list by *any* barangay and get rows. The one case
+   he cannot open is a **restricted** record without a legal basis — that is shot **2.9**,
+   and it now renders a visible refusal banner rather than an empty table.
+3. **Do not film the admin device wipe.** `POST /admin/wipe/device/:deviceId` is real and
+   irreversible: it bumps the user's `tokenVersion` and clears their bound device, forcing
+   re-authentication. The Admin Panel has a wipe screen. Keep it closed. There is no honest
+   way to show it without a re-seed. (The per-user wipe, `POST /admin/wipe/user/:userId`,
+   has been removed from the system.)
 
 ### 0.4 Craft notes that separate a demo from a fake
 
@@ -112,7 +114,7 @@ only role that can approve, issue documents, and manage accounts.*
 | 1.2 | **Admin Panel** — lands here automatically | Let the redirect land before speaking. | "Note where we landed. Every role is thrown to its own home page on sign-in. For Rosario, that is the admin panel." |
 | 1.3 | Admin Panel → **Users** | Open the users list. | "Here are every account in the system — social workers, coordinators, partner agencies, and claimants." |
 | 1.4 | User edit drawer → **Role** | Open one user, point at the role field. | "Roles are assigned centrally. A person cannot promote themselves; an admin assigns the role." |
-| 1.5 | User edit → **Assigned Barangay** / **Permitted Barangays** | Point at both fields. | "This is the field that scopes every other role. A barangay is assigned here, and it is what limits what that person can see in a moment." |
+| 1.5 | User edit → **Assigned Barangay** / **Permitted Barangays** | Point at both fields on a coordinator, then on a social worker. | "These two fields are where scope comes from. The coordinator has one barangay assigned — that single value is what limits her. The social worker has all thirteen permitted, because the MSWDO office works municipality-wide and a field officer has to be able to follow a resident into any barangay." |
 | 1.6 | **Dashboard** | Click Dashboard in the sidebar. | "The office's morning view: served today, totals, and recent cases across the whole municipality." |
 | 1.7 | Dashboard → cases table | Hover a row, show the **barangay** column. | "Note the barangay column. The demo data covers six barangays, and Rosario sees all of them in one list — the office works municipality-wide, not barangay by barangay. Hold that thought; the coordinator chapter is the contrast." |
 | 1.8 | **Cases** → open *Pedro Reyes* | Click View on the active Indigent case from Bigte. | "This is a case file. It moves through a guided workflow — assessment, interventions, service delivery, transition, closure." |
@@ -120,7 +122,7 @@ only role that can approve, issue documents, and manage accounts.*
 | 1.10 | **Approvals** | Open the approvals pipeline. | "Cases waiting on an office decision. Approving a case is admin-only — the social worker can request review, but cannot approve." |
 | 1.11 | **Announcements** | Open Announcements, show published + draft. | "Staff write the announcements. Rosario publishes them; that is what the public saw in shot P.3." |
 | 1.12 | **Admin Panel** → Programs | Open Programs. | "The program catalogue has two tiers. This management view is staff-only — the admin and social workers — and only the admin can add, edit, or retire a program. The public list we saw in shot P.2 is a separate, deliberately narrower view." |
-| 1.13 | **SETUP: assign a barangay to the social worker** | Edit `worker1@mswdo.test`, type **Bigte** into Assigned Barangay, save. | "Before we leave, one setup action that pays off twice. I am scoping the social worker to Bigte. This is how field staff are assigned, and it is the thing that will limit him in the next chapter." |
+| 1.13 | **SETUP: confirm the Bigte coordinator's assignment** | Edit `coordinator.bigte@mswdo.test`, show **Assigned Barangay = Bigte**, save without changing it. | "Before we leave — this is the one assignment that carries the whole next chapter. The Bigte coordinator is scoped to exactly one barangay. Every list she opens will be narrowed to Bigte, and I will prove that on the data, not just the menu." |
 
 **Do not film:** the wipe screen under any circumstances. Close the tab if it opens.
 
@@ -128,11 +130,12 @@ only role that can approve, issue documents, and manage accounts.*
 
 ## 3. Chapter 2 — Social Worker (6:00–11:00)
 
-**Who this is:** Juan Dela Cruz, field social worker, assigned to Bigte.
+**Who this is:** Juan Dela Cruz, field social worker, MSWDO city-wide.
 
 **The one claim this chapter must prove:** *the social worker does the casework — intake,
-assessment, interventions — and can request review but cannot approve. His barangay
-assignment constrains which case lists he may request, not which records he is shown.*
+assessment, interventions — and can request review but cannot approve. He works across the
+whole municipality, so barangay is a filter he chooses rather than a limit imposed on him;
+what restricts him is the sensitivity of the record, not its location.*
 
 **Script:**
 
@@ -144,9 +147,9 @@ assignment constrains which case lists he may request, not which records he is s
 | 2.4 | **General Intake** | Open the intake form. | "This is where a new resident is registered — client details, family, household, and a consent checkbox under the Data Privacy Act." |
 | 2.5 | Intake → consent checkbox | Click the consent checkbox. | "Consent is recorded at the moment of intake and is tracked in a consent ledger. It can be revoked later, and revocation immediately blocks the beneficiary's data." |
 | 2.6 | **Daily Tracker** | Open the tracker. | "The day's log — the worker's record of what was handled." |
-| 2.7 | **Cases** list | Open Cases. | "Here is something worth being precise about, because it is easy to overstate. His case list is *not* silently narrowed to Bigte. The list shows everything. In this system, barangay scoping is enforced on the **request**, not by hiding rows from the screen." |
-| 2.8 | Cases → **barangay filter** → Bigte | Set the barangay filter to **Bigte**. | "But when he asks for Bigte, the guard checks that against his assignment from shot 1.13, and allows it." |
-| 2.9 | Cases → filter → **Poblacion** | Change the filter to **Poblacion**. Expect the list to come back **empty**. | "And when he asks for a barangay that is not his — the request is refused, and the list comes back with nothing in it. A social worker cannot pull another barangay's records by asking for them. The limit is on what he can *request*, not on what he is shown." |
+| 2.7 | **Cases** list | Open Cases. | "Here is something worth being precise about. Juan is a city-wide MSWDO officer, so his case list is not narrowed to one barangay. He is in scope for all thirteen, the way the office actually works." |
+| 2.8 | Cases → **barangay filter** → Bigte, then **San Lorenzo** | Set the filter to **Bigte**, then to **San Lorenzo**. Both return rows. | "Barangay is a lens he chooses, not a wall around him. Bigte, San Lorenzo, any of them — the records come back, because a field worker has to be able to follow a resident wherever they live." |
+| 2.9 | **DENIAL: a restricted record** | Open a record marked restricted without passing a legal basis. The **red refusal banner** appears under the topbar. | "What does restrict him is not geography — it is the sensitivity of the record. This one is restricted, and it needs a legal basis to open. The system tells him so, in words, on the screen. It does not just hand him an empty page and let him wonder." |
 | 2.10 | Case → **Request review** | Open a case, find the review control. | "Here is where admin and social worker genuinely diverge. Sending a case *up* for review is the social worker's move alone — not even the admin can do this one. The two roles are not a seniority ladder; they are different halves of the same workflow." |
 | 2.11 | **DENIAL: the approval is missing** | Point at where approval would be; it is not there for him. | "But he cannot *approve*. The approve control is absent, and the endpoint behind it rejects his role even if he reaches it by URL. No social worker can sign off their own case." |
 | 2.12 | **DENIAL: try an admin URL** | Type `/admin` into the address bar and press Enter. | "Let me prove the route guard is real and not just a hidden menu. I am typing the admin address directly." |
@@ -156,23 +159,29 @@ assignment constrains which case lists he may request, not which records he is s
 "the menu was tidy" and "the system enforces roles." Hold the redirected page for a
 count of three after the VO finishes.
 
-> **Presenter note for 2.7–2.9.** Do not claim the social worker's list is auto-filtered to
-> his barangay. It is not — `cases.service.findAll` only filters when a `barangay` query
-> parameter is supplied, and the guard's social-worker branch validates that parameter
-> rather than injecting one. The contrast with the coordinator is deliberate and is the
-> interesting part: the coordinator branch *does* inject the assigned barangay when none is
-> given, which is why beat 3.11 shows a single barangay in every row. If someone asks
-> "so can a social worker see a Poblacion case file?", the honest answer is yes — the
-> scoping here constrains the *filter*, not the record. Fixing that is a design question
-> worth raising separately, not something to paper over on camera.
+> **Presenter note for 2.7–2.9.** Do not claim the social worker is confined to one
+> barangay. He is not, and that is by design: MSWDO field staff are city-wide, so
+> `seed-accounts.ts` gives every social worker all thirteen barangays as permitted scope and
+> the guard's social-worker branch no longer denies on geography at all. If someone asks
+> "so can a social worker open a case from any barangay?", the honest answer is **yes**,
+> and that is the correct answer for a municipal office.
 >
-> **2.9 is a weak visual and you should know it before you film it.** The guard returns
-> `false`, which the client surfaces as a failed fetch — the list simply renders **empty**,
-> with no error banner and no toast, because `swrErrorHandler` only writes to the console.
-> An empty table is ambiguous on its own: a viewer will read it as "no cases in Poblacion"
-> rather than "access refused". Pair it with 2.8 (the same control, returning rows) and say
-> the word "refused" clearly in the VO, or cut 2.9 entirely and keep the stronger proof at
-> 2.12–2.13. There is no version of this beat where the UI itself displays a denial.
+> The contrast with the coordinator in Chapter 3 is the point worth drawing out: the
+> coordinator branch *does* inject the assigned barangay when none is supplied
+> (`abac.guard.ts`, coordinator branch), which is why beat 3.11 shows a single barangay in
+> every row. Two roles, two different scoping models, both deliberate.
+>
+> **2.9 is now a real on-screen denial, not an ambiguous empty table.** The guard throws a
+> `ForbiddenException` carrying its reason, the API client broadcasts any 403 on
+> `kapwa:access:denied`, and `AccessDeniedBanner` renders it as a persistent red strip under
+> the topbar with a dismiss button. Say the sentence "access denied" in the VO and hold on
+> the banner — a viewer who sees the words knows the refusal is enforced, not a loading
+> failure.
+>
+> **Pick the restricted record before you film.** Which routes carry
+> `@ResourceSensitivity('restricted')` is a one-line grep; confirm the chosen record
+> actually returns 403 without a `legalBasis` parameter before the shoot, or you will be
+> standing in front of a page that loads fine.
 
 ---
 
@@ -275,14 +284,15 @@ from a recording, the claim is unsupported.
 | Program catalogue is tiered: staff read, admin writes | 1.12 | `programs.controller.ts` — `GET` admin+social_worker, `POST`/`PATCH`/`DELETE` admin; public list is a separate controller |
 | Social worker does intake and casework | 2.4, 2.7 | `intake.controller.ts`, `cases.controller.ts` — admin + social_worker |
 | Social worker can request review, not approve | 2.10, 2.11 | `cases.controller.ts:157-158` — `request-review` is social_worker **only** |
-| A social worker cannot request a foreign barangay's cases | 2.8, 2.9 | `abac.guard.ts:64-69` — permitted + primary barangay check |
-| Restricted data needs a legal basis | — | `abac.guard.ts:63` — `restricted` sensitivity requires `legalBasis` |
+| Social workers are scoped to the whole municipality | 2.7, 2.8 | `abac.guard.ts` social-worker branch — no geographic denial; `seed-accounts.ts` seeds all 13 barangays as permitted |
+| Restricted data needs a legal basis | 2.9 | `abac.guard.ts` — `restricted` sensitivity requires `legalBasis`, else `ForbiddenException` |
+| A refusal is visible, not a silent empty list | 2.9 | `api.ts` broadcasts 403 on `kapwa:access:denied`; `AccessDeniedBanner` renders it persistently |
 | Routes reject the wrong role, not just the menu | 2.12, 2.13, 3.8, 4.8 | `ProtectedRoute.tsx:26` — redirect on role mismatch |
 | Coordinator has no case lifecycle access | 3.8, 3.9 | `routes.tsx` — no `/cases` route for `coordinator` |
-| Coordinator's lists are auto-scoped to one barangay | 3.10, 3.11 | `abac.guard.ts:54-56` — guard injects the assigned barangay when none is supplied |
-| Coordinator cannot read another barangay | 3.11 | `abac.guard.ts:52-53` — an explicit `barangay` must equal the assignment |
+| Coordinator's lists are auto-scoped to one barangay | 3.10, 3.11 | `abac.guard.ts:62-64` — guard injects the assigned barangay when none is supplied |
+| Coordinator cannot read another barangay | 3.11 | `abac.guard.ts:57-61` — an explicit `barangay` must equal the assignment |
 | Claimant sees only their own record | 4.8, 4.9, 4.10 | `routes.tsx:147-168` — claimant gets 8 routes, all self-scoped |
-| Revoked consent immediately blocks access | 4.11 | `abac.guard.ts:31-41` and `:74-89` — consent ledger check |
+| Revoked consent immediately blocks access | 4.11 | `abac.guard.ts:31-39` and `:90-103` — consent ledger check |
 
 ## Appendix B — Optional beats
 
@@ -306,5 +316,7 @@ Cut these for time. Each is real, none is load-bearing.
 - 4 chapters, 54 shots, ~20 minutes
 - 5 distinct denial proofs — the part of the film that makes it evidence rather than marketing
 - Every capability claim traceable to a file and line
-- 3 presenter notes flagging beats that **cannot** be filmed honestly from the UI, or
-  that show a denial too weakly to carry the point, so nothing gets staged or oversold
+- Presenter notes flagging what **cannot** be filmed honestly from the UI, and what to
+  confirm before the shoot, so nothing gets staged or oversold
+- Every denial in this script now renders as a visible, worded refusal on screen — no beat
+  relies on a viewer inferring "access refused" from an empty table

@@ -42,7 +42,8 @@ describe('FilingController — case ID photo endpoint', () => {
       getClass: () => FilingController,
       switchToHttp: () => ({ getRequest: () => ({ user: { role: 'coordinator' } }) }),
     } as any;
-    expect(guard.canActivate(ctx)).toBe(false);
+    // Throws a worded ForbiddenException rather than returning bare false.
+    expect(() => guard.canActivate(ctx)).toThrow(/coordinator/i);
   });
 
   it('RolesGuard allows an admin at the route level', () => {

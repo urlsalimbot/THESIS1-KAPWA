@@ -13,6 +13,8 @@ import {
   downloadCertificate,
   downloadMonthlyFunds,
   KAPWA_AUTH_LOGOUT_EVENT,
+  KAPWA_ACCESS_DENIED_EVENT,
+  type AccessDeniedDetail,
 } from './api';
 
 const API = 'http://localhost:3000/api/v1';
@@ -76,6 +78,30 @@ describe('api core request', () => {
   it('throws ApiError on non-OK responses', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({ message: 'nope' }, 403)));
     await expect(api.get('/x')).rejects.toMatchObject({ status: 403, body: { message: 'nope' } });
+  });
+
+  it('announces a 403 refusal with the server reason and path', async () => {
+    const seen: AccessDeniedDetail[] = [];
+    const onDenied = (e: Event) => seen.push((e as CustomEvent<AccessDeniedDetail>).detail);
+    window.addEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonRes({ message: 'You are not assigned to Poblacion.' }, 403)),
+    );
+    await expect(api.get('/cases')).rejects.toMatchObject({ status: 403 });
+    window.removeEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    expect(seen).toEqual([
+      { message: 'You are not assigned to Poblacion.', path: '/cases' },
+    ]);
+  });
+
+  it('stays silent for non-403 failures, which are already surfaced elsewhere', async () => {
+    const onDenied = vi.fn();
+    window.addEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({ message: 'boom' }, 500)));
+    await expect(api.get('/x')).rejects.toMatchObject({ status: 500 });
+    window.removeEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    expect(onDenied).not.toHaveBeenCalled();
   });
 
   it('POST / PUT / PATCH / DELETE issue the right method and JSON body', async () => {

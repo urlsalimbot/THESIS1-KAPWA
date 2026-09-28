@@ -2221,6 +2221,10 @@ const fil: EnLocale = {
     "subtitle": "Mga dedikadong lingkod-bayan na nakatuon sa paghahatid ng mga serbisyong panlipunang kapakanan sa komunidad ng Norzagaray, Bulacan.",
     "title": "Aming Team"
   },
+  "accessDenied": {
+    "dismiss": "I-dismiss ang abiso ng tinanggal na access",
+    "title": "Tinanggal na access — wala kang pahintulot na makita ito."
+  },
   "adminWipe": {
     "cancel": "Kanselahin",
     "confirmDescription": "Ito ay mag-i-invalidate sa lahat ng session at mag-i-unlink sa device para sa {{email}}. Ang user ay mapipilitang mag-re-authenticate. Ang aksyon na ito ay hindi maaaring i-undo. I-type ang WIPE upang kumpirmahin.",

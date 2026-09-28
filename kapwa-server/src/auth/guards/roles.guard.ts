@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
@@ -15,6 +15,12 @@ export class RolesGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest();
     if (!user) throw new UnauthorizedException();
-    return requiredRoles.includes(user.role);
+    if (requiredRoles.includes(user.role)) return true;
+    // Naming the role and the required set is what lets the client say why it
+    // was refused. A bare `false` here yields Nest's default "Forbidden
+    // resource", which tells the user nothing they can act on.
+    throw new ForbiddenException(
+      `Your role (${user.role}) cannot perform this action. It requires: ${requiredRoles.join(', ')}.`,
+    );
   }
 }

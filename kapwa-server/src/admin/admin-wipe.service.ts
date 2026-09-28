@@ -16,11 +16,6 @@ export class AdminWipeService {
     return { deviceId, wiped: true };
   }
 
-  async wipeUser(userId: string): Promise<{ userId: string; wiped: boolean }> {
-    await this.userRepo.update(userId, { tokenVersion: () => 'token_version + 1', deviceId: '' });
-    return { userId, wiped: true };
-  }
-
   async listBoundDevices(): Promise<{ id: string; email: string; deviceId: string | null }[]> {
     const users = await this.userRepo.find({
       where: {},
