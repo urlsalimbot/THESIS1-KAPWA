@@ -355,7 +355,7 @@ bash perf/k6/run.sh --stop
 ss -ltn | grep -c ':3100' || echo 'port 3100 free'
 ```
 
-Expected: `{ status: 'ok', db: 'connected', ... }`; psql prints `25|25`; `stack stopped`; `perf/results/.stack-state` is gone and port 3100 is free.
+Expected: `{ status: 'ok', db: 'connected', ... }`; psql prints `75|25` (3 persons per intake × 25, and 25 interventions); `stack stopped`; `perf/results/.stack-state` is gone and port 3100 is free.
 
 - [ ] **Step 4: Commit**
 
@@ -751,14 +751,17 @@ export function writes(data) {
   const token = data.worker.accessToken;
   const suffix = `${__VU}-${__ITER}-${Date.now()}`;
   const address = { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: '03', postalCode: '3012' };
+  const digits = String((__VU * 1000 + __ITER) % 10000000).padStart(7, '0');
   const payload = {
     beneficiary: {
       surname: `Perf${suffix}`,
       firstName: 'Load',
       gender: 'Male',
       dob: '1990-05-15',
+      placeOfBirth: 'Norzagaray, Bulacan',
       civilStatus: 'Married',
-      cellularNumber: '09170000000',
+      cellularNumber: `0917${digits}`,
+      email: `perf-${suffix}@example.test`,
       currentAddress: address,
       occupation: 'Farmer',
       estimatedMonthlyIncome: 8000,
@@ -768,9 +771,13 @@ export function writes(data) {
       firstName: 'Load',
       gender: 'Female',
       dob: '1992-08-20',
+      placeOfBirth: 'Norzagaray, Bulacan',
       civilStatus: 'Married',
-      cellularNumber: '09170000001',
+      cellularNumber: `0918${digits}`,
+      email: `perf-claim-${suffix}@example.test`,
       currentAddress: address,
+      occupation: 'Housewife',
+      estimatedMonthlyIncome: 1000,
       relationshipToBeneficiary: 'Spouse',
     },
     familyMembers: [],
