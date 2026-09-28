@@ -38,6 +38,7 @@ Five input classes/failure modes the spec implies but no happy path exercises; e
 
 **Files:**
 - Create: `perf/.gitignore`
+- Create: `perf/seed/seed-data.mjs`
 - Create: `perf/k6/run.sh`
 
 **Interfaces:**
@@ -162,10 +163,12 @@ fi
 (cd "$ROOT/kapwa-server" && env $(db_env) npx ts-node src/database/seed-programs.ts >"$RUN_DIR/seed-programs.log" 2>&1)
 
 # 5. Server
-(cd "$ROOT/kapwa-server" && env $(db_env) PORT="$SERVER_PORT" THROTTLE_LIMIT=100000 THROTTLE_TTL_MS=60000 NODE_ENV=development \
-  node dist/main.js >"$RUN_DIR/server.log" 2>&1 &
- echo $! > "$RUN_DIR/server.pid")
-SERVER_PID=$(cat "$RUN_DIR/server.pid")
+(
+  cd "$ROOT/kapwa-server"
+  exec env $(db_env) PORT="$SERVER_PORT" THROTTLE_LIMIT=100000 THROTTLE_TTL_MS=60000 NODE_ENV=development \
+    node dist/main.js >"$RUN_DIR/server.log" 2>&1
+) &
+SERVER_PID=$!
 
 wait_health() {
   for _ in $(seq 1 60); do
@@ -179,8 +182,8 @@ wait_health() {
 }
 wait_health
 
-# 6. Demo seed (API-driven; uploads warn without MinIO)
-(cd "$ROOT/kapwa-server" && env $(db_env) API_BASE="$BASE_URL" npx ts-node src/database/seed-demo.ts >"$RUN_DIR/seed-demo.log" 2>&1)
+# 6. Perf seed data (API-driven, CSRF-aware; deterministic volume)
+API_BASE="$BASE_URL" SEED_CASES="${SEED_CASES:-25}" node "$ROOT/perf/seed/seed-data.mjs" >"$RUN_DIR/seed-data.log" 2>&1
 
 if [ "$mode" = stack ]; then
   printf 'SERVER_PID=%s\nPG_STARTED_BY_US=%s\nRUN_DIR=%s\n' "$SERVER_PID" "$PG_STARTED_BY_US" "$RUN_DIR" > "$STATE_FILE"
@@ -225,6 +228,117 @@ stop_all
 exit "$k6_status"
 ```
 
+- [ ] **Step 2b: Write `perf/seed/seed-data.mjs`
+
+```js
+// CSRF-aware API seeder for the k6 suite. Creates deterministic demo data:
+// N intakes (varied barangays/incomes) + one intervention per case.
+const API = process.env.API_BASE || 'http://localhost:3100/api/v1';
+const CASES = Number(process.env.SEED_CASES || 25);
+const ADMIN = { email: 'admin@mswdo.test', password: 'admin123' };
+
+const BARANGAYS = ['Bigte', 'Poblacion', 'Matictic', 'Partida', 'San Mateo'];
+const SERVICES = [
+  { name: 'Medical Assistance', amount: 3500, fundSource: 'LGU - Municipal' },
+  { name: 'Food Assistance', amount: 1200, fundSource: 'DSWD - AICS' },
+  { name: 'Educational Assistance', amount: 5000, fundSource: 'LGU - Municipal' },
+  { name: 'Burial Assistance', amount: 8000, fundSource: 'DSWD - AICS' },
+];
+
+let csrf = '';
+let cookie = '';
+
+function rememberCookies(res) {
+  const raw = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+  for (const c of raw) {
+    const pair = c.split(';')[0];
+    if (pair.startsWith('csrf-token=')) {
+      cookie = pair;
+      csrf = pair.split('=')[1] || '';
+    }
+  }
+}
+
+function headers(token, json = true) {
+  const h = { Cookie: cookie, 'X-CSRF-Token': csrf };
+  if (json) h['Content-Type'] = 'application/json';
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
+}
+
+async function jsonFetch(path, options) {
+  const res = await fetch(`${API}${path}`, options);
+  rememberCookies(res);
+  const text = await res.text();
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  return { status: res.status, body };
+}
+
+function intakePayload(i) {
+  const suffix = String(i).padStart(3, '0');
+  const barangay = BARANGAYS[i % BARANGAYS.length];
+  const income = 3000 + (i % 12) * 1500;
+  const address = { street: 'Purok 1', barangay, city: 'Norzagaray', province: 'Bulacan', region: '03', postalCode: '3012' };
+  return {
+    beneficiary: {
+      surname: `PerfSeed${suffix}`, firstName: 'Load',
+      gender: i % 2 ? 'Female' : 'Male', dob: '1988-04-12', civilStatus: 'Married',
+      cellularNumber: `091700${String(1000 + i)}`, currentAddress: address,
+      occupation: 'Farmer', estimatedMonthlyIncome: income,
+    },
+    claimant: {
+      surname: `PerfSeedC${suffix}`, firstName: 'Load',
+      gender: 'Female', dob: '1990-02-02', civilStatus: 'Married',
+      cellularNumber: `091711${String(1000 + i)}`, currentAddress: address,
+      relationshipToBeneficiary: 'Spouse',
+    },
+    familyMembers: [
+      { surname: `PerfSeed${suffix}`, firstName: 'Child', gender: 'Male', dob: '2016-07-01', age: 9, relationship: 'Child', occupation: 'Student' },
+    ],
+    case: {},
+  };
+}
+
+async function main() {
+  const health = await jsonFetch('/health', { method: 'GET' });
+  if (health.status !== 200) throw new Error(`health ${health.status}`);
+
+  const login = await jsonFetch('/auth/login', { method: 'POST', headers: headers(undefined), body: JSON.stringify(ADMIN) });
+  if (login.status !== 200) throw new Error(`login ${login.status}: ${JSON.stringify(login.body).slice(0, 200)}`);
+  const token = login.body.accessToken;
+
+  let cases = 0;
+  let interventions = 0;
+  for (let i = 0; i < CASES; i++) {
+    const created = await jsonFetch('/intake', { method: 'POST', headers: headers(token), body: JSON.stringify(intakePayload(i)) });
+    if (created.status !== 200 && created.status !== 201) {
+      throw new Error(`intake ${i} -> ${created.status}: ${JSON.stringify(created.body).slice(0, 200)}`);
+    }
+    cases++;
+    const caseId = created.body?.caseId;
+    if (!caseId) continue;
+    const svc = SERVICES[i % SERVICES.length];
+    const deliveryDate = new Date(Date.now() - (i % 60) * 86400000).toISOString().slice(0, 10);
+    const iv = await jsonFetch(`/cases/${caseId}/interventions`, {
+      method: 'POST',
+      headers: headers(token),
+      body: JSON.stringify({ serviceName: svc.name, category: 'perf-seed', deliveryDate, amount: svc.amount, fundSource: svc.fundSource }),
+    });
+    if (iv.status === 200 || iv.status === 201) interventions++;
+    else console.warn(`  WARN intervention ${i} -> ${iv.status}: ${JSON.stringify(iv.body).slice(0, 160)}`);
+  }
+
+  console.log(`seed-data: cases=${cases} interventions=${interventions} (target ${CASES})`);
+  if (cases !== CASES) process.exit(1);
+}
+
+main().catch(err => {
+  console.error('seed-data failed:', err.message);
+  process.exit(1);
+});
+```
+
 - [ ] **Step 3: Make it executable and run the stack smoke check**
 
 ```bash
@@ -232,14 +346,16 @@ chmod +x perf/k6/run.sh
 bash perf/k6/run.sh --stack-only
 ```
 
-Expected: ends with `stack ready at http://localhost:3100/api/v1`; a new `perf/results/<ts>/` contains `migrate.log`, `seed-accounts.log`, `seed-programs.log`, `seed-demo.log`, `server.log`. Then verify health and stop:
+Expected: ends with `stack ready at http://localhost:3100/api/v1`; a new `perf/results/<ts>/` contains `migrate.log`, `seed-accounts.log`, `seed-programs.log`, `seed-data.log`, `server.log`; `seed-data.log` reports `cases=25`. Then verify health, data, and stop:
 
 ```bash
 node -e "fetch('http://localhost:3100/api/v1/health').then(r=>r.json()).then(b=>{console.log(b);process.exit(b.status==='ok'?0:1)})"
+psql -h localhost -p 5433 -U kapwa -d kapwa_perf -tAc "SELECT (SELECT count(*) FROM persons WHERE surname LIKE 'PerfSeed%'), (SELECT count(*) FROM case_interventions WHERE category='perf-seed')"
 bash perf/k6/run.sh --stop
+ss -ltn | grep -c ':3100' || echo 'port 3100 free'
 ```
 
-Expected: `{ status: 'ok', db: 'connected', ... }` then `stack stopped`; `perf/results/.stack-state` is gone.
+Expected: `{ status: 'ok', db: 'connected', ... }`; psql prints `25|25`; `stack stopped`; `perf/results/.stack-state` is gone and port 3100 is free.
 
 - [ ] **Step 4: Commit**
 
