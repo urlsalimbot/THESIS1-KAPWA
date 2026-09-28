@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { buildAccessCardPdf } from './access-card-pdf.builder';
 import { AccessCardPdfData } from './access-card-pdf.types';
 import { AccessCardService } from './access-card-service.entity';
-import { LogServiceInput } from './dto/access-cards.zod';
+import { LogServiceInput, LogServiceRowSchema } from './dto/access-cards.zod';
 
 /** A category the card's tabs and every logging form agree on. */
 export type AccessCardCategory = NonNullable<LogServiceInput['category']>;
@@ -184,6 +184,20 @@ export class AccessCardsService {
   }
 
   async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agencyId?: string; workerNameSign?: string; category?: AccessCardCategory; loggedBy?: string; sourceBarangay?: string }) {
+    // Validate here as well as in ZodPipe. This method is public and is called
+    // directly by the 4Ps module and by autoLogFromIntervention, which have no
+    // HTTP layer and so no pipe. Without this, a caller outside the vocabulary
+    // writes a row that matches no category tab on the resident's card — a
+    // silent orphan rather than a rejected request. `category` is typed
+    // AccessCardCategory above, so only an `any`-casting caller can get here;
+    // this is the runtime backstop for that.
+    const parsed = LogServiceRowSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new BadRequestException(
+        `Invalid access card service entry: ${parsed.error.issues.map(i => `${i.path.join('.') || '(root)'} ${i.message}`).join('; ')}`,
+      );
+    }
+
     const entry = this.repo.create({
       accessCardCode: data.accessCardCode,
       serviceRendered: data.serviceRendered,

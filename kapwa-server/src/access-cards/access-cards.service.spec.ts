@@ -133,6 +133,63 @@ describe('AccessCardsService', () => {
     });
   });
 
+  describe('logService boundary validation', () => {
+    // POST /access-cards/log is the only writer that passes through ZodPipe.
+    // FourPsService.logToCard and autoLogFromIntervention call logService as a
+    // plain method — no HTTP, no pipe, no guards — which is how `4ps_compliance`
+    // rows stayed invisible on the card for so long: they inserted cleanly,
+    // tests passed, and the row matched no filter tab. Validating here makes an
+    // out-of-vocabulary category a loud failure for every caller, not just the
+    // HTTP one.
+    it('rejects a category outside the sanctioned vocabulary', async () => {
+      await expect(
+        service.logService({
+          accessCardCode: 'NORZ-AC-2026-0042',
+          serviceRendered: '4Ps compliance',
+          serviceDate: new Date('2026-09-01'),
+          category: '4ps_compliance' as any,
+        }),
+      ).rejects.toThrow();
+      expect(repoMock.save).not.toHaveBeenCalled();
+    });
+
+    it('accepts every sanctioned category, including the 4Ps pair', async () => {
+      repoMock.create.mockImplementation((d: any) => d);
+      repoMock.save.mockImplementation((d: any) => Promise.resolve(d));
+      for (const category of ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'] as const) {
+        const row = await service.logService({
+          accessCardCode: 'NORZ-AC-2026-0042',
+          serviceRendered: 'x',
+          serviceDate: new Date('2026-09-01'),
+          category,
+        });
+        expect(row.category).toBe(category);
+      }
+    });
+
+    it('still defaults a missing category to referral', async () => {
+      repoMock.create.mockImplementation((d: any) => d);
+      repoMock.save.mockImplementation((d: any) => Promise.resolve(d));
+      const row = await service.logService({
+        accessCardCode: 'NORZ-AC-2026-0042',
+        serviceRendered: 'x',
+        serviceDate: new Date('2026-09-01'),
+      });
+      expect(row.category).toBe('referral');
+    });
+
+    it('rejects an empty serviceRendered', async () => {
+      await expect(
+        service.logService({
+          accessCardCode: 'NORZ-AC-2026-0042',
+          serviceRendered: '',
+          serviceDate: new Date('2026-09-01'),
+        }),
+      ).rejects.toThrow();
+      expect(repoMock.save).not.toHaveBeenCalled();
+    });
+  });
+
   describe('findByCard', () => {
     it('returns services for a card code ordered by date desc', async () => {
       const services = [{ id: '1', accessCardCode: 'NORZ-AC-2026-0042', serviceDate: new Date() }];
@@ -147,6 +204,12 @@ describe('AccessCardsService', () => {
   });
 
   describe('logService agency resolution', () => {
+    // A real UUID, because `access_card_services.agency_id` is a UUID column
+    // (migrate.ts) and the schema has always said so. The old 'ag-1' fixture
+    // was tolerated only because nothing validated the service boundary — it
+    // could never have inserted.
+    const AGENCY_ID = '0192f3a4-5b6c-7d8e-9f01-234567890abc';
+
     it('stores agencyId directly when provided', async () => {
       repoMock.create.mockImplementation((dto: any) => dto);
       repoMock.save.mockImplementation(async (dto: any) => ({ id: 's1', ...dto }));
@@ -154,9 +217,9 @@ describe('AccessCardsService', () => {
         accessCardCode: 'NORZ-AC-2026-0042',
         serviceRendered: 'Medical Aid',
         serviceDate: new Date(),
-        agencyId: 'ag-1',
+        agencyId: AGENCY_ID,
       });
-      expect(result).toEqual(expect.objectContaining({ id: 's1', agencyId: 'ag-1' }));
+      expect(result).toEqual(expect.objectContaining({ id: 's1', agencyId: AGENCY_ID }));
     });
   });
 

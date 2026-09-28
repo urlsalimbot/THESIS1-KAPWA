@@ -6,7 +6,7 @@ import { CaseComplianceItem } from './fourps-compliance.entity';
 import { CasePayout } from './fourps-payout.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { AccessCardsService } from '../access-cards/access-cards.service';
-import { LogServiceSchema } from '../access-cards/dto/access-cards.zod';
+import { LogServiceRowSchema } from '../access-cards/dto/access-cards.zod';
 
 // 4Ps now auto-logs to the household access card and (on payout completion)
 // records a case intervention. Both are best-effort collaborators.
@@ -367,10 +367,15 @@ describe('FourPsService access-card logging', () => {
     const written = cards.logService.mock.calls.map(([payload]) => payload);
     expect(written.length).toBeGreaterThanOrEqual(3);
     for (const payload of written) {
-      const parsed = LogServiceSchema.safeParse({
+      // LogServiceRowSchema, not LogServiceSchema: it is the schema
+      // AccessCardsService.logService actually runs, and it takes the Date this
+      // module already holds (z.coerce.date) rather than an ISO string the
+      // test would have to manufacture. Parsing the payload the same way the
+      // callee does is what makes this a contract test instead of a proxy.
+      const parsed = LogServiceRowSchema.safeParse({
         accessCardCode: payload.accessCardCode,
         serviceRendered: payload.serviceRendered,
-        serviceDate: payload.serviceDate.toISOString().slice(0, 10),
+        serviceDate: payload.serviceDate,
         cost: payload.cost,
         category: payload.category,
       });

@@ -30,3 +30,22 @@ export const LogServiceSchema = z.object({
 });
 
 export type LogServiceInput = z.infer<typeof LogServiceSchema>;
+
+/**
+ * The same shape, but for callers that already hold a `Date`.
+ *
+ * `POST /access-cards/log` is the only writer that goes through `ZodPipe`.
+ * `FourPsService.logToCard` and `AccessCardsService.autoLogFromIntervention`
+ * call `logService` as a plain method — no HTTP, no pipe, no guards — so the
+ * schema has to be enforced at the service boundary too or those callers write
+ * whatever they like. That gap is how `4ps_compliance` rows survived: they
+ * inserted cleanly, tests passed, and the row matched no category tab.
+ *
+ * `serviceDate` is coerced rather than re-typed because the controller has
+ * already turned the request's string into a `Date` by this point.
+ */
+export const LogServiceRowSchema = LogServiceSchema.extend({
+  serviceDate: z.coerce.date(),
+});
+
+export type LogServiceRow = z.infer<typeof LogServiceRowSchema>;
