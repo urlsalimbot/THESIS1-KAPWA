@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { CaseListRow, ReportColumn, SummaryReportData, SummaryTable } from './summary-report.types';
+import { BAND_LABELS, CaseListRow, ReportColumn, SummaryReportData, SummaryTable } from './summary-report.types';
 
 const PAGE: [number, number] = [936, 612]; // US Legal landscape (8.5in x 13in)
 const M = 28;
@@ -117,12 +117,9 @@ function drawSectionTitle(doc: any, title: string) {
 // ---------------------------------------------------------------------------
 
 function colWeight(c: ReportColumn): number {
-  if (c.key === 'TOTAL' || c.key === 'UNASSIGNED') return 18;
+  if (c.key === 'TOTAL') return 14;
   if (c.band === 'SEX') return 9;
-  // Reference-mapped GAD columns get more width than the filler programmes
-  // (OTHER PROGRAMS) so their labels survive the production-width table.
-  if (c.mapped) return 13;
-  return 7;
+  return 11;
 }
 
 function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]) {
@@ -168,7 +165,7 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
     const subIdx = columns.map((c, i) => (c.band === b && c.subBand ? i : -1)).filter((i) => i >= 0);
     const [s, e] = subIdx.length ? [subIdx[0], subIdx[subIdx.length - 1]] : [idx[0], idx[idx.length - 1]];
     doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
-      .text(b, colX[s] + 2, R1top + 3, { width: colX[e + 1] - colX[s] - 4, align: 'center', lineBreak: false });
+      .text(BAND_LABELS[b] ?? b, colX[s] + 2, R1top + 3, { width: colX[e + 1] - colX[s] - 4, align: 'center', lineBreak: false });
   }
 
   // R2: sub-band captions (once per sub-band) + R2-anchored column labels.

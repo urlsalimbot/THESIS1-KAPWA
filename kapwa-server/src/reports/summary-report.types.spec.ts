@@ -1,107 +1,115 @@
-import { programBand, selectCaseColumn, buildColumns, codeForProgram, gadLabelFor } from './summary-report.types';
+import {
+  programColumnKey, selectCaseColumn, buildColumns, codeForColumn, mostRelevantProgram,
+  SPEC_COLUMNS,
+} from './summary-report.types';
 
 const PROGRAMS = [
   { id: 'p-burial', name: 'Burial Assistance', category: 'Burial' },
   { id: 'p-med', name: 'Medical Assistance', category: 'Medical' },
+  { id: 'p-assist', name: 'Assistive Device Support', category: 'PWD Welfare' },
+  { id: 'p-pwd', name: 'PWD Assistance', category: 'PWD Welfare' },
   { id: 'p-pao', name: 'Legal Referral (PAO)', category: 'Legal' },
   { id: 'p-ref', name: 'Referral – Others', category: 'Legal' },
   { id: 'p-csr', name: 'Case Study Report (CSR)', category: 'Technical' },
   { id: 'p-hv', name: 'Home Visit', category: 'Technical' },
-  { id: 'p-ph', name: 'PhilHealth Assistance', category: 'Medical' },
+  { id: 'p-counsel', name: 'Psychosocial Counseling', category: 'Mental Health' },
   { id: 'p-4ps', name: '4Ps — Pantawid Pamilyang Pilipino Program', category: 'CCT' },
 ];
 
 const base = { serviceText: '', referralText: '', hasCsr: false, hasVisit: false };
 
-describe('programBand', () => {
-  it('maps programs to the reference bands', () => {
-    expect(programBand('Burial Assistance', 'Burial')).toMatchObject({ band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE', slot: 1 });
-    expect(programBand('Medical Assistance', 'Medical')).toMatchObject({ band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE', slot: 2 });
-    expect(programBand('Assistive Device Support', 'PWD Welfare')).toMatchObject({ band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE', slot: 3 });
-    expect(programBand('PWD Assistance', 'PWD Welfare')).toMatchObject({ band: 'FINANCIAL', slot: 4 });
-    expect(programBand('PWD Assistance', 'PWD Welfare').subBand).toBeUndefined();
-    expect(programBand('Legal Referral (PAO)', 'Legal')).toMatchObject({ band: 'LEGAL', subBand: 'REFERRAL', slot: 1 });
-    expect(programBand('Birth Discrepancy Assistance', 'Technical').band).toBe('TECHNICAL');
-    expect(programBand('Home Visit', 'Technical').band).toBe('TECHNICAL');
-    // PhilHealth sits under TECHNICAL in the reference column order.
-    expect(programBand('PhilHealth Assistance', 'Medical')).toMatchObject({ band: 'TECHNICAL', slot: 5 });
-    expect(programBand('4Ps — Pantawid Pamilyang Pilipino Program', 'CCT').band).toBe('OTHER PROGRAMS');
+describe('buildColumns', () => {
+  it('is the exact 18-column printed form', () => {
+    const cols = buildColumns();
+    expect(cols.map((c) => c.key)).toEqual([
+      'MALE', 'FEMALE',
+      'BURIAL', 'MEDICAL', 'ASSISTIVE', 'PWD',
+      'LEGAL_PAO', 'LEGAL_OTHERS',
+      'BIRTH_DISCREPANCY', 'TRAVEL', 'CSR', 'COUNSELLING', 'PHILHEALTH',
+      'CUSTODY', 'HOME_VISIT', 'BALIK', 'TECH_OTHERS',
+      'TOTAL',
+    ]);
+    expect(cols).toHaveLength(18);
+    const burial = cols.find((c) => c.key === 'BURIAL');
+    expect(burial).toMatchObject({ label: 'Burial', band: 'FINANCIAL', subBand: 'Financial Assistance' });
+    expect(cols.find((c) => c.key === 'LEGAL_PAO')).toMatchObject({ label: 'LEGAL/PAO', band: 'LEGAL', subBand: 'Referral' });
+    expect(cols.find((c) => c.key === 'OTHERS' as never) ?? cols[16]).toMatchObject({ label: 'Others', band: 'TECHNICAL' });
+    expect(cols[17]).toMatchObject({ label: 'TOTAL', band: '' });
+  });
+});
+
+describe('programColumnKey', () => {
+  it('maps programmes onto the printed slots', () => {
+    expect(programColumnKey('Burial Assistance')).toBe('BURIAL');
+    expect(programColumnKey('Medical Equipment Loan')).toBe('MEDICAL');
+    expect(programColumnKey('Assistive Device Support')).toBe('ASSISTIVE');
+    expect(programColumnKey('PWD Assistance')).toBe('PWD');
+    expect(programColumnKey('Legal Referral (PAO)')).toBe('LEGAL_PAO');
+    expect(programColumnKey('Referral and Linkage Services')).toBe('LEGAL_OTHERS');
+    expect(programColumnKey('Birth Discrepancy Assistance')).toBe('BIRTH_DISCREPANCY');
+    expect(programColumnKey('Travel Assessment')).toBe('TRAVEL');
+    expect(programColumnKey('Case Study Report (CSR)')).toBe('CSR');
+    expect(programColumnKey('Psychosocial Counseling')).toBe('COUNSELLING');
+    expect(programColumnKey('PhilHealth Assistance')).toBe('PHILHEALTH');
+    expect(programColumnKey('Child Custody Support')).toBe('CUSTODY');
+    expect(programColumnKey('Home Visit')).toBe('HOME_VISIT');
+    expect(programColumnKey('Balik Probinsya Assistance')).toBe('BALIK');
+    // Programmes outside the form fold into the technical OTHERS slot.
+    expect(programColumnKey('Educational Assistance')).toBe('TECH_OTHERS');
+    expect(programColumnKey('4Ps — Pantawid Pamilyang Pilipino Program')).toBe('TECH_OTHERS');
+  });
+});
+
+describe('codeForColumn', () => {
+  it('derives case-list remark codes', () => {
+    expect(codeForColumn('BURIAL')).toBe('FA');
+    expect(codeForColumn('CSR')).toBe('CSR');
+    expect(codeForColumn('HOME_VISIT')).toBe('HV');
+    expect(codeForColumn('LEGAL_PAO')).toBe('R');
+    expect(codeForColumn('COUNSELLING')).toBe('H');
+    expect(codeForColumn('TECH_OTHERS')).toBe('C');
   });
 });
 
 describe('selectCaseColumn', () => {
-  it('uses the first program-linked intervention', () => {
-    expect(selectCaseColumn({ ...base, programId: 'p-burial' }, PROGRAMS)).toEqual({ key: 'p-burial', code: 'FA' });
-    expect(selectCaseColumn({ ...base, programId: 'p-csr' }, PROGRAMS)).toEqual({ key: 'p-csr', code: 'CSR' });
-    expect(selectCaseColumn({ ...base, programName: 'Medical Assistance' }, PROGRAMS)).toEqual({ key: 'p-med', code: 'FA' });
+  it('uses the programme-linked intervention slot', () => {
+    expect(selectCaseColumn({ ...base, programId: 'p-burial' }, PROGRAMS)).toEqual({ key: 'BURIAL', code: 'FA' });
+    expect(selectCaseColumn({ ...base, programName: 'Psychosocial Counseling' }, PROGRAMS)).toEqual({ key: 'COUNSELLING', code: 'H' });
+    expect(selectCaseColumn({ ...base, programId: 'p-4ps' }, PROGRAMS)).toEqual({ key: 'TECH_OTHERS', code: 'C' });
   });
 
-  it('maps referral-only cases to the legal referral programs or a relevant match', () => {
-    expect(selectCaseColumn({ ...base, referralText: 'Referred to PAO for legal aid' }, PROGRAMS)).toEqual({ key: 'p-pao', code: 'R' });
-    // No exact legal match → align to the most relevant programme.
-    expect(selectCaseColumn({ ...base, referralText: 'referred for home visitation services' }, PROGRAMS)).toEqual({ key: 'p-hv', code: 'R' });
-    // No shared token with any programme → UNASSIGNED.
-    expect(selectCaseColumn({ ...base, referralText: 'Referred to PCSO' }, PROGRAMS).key).toBe('UNASSIGNED');
+  it('maps referrals: legal to LEGAL/PAO, others to a relevant programme or OTHERS', () => {
+    expect(selectCaseColumn({ ...base, referralText: 'Referred to PAO for legal aid' }, PROGRAMS)).toEqual({ key: 'LEGAL_PAO', code: 'R' });
+    expect(selectCaseColumn({ ...base, referralText: 'referred for counseling sessions' }, PROGRAMS)).toEqual({ key: 'COUNSELLING', code: 'R' });
+    expect(selectCaseColumn({ ...base, referralText: 'Referred to PCSO' }, PROGRAMS)).toEqual({ key: 'LEGAL_OTHERS', code: 'R' });
   });
 
-  it('aligns ad-hoc service text to the most relevant programme column', () => {
-    expect(selectCaseColumn({ ...base, serviceText: 'home visitation for the elderly' }, PROGRAMS)).toEqual({ key: 'p-hv', code: 'HV' });
-    expect(selectCaseColumn({ ...base, serviceText: 'funeral assistance claim' }, PROGRAMS).key).toBe('p-burial');
-    expect(selectCaseColumn({ ...base, serviceText: 'definitely not a service' }, PROGRAMS).key).toBe('UNASSIGNED');
+  it('falls back to CSR / Home Visit, then ad-hoc service text', () => {
+    expect(selectCaseColumn({ ...base, hasCsr: true }, PROGRAMS)).toEqual({ key: 'CSR', code: 'CSR' });
+    expect(selectCaseColumn({ ...base, hasVisit: true }, PROGRAMS)).toEqual({ key: 'HOME_VISIT', code: 'HV' });
+    expect(selectCaseColumn({ ...base, serviceText: 'funeral assistance claim' }, PROGRAMS)).toEqual({ key: 'BURIAL', code: 'FA' });
   });
 
-  it('falls back to CSR / Home Visit columns', () => {
-    expect(selectCaseColumn({ ...base, hasCsr: true }, PROGRAMS)).toEqual({ key: 'p-csr', code: 'CSR' });
-    expect(selectCaseColumn({ ...base, hasVisit: true }, PROGRAMS)).toEqual({ key: 'p-hv', code: 'HV' });
-  });
-
-  it('returns UNASSIGNED when nothing matches or the program is gone', () => {
-    expect(selectCaseColumn(base, PROGRAMS).key).toBe('UNASSIGNED');
-    expect(selectCaseColumn({ ...base, programId: 'p-gone' }, PROGRAMS).key).toBe('UNASSIGNED');
+  it('sends everything unmatched to the technical OTHERS slot', () => {
+    expect(selectCaseColumn(base, PROGRAMS)).toEqual({ key: 'TECH_OTHERS', code: 'C' });
+    expect(selectCaseColumn({ ...base, serviceText: 'definitely not a service' }, PROGRAMS).key).toBe('TECH_OTHERS');
   });
 });
 
-describe('codeForProgram', () => {
-  it('derives remark codes from band and name', () => {
-    expect(codeForProgram('Burial Assistance', 'FINANCIAL')).toBe('FA');
-    expect(codeForProgram('Case Study Report (CSR)', 'TECHNICAL')).toBe('CSR');
-    expect(codeForProgram('Home Visit', 'TECHNICAL')).toBe('HV');
-    expect(codeForProgram('Legal Referral (PAO)', 'LEGAL')).toBe('R');
-    expect(codeForProgram('Psychosocial Counseling', 'TECHNICAL')).toBe('H');
-    expect(codeForProgram('4Ps — Pantawid Pamilyang Pilipino Program', 'OTHER PROGRAMS')).toBe('C');
+describe('mostRelevantProgram', () => {
+  it('scores by shared tokens and returns undefined without a match', () => {
+    expect(mostRelevantProgram('home visitation for the elderly', PROGRAMS)?.id).toBe('p-hv');
+    expect(mostRelevantProgram('nothing in common here', PROGRAMS)).toBeUndefined();
   });
 });
 
-describe('buildColumns', () => {
-  it('builds SEX + programs + UNASSIGNED + TOTAL columns in reference order', () => {
-    const cols = buildColumns(PROGRAMS);
-    expect(cols[0]).toMatchObject({ key: 'MALE', band: 'SEX' });
-    expect(cols[1]).toMatchObject({ key: 'FEMALE', band: 'SEX' });
-    const keys = cols.map((c) => c.key);
-    // Reference order: BURIAL, MEDICAL before PWD; LEGAL/PAO before OTHERS;
-    // TECHNICAL birth<travel<csr<philhealth; 4Ps in OTHER PROGRAMS.
-    expect(keys.indexOf('p-burial')).toBeLessThan(keys.indexOf('p-med'));
-    expect(keys.indexOf('p-med')).toBeLessThan(keys.indexOf('p-hv'));
-    expect(keys.indexOf('p-pao')).toBeLessThan(keys.indexOf('p-ref'));
-    expect(keys.indexOf('p-csr')).toBeLessThan(keys.indexOf('p-ph'));
-    expect(keys.indexOf('p-ph')).toBeLessThan(keys.indexOf('p-4ps'));
-    expect(cols[cols.length - 2]).toMatchObject({ key: 'UNASSIGNED', band: '' });
-    expect(cols[cols.length - 1]).toMatchObject({ key: 'TOTAL', band: '' });
-    const burial = cols.find((c) => c.key === 'p-burial');
-    expect(burial).toMatchObject({ label: 'BURIAL', band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' });
-  });
-});
-
-describe('gadLabelFor', () => {
-  it('maps reference programmes to the GAD short labels and leaves others named', () => {
-    expect(gadLabelFor('Burial Assistance')).toBe('BURIAL');
-    expect(gadLabelFor('Medical Equipment Loan')).toBe('MEDICAL');
-    expect(gadLabelFor('Assistive Device Support')).toBe('ASSISTIVE DEVICES');
-    expect(gadLabelFor('PWD Assistance')).toBe('PWD');
-    expect(gadLabelFor('Legal Referral (PAO)')).toBe('LEGAL/PAO');
-    expect(gadLabelFor('Psychosocial Counseling')).toBe('COUNSELLING');
-    expect(gadLabelFor('PhilHealth Assistance')).toBe('PHILHEALTH');
-    expect(gadLabelFor('Balik Probinsya Assistance')).toBe('BALIK PROBINSYA');
-    expect(gadLabelFor('Educational Assistance')).toBeUndefined();
+describe('SPEC_COLUMNS', () => {
+  it('exposes the printed header labels verbatim', () => {
+    const labels = SPEC_COLUMNS.map((c) => c.label);
+    for (const l of ['Male', 'Female', 'Burial', 'Medical', 'Assistive Devices', 'PWD', 'LEGAL/PAO', 'OTHERS',
+      'Birth Discrepancy', 'Travel Assessment', 'Case Study Report', 'Counselling', 'PhilHealth',
+      'Child Custody', 'Home Visit', 'Balik Probinsya', 'Others', 'TOTAL']) {
+      expect(labels).toContain(l);
+    }
   });
 });

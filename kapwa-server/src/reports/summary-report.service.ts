@@ -96,7 +96,7 @@ export class SummaryReportService {
       this.dataSource.query(PROGRAMS_SQL),
     ]);
     const programs = (programRows ?? []) as Array<{ id: string; name: string; category?: string | null }>;
-    const columns = buildColumns(programs);
+    const columns = buildColumns();
 
     const annual = emptyCounts(columns);
     const monthly = [0, 1, 2].map((i) => monthRange(year, (quarter - 1) * 3 + i));
@@ -114,7 +114,7 @@ export class SummaryReportService {
         programName: r.program_name,
       };
       const col = selectCaseColumn(input, programs);
-      const key = annual.byColumn[col.key] !== undefined ? col.key : 'UNASSIGNED';
+      const key = annual.byColumn[col.key] !== undefined ? col.key : 'TECH_OTHERS';
       addTo(annual, r.gender, key);
       const created = new Date(r.created_at);
       const mIdx = monthly.findIndex((m) => created >= m.start && created < m.end);

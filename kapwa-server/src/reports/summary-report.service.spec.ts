@@ -60,9 +60,9 @@ describe('SummaryReportService.build', () => {
       .filter(col => !['MALE', 'FEMALE', 'TOTAL'].includes(col.key))
       .reduce((s, col) => s + (c.byColumn[col.key] ?? 0), 0);
     expect(colTotal).toBe(c.total);
-    expect(c.byColumn['p-burial']).toBe(1);
-    expect(c.byColumn['p-med']).toBe(1);
-    expect(c.byColumn['p-csr']).toBe(1);
+    expect(c.byColumn['BURIAL']).toBe(1);
+    expect(c.byColumn['MEDICAL']).toBe(1);
+    expect(c.byColumn['CSR']).toBe(1);
   });
 
   it('builds three month tables plus a quarter summary for Q2', async () => {
@@ -83,15 +83,16 @@ describe('SummaryReportService.build', () => {
     expect(data.notedBy.length).toBeGreaterThan(0);
   });
 
-  it('includes program-driven columns plus UNASSIGNED and TOTAL', async () => {
+  it('exposes the fixed 18-column reference set', async () => {
     const { service } = makeService([]);
     const data = await service.build(2025, 2);
     const keys = columnKeys(data);
+    expect(keys).toHaveLength(18);
     expect(keys[0]).toBe('MALE');
     expect(keys[1]).toBe('FEMALE');
-    expect(keys).toContain('p-burial');
-    expect(keys).toContain('p-csr');
-    expect(keys[keys.length - 2]).toBe('UNASSIGNED');
+    expect(keys).toContain('BURIAL');
+    expect(keys).toContain('LEGAL_PAO');
+    expect(keys).toContain('TECH_OTHERS');
     expect(keys[keys.length - 1]).toBe('TOTAL');
   });
 

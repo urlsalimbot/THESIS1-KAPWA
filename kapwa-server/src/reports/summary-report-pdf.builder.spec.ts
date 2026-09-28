@@ -2,18 +2,19 @@ import { PDFDocument } from 'pdf-lib';
 import { buildSummaryReportPdf } from './summary-report-pdf.builder';
 import { ReportColumn, SummaryReportData, SummaryTable, buildColumns } from './summary-report.types';
 
-// Program fixture mirrors a small deployment of the seeded catalogue.
+// Program fixture mirrors a small deployment; columns are the fixed 18-slot
+// reference set regardless of the catalogue.
 const PROGRAMS = [
   { id: 'p-burial', name: 'Burial Assistance', category: 'Burial' },
   { id: 'p-med', name: 'Medical Assistance', category: 'Medical' },
   { id: 'p-pwd', name: 'PWD Assistance', category: 'PWD Welfare' },
-  { id: 'p-pao', name: 'Legal Referral (PAO)', category: 'Social Services' },
-  { id: 'p-ref', name: 'Referral – Others', category: 'Social Services' },
-  { id: 'p-csr', name: 'Case Study Report (CSR)', category: 'Social Services' },
-  { id: 'p-hv', name: 'Home Visit', category: 'Family Welfare' },
+  { id: 'p-pao', name: 'Legal Referral (PAO)', category: 'Legal' },
+  { id: 'p-ref', name: 'Referral – Others', category: 'Legal' },
+  { id: 'p-csr', name: 'Case Study Report (CSR)', category: 'Technical' },
+  { id: 'p-hv', name: 'Home Visit', category: 'Technical' },
 ];
 
-const COLUMNS: ReportColumn[] = buildColumns(PROGRAMS);
+const COLUMNS: ReportColumn[] = buildColumns();
 
 function emptyTable(title: string): SummaryTable {
   const byColumn: Record<string, number> = {};
@@ -61,14 +62,14 @@ describe('buildSummaryReportPdf', () => {
     expect(Math.round(height)).toBe(612);
   });
 
-  it('prints page titles, program-driven bands, signatories, and case rows', async () => {
+  it('prints page titles, reference bands, signatories, and case rows', async () => {
     const text = searchableText(await buildSummaryReportPdf(data));
     for (const s of [
       'SUMMARY REPORT 2025', 'GAD DATABASE CASE TRACKER', '2nd QUARTER REPORT',
       'April 1-30, 2025', 'May 1-31, 2025', 'June 1-30, 2025', '2nd QUARTER SUMMARY',
       'GAD DATABASE CASE LIST', 'SR. CITIZEN', 'INDIGENT', 'Intervention/Remarks',
-      'FINANCIAL', 'LEGAL', 'TECHNICAL', 'BURIAL', 'MEDICAL', 'CASE STUDY REPORT',
-      'UNASSIGNED', 'Prepared by:', 'Noted by:', 'ARLYNDA F. GAMUTIA', 'ANNALYN JOY C. SAN PEDRO',
+      'SEX', 'Financial', 'Legal', 'Technical', 'Burial', 'Medical', 'Case Study',
+      'Prepared by:', 'Noted by:', 'ARLYNDA F. GAMUTIA', 'ANNALYN JOY C. SAN PEDRO',
       'Magno', 'Poblacion',
     ]) expect(text).toContain(s);
   });
@@ -76,8 +77,8 @@ describe('buildSummaryReportPdf', () => {
   it('merges sub-bands once per table', async () => {
     const text = searchableText(await buildSummaryReportPdf(data));
     // 1 annual + 3 monthly + 1 quarter summary = 5 tables, one merged cell each.
-    expect((text.match(/FINANCIAL ASSISTANCE/g) ?? []).length).toBe(5);
-    expect((text.match(/REFERRAL/g) ?? []).length).toBe(5);
+    expect((text.match(/Financial Assistance/g) ?? []).length).toBe(5);
+    expect((text.match(/Referral/g) ?? []).length).toBe(5);
   });
 
   it('paginates a long case list without crashing', async () => {
@@ -91,27 +92,20 @@ describe('buildSummaryReportPdf', () => {
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
   });
 
-  it('stays collision-free with a production-sized programme catalogue', async () => {
-    // 30+ long-named programs mimic prod: labels wrap/ellipsise in narrow
-    // columns and special columns (UNASSIGNED/TOTAL) keep their full labels.
-    const widePrograms = Array.from({ length: 30 }, (_, i) => ({
-      id: `p${i}`,
-      name: `${i % 2 ? '4Ps — Pantawid Pamilyang Pilipino Program' : 'Comprehensive Family Development Intervention Program'} ${i}`,
-      category: i % 3 === 0 ? 'CCT' : 'Other',
-    }));
-    const wideCols = buildColumns(widePrograms);
-    const bc: Record<string, number> = {};
-    for (const c of wideCols) { if (!['MALE', 'FEMALE', 'TOTAL'].includes(c.key)) bc[c.key] = 0; }
-    const emptyT = (title: string): SummaryTable => ({ title, counts: { male: 0, female: 0, total: 0, byColumn: bc } });
-    const text = searchableText(await buildSummaryReportPdf({
-      ...data,
-      columns: wideCols,
-      annual: emptyT('SUMMARY REPORT 2025'),
-      monthly: [emptyT('April 1-30, 2025'), emptyT('May 1-31, 2025'), emptyT('June 1-30, 2025')],
-      quarterSummary: emptyT('2nd QUARTER SUMMARY'),
-    }));
-    expect(text).toContain('UNASSIGNED');
-    expect(text).toContain('TOTAL');
-    expect(text).toContain('OTHER PROGRAMS');
+  it('prints the exact reference header matrix (bands, sub-bands, labels)', async () => {
+    const text = searchableText(await buildSummaryReportPdf(data));
+    for (const s of [
+      'SEX', 'Financial', 'Legal', 'Technical',
+      'Financial Assistance', 'Referral',
+      'Male', 'Female', 'Burial', 'Medical', 'Assistive Devices', 'PWD',
+      'LEGAL/PAO', 'OTHERS',
+      'Birth Discrepancy', 'Travel Assessment', 'Case Study Report', 'Counselling',
+      'PhilHealth', 'Child Custody', 'Home Visit', 'Balik Probinsya', 'TOTAL',
+    ]) {
+      // Labels may wrap across lines; assert each word group is present.
+      for (const word of s.split(' ')) {
+        expect(text).toContain(word);
+      }
+    }
   });
 });

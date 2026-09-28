@@ -216,14 +216,9 @@ const accessCardData = {
   ],
 };
 
-// Mirrors the fixture in summary-report-pdf.builder.spec.ts (program-driven):
-// columns come from the FULL seeded programme catalogue (as production does),
-// built through buildColumns so labels/bands match the server exactly.
-const { PROGRAMS } = loadBuilder('database/seed-programs.js');
+// Mirrors the builder spec fixture: the fixed 18-slot reference column set.
 const { buildColumns } = loadBuilder('reports/summary-report.types.js');
-const SUMMARY_PROG_COLUMNS = buildColumns(
-  PROGRAMS.map((p) => ({ id: p.id, name: p.name, category: p.category })),
-);
+const SUMMARY_PROG_COLUMNS = buildColumns();
 
 const summaryEmptyTable = (title) => {
   const byColumn = {};
