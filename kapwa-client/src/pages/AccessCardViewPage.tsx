@@ -2,7 +2,7 @@ import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { categoryLabel, referralStatusLabel } from '@/i18n/display';
+import { referralStatusLabel } from '@/i18n/display';
 import { api, downloadAccessCardPdf } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { queryKeys } from '../lib/query-keys';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
+import { CategoryBadge } from '@/components/cards/CategoryBadge';
 import { ACCESS_CARD_CATEGORY_TABS, type AccessCardCategory } from '@/lib/constants';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
 import { formatDate, todayInManila } from '../lib/format';
@@ -69,23 +70,6 @@ interface Agency {
   id: string;
   code: string;
   name: string;
-}
-
-function CategoryBadge({ category }: { category?: string }) {
-  const { t } = useTranslation();
-  const variants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-    case_service: 'default',
-    referral: 'secondary',
-    community_service: 'outline',
-    seminar: 'secondary',
-    payout: 'default',
-    compliance: 'outline',
-  };
-  return (
-    <Badge variant={variants[category || ''] || 'outline'} className="text-[10px]">
-      {category ? categoryLabel(t, category) : t('accessCard.unknown', 'Unknown')}
-    </Badge>
-  );
 }
 
 // The add-entry form's blank state. Defined once and used both to open the form
@@ -381,6 +365,7 @@ export function AccessCardViewPage() {
           <div className="space-y-1">
             {summary.servicesFromOtherAgencies.map(s => (
               <div key={s.id} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                <CategoryBadge category={s.category} />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{s.serviceRendered}</p>
                   <p className="text-xs text-muted-foreground">

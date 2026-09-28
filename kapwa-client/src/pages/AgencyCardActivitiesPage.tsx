@@ -6,8 +6,8 @@ import { queryKeys } from '../lib/query-keys';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
+import { CategoryBadge } from '@/components/cards/CategoryBadge';
 import type { AccessCardCategory } from '@/lib/constants';
 import { Check, Search } from 'lucide-react';
 import { formatDate } from '../lib/format';
@@ -112,7 +112,7 @@ export function AgencyCardActivitiesPage() {
                     <div>
                       <p className="text-sm font-medium">{s.serviceRendered}</p>
                       <p className="text-xs text-muted-foreground">
-                        <Badge variant="secondary" className="text-[10px] mr-1">{s.category}</Badge>
+                        <CategoryBadge category={s.category} className="mr-1" />
                         {formatDate(s.serviceDate)}
                       </p>
                     </div>

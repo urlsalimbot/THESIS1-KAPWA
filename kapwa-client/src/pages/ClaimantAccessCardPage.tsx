@@ -3,11 +3,21 @@ import { useTranslation } from 'react-i18next';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CategoryBadge } from '@/components/cards/CategoryBadge';
+import { formatDate } from '../lib/format';
 
 interface MyAccessCard {
   code: string;
   beneficiary?: { name: string; barangay?: string };
-  services?: { service_rendered?: string; serviceRendered?: string; service_date?: string; serviceDate?: string; cost?: number | null }[];
+  // The shape `BeneficiariesService.getAccessCard` returns, which is the only
+  // thing that serves this route. It maps the raw columns itself, so the
+  // snake_case spellings this used to also accept were never reachable.
+  services?: {
+    serviceRendered?: string;
+    serviceDate?: string | null;
+    cost?: number | null;
+    category?: string;
+  }[];
   remainingSlots?: number;
 }
 
@@ -36,10 +46,11 @@ export function ClaimantAccessCardPage() {
             <ul className="space-y-2">
               {(data.services ?? []).map((s, i) => (
                 <li key={i} className="flex items-center justify-between text-sm border-b py-2 last:border-0">
-                  <span>{s.service_rendered ?? s.serviceRendered}</span>
+                  <span>{s.serviceRendered}</span>
                   <span className="flex items-center gap-3 text-muted-foreground">
+                    <CategoryBadge category={s.category} />
                     {s.cost != null && s.cost > 0 && <span className="font-semibold text-foreground">₱{s.cost.toLocaleString()}</span>}
-                    <span className="text-xs">{s.service_date ?? s.serviceDate}</span>
+                    <span className="text-xs">{formatDate(s.serviceDate)}</span>
                   </span>
                 </li>
               ))}

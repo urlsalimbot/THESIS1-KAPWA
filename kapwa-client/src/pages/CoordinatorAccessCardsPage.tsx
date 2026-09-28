@@ -8,10 +8,10 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DataTable } from '@/components/data-table';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
+import { CategoryBadge } from '@/components/cards/CategoryBadge';
 import type { AccessCardCategory } from '@/lib/constants';
 import { Search, Check, History, BadgeCheck, Loader2, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
@@ -241,11 +241,7 @@ function VerifyTab() {
                       <div>
                         <p className="text-sm font-medium">{s.serviceRendered}</p>
                         <p className="text-xs text-muted-foreground">
-                          {s.category && (
-                            <Badge variant="secondary" className="text-[10px] mr-1">
-                              {s.category}
-                            </Badge>
-                          )}
+                          <CategoryBadge category={s.category} className="mr-1" />
                           {formatDate(s.serviceDate)}
                         </p>
                       </div>
@@ -434,7 +430,13 @@ function HistoryTab() {
   const columns: ColumnDef<AccessCardService>[] = [
     { accessorKey: 'accessCardCode', header: t('accessCard.cardCode', 'Card Code') },
     { accessorKey: 'serviceRendered', header: t('accessCard.service', 'Service') },
-    { accessorKey: 'category', header: t('accessCard.category', 'Category') },
+    {
+      accessorKey: 'category',
+      header: t('accessCard.category', 'Category'),
+      // The table used to print the stored token, so the history read
+      // `community_service` while the row above it read "Community Service".
+      cell: ({ row }) => <CategoryBadge category={row.original.category} />,
+    },
     { accessorKey: 'sourceBarangay', header: t('accessCard.barangay', 'Barangay') },
     {
       accessorKey: 'serviceDate',

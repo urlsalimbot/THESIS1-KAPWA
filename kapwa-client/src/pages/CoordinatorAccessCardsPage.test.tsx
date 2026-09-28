@@ -125,6 +125,11 @@ describe('CoordinatorAccessCardsPage', () => {
     // "Page 1 of 2 (1–2 of 2 total)" and make page 2 unreachable.
     expect(screen.getByText(/Page 1 of 6 \(1–10 of 57 total\)/)).toBeInTheDocument();
     expect(screen.getByLabelText(/go to next page/i)).toBeInTheDocument();
+
+    // This column printed the stored token, so the history read
+    // `community_service` while the row above it read "Community Service".
+    expect(screen.getAllByText('Community Service')).toHaveLength(2);
+    expect(screen.queryByText('community_service')).not.toBeInTheDocument();
   });
 
   it('reports a load failure instead of rendering a silently empty table', async () => {
@@ -402,5 +407,34 @@ describe('CoordinatorAccessCardsPage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('writes a service row in words, not in stored tokens', async () => {
+    // The tab strip above this row reads "Community Service"; the row used to
+    // read `community_service`, and the date used to be whatever the API sent.
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      if (k.includes('/card')) {
+        return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
+      }
+      return Promise.resolve([service(1)]);
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText(/enter card code/i), 'NORZ-AC-2026-0001');
+    await user.click(screen.getByRole('button', { name: /^Verify$/i }));
+    await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
+
+    // Scoped to the service row: the logging form's category dropdown also
+    // reads "Community Service", so an unscoped query finds two of them.
+    const row = screen.getByText('Service 1').closest('div') as HTMLElement;
+    expect(within(row).getByText('Community Service')).toBeInTheDocument();
+
+    // And nowhere on the page does the stored token reach the screen.
+    expect(screen.queryByText('community_service')).not.toBeInTheDocument();
+    expect(within(row).getByText('Sep 1, 2026')).toBeInTheDocument();
+    expect(screen.queryByText('2026-09-01')).not.toBeInTheDocument();
   });
 });

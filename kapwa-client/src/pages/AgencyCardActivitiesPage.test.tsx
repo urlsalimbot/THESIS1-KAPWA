@@ -108,4 +108,43 @@ describe('AgencyCardActivitiesPage', () => {
     expect((screen.getByLabelText(/^agency/i) as HTMLInputElement).tagName).toBe('SELECT');
     expect(screen.getByLabelText(/^remarks/i).tagName).toBe('TEXTAREA');
   });
+
+  it('labels a service row in words, not in the stored category token', async () => {
+    // An agency staffer saw the literal string `community_service` here while
+    // the resident's own card called the same row "Community Service".
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('agencies')) {
+        return Promise.resolve([{ id: 'ag-rhu', code: 'RHU', name: 'Rural Health Unit' }]);
+      }
+      if (k.includes('access-cards') && k.includes('summary')) {
+        return Promise.resolve({ person: { id: 'p1', firstName: 'Juan', surname: 'Santos' } });
+      }
+      if (k.includes('access-cards')) {
+        return Promise.resolve([
+          {
+            id: 's1',
+            serviceRendered: 'Medical Consultation',
+            serviceDate: '2026-07-20',
+            category: 'community_service',
+          },
+        ]);
+      }
+      return Promise.resolve(null);
+    });
+
+    const user = userEvent.setup();
+    renderWithSWR(<AgencyCardActivitiesPage />);
+    await user.type(screen.getByPlaceholderText(/Enter card code/), 'NORZ-AC-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Verify/ }));
+    await screen.findByText('Medical Consultation');
+
+    // Scoped to the service row: the logging form's category dropdown also
+    // reads "Community Service", so an unscoped query finds two of them.
+    const row = screen.getByText('Medical Consultation').closest('div') as HTMLElement;
+    expect(within(row).getByText('Community Service')).toBeTruthy();
+    expect(screen.queryByText('community_service')).toBeNull();
+    expect(within(row).getByText('Jul 20, 2026')).toBeTruthy();
+    expect(screen.queryByText('2026-07-20')).toBeNull();
+  });
 });
