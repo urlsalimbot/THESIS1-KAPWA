@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { IntakeReviewPage } from './IntakeReviewPage';
 import { uploadIntakeIdPhotos } from '@/lib/intake-id-photo';
 import { axe } from 'vitest-axe';
@@ -21,6 +22,7 @@ let mockLocationState: any = {
     {
       householdId: 'hh-1',
       score: 0.92,
+      matchedOn: ['phone', 'both_names'],
       caseExistsWithin30Days: false,
       primaryBeneficiary: {
         id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan',
@@ -28,6 +30,8 @@ let mockLocationState: any = {
         occupation: 'Farmer', estimatedMonthlyIncome: 8500,
         civilStatus: 'Married', currentAddress: { barangay: 'Bigte', street: '123 Purok 1' },
         philhealthNumber: '123456789', category: 'Family',
+          dob: '1985-01-20',
+          email: 'juan.delacruz@example.com',
       },
       allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
       familyMembers: [
@@ -52,7 +56,7 @@ let mockLocationState: any = {
     },
   ],
   intakeData: {
-    beneficiary: { surname: 'Dela Cruz', firstName: 'Juan', age: 40, currentAddress: { barangay: 'Bigte' }, gender: 'Male', estimatedMonthlyIncome: 8500, occupation: 'Farmer', cellularNumber: '09171234567' },
+    beneficiary: { surname: 'Dela Cruz', firstName: 'Juan', age: 40, currentAddress: { barangay: 'Bigte' }, gender: 'Male', estimatedMonthlyIncome: 8500, occupation: 'Farmer', cellularNumber: '09171234567', dob: '1985-01-20', email: 'juan.delacruz@example.com' },
     familyMembers: [{ surname: 'Dela Cruz', firstName: 'Maria', relationship: 'Spouse' }],
   },
 };
@@ -86,6 +90,7 @@ describe('IntakeReviewPage', () => {
         {
           householdId: 'hh-1',
           score: 0.92,
+      matchedOn: ['phone', 'both_names'],
           caseExistsWithin30Days: false,
           primaryBeneficiary: {
             id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan',
@@ -93,6 +98,8 @@ describe('IntakeReviewPage', () => {
             occupation: 'Farmer', estimatedMonthlyIncome: 8500,
             civilStatus: 'Married', currentAddress: { barangay: 'Bigte', street: '123 Purok 1' },
             philhealthNumber: '123456789', category: 'Family',
+          dob: '1985-01-20',
+          email: 'juan.delacruz@example.com',
           },
           allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
           familyMembers: [
@@ -117,7 +124,7 @@ describe('IntakeReviewPage', () => {
         },
       ],
       intakeData: {
-        beneficiary: { surname: 'Dela Cruz', firstName: 'Juan', age: 40, currentAddress: { barangay: 'Bigte' }, gender: 'Male', estimatedMonthlyIncome: 8500, occupation: 'Farmer', cellularNumber: '09171234567' },
+        beneficiary: { surname: 'Dela Cruz', firstName: 'Juan', age: 40, currentAddress: { barangay: 'Bigte' }, gender: 'Male', estimatedMonthlyIncome: 8500, occupation: 'Farmer', cellularNumber: '09171234567', dob: '1985-01-20', email: 'juan.delacruz@example.com' },
         familyMembers: [{ surname: 'Dela Cruz', firstName: 'Maria', relationship: 'Spouse' }],
       },
     };
@@ -175,13 +182,13 @@ describe('IntakeReviewPage', () => {
     expect(screen.getAllByText(/choosing "Yes, update info"/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('should show "No, different person" buttons per card', async () => {
+  it('should show "Not this person" buttons per card', async () => {
     render(
       <MemoryRouter>
         <IntakeReviewPage />
       </MemoryRouter>
     );
-    const rejectBtns = screen.getAllByRole('button', { name: /different person/i });
+    const rejectBtns = screen.getAllByRole('button', { name: /not this person/i });
     expect(rejectBtns.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -291,5 +298,54 @@ describe('IntakeReviewPage', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /register as new client/i }));
     await waitFor(() => expect(localStorage.getItem(DRAFT_KEY)).toBeNull());
+  });
+
+  it('dismisses a card via "Not this person" and restores it with Undo', async () => {
+    render(
+      <>
+        <MemoryRouter>
+          <IntakeReviewPage />
+        </MemoryRouter>
+        <Toaster position="bottom-right" />
+      </>
+    );
+
+    expect(screen.getAllByText(/Is this/i)).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole('button', { name: /not this person/i })[0]);
+    expect(screen.getAllByText(/Is this/i)).toHaveLength(1);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /undo/i })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /undo/i }));
+    await waitFor(() => expect(screen.getAllByText(/Is this/i)).toHaveLength(2));
+  });
+
+  it('shows the continue-as-new state after the last card is dismissed', async () => {
+    render(
+      <>
+        <MemoryRouter>
+          <IntakeReviewPage />
+        </MemoryRouter>
+        <Toaster position="bottom-right" />
+      </>
+    );
+
+    const dismissButtons = screen.getAllByRole('button', { name: /not this person/i });
+    fireEvent.click(dismissButtons[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /not this person/i })[0]);
+
+    expect(screen.getByText(/No possible matches left to review/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /Continue as new client/i })).toBeDefined();
+    expect(screen.queryByText(/none of these match/i)).toBeNull();
+  });
+
+  it('reveals why a candidate was flagged', async () => {
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/Why this was flagged/i)).toBeDefined();
+    expect(screen.getByText(/Phone match/i)).toBeDefined();
+    expect(screen.getByText(/Both names/i)).toBeDefined();
   });
 });

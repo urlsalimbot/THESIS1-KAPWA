@@ -113,7 +113,9 @@ export interface MatchCandidate {
     middleName?: string;
     gender: string;
     age: number;
+    dob?: string;
     phone: string;
+    email?: string;
     occupation: string;
     estimatedMonthlyIncome: number;
     civilStatus: string;
