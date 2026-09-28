@@ -161,10 +161,10 @@ const router = createBrowserRouter([
   { path: '/reports', element: <Private roles={['mayor']}><MayorReportsPage /></Private> },
   { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },
-  { path: '/announcements/manage', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementsPage /></Private> },
-  { path: '/announcements/manage/new', element: <Private roles={['admin','social_worker','coordinator']}><CreateAnnouncementPage /></Private> },
-  { path: '/announcements/manage/:id', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementDetailPage /></Private> },
-  { path: '/announcements/manage/:id/edit', element: <Private roles={['admin','social_worker','coordinator']}><AnnouncementEditPage /></Private> },
+  { path: '/announcements/manage', element: <Private roles={['admin','social_worker']}><AnnouncementsPage /></Private> },
+  { path: '/announcements/manage/new', element: <Private roles={['admin','social_worker']}><CreateAnnouncementPage /></Private> },
+  { path: '/announcements/manage/:id', element: <Private roles={['admin','social_worker']}><AnnouncementDetailPage /></Private> },
+  { path: '/announcements/manage/:id/edit', element: <Private roles={['admin','social_worker']}><AnnouncementEditPage /></Private> },
   { path: '/my-access-card', element: <Private roles={['claimant']}><ClaimantAccessCardPage /></Private> },
 ]);
 

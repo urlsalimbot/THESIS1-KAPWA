@@ -29,42 +29,42 @@ export class AnnouncementsController {
   constructor(private readonly svc: AnnouncementsService) {}
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator')
-  @ApiOperation({ summary: 'List all announcements (admin)' })
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'List all announcements (MSWDO staff)' })
   async findAll() {
     return this.svc.findAll();
   }
 
   @Get(':id')
-  @Roles('admin', 'social_worker', 'coordinator')
-  @ApiOperation({ summary: 'Get announcement by ID (admin)' })
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Get announcement by ID (MSWDO staff)' })
   async findOne(@Param('id') id: string) {
     return this.svc.findOne(id);
   }
 
   @Post()
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Create announcement' })
   async create(@Body() dto: CreateAnnouncementDto) {
     return this.svc.create(dto);
   }
 
   @Patch(':id')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Update announcement fields' })
   async update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto) {
     return this.svc.update(id, dto);
   }
 
   @Patch(':id/pin')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Toggle pinned status' })
   async togglePin(@Param('id') id: string) {
     return this.svc.togglePin(id);
   }
 
   @Delete(':id')
-  @Roles('admin', 'social_worker', 'coordinator')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Delete announcement' })
   async remove(@Param('id') id: string) {
     await this.svc.delete(id);

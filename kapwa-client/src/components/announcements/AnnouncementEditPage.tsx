@@ -65,7 +65,7 @@ export function AnnouncementEditPage() {
       description={t('announcements.editDesc', 'Update this announcement.')}
       backTo={{ label: t('announcements.manage', 'Announcements'), onClick: () => navigate('/announcements/manage') }}
     >
-      <div className="max-w-3xl space-y-4">
+      <div className="mx-auto w-full max-w-3xl space-y-4">
         {data && (
           <AnnouncementForm
             key={data.id}

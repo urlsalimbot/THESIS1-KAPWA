@@ -6,6 +6,27 @@ import { AbacService, ResourceSensitivity } from '../services/abac.service';
 import { RESOURCE_SENSITIVITY_KEY } from '../decorators/resource-sensitivity.decorator';
 import { ConsentLedger } from '../../beneficiaries/consent-ledger.entity';
 
+/**
+ * Force a query-param scope onto the request.
+ *
+ * Express 5 (5.2.x here) exposes `req.query` as an accessor on the request
+ * prototype that re-parses `req.url` on every access, and it has **no setter**.
+ * A plain `req.query.barangay = x` is therefore silently discarded before
+ * Nest's `@Query()` decorator reads the value — the guard appears to scope the
+ * query and the handler still receives the unfiltered params. Shadow the
+ * prototype getter with an own data property so the value survives.
+ *
+ * Do not "simplify" this back into a property assignment.
+ */
+function pinQueryScope(request: any, key: string, value: string): void {
+  Object.defineProperty(request, 'query', {
+    value: { ...(request.query ?? {}), [key]: value },
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
+}
+
 @Injectable()
 export class AbacGuard implements CanActivate {
   constructor(
@@ -27,6 +48,11 @@ export class AbacGuard implements CanActivate {
     // only — case/IRF route :id params are not beneficiary UUIDs.
     const routePath = request.route?.path || request.url || '';
     const isBeneficiaryRoute = /\/beneficiaries(\/|$)/.test(routePath);
+    // The access-card *list* only — `/access-cards/:cardCode` is a single-card
+    // lookup, and cross-barangay point-of-service verification is legitimate.
+    // End-anchored so `request.route.path` matches whether or not the global
+    // prefix is part of it.
+    const ACCESS_CARD_LIST_ROUTE = /\/access-cards\/?$/;
     const beneficiaryId = params?.beneficiaryId || params?.id;
     if (isBeneficiaryRoute && beneficiaryId) {
       const consent = await this.consentRepo.findOne({
@@ -53,14 +79,26 @@ export class AbacGuard implements CanActivate {
           `Barangay coordinators cannot access ${resourceSensitivity} records.`,
         );
       }
-      const barangay = query?.barangay || params?.barangay || body?.barangay;
+      // `barangay` is the canonical scope param. Modules that store the scope in
+      // their own column alias it — access-cards filters on `sourceBarangay` —
+      // so a coordinator cannot escape their barangay through the alias.
+      const barangay =
+        query?.barangay || query?.sourceBarangay || params?.barangay || body?.barangay;
       if (barangay && barangay !== user.assignedBarangay) {
         throw new ForbiddenException(
           `You are not assigned to ${barangay}. Your assignment is ${user.assignedBarangay}.`,
         );
       }
-      if (!barangay && isBeneficiaryRoute && user.assignedBarangay) {
-        query.barangay = user.assignedBarangay;
+      // Pin a bare list request to the coordinator's own barangay rather than
+      // letting it fan out city-wide. Without this an omitted filter returned
+      // every barangay's rows, since the services only filter when a value is
+      // supplied.
+      if (!barangay && user.assignedBarangay) {
+        if (isBeneficiaryRoute) {
+          pinQueryScope(request, 'barangay', user.assignedBarangay);
+        } else if (ACCESS_CARD_LIST_ROUTE.test(routePath)) {
+          pinQueryScope(request, 'sourceBarangay', user.assignedBarangay);
+        }
       }
       return true;
     }

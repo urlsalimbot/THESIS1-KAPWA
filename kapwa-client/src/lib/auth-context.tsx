@@ -3,7 +3,7 @@ import { api, REFRESH_TOKEN_KEY } from './api';
 import { clearDraft } from '../hooks/useIntakeAutosave';
 import { clearPendingIdPhoto } from './intake-id-photo';
 
-interface User { id: string; email: string; fullName: string; role: string; phone?: string; agencyId?: string; mustChangePassword?: boolean; }
+interface User { id: string; email: string; fullName: string; role: string; phone?: string; agencyId?: string; mustChangePassword?: boolean; assignedBarangay?: string; }
 
 interface AuthContextType {
   user: User | null;

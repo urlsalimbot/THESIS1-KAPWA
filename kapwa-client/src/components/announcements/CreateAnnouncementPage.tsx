@@ -30,7 +30,7 @@ export function CreateAnnouncementPage() {
       description={t('announcements.newDesc', 'Draft and publish a public announcement.')}
       backTo={{ label: t('announcements.manage', 'Announcements'), onClick: () => navigate('/announcements/manage') }}
     >
-      <div className="max-w-3xl space-y-4">
+      <div className="mx-auto w-full max-w-3xl space-y-4">
         <AnnouncementForm isNew saving={saving} onSave={save} />
       </div>
     </PageShell>

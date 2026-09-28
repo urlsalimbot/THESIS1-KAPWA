@@ -45,7 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/tracker', label: 'Daily Tracker', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/approvals', label: 'Approvals', icon: <Stamp size={20} />, roles: ['admin', 'social_worker'] },
-      { path: '/announcements/manage', label: 'Announcements', icon: <Megaphone size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
+      { path: '/announcements/manage', label: 'Announcements', icon: <Megaphone size={20} />, roles: ['admin', 'social_worker'] },
     ],
   },
   {
