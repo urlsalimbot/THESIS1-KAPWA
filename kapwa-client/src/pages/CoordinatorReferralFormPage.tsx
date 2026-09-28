@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
+import { NAME_EXTENSIONS } from '../lib/constants';
 import { User, MapPin, FileText, Phone, Send } from 'lucide-react';
 
 export function CoordinatorReferralFormPage() {
@@ -77,28 +78,29 @@ export function CoordinatorReferralFormPage() {
               <span className="text-xs text-muted-foreground font-medium">{t('coordinator.residentName', 'Name of the Resident')}</span>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
                 <div className="space-y-1.5">
-                  <span className="text-xs text-muted-foreground font-medium">{t('coordinator.surname', 'Surname *')}</span>
-                  <Input className="h-9" required value={form.surname} onChange={e => update('surname', e.target.value)} aria-label={t('coordinator.surname', 'surname')} />
+                  <label htmlFor="crf-surname" className="text-xs text-muted-foreground font-medium">{t('coordinator.surname', 'Surname *')}</label>
+                  <Input id="crf-surname" className="h-9" required value={form.surname} onChange={e => update('surname', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-xs text-muted-foreground font-medium">{t('coordinator.firstName', 'First Name *')}</span>
-                  <Input className="h-9" required value={form.firstName} onChange={e => update('firstName', e.target.value)} aria-label={t('coordinator.firstName', 'firstName')} />
+                  <label htmlFor="crf-firstName" className="text-xs text-muted-foreground font-medium">{t('coordinator.firstName', 'First Name *')}</label>
+                  <Input id="crf-firstName" className="h-9" required value={form.firstName} onChange={e => update('firstName', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-xs text-muted-foreground font-medium">{t('coordinator.middleName', 'Middle Name')}</span>
-                  <Input className="h-9" value={form.middleName} onChange={e => update('middleName', e.target.value)} aria-label={t('coordinator.middleName', 'middleName')} />
+                  <label htmlFor="crf-middleName" className="text-xs text-muted-foreground font-medium">{t('coordinator.middleName', 'Middle Name')}</label>
+                  <Input id="crf-middleName" className="h-9" value={form.middleName} onChange={e => update('middleName', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-xs text-muted-foreground font-medium">{t('coordinator.extension', 'Extension')}</span>
+                  <label htmlFor="crf-extension" className="text-xs text-muted-foreground font-medium">{t('coordinator.extension', 'Extension')}</label>
                   <Select value={form.extension} onValueChange={v => update('extension', v)}>
-                    <SelectTrigger aria-label={t('coordinator.extension', 'extension')} className="h-9">
+                    <SelectTrigger id="crf-extension" className="h-9">
                       <SelectValue placeholder={t('coordinator.na', 'N/A')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('coordinator.na', 'N/A')}</SelectItem>
-                      <SelectItem value="Jr.">Jr.</SelectItem>
-                      <SelectItem value="Sr.">Sr.</SelectItem>
-                      <SelectItem value="III">III</SelectItem>
+                      {/* 'N/A' is the placeholder (the empty value), so it is
+                          excluded here — a Radix SelectItem may not use ''. */}
+                      {NAME_EXTENSIONS.filter(e => e !== 'N/A').map(e => (
+                        <SelectItem key={e} value={e}>{e}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -108,8 +110,8 @@ export function CoordinatorReferralFormPage() {
             <div className="h-px bg-border" />
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="space-y-1.5">
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.sex', 'Sex *')}</span>
+              <fieldset className="space-y-1.5">
+                <legend className="text-xs text-muted-foreground font-medium">{t('coordinator.sex', 'Sex *')}</legend>
                 <div className="flex h-9 items-center gap-4">
                   {['Male', 'Female'].map(s => (
                     <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -118,16 +120,16 @@ export function CoordinatorReferralFormPage() {
                     </label>
                   ))}
                 </div>
+              </fieldset>
+              <div className="space-y-1.5">
+                <label htmlFor="crf-dob" className="text-xs text-muted-foreground font-medium">{t('coordinator.dateOfBirth', 'Date of Birth *')}</label>
+                <Input id="crf-dob" className="h-9" type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.dateOfBirth', 'Date of Birth *')}</span>
-                <Input className="h-9" type="date" required value={form.dob} onChange={e => update('dob', e.target.value)} aria-label={t('coordinator.dateOfBirth', 'dob')} />
-              </div>
-              <div className="space-y-1.5">
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.phone', 'Phone')}</span>
+                <label htmlFor="crf-phone" className="text-xs text-muted-foreground font-medium">{t('coordinator.phone', 'Phone')}</label>
                 <div className="relative">
                   <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input className="h-9 pl-9" type="tel" value={form.phone} onChange={e => update('phone', e.target.value)} aria-label={t('coordinator.phone', 'phone')} placeholder="0917XXX-XXXX" />
+                  <Input id="crf-phone" className="h-9 pl-9" type="tel" value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="0917XXX-XXXX" />
                 </div>
               </div>
             </div>
@@ -143,12 +145,12 @@ export function CoordinatorReferralFormPage() {
           <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.street', 'Street / Purok')}</span>
-                <Input className="h-9" value={form.street} onChange={e => update('street', e.target.value)} aria-label={t('coordinator.street', 'street')} />
+                <label htmlFor="crf-street" className="text-xs text-muted-foreground font-medium">{t('coordinator.street', 'Street / Purok')}</label>
+                <Input id="crf-street" className="h-9" value={form.street} onChange={e => update('street', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</span>
-                <Input className="h-9" value={form.barangay} onChange={e => update('barangay', e.target.value)} aria-label={t('coordinator.barangay', 'barangay')} />
+                <label htmlFor="crf-barangay" className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</label>
+                <Input id="crf-barangay" className="h-9" value={form.barangay} onChange={e => update('barangay', e.target.value)} />
               </div>
             </div>
           </div>
@@ -161,8 +163,8 @@ export function CoordinatorReferralFormPage() {
             <h2 className="text-sm font-semibold text-foreground">{t('coordinator.referralDetails', 'Referral Details')}</h2>
           </div>
           <div className="p-4 space-y-1.5">
-            <span className="text-xs text-muted-foreground font-medium">{t('coordinator.reasonForReferral', 'Reason for Referral *')}</span>
-            <Textarea required value={form.reason} onChange={e => update('reason', e.target.value)} placeholder={t('coordinator.reasonPlaceholder', 'Describe why this resident is being referred to MSWDO...')} />
+            <label htmlFor="crf-reason" className="text-xs text-muted-foreground font-medium">{t('coordinator.reasonForReferral', 'Reason for Referral *')}</label>
+            <Textarea id="crf-reason" required value={form.reason} onChange={e => update('reason', e.target.value)} placeholder={t('coordinator.reasonPlaceholder', 'Describe why this resident is being referred to MSWDO...')} />
           </div>
         </div>
 
