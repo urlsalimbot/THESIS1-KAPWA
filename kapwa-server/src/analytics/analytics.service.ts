@@ -313,7 +313,7 @@ export class AnalyticsService {
 
   async getInequality(filters: AnalyticsFilters) {
     const compute = () => this.computeInequality(filters);
-    return this.cache?.wrap(`analytics:inequality:${JSON.stringify(filters)}`, compute, 5 * 60 * 1000) ?? compute();
+    return this.cache?.wrap(`analytics:inequality:${filters.barangay ?? 'all'}`, compute, 5 * 60 * 1000) ?? compute();
   }
 
   private async computeInequality(filters: AnalyticsFilters) {
@@ -330,6 +330,12 @@ export class AnalyticsService {
     if (incomes.length < MIN_INCOME_SAMPLE) {
       throw new UnprocessableEntityException({ code: 'insufficient_data', required: MIN_INCOME_SAMPLE, actual: incomes.length });
     }
+    const excludedRows: Array<{ excluded: string }> = await this.caseRepo.query(
+      `SELECT COUNT(*)::int AS excluded FROM households
+       WHERE (estimated_income IS NULL OR estimated_income = 0)
+         AND ($1::text IS NULL OR COALESCE(barangay, 'Unspecified') = $1)`,
+      [filters.barangay ?? null],
+    );
     const sorted = [...incomes].sort((a, b) => a - b);
     const total = sorted.reduce((a, b) => a + b, 0);
     const topCount = Math.max(1, Math.ceil(sorted.length * 0.1));
@@ -340,6 +346,7 @@ export class AnalyticsService {
       top10Share,
       deciles: Array.from({ length: 9 }, (_, i) => quantile(sorted, (i + 1) / 10)),
       count: sorted.length,
+      excludedMissing: Number(excludedRows?.[0]?.excluded ?? 0),
     };
   }
 

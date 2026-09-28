@@ -624,6 +624,18 @@ describe('AnalyticsService', () => {
       expect(cache.wrap.mock.calls[0][0]).toBe('analytics:concentration:{"barangay":"Bigte"}');
       expect(cache.wrap.mock.calls[1][0]).toBe('analytics:equity:{"from":"2026-01-01"}');
     });
+
+    it('keys inequality by barangay only and surfaces the excluded-missing count', async () => {
+      const { service: cachedService, repo, cache } = await buildCachedService(async (_key, fn) => fn());
+      repo.query
+        .mockResolvedValueOnce(Array.from({ length: 20 }, (_, i) => ({ estimated_income: String((i + 1) * 1000) })))
+        .mockResolvedValueOnce([{ excluded: '3' }]);
+
+      const result = await cachedService.getInequality({ from: '2026-01-01', to: '2026-06-30', barangay: 'Bigte' });
+
+      expect(result.excludedMissing).toBe(3);
+      expect(cache.wrap.mock.calls[0][0]).toBe('analytics:inequality:Bigte');
+    });
   });
 
   describe('complementSuppression', () => {
@@ -665,15 +677,17 @@ describe('AnalyticsService wave 2', () => {
 
   describe('getInequality', () => {
     it('computes Gini, Lorenz, top-10 share, and deciles for known incomes', async () => {
-      repoMock.query.mockResolvedValue([
-        { estimated_income: '1000' }, { estimated_income: '2000' }, { estimated_income: '3000' },
-        { estimated_income: '4000' }, { estimated_income: '5000' }, { estimated_income: '6000' },
-        { estimated_income: '7000' }, { estimated_income: '8000' }, { estimated_income: '9000' },
-        { estimated_income: '10000' }, { estimated_income: '11000' }, { estimated_income: '12000' },
-        { estimated_income: '13000' }, { estimated_income: '14000' }, { estimated_income: '15000' },
-        { estimated_income: '16000' }, { estimated_income: '17000' }, { estimated_income: '18000' },
-        { estimated_income: '19000' }, { estimated_income: '20000' },
-      ]);
+      repoMock.query
+        .mockResolvedValueOnce([
+          { estimated_income: '1000' }, { estimated_income: '2000' }, { estimated_income: '3000' },
+          { estimated_income: '4000' }, { estimated_income: '5000' }, { estimated_income: '6000' },
+          { estimated_income: '7000' }, { estimated_income: '8000' }, { estimated_income: '9000' },
+          { estimated_income: '10000' }, { estimated_income: '11000' }, { estimated_income: '12000' },
+          { estimated_income: '13000' }, { estimated_income: '14000' }, { estimated_income: '15000' },
+          { estimated_income: '16000' }, { estimated_income: '17000' }, { estimated_income: '18000' },
+          { estimated_income: '19000' }, { estimated_income: '20000' },
+        ])
+        .mockResolvedValueOnce([{ excluded: '3' }]);
       const result = await service.getInequality({});
       expect(result.count).toBe(20);
       expect(result.gini).toBeGreaterThan(0.2);
@@ -681,6 +695,7 @@ describe('AnalyticsService wave 2', () => {
       expect(result.lorenz[result.lorenz.length - 1]).toEqual({ p: 1, share: 1 });
       expect(result.top10Share).toBeCloseTo((19000 + 20000) / 210000);
       expect(result.deciles).toHaveLength(9);
+      expect(result.excludedMissing).toBe(3);
     });
 
     it('throws insufficient_data below 20 incomes', async () => {

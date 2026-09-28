@@ -3,6 +3,8 @@ import { FEATURE_KEYS } from '../analytics.types';
 
 const isoDate = z.string().date();
 
+const emptyToUndefined = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(v => (v === '' ? undefined : v), schema);
+
 export const AnalyticsRangeSchema = z.object({
   from: isoDate.optional(),
   to: isoDate.optional(),
@@ -32,15 +34,15 @@ export const RunListQuerySchema = z.object({
 
 export const ForecastQuerySchema = z.object({
   metric: z.enum(['cases', 'disbursement']).default('cases'),
-  horizon: z.coerce.number().int().min(1).max(12).default(6),
+  horizon: emptyToUndefined(z.coerce.number().int().min(1).max(12).default(6)),
 });
 
 export const AssociationsQuerySchema = z.object({
   from: isoDate.optional(),
   to: isoDate.optional(),
   barangay: z.string().min(1).max(120).optional(),
-  minSupport: z.coerce.number().min(0).max(1).default(0.05),
-  minConfidence: z.coerce.number().min(0).max(1).default(0.5),
+  minSupport: emptyToUndefined(z.coerce.number().min(0).max(1).default(0.05)),
+  minConfidence: emptyToUndefined(z.coerce.number().min(0).max(1).default(0.5)),
 }).refine(v => !v.from || !v.to || v.from <= v.to, { message: 'from must be on or before to' });
 
 export type AnalyticsRangeInput = z.infer<typeof AnalyticsRangeSchema>;

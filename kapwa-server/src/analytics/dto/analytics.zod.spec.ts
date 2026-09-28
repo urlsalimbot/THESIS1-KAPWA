@@ -28,10 +28,13 @@ describe('analytics wave-2 query schemas', () => {
     expect(ForecastQuerySchema.safeParse({ horizon: '13' }).success).toBe(false);
     expect(ForecastQuerySchema.parse({ metric: 'disbursement', horizon: '12' }))
       .toEqual({ metric: 'disbursement', horizon: 12 });
+    expect(ForecastQuerySchema.parse({ horizon: '' })).toEqual({ metric: 'cases', horizon: 6 });
   });
 
   it('bounds association thresholds and rejects inverted ranges', () => {
     expect(AssociationsQuerySchema.parse({})).toEqual({ minSupport: 0.05, minConfidence: 0.5 });
+    expect(AssociationsQuerySchema.parse({ minSupport: '', minConfidence: '' }))
+      .toEqual({ minSupport: 0.05, minConfidence: 0.5 });
     expect(AssociationsQuerySchema.safeParse({ minSupport: '1.5' }).success).toBe(false);
     expect(AssociationsQuerySchema.safeParse({ minConfidence: '-0.1' }).success).toBe(false);
     expect(AssociationsQuerySchema.safeParse({ from: '2026-06-01', to: '2026-01-01' }).success).toBe(false);

@@ -186,7 +186,7 @@ Transactions = cases in range; items = distinct `case_interventions.service_name
 
 ## 7. Privacy & access
 
-- Suppression threshold `MIN_CELL = 5` applied **server-side**: any count/size/rule cell below 5 is returned as `{suppressed: true}` without the value; percentages for suppressed cells are suppressed too. Whole responses with `n < 5` return an empty state.
+- Suppression threshold `MIN_CELL = 5` applied **server-side**: any count/size/rule cell below 5 is returned as `{suppressed: true}` without the value; percentages for suppressed cells are suppressed too. Whole responses with `n < 5` return an empty state. Exception: the forecasting series (§5.7) is a model input and is not cell-suppressed; its monthly buckets are returned as-is so the trend and holdout metrics are computable, and the methodology note discloses this.
 - Drill-down (`/members`) is `admin | social_worker` only, paginated (default 20, max 100), and logged via `AuditLogService.log` (`action: 'analytics.drilldown'`, run id + cluster index + pager). Existing PII masking applies to the member rows.
 - `mayor` receives aggregates only (drill-down endpoints return 403). Exports are aggregate-only — no member rows are exportable in this spec.
 - No raw `estimated_income` of identifiable households appears in aggregate responses (bands only; clustering profiles use medians).
