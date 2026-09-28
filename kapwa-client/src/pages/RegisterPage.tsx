@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Loader2, HandHeart } from 'lucide-react';
+import { Loader2, HandHeart, User, Mail, MapPin, Lock } from 'lucide-react';
 import { api } from '../lib/api';
 import { AuthShell } from '@/components/public/AuthShell';
 
@@ -166,6 +167,9 @@ export function RegisterPage() {
     );
   }
 
+  // Sectioned layout: the name quartet runs inline in one row, Date of Birth
+  // sits with it, and contact / address / security get their own labelled
+  // sections so the eye groups fields before reading a single label.
   return (
     <AuthShell cardWidth="lg">
       <Card className="w-full border-border/50 shadow-lg">
@@ -186,111 +190,125 @@ export function RegisterPage() {
           )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Personal Information — the name quartet runs inline */}
+              <div className="space-y-3">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <User size={14} className="text-primary" aria-hidden="true" />
+                  {t('auth.sectionPersonal', 'Personal Information')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.firstName', 'First Name')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('auth.firstName', 'First Name')} className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="middleName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.middleName', 'Middle Name')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('auth.middleName', 'Middle Name')} className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.lastName', 'Last Name')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('auth.lastName', 'Last Name')} className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="nameExtension"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.nameExtension', 'Name Extension')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('auth.nameExtensionPlaceholder', 'Jr., Sr., III')} className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
-                  name="firstName"
+                  name="dateOfBirth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('auth.firstName', 'First Name')}</FormLabel>
+                      <FormLabel>{t('auth.dateOfBirth', 'Date of Birth')}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('auth.firstName', 'First Name')} className="h-11 md:h-10" {...field} />
+                        <Input type="date" className="h-11 md:h-10" aria-label={t('auth.dateOfBirth', 'Date of Birth')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="middleName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('auth.middleName', 'Middle Name')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('auth.middleName', 'Middle Name')} className="h-11 md:h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('auth.lastName', 'Last Name')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('auth.lastName', 'Last Name')} className="h-11 md:h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="nameExtension"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('auth.nameExtension', 'Name Extension')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('auth.nameExtension', 'e.g. Jr., Sr., III')} className="h-11 md:h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('auth.emailLabel', 'Email')}</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder={t('auth.emailLabel', 'Email')} className="h-11 md:h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('auth.phoneLabel', 'Phone')}</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="09XX XXX XXXX" className="h-11 md:h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('auth.passwordLabel', 'Password')}</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder={t('auth.passwordLabel', 'Password')} className="h-11 md:h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('auth.confirmPassword', 'Confirm Password')}</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder={t('auth.confirmPassword', 'Confirm Password')} className="h-11 md:h-10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              </div>
+              <Separator />
+
+              {/* Contact Details */}
+              <div className="space-y-3">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Mail size={14} className="text-primary" aria-hidden="true" />
+                  {t('auth.sectionContact', 'Contact Details')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.emailLabel', 'Email')}</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder={t('auth.emailLabel', 'Email')} className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.phoneLabel', 'Phone')}</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="09XX XXX XXXX" className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+              <Separator />
+
+              {/* Address — the barangay select gets the full width it needs */}
+              <div className="space-y-3">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <MapPin size={14} className="text-primary" aria-hidden="true" />
+                  {t('auth.sectionAddress', 'Address')}
+                </h3>
                 <FormField
                   control={form.control}
                   name="barangay"
@@ -316,20 +334,43 @@ export function RegisterPage() {
                   )}
                 />
               </div>
+              <Separator />
 
-              <FormField
-                control={form.control}
-                name="dateOfBirth"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('auth.dateOfBirth', 'Date of Birth')}</FormLabel>
-                    <FormControl>
-                      <Input type="date" className="h-11 md:h-10" aria-label={t('auth.dateOfBirth', 'Date of Birth')} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Account Security */}
+              <div className="space-y-3">
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Lock size={14} className="text-primary" aria-hidden="true" />
+                  {t('auth.sectionSecurity', 'Account Security')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.passwordLabel', 'Password')}</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder={t('auth.passwordLabel', 'Password')} className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('auth.confirmPassword', 'Confirm Password')}</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder={t('auth.confirmPassword', 'Confirm Password')} className="h-11 md:h-10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
               <Button
                 type="submit"

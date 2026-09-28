@@ -44,7 +44,7 @@ export function AuthShell({ children, cardWidth = 'md' }: AuthShellProps) {
       </div>
 
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16 pt-4 sm:px-6">
-        <div className={cn('w-full', cardWidth === 'lg' ? 'max-w-lg' : 'max-w-md')}>{children}</div>
+        <div className={cn('w-full', cardWidth === 'lg' ? 'max-w-2xl' : 'max-w-md')}>{children}</div>
       </main>
     </div>
   );
