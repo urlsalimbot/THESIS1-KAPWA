@@ -914,13 +914,17 @@ function esc(value) {
 
 function metricRow(name, metric) {
   const values = metric.values || {};
-  return `<tr><td>${esc(name)}</td><td>${esc(metric.type)}</td><td>${esc(values.rate !== undefined ? `${(values.rate * 100).toFixed(2)}%` : (values['p(95)'] !== undefined ? `${Number(values['p(95)']).toFixed(1)} ms` : (values.count ?? '')))}</td><td>${esc(values.avg !== undefined ? `${Number(values.avg).toFixed(1)}` : '')}</td></tr>`;
+  let value = '';
+  if (metric.type === 'rate') value = `${(values.rate * 100).toFixed(2)}%`;
+  else if (metric.type === 'trend') value = values['p(95)'] !== undefined ? `${Number(values['p(95)']).toFixed(1)} ms` : '';
+  else value = `${values.count ?? ''}${values.rate !== undefined ? ` (${Number(values.rate).toFixed(1)}/s)` : ''}`;
+  return `<tr><td>${esc(name)}</td><td>${esc(metric.type)}</td><td>${esc(value)}</td><td>${esc(values.avg !== undefined ? Number(values.avg).toFixed(1) : '')}</td></tr>`;
 }
 
 export function renderHtml(data) {
   const metrics = data.metrics || {};
   const thresholdRows = Object.entries(metrics).flatMap(([name, metric]) =>
-    Object.entries(metric.thresholds || {}).map(([expr, t]) => ({ name, expr, ok: !t.fails })),
+    Object.entries(metric.thresholds || {}).map(([expr, t]) => ({ name, expr, ok: t.ok !== undefined ? t.ok : !t.fails })),
   );
   const keyMetrics = ['http_reqs', 'http_req_failed', 'http_req_duration', 'checks', 'iterations', 'vus_max']
     .filter(name => metrics[name]);
