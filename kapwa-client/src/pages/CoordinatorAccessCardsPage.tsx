@@ -11,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DataTable } from '@/components/data-table';
+import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
+import type { AccessCardCategory } from '@/lib/constants';
 import { Search, Check, Plus, History, BadgeCheck, Loader2, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { formatDate } from '../lib/format';
@@ -263,7 +265,7 @@ function VerifyTab() {
 
 function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () => Promise<void> }) {
   const { t } = useTranslation();
-  const [category, setCategory] = useState('community_service');
+  const [category, setCategory] = useState<AccessCardCategory>('community_service');
   const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [remarks, setRemarks] = useState('');
   const [agencyId, setAgencyId] = useState('');
@@ -304,21 +306,14 @@ function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () =
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label htmlFor="ac-category" className="text-xs font-medium text-muted-foreground">
-                {t('accessCard.category', 'Category *')}
+                {t('accessCard.category', 'Category')}
               </label>
-              <select
+              <AccessCardCategorySelect
                 id="ac-category"
                 value={category}
-                onChange={e => setCategory(e.target.value)}
+                onChange={setCategory}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="community_service">{t('accessCard.catCommunity', 'Community Service')}</option>
-                <option value="seminar">{t('accessCard.catSeminar', 'Seminar')}</option>
-                <option value="distribution">{t('accessCard.catDistribution', 'Distribution')}</option>
-                <option value="referral">{t('accessCard.catReferral', 'Referral')}</option>
-                <option value="case_service">{t('accessCard.catCaseService', 'Case Service')}</option>
-                <option value="other">{t('accessCard.catOther', 'Other')}</option>
-              </select>
+              />
             </div>
             <div className="space-y-1">
               <label htmlFor="ac-date" className="text-xs font-medium text-muted-foreground">

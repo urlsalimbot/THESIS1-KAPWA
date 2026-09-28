@@ -11,6 +11,8 @@ import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
+import type { AccessCardCategory } from '@/lib/constants';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
 import { formatDate } from '../lib/format';
 
@@ -90,7 +92,7 @@ export function AccessCardViewPage() {
   const canExportGisPdf = ['admin', 'social_worker', 'coordinator'].includes(user?.role ?? '');
   const [activeTab, setActiveTab] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ serviceRendered: '', serviceDate: '', cost: '', agencyId: '', workerNameSign: '', category: 'referral' });
+  const [addForm, setAddForm] = useState<{ serviceRendered: string; serviceDate: string; cost: string; agencyId: string; workerNameSign: string; category: AccessCardCategory }>({ serviceRendered: '', serviceDate: '', cost: '', agencyId: '', workerNameSign: '', category: 'referral' });
   const [adding, setAdding] = useState(false);
 
   const { data: ben } = useSWR<Record<string, unknown>>(
@@ -247,23 +249,18 @@ export function AccessCardViewPage() {
           <form onSubmit={handleAddEntry} className="mx-4 mb-3 p-3 rounded-lg border bg-muted/30 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('accessCard.category', 'Category *')}</label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                <label htmlFor="access-card-category" className="text-xs font-medium">{t('accessCard.category', 'Category')}</label>
+                <AccessCardCategorySelect
+                  id="access-card-category"
                   value={addForm.category}
-                  onChange={e => setAddForm(f => ({ ...f, category: e.target.value }))}
-                >
-                  <option value="case_service">{t('accessCard.catCaseService', 'Case Service')}</option>
-                  <option value="referral">{t('accessCard.catReferral', 'Referral')}</option>
-                  <option value="community_service">{t('accessCard.catCommunity', 'Community Service')}</option>
-                  <option value="seminar">{t('accessCard.catSeminar', 'Seminar')}</option>
-                  <option value="payout">{t('accessCard.catPayout', 'Payout')}</option>
-                  <option value="compliance">{t('accessCard.catCompliance', 'Compliance')}</option>
-                </select>
+                  onChange={value => setAddForm(f => ({ ...f, category: value }))}
+                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('accessCard.serviceDate', 'Service Date *')}</label>
+                <label htmlFor="access-card-service-date" className="text-xs font-medium">{t('accessCard.serviceDate', 'Service Date *')}</label>
                 <input
+                  id="access-card-service-date"
                   type="date"
                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                   value={addForm.serviceDate}
@@ -273,8 +270,9 @@ export function AccessCardViewPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">{t('accessCard.serviceRendered', 'Service Rendered *')}</label>
+              <label htmlFor="access-card-service-rendered" className="text-xs font-medium">{t('accessCard.serviceRendered', 'Service Rendered *')}</label>
               <input
+                id="access-card-service-rendered"
                 className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 value={addForm.serviceRendered}
                 onChange={e => setAddForm(f => ({ ...f, serviceRendered: e.target.value }))}
@@ -284,8 +282,8 @@ export function AccessCardViewPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('accessCard.cost', 'Cost (₱)')}</label>
-                <input type="number" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))} />
+                <label htmlFor="access-card-cost" className="text-xs font-medium">{t('accessCard.cost', 'Cost (₱)')}</label>
+                <input id="access-card-cost" type="number" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))} />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium" htmlFor="access-card-agency">{t('accessCard.agency', 'Agency *')}</label>
@@ -303,8 +301,8 @@ export function AccessCardViewPage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('accessCard.workerName', 'Worker Name')}</label>
-                <input className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.workerNameSign} onChange={e => setAddForm(f => ({ ...f, workerNameSign: e.target.value }))} />
+                <label htmlFor="access-card-worker" className="text-xs font-medium">{t('accessCard.workerName', 'Worker Name')}</label>
+                <input id="access-card-worker" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.workerNameSign} onChange={e => setAddForm(f => ({ ...f, workerNameSign: e.target.value }))} />
               </div>
             </div>
             <div className="flex gap-2">

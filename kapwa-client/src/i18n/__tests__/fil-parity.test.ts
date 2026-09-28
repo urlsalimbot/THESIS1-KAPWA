@@ -20,15 +20,11 @@ function flat(o: Record<string, unknown>, prefix = ''): Record<string, string> {
 const ALLOWED_IDENTICAL = new Set([
   'accessCard.barangay',
   'accessCard.byWorker',
-  'accessCard.catReferral',
-  'accessCard.catSeminar',
   'accessCard.exportAccessCardPdf',
   'admin.device',
   'admin.entryCount_one',
   'admin.entryCount_other',
   'admin.lcrImport',
-  'agency.catReferral',
-  'agency.catSeminar',
   // analytics.*: statistical/methodological terms (inertia, silhouette,
   // dependency/coverage ratio), the loanword profile, and Barangay as a
   // proper noun — the fil copy deliberately keeps these identical.

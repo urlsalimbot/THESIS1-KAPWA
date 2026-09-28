@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
@@ -69,5 +69,43 @@ describe('AgencyCardActivitiesPage', () => {
       serviceRendered: 'Dental checkup',
       agencyId: 'ag-rhu',
     }));
+  });
+
+  const SANCTIONED = ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'];
+
+  async function verifyACard() {
+    const user = userEvent.setup();
+    renderWithSWR(<AgencyCardActivitiesPage />);
+    await user.type(screen.getByPlaceholderText(/Enter card code/), 'NORZ-AC-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Verify/ }));
+    await screen.findByPlaceholderText(/Describe the activity/);
+    return user;
+  }
+
+  function offeredCategories() {
+    const select = screen.getByLabelText(/^category/i);
+    return within(select).getAllByRole('option').map(o => (o as HTMLOptionElement).value);
+  }
+
+  // Same regression as the coordinator form: 'distribution' and 'other' were offered
+  // here too, and the server rejects both.
+  it('offers no category the logging endpoint rejects', async () => {
+    await verifyACard();
+    expect(offeredCategories().filter(v => !SANCTIONED.includes(v))).toEqual([]);
+  });
+
+  it('offers payout and compliance alongside the other categories', async () => {
+    await verifyACard();
+    expect([...offeredCategories()].sort()).toEqual([...SANCTIONED].sort());
+  });
+
+  // Defect E: bare <label> with no htmlFor, so clicking the text did nothing and a
+  // screen reader announced the fields unlabelled.
+  it('associates every logging control with its label', async () => {
+    await verifyACard();
+    expect(screen.getByLabelText(/^category/i).tagName).toBe('SELECT');
+    expect((screen.getByLabelText(/^date/i) as HTMLInputElement).type).toBe('date');
+    expect((screen.getByLabelText(/^agency/i) as HTMLInputElement).tagName).toBe('SELECT');
+    expect(screen.getByLabelText(/^remarks/i).tagName).toBe('TEXTAREA');
   });
 });

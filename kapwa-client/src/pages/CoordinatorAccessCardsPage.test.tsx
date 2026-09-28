@@ -165,8 +165,57 @@ describe('CoordinatorAccessCardsPage', () => {
     );
   });
 
-  it('confirms a logged activity and keeps the verified card on screen', async () => {
+  // The categories the server's LogServiceSchema accepts. Pinned here as a literal
+  // on purpose: if a category is added to the shared constant and to the form,
+  // this test fails until the sanctioned set is consciously widened.
+  const SANCTIONED = ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'];
+
+  async function verifyACard() {
     mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      if (k.includes('/card')) {
+        return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
+      }
+      return Promise.resolve([service(1)]);
+    });
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText(/enter card code/i), 'NORZ-AC-2026-0001');
+    await user.click(screen.getByRole('button', { name: /^Verify$/i }));
+    await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
+    return user;
+  }
+
+  function offeredCategories() {
+    const select = screen.getByLabelText(/^category/i);
+    return within(select).getAllByRole('option').map(o => (o as HTMLOptionElement).value);
+  }
+
+  // Regression: the dropdown offered 'distribution' and 'other', neither of which
+  // the server accepts. Choosing either 400s, and the form's bare catch replaced
+  // that with "Failed to log activity" — no field named, no reason given.
+  it('offers no category the logging endpoint rejects', async () => {
+    await verifyACard();
+    expect(offeredCategories().filter(v => !SANCTIONED.includes(v))).toEqual([]);
+  });
+
+  // Regression: 'payout' and 'compliance' were missing, so a barangay coordinator
+  // had no way to record a 4Ps disbursement or check-off by hand — the two events
+  // a barangay is actually asked to attest to.
+  it('offers payout and compliance so a coordinator can record a 4Ps event', async () => {
+    await verifyACard();
+    const offered = offeredCategories();
+    expect(offered).toContain('payout');
+    expect(offered).toContain('compliance');
+  });
+
+  it('offers exactly the sanctioned categories, nothing missing', async () => {
+    await verifyACard();
+    expect([...offeredCategories()].sort()).toEqual([...SANCTIONED].sort());
+  });
+
+  it('confirms a logged activity and keeps the verified card on screen', async () => {    mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
       if (k.includes('/card')) {

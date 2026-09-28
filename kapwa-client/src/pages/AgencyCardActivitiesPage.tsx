@@ -7,6 +7,8 @@ import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
+import type { AccessCardCategory } from '@/lib/constants';
 import { Check, Search } from 'lucide-react';
 import { formatDate } from '../lib/format';
 
@@ -32,7 +34,7 @@ export function AgencyCardActivitiesPage() {
 
   const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(queryKeys.agencies.list());
 
-  const [category, setCategory] = useState('community_service');
+  const [category, setCategory] = useState<AccessCardCategory>('community_service');
   const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [remarks, setRemarks] = useState('');
   const [agencyId, setAgencyId] = useState(user?.agencyId || '');
@@ -127,23 +129,18 @@ export function AgencyCardActivitiesPage() {
             <h3 className="text-sm font-semibold">{t('agency.logActivity', 'Log Activity')}</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('agency.category', 'Category *')}</label>
-                <select
+                <label htmlFor="agency-card-category" className="text-xs font-medium">{t('agency.category', 'Category')}</label>
+                <AccessCardCategorySelect
+                  id="agency-card-category"
                   value={category}
-                  onChange={e => setCategory(e.target.value)}
+                  onChange={setCategory}
                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                >
-                  <option value="community_service">{t('agency.catCommunity', 'Community Service')}</option>
-                  <option value="seminar">{t('agency.catSeminar', 'Seminar')}</option>
-                  <option value="distribution">{t('agency.catDistribution', 'Distribution')}</option>
-                  <option value="referral">{t('agency.catReferral', 'Referral')}</option>
-                  <option value="case_service">{t('agency.catCaseService', 'Case Service')}</option>
-                  <option value="other">{t('agency.catOther', 'Other')}</option>
-                </select>
+                />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium">{t('agency.date', 'Date *')}</label>
+                <label htmlFor="agency-card-date" className="text-xs font-medium">{t('agency.date', 'Date *')}</label>
                 <input
+                  id="agency-card-date"
                   type="date"
                   value={serviceDate}
                   onChange={e => setServiceDate(e.target.value)}
@@ -152,8 +149,9 @@ export function AgencyCardActivitiesPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">{t('agency.agency', 'Agency *')}</label>
+              <label htmlFor="agency-card-agency" className="text-xs font-medium">{t('agency.agency', 'Agency *')}</label>
               <select
+                id="agency-card-agency"
                 value={agencyId}
                 onChange={e => setAgencyId(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
@@ -166,8 +164,9 @@ export function AgencyCardActivitiesPage() {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">{t('agency.remarks', 'Remarks *')}</label>
+              <label htmlFor="agency-card-remarks" className="text-xs font-medium">{t('agency.remarks', 'Remarks *')}</label>
               <textarea
+                id="agency-card-remarks"
                 value={remarks}
                 onChange={e => setRemarks(e.target.value)}
                 rows={2}

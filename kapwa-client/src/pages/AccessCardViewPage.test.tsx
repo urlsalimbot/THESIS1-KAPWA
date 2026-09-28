@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { AccessCardViewPage } from './AccessCardViewPage';
@@ -113,6 +113,31 @@ describe('AccessCardViewPage', () => {
     // jsdom does not implement showModal; click is enough to open the form markup below.
     addEntryButton.click();
     expect(await screen.findByLabelText('Agency *')).toBeTruthy();
+  });
+
+  // Defect E: every control here but the agency select had a bare <label> with no
+  // `htmlFor`, so clicking the text did nothing and assistive tech had no name to
+  // announce. Reach each one by its label text.
+  it('associates every add-entry control with its label', async () => {
+    renderWithSWR(<AccessCardViewPage />);
+    (await screen.findByRole('button', { name: /Add Entry/ })).click();
+
+    expect((await screen.findByLabelText('Category')).tagName).toBe('SELECT');
+    expect(((await screen.findByLabelText('Service Date *')) as HTMLInputElement).type).toBe('date');
+    expect((await screen.findByLabelText('Service Rendered *')).tagName).toBe('INPUT');
+    expect(((await screen.findByLabelText('Cost (₱)')) as HTMLInputElement).type).toBe('number');
+    expect((await screen.findByLabelText('Worker Name')).tagName).toBe('INPUT');
+  });
+
+  it('offers the same sanctioned categories as the other logging forms', async () => {
+    renderWithSWR(<AccessCardViewPage />);
+    (await screen.findByRole('button', { name: /Add Entry/ })).click();
+
+    const select = await screen.findByLabelText('Category');
+    const offered = within(select).getAllByRole('option').map(o => (o as HTMLOptionElement).value);
+    expect([...offered].sort()).toEqual(
+      ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'].sort(),
+    );
   });
 });
 
