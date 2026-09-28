@@ -31,6 +31,7 @@ import {
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
 import { isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
+import { computeAge } from '@/lib/age';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
 import { StepImplementHIP } from '@/components/case-view/StepImplementHIP';
 import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDelivery';
@@ -267,7 +268,7 @@ export function CaseViewPage() {
   const benAddress = addressNames(ben?.currentAddress) || ben?.address;
   const claimantAddress = addressNames(caseData?.claimant?.currentAddress) || caseData?.claimant?.address;
   const dob = ben?.dob;
-  const age = dob ? new Date().getFullYear() - new Date(dob).getFullYear() : null;
+  const age = dob ? computeAge(dob) : null;
   const household = ben?.household;
 
 

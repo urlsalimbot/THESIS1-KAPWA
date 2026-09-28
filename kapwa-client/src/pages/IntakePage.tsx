@@ -24,16 +24,7 @@ import {
   clearPendingIdPhoto, uploadIntakeIdPhotos,
 } from '@/lib/intake-id-photo';
 import { validatePerson, type PersonFormValues, type ValidationErrors } from '@/hooks/useIntakeValidation';
-
-function computeAge(dob: string): number {
-  if (!dob) return 0;
-  const birth = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+import { computeAge } from '@/lib/age';
 
 function formatMoney(val: string): string {
   const num = parseFloat(val.replace(/,/g, ''));

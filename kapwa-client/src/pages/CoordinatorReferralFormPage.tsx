@@ -66,7 +66,7 @@ export function CoordinatorReferralFormPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="max-w-2xl mx-auto space-y-6">
         {/* Personal Information */}
         <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">

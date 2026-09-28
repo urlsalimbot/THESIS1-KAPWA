@@ -3,6 +3,7 @@ import { useSWRConfig } from "swr";
 import useSWR from "swr";
 import { useTranslation } from "react-i18next";
 import { statusLabel, categoryLabel } from "@/i18n/display";
+import { computeAge } from "@/lib/age";
 import {
   ArrowLeft,
   User,
@@ -210,22 +211,7 @@ export function BeneficiaryViewPage() {
     if (!id) return;
     if (ben) {
       const b = ben as Record<string, unknown>;
-      const age = b.dob
-        ? (() => {
-            const today = new Date();
-            const birth = new Date(b.dob as string);
-            let a = today.getFullYear() - birth.getFullYear();
-
-            // Compare month and day correctly
-            const hasNotPassedBirthday =
-              today.getMonth() < birth.getMonth() ||
-              (today.getMonth() === birth.getMonth() &&
-                today.getDate() < birth.getDate());
-
-            if (hasNotPassedBirthday) a--;
-            return a;
-          })()
-        : 0;
+      const age = computeAge(b.dob as string | undefined);
       const addrParts = ((b.address as string) || "")
         .split(",")
         .map((s: string) => s.trim());

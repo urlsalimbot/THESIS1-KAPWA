@@ -79,6 +79,13 @@ describe('CoordinatorReferralFormPage labels', () => {
     expect(screen.getByText('Reason for Referral *')).toBeTruthy();
   });
 
+  it('shows a visible error banner when submitting an incomplete form (no silent block)', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Submit Referral' }));
+    expect(screen.getByText('Please fill in all required fields')).toBeTruthy();
+    expect(mockApiPost).not.toHaveBeenCalled();
+  });
+
   /**
    * Every label was a bare <span>, so it was not programmatically associated
    * with its control; the fields carried a separate, raw aria-label instead.
