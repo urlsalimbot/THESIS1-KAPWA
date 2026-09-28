@@ -1148,3 +1148,17 @@ git commit -m "docs(perf): record validated 20-VU full-profile run"
 **3. Type consistency:** `profileConfig` keys match the scenario keys and `exec` names; `main.js` imports match the lib exports (`get`, `getAllow422`, `postJson`, `think`, `login`, `authHeaders`, `csrfToken`, `renderHtml`); `run.sh` env names (`BASE_URL`, `PROFILE`, `RESULTS_DIR`, `UPLOAD`) match `config.js`; state-file keys (`SERVER_PID`, `PG_STARTED_BY_US`, `RUN_DIR`) match between write and `stop_all`.
 
 **4. Review Focus coverage:** stack-not-ready → Tasks 1 (health poll) and 2 (failure-visibility step); CSRF → Tasks 2 (lib) and 4 (403 proof step); duplicate intakes → Task 4 (unique surnames + row count); sparse analytics → Task 3 (expectedStatuses 200/422); threshold breach → Task 5 (force-fail step writes artifacts and exits 1).
+
+---
+
+## Final-review amendments (post-implementation)
+
+The whole-feature final review found three Important gaps; fixes landed in `484183c` with the flagship run regenerated in `38f8291`:
+
+1. **Smoke is a real gate** — `checks{scenario:smoke}: [{ threshold: 'rate>0.99', abortOnFail: true, delayAbortEval: '2s' }]` in every profile. Verified by an induced smoke failure: the run aborts early (exit 99).
+2. **k6 is pinned and recorded** — images `grafana/k6:2.3.0` / `docker.io/grafana/k6:2.3.0`; `run-meta.json` carries `k6Version` (`k6 v2.3.0 …` in the validated run).
+3. **Measured workload mix replaces the "9:1" claim** — new `reads_iterations` / `writes_iterations` counters make the ratio auditable; the validated run measured 19.07:1 iterations at a 10:1 VU allocation (20 reads + 2 writes + 1 smoke).
+
+Minor amendments: intake now asserts `caseId`; `noCookiesReset: true` bootstraps CSRF once per VU instead of per iteration; check names/tags template UUIDs (`/cases/:id`); dead `refresh()` removed; unknown-profile warning; README prerequisites document the disposable Postgres bootstrap, the `ss` requirement, and `npm install`.
+
+Deferred (recorded, not fixed): version capture is unguarded under `set -euo pipefail`; the HTML key-metrics table omits the two iteration counters; app-level issues outside the suite — intake serialization 500s under concurrent writes (4 in the validated run, within budget) and the repeat-intake `age` getter bug (worked around with `--reset-db`).
