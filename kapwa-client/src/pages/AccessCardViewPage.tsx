@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
-import type { AccessCardCategory } from '@/lib/constants';
+import { ACCESS_CARD_CATEGORY_TABS, type AccessCardCategory } from '@/lib/constants';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
 import { formatDate } from '../lib/format';
 
@@ -29,7 +29,11 @@ interface AccessCardService {
   category?: string;
 }
 
-const CATEGORY_TABS = ['', 'case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'];
+// The tab strip itself is ACCESS_CARD_CATEGORY_TABS (lib/constants) — derived
+// from the same list the logging forms render, so a category cannot be writable
+// but unfilterable. Only the tab-specific wording lives here, because it is
+// deliberately shorter than the full category name ("Community" vs
+// "Community Service") and the "All" tab has no category.
 const CATEGORY_TAB_LABELS: Record<string, { key: string; label: string }> = {
   '': { key: 'accessCard.tabAll', label: 'All' },
   case_service: { key: 'accessCard.tabCaseServices', label: 'Case Services' },
@@ -230,7 +234,7 @@ export function AccessCardViewPage() {
         </div>
 
         <div className="px-4 pb-2 flex gap-1 overflow-x-auto">
-          {CATEGORY_TABS.map(tab => (
+          {ACCESS_CARD_CATEGORY_TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}

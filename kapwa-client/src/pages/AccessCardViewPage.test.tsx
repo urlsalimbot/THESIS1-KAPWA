@@ -3,6 +3,10 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { AccessCardViewPage } from './AccessCardViewPage';
+import {
+  ACCESS_CARD_CATEGORIES,
+  ACCESS_CARD_CATEGORY_TABS,
+} from '../lib/constants';
 
 const { mockApiGet, mockDownloadAccessCardPdf, mockUseAuth } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
@@ -36,6 +40,26 @@ function renderWithSWR(ui: React.ReactNode) {
     </SWRConfig>,
   );
 }
+
+describe('ACCESS_CARD_CATEGORY_TABS', () => {
+  it('leads with the empty "All" filter', () => {
+    expect(ACCESS_CARD_CATEGORY_TABS[0]).toBe('');
+  });
+
+  it('offers a tab for every sanctioned category, and no others', () => {
+    // The card filters on exact string equality, so a category with no tab is
+    // writable but invisible — the row inserts cleanly and then matches nothing
+    // except "All". Deriving the tabs is what makes that unrepresentable.
+    expect([...ACCESS_CARD_CATEGORY_TABS].sort()).toEqual(
+      ['', ...ACCESS_CARD_CATEGORIES].sort(),
+    );
+  });
+
+  it('is free of duplicates', () => {
+    expect(new Set(ACCESS_CARD_CATEGORY_TABS).size).toBe(ACCESS_CARD_CATEGORY_TABS.length);
+  });
+
+});
 
 describe('AccessCardViewPage', () => {
   beforeEach(async () => {
@@ -97,6 +121,20 @@ describe('AccessCardViewPage', () => {
     renderWithSWR(<AccessCardViewPage />);
     expect(await screen.findByRole('heading', { name: /Access Card/ })).toBeTruthy();
     expect(screen.getByText('Services Rendered')).toBeTruthy();
+  });
+
+  it('renders one tab per sanctioned category, from the shared constant', async () => {
+    // The page must keep rendering ACCESS_CARD_CATEGORY_TABS rather than a
+    // hand-written list — that is what makes "writable but unfilterable"
+    // unrepresentable. Reverting the page to its own array fails here; adding
+    // a category without a tab fails the constant test above. The two together
+    // mean the page list and the constant can never quietly diverge.
+    renderWithSWR(<AccessCardViewPage />);
+    await screen.findByRole('heading', { name: /Access Card/ });
+
+    const TAB_TEXTS = ['All', 'Case Services', 'Referrals', 'Community', 'Seminars', 'Payouts', 'Compliance'];
+    const found = TAB_TEXTS.filter(label => screen.queryAllByRole('button', { name: label }).length > 0);
+    expect(found).toHaveLength(ACCESS_CARD_CATEGORY_TABS.length);
   });
 
   it('renders Services From Other Agencies and Referrals History from the summary', async () => {

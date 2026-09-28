@@ -58,3 +58,20 @@ export const ACCESS_CARD_CATEGORIES = [
 
 export type AccessCardCategory = (typeof ACCESS_CARD_CATEGORIES)[number];
 
+/**
+ * The filter tabs on a resident's card: the empty string means "All" and
+ * selects every row, otherwise the tab matches `service.category` by exact
+ * string equality.
+ *
+ * Derived from ACCESS_CARD_CATEGORIES rather than listed by hand, because the
+ * two lists had already drifted once (this was a fourth copy of the
+ * vocabulary). A category with no tab is writable but invisible — the row
+ * inserts cleanly, then matches nothing but "All", which is exactly how the
+ * 4Ps module's `4ps_compliance` rows went unnoticed. Deriving makes that
+ * unrepresentable rather than merely unlikely.
+ */
+export const ACCESS_CARD_CATEGORY_TABS: readonly (AccessCardCategory | '')[] = [
+  '',
+  ...ACCESS_CARD_CATEGORIES,
+];
+
