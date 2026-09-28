@@ -4,9 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { Sidebar } from './Sidebar';
 
+const { mockRole } = vi.hoisted(() => ({ mockRole: { current: 'social_worker' } }));
+
 vi.mock('../lib/auth-context', () => ({
   useAuth: () => ({
-    user: { id: '1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' },
+    user: { id: '1', email: 'a@b.com', fullName: 'A B', role: mockRole.current },
     token: 'test-tok',
     loading: false,
     login: vi.fn(),
@@ -19,6 +21,12 @@ vi.mock('../lib/auth-context', () => ({
 
 function renderWithRouter(ui: React.ReactElement, { initialEntries = ['/'] } = {}) {
   return render(<MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>);
+}
+
+function activeHrefs(): string[] {
+  return [...document.querySelectorAll('a')]
+    .filter(link => link.classList.contains('bg-muted'))
+    .map(link => link.getAttribute('href') ?? '');
 }
 
 describe('Sidebar', () => {
@@ -45,6 +53,23 @@ describe('Sidebar', () => {
     });
     expect(activeLink).toBeTruthy();
     expect((activeLink as unknown as HTMLElement)?.getAttribute('href')).toBe('/cases');
+  });
+
+  it('on /admin/programs only Programs is highlighted, not the Admin Panel ancestor', () => {
+    mockRole.current = 'admin';
+    renderWithRouter(<Sidebar />, { initialEntries: ['/admin/programs'] });
+    expect(activeHrefs()).toEqual(['/admin/programs']);
+  });
+
+  it('on /admin only Admin Panel is highlighted', () => {
+    mockRole.current = 'admin';
+    renderWithRouter(<Sidebar />, { initialEntries: ['/admin'] });
+    expect(activeHrefs()).toEqual(['/admin']);
+  });
+
+  it('keeps a parent highlight on detail routes (Cases on /cases/:id)', () => {
+    renderWithRouter(<Sidebar />, { initialEntries: ['/cases/abc123'] });
+    expect(activeHrefs()).toEqual(['/cases']);
   });
 
   it('has no axe violations', async () => {

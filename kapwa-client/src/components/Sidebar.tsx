@@ -26,9 +26,18 @@ export function SidebarNavContent({ onNavClick }: SidebarNavContentProps) {
             </p>
             <div className="flex flex-col gap-0.5 mt-1">
               {visibleItems.map(item => {
-                const isActive = item.path === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(item.path);
+                // An item is active only when it is the LONGEST nav path that
+                // matches the current route. Prefix matching alone would also
+                // highlight ancestors — with `/admin` and `/admin/programs`
+                // both defined, EVERY admin subroute would light up "Admin
+                // Panel". Longest-match keeps detail-page highlighting
+                // (/cases/123 → Cases) while letting the specific item win.
+                const isActive = visibleItems
+                  .map(i => i.path)
+                  .filter(p => p === '/'
+                    ? location.pathname === '/'
+                    : location.pathname.startsWith(p))
+                  .sort((a, b) => b.length - a.length)[0] === item.path;
                 return (
                   <Link
                     key={item.path}
