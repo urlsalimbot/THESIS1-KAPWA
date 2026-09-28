@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { CaseViewPage } from './CaseViewPage';
 
-const { mockApiGet, mockGetFilingObjectUrl, mockUseAuth, mockDownloadGisPdf } = vi.hoisted(() => ({
+const { mockApiGet, mockGetFilingObjectUrl, mockUseAuth, mockDownloadGisPdf, mockDownloadFilingDoc } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockGetFilingObjectUrl: vi.fn(),
   mockUseAuth: vi.fn(),
   mockDownloadGisPdf: vi.fn(),
+  mockDownloadFilingDoc: vi.fn(),
 }));
 
 vi.mock('../components/family/FamilyGraph', () => ({
@@ -25,7 +26,11 @@ vi.mock('../lib/api', () => ({
   },
   getFilingObjectUrl: (...args: unknown[]) => mockGetFilingObjectUrl(...args),
   downloadCsrPdf: vi.fn(),
-  downloadFilingDoc: vi.fn(),
+  downloadFilingDoc: (...args: unknown[]) => mockDownloadFilingDoc(...args),
+  filingDocIdFromUrl: (url: string) => {
+    const match = /\/filing\/([^/]+)\/download/.exec(url);
+    return match ? match[1] : null;
+  },
   downloadGisPdf: (...args: unknown[]) => mockDownloadGisPdf(...args),
 }));
 
@@ -84,6 +89,7 @@ describe('CaseViewPage — government ID photo', () => {
     mockApiGet.mockReset();
     mockGetFilingObjectUrl.mockReset();
     mockUseAuth.mockReset();
+    mockDownloadFilingDoc.mockReset();
     mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
@@ -216,6 +222,33 @@ describe('CaseViewPage — government ID photo', () => {
     await screen.findByRole('button', { name: /GIS \(PDF\)/i });
     expect(screen.queryByRole('button', { name: /Issue COE/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /Issue PCV/i })).toBeNull();
+  });
+
+  it('downloads generated documents through the authenticated helper instead of opening the raw URL', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) {
+        return Promise.resolve({
+          ...mockCase,
+          certificateUrl: '/filing/FILE-COE-1/download',
+          pettyCashVoucherUrl: '/filing/FILE-PCV-2/download',
+        });
+      }
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<CaseViewPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'View Certificate of Eligibility' }));
+    expect(mockDownloadFilingDoc).toHaveBeenCalledWith('FILE-COE-1', 'certificate-of-eligibility.pdf');
+
+    fireEvent.click(screen.getByRole('button', { name: 'View Petty Cash Voucher' }));
+    expect(mockDownloadFilingDoc).toHaveBeenCalledWith('FILE-PCV-2', 'petty-cash-voucher.pdf');
   });
 });
 

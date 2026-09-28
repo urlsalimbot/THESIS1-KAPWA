@@ -10,8 +10,8 @@ import {
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { FileText, CheckCircle, Clock, ExternalLink, Download, Lock } from 'lucide-react';
-import { downloadCsrPdf } from '@/lib/api';
+import { FileText, CheckCircle, Clock, Download, Lock } from 'lucide-react';
+import { downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
 import { useTranslation } from 'react-i18next';
 
@@ -84,6 +84,21 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
   }
 
   const isClosed = caseData?.status === 'closed';
+
+  // Generated documents sit behind the Bearer token; opening the raw API URL in
+  // a new tab cannot attach it (401). Download through the authenticated helper.
+  async function viewGeneratedDoc(url: string, fallbackName: string) {
+    const docId = filingDocIdFromUrl(url);
+    if (!docId) {
+      toast.error(t('cases.downloadFailed', 'Download failed'));
+      return;
+    }
+    try {
+      await downloadFilingDoc(docId, fallbackName);
+    } catch {
+      toast.error(t('cases.downloadFailed', 'Download failed'));
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -214,14 +229,13 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t('caseView.closure.certificate', 'Certificate')}</span>
             {caseData?.certificateUrl ? (
-              <a
-                href={api.url(caseData.certificateUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline flex items-center gap-1"
+              <button
+                type="button"
+                onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
+                className="flex items-center gap-1 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               >
-                <FileText size={14} /> {t('caseView.closure.view', 'View')} <ExternalLink size={10} />
-              </a>
+                <FileText size={14} /> {t('caseView.closure.view', 'View')}
+              </button>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
@@ -229,14 +243,13 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t('caseView.closure.pettyCashVoucher', 'Petty Cash Voucher')}</span>
             {caseData?.pettyCashVoucherUrl ? (
-              <a
-                href={api.url(caseData.pettyCashVoucherUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline flex items-center gap-1"
+              <button
+                type="button"
+                onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
+                className="flex items-center gap-1 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               >
-                <FileText size={14} /> {t('caseView.closure.view', 'View')} <ExternalLink size={10} />
-              </a>
+                <FileText size={14} /> {t('caseView.closure.view', 'View')}
+              </button>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}

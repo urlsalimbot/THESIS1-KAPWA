@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { api, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,6 +124,21 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
 
   const totalAmount = interventions.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
 
+  // Generated documents sit behind the Bearer token; opening the raw API URL in
+  // a new tab cannot attach it (401). Download through the authenticated helper.
+  async function viewGeneratedDoc(url: string, fallbackName: string) {
+    const docId = filingDocIdFromUrl(url);
+    if (!docId) {
+      toast.error(t('cases.downloadFailed', 'Download failed'));
+      return;
+    }
+    try {
+      await downloadFilingDoc(docId, fallbackName);
+    } catch {
+      toast.error(t('cases.downloadFailed', 'Download failed'));
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Generated approval documents — COE + PCV are produced at approval */}
@@ -131,14 +147,22 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
           <h3 className="text-sm font-semibold mb-2">{t('caseView.implement.generatedDocs', 'Generated Documents')}</h3>
           <div className="flex flex-wrap gap-x-5 gap-y-1.5">
             {caseData.certificateUrl && (
-              <a href={api.url(caseData.certificateUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <button
+                type="button"
+                onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
+                className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              >
                 <FileText size={14} /> {t('caseView.implement.viewCertificate', 'View Certificate of Eligibility')}
-              </a>
+              </button>
             )}
             {caseData.pettyCashVoucherUrl && (
-              <a href={api.url(caseData.pettyCashVoucherUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <button
+                type="button"
+                onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
+                className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              >
                 <FileText size={14} /> {t('caseView.implement.viewVoucher', 'View Petty Cash Voucher')}
-              </a>
+              </button>
             )}
           </div>
         </div>

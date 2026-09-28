@@ -12,6 +12,7 @@ import {
   exportIrfPdf,
   downloadCertificate,
   downloadMonthlyFunds,
+  filingDocIdFromUrl,
   KAPWA_AUTH_LOGOUT_EVENT,
   KAPWA_ACCESS_DENIED_EVENT,
   type AccessDeniedDetail,
@@ -305,6 +306,120 @@ describe('token refresh + retry', () => {
   });
 });
 
+describe('CSRF double-submit retry', () => {
+  // The server guard boots the csrf-token cookie on the very request it then
+  // rejects with 403 'Missing CSRF token'. The client must re-issue the SAME
+  // request once — the retry carries the cookie the first attempt caused to be
+  // set — instead of surfacing a misleading "Access denied" banner.
+
+  it('retries exactly once when a PATCH is rejected with a CSRF 403, then succeeds', async () => {
+    let calls = 0;
+    const fetchMock = vi.fn((..._args: unknown[]) => {
+      calls++;
+      if (calls === 1) return Promise.resolve(jsonRes({ message: 'Missing CSRF token' }, 403));
+      return Promise.resolve(jsonRes({ ok: true }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const out = await api.patch('/cases/c1/status', { status: 'active' });
+    expect(out).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // Both attempts carry the same body — the retry is a replay, not a mutation.
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ status: 'active' });
+    expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)).toEqual({ status: 'active' });
+  });
+
+  it('does not fire the access-denied banner when the CSRF retry succeeds', async () => {
+    const seen: AccessDeniedDetail[] = [];
+    const onDenied = (e: Event) => seen.push((e as CustomEvent<AccessDeniedDetail>).detail);
+    window.addEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    try {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(jsonRes({ message: 'Invalid CSRF token' }, 403))
+        .mockResolvedValueOnce(jsonRes({ ok: 1 }));
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(api.post('/a', { n: 1 })).resolves.toEqual({ ok: 1 });
+    } finally {
+      window.removeEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    }
+    expect(seen).toEqual([]);
+  });
+
+  it('does not loop: a second CSRF 403 is thrown after exactly one retry', async () => {
+    const seen: AccessDeniedDetail[] = [];
+    const onDenied = (e: Event) => seen.push((e as CustomEvent<AccessDeniedDetail>).detail);
+    window.addEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    let fetchMock!: ReturnType<typeof vi.fn>;
+    try {
+      fetchMock = vi.fn(() => Promise.resolve(jsonRes({ message: 'Missing CSRF token' }, 403)));
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(api.patch('/cases/c1/status', { status: 'active' })).rejects.toMatchObject({
+        status: 403,
+        body: { message: 'Missing CSRF token' },
+      });
+    } finally {
+      window.removeEventListener(KAPWA_ACCESS_DENIED_EVENT, onDenied);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // The retry was rejected too, so it surfaces as an ordinary refusal.
+    expect(seen).toEqual([{ message: 'Missing CSRF token', path: '/cases/c1/status' }]);
+  });
+
+  it('rejects (without retrying) a plain 403 whose message is not CSRF', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(jsonRes({ message: 'You are not assigned to Poblacion.' }, 403)));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(api.post('/cases', {})).rejects.toMatchObject({ status: 403 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('api.upload retries once on a CSRF 403 reusing the same FormData', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonRes({ message: 'Missing CSRF token' }, 403))
+      .mockResolvedValueOnce(jsonRes({ url: 'u' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const formData = new FormData();
+    formData.append('file', 'x');
+    const out = await api.upload('/minio/upload', formData);
+    expect(out).toEqual({ url: 'u' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1].body).toBe(formData);
+    expect(fetchMock.mock.calls[1][1].body).toBe(formData);
+  });
+
+  it('uploadWithProgress re-sends the SAME FormData once on a CSRF 403, then resolves', async () => {
+    localStorage.setItem('kapwa_token', 'tok');
+    const formData = new FormData();
+    formData.append('file', 'x');
+    const instance: any = {
+      open: vi.fn(),
+      setRequestHeader: vi.fn(),
+      abort: vi.fn(),
+      upload: {},
+      status: 403,
+      responseText: JSON.stringify({ message: 'Missing CSRF token' }),
+      send: vi.fn(function (this: any) {
+        this.upload.onprogress?.({ lengthComputable: true, loaded: 40, total: 100 });
+        if (this._attempts) {
+          // Second attempt carries the re-issued cookie and succeeds.
+          this.status = 200;
+          this.responseText = JSON.stringify({ uploaded: true });
+        }
+        this._attempts = (this._attempts || 0) + 1;
+        this.onload?.();
+      }),
+    };
+    const XHRMock = function () { return instance; } as unknown as typeof XMLHttpRequest;
+    (globalThis as any).XMLHttpRequest = XHRMock;
+    (window as any).XMLHttpRequest = XHRMock;
+
+    const out = await uploadWithProgress('/upload', formData, vi.fn());
+    expect(out).toEqual({ uploaded: true });
+    expect(instance.send).toHaveBeenCalledTimes(2);
+    // Both attempts send the original FormData object — it is replayable.
+    expect(instance.send).toHaveBeenCalledWith(formData);
+    expect(instance.send).toHaveBeenCalledWith(formData);
+  });
+});
+
 describe('download helpers', () => {
   it('downloadCsrPdf downloads the blob and clicks the anchor', async () => {
     localStorage.setItem('kapwa_token', 'tok');
@@ -332,6 +447,18 @@ describe('download helpers', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonRes({})));
     await downloadFilingDoc('f1', 'fallback.pdf');
     expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('filingDocIdFromUrl extracts the filing id from a download URL', () => {
+    expect(filingDocIdFromUrl('/filing/f1/download')).toBe('f1');
+    expect(filingDocIdFromUrl('http://localhost:3000/api/v1/filing/f2/download')).toBe('f2');
+    expect(filingDocIdFromUrl('/filing/uuid-with-dashes/download')).toBe('uuid-with-dashes');
+  });
+
+  it('filingDocIdFromUrl returns null for non-filing URLs', () => {
+    expect(filingDocIdFromUrl('/cases/c1/download')).toBeNull();
+    expect(filingDocIdFromUrl('/filing/f1')).toBeNull();
+    expect(filingDocIdFromUrl('')).toBeNull();
   });
 
   it('getFilingObjectUrl returns the object URL', async () => {

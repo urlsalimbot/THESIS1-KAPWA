@@ -142,8 +142,30 @@ export function BeneficiaryViewPage() {
     if (name) setBreadcrumbLabel(id, name);
   }, [id, ben]);
 
+  // The Cases panel must reflect THIS beneficiary's cases, so the request is
+  // filtered server-side by beneficiaryId (GET /cases?beneficiaryId=...). The
+  // list endpoint paginates (default 10/page), so fetch every page — a
+  // beneficiary with more cases than one page used to show "No active cases".
   const { data: casesRes } = useSWR<{ data: Array<Record<string, unknown>>; total: number }>(
-    queryKeys.cases.list(),
+    id ? queryKeys.cases.list({ beneficiaryId: id }) : null,
+    async () => {
+      const pageSize = 100;
+      const all: Array<Record<string, unknown>> = [];
+      let total = 0;
+      for (let page = 1; ; page += 1) {
+        const res = await api.get<{ data: Array<Record<string, unknown>>; total: number }>(
+          queryKeys.cases.list({ beneficiaryId: id, page, limit: pageSize }),
+        );
+        const rows = res?.data ?? [];
+        all.push(...rows);
+        total = res?.total ?? all.length;
+        // Stop on a short page (server had no more rows) or once every row the
+        // server reported has been collected. `total` guards against a server
+        // that keeps returning full pages.
+        if (rows.length < pageSize || all.length >= total) break;
+      }
+      return { data: all, total };
+    },
   );
   const {
     data: famGraph,

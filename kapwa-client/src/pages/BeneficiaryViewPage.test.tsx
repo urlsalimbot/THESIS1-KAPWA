@@ -84,7 +84,7 @@ describe('BeneficiaryViewPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
-      if (k.includes('cases') && k.includes('list')) return Promise.resolve({ data: mockCases, total: mockCases.length });
+      if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
       if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
       return Promise.resolve(null);
@@ -145,7 +145,7 @@ describe('BeneficiaryViewPage', () => {
           currentAddress: { barangay: 'Poblacion', city: '0301413000', province: '0301400000' },
         });
       }
-      if (k.includes('cases') && k.includes('list')) return Promise.resolve({ data: mockCases, total: mockCases.length });
+      if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
       if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
       if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
       return Promise.resolve(null);
@@ -159,6 +159,85 @@ describe('BeneficiaryViewPage', () => {
       </MemoryRouter>
     );
     expect(await screen.findByText('Poblacion, Norzagaray, Bulacan', {}, { timeout: 5000 })).toBeTruthy();
+  });
+
+  it('issues a beneficiaryId-filtered cases request and renders the real case list', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
+      if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
+      if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
+      if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // The Cases panel must request /cases?beneficiaryId=... (not the
+    // unfiltered list), so the mock must have seen the filtered params.
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ beneficiaryId: 'BEN-001' })]),
+      );
+    });
+
+    // The existing case renders with its status badge — not "No active cases".
+    expect(await screen.findByText('Financial Assistance', {}, { timeout: 5000 })).toBeTruthy();
+    // (The profile header also shows an "Active" consent badge, hence getAll.)
+    expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
+    expect(screen.queryByText('No active cases')).toBeNull();
+  });
+
+  it('fetches ALL pages of beneficiary cases, not just the first', async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({
+      id: `C-P1-${i}`,
+      controlNo: `NORZ-2026-${1000 + i}`,
+      beneficiaryId: 'BEN-001',
+      status: 'active',
+      serviceRequested: ['Financial Assistance'],
+      createdAt: '2026-06-01T00:00:00Z',
+    }));
+    const page2 = [{
+      id: 'C-002',
+      controlNo: 'NORZ-2026-0002',
+      beneficiaryId: 'BEN-001',
+      status: 'closed',
+      serviceRequested: ['Medical'],
+      createdAt: '2025-01-01T00:00:00Z',
+    }];
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
+      if (k.includes('cases') && k.includes('beneficiaryId')) {
+        // First page is FULL (100 === limit), so the panel must keep paging.
+        if (k.includes('"page":1')) return Promise.resolve({ data: page1, total: 101 });
+        return Promise.resolve({ data: page2, total: 101 });
+      }
+      if (k.includes('family-graph')) return Promise.resolve(mockFamilyGraph);
+      if (k.includes('tracker') && k.includes('list')) return Promise.resolve(mockTrackerEntries);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // The page-2 case (beyond the default 10/page limit) counts towards the panel.
+    expect(await screen.findByText('Medical', {}, { timeout: 5000 })).toBeTruthy();
+    expect(screen.queryByText('No active cases')).toBeNull();
+    expect(mockApiGet).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ beneficiaryId: 'BEN-001', page: 2 })]),
+    );
   });
 
   it('shows and edits the NHTS-PR / Listahanan ID', async () => {

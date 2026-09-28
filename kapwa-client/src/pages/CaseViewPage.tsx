@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
+import { api, downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
 import { formatDate, formatDateTime } from '../lib/format';
@@ -119,6 +119,22 @@ export function CaseViewPage() {
       toast.error(humanizeError(e));
     }
     setIssuing(null);
+  }
+
+  // Generated documents are served behind the Bearer token, so "View" cannot
+  // open the raw API URL in a new tab (no token there → 401). Download through
+  // the authenticated helper instead and let the browser show the PDF.
+  async function viewGeneratedDoc(url: string, fallbackName: string) {
+    const docId = filingDocIdFromUrl(url);
+    if (!docId) {
+      toast.error(t('cases.downloadFailed', 'Download failed'));
+      return;
+    }
+    try {
+      await downloadFilingDoc(docId, fallbackName);
+    } catch {
+      toast.error(t('cases.downloadFailed', 'Download failed'));
+    }
   }
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -540,14 +556,22 @@ export function CaseViewPage() {
             <div className="rounded-lg border bg-card px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
               <span className="text-sm font-semibold">{t('caseView.generatedDocs', 'Generated Documents')}</span>
               {caseData.certificateUrl && (
-                <a href={api.url(caseData.certificateUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
+                  className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                >
                   <FileText size={14} /> {t('caseView.viewCertificate', 'View Certificate of Eligibility')}
-                </a>
+                </button>
               )}
               {caseData.pettyCashVoucherUrl && (
-                <a href={api.url(caseData.pettyCashVoucherUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
+                  className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                >
                   <FileText size={14} /> {t('caseView.viewVoucher', 'View Petty Cash Voucher')}
-                </a>
+                </button>
               )}
             </div>
           )}

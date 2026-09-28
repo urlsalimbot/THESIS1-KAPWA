@@ -1,11 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { api } from '@/lib/api';
-import { FileText, CheckCircle, Clock, ExternalLink } from 'lucide-react';
+import { FileText, CheckCircle, Clock } from 'lucide-react';
+import { downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
 import { useTranslation } from 'react-i18next';
 import { statusLabel } from '@/i18n/display';
+import { toast } from 'sonner';
 
 interface StepSignaturesProps {
   caseData: any;
@@ -83,9 +84,19 @@ export function StepSignatures({ caseData }: StepSignaturesProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t('caseView.signatures.certificate', 'Certificate')}</span>
             {caseData?.certificateUrl ? (
-              <a href={api.url(caseData.certificateUrl)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                <FileText size={14} /> {t('caseView.signatures.view', 'View')} <ExternalLink size={10} />
-              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = filingDocIdFromUrl(caseData.certificateUrl);
+                  if (!id) return;
+                  downloadFilingDoc(id, 'certificate-of-eligibility.pdf').catch(() =>
+                    toast.error(t('caseView.documents.downloadFailed', 'Download failed')),
+                  );
+                }}
+                className="text-primary hover:underline flex items-center gap-1"
+              >
+                <FileText size={14} /> {t('caseView.signatures.view', 'View')}
+              </button>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
@@ -93,9 +104,19 @@ export function StepSignatures({ caseData }: StepSignaturesProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t('caseView.signatures.pettyCashVoucher', 'Petty Cash Voucher')}</span>
             {caseData?.pettyCashVoucherUrl ? (
-              <a href={api.url(caseData.pettyCashVoucherUrl)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                <FileText size={14} /> {t('caseView.signatures.view', 'View')} <ExternalLink size={10} />
-              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = filingDocIdFromUrl(caseData.pettyCashVoucherUrl);
+                  if (!id) return;
+                  downloadFilingDoc(id, 'petty-cash-voucher.pdf').catch(() =>
+                    toast.error(t('caseView.documents.downloadFailed', 'Download failed')),
+                  );
+                }}
+                className="text-primary hover:underline flex items-center gap-1"
+              >
+                <FileText size={14} /> {t('caseView.signatures.view', 'View')}
+              </button>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}

@@ -33,6 +33,23 @@ function announceAccessDenied(err: ApiError, path: string): void {
   );
 }
 
+/**
+ * The double-submit CSRF guard (server src/common/csrf.guard.ts) boots the
+ * csrf-token cookie on ANY request when it is absent, but still rejects the
+ * request it booted on. That rejection is transient — the cookie was re-issued
+ * in the same response — so a single immediate retry carries the fresh token.
+ * Anything else (a real policy 403) must NOT be retried.
+ */
+function isCsrfRejection(err: ApiError): boolean {
+  if (err.status !== 403) return false;
+  const body = err.body as { message?: unknown } | null;
+  const message =
+    body && typeof body === 'object'
+      ? (body as { message?: unknown }).message
+      : undefined;
+  return typeof message === 'string' && /csrf/i.test(message);
+}
+
 function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -122,7 +139,11 @@ async function rawRequest<T>(
     if (!res.ok) {
       const errBody = await res.json().catch(() => null);
       const err = new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
-      announceAccessDenied(err, normalized);
+      // A CSRF rejection is self-healing: executeWithRetry re-issues this exact
+      // request once with the cookie the guard just set. Announcing it here
+      // would show a misleading "Access denied" banner for an action that then
+      // succeeds — announce only when the retry is exhausted.
+      if (!isCsrfRejection(err)) announceAccessDenied(err, normalized);
       throw err;
     }
     return (await res.json()) as T;
@@ -195,6 +216,7 @@ async function executeWithRetry<T>(
   signal: AbortSignal | undefined,
   isRetry: boolean = false,
   attempt: number = 0,
+  csrfRetried: boolean = false,
 ): Promise<T> {
   const normalized = normalizePath(path);
   try {
@@ -209,7 +231,7 @@ async function executeWithRetry<T>(
       if (!isRetry) {
         const refreshed = await refreshToken();
         if (refreshed) {
-          return executeWithRetry<T>(method, normalized, body, signal, true, attempt);
+          return executeWithRetry<T>(method, normalized, body, signal, true, attempt, csrfRetried);
         }
       }
       // Unrecoverable 401: no refresh token, refresh rejected, or the retried
@@ -218,12 +240,24 @@ async function executeWithRetry<T>(
       endSession('session_expired');
       throw err;
     }
+    // CSRF double-submit rejections are transient and unsafe-request-only: the
+    // guard re-issued the cookie on the rejected response, so one immediate
+    // retry of the SAME request (same body) carries the fresh token. Never
+    // loops — csrfRetried survives every recursion path above and below.
+    if (err instanceof ApiError && isCsrfRejection(err) && method !== 'GET' && !csrfRetried) {
+      return executeWithRetry<T>(method, normalized, body, signal, isRetry, attempt, true);
+    }
+    if (err instanceof ApiError && isCsrfRejection(err) && csrfRetried) {
+      // The retry was rejected too (cookie not re-issued or genuinely denied):
+      // surface it as the ordinary access-denied refusal.
+      announceAccessDenied(err, normalized);
+    }
     const isRetryableError =
       err instanceof TypeError ||
       (err instanceof DOMException && err.name === 'AbortError' && !signal?.aborted);
     if (isRetryableError && method === 'GET' && attempt < MAX_RETRIES) {
       await sleep(delayForAttempt(attempt), signal);
-      return executeWithRetry<T>(method, normalized, body, signal, isRetry, attempt + 1);
+      return executeWithRetry<T>(method, normalized, body, signal, isRetry, attempt + 1, csrfRetried);
     }
     throw err;
   }
@@ -244,19 +278,26 @@ export const api = {
   upload: async <T>(path: string, formData: FormData, opts?: { signal?: AbortSignal }): Promise<T> => {
     const token = getToken();
     const url = `${API_BASE}${normalizePath(path)}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...csrfHeaders() },
-      body: formData,
-      signal: opts?.signal,
-    });
-    if (!res.ok) {
+    // CSRF retry: the guard re-issues the cookie on the 403 it boots on, so one
+    // extra attempt carries the fresh token. The FormData body is replayable.
+    let csrfRetried = false;
+    for (;;) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...csrfHeaders() },
+        body: formData,
+        signal: opts?.signal,
+      });
+      if (res.ok) return res.json();
       const errBody = await res.json().catch(() => null);
       const err = new ApiError(res.status, errBody, apiErrorMessage(res.status, errBody));
+      if (isCsrfRejection(err) && !csrfRetried) {
+        csrfRetried = true;
+        continue;
+      }
       announceAccessDenied(err, url);
       throw err;
     }
-    return res.json();
   },
 };
 
@@ -270,10 +311,17 @@ export async function uploadWithProgress<T>(
   const url = `${API_BASE}${normalizePath(path)}`;
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    const csrf = csrfToken();
-    if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
+    // CSRF retry: the guard re-issues the cookie on the 403 it boots on, so one
+    // re-send of the SAME FormData carries the fresh token. csrfHeaders() is
+    // re-read per attempt so the retry picks up the newly set cookie.
+    let csrfRetried = false;
+    const sendAttempt = () => {
+      xhr.open('POST', url);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      const csrf = csrfToken();
+      if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
+      xhr.send(formData);
+    };
     if (opts?.signal) {
       opts.signal.addEventListener('abort', () => xhr.abort());
     }
@@ -287,15 +335,21 @@ export async function uploadWithProgress<T>(
         } catch {
           resolve(undefined as unknown as T);
         }
-      } else {
-        let body: unknown = null;
-        try { body = JSON.parse(xhr.responseText); } catch { /* ignore */ }
-        reject(new ApiError(xhr.status, body, apiErrorMessage(xhr.status, body)));
+        return;
       }
+      let body: unknown = null;
+      try { body = JSON.parse(xhr.responseText); } catch { /* ignore */ }
+      const err = new ApiError(xhr.status, body, apiErrorMessage(xhr.status, body));
+      if (isCsrfRejection(err) && !csrfRetried) {
+        csrfRetried = true;
+        sendAttempt();
+        return;
+      }
+      reject(err);
     };
     xhr.onerror = () => reject(new Error('Network error'));
     xhr.ontimeout = () => reject(new Error('Upload timed out'));
-    xhr.send(formData);
+    sendAttempt();
   });
 }
 
@@ -395,6 +449,18 @@ export async function downloadFilingDoc(id: string, fallbackName = 'document'): 
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Extract the filing document id from a `/filing/:id/download` URL (the shape
+ * server-stored fields like certificateUrl / pettyCashVoucherUrl hold), so the
+ * authenticated download helper can be used instead of opening the raw API URL
+ * in a new tab — a bare tab cannot attach the localStorage Bearer token and
+ * would 401.
+ */
+export function filingDocIdFromUrl(url: string): string | null {
+  const match = /\/filing\/([^/]+)\/download/.exec(url);
+  return match?.[1] ?? null;
 }
 
 export async function getFilingObjectUrl(id: string): Promise<string> {
