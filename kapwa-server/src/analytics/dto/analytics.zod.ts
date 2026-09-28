@@ -30,7 +30,22 @@ export const RunListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export const ForecastQuerySchema = z.object({
+  metric: z.enum(['cases', 'disbursement']).default('cases'),
+  horizon: z.coerce.number().int().min(1).max(12).default(6),
+});
+
+export const AssociationsQuerySchema = z.object({
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+  barangay: z.string().min(1).max(120).optional(),
+  minSupport: z.coerce.number().min(0).max(1).default(0.05),
+  minConfidence: z.coerce.number().min(0).max(1).default(0.5),
+}).refine(v => !v.from || !v.to || v.from <= v.to, { message: 'from must be on or before to' });
+
 export type AnalyticsRangeInput = z.infer<typeof AnalyticsRangeSchema>;
 export type ClusteringRunInput = z.infer<typeof ClusteringRunSchema>;
 export type RunMembersQueryInput = z.infer<typeof RunMembersQuerySchema>;
 export type RunListQueryInput = z.infer<typeof RunListQuerySchema>;
+export type ForecastQueryInput = z.infer<typeof ForecastQuerySchema>;
+export type AssociationsQueryInput = z.infer<typeof AssociationsQuerySchema>;

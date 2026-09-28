@@ -11,6 +11,8 @@ import {
   ClusteringRunSchema, ClusteringRunInput,
   RunMembersQuerySchema, RunMembersQueryInput,
   RunListQuerySchema, RunListQueryInput,
+  ForecastQuerySchema, ForecastQueryInput,
+  AssociationsQuerySchema, AssociationsQueryInput,
 } from './dto/analytics.zod';
 import { AuthenticatedRequest } from '../auth/types';
 
@@ -43,6 +45,27 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Barangay equity and coverage ratios' })
   async equity(@Query(new ZodPipe(AnalyticsRangeSchema)) query: AnalyticsRangeInput) {
     return this.analytics.getEquity(query);
+  }
+
+  @Get('inequality')
+  @Roles('admin', 'social_worker', 'mayor')
+  @ApiOperation({ summary: 'Household income inequality (Gini, Lorenz, deciles)' })
+  async inequality(@Query(new ZodPipe(AnalyticsRangeSchema)) query: AnalyticsRangeInput) {
+    return this.analytics.getInequality(query);
+  }
+
+  @Get('forecast')
+  @Roles('admin', 'social_worker', 'mayor')
+  @ApiOperation({ summary: 'Caseload or disbursement forecast (Holt linear, 6-month default)' })
+  async forecast(@Query(new ZodPipe(ForecastQuerySchema)) query: ForecastQueryInput) {
+    return this.analytics.getForecast(query);
+  }
+
+  @Get('associations')
+  @Roles('admin', 'social_worker', 'mayor')
+  @ApiOperation({ summary: 'Service association rules (support, confidence, lift)' })
+  async associations(@Query(new ZodPipe(AssociationsQuerySchema)) query: AssociationsQueryInput) {
+    return this.analytics.getAssociations(query);
   }
 
   @Post('clustering/runs')

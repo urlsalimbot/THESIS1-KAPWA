@@ -5,7 +5,10 @@ import { ClusteringService } from './clustering.service';
 
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;
-  const analytics = { getDemographics: jest.fn(), getConcentration: jest.fn(), getEquity: jest.fn() };
+  const analytics = {
+    getDemographics: jest.fn(), getConcentration: jest.fn(), getEquity: jest.fn(),
+    getInequality: jest.fn(), getForecast: jest.fn(), getAssociations: jest.fn(),
+  };
   const clustering = {
     createRun: jest.fn(), listRuns: jest.fn(), getRun: jest.fn(),
     getRunMembers: jest.fn(), exportRunCsv: jest.fn(),
@@ -48,5 +51,23 @@ describe('AnalyticsController', () => {
     await controller.exportCsv('run-1', res as any);
     expect(res.set).toHaveBeenCalledWith(expect.objectContaining({ 'Content-Type': 'text/csv' }));
     expect(res.send).toHaveBeenCalledWith(expect.any(Buffer));
+  });
+
+  it('returns inequality for the range filters', async () => {
+    analytics.getInequality.mockResolvedValue({ gini: 0.4 });
+    await controller.inequality({ from: '2026-01-01', to: '2026-06-30' });
+    expect(analytics.getInequality).toHaveBeenCalledWith({ from: '2026-01-01', to: '2026-06-30' });
+  });
+
+  it('passes forecast metric and horizon through', async () => {
+    analytics.getForecast.mockResolvedValue({ metric: 'cases' });
+    await controller.forecast({ metric: 'disbursement', horizon: 12 });
+    expect(analytics.getForecast).toHaveBeenCalledWith({ metric: 'disbursement', horizon: 12 });
+  });
+
+  it('passes association thresholds through', async () => {
+    analytics.getAssociations.mockResolvedValue({ rules: [] });
+    await controller.associations({ minSupport: 0.1, minConfidence: 0.6 });
+    expect(analytics.getAssociations).toHaveBeenCalledWith({ minSupport: 0.1, minConfidence: 0.6 });
   });
 });
