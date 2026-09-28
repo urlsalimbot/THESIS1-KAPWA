@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { HandHeart, Menu, X } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { HandHeart, Menu, X, Sun, Moon, Monitor, Languages, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from './public/PageContainer';
+import { useTheme } from '@/lib/theme-context';
+import { useLanguage } from '@/i18n/useLanguage';
 
 interface User {
   id: string;
@@ -25,6 +30,12 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
   const location = useLocation();
   const currentPath = location.pathname;
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { lang, setLang } = useLanguage();
+  // Hydration guard: resolvedTheme is unknown until the browser mounts; the
+  // trigger icon falls back to Sun (light) for the first render.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const navLinks = [
     { to: '/', label: t('public.home', 'Home') },
@@ -63,7 +74,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'shrink-0 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 lg:px-4',
+                  'flex shrink-0 items-center rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 lg:px-4',
                   'hover:bg-muted hover:text-foreground',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   active ? 'font-semibold text-accent' : 'text-muted-foreground'
@@ -76,8 +87,67 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
           })}
         </nav>
 
-        {/* Right side: CTA + mobile menu */}
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Right side: appearance/lang toggles + CTA + mobile menu */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {/* Appearance — Light / Dark / System, mirrors the app-shell Topbar */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="touch-sm flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={t('topbar.theme', 'Theme')}
+              >
+                {mounted && resolvedTheme === 'dark' ? (
+                  <Moon size={18} aria-hidden="true" />
+                ) : (
+                  <Sun size={18} aria-hidden="true" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={8} className="w-44">
+              <DropdownMenuLabel className="font-semibold">{t('topbar.theme', 'Theme')}</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setTheme('light')}>
+                <Sun size={16} className="mr-2" />
+                {t('topbar.themeLight', 'Light')}
+                {theme === 'light' && <Check size={14} className="ml-auto text-primary" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('dark')}>
+                <Moon size={16} className="mr-2" />
+                {t('topbar.themeDark', 'Dark')}
+                {theme === 'dark' && <Check size={14} className="ml-auto text-primary" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('system')}>
+                <Monitor size={16} className="mr-2" />
+                {t('topbar.themeSystem', 'System')}
+                {theme === 'system' && <Check size={14} className="ml-auto text-primary" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Language — English / Filipino, same source as the app shell */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="touch-sm flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={t('topbar.language', 'Language')}
+              >
+                <Languages size={18} aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={8} className="w-44">
+              <DropdownMenuLabel className="font-semibold">{t('topbar.language', 'Language')}</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setLang('en')}>
+                <Languages size={16} className="mr-2" />
+                {t('nav.english', 'English')}
+                {lang === 'en' && <Check size={14} className="ml-auto text-primary" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang('fil')}>
+                <Languages size={16} className="mr-2" />
+                {t('nav.filipino', 'Filipino')}
+                {lang === 'fil' && <Check size={14} className="ml-auto text-primary" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {!loading &&
             (user ? (
               <Button variant="outline" size="sm" className="touch-sm" asChild>
@@ -132,7 +202,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                       to={link.to}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        'touch-sm rounded-md px-4 py-3 text-sm font-medium no-underline transition-colors duration-200',
+                        'touch-sm flex items-center rounded-md px-4 py-3 text-sm font-medium no-underline transition-colors duration-200',
                         'hover:bg-muted hover:text-foreground',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         active ? 'bg-accent/5 font-semibold text-accent' : 'text-muted-foreground'
