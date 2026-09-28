@@ -116,8 +116,8 @@ export function AgencyCardActivitiesPage() {
                         {formatDate(s.serviceDate)}
                       </p>
                     </div>
-                    {s.cost != null && Number(s.cost) > 0 && (
-                      <span className="text-sm font-medium tabular-nums">₱{Number(s.cost).toLocaleString()}</span>
+                    {s.cost != null && s.cost > 0 && (
+                      <span className="text-sm font-medium tabular-nums">₱{s.cost.toLocaleString()}</span>
                     )}
                   </div>
                 ))}

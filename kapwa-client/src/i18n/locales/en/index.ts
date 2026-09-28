@@ -552,6 +552,7 @@ const en = {
     "cardCode": "Card Code",
     "category": "Category",
     "codeLabel": "Code: {{code}}",
+    "codeChanged": "The card code no longer matches the card on screen. Verify it again before logging an activity.",
     "consentNote": "Inter-agency sharing consent is not active — shown to MSWDO only.",
     "coordinatorDescription": "Verify, assign, and log activities on access cards.",
     "cost": "Cost (₱)",

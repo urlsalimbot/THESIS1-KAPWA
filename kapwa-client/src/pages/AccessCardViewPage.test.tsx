@@ -177,6 +177,22 @@ describe('AccessCardViewPage', () => {
       ['case_service', 'referral', 'community_service', 'seminar', 'payout', 'compliance'].sort(),
     );
   });
+
+  it('opens the add-entry form with the Manila day already filled in', async () => {
+    // It used to open on an empty date input while the other two logging forms
+    // handed the coordinator today. An empty required date is also the one
+    // field the browser will not auto-correct.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-09-28T17:00:00Z')); // 01:00 on the 29th in Manila
+    try {
+      renderWithSWR(<AccessCardViewPage />);
+      (await screen.findByRole('button', { name: /Add Entry/ })).click();
+
+      expect(await screen.findByLabelText('Service Date *')).toHaveValue('2026-09-29');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('AccessCardViewPage — access card PDF export', () => {

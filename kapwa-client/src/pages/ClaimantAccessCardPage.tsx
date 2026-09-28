@@ -38,7 +38,7 @@ export function ClaimantAccessCardPage() {
                 <li key={i} className="flex items-center justify-between text-sm border-b py-2 last:border-0">
                   <span>{s.service_rendered ?? s.serviceRendered}</span>
                   <span className="flex items-center gap-3 text-muted-foreground">
-                    {s.cost != null && s.cost > 0 && <span className="font-semibold text-foreground">₱{Number(s.cost).toLocaleString()}</span>}
+                    {s.cost != null && s.cost > 0 && <span className="font-semibold text-foreground">₱{s.cost.toLocaleString()}</span>}
                     <span className="text-xs">{s.service_date ?? s.serviceDate}</span>
                   </span>
                 </li>

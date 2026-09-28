@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategorySelect';
 import { ACCESS_CARD_CATEGORY_TABS, type AccessCardCategory } from '@/lib/constants';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
-import { formatDate } from '../lib/format';
+import { formatDate, todayInManila } from '../lib/format';
 
 interface AccessCardService {
   id: string;
@@ -88,6 +88,31 @@ function CategoryBadge({ category }: { category?: string }) {
   );
 }
 
+// The add-entry form's blank state. Defined once and used both to open the form
+// and to clear it after a save: two copies of this object meant a change to the
+// defaults could reach only one of them, and the second entry of a session
+// started from stale values.
+function blankAddForm(): {
+  serviceRendered: string;
+  serviceDate: string;
+  cost: string;
+  agencyId: string;
+  workerNameSign: string;
+  category: AccessCardCategory;
+} {
+  return {
+    serviceRendered: '',
+    // Manila's date, not UTC's. Between 00:00 and 08:00 local the UTC date is
+    // still yesterday, so a coordinator logging an early-morning service was
+    // handed the wrong day — and the other two logging forms hand over today.
+    serviceDate: todayInManila(),
+    cost: '',
+    agencyId: '',
+    workerNameSign: '',
+    category: 'referral',
+  };
+}
+
 export function AccessCardViewPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -96,7 +121,7 @@ export function AccessCardViewPage() {
   const canExportGisPdf = ['admin', 'social_worker', 'coordinator'].includes(user?.role ?? '');
   const [activeTab, setActiveTab] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState<{ serviceRendered: string; serviceDate: string; cost: string; agencyId: string; workerNameSign: string; category: AccessCardCategory }>({ serviceRendered: '', serviceDate: '', cost: '', agencyId: '', workerNameSign: '', category: 'referral' });
+  const [addForm, setAddForm] = useState(blankAddForm);
   const [adding, setAdding] = useState(false);
 
   const { data: ben } = useSWR<Record<string, unknown>>(
@@ -134,7 +159,7 @@ export function AccessCardViewPage() {
       });
       await cardMutate();
       setShowAddForm(false);
-      setAddForm({ serviceRendered: '', serviceDate: '', cost: '', agencyId: '', workerNameSign: '', category: 'referral' });
+      setAddForm(blankAddForm());
     } catch (err) {
       console.error('Failed to add entry:', err);
     } finally {
@@ -332,8 +357,8 @@ export function AccessCardViewPage() {
                       {s.workerNameSign && t('accessCard.byWorker', ' · {{name}}', { name: s.workerNameSign })}
                     </p>
                   </div>
-                  {s.cost != null && Number(s.cost) > 0 && (
-                    <span className="text-xs font-semibold shrink-0">₱{Number(s.cost).toLocaleString()}</span>
+                  {s.cost != null && s.cost > 0 && (
+                    <span className="text-xs font-semibold shrink-0">₱{s.cost.toLocaleString()}</span>
                   )}
                 </div>
               ))}
@@ -363,8 +388,8 @@ export function AccessCardViewPage() {
                     {s.agencyRef?.name && ` · ${s.agencyRef.name}`}
                   </p>
                 </div>
-                {s.cost != null && Number(s.cost) > 0 && (
-                  <span className="text-xs font-semibold shrink-0">₱{Number(s.cost).toLocaleString()}</span>
+                {s.cost != null && s.cost > 0 && (
+                  <span className="text-xs font-semibold shrink-0">₱{s.cost.toLocaleString()}</span>
                 )}
               </div>
             ))}

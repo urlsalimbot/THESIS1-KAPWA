@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../common/base.entity';
 import { Agency } from '../agencies/agency.entity';
+import { DECIMAL_AS_NUMBER } from '../common/transformers';
 
 @Entity('access_card_services')
 export class AccessCardService extends BaseEntity {
@@ -14,7 +15,7 @@ export class AccessCardService extends BaseEntity {
   @Column({ name: 'service_rendered' })
   serviceRendered!: string;
 
-  @Column({ name: 'cost', type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({ name: 'cost', type: 'decimal', precision: 12, scale: 2, nullable: true, transformer: DECIMAL_AS_NUMBER })
   cost?: number;
 
   @Column({ name: 'agency_id', nullable: true })

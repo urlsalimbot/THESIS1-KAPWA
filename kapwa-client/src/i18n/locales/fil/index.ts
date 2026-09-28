@@ -1084,6 +1084,7 @@ const fil: EnLocale = {
     "cardCode": "Kodigo ng Card",
     "category": "Kategorya",
     "codeLabel": "Kodigo: {{code}}",
+    "codeChanged": "Hindi na tugma ang nakasulat na kodigo sa card na nasa screen. Pakisuri muli bago mag-log ng aktibidad.",
     "consentNote": "Hindi aktibo ang consent para sa inter-agency sharing — tanging sa MSWDO ito ipinapakita.",
     "coordinatorDescription": "I-verify, italaga, at itala ang mga aktibidad sa mga access card.",
     "cost": "Halaga (₱)",

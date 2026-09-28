@@ -277,4 +277,130 @@ describe('CoordinatorAccessCardsPage', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/failed to log/i));
     expect(screen.getByLabelText(/remarks/i)).toHaveValue('Pantry pack');
   });
+
+  it('identifies the card on screen by the code it verified, not what is in the box', async () => {
+    // `accessCardCode` is only `z.string().min(1)` server-side, so the endpoint
+    // does not re-check that a posted code belongs to the card that was just
+    // verified. The card that is on screen must be named by the verified code:
+    // if the label followed the input, the coordinator could read "Code: …9999"
+    // above a history belonging to …0001 and file the next row against either.
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      if (k.includes('/card')) {
+        return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
+      }
+      return Promise.resolve([service(1)]);
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText(/enter card code/i), 'NORZ-AC-2026-0001');
+    await user.click(screen.getByRole('button', { name: /^Verify$/i }));
+    await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
+    expect(screen.getByText('Code: NORZ-AC-2026-0001')).toBeInTheDocument();
+
+    const box = screen.getByLabelText(/enter card code/i);
+    await user.clear(box);
+    await user.type(box, 'NORZ-AC-2026-9999');
+
+    expect(screen.getByText('Code: NORZ-AC-2026-0001')).toBeInTheDocument();
+    expect(screen.queryByText('Code: NORZ-AC-2026-9999')).not.toBeInTheDocument();
+  });
+
+  it('refuses to log once the code in the box no longer matches the verified card', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      if (k.includes('/card')) {
+        return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
+      }
+      return Promise.resolve([service(1)]);
+    });
+    mockApiPost.mockResolvedValue({ id: 's11' });
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText(/enter card code/i), 'NORZ-AC-2026-0001');
+    await user.click(screen.getByRole('button', { name: /^Verify$/i }));
+    await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
+
+    const box = screen.getByLabelText(/enter card code/i);
+    await user.clear(box);
+    await user.type(box, 'NORZ-AC-2026-9999');
+
+    await user.selectOptions(screen.getByLabelText(/agency/i), 'ag-1');
+    await user.type(screen.getByLabelText(/remarks/i), 'Pantry pack');
+
+    // The form is fully filled in, so this is the mismatch alone holding it back.
+    expect(screen.getByRole('button', { name: /log activity/i })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/no longer matches/i);
+
+    // And clicking anyway must not reach the server with the typed code.
+    await user.click(screen.getByRole('button', { name: /log activity/i }));
+    expect(mockApiPost).not.toHaveBeenCalled();
+  });
+
+  it('posts the verified code once the box is put back in step', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      if (k.includes('/card')) {
+        return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
+      }
+      return Promise.resolve([service(1)]);
+    });
+    mockApiPost.mockResolvedValue({ id: 's12' });
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText(/enter card code/i), 'NORZ-AC-2026-0001');
+    await user.click(screen.getByRole('button', { name: /^Verify$/i }));
+    await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
+
+    const box = screen.getByLabelText(/enter card code/i);
+    await user.clear(box);
+    await user.type(box, 'NORZ-AC-2026-9999');
+    await user.selectOptions(screen.getByLabelText(/agency/i), 'ag-1');
+    await user.type(screen.getByLabelText(/remarks/i), 'Pantry pack');
+    expect(screen.getByRole('button', { name: /log activity/i })).toBeDisabled();
+
+    // Correcting the box re-enables the form without another lookup.
+    await user.clear(box);
+    await user.type(box, 'NORZ-AC-2026-0001');
+    await user.click(screen.getByRole('button', { name: /log activity/i }));
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/activity logged/i));
+    const posted = mockApiPost.mock.calls[0][1] as Record<string, unknown>;
+    expect(posted.accessCardCode).toBe('NORZ-AC-2026-0001');
+  });
+
+  it('pre-fills the service date with the Manila day, not the UTC one', async () => {
+    // 17:00Z is already 01:00 the next day in Manila (UTC+8). Reading the UTC
+    // date handed the coordinator yesterday's date, and if they submitted
+    // without noticing the service landed on the card a day early.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-09-28T17:00:00Z'));
+    try {
+      mockApiGet.mockImplementation((key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+        if (k.includes('/card')) {
+          return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
+        }
+        return Promise.resolve([service(1)]);
+      });
+      mockApiPost.mockResolvedValue({ id: 's13' });
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderPage();
+      await user.type(screen.getByLabelText(/enter card code/i), 'NORZ-AC-2026-0001');
+      await user.click(screen.getByRole('button', { name: /^Verify$/i }));
+      await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
+
+      expect(screen.getByLabelText(/date/i)).toHaveValue('2026-09-29');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -15,7 +15,7 @@ import { AccessCardCategorySelect } from '@/components/cards/AccessCardCategoryS
 import type { AccessCardCategory } from '@/lib/constants';
 import { Search, Check, History, BadgeCheck, Loader2, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
-import { formatDate } from '../lib/format';
+import { formatDate, todayInManila } from '../lib/format';
 
 type Tab = 'verify' | 'history';
 
@@ -103,6 +103,13 @@ function FormError({ children }: { children?: string | null }) {
 function VerifyTab() {
   const { t } = useTranslation();
   const [code, setCode] = useState('');
+  // The code the server actually confirmed, which is not necessarily what is in
+  // the box right now. `accessCardCode` is only `z.string().min(1)` server-side,
+  // so the endpoint does not re-check that a posted code belongs to the card
+  // that was just verified. Writing against the live input meant that editing
+  // the text after a lookup silently filed the service against an unverified
+  // code, and the row then never showed up in the history on screen.
+  const [verifiedCode, setVerifiedCode] = useState('');
   const [result, setResult] = useState<{ services: AccessCardService[]; beneficiary: any } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,8 +136,11 @@ function VerifyTab() {
         );
       }
       setResult({ services: services ?? [], beneficiary });
+      setVerifiedCode(cardCode);
     } catch {
       setResult(null);
+      // A failed lookup verifies nothing, so no card is on screen to log against.
+      setVerifiedCode('');
       setError(t('accessCard.notFound', 'Access card not found'));
     } finally {
       setLoading(false);
@@ -149,10 +159,16 @@ function VerifyTab() {
 
   async function handleLogged() {
     // Refresh first, then confirm. Clearing the flag inside `lookup` would wipe
-    // the very confirmation the refresh is meant to accompany.
-    await lookup(code.trim());
+    // the very confirmation the refresh is meant to accompany. Re-reads
+    // `verifiedCode` because that is the card the row was just written to.
+    await lookup(verifiedCode);
     setJustLogged(t('accessCard.logged', 'Activity logged.'));
   }
+
+  // The box is still editable so a coordinator can start the next lookup, but
+  // anything that is not a re-verification of what is on screen cannot be
+  // written.
+  const codeMatchesVerified = code.trim() === verifiedCode;
 
   return (
     <div className="space-y-6">
@@ -203,7 +219,7 @@ function VerifyTab() {
                   {result.beneficiary.surname}, {result.beneficiary.first_name}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {t('accessCard.codeLabel', 'Code: {{code}}', { code })}
+                  {t('accessCard.codeLabel', 'Code: {{code}}', { code: verifiedCode })}
                 </p>
               </CardContent>
             </Card>
@@ -235,7 +251,7 @@ function VerifyTab() {
                       </div>
                       {s.cost != null && (
                         <span className="text-sm font-medium tabular-nums">
-                          ₱{Number(s.cost).toLocaleString()}
+                          ₱{s.cost.toLocaleString()}
                         </span>
                       )}
                     </div>
@@ -245,17 +261,40 @@ function VerifyTab() {
             </CardContent>
           </Card>
 
-          <ActivityForm cardCode={code} onLogged={handleLogged} />
+          {!codeMatchesVerified && (
+            <FormError>
+              {t(
+                'accessCard.codeChanged',
+                'The card code no longer matches the card on screen. Verify it again before logging an activity.',
+              )}
+            </FormError>
+          )}
+
+          <ActivityForm
+            cardCode={verifiedCode}
+            canSubmit={codeMatchesVerified}
+            onLogged={handleLogged}
+          />
         </>
       )}
     </div>
   );
 }
 
-function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () => Promise<void> }) {
+function ActivityForm({
+  cardCode,
+  canSubmit,
+  onLogged,
+}: {
+  cardCode: string;
+  canSubmit: boolean;
+  onLogged: () => Promise<void>;
+}) {
   const { t } = useTranslation();
   const [category, setCategory] = useState<AccessCardCategory>('community_service');
-  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
+  // Manila's date, not UTC's — between 00:00 and 08:00 local the UTC date is
+  // already yesterday, so the old default pre-filled the wrong day.
+  const [serviceDate, setServiceDate] = useState(() => todayInManila());
   const [remarks, setRemarks] = useState('');
   const [agencyId, setAgencyId] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -264,6 +303,9 @@ function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () =
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    // Belt and braces: the button is disabled, but a submit can still arrive
+    // from a keyboard or an autofill without the click.
+    if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -343,7 +385,7 @@ function ActivityForm({ cardCode, onLogged }: { cardCode: string; onLogged: () =
             />
           </div>
           <FormError>{error}</FormError>
-          <Button type="submit" disabled={submitting || !remarks.trim()} size="sm">
+          <Button type="submit" disabled={submitting || !remarks.trim() || !canSubmit} size="sm">
             <Check size={14} className="mr-1" />{' '}
             {submitting ? t('accessCard.logging', 'Logging...') : t('accessCard.logActivity', 'Log Activity')}
           </Button>
