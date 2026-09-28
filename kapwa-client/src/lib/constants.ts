@@ -36,3 +36,25 @@ export const OTHER_ASSISTANCE = [
 export const FAMILY_MEMBER_STATUSES = ['Employed', 'Self-Employed', 'Unemployed', 'Student', 'Retired', 'Dependent', 'OFW'] as const;
 
 export const NAME_EXTENSIONS = ['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV'] as const;
+
+/**
+ * The categories `POST /access-cards/log` accepts, mirroring the server's
+ * `ACCESS_CARD_CATEGORIES`. `payout` and `compliance` cover recurring-program
+ * events (4Ps disbursements and conditionality check-offs), which the 4Ps module
+ * also writes to the same table.
+ *
+ * Every service-logging dropdown renders from this list, so a form cannot offer a
+ * value the endpoint would reject. Do not add a value here without adding it to
+ * the server's list first — the form and the endpoint have to agree.
+ */
+export const ACCESS_CARD_CATEGORIES = [
+  'case_service',
+  'referral',
+  'community_service',
+  'seminar',
+  'payout',
+  'compliance',
+] as const;
+
+export type AccessCardCategory = (typeof ACCESS_CARD_CATEGORIES)[number];
+
