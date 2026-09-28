@@ -8,6 +8,7 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Search } from 'lucide-react';
+import { formatDate } from '../lib/format';
 
 interface ServiceEntry {
   id: string;
@@ -110,7 +111,7 @@ export function AgencyCardActivitiesPage() {
                       <p className="text-sm font-medium">{s.serviceRendered}</p>
                       <p className="text-xs text-muted-foreground">
                         <Badge variant="secondary" className="text-[10px] mr-1">{s.category}</Badge>
-                        {new Date(s.serviceDate).toLocaleDateString()}
+                        {formatDate(s.serviceDate)}
                       </p>
                     </div>
                     {s.cost != null && Number(s.cost) > 0 && (

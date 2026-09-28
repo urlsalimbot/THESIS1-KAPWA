@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
+import { formatDate } from '../lib/format';
 
 interface AccessCardService {
   id: string;
@@ -324,7 +325,7 @@ export function AccessCardViewPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{s.serviceRendered}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(s.serviceDate).toLocaleDateString()}
+                      {formatDate(s.serviceDate)}
                       {s.agencyRef?.name || s.agency}
                       {s.workerNameSign && t('accessCard.byWorker', ' · {{name}}', { name: s.workerNameSign })}
                     </p>
@@ -356,7 +357,7 @@ export function AccessCardViewPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{s.serviceRendered}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(s.serviceDate).toLocaleDateString()}
+                    {formatDate(s.serviceDate)}
                     {s.agencyRef?.name && ` · ${s.agencyRef.name}`}
                   </p>
                 </div>
@@ -385,7 +386,7 @@ export function AccessCardViewPage() {
                   <p className="font-medium truncate">{r.reason}</p>
                   <p className="text-xs text-muted-foreground">
                     {(r.fromAgency?.name || r.fromAgencyId)} → {(r.toAgency?.name || r.toAgencyId)} ·{' '}
-                    {new Date(r.createdAt).toLocaleDateString()}
+                    {formatDate(r.createdAt)}
                   </p>
                 </div>
               </div>

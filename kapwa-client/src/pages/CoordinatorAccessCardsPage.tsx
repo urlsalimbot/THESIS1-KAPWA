@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DataTable } from '@/components/data-table';
 import { Search, Check, Plus, History, BadgeCheck, Loader2, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
+import { formatDate } from '../lib/format';
 
 type Tab = 'verify' | 'assign' | 'history';
 
@@ -238,7 +239,7 @@ function VerifyTab() {
                               {s.category}
                             </Badge>
                           )}
-                          {new Date(s.serviceDate).toLocaleDateString()}
+                          {formatDate(s.serviceDate)}
                         </p>
                       </div>
                       {s.cost != null && (
@@ -548,7 +549,7 @@ function HistoryTab() {
     {
       accessorKey: 'serviceDate',
       header: t('accessCard.date', 'Date'),
-      cell: ({ row }) => new Date(row.original.serviceDate).toLocaleDateString(),
+      cell: ({ row }) => formatDate(row.original.serviceDate),
     },
   ];
 
