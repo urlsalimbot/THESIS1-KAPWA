@@ -6,6 +6,7 @@ import { CaseComplianceItem } from './fourps-compliance.entity';
 import { CasePayout } from './fourps-payout.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { AccessCardsService } from '../access-cards/access-cards.service';
+import { LogServiceSchema } from '../access-cards/dto/access-cards.zod';
 
 // 4Ps now auto-logs to the household access card and (on payout completion)
 // records a case intervention. Both are best-effort collaborators.
@@ -157,7 +158,7 @@ describe('FourPsService compliance status', () => {
     const entry = { id: 'c1', met: false, metAt: undefined, metBy: undefined };
     repoMock.findOne.mockResolvedValue(entry);
     repoMock.save.mockImplementation(async (e: any) => e);
-    await service.markComplied('c1', 'user-1');
+    await service.markComplied('c1', { id: 'user-1' });
     expect(entry.met).toBe(true);
     expect(entry.metBy).toBe('user-1');
     expect(entry.metAt).toBeInstanceOf(Date);
@@ -176,7 +177,7 @@ describe('FourPsService compliance status', () => {
 
   it('throws for an unknown compliance id', async () => {
     repoMock.findOne.mockResolvedValue(null);
-    await expect(service.markComplied('missing', 'user-1')).rejects.toThrow(NotFoundException);
+    await expect(service.markComplied('missing', { id: 'user-1' })).rejects.toThrow(NotFoundException);
     await expect(service.unmarkComplied('missing')).rejects.toThrow(NotFoundException);
   });
 });
@@ -200,7 +201,7 @@ describe('FourPsService payouts', () => {
 
   it('schedules a payout as scheduled', async () => {
     payoutRepoMock.save.mockImplementation(async (e: any) => ({ id: 'p1', ...e }));
-    const payout = await service.schedulePayout('case-1', { cycleNo: 'CY2026-02', scheduledAt: '2026-10-01', amount: 1200 });
+    const payout = await service.schedulePayout('case-1', { cycleNo: 'CY2026-02', scheduledAt: '2026-10-01', amount: 1200 }, { id: 'user-1' });
     expect(payoutRepoMock.create).toHaveBeenCalledWith({
       caseId: 'case-1', cycleNo: 'CY2026-02', scheduledAt: '2026-10-01', amount: 1200, status: 'scheduled',
     });
@@ -211,7 +212,7 @@ describe('FourPsService payouts', () => {
     const payout = { id: 'p1', status: 'scheduled' };
     payoutRepoMock.findOne.mockResolvedValue(payout);
     payoutRepoMock.save.mockImplementation(async (e: any) => e);
-    await service.setPayoutStatus('p1', 'missed', 'Beneficiary did not attend');
+    await service.setPayoutStatus('p1', 'missed', 'Beneficiary did not attend', { id: 'user-1' });
     expect(payout.status).toBe('missed');
     expect((payout as any).remarks).toBe('Beneficiary did not attend');
   });
@@ -233,7 +234,147 @@ describe('FourPsService payouts', () => {
 
   it('throws for unknown payout ids', async () => {
     payoutRepoMock.findOne.mockResolvedValue(null);
-    await expect(service.setPayoutStatus('missing', 'completed')).rejects.toThrow(NotFoundException);
+    await expect(service.setPayoutStatus('missing', 'completed', undefined, { id: 'user-1' })).rejects.toThrow(NotFoundException);
     await expect(service.markNotified('missing', 'user-1')).rejects.toThrow(NotFoundException);
+  });
+});
+
+// 4Ps writes to the same `access_card_services` table the manual forms write to, so
+// its rows must use the same category vocabulary (otherwise the card's category tabs
+// never match them) and must carry the same audit columns (otherwise a coordinator
+// never sees their own barangay's 4Ps rows and the row has no actor).
+describe('FourPsService access-card logging', () => {
+  let service: FourPsService;
+  let repoMock: any;
+  let payoutRepoMock: any;
+  let interventionRepoMock: any;
+  let cards: { accessCardCodeFor: jest.Mock; logService: jest.Mock };
+
+  const actor = { id: 'user-1', assignedBarangay: 'Bigte' };
+
+  function lastLog() {
+    return cards.logService.mock.calls.at(-1)?.[0];
+  }
+
+  beforeEach(async () => {
+    repoMock = { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) };
+    payoutRepoMock = {
+      query: jest.fn().mockResolvedValue([{ beneficiary_id: 'ben-1' }]),
+      find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d),
+    };
+    interventionRepoMock = { save: jest.fn(), create: jest.fn((d: any) => d) };
+    cards = {
+      accessCardCodeFor: jest.fn().mockResolvedValue('NORZ-AC-2026-0001'),
+      logService: jest.fn().mockResolvedValue({ id: 'acs-1' }),
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FourPsService,
+        { provide: getRepositoryToken(CaseComplianceItem), useValue: repoMock },
+        { provide: getRepositoryToken(CasePayout), useValue: payoutRepoMock },
+        { provide: getRepositoryToken(CaseIntervention), useValue: interventionRepoMock },
+        { provide: AccessCardsService, useValue: cards },
+      ],
+    }).compile();
+    service = module.get(FourPsService);
+  });
+
+  it('logs a compliance check-off under the sanctioned "compliance" category', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'c1', caseId: 'case-1', complianceType: 'health_checkup', monthLabel: 'Oct 2026' });
+    repoMock.save.mockImplementation(async (e: any) => e);
+
+    await service.markComplied('c1', actor);
+
+    expect(lastLog()).toMatchObject({ category: 'compliance' });
+    // The "4Ps" attribution stays in the description, so nothing is lost by folding
+    // the category back onto the shared vocabulary.
+    expect(lastLog().serviceRendered).toContain('4Ps compliance');
+  });
+
+  it('records who logged the check-off and which barangay they act for', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'c1', caseId: 'case-1', complianceType: 'fds' });
+    repoMock.save.mockImplementation(async (e: any) => e);
+
+    await service.markComplied('c1', actor);
+
+    expect(lastLog()).toMatchObject({ loggedBy: 'user-1', sourceBarangay: 'Bigte' });
+  });
+
+  it('leaves the barangay unset for a city-wide actor who has no assignment', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'c1', caseId: 'case-1', complianceType: 'fds' });
+    repoMock.save.mockImplementation(async (e: any) => e);
+
+    await service.markComplied('c1', { id: 'mswdo-1' });
+
+    expect(lastLog()).toMatchObject({ loggedBy: 'mswdo-1', sourceBarangay: undefined });
+  });
+
+  it('logs a scheduled payout under the sanctioned "payout" category with its actor', async () => {
+    payoutRepoMock.save.mockImplementation(async (e: any) => ({ id: 'p1', ...e }));
+
+    await service.schedulePayout('case-1', { cycleNo: 'CY2026-02', scheduledAt: '2026-10-01', amount: 1200 }, actor);
+
+    expect(lastLog()).toMatchObject({ category: 'payout', loggedBy: 'user-1', sourceBarangay: 'Bigte', cost: 1200 });
+  });
+
+  it('logs a released payout under the sanctioned "payout" category with its actor', async () => {
+    const payout = { id: 'p1', caseId: 'case-1', status: 'scheduled', scheduledAt: '2026-10-01', amount: 1200, cycleNo: 'CY2026-02' };
+    payoutRepoMock.findOne.mockResolvedValue(payout);
+    payoutRepoMock.save.mockImplementation(async (e: any) => e);
+
+    await service.setPayoutStatus('p1', 'completed', undefined, actor);
+
+    expect(lastLog()).toMatchObject({ category: 'payout', loggedBy: 'user-1', sourceBarangay: 'Bigte' });
+    expect(lastLog().serviceRendered).toContain('4Ps payout released');
+  });
+
+  it('does not write to the card when the household has no beneficiary', async () => {
+    payoutRepoMock.query.mockResolvedValue([]);
+    payoutRepoMock.save.mockImplementation(async (e: any) => ({ id: 'p1', ...e }));
+
+    await service.schedulePayout('case-1', { scheduledAt: '2026-10-01' }, actor);
+
+    expect(cards.logService).not.toHaveBeenCalled();
+  });
+
+  it('still completes the compliance check-off when the card write fails', async () => {
+    const entry = { id: 'c1', caseId: 'case-1', complianceType: 'fds', met: false };
+    repoMock.findOne.mockResolvedValue(entry);
+    repoMock.save.mockImplementation(async (e: any) => e);
+    cards.accessCardCodeFor.mockRejectedValue(new Error('no card'));
+
+    await expect(service.markComplied('c1', actor)).resolves.toBeUndefined();
+
+    expect(entry.met).toBe(true);
+  });
+
+  // The 4Ps module reaches AccessCardsService.logService directly, so it never
+  // passes through the controller's ZodPipe. Nothing else would notice if it
+  // invented a private category value: the row would insert fine (the column is a
+  // bare VARCHAR) and then match no category tab on the card. This walks every
+  // write path and puts what it wrote through the schema the manual forms obey.
+  it('writes only categories the manual logging form could have written', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'c1', caseId: 'case-1', complianceType: 'fds' });
+    repoMock.save.mockImplementation(async (e: any) => e);
+    payoutRepoMock.save.mockImplementation(async (e: any) => ({ id: 'p1', ...e }));
+    const payout = { id: 'p1', caseId: 'case-1', status: 'scheduled', scheduledAt: '2026-10-01', amount: 1200 };
+    payoutRepoMock.findOne.mockResolvedValue(payout);
+
+    await service.markComplied('c1', actor);
+    await service.schedulePayout('case-1', { scheduledAt: '2026-10-01', amount: 1200 }, actor);
+    await service.setPayoutStatus('p1', 'completed', undefined, actor);
+
+    const written = cards.logService.mock.calls.map(([payload]) => payload);
+    expect(written.length).toBeGreaterThanOrEqual(3);
+    for (const payload of written) {
+      const parsed = LogServiceSchema.safeParse({
+        accessCardCode: payload.accessCardCode,
+        serviceRendered: payload.serviceRendered,
+        serviceDate: payload.serviceDate.toISOString().slice(0, 10),
+        cost: payload.cost,
+        category: payload.category,
+      });
+      expect({ category: payload.category, ok: parsed.success }).toEqual({ category: payload.category, ok: true });
+    }
   });
 });

@@ -48,7 +48,7 @@ export class FourPsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    await this.svc.markComplied(id, req.user!.id);
+    await this.svc.markComplied(id, req.user);
     return { met: true };
   }
 
@@ -66,8 +66,9 @@ export class FourPsController {
   async schedulePayout(
     @Param('caseId', new ParseUUIDPipe()) caseId: string,
     @Body(new ZodPipe(SchedulePayoutSchema)) body: SchedulePayoutInput,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.svc.schedulePayout(caseId, body);
+    return this.svc.schedulePayout(caseId, body, req.user);
   }
 
   @Get(':caseId/payouts')
@@ -83,8 +84,9 @@ export class FourPsController {
   async setPayoutStatus(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body(new ZodPipe(PayoutStatusSchema)) body: PayoutStatusInput,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.svc.setPayoutStatus(id, body.status, body.remarks);
+    return this.svc.setPayoutStatus(id, body.status, body.remarks, req.user);
   }
 
   @Post('payouts/:id/notify')

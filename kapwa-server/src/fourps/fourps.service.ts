@@ -1,10 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CaseComplianceItem, ComplianceType } from './fourps-compliance.entity';
 import { CasePayout } from './fourps-payout.entity';
-import { AccessCardsService } from '../access-cards/access-cards.service';
+import { AccessCardsService, AccessCardCategory } from '../access-cards/access-cards.service';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+
+/**
+ * Whoever caused an access-card row to exist. Structurally satisfied by the
+ * authenticated `User`, so controllers can pass `req.user` straight through.
+ */
+export interface CardLoggingActor {
+  id: string;
+  assignedBarangay?: string;
+}
 
 export function ageFromDob(dob: string | Date | null | undefined, now: Date = new Date()): number {
   if (!dob) return 0;
@@ -27,11 +36,18 @@ export class FourPsService {
     private readonly accessCards: AccessCardsService,
   ) {}
 
+  private readonly logger = new Logger(FourPsService.name);
+
   // 4Ps activity is logged against the household access card (payouts and
   // compliance check-offs) so the ledger and the printed card stay complete
   // without a second manual entry. Best-effort: a logging failure must never
-  // fail the 4Ps action itself.
-  private async logToCard(caseId: string, entry: { serviceRendered: string; serviceDate: Date; cost?: number; category: string }) {
+  // fail the 4Ps action itself — but it must not vanish silently either, since
+  // a dropped row is a gap in the beneficiary's service ledger.
+  private async logToCard(
+    caseId: string,
+    entry: { serviceRendered: string; serviceDate: Date; cost?: number; category: AccessCardCategory },
+    actor: CardLoggingActor,
+  ) {
     try {
       const rows = await this.payoutRepo.query(
         'SELECT beneficiary_id FROM cases WHERE id = $1 LIMIT 1',
@@ -46,9 +62,17 @@ export class FourPsService {
         serviceDate: entry.serviceDate,
         cost: entry.cost,
         category: entry.category,
+        // Same audit columns the manual logging route writes, so a coordinator's
+        // barangay-scoped list actually shows the 4Ps rows and every row names
+        // the staff member who caused it.
+        loggedBy: actor.id,
+        sourceBarangay: actor.assignedBarangay,
       });
-    } catch {
+    } catch (err) {
       // Card may not exist yet — the 4Ps record is still authoritative.
+      this.logger.warn(
+        `4Ps card logging skipped for case ${caseId}: ${(err as Error)?.message ?? err}`,
+      );
     }
   }
 
@@ -192,18 +216,21 @@ export class FourPsService {
     return { total, complied, rate: total > 0 ? complied / total : 0, byType, entries: enriched };
   }
 
-  async markComplied(id: string, userId: string): Promise<void> {
+  async markComplied(id: string, actor: CardLoggingActor): Promise<void> {
     const entry = await this.complianceRepo.findOne({ where: { id } });
     if (!entry) throw new NotFoundException('Compliance entry not found');
     entry.met = true;
     entry.metAt = new Date();
-    entry.metBy = userId;
+    entry.metBy = actor.id;
     await this.complianceRepo.save(entry);
     await this.logToCard(entry.caseId, {
       serviceRendered: `4Ps compliance — ${entry.complianceType || 'condition'}${entry.monthLabel ? ` (${entry.monthLabel})` : ''}`,
       serviceDate: new Date(),
-      category: '4ps_compliance',
-    });
+      // 'compliance', not a 4Ps-specific value: the card's category tabs filter on
+      // the shared vocabulary, and a private value would match no tab at all. The
+      // "4Ps" attribution lives in serviceRendered.
+      category: 'compliance',
+    }, actor);
   }
 
   async unmarkComplied(id: string): Promise<void> {
@@ -218,6 +245,7 @@ export class FourPsService {
   async schedulePayout(
     caseId: string,
     input: { cycleNo?: string; scheduledAt: string; amount?: number },
+    actor: CardLoggingActor,
   ): Promise<CasePayout> {
     const payout = await this.payoutRepo.save(this.payoutRepo.create({
       caseId,
@@ -230,15 +258,16 @@ export class FourPsService {
       serviceRendered: `4Ps payout scheduled${input.cycleNo ? ` — ${input.cycleNo}` : ''}`,
       serviceDate: new Date(input.scheduledAt),
       cost: input.amount,
-      category: '4ps_payout',
-    });
+      category: 'payout',
+    }, actor);
     return payout;
   }
 
   async setPayoutStatus(
     id: string,
     status: 'completed' | 'missed' | 'cancelled',
-    remarks?: string,
+    remarks: string | undefined,
+    actor: CardLoggingActor,
   ): Promise<CasePayout> {
     const payout = await this.payoutRepo.findOne({ where: { id } });
     if (!payout) throw new NotFoundException('Payout not found');
@@ -266,8 +295,8 @@ export class FourPsService {
           serviceRendered: `4Ps payout released${payout.cycleNo ? ` — ${payout.cycleNo}` : ''}`,
           serviceDate: payout.scheduledAt ? new Date(payout.scheduledAt) : new Date(),
           cost: payout.amount,
-          category: '4ps_payout',
-        });
+          category: 'payout',
+        }, actor);
       } catch {
         // Intervention/card logging is best-effort; the payout status stands.
       }

@@ -307,10 +307,20 @@ export async function migrate() {
   await q.query(`DELETE FROM case_requirements a USING case_requirements b
     WHERE a.id < b.id AND a.case_id = b.case_id AND a.requirement_key = b.requirement_key`);
   await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_case_requirements_case_key ON case_requirements(case_id, requirement_key)`);
-  await q.query(`INSERT INTO case_requirements (case_id, requirement_key, met)
-    SELECT c.id, e.key, e.value::boolean
-    FROM cases c, jsonb_each(c.requirements_checklist) AS e
-    WHERE c.requirements_checklist IS NOT NULL`);
+  // Decompose the JSONB checklist into case_requirements. Guarded because
+  // CaseDecompose…0048 (Wave 1) drops cases.requirements_checklist, so on any
+  // database that came up through the migration chain the column is already gone
+  // and CreateCaseChildTables…0041 has done this backfill. Unguarded, this threw
+  // and aborted the whole bootstrap — which is the supported upgrade path for
+  // existing databases, so nothing below it (including later repairs) ever ran.
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='cases' AND column_name='requirements_checklist') THEN
+      INSERT INTO case_requirements (case_id, requirement_key, met)
+        SELECT c.id, e.key, e.value::boolean
+        FROM cases c, jsonb_each(c.requirements_checklist) AS e
+        WHERE c.requirements_checklist IS NOT NULL;
+    END IF;
+  END $$;`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS case_referrals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
@@ -529,6 +539,15 @@ export async function migrate() {
   await q.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS logged_by UUID REFERENCES users(id)`);
   await q.query(`ALTER TABLE access_card_services ADD COLUMN IF NOT EXISTS source_barangay TEXT`);
 
+  // 4Ps wrote its own category values ('4ps_compliance', '4ps_payout'), which the
+  // card's category tabs do not filter on, so those rows showed under "All" only.
+  // Fold them onto the sanctioned vocabulary; the "4Ps" attribution stays in
+  // service_rendered. Idempotent — both statements match nothing on a rerun, and
+  // a fresh boot has no rows to fold. Mirrors
+  // ZRenormalizeFourPsCardCategories0000000000067 for the existing-DB path.
+  await q.query(`UPDATE access_card_services SET category = 'compliance' WHERE category = '4ps_compliance'`);
+  await q.query(`UPDATE access_card_services SET category = 'payout' WHERE category = '4ps_payout'`);
+
   await q.query(`CREATE TABLE IF NOT EXISTS referrals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     coordinator_id UUID NOT NULL REFERENCES users(id),
@@ -549,10 +568,21 @@ export async function migrate() {
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
-  await q.query(`ALTER TABLE referrals ALTER COLUMN surname DROP NOT NULL`);
-  await q.query(`ALTER TABLE referrals ALTER COLUMN first_name DROP NOT NULL`);
-  await q.query(`ALTER TABLE referrals ALTER COLUMN gender DROP NOT NULL`);
-  await q.query(`ALTER TABLE referrals ALTER COLUMN dob DROP NOT NULL`);
+  // The denormalized person copy on referrals (surname, first_name, gender, dob)
+  // is optional. ReferralPersonLink…0049 (Wave 2) replaced it with a person_id
+  // relation and dropped the columns, so relaxing NOT NULL is a no-op on any
+  // database that came up through the migration chain — and an unconditional
+  // ALTER threw there, aborting the bootstrap.
+  await q.query(`DO $$ DECLARE col TEXT; BEGIN
+    FOREACH col IN ARRAY ARRAY['surname','first_name','gender','dob'] LOOP
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='referrals' AND column_name=col
+      ) THEN
+        EXECUTE format('ALTER TABLE referrals ALTER COLUMN %I DROP NOT NULL', col);
+      END IF;
+    END LOOP;
+  END $$;`);
   // F13 (deployability): the Referral entity maps an eager person relation via
   // person_id; without the column, GET /referrals/counts (and any repo.count
   // touching the relation) fails with "column Referral.person_id does not

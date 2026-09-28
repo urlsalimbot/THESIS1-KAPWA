@@ -4,6 +4,10 @@ import { Repository } from 'typeorm';
 import { buildAccessCardPdf } from './access-card-pdf.builder';
 import { AccessCardPdfData } from './access-card-pdf.types';
 import { AccessCardService } from './access-card-service.entity';
+import { LogServiceInput } from './dto/access-cards.zod';
+
+/** A category the card's tabs and every logging form agree on. */
+export type AccessCardCategory = NonNullable<LogServiceInput['category']>;
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { Agency } from '../agencies/agency.entity';
@@ -179,7 +183,7 @@ export class AccessCardsService {
     return { beneficiary: ben[0], code: ben[0].access_card_code, services };
   }
 
-  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agencyId?: string; workerNameSign?: string; category?: string; loggedBy?: string; sourceBarangay?: string }) {
+  async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agencyId?: string; workerNameSign?: string; category?: AccessCardCategory; loggedBy?: string; sourceBarangay?: string }) {
     const entry = this.repo.create({
       accessCardCode: data.accessCardCode,
       serviceRendered: data.serviceRendered,

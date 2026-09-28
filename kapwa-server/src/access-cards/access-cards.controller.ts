@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, ParseUUIDPipe, DefaultValuePipe, ParseIntPipe, Request, Res, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { LogServiceSchema } from './dto/access-cards.zod';
+import { LogServiceSchema, LogServiceInput } from './dto/access-cards.zod';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AbacGuard } from '../auth/guards/abac.guard';
@@ -60,7 +60,7 @@ export class AccessCardsController {
   @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
   @ApiOperation({ summary: 'Log a service to an access card' })
   async logService(
-    @Body(new ZodPipe(LogServiceSchema)) body: { accessCardCode: string; serviceRendered: string; serviceDate: string; cost?: number; agencyId?: string; workerNameSign?: string; category?: string },
+    @Body(new ZodPipe(LogServiceSchema)) body: LogServiceInput,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.svc.logService({
