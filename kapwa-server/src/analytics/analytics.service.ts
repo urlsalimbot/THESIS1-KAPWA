@@ -382,15 +382,16 @@ export class AnalyticsService {
     const lastMonth = months[months.length - 1];
     const forecast = model.forecast.map((value, i) => {
       const h = i + 1;
+      const point = Math.max(0, value);
       const band = 1.96 * model.residualStd * Math.sqrt(h);
       const [year, month] = lastMonth.split('-').map(Number);
       const d = new Date(Date.UTC(year, month - 1 + h, 1));
       const label = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
       return {
         month: label,
-        value: Math.max(0, Number(value.toFixed(2))),
-        lower: Math.max(0, Number((value - band).toFixed(2))),
-        upper: Number((value + band).toFixed(2)),
+        value: Number(point.toFixed(2)),
+        lower: Number(Math.max(0, point - band).toFixed(2)),
+        upper: Number(Math.max(point, point + band).toFixed(2)),
       };
     });
 
