@@ -34,7 +34,9 @@ export function profileConfig(profile) {
     case 'quick':
       return { smoke, reads: readsQuick, writes: writesQuick };
     case 'full':
+      return { smoke, reads: readsFull, writes: writesFull };
     default:
+      if (profile !== 'full') console.warn(`unknown PROFILE "${profile}", falling back to full`);
       return { smoke, reads: readsFull, writes: writesFull };
   }
 }

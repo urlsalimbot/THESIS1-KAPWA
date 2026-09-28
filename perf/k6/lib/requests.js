@@ -3,8 +3,9 @@ import { check, sleep } from 'k6';
 import { BASE_URL } from '../config.js';
 import { authHeaders } from './auth.js';
 
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 function endpointTag(path) {
-  return path.split('?')[0];
+  return path.split('?')[0].replace(UUID_RE, ':id');
 }
 
 export function get(path, token, tags = {}) {

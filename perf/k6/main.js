@@ -1,13 +1,22 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { Counter } from 'k6/metrics';
 import { BASE_URL, PROFILE, profileConfig, ACCOUNTS, UPLOAD, RESULTS_DIR } from './config.js';
 import { login, authHeaders, csrfToken } from './lib/auth.js';
 import { get, getAllow422, postJson, think } from './lib/requests.js';
 import { renderHtml } from './lib/summary.js';
 
+// Directly measured per-scenario iteration counts (k6's summary folds all
+// `iterations` samples together, so scenario counts need explicit counters).
+const readsIterations = new Counter('reads_iterations');
+const writesIterations = new Counter('writes_iterations');
+
 const thresholds = {
   http_req_failed: ['rate<0.01'],
   checks: ['rate>0.99'],
+  // Smoke failures abort the whole run: a broken auth/health path must not be
+  // averaged away by the load stages.
+  'checks{scenario:smoke}': [{ threshold: 'rate>0.99', abortOnFail: true, delayAbortEval: '2s' }],
 };
 if (PROFILE !== 'smoke') {
   thresholds['http_req_duration{scenario:reads}'] = ['p(95)<500'];
@@ -19,6 +28,9 @@ if (PROFILE !== 'smoke') {
 const samplePdf = UPLOAD ? open('./assets/sample.pdf', 'b') : null;
 
 export const options = {
+  // Keep each VU's cookie jar across iterations so the CSRF bootstrap happens
+  // once per VU instead of once per iteration.
+  noCookiesReset: true,
   scenarios: profileConfig(PROFILE),
   thresholds,
 };
@@ -41,6 +53,7 @@ export function smoke(data) {
 }
 
 export function reads(data) {
+  readsIterations.add(1);
   const token = data.worker.accessToken;
 
   get('/dashboard/metrics', token);
@@ -67,6 +80,7 @@ export function reads(data) {
 }
 
 export function writes(data) {
+  writesIterations.add(1);
   const token = data.worker.accessToken;
   const suffix = `${__VU}-${__ITER}-${Date.now()}`;
   const address = { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: '03', postalCode: '3012' };
@@ -104,7 +118,10 @@ export function writes(data) {
   };
 
   const res = postJson('/intake', token, payload);
-  const ok = check(res, { 'intake 200/201': r => r.status === 200 || r.status === 201 });
+  const ok = check(res, {
+    'intake 200/201': r => r.status === 200 || r.status === 201,
+    'intake has caseId': r => { try { return Boolean(r.json('caseId')); } catch { return false; } },
+  });
 
   if (ok && UPLOAD) {
     const caseId = res.json('caseId');

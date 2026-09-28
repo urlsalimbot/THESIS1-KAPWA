@@ -30,15 +30,6 @@ export function login(email, password) {
   return { accessToken: body.accessToken, refreshToken: body.refreshToken };
 }
 
-export function refresh(refreshToken) {
-  const res = http.post(`${BASE_URL}/auth/refresh`, JSON.stringify({ refreshToken }), {
-    headers: { 'Content-Type': 'application/json', [CSRF_HEADER]: csrfToken() },
-    tags: { endpoint: 'auth-refresh' },
-  });
-  if (res.status !== 200) return '';
-  return res.json('accessToken') || '';
-}
-
 export function ensureCsrf() {
   if (!csrfToken()) bootstrapCsrf();
 }

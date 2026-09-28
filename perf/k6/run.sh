@@ -185,7 +185,7 @@ elif docker info >/dev/null 2>&1; then
   docker run --rm --network host --user "$(id -u):$(id -g)" \
     -v "$K6_DIR:/scripts:ro" -v "$RUN_DIR:/results" \
     -e BASE_URL="$BASE_URL" -e PROFILE="$profile" -e RESULTS_DIR=/results -e UPLOAD="$upload" \
-    grafana/k6 run /scripts/main.js
+    grafana/k6:2.3.0 run /scripts/main.js
   k6_status=$?
 elif command -v podman >/dev/null 2>&1; then
   runner=podman
@@ -194,13 +194,22 @@ elif command -v podman >/dev/null 2>&1; then
   podman run --rm --network host --userns=keep-id --user "$(id -u):$(id -g)" \
     -v "$K6_DIR:/scripts:ro" -v "$RUN_DIR:/results" \
     -e BASE_URL="$BASE_URL" -e PROFILE="$profile" -e RESULTS_DIR=/results -e UPLOAD="$upload" \
-    docker.io/grafana/k6 run /scripts/main.js
+    docker.io/grafana/k6:2.3.0 run /scripts/main.js
   k6_status=$?
 else
   echo "no k6 runner available: install k6, or start docker, or install podman" >&2
   exit 2
 fi
 set -e
+
+# Capture the k6 version that actually ran (before writing run metadata).
+case "$runner" in
+  local)  k6_version=$(k6 version 2>/dev/null | head -1) ;;
+  docker) k6_version=$(docker run --rm grafana/k6:2.3.0 version 2>/dev/null | head -1) ;;
+  podman) k6_version=$(podman run --rm docker.io/grafana/k6:2.3.0 version 2>/dev/null | head -1) ;;
+  *)      k6_version="" ;;
+esac
+k6_version=${k6_version:-unknown}
 
 # 8. Run metadata + teardown
 cat > "$RUN_DIR/run-meta.json" <<JSON
@@ -209,6 +218,7 @@ cat > "$RUN_DIR/run-meta.json" <<JSON
   "startedAt": "$startedAt",
   "profile": "$profile",
   "runner": "$runner",
+  "k6Version": "$k6_version",
   "baseUrl": "$BASE_URL",
   "database": "$DB_NAME",
   "throttleLimit": "100000",
