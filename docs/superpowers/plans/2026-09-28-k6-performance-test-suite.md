@@ -915,8 +915,9 @@ function esc(value) {
 function metricRow(name, metric) {
   const values = metric.values || {};
   let value = '';
-  if (metric.type === 'rate') value = `${(values.rate * 100).toFixed(2)}%`;
+  if (metric.type === 'rate') value = `${((values.rate ?? 0) * 100).toFixed(2)}%`;
   else if (metric.type === 'trend') value = values['p(95)'] !== undefined ? `${Number(values['p(95)']).toFixed(1)} ms` : '';
+  else if (metric.type === 'gauge') value = `${values.value ?? ''}`;
   else value = `${values.count ?? ''}${values.rate !== undefined ? ` (${Number(values.rate).toFixed(1)}/s)` : ''}`;
   return `<tr><td>${esc(name)}</td><td>${esc(metric.type)}</td><td>${esc(value)}</td><td>${esc(values.avg !== undefined ? Number(values.avg).toFixed(1) : '')}</td></tr>`;
 }
@@ -952,10 +953,6 @@ h2{margin-top:2rem}
 <h2>Key metrics</h2>
 <table><thead><tr><th>Metric</th><th>Type</th><th>Value</th><th>Avg</th></tr></thead><tbody>${keyMetrics.map(name => metricRow(name, metrics[name])).join('')}</tbody></table>
 </body></html>`;
-}
-
-export function writeSummary(data) {
-  return { summaryJson: JSON.stringify(data, null, 2), summaryHtml: renderHtml(data) };
 }
 ```
 
@@ -1009,7 +1006,7 @@ threshold fails.
 | `run.sh --stop` | Tear down a `--stack-only` stack |
 | `run.sh --profile smoke\|reads\|writes\|quick\|full` | Pick scenario set |
 | `run.sh --reset-db` | Drop/recreate `kapwa_perf` first |
-| `run.sh --no-build` | Skip the server build step |
+| `run.sh --no-build` | Skip the server build step (still builds when `dist/main.js` is missing) |
 | `run.sh --upload` | Enable the MinIO upload scenario (requires MinIO running) |
 
 ## Scenarios
@@ -1032,9 +1029,9 @@ threshold fails.
 
 ## Interpreting results
 
-- Analytics and dashboard endpoints are cached for 5 minutes; a second run without a
-  data change will mostly measure the cache. Restart the server (or vary filters) for
-  cold-path numbers.
+- Analytics and dashboard *trends* are cached for 5 minutes and `/dashboard/metrics`
+  for 30 s; a second run without a data change will mostly measure the cache. Restart
+  the server (or vary filters) for cold-path numbers.
 - The writes scenario grows the `kapwa_perf` database by design; use `--reset-db` to
   start clean and to keep run-to-run comparisons honest. **Repeat seeding without a
   reset currently fails** because a repeated intake for an existing person hits an app
