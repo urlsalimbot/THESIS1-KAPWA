@@ -53,12 +53,39 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
 function ordinal(q: number): string { return ['1st', '2nd', '3rd', '4th'][q - 1] ?? `${q}th`; }
 
 function drawLetterhead(doc: any, data: SummaryReportData, full: boolean) {
-  // Municipal seal (left) + DSWD seal (right) framing the letterhead, guarded
-  // so a missing asset never breaks the report.
   const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
   const dswdPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
-  if (fs.existsSync(sealPath)) { try { doc.image(sealPath, LEFT, 20, { fit: [46, 46] }); } catch { /* seal omitted */ } }
-  if (fs.existsSync(dswdPath)) { try { doc.image(dswdPath, RIGHT - 46, 20, { fit: [46, 46] }); } catch { /* seal omitted */ } }
+  const BADGE = 46;
+  const GAP = 20; // keep the seals 20pt from the letterhead text
+
+  // Letterhead lines (font/size/text) — used both to render the text and to
+  // place the badges at a fixed 20pt gap from its edges.
+  const lines: Array<{ text: string; size: number; bold: boolean }> = full
+    ? [
+        { text: 'Republic of the Philippines', size: 9, bold: true },
+        { text: 'Province of Bulacan', size: 8, bold: false },
+        { text: 'Municipality of Norzagaray', size: 8, bold: false },
+      ]
+    : [{ text: 'Municipality of Norzagaray', size: 9, bold: true }];
+  lines.push(
+    { text: data.officeName.toUpperCase(), size: 8.5, bold: true },
+    { text: `ACCOMPLISHMENT REPORT (Services) ${data.year}`, size: 7.5, bold: false },
+  );
+
+  const widest = lines.reduce((w, l) => {
+    doc.font(l.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(l.size);
+    return Math.max(w, doc.widthOfString(l.text));
+  }, 0);
+  const textLeft = (LEFT + RIGHT) / 2 - widest / 2;
+  const textRight = (LEFT + RIGHT) / 2 + widest / 2;
+  const textTop = M;
+  const textBottom = (full ? M + 32 : M + 12) + 10;
+  const badgeY = Math.max(M - BADGE / 2 + 8, (textTop + textBottom) / 2 - BADGE / 2);
+
+  const sealX = Math.max(LEFT, textLeft - GAP - BADGE);
+  const dswdX = Math.min(RIGHT - BADGE, textRight + GAP);
+  if (fs.existsSync(sealPath)) { try { doc.image(sealPath, sealX, badgeY, { fit: [BADGE, BADGE] }); } catch { /* seal omitted */ } }
+  if (fs.existsSync(dswdPath)) { try { doc.image(dswdPath, dswdX, badgeY, { fit: [BADGE, BADGE] }); } catch { /* seal omitted */ } }
 
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111');
   if (full) {
