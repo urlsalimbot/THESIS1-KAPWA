@@ -1,8 +1,9 @@
 import http from 'k6/http';
 import { check } from 'k6';
-import { BASE_URL, PROFILE, profileConfig, ACCOUNTS, UPLOAD } from './config.js';
+import { BASE_URL, PROFILE, profileConfig, ACCOUNTS, UPLOAD, RESULTS_DIR } from './config.js';
 import { login, authHeaders, csrfToken } from './lib/auth.js';
 import { get, getAllow422, postJson, think } from './lib/requests.js';
+import { renderHtml } from './lib/summary.js';
 
 const thresholds = {
   http_req_failed: ['rate<0.01'],
@@ -118,4 +119,11 @@ export function writes(data) {
   }
 
   think(1, 2);
+}
+
+export function handleSummary(data) {
+  return {
+    [`${RESULTS_DIR}/summary.json`]: JSON.stringify(data, null, 2),
+    [`${RESULTS_DIR}/summary.html`]: renderHtml(data),
+  };
 }
