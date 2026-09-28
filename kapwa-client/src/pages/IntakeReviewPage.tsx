@@ -17,6 +17,7 @@ import { clearDraft } from '@/hooks/useIntakeAutosave';
 interface MatchCandidate {
   householdId: string;
   score: number;
+  matchedOn: string[];
   caseExistsWithin30Days: boolean;
   primaryBeneficiary: {
     id: string; surname: string; firstName: string; middleName?: string;
@@ -35,10 +36,21 @@ interface LocationState {
   intakeData: any;
 }
 
+// Server-issued reasons (match-scoring MATCH_REASON_TOKENS) shown on the card.
+const MATCHED_ON_LABELS: Record<string, string> = {
+  phone: 'Phone match',
+  email: 'Email match',
+  philhealth: 'PhilHealth match',
+  both_names: 'Both names',
+  dob_name: 'DOB + name',
+  phonetic_surname: 'Sound-alike surname',
+  family_member: 'Family member',
+};
+
 function confidenceLabel(score: number, t: TFunction): { label: string; className: string } {
-  if (score >= 0.8) return { label: t('intake.confidenceVeryLikely', 'Very likely the same person'), className: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
-  if (score >= 0.5) return { label: t('intake.confidenceSome', 'Some similarities'), className: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
-  return { label: t('intake.confidenceSameSurname', 'Same surname only'), className: 'bg-gray-100 text-gray-600 border-gray-300' };
+  if (score >= 0.6) return { label: t('intake.confidenceVeryLikely', 'Very likely the same person'), className: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+  if (score >= 0.35) return { label: t('intake.confidenceSome', 'Some similarities'), className: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
+  return { label: t('intake.confidenceSameSurname', 'Possible match'), className: 'bg-gray-100 text-gray-600 border-gray-300' };
 }
 
 function eligibilityNote(candidate: MatchCandidate, t: TFunction): { text: string; icon: 'check' | 'info' } {
@@ -206,6 +218,16 @@ export function IntakeReviewPage() {
                   {elig.icon === 'info' ? <Info size={16} className="mt-0.5 shrink-0" /> : <CheckCircle size={16} className="mt-0.5 shrink-0" />}
                   <span>{elig.text}</span>
                 </div>
+
+                {c.matchedOn && c.matchedOn.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.matchedOn.map(token => (
+                      <span key={token} className="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                        {MATCHED_ON_LABELS[token] ?? token}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-2">
                   <Button

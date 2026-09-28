@@ -590,6 +590,10 @@ export function IntakePage() {
         middleName: beneficiary.middleName || undefined,
         familyMembers: family.filter(m => m.surname.trim()).map(f => ({ surname: f.surname, firstName: f.firstName })),
         barangay: beneficiary.currentAddress.barangay || undefined,
+        dob: beneficiary.dob || undefined,
+        phone: beneficiary.cellularNumber || undefined,
+        email: beneficiary.email || undefined,
+        philhealthNumber: beneficiary.philhealthNumber || undefined,
       });
 
       if (matchResult.candidates && matchResult.candidates.length > 0) {

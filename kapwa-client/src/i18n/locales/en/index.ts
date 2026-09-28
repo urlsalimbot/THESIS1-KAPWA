@@ -1455,7 +1455,7 @@ const en = {
     "claimantRelationshipRequired": "Please specify claimant relationship to beneficiary",
     "clientName": "Name of the Client",
     "clientRegistered": "Client registered",
-    "confidenceSameSurname": "Same surname only",
+    "confidenceSameSurname": "Possible match",
     "confidenceSome": "Some similarities",
     "confidenceVeryLikely": "Very likely the same person",
     "consentRequired": "Consent required per Data Privacy Act (RA 10173)",

@@ -37,7 +37,7 @@ let mockLocationState: any = {
     },
     {
       householdId: 'hh-2',
-      score: 0.65,
+      score: 0.45,
       caseExistsWithin30Days: true,
       primaryBeneficiary: {
         id: 'ben-2', surname: 'Cruz', firstName: 'Rosa',
@@ -102,7 +102,7 @@ describe('IntakeReviewPage', () => {
         },
         {
           householdId: 'hh-2',
-          score: 0.65,
+          score: 0.45,
           caseExistsWithin30Days: true,
           primaryBeneficiary: {
             id: 'ben-2', surname: 'Cruz', firstName: 'Rosa',

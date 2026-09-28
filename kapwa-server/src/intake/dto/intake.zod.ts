@@ -90,6 +90,12 @@ export const MatchCheckInputSchema = z.object({
     firstName: z.string().min(1),
   })).optional(),
   barangay: z.string().optional(),
+  // Optional PII. Each is a corroborator or (for unique identifiers) an
+  // independent trigger in the match rule; absent when the caller has no value.
+  dob: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  philhealthNumber: z.string().optional(),
 });
 
 export type MatchCheckInput = z.infer<typeof MatchCheckInputSchema>;
@@ -97,6 +103,8 @@ export type MatchCheckInput = z.infer<typeof MatchCheckInputSchema>;
 export interface MatchCandidate {
   householdId: string;
   score: number;
+  /** Human-readable reasons this household was flagged (e.g. "Phone", "DOB + name"). */
+  matchedOn: string[];
   caseExistsWithin30Days: boolean;
   primaryBeneficiary: {
     id: string;

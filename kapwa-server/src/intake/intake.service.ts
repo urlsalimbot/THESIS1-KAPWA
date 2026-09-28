@@ -17,7 +17,7 @@ import { AccountProvisioningService } from '../accounts/account-provisioning.ser
 import { Referral, ReferralStatus } from '../referrals/referral.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { memberToPerson } from './member-person';
-import { assessMatchCandidate } from './match-scoring';
+import { assessMatchCandidate, soundex } from './match-scoring';
 import { User, UserRole } from '../auth/user.entity';
 import type { IntakeInput, MatchCheckInput, MatchCandidate, ConfirmMatchInput, ConfirmMatchResponse } from './dto/intake.zod';
 
@@ -560,8 +560,9 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
   async matchCheck(data: MatchCheckInput, workerBarangays: string[]): Promise<{ candidates: MatchCandidate[] }> {
     const familyNames = (data.familyMembers || []).map(f => `${f.surname}, ${f.firstName}`).filter(Boolean);
 
-    // Score in SQL (pg_trgm), decide in assessMatchCandidate: the coarse WHERE
-    // keeps every row that could still qualify under either branch of the rule.
+    // Score in SQL (pg_trgm + cheap exact-PII flags), decide in TS:
+    // the coarse WHERE is multi-pass blocking (name trigram OR any PII block)
+    // that keeps every row that could still qualify under assessMatchCandidate.
     const raw = await this.dataSource.query(
       `WITH household_scores AS (
         SELECT
@@ -578,7 +579,27 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
               WHERE hm2.household_id = h.id
               GROUP BY u.name
             ) sub
-          ) ELSE 0 END AS family_score
+          ) ELSE 0 END AS family_score,
+          (CASE WHEN $4 IS NOT NULL AND $4 ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN p.dob = $4::date ELSE false END) AS dob_match,
+          (CASE WHEN $5 IS NOT NULL AND $5 <> '' THEN EXISTS (
+            SELECT 1 FROM person_contacts pc
+            WHERE pc.person_id = b.person_id AND pc.contact_type = 'phone'
+              AND right('0000000000' || regexp_replace(pc.value, '[^0-9]', '', 'g'), 10)
+                = right('0000000000' || regexp_replace($5, '[^0-9]', '', 'g'), 10)
+          ) ELSE false END) AS phone_match,
+          (CASE WHEN $6 IS NOT NULL AND $6 <> '' THEN EXISTS (
+            SELECT 1 FROM person_contacts pc
+            WHERE pc.person_id = b.person_id AND pc.contact_type = 'email'
+              AND lower(trim(pc.value)) = lower(trim($6))
+          ) ELSE false END) AS email_match,
+          (CASE WHEN $7 IS NOT NULL AND $7 <> '' THEN
+            COALESCE(regexp_replace(p.philhealth_number, '[^0-9]', '', 'g') = regexp_replace($7, '[^0-9]', '', 'g'), false)
+          ELSE false END) AS philhealth_match,
+          (CASE WHEN $8 IS NOT NULL AND $8 <> '' THEN EXISTS (
+            SELECT 1 FROM person_addresses pa
+            WHERE pa.person_id = b.person_id AND pa.address_type = 'current'
+              AND lower(trim(pa.barangay)) = lower(trim($8))
+          ) ELSE false END) AS barangay_match
         FROM households h
         JOIN beneficiaries b ON h.primary_beneficiary_id = b.id
         JOIN persons p ON p.id = b.person_id
@@ -586,6 +607,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       SELECT
         hs.id AS household_id,
         hs.sim_surname, hs.sim_first, hs.family_score,
+        hs.dob_match, hs.phone_match, hs.email_match, hs.philhealth_match, hs.barangay_match,
         b.id AS ben_id, p.surname, p.first_name,
         (SELECT pa2.raw FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' LIMIT 1) AS address,
         (SELECT pc2.value FROM person_contacts pc2 WHERE pc2.person_id = p.id AND pc2.contact_type = 'phone' LIMIT 1) AS phone,
@@ -621,9 +643,11 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       JOIN persons p ON p.id = b.person_id
       LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
       WHERE hs.sim_surname >= 0.4 OR hs.sim_first >= 0.4 OR hs.family_score >= 0.6
+        OR hs.dob_match OR hs.phone_match OR hs.email_match OR hs.philhealth_match OR hs.barangay_match
       ORDER BY (0.6 * ((hs.sim_surname + hs.sim_first) / 2) + 0.4 * hs.family_score) DESC
       LIMIT 50`,
-      [data.surname, data.firstName, familyNames.length > 0 ? familyNames : null],
+      [data.surname, data.firstName, familyNames.length > 0 ? familyNames : null,
+        data.dob ?? null, data.phone ?? null, data.email ?? null, data.philhealthNumber ?? null, data.barangay ?? null],
     );
 
     const candidates: MatchCandidate[] = (raw as any[])
@@ -633,6 +657,12 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           simSurname: parseFloat(r.sim_surname) || 0,
           simFirstName: parseFloat(r.sim_first) || 0,
           familyScore: parseFloat(r.family_score) || 0,
+          dobMatch: Boolean(r.dob_match),
+          phoneMatch: Boolean(r.phone_match),
+          emailMatch: Boolean(r.email_match),
+          philhealthMatch: Boolean(r.philhealth_match),
+          barangayMatch: Boolean(r.barangay_match),
+          surnamePhoneticMatch: soundex(r.surname) === soundex(data.surname),
         }),
       }))
       .filter(({ assessment, row }) => {
@@ -647,6 +677,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       .map(({ row: r, assessment }) => ({
         householdId: r.household_id,
         score: assessment.score,
+        matchedOn: assessment.matchedOn,
         caseExistsWithin30Days: Boolean(r.case_exists_30d),
         primaryBeneficiary: {
           id: r.ben_id,

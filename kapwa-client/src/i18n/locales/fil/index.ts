@@ -751,7 +751,7 @@ const fil: EnLocale = {
     "claimantRelationshipRequired": "Pakilagay ang relasyon ng claimant sa benepisyaryo",
     "clientName": "Pangalan ng Kliyente",
     "clientRegistered": "Nakarehistro ang kliyente",
-    "confidenceSameSurname": "Pareho lang ang apelyido",
+    "confidenceSameSurname": "Posibleng tugma",
     "confidenceSome": "May pagkakahawig",
     "confidenceVeryLikely": "Malamang na parehong tao",
     "consentRequired": "Kinakailangan ang pahintulot ayon sa Data Privacy Act (RA 10173)",
