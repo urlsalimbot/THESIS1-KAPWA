@@ -346,10 +346,15 @@ export class CasesExportService {
   }
 
   // Manual issuance (spec §2). Idempotent: an already-issued document is
-  // returned as-is without filing a duplicate.
+  // returned as-is without filing a duplicate — but only while its file is
+  // still on disk. A stored URL whose file is gone (uploads volume cleaned or
+  // rotated) is treated as stale: urlFileLive deletes the dead filing row and
+  // clears the case URL, and a fresh certificate is issued below.
   async issueCoe(caseId: string, actorId?: string): Promise<string> {
     const c = await this.requireCase(caseId);
-    if (c.certificateUrl) return c.certificateUrl;
+    if (c.certificateUrl && (await this.filing.urlFileLive(c.certificateUrl))) {
+      return c.certificateUrl;
+    }
     const pdf = await this.buildCertificateOfEligibility(c, actorId);
     const doc = await this.filing.upload(
       { originalname: `COE-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: pdf.length, buffer: pdf },
@@ -362,7 +367,9 @@ export class CasesExportService {
 
   async issuePcv(caseId: string, actorId?: string): Promise<string> {
     const c = await this.requireCase(caseId);
-    if (c.pettyCashVoucherUrl) return c.pettyCashVoucherUrl;
+    if (c.pettyCashVoucherUrl && (await this.filing.urlFileLive(c.pettyCashVoucherUrl))) {
+      return c.pettyCashVoucherUrl;
+    }
     const pdf = await this.buildPettyCashVoucher(c);
     const doc = await this.filing.upload(
       { originalname: `PCV-${c.controlNo}.pdf`, mimetype: 'application/pdf', size: pdf.length, buffer: pdf },

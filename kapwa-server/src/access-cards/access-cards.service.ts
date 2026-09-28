@@ -183,6 +183,25 @@ export class AccessCardsService {
     return { beneficiary: ben[0], code: ben[0].access_card_code, services };
   }
 
+  // Card lookup by its human-readable code (e.g. NORZ-AC-2026-0001) instead of
+  // a beneficiary UUID — the coordinator flow only ever has the printed code.
+  // Same response shape as findBeneficiaryCard.
+  async findCardByCode(cardCode: string, caller?: User) {
+    await this.assertCardAccess(caller, { cardCode });
+    const ben = await this.repo.query(
+      'SELECT b.id, COALESCE(h.access_card_code, br.access_card_code) AS access_card_code, p.surname, p.first_name FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id JOIN persons p ON p.id = b.person_id WHERE COALESCE(h.access_card_code, br.access_card_code) = $1 LIMIT 1',
+      [cardCode]
+    );
+    if (!ben?.[0]?.access_card_code) {
+      throw new NotFoundException('No access card found for this code');
+    }
+    const services = await this.repo.find({
+      where: { accessCardCode: ben[0].access_card_code },
+      order: { serviceDate: 'DESC' },
+    });
+    return { beneficiary: ben[0], code: ben[0].access_card_code, services };
+  }
+
   async logService(data: { accessCardCode: string; serviceRendered: string; serviceDate: Date; cost?: number; agencyId?: string; workerNameSign?: string; category?: AccessCardCategory; loggedBy?: string; sourceBarangay?: string }) {
     // Validate here as well as in ZodPipe. This method is public and is called
     // directly by the 4Ps module and by autoLogFromIntervention, which have no

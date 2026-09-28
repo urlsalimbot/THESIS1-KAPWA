@@ -120,6 +120,63 @@ describe('AccessCardsService', () => {
     });
   });
 
+  describe('findCardByCode', () => {
+    // Same shape as findBeneficiaryCard, but keyed on the printed card code —
+    // the coordinator flow only ever has NORZ-AC-YYYY-NNNN, never a UUID.
+    it('returns the card, beneficiary and services for a card code', async () => {
+      const benData = { id: 'ben-id', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John' };
+      repoMock.query.mockResolvedValue([benData]);
+      repoMock.find.mockResolvedValue([{ id: 's1', accessCardCode: 'NORZ-AC-2026-0042' }]);
+
+      const result = await service.findCardByCode('NORZ-AC-2026-0042', { role: 'admin' } as any);
+
+      expect(result).toEqual({
+        beneficiary: benData,
+        code: 'NORZ-AC-2026-0042',
+        services: [{ id: 's1', accessCardCode: 'NORZ-AC-2026-0042' }],
+      });
+      expect(repoMock.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE COALESCE(h.access_card_code, br.access_card_code) = $1'),
+        ['NORZ-AC-2026-0042']
+      );
+      expect(repoMock.find).toHaveBeenCalledWith({
+        where: { accessCardCode: 'NORZ-AC-2026-0042' },
+        order: { serviceDate: 'DESC' },
+      });
+    });
+
+    it('throws NotFoundException when no beneficiary owns the code', async () => {
+      repoMock.query.mockResolvedValue([]);
+      await expect(service.findCardByCode('NORZ-AC-9999', { role: 'admin' } as any))
+        .rejects.toThrow('No access card found for this code');
+    });
+
+    it('allows agency_staff when a referral links their agency to the card', async () => {
+      // assertCardAccess: beneficiary lookup, then referral link check, then
+      // the findCardByCode beneficiary lookup.
+      repoMock.query
+        .mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }])
+        .mockResolvedValueOnce([{ '?column?': 1 }])
+        .mockResolvedValueOnce([{ id: 'b1', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John' }]);
+      repoMock.find.mockResolvedValueOnce([]);
+
+      const result = await service.findCardByCode(
+        'NORZ-AC-2026-0042',
+        { id: 'a1', role: 'agency_staff', agencyId: 'ag-1' } as any,
+      );
+      expect(result.code).toBe('NORZ-AC-2026-0042');
+    });
+
+    it('blocks agency_staff with no referral link via the same gate as findByCard', async () => {
+      repoMock.query
+        .mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }])
+        .mockResolvedValueOnce([]);
+      await expect(
+        service.findCardByCode('NORZ-AC-2026-0042', { id: 'a1', role: 'agency_staff', agencyId: 'ag-9' } as any),
+      ).rejects.toThrow('No referral links');
+    });
+  });
+
   describe('logService', () => {
     it('creates and saves a service entry', async () => {
       const data = { accessCardCode: 'NORZ-AC-2026-0042', serviceRendered: 'Medical Aid', serviceDate: new Date() };

@@ -9,7 +9,6 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { FilingService } from './filing.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { UploadMetadataSchema, VerifyDocumentSchema, VerifyDocumentInput } from './dto/filing.zod';
-import * as path from 'path';
 import * as fs from 'fs';
 
 @ApiTags('Filing')
@@ -102,8 +101,13 @@ export class FilingController {
     if (!this.filingService.isPhotoAccessAllowed(req.user?.role, doc.category)) {
       throw new ForbiddenException('You do not have access to this document');
     }
-    const filePath = path.resolve(process.cwd(), 'uploads', doc.fileName);
-    if (!fs.existsSync(filePath)) throw new NotFoundException('File not found on disk');
+    // Missing on disk = stale record (uploads volume cleaned/rotated). The row
+    // is deleted and, for approval documents, the case's certificate/PCV URL
+    // cleared so the UI can re-issue — the client distinguishes this message.
+    if (!(await this.filingService.ensureFileOnDisk(doc))) {
+      throw new NotFoundException('File not found on disk: the stored document was removed and its record cleaned up. Re-upload or re-issue the document.');
+    }
+    const filePath = this.filingService.diskPath(doc.fileName);
     const stream = fs.createReadStream(filePath);
     res.set({ 'Content-Type': doc.mimeType || 'application/octet-stream', 'Content-Disposition': `attachment; filename="${doc.originalName}"` });
     return new StreamableFile(stream);

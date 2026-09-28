@@ -116,7 +116,7 @@ describe('CasesExportService', () => {
       save: jest.fn(async (x: any) => x),
       manager: { query: jest.fn().mockResolvedValue([]) },
     };
-    const filing = { upload: jest.fn().mockResolvedValue({ id: 'doc-1' }) };
+    const filing = { upload: jest.fn().mockResolvedValue({ id: 'doc-1' }), urlFileLive: jest.fn().mockResolvedValue(true) };
     const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, filing, {} as any);
     svc.org = { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') };
 
@@ -132,21 +132,69 @@ describe('CasesExportService', () => {
     expect(pcv.originalname).toBe('PCV-KAPWA-2026-0001.pdf');
     expect((coe.buffer as Buffer).toString('latin1')).toContain('%PDF');
     expect(caseRepo.save).toHaveBeenCalledTimes(2);
+    // The stored URL was only reused after confirming its file is still live.
+    expect(filing.urlFileLive).toHaveBeenCalledWith(filedUrl);
   });
 
-  it('does not re-file or re-save when the document already exists', async () => {
+  it('does not re-file or re-save when the document already exists on disk', async () => {
     const filedUrl = '/filing/doc-9/download';
     const caseRepo = {
       findOne: jest.fn().mockResolvedValue({ ...baseCase, certificateUrl: filedUrl }),
       save: jest.fn(),
       manager: { query: jest.fn().mockResolvedValue([]) },
     };
-    const filing = { upload: jest.fn() };
+    const filing = { upload: jest.fn(), urlFileLive: jest.fn().mockResolvedValue(true) };
     const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, filing, {} as any);
 
     await expect(svc.issueCoe('c1', 'u1')).resolves.toBe(filedUrl);
     expect(filing.upload).not.toHaveBeenCalled();
     expect(caseRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('re-issues the COE when the stored certificate file is gone from disk', async () => {
+    const filedUrl = '/filing/doc-1/download';
+    const caseRepo = {
+      findOne: jest.fn().mockResolvedValue({ ...baseCase, certificateUrl: filedUrl }),
+      save: jest.fn(async (x: any) => x),
+      manager: { query: jest.fn().mockResolvedValue([]) },
+    };
+    // urlFileLive=false models the stale record: the filing row was deleted and
+    // the case URL cleared, so issueCoe must fall through to a fresh PDF.
+    const filing = {
+      urlFileLive: jest.fn().mockResolvedValue(false),
+      upload: jest.fn().mockResolvedValue({ id: 'doc-2' }),
+    };
+    const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, filing, {} as any);
+    svc.org = { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') };
+
+    await expect(svc.issueCoe('c1', 'u1')).resolves.toBe('/filing/doc-2/download');
+    expect(filing.urlFileLive).toHaveBeenCalledWith(filedUrl);
+    expect(filing.upload).toHaveBeenCalledTimes(1);
+    expect(caseRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ certificateUrl: '/filing/doc-2/download' }),
+    );
+  });
+
+  it('re-issues the PCV when its stored file is gone from disk', async () => {
+    const filedUrl = '/filing/doc-1/download';
+    const caseRepo = {
+      findOne: jest.fn().mockResolvedValue({ ...baseCase, pettyCashVoucherUrl: filedUrl }),
+      save: jest.fn(async (x: any) => x),
+      manager: { query: jest.fn().mockResolvedValue([]) },
+    };
+    const filing = {
+      urlFileLive: jest.fn().mockResolvedValue(false),
+      upload: jest.fn().mockResolvedValue({ id: 'doc-3' }),
+    };
+    const svc: any = new (CasesExportService as any)(caseRepo, {} as any, {} as any, filing, {} as any);
+    svc.org = { officeName: jest.fn().mockResolvedValue('Municipal Social Welfare and Development Office') };
+
+    await expect(svc.issuePcv('c1', 'u1')).resolves.toBe('/filing/doc-3/download');
+    expect(filing.urlFileLive).toHaveBeenCalledWith(filedUrl);
+    expect(filing.upload).toHaveBeenCalledTimes(1);
+    expect(caseRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ pettyCashVoucherUrl: '/filing/doc-3/download' }),
+    );
   });
 });
 

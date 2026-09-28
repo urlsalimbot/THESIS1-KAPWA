@@ -48,6 +48,16 @@ export class AccessCardsController {
     return this.svc.findBeneficiaryCard(id, req.user);
   }
 
+  // Coordinator flow scans/enters the printed code (NORZ-AC-YYYY-NNNN), not the
+  // beneficiary UUID — the UUID endpoint above 400s on a code. Declared before
+  // the catch-all `:cardCode` route so it wins for the /by-code/… prefix.
+  @Get('by-code/:code/card')
+  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
+  @ApiOperation({ summary: 'Get beneficiary card details by card code' })
+  async findCardByCode(@Param('code') code: string, @Request() req: AuthenticatedRequest) {
+    return this.svc.findCardByCode(code, req.user);
+  }
+
   @Get('beneficiary/:id/access-card-pdf')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Download family access card PDF' })

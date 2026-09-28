@@ -3,6 +3,7 @@ import { AccessCardsController } from './access-cards.controller';
 import { AccessCardsService } from './access-cards.service';
 import { AbacGuard } from '../auth/guards/abac.guard';
 import { exportFileName } from '../common/constants';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 
 describe('AccessCardsController', () => {
   let controller: AccessCardsController;
@@ -11,6 +12,7 @@ describe('AccessCardsController', () => {
     accessCardCodeFor: jest.fn(),
     ensureHouseholdCard: jest.fn(),
     generateAndAssign: jest.fn(),
+    findCardByCode: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -26,6 +28,7 @@ describe('AccessCardsController', () => {
     svc.accessCardCodeFor.mockReset();
     svc.ensureHouseholdCard.mockReset();
     svc.generateAndAssign.mockReset();
+    svc.findCardByCode.mockReset();
   });
 
   it('streams the access card PDF with attachment headers', async () => {
@@ -56,6 +59,26 @@ describe('AccessCardsController', () => {
       expect(res).toEqual({ accessCardCode: 'NORZ-AC-2026-0007' });
       expect(svc.ensureHouseholdCard).toHaveBeenCalledWith('b1');
       expect(svc.generateAndAssign).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /by-code/:code/card', () => {
+    // The coordinator flow enters the printed card code, not a beneficiary
+    // UUID — the ParseUUIDPipe on /beneficiary/:id/card 400s on that.
+    it('resolves card details from the printed code, same shape as findBeneficiaryCard', async () => {
+      svc.findCardByCode.mockResolvedValue({
+        beneficiary: { id: 'b1', access_card_code: 'NORZ-AC-2026-0001' },
+        code: 'NORZ-AC-2026-0001',
+        services: [],
+      });
+      const out = await controller.findCardByCode('NORZ-AC-2026-0001', { user: { role: 'coordinator' } } as any);
+      expect(svc.findCardByCode).toHaveBeenCalledWith('NORZ-AC-2026-0001', { role: 'coordinator' });
+      expect(out.code).toBe('NORZ-AC-2026-0001');
+    });
+
+    it('is scoped to staff + agency_staff (claimant excluded)', () => {
+      const roles = Reflect.getMetadata(ROLES_KEY, AccessCardsController.prototype.findCardByCode);
+      expect(roles).toEqual(['admin', 'social_worker', 'coordinator', 'agency_staff']);
     });
   });
 });

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ForbiddenException } from '@nestjs/common';
 import { In, Not } from 'typeorm';
+import * as fs from 'fs';
 import { FilingService } from './filing.service';
 import { DocumentVault } from './filing.entity';
 import { Case } from '../cases/case.entity';
@@ -18,11 +19,14 @@ describe('FilingService', () => {
       save: jest.fn().mockResolvedValue({}),
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      query: jest.fn().mockResolvedValue([]),
     };
     caseRepoMock = {
       findOne: jest.fn().mockResolvedValue({ id: '1', controlNo: 'KAPWA-001' }),
       find: jest.fn().mockResolvedValue([]),
+      query: jest.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -123,6 +127,83 @@ describe('FilingService', () => {
       docRepoMock.delete.mockResolvedValue({ affected: 1 });
       const result = await service.delete('1');
       expect(result).toEqual({ affected: 1 });
+    });
+  });
+
+  describe('setVerified', () => {
+    it('persists verifiedAt/verifiedBy when verifying', async () => {
+      docRepoMock.findOne.mockResolvedValue({ id: 'd1', caseId: 'c1' });
+      const out = await service.setVerified('d1', true, 'u1');
+      expect(docRepoMock.update).toHaveBeenCalledWith('d1', { verifiedAt: expect.any(Date), verifiedBy: 'u1' });
+      expect(out.verifiedAt).toBeInstanceOf(Date);
+    });
+
+    it('clears verifiedAt/verifiedBy with nulls when verification is removed and recomputes the met flag', async () => {
+      docRepoMock.findOne.mockResolvedValue({ id: 'd1', caseId: 'c1', requirementKey: 'birth_cert' });
+      docRepoMock.query.mockResolvedValue([{ verified: false }]);
+      const out = await service.setVerified('d1', false, 'u1');
+      // TypeORM ignores `undefined` on save — a silent no-op that left the
+      // columns set. Clearing must persist NULLs instead.
+      expect(docRepoMock.update).toHaveBeenCalledWith('d1', { verifiedAt: null, verifiedBy: null });
+      expect(out.verifiedAt).toBeUndefined();
+      expect(out.verifiedBy).toBeUndefined();
+      // case_requirements met flag re-derived to false for the requirement.
+      expect(docRepoMock.query).toHaveBeenCalledWith(
+        expect.stringContaining('ON CONFLICT (case_id, requirement_key)'),
+        ['c1', 'birth_cert', false],
+      );
+    });
+  });
+
+  describe('stale disk-file self-healing', () => {
+    let existsSpy: jest.SpyInstance;
+
+    afterEach(() => {
+      existsSpy?.mockRestore();
+    });
+
+    it('ensureFileOnDisk returns true for a live file and keeps the row', async () => {
+      existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      const doc = { id: 'd1', fileName: 'coe.pdf', category: 'approval_document', caseId: 'c1' };
+      await expect(service.ensureFileOnDisk(doc as DocumentVault)).resolves.toBe(true);
+      expect(docRepoMock.delete).not.toHaveBeenCalled();
+      expect(caseRepoMock.query).not.toHaveBeenCalled();
+    });
+
+    it('deletes the stale approval_document row and clears the case URL that pointed at it', async () => {
+      existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      const doc = { id: 'd1', fileName: 'coe.pdf', category: 'approval_document', caseId: 'c1' };
+      await expect(service.ensureFileOnDisk(doc as DocumentVault)).resolves.toBe(false);
+      expect(docRepoMock.delete).toHaveBeenCalledWith('d1');
+      expect(caseRepoMock.query).toHaveBeenCalledWith(
+        expect.stringContaining('certificate_url'),
+        ['c1', '/filing/d1/download'],
+      );
+    });
+
+    it('deletes stale non-approval rows without touching case URLs', async () => {
+      existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      const doc = { id: 'd2', fileName: 'req.pdf', category: 'requirement', caseId: 'c1' };
+      await expect(service.ensureFileOnDisk(doc as DocumentVault)).resolves.toBe(false);
+      expect(docRepoMock.delete).toHaveBeenCalledWith('d2');
+      expect(caseRepoMock.query).not.toHaveBeenCalled();
+    });
+
+    it('urlFileLive only trusts a stored /filing/:id/download URL whose file is on disk', async () => {
+      existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      docRepoMock.findOne.mockResolvedValue({ id: 'doc-x', fileName: 'a.pdf', category: 'approval_document', caseId: 'c1' });
+      await expect(service.urlFileLive('/filing/doc-x/download')).resolves.toBe(true);
+      expect(docRepoMock.delete).not.toHaveBeenCalled();
+    });
+
+    it('urlFileLive reports a dead URL when the row is gone, the file is missing, or the URL is foreign', async () => {
+      existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      docRepoMock.findOne.mockResolvedValue({ id: 'doc-x', fileName: 'a.pdf', caseId: 'c1' });
+      await expect(service.urlFileLive('/filing/doc-x/download')).resolves.toBe(false);
+      expect(docRepoMock.delete).toHaveBeenCalledWith('doc-x');
+      docRepoMock.findOne.mockResolvedValue(null);
+      await expect(service.urlFileLive('/filing/ghost/download')).resolves.toBe(false);
+      await expect(service.urlFileLive('https://cdn.example/coe.pdf')).resolves.toBe(false);
     });
   });
 

@@ -62,7 +62,7 @@ export class FilingService {
 
     const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\./g, '');
     const fileName = `${Date.now()}-${safeName}`;
-    const filePath = path.join(UPLOAD_DIR, fileName);
+    const filePath = this.diskPath(fileName);
     await fs.promises.writeFile(filePath, file.buffer);
 
     const doc = this.docRepo.create({
@@ -90,12 +90,18 @@ export class FilingService {
 
   // Documentary-needs verification ("pass on-site"). Verifying a remote upload
   // satisfies the requirement; clearing verification re-derives it from any
-  // remaining verified document for the same requirement.
+  // remaining verified document for the same requirement. verified=false must
+  // persist NULLs (TypeORM ignores `undefined` on save, which made the old
+  // `doc.verifiedAt = undefined` path a silent no-op).
   async setVerified(id: string, verified: boolean, actorId?: string) {
     const doc = await this.findOne(id);
-    doc.verifiedAt = verified ? new Date() : undefined;
-    doc.verifiedBy = verified ? actorId : undefined;
-    await this.docRepo.save(doc);
+    const verifiedAt = verified ? new Date() : null;
+    const verifiedBy = verified ? (actorId ?? null) : null;
+    // TypeORM's QueryDeepPartialEntity rejects `null` for optional columns, so
+    // the cast is required to persist NULL — the whole point of un-verifying.
+    await this.docRepo.update(id, { verifiedAt, verifiedBy } as any);
+    doc.verifiedAt = verifiedAt ?? undefined;
+    doc.verifiedBy = verifiedBy ?? undefined;
     if (doc.caseId && doc.requirementKey) {
       await this.recomputeRequirementMet(doc.caseId, doc.requirementKey);
     }
@@ -227,6 +233,50 @@ export class FilingService {
       await this.recomputeRequirementMet(doc.caseId, doc.requirementKey);
     }
     return result;
+  }
+
+  // A persisted filing whose file is gone from disk (uploads volume cleaned or
+  // rotated) is a dead row: its download 404s forever, and an approval
+  // document leaves the case pointing at a certificate that can never be
+  // fetched. This self-healing check deletes the stale row and clears any case
+  // URL (certificateUrl / pettyCashVoucherUrl) that referenced it, so the UI
+  // can re-issue instead of failing silently.
+  async ensureFileOnDisk(doc: DocumentVault): Promise<boolean> {
+    if (fs.existsSync(this.diskPath(doc.fileName))) return true;
+    await this.docRepo.delete(doc.id);
+    if (doc.caseId && doc.requirementKey) {
+      await this.recomputeRequirementMet(doc.caseId, doc.requirementKey);
+    }
+    if (doc.caseId && doc.category === 'approval_document') {
+      // Only clear the URL(s) pointing at this exact row, so a case holding
+      // both a COE and a PCV keeps the document whose file is still live.
+      await this.caseRepo.query(
+        `UPDATE cases SET
+           certificate_url = CASE WHEN certificate_url = $2 THEN NULL ELSE certificate_url END,
+           petty_cash_voucher_url = CASE WHEN petty_cash_voucher_url = $2 THEN NULL ELSE petty_cash_voucher_url END
+         WHERE id = $1`,
+        [doc.caseId, `/filing/${doc.id}/download`],
+      );
+    }
+    return false;
+  }
+
+  // Stored approval-document URLs (`/filing/:id/download`) are only
+  // "live" while the file behind them is still on disk. When the file is gone
+  // the stale filing row is removed (see ensureFileOnDisk) and this reports
+  // false so the caller re-issues with a fresh PDF.
+  async urlFileLive(url: string): Promise<boolean> {
+    const m = /^\/filing\/([^/]+)\/download$/.exec(url ?? '');
+    if (!m) return false;
+    const doc = await this.docRepo.findOne({ where: { id: m[1] } });
+    if (!doc) return false;
+    return this.ensureFileOnDisk(doc);
+  }
+
+  // Absolute path of a stored document on disk. Public so the download handler
+  // and the certificate re-issue path share the same uploads directory.
+  diskPath(fileName: string): string {
+    return path.join(UPLOAD_DIR, fileName);
   }
 
   async cleanupOlderThan(days: number) {
