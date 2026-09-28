@@ -142,7 +142,10 @@ if [ "$mode" = stop ]; then KEEP_RUNNING=1; stop_all; exit 0; fi
 # Re-entrant: reuse a healthy stack for --stack-only (unless a DB reset is asked
 # for); clean up stale state otherwise.
 if [ -f "$STATE_FILE" ] && [ "$reset" = 0 ]; then
-  if [ "$mode" = stack ] && node -e "fetch('${BASE_URL}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+  # shellcheck disable=SC1090
+  . "$STATE_FILE"
+  if [ "$mode" = stack ] && kill -0 "${SERVER_PID:-0}" 2>/dev/null \
+     && node -e "fetch('${BASE_URL}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
     echo "stack already running at $BASE_URL"
     KEEP_RUNNING=1
     exit 0
@@ -202,9 +205,18 @@ wait_health() {
   echo "server did not become healthy; see $RUN_DIR/server.log" >&2
   return 1
 }
+owns_port() {
+  ss -ltnp "sport = :$SERVER_PORT" 2>/dev/null | grep -q "pid=$SERVER_PID,"
+}
+
 wait_health
-if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-  echo "server pid $SERVER_PID is not alive (likely EADDRINUSE against a foreign listener):" >&2
+for _ in $(seq 1 30); do
+  kill -0 "$SERVER_PID" 2>/dev/null || break
+  owns_port && break
+  sleep 1
+done
+if ! kill -0 "$SERVER_PID" 2>/dev/null || ! owns_port; then
+  echo "server pid $SERVER_PID is not serving port $SERVER_PORT (likely EADDRINUSE against a foreign listener):" >&2
   tail -20 "$RUN_DIR/server.log" >&2 || true
   exit 1
 fi
