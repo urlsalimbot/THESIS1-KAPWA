@@ -10,10 +10,13 @@ export const ACCOUNTS = {
 
 export function profileConfig(profile) {
   const smoke = { executor: 'per-vu-iterations', vus: 1, iterations: 1, exec: 'smoke' };
+  const reads = { executor: 'constant-vus', vus: 5, duration: '20s', startTime: '1s', exec: 'reads' };
   switch (profile) {
     case 'smoke':
       return { smoke };
+    case 'reads':
+      return { smoke, reads };
     default:
-      return { smoke };
+      return { smoke, reads };
   }
 }
