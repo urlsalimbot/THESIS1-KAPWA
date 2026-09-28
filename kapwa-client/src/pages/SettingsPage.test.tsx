@@ -38,6 +38,22 @@ describe('SettingsPage', () => {
     expect(screen.getByText(/profile information/i)).toBeInTheDocument();
   });
 
+  it('wraps the change-password controls in a real form', () => {
+    // Fields not inside a <form> make browsers drop autocomplete/validation
+    // semantics — and warn about it on every keystroke.
+    renderWithProviders(<SettingsPage />);
+    const submit = screen.getByRole('button', { name: /change password/i });
+    expect(submit.closest('form')).toBeInstanceOf(HTMLFormElement);
+    expect(screen.getByLabelText(/current password/i).closest('form')).toBeInstanceOf(HTMLFormElement);
+  });
+
+  it('wraps the change-email controls in a real form', () => {
+    renderWithProviders(<SettingsPage />);
+    const submit = screen.getByRole('button', { name: /update email/i });
+    expect(submit.closest('form')).toBeInstanceOf(HTMLFormElement);
+    expect(screen.getByLabelText(/new email/i).closest('form')).toBeInstanceOf(HTMLFormElement);
+  });
+
   it('renders Language preference and switches locale', async () => {
     renderWithProviders(<SettingsPage />);
     expect(await screen.findByText('Language Preference')).toBeTruthy();

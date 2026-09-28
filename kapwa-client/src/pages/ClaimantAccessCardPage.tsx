@@ -1,10 +1,13 @@
 import useSWR from 'swr';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { queryKeys } from '../lib/query-keys';
+import { ApiError } from '../lib/api-error';
 import { PageShell } from '@/components/PageShell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CategoryBadge } from '@/components/cards/CategoryBadge';
 import { formatDate } from '../lib/format';
+import { IdCard } from 'lucide-react';
 
 interface MyAccessCard {
   code: string;
@@ -25,10 +28,30 @@ export function ClaimantAccessCardPage() {
   const { t } = useTranslation();
   const { data, isLoading, error } = useSWR<MyAccessCard>(queryKeys.beneficiaries.myAccessCard());
 
+  // A 404 is the server saying "no access card on record", not a broken call:
+  // a brand-new beneficiary has no card until the office issues one. Treat that
+  // as an expected empty state rather than loading failure noise.
+  const noCardOnRecord = error instanceof ApiError && error.status === 404;
+
   return (
     <PageShell title={t('claims.myAccessCard', 'My Access Card')} description={t('claims.cardDescription', 'Your service history on record with MSWDO')}>
       {isLoading && <p className="text-sm text-muted-foreground">{t('claims.loadingCard', 'Loading your access card…')}</p>}
-      {error && <p className="text-sm text-destructive">{t('claims.cardLoadFailed', 'Could not load your access card.')}</p>}
+      {noCardOnRecord && (
+        <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+          <div className="rounded-full bg-muted/60 p-5 mb-3">
+            <IdCard size={36} className="opacity-50" aria-hidden="true" />
+          </div>
+          <p className="text-sm font-medium text-foreground">{t('claims.noAccessCard', "You don't have an access card yet")}</p>
+          <p className="text-sm mt-1">{t('claims.noAccessCardHint', 'Visit the MSWDO office to get one.')}</p>
+          <Link
+            to="/my-dashboard"
+            className="mt-4 text-sm text-primary underline underline-offset-2 hover:no-underline"
+          >
+            {t('claims.backToDashboard', 'Back to My Dashboard')}
+          </Link>
+        </div>
+      )}
+      {error && !noCardOnRecord && <p className="text-sm text-destructive">{t('claims.cardLoadFailed', 'Could not load your access card.')}</p>}
       {data && (
         <Card>
           <CardHeader>

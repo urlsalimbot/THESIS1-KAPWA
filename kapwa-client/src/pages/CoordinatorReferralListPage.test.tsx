@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { CoordinatorReferralListPage } from './CoordinatorReferralListPage';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
@@ -30,10 +30,18 @@ const referral = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+}
+
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <CoordinatorReferralListPage />
+    <MemoryRouter initialEntries={['/coordinator/referrals']}>
+      <Routes>
+        <Route path="/coordinator/referrals" element={<CoordinatorReferralListPage />} />
+        <Route path="/coordinator/referrals/:id" element={<LocationProbe />} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -67,34 +75,27 @@ describe('CoordinatorReferralListPage', () => {
 
     renderPage();
 
-    // Two em dashes: this column, and the Referred By column beside it, which
-    // has no coordinator on this record either.
+    // The name column falls back to an em dash for a fully unnamed referral.
     expect((await screen.findAllByText('—')).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('names the resident in the detail dialog too', async () => {
+  it('opens the referral detail route when View is clicked', async () => {
     renderPage();
     (await screen.findByLabelText('View')).click();
 
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Dela Cruz, Juan')).toBeInTheDocument();
-    expect(within(dialog).getByText(/Referral information for Dela Cruz, Juan/)).toBeInTheDocument();
+    // The View button navigates to the coordinator detail route rather than
+    // leaving the row inert — the route then fetches and renders the referral.
+    expect(await screen.findByTestId('location')).toHaveTextContent('/coordinator/referrals/r1');
   });
 
-  it('does not print a bare comma in the detail dialog either', async () => {
-    // The dialog built the same label by hand as the table did, so it carried
-    // the same empty-surname bug — in two places, the Name field and the
-    // description above it.
-    mockApiGet.mockResolvedValue([referral({ surname: '' })]);
+  it('navigates to the detail of the row that was clicked', async () => {
+    mockApiGet.mockResolvedValue([referral({ id: 'r1' }), referral({ id: 'r2', firstName: 'Ana' })]);
     renderPage();
-    (await screen.findByLabelText('View')).click();
+    await screen.findByText('Dela Cruz, Juan');
 
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).queryByText(', Juan')).not.toBeInTheDocument();
-    expect(within(dialog).getAllByText('Juan').length).toBeGreaterThanOrEqual(1);
-    // Not "Referral information for , Juan".
-    expect(within(dialog).getByText(/Referral information for/)).toHaveTextContent(
-      'Referral information for Juan',
-    );
+    // Both rows have a View action; the second row must open its own detail.
+    const viewButtons = screen.getAllByLabelText('View');
+    viewButtons[1].click();
+    expect(await screen.findByTestId('location')).toHaveTextContent('/coordinator/referrals/r2');
   });
 });

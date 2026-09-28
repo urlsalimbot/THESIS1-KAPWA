@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
 import { ClaimantAccessCardPage } from './ClaimantAccessCardPage';
+import { ApiError } from '../lib/api-error';
 
 const mockApiGet = vi.fn();
 
@@ -103,5 +104,29 @@ describe('ClaimantAccessCardPage', () => {
     await screen.findByRole('heading', { name: 'My Access Card' });
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  it('renders a friendly empty state when no card is on record (404)', async () => {
+    // A beneficiary without an access card gets a 404 from
+    // /beneficiaries/me/access-card. That is "you have no card yet", not a
+    // broken page — the old generic error text read as a server failure.
+    mockApiGet.mockRejectedValue(new ApiError(404, { message: 'No access card on record' }));
+
+    renderWithSWR(<ClaimantAccessCardPage />);
+
+    expect(await screen.findByText(/You don't have an access card yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/Visit the MSWDO office to get one/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Back to My Dashboard/i })).toHaveAttribute('href', '/my-dashboard');
+    expect(screen.queryByText(/Could not load your access card/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps the load-failure error for genuine failures', async () => {
+    // 500s and network errors are real problems and must still surface as such.
+    mockApiGet.mockRejectedValue(new ApiError(500, { message: 'boom' }));
+
+    renderWithSWR(<ClaimantAccessCardPage />);
+
+    expect(await screen.findByText(/Could not load your access card/i)).toBeInTheDocument();
+    expect(screen.queryByText(/You don't have an access card yet/i)).not.toBeInTheDocument();
   });
 });

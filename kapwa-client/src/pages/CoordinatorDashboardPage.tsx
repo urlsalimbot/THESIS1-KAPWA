@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, Eye, Send, ExternalLink, BadgeCheck } from 'lucide-react';
+import { MessageSquare, Send, ExternalLink, BadgeCheck } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table';
 import { QuickScanCard } from '@/components/QuickScanCard';
@@ -50,12 +50,14 @@ export function CoordinatorDashboardPage() {
     { accessorKey: 'category', header: t('dashboard.category', 'Category') },
     { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
     { accessorKey: 'remarks', header: t('dashboard.remarks', 'Remarks'), cell: ({ row }) => <span className="text-xs text-muted-foreground/70">{row.original.remarks || '—'}</span> },
+    // Coordinators cannot open /cases/:id (MSWDO-only), so a View button here
+    // bounced them right back to the dashboard. The control number is the
+    // reference a coordinator can quote to MSWDO instead of a dead link.
     {
-      id: 'actions', header: '',
+      id: 'controlNo',
+      header: t('dashboard.controlNo', 'Case No.'),
       cell: ({ row }) => (
-        <Button variant="secondary" size="sm" onClick={() => navigate(`/cases/${row.original.id}`)} aria-label={t('dashboard.viewCase', 'View Case')}>
-          <Eye size={14} className="mr-1" /> {t('dashboard.view', 'View')}
-        </Button>
+        <span className="text-xs font-medium tabular-nums">{row.original.controlNo || '—'}</span>
       ),
     },
   ];

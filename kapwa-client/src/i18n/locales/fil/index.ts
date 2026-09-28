@@ -79,7 +79,9 @@ const fil: EnLocale = {
     "received": "Natanggap",
     "actioned": "Inaksyunan",
     "closed": "Sarado",
-    "declined": "Tinanggihan"
+    "declined": "Tinanggihan",
+    "pending": "Nakapila",
+    "accepted": "Tinanggap"
   },
   "syncStatus": {
     "pending": "Nakapila",
@@ -336,6 +338,9 @@ const fil: EnLocale = {
     "cardLoadFailed": "Hindi ma-load ang iyong access card.",
     "loadingCard": "Nilo-load ang iyong access card…",
     "myAccessCard": "Aking Access Card",
+    "noAccessCard": "Wala ka pang access card",
+    "noAccessCardHint": "Bisitahin ang opisina ng MSWDO para makakuha ng isa.",
+    "backToDashboard": "Bumalik sa Aking Dashboard",
     "noServices": "Wala pang naitalang serbisyo."
   },
   "dashboard": {
@@ -377,6 +382,7 @@ const fil: EnLocale = {
     "messages": "Mga Mensahe",
     "middleName": "Gitnang Pangalan",
     "myReferrals": "Aking Mga Referral",
+    "controlNo": "Bilang ng Kaso",
     "name": "Pangalan",
     "newIntake": "Bagong Intake",
     "newReferral": "Bagong Referral",
@@ -781,6 +787,7 @@ const fil: EnLocale = {
     "extension": "Extension",
     "firstName": "Unang Pangalan *",
     "fixHighlighted": "Pakiyusin ang mga naka-highlight na field sa ibaba.",
+    "fillRequired": "Pakilagay ang mga kinakailangang field.",
     "foundRecords": "Nakahanap kami ng mga rekord na maaaring para sa kliyenteng ito.",
     "fromReferral": "Mula sa referral: {{reason}}",
     "infoUpdated": "Na-update ang impormasyon",
@@ -827,6 +834,7 @@ const fil: EnLocale = {
     "noPriorRecords": "Walang nakitang naunang rekord para sa pangalang ito.",
     "nothingToReview": "Walang intake data na susuriin.",
     "occupation": "Trabaho",
+    "occupationRequired": "Trabaho *",
     "optional": "Opsyonal",
     "philhealth": "PhilHealth",
     "philhealthNumber": "Numero ng PhilHealth",
@@ -1356,6 +1364,7 @@ const fil: EnLocale = {
     "street": "Kalye / Purok",
     "submitFailed": "Nabigo ang pagsusumite ng referral",
     "submitReferral": "Isumite ang Referral",
+    "toMswdo": "MSWDO Norzagaray",
     "submitted": "Na-isumite ang referral",
     "submittedDesc": "Nai-refer na ang residente sa MSWDO para sa assessment.",
     "submitting": "Isinusumite...",

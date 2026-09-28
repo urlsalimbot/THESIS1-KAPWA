@@ -113,8 +113,12 @@ function VerifyTab() {
       const services: any = await api.get(`/access-cards/${encodeURIComponent(cardCode)}`);
       let beneficiary = null;
       try {
+        // The verify endpoint returns the card's service history keyed by code;
+        // the beneficiary detail endpoint takes a beneficiary UUID, not a card
+        // code, so it 400'd on every lookup. `by-code` resolves the same detail
+        // from the code we just verified.
         const cardData: any = await api.get(
-          `/access-cards/beneficiary/${encodeURIComponent(cardCode)}/card`,
+          `/access-cards/by-code/${encodeURIComponent(cardCode)}/card`,
         );
         beneficiary = cardData.beneficiary;
       } catch {

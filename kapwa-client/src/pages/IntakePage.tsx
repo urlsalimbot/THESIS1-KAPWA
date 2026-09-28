@@ -198,7 +198,7 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <FieldError error={getError('occupation')}>
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('intake.occupation', 'Occupation *')}</label>
+            <label className="text-sm font-medium">{t('intake.occupationRequired', 'Occupation *')}</label>
             <Input required value={form.occupation} onChange={e => onChange('occupation', e.target.value)} aria-label={`${prefix}-occupation`} className={getError('occupation') ? 'border-destructive' : ''} />
           </div>
         </FieldError>
@@ -523,6 +523,19 @@ export function IntakePage() {
     e.preventDefault();
     setError('');
 
+    // A completely empty form gets its own message so a fresh worker does not
+    // face a wall of field errors with no idea why the form did not submit.
+    const blank = (form: PersonForm): boolean =>
+      !form.surname.trim() && !form.firstName.trim() && !form.middleName.trim()
+      && !form.gender && !form.dob && !form.placeOfBirth.trim()
+      && !form.civilStatus && !form.cellularNumber.trim() && !form.email.trim()
+      && !form.currentAddress.street.trim() && !form.currentAddress.barangay.trim()
+      && !form.philhealthNumber.trim() && !form.occupation.trim()
+      && !form.estimatedMonthlyIncome.trim();
+    const formIsEmpty = blank(beneficiary)
+      && (beneficiaryIsClaimant || blank(claimant))
+      && family.every(m => !m.surname.trim() && !m.firstName.trim());
+
     const toValidate = (form: PersonForm): PersonFormValues => ({
       ...form,
       street: form.currentAddress.street,
@@ -549,7 +562,9 @@ export function IntakePage() {
 
     const allErrors = { ...benErrs, ...claimErrs };
     if (Object.keys(allErrors).length > 0) {
-      setError(t('intake.fixHighlighted', 'Please fix the highlighted fields below.'));
+      setError(formIsEmpty
+        ? t('intake.fillRequired', 'Please fill in the required fields.')
+        : t('intake.fixHighlighted', 'Please fix the highlighted fields below.'));
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }

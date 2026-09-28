@@ -150,7 +150,7 @@ describe('CoordinatorAccessCardsPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) return Promise.reject(new Error('no beneficiary'));
+      if (k.includes('/by-code/')) return Promise.reject(new Error('no beneficiary'));
       return Promise.resolve([service(1), service(2)]);
     });
 
@@ -164,6 +164,31 @@ describe('CoordinatorAccessCardsPage', () => {
     );
     // The card itself still resolved, so its history is shown.
     expect(screen.getByText('Service 1')).toBeInTheDocument();
+  });
+
+  // Regression: the verify detail call used /access-cards/beneficiary/<code>/card,
+  // which 400s because that endpoint expects a beneficiary UUID, not a card code.
+  // The by-code endpoint resolves the same detail from the verified code.
+  it('loads the card detail from the code-routed endpoint, not the beneficiary one', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      if (k.includes('/by-code/')) {
+        return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
+      }
+      return Promise.resolve([service(1)]);
+    });
+    renderPage();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/enter card code/i), 'NORZ-AC-2026-0001');
+    await user.click(screen.getByRole('button', { name: /^Verify$/i }));
+    await waitFor(() => expect(screen.getByText('Reyes, Pedro')).toBeInTheDocument());
+
+    const urls = mockApiGet.mock.calls.map(c => JSON.stringify(c[0]));
+    expect(urls.some(u => u.includes('/access-cards/by-code/NORZ-AC-2026-0001/card'))).toBe(true);
+    // The old broken shape must never be requested with a card code in the
+    // beneficiary slot.
+    expect(urls.some(u => u.includes('/access-cards/beneficiary/NORZ-AC-2026-0001/card'))).toBe(false);
   });
 
   it('reports an unknown card code', async () => {
@@ -192,7 +217,7 @@ describe('CoordinatorAccessCardsPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) {
+      if (k.includes('/by-code/')) {
         return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
       }
       return Promise.resolve([service(1)]);
@@ -236,7 +261,7 @@ describe('CoordinatorAccessCardsPage', () => {
   it('confirms a logged activity and keeps the verified card on screen', async () => {    mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) {
+      if (k.includes('/by-code/')) {
         return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
       }
       return Promise.resolve([service(1)]);
@@ -262,7 +287,7 @@ describe('CoordinatorAccessCardsPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) {
+      if (k.includes('/by-code/')) {
         return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
       }
       return Promise.resolve([service(1)]);
@@ -292,7 +317,7 @@ describe('CoordinatorAccessCardsPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) {
+      if (k.includes('/by-code/')) {
         return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
       }
       return Promise.resolve([service(1)]);
@@ -317,7 +342,7 @@ describe('CoordinatorAccessCardsPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) {
+      if (k.includes('/by-code/')) {
         return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
       }
       return Promise.resolve([service(1)]);
@@ -350,7 +375,7 @@ describe('CoordinatorAccessCardsPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) {
+      if (k.includes('/by-code/')) {
         return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
       }
       return Promise.resolve([service(1)]);
@@ -390,7 +415,7 @@ describe('CoordinatorAccessCardsPage', () => {
       mockApiGet.mockImplementation((key: unknown) => {
         const k = JSON.stringify(key);
         if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-        if (k.includes('/card')) {
+        if (k.includes('/by-code/')) {
           return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
         }
         return Promise.resolve([service(1)]);
@@ -415,7 +440,7 @@ describe('CoordinatorAccessCardsPage', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('agencies')) return Promise.resolve(AGENCIES);
-      if (k.includes('/card')) {
+      if (k.includes('/by-code/')) {
         return Promise.resolve({ beneficiary: { surname: 'Reyes', first_name: 'Pedro' } });
       }
       return Promise.resolve([service(1)]);

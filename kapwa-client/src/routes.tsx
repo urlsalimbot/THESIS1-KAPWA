@@ -38,6 +38,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ defa
 const CoordinatorDashboardPage = lazy(() => import('./pages/CoordinatorDashboardPage').then(m => ({ default: m.CoordinatorDashboardPage })));
 const CoordinatorReferralFormPage = lazy(() => import('./pages/CoordinatorReferralFormPage').then(m => ({ default: m.CoordinatorReferralFormPage })));
 const CoordinatorReferralListPage = lazy(() => import('./pages/CoordinatorReferralListPage').then(m => ({ default: m.CoordinatorReferralListPage })));
+const CoordinatorReferralDetailPage = lazy(() => import('./pages/CoordinatorReferralDetailPage').then(m => ({ default: m.CoordinatorReferralDetailPage })));
 const ReferralReviewPage = lazy(() => import('./pages/ReferralReviewPage').then(m => ({ default: m.ReferralReviewPage })));
 const ReferralsPage = lazy(() => import('./pages/ReferralsPage').then(m => ({ default: m.ReferralsPage })));
 const AgencyDashboardPage = lazy(() => import('./pages/AgencyDashboardPage').then(m => ({ default: m.AgencyDashboardPage })));
@@ -142,6 +143,7 @@ const router = createBrowserRouter([
   { path: '/coordinator/dashboard', element: <Private roles={['coordinator']}><CoordinatorDashboardPage /></Private> },
   { path: '/coordinator/referrals', element: <Private roles={['coordinator']}><CoordinatorReferralListPage /></Private> },
   { path: '/coordinator/referrals/new', element: <Private roles={['coordinator']}><CoordinatorReferralFormPage /></Private> },
+  { path: '/coordinator/referrals/:id', element: <Private roles={['coordinator']}><CoordinatorReferralDetailPage /></Private> },
   { path: '/coordinator/access-cards', element: <Private roles={['coordinator']}><CoordinatorAccessCardsPage /></Private> },
   { path: '/referrals', element: <Private roles={['admin','social_worker','coordinator']}><ReferralsPage /></Private> },
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
@@ -169,7 +171,9 @@ const router = createBrowserRouter([
 ]);
 
 function swrErrorHandler(error: unknown) {
-  if (error instanceof ApiError && error.status !== 401) {
+  // 404s are expected conditions the pages handle themselves (e.g. a claimant
+  // with no access card on record) — not failures worth an error log.
+  if (error instanceof ApiError && error.status !== 401 && error.status !== 404) {
     console.error('SWR fetch error:', error);
   }
   // 401s are handled by the api client's refresh interceptor — silent here.

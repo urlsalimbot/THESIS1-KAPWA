@@ -47,6 +47,7 @@ const ALLOWED_IDENTICAL = new Set([
   'auth.emailLabel',
   'auth.emailCodeTitle',
   'auth.mfaMethodEmail',
+  'coordinator.toMswdo',
   'auth.mfaMethodTotp',
   'auth.manualEntryKey',
   'auth.mfaTitle',

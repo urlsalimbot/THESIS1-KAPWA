@@ -151,7 +151,7 @@ describe('IntakePage — validation', () => {
   });
 
 
-  it('shows error banner when submitting empty form', async () => {
+  it('shows a distinct banner when submitting an empty form', async () => {
     render(
       <MemoryRouter>
         <IntakePage />
@@ -159,7 +159,10 @@ describe('IntakePage — validation', () => {
     );
     await screen.findByRole('heading', { name: /General Intake Form/i });
     submitForm();
-    expect(await screen.findByText('Please fix the highlighted fields below.')).toBeInTheDocument();
+    // A completely empty form gets its own message instead of a wall of field
+    // errors — "fix the highlighted fields" with nothing filled in reads as a
+    // broken form, not a nudge to start typing.
+    expect(await screen.findByText('Please fill in the required fields.')).toBeInTheDocument();
   });
 
   it('submits successfully with valid data and beneficiary as claimant', async () => {

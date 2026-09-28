@@ -64,6 +64,10 @@ describe('LoginPage', () => {
     render(<BrowserRouter><LoginPage /></BrowserRouter>);
     expect(screen.getByText('Email')).toBeTruthy();
     expect(screen.getByText('Password')).toBeTruthy();
+    // Credential managers only offer to save what autocomplete tells them is a
+    // username/password pair.
+    expect(screen.getByPlaceholderText('Enter your email')).toHaveAttribute('autocomplete', 'email');
+    expect(screen.getByPlaceholderText('Enter your password')).toHaveAttribute('autocomplete', 'current-password');
   });
 
   it('renders submit button with Sign In text', () => {

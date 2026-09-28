@@ -229,24 +229,30 @@ function ProfileTab() {
           <Mail size={16} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground">{t('settings.changeEmail', 'Change Email')}</h2>
         </div>
-        <div className="p-4 space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            changeEmail.trigger({ newEmail, currentPassword: emailPw });
+          }}
+          className="p-4 space-y-4"
+        >
           <p className="text-xs text-muted-foreground">{t('settings.changeEmailHint', 'A verification link will be sent to your new address.')}</p>
           <div className="space-y-1.5">
             <label htmlFor="new-email" className="text-xs text-muted-foreground font-medium">{t('settings.newEmail', 'New Email')}</label>
-            <Input id="new-email" type="email" placeholder="your@newemail.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="h-9" />
+            <Input id="new-email" type="email" autoComplete="email" placeholder="your@newemail.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="h-9" />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="email-pw" className="text-xs text-muted-foreground font-medium">{t('settings.confirmPassword', 'Confirm Password')}</label>
-            <Input id="email-pw" type="password" placeholder={t('settings.currentPasswordPlaceholder', 'Enter your current password')} value={emailPw} onChange={e => setEmailPw(e.target.value)} className="h-9" />
+            <Input id="email-pw" type="password" autoComplete="current-password" placeholder={t('settings.currentPasswordPlaceholder', 'Enter your current password')} value={emailPw} onChange={e => setEmailPw(e.target.value)} className="h-9" />
           </div>
           <Button
-            onClick={() => changeEmail.trigger({ newEmail, currentPassword: emailPw })}
+            type="submit"
             disabled={changeEmail.isMutating || !newEmail || !emailPw}
             className="gap-2"
           >
             {changeEmail.isMutating ? t('settings.sendingVerification', 'Sending verification...') : t('settings.updateEmail', 'Update Email')}
           </Button>
-        </div>
+        </form>
       </div>
 
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
@@ -254,11 +260,17 @@ function ProfileTab() {
           <Lock size={16} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground">{t('settings.changePassword', 'Change Password')}</h2>
         </div>
-        <div className="p-4 space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleChangePassword();
+          }}
+          className="p-4 space-y-4"
+        >
           <p className="text-xs text-muted-foreground">{t('settings.passwordMinHint', 'Password must be at least 8 characters.')}</p>
           <div className="space-y-1.5">
             <label htmlFor="current-pw" className="text-xs text-muted-foreground font-medium">{t('settings.currentPassword', 'Current Password')}</label>
-            <Input id="current-pw" type="password" placeholder={t('settings.currentPasswordPlaceholder', 'Enter current password')} value={currentPw} onChange={e => setCurrentPw(e.target.value)} className="h-9" />
+            <Input id="current-pw" type="password" autoComplete="current-password" placeholder={t('settings.currentPasswordPlaceholder', 'Enter current password')} value={currentPw} onChange={e => setCurrentPw(e.target.value)} className="h-9" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -267,6 +279,7 @@ function ProfileTab() {
                 <Input
                   id="new-pw"
                   type={showPw ? 'text' : 'password'}
+                  autoComplete="new-password"
                   placeholder={t('settings.minChars', 'Min. 8 characters')}
                   value={newPw}
                   onChange={e => setNewPw(e.target.value)}
@@ -285,7 +298,7 @@ function ProfileTab() {
             </div>
             <div className="space-y-1.5">
               <label htmlFor="confirm-pw" className="text-xs text-muted-foreground font-medium">{t('settings.confirmNewPassword', 'Confirm New Password')}</label>
-              <Input id="confirm-pw" type="password" placeholder={t('settings.repeatPassword', 'Repeat new password')} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className="h-9" />
+              <Input id="confirm-pw" type="password" autoComplete="new-password" placeholder={t('settings.repeatPassword', 'Repeat new password')} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className="h-9" />
             </div>
           </div>
           {pwError && (
@@ -294,14 +307,14 @@ function ProfileTab() {
             </div>
           )}
           <Button
-            onClick={handleChangePassword}
+            type="submit"
             disabled={changePassword.isMutating || !currentPw || !newPw || !confirmPw}
             className="gap-2"
           >
             <KeyRound size={16} />
             {changePassword.isMutating ? t('settings.changing', 'Changing...') : t('settings.changePassword', 'Change Password')}
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   );

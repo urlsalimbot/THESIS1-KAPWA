@@ -269,7 +269,7 @@ export function LoginPage() {
                   <FormItem>
                     <FormLabel>{t('auth.emailLabel', 'Email')}</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder={t('auth.emailPlaceholder', 'Enter your email')} className="h-11" autoFocus {...field} />
+                      <Input type="email" autoComplete="email" placeholder={t('auth.emailPlaceholder', 'Enter your email')} className="h-11" autoFocus {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -283,7 +283,7 @@ export function LoginPage() {
                     <FormLabel>{t('auth.passwordLabel', 'Password')}</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Input type={showPassword ? 'text' : 'password'} placeholder={t('auth.passwordPlaceholder', 'Enter your password')} className="h-11 pe-10" {...field} />
+                        <Input type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder={t('auth.passwordPlaceholder', 'Enter your password')} className="h-11 pe-10" {...field} />
                         <button
                           type="button"
                           onClick={() => setShowPassword(v => !v)}

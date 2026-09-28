@@ -8,11 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from '@/components/ui/dialog';
 import { DataTable } from '@/components/data-table';
-import { Plus, Eye, Send, AlertCircle } from 'lucide-react';
+import { Plus, Eye, Send } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
 import { formatDate, residentName } from '../lib/format';
 
@@ -40,7 +37,6 @@ export function CoordinatorReferralListPage() {
   const navigate = useNavigate();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Referral | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   useEffect(() => {
@@ -87,7 +83,12 @@ export function CoordinatorReferralListPage() {
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)} aria-label={t('coordinator.view', 'View')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/coordinator/referrals/${row.original.id}`)}
+          aria-label={t('coordinator.view', 'View')}
+        >
           <Eye size={14} />
         </Button>
       ),
@@ -144,51 +145,6 @@ export function CoordinatorReferralListPage() {
           <DataTable columns={columns} data={referrals} rowCount={referrals.length} pagination={pagination} onPaginationChange={setPagination} sorting={[]} />
         </div>
       )}
-
-      <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('coordinator.referralDetails', 'Referral Details')}</DialogTitle>
-            <DialogDescription>{t('coordinator.detailsFor', 'Referral information for {{name}}', { name: selected ? residentName(selected.surname, selected.firstName) : '—' })}</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <div>
-              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.name', 'Name')}</span>
-              <p className="font-medium">{selected && residentName(selected.surname, selected.firstName)}</p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</span>
-              <p className="font-medium">{selected?.barangay}</p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.status', 'Status')}</span>
-              <p className="font-medium">
-                {selected && <Badge variant={variantMap[selected.status] || 'secondary'}>{referralStatusLabel(t, selected.status)}</Badge>}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.date', 'Date')}</span>
-              <p className="font-medium">{selected && formatDate(selected.createdAt)}</p>
-            </div>
-            <div className="col-span-2">
-              <span className="text-xs text-muted-foreground font-medium">{t('coordinator.reason', 'Reason')}</span>
-              <p className="font-medium">{selected?.reason}</p>
-            </div>
-            {selected?.declineReason && (
-              <div className="col-span-2">
-                <span className="text-xs text-destructive">{t('coordinator.declineReason', 'Decline Reason')}</span>
-                <p className="font-medium">{selected.declineReason}</p>
-              </div>
-            )}
-            {selected?.case?.controlNo && (
-              <div>
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.caseNo', 'Case No.')}</span>
-                <p className="font-medium">{selected.case.controlNo}</p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </PageShell>
   );
 }

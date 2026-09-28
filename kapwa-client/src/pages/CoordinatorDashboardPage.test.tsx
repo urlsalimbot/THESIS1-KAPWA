@@ -95,4 +95,38 @@ describe('CoordinatorDashboardPage', () => {
     expect(screen.getAllByText('Messages').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText(/access card code/i)).toBeDefined();
   });
+
+  it('shows tracker row control numbers without a dead-end case link', async () => {
+    // /cases/:id is MSWDO-only, so the old View button bounced coordinators
+    // straight back. The control number is the reference they can quote instead.
+    mockApiGet.mockImplementation((path: unknown) => {
+      const p = typeof path === 'string' ? path : JSON.stringify(path);
+      if (p.includes('/access-cards/') && p.includes('/summary')) {
+        return Promise.resolve(summaryPayload);
+      }
+      const dashboardData = {
+        ...dashboardPayload,
+        recentCases: [
+          {
+            id: 'c1',
+            date: '2026-09-01T00:00:00.000Z',
+            name: 'Maria Santos',
+            category: 'Medical',
+            barangay: 'Bigte',
+            remarks: '',
+            controlNo: 'NORZ-2026-0007',
+          },
+        ],
+      };
+      return Promise.resolve(dashboardData);
+    });
+
+    render(<MemoryRouter><CoordinatorDashboardPage /></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Coordinator Dashboard' });
+
+    expect(await screen.findByText('NORZ-2026-0007')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /view case/i })).toBeNull();
+    // The row is not a link to a case the coordinator cannot open.
+    expect(screen.queryByRole('link', { name: /view case/i })).toBeNull();
+  });
 });
