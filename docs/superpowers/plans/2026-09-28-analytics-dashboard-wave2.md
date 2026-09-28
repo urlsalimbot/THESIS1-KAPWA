@@ -397,16 +397,33 @@ describe('AnalyticsService wave 2', () => {
         const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
         months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
       }
-      repoMock.query.mockResolvedValue(months.map((month, i) => ({ month, value: String(5 + i) })));
+      // A bump keeps residualStd > 0 so the band is non-zero and widening is meaningful.
+      repoMock.query.mockResolvedValue(months.map((month, i) => ({ month, value: String(i === 5 ? 40 : 5 + i) })));
       const result = await service.getForecast({ metric: 'cases', horizon: 3 });
       expect(result.history).toHaveLength(24);
       expect(result.forecast).toHaveLength(3);
-      expect(result.forecast[0].upper).toBeGreaterThanOrEqual(result.forecast[0].value);
+      expect(result.forecast[0].upper).toBeGreaterThan(result.forecast[0].value);
       expect(result.forecast[2].upper - result.forecast[2].value)
-        .toBeGreaterThanOrEqual(result.forecast[0].upper - result.forecast[0].value);
+        .toBeGreaterThan(result.forecast[0].upper - result.forecast[0].value);
       expect(result.mape).not.toBeNull();
       expect(result.baselineMape).not.toBeNull();
       expect(result.metric).toBe('cases');
+    });
+
+    it('keeps a declining forecast non-negative and ordered', async () => {
+      const months: string[] = [];
+      const now = new Date();
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+        months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+      }
+      repoMock.query.mockResolvedValue(months.map((month, i) => ({ month, value: String(Math.max(0, 100 - i * 4)) })));
+      const result = await service.getForecast({ metric: 'cases', horizon: 12 });
+      for (const point of result.forecast) {
+        expect(point.value).toBeGreaterThanOrEqual(0);
+        expect(point.lower).toBeGreaterThanOrEqual(0);
+        expect(point.upper).toBeGreaterThanOrEqual(point.value);
+      }
     });
 
     it('handles an all-zero series without NaN', async () => {
@@ -426,7 +443,10 @@ describe('AnalyticsService wave 2', () => {
       const pairs: Array<[string, string]> = [];
       for (let i = 0; i < 40; i++) pairs.push([`c${i}`, 'Medical']);
       for (let i = 0; i < 35; i++) pairs.push([`c${i}`, 'Food']);
-      for (let i = 0; i < 3; i++) pairs.push([`c${i}`, 'Transport']);
+      // 'Aid' appears in 4 cases, 3 of which also have Medical: countA=4 and
+      // countBoth=3 are below MIN_CELL while confidence 3/4 clears 0.5, so the
+      // rule survives filtering and must come back fully suppressed.
+      for (let i = 0; i < 4; i++) pairs.push([`c${i}`, 'Aid']);
       repoMock.query.mockResolvedValue(txRows(pairs));
       const result = await service.getAssociations({ minSupport: 0.05, minConfidence: 0.5 });
       expect(result.totalTransactions).toBe(40);
@@ -434,13 +454,13 @@ describe('AnalyticsService wave 2', () => {
       expect(medicalFood).toBeDefined();
       expect(medicalFood!.countBoth).toEqual({ value: 35 });
       expect('value' in medicalFood!.support).toBe(true);
-      const transportRule = result.rules.find(r => r.a === 'Transport' || r.b === 'Transport');
-      if (transportRule) {
-        expect(transportRule.countBoth).toEqual({ suppressed: true });
-        expect('suppressed' in transportRule.support).toBe(true);
-        expect('suppressed' in transportRule.confidence).toBe(true);
-        expect('suppressed' in transportRule.lift).toBe(true);
-      }
+      const suppressedRule = result.rules.find(r => r.a === 'Aid' && r.b === 'Medical');
+      expect(suppressedRule).toBeDefined();
+      expect(suppressedRule!.countA).toEqual({ suppressed: true });
+      expect(suppressedRule!.countBoth).toEqual({ suppressed: true });
+      expect('suppressed' in suppressedRule!.support).toBe(true);
+      expect('suppressed' in suppressedRule!.confidence).toBe(true);
+      expect('suppressed' in suppressedRule!.lift).toBe(true);
     });
 
     it('throws insufficient_data below 30 transactions', async () => {
@@ -541,15 +561,16 @@ Add the methods (after `getEquity`):
     const lastMonth = months[months.length - 1];
     const forecast = model.forecast.map((value, i) => {
       const h = i + 1;
+      const point = Math.max(0, value);
       const band = 1.96 * model.residualStd * Math.sqrt(h);
       const [year, month] = lastMonth.split('-').map(Number);
       const d = new Date(Date.UTC(year, month - 1 + h, 1));
       const label = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
       return {
         month: label,
-        value: Math.max(0, Number(value.toFixed(2))),
-        lower: Math.max(0, Number((value - band).toFixed(2))),
-        upper: Number((value + band).toFixed(2)),
+        value: Number(point.toFixed(2)),
+        lower: Number(Math.max(0, point - band).toFixed(2)),
+        upper: Number(Math.max(point, point + band).toFixed(2)),
       };
     });
 
