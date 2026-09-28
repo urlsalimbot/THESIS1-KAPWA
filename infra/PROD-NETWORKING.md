@@ -4,6 +4,23 @@ Status: **investigated 2026-09-29, fixes landed in repo** (commit: see git log
 after this doc). This file documents the incident, the evidence, and what
 remains **infra-only** (not fixable from this repository).
 
+**Re-verified 2026-09-29 (with AWS console/CLI access):**
+
+- WebSocket re-probed end-to-end: `wss://kapwa.software/socket.io/?EIO=4&
+  transport=websocket` → **101 upgrade OK** (engine.io open). CloudFront
+  config confirms `/socket.io/*` → `ec2-api` origin (alongside `/api/*`).
+  The incident-time 502 was a transient origin failure, as concluded below;
+  nothing is broken today.
+- **`/favicon.ico` 403 FIXED (live):** the missing-key 403 was confirmed
+  against the edge (`403 AmazonS3`, no custom error responses configured).
+  `kapwa-client/public/favicon.ico` (multi-size 16/32/48/192, rendered from
+  `favicon.svg`) was added to the repo **and** uploaded straight to the
+  origin `s3://kapwa-software-frontend/favicon.ico` (content-type
+  `image/x-icon`, cache `public, max-age=86400`) with a CloudFront
+  invalidation for `/favicon.ico`. Verified live: **200, image/x-icon,
+  7994 bytes**. The next frontend deploy keeps it durable (the SPA sync
+  uploads `public/`).
+
 ---
 
 ## 1. Incident
@@ -120,16 +137,11 @@ If the 502 reappears:
    container, its TLS/proxy) are outside this repo. Verified healthy at
    investigation time; on recurrence follow section 5. Nothing in the repo
    rejects or 502s the handshake.
-2. **`/favicon.ico` 403** — the SPA bucket (S3) has no `favicon.ico` object
-   (`kapwa-client/public/` ships only `favicon.svg`; S3 returns **403
-   AccessDenied** for missing keys and that response is what CloudFront
-   surfaces). The durable fix is one of:
-   - add `favicon.ico` to `kapwa-client/public/` and redeploy the SPA
-     (`deploy-aws.sh frontend` — note `--delete` in the sync), **or**
-   - add a CloudFront error-response rule for `/favicon.ico` / 403 → 204
-     (or a `Custom Error Response` 403→204) in the AWS console.
-   The Caddy/nginx `204` rules landed above cover only the compose-backed
-   topologies.
+2. ~~`/favicon.ico` 403~~ — **RESOLVED 2026-09-29**: object
+   `s3://kapwa-software-frontend/favicon.ico` now exists (repo +
+   origin, verified `200 image/x-icon` live). The Caddy/nginx `204`
+   rules still cover the compose-backed topologies; the CloudFront
+   error-response rule is no longer needed.
 3. **`NOTIF_WS_ORIGIN` / `APP_URL` values** — they live in the gitignored
    `infra/.env.production` on the EC2 host (`docker-compose.aws.yml` loads it
    via `env_file`). `infra/.env.example` documents
