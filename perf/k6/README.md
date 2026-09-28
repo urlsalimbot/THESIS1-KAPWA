@@ -75,3 +75,23 @@ Exit code is non-zero when a threshold fails.
 Attach `summary.html` per run plus `run-meta.json` (git SHA, profile, throttle settings).
 Method summary: seeded municipal dataset, 20-VU ramping profile, 9:1 read:write mix,
 acceptance thresholds above; cold/warm cache behavior disclosed.
+
+### Validated full-profile run
+
+`perf/results/20260928T070013Z/` — started 2026-09-28T07:00:13Z (UTC), git `07b5d98`,
+profile `full`: reads ramping to 20 VUs + 2 write VUs + 1 smoke VU (max concurrent 23),
+k6 via podman (`--userns=keep-id`). 71,247 requests, 5,718 iterations, 4 m 36 s.
+
+| Metric | Threshold | Measured | Result |
+|---|---|---|---|
+| `http_req_failed` | < 1% | 0.0028% (2 of 71,247 requests) | PASS |
+| `checks` | > 99% | 99.9972% (71,246 of 71,248 checks) | PASS |
+| reads p95 (`http_req_duration{scenario:reads}`) | < 500 ms | 20.33 ms | PASS |
+| writes p95 (`http_req_duration{scenario:writes}`) | < 1500 ms | 216.12 ms | PASS |
+
+The 2 failed requests were `POST /intake` (writes scenario) returning 500 after a
+Postgres serialization error (*could not serialize access due to read/write dependencies
+among transactions*) under concurrent writes — within the 1% failure budget.
+
+Artifacts: `summary.json`, `summary.html`, `run-meta.json`, `server.log`, `migrate.log`,
+`seed-accounts.log`, `seed-programs.log`, `seed-data.log`.
