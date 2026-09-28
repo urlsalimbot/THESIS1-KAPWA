@@ -305,6 +305,8 @@ function WorkerReferralView() {
     { accessorKey: 'barangay', header: t('referral.barangay', 'Barangay') },
     {
       id: 'coordinator', header: t('referral.referredBy', 'Referred By'),
+      // First-name-first on purpose; see User.fullName. Resident names on this
+      // same row are surname-first and are meant to stay that way.
       cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.coordinator?.fullName || '—'}</span>,
     },
     {

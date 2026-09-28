@@ -14,7 +14,7 @@ import {
 import { DataTable } from '@/components/data-table';
 import { Plus, Eye, Send, AlertCircle } from 'lucide-react';
 import type { ColumnDef, PaginationState } from '@tanstack/react-table';
-import { formatDate } from '../lib/format';
+import { formatDate, residentName } from '../lib/format';
 
 interface Referral {
   id: string;
@@ -61,7 +61,7 @@ export function CoordinatorReferralListPage() {
     {
       id: 'name',
       header: t('coordinator.name', 'Name'),
-      cell: ({ row }) => `${row.original.surname}, ${row.original.firstName}`,
+      cell: ({ row }) => residentName(row.original.surname, row.original.firstName),
     },
     { accessorKey: 'barangay', header: t('coordinator.barangay', 'Barangay') },
     {
@@ -149,12 +149,12 @@ export function CoordinatorReferralListPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('coordinator.referralDetails', 'Referral Details')}</DialogTitle>
-            <DialogDescription>{t('coordinator.detailsFor', 'Referral information for {{name}}', { name: `${selected?.surname}, ${selected?.firstName}` })}</DialogDescription>
+            <DialogDescription>{t('coordinator.detailsFor', 'Referral information for {{name}}', { name: selected ? residentName(selected.surname, selected.firstName) : '—' })}</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
               <span className="text-xs text-muted-foreground font-medium">{t('coordinator.name', 'Name')}</span>
-              <p className="font-medium">{selected?.surname}, {selected?.firstName}</p>
+              <p className="font-medium">{selected && residentName(selected.surname, selected.firstName)}</p>
             </div>
             <div>
               <span className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</span>

@@ -101,3 +101,27 @@ export function formatTimestamp(iso: string): string {
   if (hrs < 24) return i18n.t('time.hoursAgo', { count: hrs, minutes: mins % 60 });
   return i18n.t('time.daysAgo', { count: Math.floor(hrs / 24) });
 }
+
+/**
+ * A resident's name for display: surname first, then given name.
+ *
+ * The API assembles these from the joined person with a `?? ''` fallback (see
+ * `Referral`), so an empty surname is a value that really arrives, not a
+ * missing field. Writing `${surname}, ${firstName}` at each site then renders
+ * ", Juan" — a comma with nothing in front of it.
+ *
+ * **Residents only.** A coordinator's name is a single `fullName` field built
+ * server-side as `first middle last` ("Juan Dela Cruz"), and that is deliberate:
+ * staff are shown first-name-first, residents surname-first. Do not point this
+ * helper at a coordinator.
+ */
+export function residentName(
+  surname: string | null | undefined,
+  firstName: string | null | undefined,
+): string {
+  const last = surname?.trim() ?? '';
+  const first = firstName?.trim() ?? '';
+  if (last && first) return `${last}, ${first}`;
+  // One part is enough; a separator with nothing on one side of it is not.
+  return last || first || '—';
+}

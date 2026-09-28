@@ -117,6 +117,9 @@ export class User extends BaseEntity {
   updatedAt!: Date;
 
   // --- Legacy flattened shape, now assembled from name-part columns ---
+  // First name first, on purpose. Staff are shown as "Juan Dela Cruz" while
+  // residents are shown as "Dela Cruz, Juan", so the two are never confused on
+  // a page that lists both. Do not reorder this to match the resident format.
   @Expose() get fullName(): string | undefined {
     const parts = [this.firstName, this.middleName, this.lastName].filter(Boolean);
     const name = parts.join(' ').trim();

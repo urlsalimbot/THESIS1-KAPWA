@@ -113,6 +113,8 @@ export function ReferralReviewPage() {
     {
       id: 'coordinator',
       header: t('referral.referredBy', 'Referred By'),
+      // `fullName` is first-name-first by design — staff read that way, residents
+      // read surname-first. Not an inconsistency with the Name column next door.
       cell: ({ row }) => row.original.coordinator?.fullName || '—',
     },
     {

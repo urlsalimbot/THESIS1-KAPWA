@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import i18n from '../i18n';
-import { formatDate, formatDateTime, formatTimestamp, todayInManila } from './format';
+import { formatDate, formatDateTime, formatTimestamp, todayInManila, residentName } from './format';
 
 const ORIGINAL_TZ = process.env.TZ;
 
@@ -95,5 +95,47 @@ describe('todayInManila', () => {
     expect(todayInManila(instant)).toBe('2026-09-29');
     process.env.TZ = 'Pacific/Kiritimati';
     expect(todayInManila(instant)).toBe('2026-09-29');
+  });
+});
+
+describe('residentName', () => {
+  it('puts the surname first for a resident', () => {
+    expect(residentName('Dela Cruz', 'Juan')).toBe('Dela Cruz, Juan');
+  });
+
+  it('does not leave a bare comma when there is no surname', () => {
+    // The server assembles these from the joined person with a `?? ''` fallback,
+    // so an empty surname is a real value that reaches the client. Hand-written
+    // `${surname}, ${firstName}` renders ", Juan".
+    expect(residentName('', 'Juan')).toBe('Juan');
+    expect(residentName(null, 'Juan')).toBe('Juan');
+    expect(residentName(undefined, 'Juan')).toBe('Juan');
+  });
+
+  it('does not leave a trailing comma when there is no given name', () => {
+    expect(residentName('Dela Cruz', '')).toBe('Dela Cruz');
+    expect(residentName('Dela Cruz', null)).toBe('Dela Cruz');
+  });
+
+  it('treats whitespace as absent', () => {
+    expect(residentName('   ', 'Juan')).toBe('Juan');
+    expect(residentName('Dela Cruz', '  ')).toBe('Dela Cruz');
+  });
+
+  it('trims the parts it keeps', () => {
+    expect(residentName('  Dela Cruz ', ' Juan ')).toBe('Dela Cruz, Juan');
+  });
+
+  it('falls back to an em dash when there is no name at all', () => {
+    // Same contract as formatDate, and the convention the referral tables
+    // already use for a missing value.
+    expect(residentName('', '')).toBe('—');
+    expect(residentName(null, undefined)).toBe('—');
+  });
+
+  it('does not change the order for a two-part given name', () => {
+    // "Juan Miguel" is a given name, not a surname — the comma is the only
+    // thing separating the two fields, so it must stay.
+    expect(residentName('Dela Cruz', 'Juan Miguel')).toBe('Dela Cruz, Juan Miguel');
   });
 });
