@@ -1,3 +1,5 @@
+import * as path from 'path';
+import * as fs from 'fs';
 import { CaseListRow, ReportColumn, SummaryReportData, SummaryTable } from './summary-report.types';
 
 const PAGE: [number, number] = [841.89, 595.28]; // A4 landscape
@@ -51,6 +53,13 @@ export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Bu
 function ordinal(q: number): string { return ['1st', '2nd', '3rd', '4th'][q - 1] ?? `${q}th`; }
 
 function drawLetterhead(doc: any, data: SummaryReportData, full: boolean) {
+  // Municipal seal (left) + DSWD seal (right) framing the letterhead, guarded
+  // so a missing asset never breaks the report.
+  const sealPath = path.join(__dirname, '..', 'gis', 'assets', 'norzagaray-bulacan-official-logo.png');
+  const dswdPath = path.join(__dirname, '..', 'gis', 'assets', 'DSWD-Logo.png');
+  if (fs.existsSync(sealPath)) { try { doc.image(sealPath, LEFT, 20, { fit: [46, 46] }); } catch { /* seal omitted */ } }
+  if (fs.existsSync(dswdPath)) { try { doc.image(dswdPath, RIGHT - 46, 20, { fit: [46, 46] }); } catch { /* seal omitted */ } }
+
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111');
   if (full) {
     doc.text('Republic of the Philippines', LEFT, M, { width: WIDTH, align: 'center', lineBreak: false });
@@ -91,13 +100,18 @@ function drawSectionTitle(doc: any, title: string) {
 // ---------------------------------------------------------------------------
 
 function colWeight(c: ReportColumn): number {
-  if (c.band === 'SEX' || c.key === 'TOTAL') return 8;
-  if (c.key === 'UNASSIGNED') return 6;
-  return 5 + Math.min(c.label.length, 14);
+  if (c.key === 'TOTAL' || c.key === 'UNASSIGNED') return 18;
+  if (c.band === 'SEX') return 9;
+  // Cap program columns so name-length never starves UNASSIGNED/TOTAL into
+  // unreadable slivers (labels wrap/ellipsise within their cell instead).
+  return Math.min(5 + c.label.length, 10);
 }
 
 function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]) {
   const topOfTable = doc.y;
+  const wide = columns.length > 24; // production-sized catalogues: skip the
+  // sub-band row — per-column 'FINANCIAL ASSISTANCE' labels would repeat into
+  // narrow non-adjacent cells and overflow onto neighbours.
   const weights = columns.map(colWeight);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const colX: number[] = [];
@@ -126,34 +140,45 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
       .text(b, x1 + 2, topOfTable + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
   }
 
-  // Tier 2: sub-bands (merged per consecutive same-subBand run).
-  let runStart = -1;
-  const flushSub = (end: number) => {
-    if (runStart < 0) return;
-    const sub = columns[runStart].subBand!;
-    const x1 = colX[runStart];
-    const x2 = colX[end + 1];
-    doc.rect(x1, topOfTable + tierH[0], x2 - x1, tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
-    doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
-      .text(sub, x1 + 1, topOfTable + tierH[0] + 2, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
-    runStart = -1;
-  };
-  columns.forEach((c, i) => {
-    if (c.subBand) { if (runStart < 0) runStart = i; }
-    else flushSub(i - 1);
-  });
-  flushSub(columns.length - 1);
+  // Tier 2: sub-bands (merged per consecutive same-subBand run) — skipped on
+  // wide tables where narrow cells cannot hold the band caption.
+  if (!wide) {
+    let runStart = -1;
+    const flushSub = (end: number) => {
+      if (runStart < 0) return;
+      const sub = columns[runStart].subBand!;
+      const x1 = colX[runStart];
+      const x2 = colX[end + 1];
+      doc.rect(x1, topOfTable + tierH[0], x2 - x1, tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
+      doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
+        .text(sub, x1 + 1, topOfTable + tierH[0] + 2, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+      runStart = -1;
+    };
+    columns.forEach((c, i) => {
+      if (c.subBand) { if (runStart < 0) runStart = i; }
+      else flushSub(i - 1);
+    });
+    flushSub(columns.length - 1);
+  }
 
-  // Tier 3: column labels. SEX/TOTAL/UNASSIGNED labels span tiers 1–3.
+  // Tier 3: column labels. Only band-less columns (UNASSIGNED/TOTAL) span
+  // tiers 1-3; SEX gets its own band cell with MALE/FEMALE at the label row.
   const labelTop = topOfTable + tierH[0] + tierH[1];
   columns.forEach((c, i) => {
-    const spanTop = (c.band === 'SEX' || c.band === '') ? topOfTable : labelTop;
+    const spanTop = c.band === '' ? topOfTable : labelTop;
     const x1 = colX[i];
     const x2 = colX[i + 1];
     doc.rect(x1, spanTop, x2 - x1, (topOfTable + headerH) - spanTop).lineWidth(0.6).strokeColor('#111').stroke();
-    const size = c.label.length > 9 ? 5.2 : 6;
-    doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
-      .text(c.label, x1 + 1, spanTop + 4, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
+    const cellW = x2 - x1 - 2;
+    // Wide catalogues put long program names in narrow columns; wrap each
+    // label to at most two fitted lines (ellipsised floor) so the header
+    // never overlaps its neighbours.
+    const size = c.label.length > 12 ? 4.6 : c.label.length > 9 ? 5.2 : 6;
+    const lines = wrapLabelLines(doc, c.label, cellW, size, 2);
+    lines.forEach((ln, li) => {
+      doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
+        .text(ln, x1 + 1, spanTop + 3 + li * (size + 1.2), { width: cellW, align: 'center', lineBreak: false });
+    });
   });
 
   // Single data row.
@@ -186,6 +211,40 @@ function drawSignatories(doc: any, data: SummaryReportData) {
     .text(data.notedBy, LEFT + WIDTH / 2, doc.y + 26, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#333')
     .text(data.notedByRole, LEFT + WIDTH / 2, doc.y + 38, { lineBreak: false });
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// Word-wrap `text` into at most `maxLines` lines at `size`. Lines that still
+// exceed `maxWidth` after wrapping are truncated with an ellipsis so narrow
+// columns never overflow into their neighbours.
+function wrapLabelLines(doc: any, text: string, maxWidth: number, size: number, maxLines: number): string[] {
+  doc.font('Helvetica-Bold').fontSize(size);
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const candidate = cur ? `${cur} ${w}` : w;
+    if (cur && doc.widthOfString(candidate) > maxWidth && lines.length < maxLines) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = candidate;
+    }
+  }
+  if (lines.length < maxLines && cur) lines.push(cur);
+  // No silent word drops: if the cap was reached mid-wrap, tail-join the
+  // remaining words onto the last line (the ellipsis floor below trims it).
+  else if (cur && lines.length > 0) lines[lines.length - 1] += ` ${cur}`;
+  // Ellipsis floor: keep every emitted line inside the column.
+  return lines.map((ln) => {
+    if (doc.widthOfString(ln) <= maxWidth) return ln;
+    let out = ln;
+    while (out.length > 1 && doc.widthOfString(out + '…') > maxWidth) out = out.slice(0, -1);
+    return out.slice(0, Math.max(0, out.length)) + '…';
+  });
 }
 
 // ---------------------------------------------------------------------------

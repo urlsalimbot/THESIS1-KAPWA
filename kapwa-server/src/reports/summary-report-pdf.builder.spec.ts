@@ -90,4 +90,28 @@ describe('buildSummaryReportPdf', () => {
     const buf = await buildSummaryReportPdf({ ...data, caseList: [] });
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
   });
+
+  it('stays collision-free with a production-sized programme catalogue', async () => {
+    // 30+ long-named programs mimic prod: labels wrap/ellipsise in narrow
+    // columns and special columns (UNASSIGNED/TOTAL) keep their full labels.
+    const widePrograms = Array.from({ length: 30 }, (_, i) => ({
+      id: `p${i}`,
+      name: `${i % 2 ? '4Ps — Pantawid Pamilyang Pilipino Program' : 'Comprehensive Family Development Intervention Program'} ${i}`,
+      category: i % 3 === 0 ? 'CCT' : 'Other',
+    }));
+    const wideCols = buildColumns(widePrograms);
+    const bc: Record<string, number> = {};
+    for (const c of wideCols) { if (!['MALE', 'FEMALE', 'TOTAL'].includes(c.key)) bc[c.key] = 0; }
+    const emptyT = (title: string): SummaryTable => ({ title, counts: { male: 0, female: 0, total: 0, byColumn: bc } });
+    const text = searchableText(await buildSummaryReportPdf({
+      ...data,
+      columns: wideCols,
+      annual: emptyT('SUMMARY REPORT 2025'),
+      monthly: [emptyT('April 1-30, 2025'), emptyT('May 1-31, 2025'), emptyT('June 1-30, 2025')],
+      quarterSummary: emptyT('2nd QUARTER SUMMARY'),
+    }));
+    expect(text).toContain('UNASSIGNED');
+    expect(text).toContain('TOTAL');
+    expect(text).toContain('OTHER PROGRAMS');
+  });
 });
