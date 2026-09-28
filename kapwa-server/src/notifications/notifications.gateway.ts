@@ -7,16 +7,20 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 
-// CORS origins for the notifications socket. Defaults cover local dev; in
-// production set NOTIF_WS_ORIGIN to a comma-separated list of allowed origins
-// (e.g. "https://kapwa.software") so the deployed client can
-// connect when served from a different origin than the API.
+// CORS origins for the notifications socket. Accepts the NOTIF_WS_ORIGIN
+// allowlist (comma-separated, e.g. "https://kapwa.software") plus the APP_URL
+// origin, merged with the localhost dev defaults so local dev keeps working
+// even when production origins are configured. Kept as an allowlist — no
+// wildcard — so only the configured origins (plus localhost) are accepted.
 function wsOrigins(): string[] {
-  const raw = process.env.NOTIF_WS_ORIGIN;
-  if (raw) {
-    return raw.split(',').map((o) => o.trim()).filter(Boolean);
-  }
-  return ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+  const configured = (process.env.NOTIF_WS_ORIGIN ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const appUrl = process.env.APP_URL?.trim();
+  if (appUrl) configured.push(appUrl);
+  const defaults = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+  return Array.from(new Set([...defaults, ...configured]));
 }
 
 @WebSocketGateway({

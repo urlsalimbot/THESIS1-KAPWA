@@ -11,15 +11,20 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
 
-// CORS origins for the chat socket. Defaults cover local dev; in production set
-// NOTIF_WS_ORIGIN to a comma-separated list of allowed origins (e.g.
-// "https://kapwa.system") so the deployed client can connect.
+// CORS origins for the chat socket. Accepts the NOTIF_WS_ORIGIN allowlist
+// (comma-separated, e.g. "https://kapwa.software") plus the APP_URL origin,
+// merged with the localhost dev defaults so local dev keeps working even when
+// production origins are configured. Kept as an allowlist — no wildcard — so
+// only the configured origins (plus localhost) are accepted.
 function chatOrigins(): string[] {
-  const raw = process.env.NOTIF_WS_ORIGIN;
-  if (raw) {
-    return raw.split(',').map((o) => o.trim()).filter(Boolean);
-  }
-  return ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+  const configured = (process.env.NOTIF_WS_ORIGIN ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const appUrl = process.env.APP_URL?.trim();
+  if (appUrl) configured.push(appUrl);
+  const defaults = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+  return Array.from(new Set([...defaults, ...configured]));
 }
 
 @WebSocketGateway({

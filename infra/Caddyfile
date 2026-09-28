@@ -44,6 +44,12 @@
         respond "OK" 200
     }
 
+    # Bare /favicon.ico requests (browser default) — the SPA ships favicon.svg,
+    # so answer 204 instead of falling through to the SPA/index.html.
+    handle /favicon.ico {
+        respond 204
+    }
+
     # Everything else → SPA client
     handle {
         reverse_proxy client:80
