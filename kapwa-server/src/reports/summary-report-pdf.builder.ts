@@ -109,9 +109,6 @@ function colWeight(c: ReportColumn): number {
 
 function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]) {
   const topOfTable = doc.y;
-  const wide = columns.length > 24; // production-sized catalogues: skip the
-  // sub-band row — per-column 'FINANCIAL ASSISTANCE' labels would repeat into
-  // narrow non-adjacent cells and overflow onto neighbours.
   const weights = columns.map(colWeight);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const colX: number[] = [];
@@ -119,65 +116,69 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
   for (const w of weights) { colX.push(x); x += (w / totalWeight) * WIDTH; }
   colX.push(RIGHT);
 
-  const tierH = [13, 13, 15];
+  // Reference GAD header matrix:
+  //   R1  SEX | FINANCIAL | (blank) | LEGAL | TECHNICAL
+  //   R2  (blank) | FINANCIAL ASSISTANCE | PWD | REFERRAL | Birth Discrepancy ...
+  //   R3  Male | Female | BURIAL | MEDICAL | ASSISTIVE DEVICES | (PWD blank) |
+  //       LEGAL/PAO | OTHERS | (technical blanks) | TOTAL
+  const tierH = [13, 14, 12];
   const headerH = tierH[0] + tierH[1] + tierH[2];
+  const headerBottom = topOfTable + headerH;
+  const R1top = topOfTable;
+  const R2top = topOfTable + tierH[0];
+  const R3top = topOfTable + tierH[0] + tierH[1];
 
-  // Tier 1: bands (merged per distinct band; empty band = no cell).
-  const bandOrder: string[] = [];
-  for (const c of columns) { if (c.band && !bandOrder.includes(c.band)) bandOrder.push(c.band); }
-  const bandStart: Record<string, number> = {};
-  const bandEnd: Record<string, number> = {};
-  columns.forEach((c, i) => {
-    if (!c.band) return;
-    if (bandStart[c.band] === undefined) bandStart[c.band] = i;
-    bandEnd[c.band] = i;
-  });
-  for (const b of bandOrder) {
-    const x1 = colX[bandStart[b]];
-    const x2 = colX[bandEnd[b] + 1];
-    doc.rect(x1, topOfTable, x2 - x1, tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
+  // R3-anchored columns: MALE/FEMALE and the sub-band columns (BURIAL,
+  // MEDICAL, ASSISTIVE DEVICES, LEGAL/PAO, OTHERS). Everything else — PWD,
+  // TECHNICAL columns, UNASSIGNED, TOTAL — anchors at R2 spanning two rows.
+  const row3 = (c: ReportColumn) => c.key === 'MALE' || c.key === 'FEMALE' || !!c.subBand;
+
+  // Grid: outer frame, horizontal tier rules, full-height column rules.
+  doc.rect(LEFT, topOfTable, WIDTH, headerH).lineWidth(0.6).strokeColor('#111').stroke();
+  doc.moveTo(LEFT, topOfTable + tierH[0]).lineTo(RIGHT, topOfTable + tierH[0]).lineWidth(0.6).strokeColor('#111').stroke();
+  doc.moveTo(LEFT, topOfTable + tierH[0] + tierH[1]).lineTo(RIGHT, topOfTable + tierH[0] + tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
+  for (let k = 1; k < columns.length; k++) {
+    doc.moveTo(colX[k], topOfTable).lineTo(colX[k], headerBottom).lineWidth(0.6).strokeColor('#111').stroke();
+  }
+
+  // R1: band captions, centred over the band's sub-band group when one exists
+  // (FINANCIAL over BURIAL..ASSISTIVE, LEGAL over PAO/OTHERS).
+  const bands: string[] = [];
+  for (const c of columns) { if (c.band && !bands.includes(c.band)) bands.push(c.band); }
+  for (const b of bands) {
+    const idx = columns.map((c, i) => (c.band === b ? i : -1)).filter((i) => i >= 0);
+    const subIdx = columns.map((c, i) => (c.band === b && c.subBand ? i : -1)).filter((i) => i >= 0);
+    const [s, e] = subIdx.length ? [subIdx[0], subIdx[subIdx.length - 1]] : [idx[0], idx[idx.length - 1]];
     doc.font('Helvetica-Bold').fontSize(6.2).fillColor('#111')
-      .text(b, x1 + 2, topOfTable + 3, { width: x2 - x1 - 4, align: 'center', lineBreak: false });
+      .text(b, colX[s] + 2, R1top + 3, { width: colX[e + 1] - colX[s] - 4, align: 'center', lineBreak: false });
   }
 
-  // Tier 2: sub-bands (merged per consecutive same-subBand run) — skipped on
-  // wide tables where narrow cells cannot hold the band caption.
-  if (!wide) {
-    let runStart = -1;
-    const flushSub = (end: number) => {
-      if (runStart < 0) return;
-      const sub = columns[runStart].subBand!;
-      const x1 = colX[runStart];
-      const x2 = colX[end + 1];
-      doc.rect(x1, topOfTable + tierH[0], x2 - x1, tierH[1]).lineWidth(0.6).strokeColor('#111').stroke();
-      doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
-        .text(sub, x1 + 1, topOfTable + tierH[0] + 2, { width: x2 - x1 - 2, align: 'center', lineBreak: false });
-      runStart = -1;
-    };
-    columns.forEach((c, i) => {
-      if (c.subBand) { if (runStart < 0) runStart = i; }
-      else flushSub(i - 1);
-    });
-    flushSub(columns.length - 1);
+  // R2: sub-band captions (once per sub-band) + R2-anchored column labels.
+  const subs: string[] = [];
+  for (const c of columns) { if (c.subBand && !subs.includes(c.subBand)) subs.push(c.subBand); }
+  for (const sb of subs) {
+    const idx = columns.map((c, i) => (c.subBand === sb ? i : -1)).filter((i) => i >= 0);
+    doc.font('Helvetica-Bold').fontSize(5.4).fillColor('#111')
+      .text(sb, colX[idx[0]] + 1, R2top + 3, { width: colX[idx[idx.length - 1] + 1] - colX[idx[0]] - 2, align: 'center', lineBreak: false });
   }
-
-  // Tier 3: column labels. Only band-less columns (UNASSIGNED/TOTAL) span
-  // tiers 1-3; SEX gets its own band cell with MALE/FEMALE at the label row.
-  const labelTop = topOfTable + tierH[0] + tierH[1];
   columns.forEach((c, i) => {
-    const spanTop = c.band === '' ? topOfTable : labelTop;
-    const x1 = colX[i];
-    const x2 = colX[i + 1];
-    doc.rect(x1, spanTop, x2 - x1, (topOfTable + headerH) - spanTop).lineWidth(0.6).strokeColor('#111').stroke();
-    const cellW = x2 - x1 - 2;
-    // Wide catalogues put long program names in narrow columns; wrap each
-    // label to at most two fitted lines (ellipsised floor) so the header
-    // never overlaps its neighbours.
+    if (row3(c)) return;
+    const cellW = colX[i + 1] - colX[i] - 2;
     const size = c.label.length > 12 ? 4.6 : c.label.length > 9 ? 5.2 : 6;
-    const lines = wrapLabelLines(doc, c.label, cellW, size, 2);
-    lines.forEach((ln, li) => {
+    wrapLabelLines(doc, c.label, cellW, size, 2).forEach((ln, li) => {
       doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
-        .text(ln, x1 + 1, spanTop + 3 + li * (size + 1.2), { width: cellW, align: 'center', lineBreak: false });
+        .text(ln, colX[i] + 1, R2top + 3 + li * (size + 1.2), { width: cellW, align: 'center', lineBreak: false });
+    });
+  });
+
+  // R3: row-3-anchored column labels.
+  columns.forEach((c, i) => {
+    if (!row3(c)) return;
+    const cellW = colX[i + 1] - colX[i] - 2;
+    const size = c.label.length > 12 ? 4.6 : c.label.length > 9 ? 5.2 : 6;
+    wrapLabelLines(doc, c.label, cellW, size, 2).forEach((ln, li) => {
+      doc.font('Helvetica-Bold').fontSize(size).fillColor('#111')
+        .text(ln, colX[i] + 1, R3top + 3 + li * (size + 1.2), { width: cellW, align: 'center', lineBreak: false });
     });
   });
 

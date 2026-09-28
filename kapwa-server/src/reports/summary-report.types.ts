@@ -76,19 +76,24 @@ export interface SummaryReportData {
 // Band mapping — program name/category → reference band
 // ---------------------------------------------------------------------------
 
-export function programBand(name: string, category?: string | null): { band: string; subBand?: string } {
+export function programBand(name: string, category?: string | null): { band: string; subBand?: string; slot: number } {
   const n = name.toLowerCase();
   const c = (category ?? '').toLowerCase();
 
-  if (/burial/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' };
-  if (/medical|philhealth/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' };
-  if (/assistive/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE' };
-  if (c.startsWith('pwd welfare') || /^pwd\b/.test(n)) return { band: 'FINANCIAL' };
-  if (/legal|referral/.test(n)) return { band: 'LEGAL', subBand: 'REFERRAL' };
-  if (/birth discrepancy|travel|case study|csr|home visit|child custody|balik probinsya|counsel|psychosocial/.test(n)) {
-    return { band: 'TECHNICAL' };
-  }
-  return { band: 'OTHER PROGRAMS' };
+  if (/burial/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE', slot: 1 };
+  if (/medical/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE', slot: 2 };
+  if (/assistive/.test(n)) return { band: 'FINANCIAL', subBand: 'FINANCIAL ASSISTANCE', slot: 3 };
+  if (c.startsWith('pwd welfare') || /^pwd\b/.test(n)) return { band: 'FINANCIAL', slot: 4 };
+  if (/legal|referral/.test(n)) return { band: 'LEGAL', subBand: 'REFERRAL', slot: /legal|\bpao\b/.test(n) ? 1 : (/others/.test(n) ? 2 : 3) };
+  if (/birth discrepancy/.test(n)) return { band: 'TECHNICAL', slot: 1 };
+  if (/travel/.test(n)) return { band: 'TECHNICAL', slot: 2 };
+  if (/case study|\bcsr\b/.test(n)) return { band: 'TECHNICAL', slot: 3 };
+  if (/counsel|psychosocial/.test(n)) return { band: 'TECHNICAL', slot: 4 };
+  if (/philhealth/.test(n)) return { band: 'TECHNICAL', slot: 5 };
+  if (/child custody/.test(n)) return { band: 'TECHNICAL', slot: 6 };
+  if (/home visit/.test(n)) return { band: 'TECHNICAL', slot: 7 };
+  if (/balik probinsya/.test(n)) return { band: 'TECHNICAL', slot: 8 };
+  return { band: 'OTHER PROGRAMS', slot: 0 };
 }
 
 /** Case-list remark code for a selected column. */
@@ -116,6 +121,35 @@ export function findProgramColumn(
   return programs.find((p) => norm(p.name) === target);
 }
 
+function tokenize(s: string): Set<string> {
+  return new Set((s || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2));
+}
+
+/**
+ * "Most relevant column" fallback: score each program against free text
+ * (referral target / ad-hoc service name) by shared significant token count,
+ * weighted toward longer matches; null when nothing shares a token.
+ */
+export function mostRelevantProgram(
+  text: string,
+  programs: ProgramResolution['programs'],
+): { id: string; name: string; category?: string | null } | undefined {
+  const words = tokenize(text);
+  if (words.size === 0) return undefined;
+  let best: { id: string; name: string; category?: string | null } | undefined;
+  let bestScore = 0;
+  for (const p of programs) {
+    const tokens = tokenize(p.name);
+    let shared = 0;
+    for (const w of words) if (tokens.has(w)) shared += 1;
+    if (shared === 0) continue;
+    // Prefer programs that match more of the text's tokens.
+    const score = shared / tokens.size;
+    if (score > bestScore) { bestScore = score; best = p; }
+  }
+  return best;
+}
+
 /**
  * One column per case, precedence:
  *  1. first program-linked intervention,
@@ -141,11 +175,16 @@ export function selectCaseColumn(
     return { key: 'UNASSIGNED', code: '' };
   }
 
-  // 2. Referral-only cases.
+  // 2. Referral-only cases — legal referrals land on Legal Referral (PAO);
+  //    anything else aligns to the most relevant programme, else UNASSIGNED.
   if (input.referralText.trim().length > 0) {
-    const isLegal = /legal|\bpao\b|public attorney/i.test(input.referralText);
-    const ref = findProgramColumn(programs, isLegal ? 'Legal Referral (PAO)' : 'Referral – Others');
-    if (ref) return { key: ref.id, code: 'R' };
+    if (/legal|\bpao\b|public attorney/i.test(input.referralText)) {
+      const ref = findProgramColumn(programs, 'Legal Referral (PAO)');
+      if (ref) return { key: ref.id, code: 'R' };
+    } else {
+      const ref = mostRelevantProgram(input.referralText, programs);
+      if (ref) return { key: ref.id, code: 'R' };
+    }
     return { key: 'UNASSIGNED', code: 'R' };
   }
 
@@ -163,18 +202,38 @@ export function selectCaseColumn(
     return { key: 'UNASSIGNED', code: 'HV' };
   }
 
-  // 5. Nothing recordable.
+  // 5. Ad-hoc service text: align to the most relevant programme column.
+  if (input.serviceText.trim().length > 0) {
+    const match = mostRelevantProgram(input.serviceText, programs);
+    if (match) {
+      const band = programBand(match.name, match.category).band;
+      return { key: match.id, code: codeForProgram(match.name, band) };
+    }
+  }
+
+  // 6. Nothing recordable.
   return { key: 'UNASSIGNED', code: '' };
 }
 
-// Column ordering used by the builder: fixed SEX/TOTAL slots plus every program
-// in list order, UNASSIGNED immediately before TOTAL.
+// Column ordering used by the builder: SEX | FINANCIAL (BURIAL, MEDICAL,
+// ASSISTIVE, PWD) | LEGAL (PAO, OTHERS) | TECHNICAL (reference order) |
+// OTHER PROGRAMS | UNASSIGNED | TOTAL — matching the reference GAD header
+// layout so band/sub-band captions stay contiguous.
+const BAND_ORDER: Record<string, number> = { SEX: 0, FINANCIAL: 1, LEGAL: 2, TECHNICAL: 3, 'OTHER PROGRAMS': 4 };
+
 export function buildColumns(programs: ProgramResolution['programs']): ReportColumn[] {
+  const rest = [...programs].sort((a, b) => {
+    const ba = programBand(a.name, a.category);
+    const bb = programBand(b.name, b.category);
+    const oa = (BAND_ORDER[ba.band] ?? 5) * 100 + (ba.slot ?? 0);
+    const ob = (BAND_ORDER[bb.band] ?? 5) * 100 + (bb.slot ?? 0);
+    return oa - ob || a.name.localeCompare(b.name);
+  });
   const out: ReportColumn[] = [
     { key: 'MALE', label: 'MALE', band: 'SEX' },
     { key: 'FEMALE', label: 'FEMALE', band: 'SEX' },
   ];
-  for (const p of programs) {
+  for (const p of rest) {
     const b = programBand(p.name, p.category);
     out.push({ key: p.id, label: p.name, band: b.band, subBand: b.subBand });
   }

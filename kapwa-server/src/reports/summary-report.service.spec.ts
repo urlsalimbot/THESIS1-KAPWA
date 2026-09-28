@@ -115,9 +115,9 @@ describe('SummaryReportService.build', () => {
     const data: SummaryReportData = await service.build(2025, 2);
     expect(data.caseList[0].intervention).toBe('Referred to PAO');
     expect(data.caseList[1].intervention).toBe('Referred to DSWD Field Office III, PCSO');
-    // No referral → falls back to the derived intervention code (here: nothing
-    // recordable, so the remark is empty).
-    expect(data.caseList[2].intervention).toBe('');
+    // No referral → the ad-hoc service text is aligned to the most relevant
+    // programme (Burial Assistance) → FA remark.
+    expect(data.caseList[2].intervention).toBe('FA');
   });
 
   it('applies recency precedence: referral is the final remark only when added last', async () => {
