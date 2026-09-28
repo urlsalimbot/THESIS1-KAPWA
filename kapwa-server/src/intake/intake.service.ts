@@ -567,8 +567,8 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       `WITH household_scores AS (
         SELECT
           h.id,
-          similarity(p.surname, $1) AS sim_surname,
-          similarity(p.first_name, $2) AS sim_first,
+          similarity(p.surname, $1::text) AS sim_surname,
+          similarity(p.first_name, $2::text) AS sim_first,
           CASE WHEN $3::text[] IS NOT NULL AND array_length($3::text[], 1) > 0 THEN (
             SELECT COALESCE(AVG(sub.best), 0)
             FROM (
@@ -580,25 +580,25 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
               GROUP BY u.name
             ) sub
           ) ELSE 0 END AS family_score,
-          (CASE WHEN $4 IS NOT NULL AND $4 ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN p.dob = $4::date ELSE false END) AS dob_match,
-          (CASE WHEN $5 IS NOT NULL AND $5 <> '' THEN EXISTS (
+          (CASE WHEN $4::text IS NOT NULL AND $4::text ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN p.dob = $4::date ELSE false END) AS dob_match,
+          (CASE WHEN $5::text IS NOT NULL AND $5::text <> '' THEN EXISTS (
             SELECT 1 FROM person_contacts pc
             WHERE pc.person_id = b.person_id AND pc.contact_type = 'phone'
               AND right('0000000000' || regexp_replace(pc.value, '[^0-9]', '', 'g'), 10)
-                = right('0000000000' || regexp_replace($5, '[^0-9]', '', 'g'), 10)
+                = right('0000000000' || regexp_replace($5::text, '[^0-9]', '', 'g'), 10)
           ) ELSE false END) AS phone_match,
-          (CASE WHEN $6 IS NOT NULL AND $6 <> '' THEN EXISTS (
+          (CASE WHEN $6::text IS NOT NULL AND $6::text <> '' THEN EXISTS (
             SELECT 1 FROM person_contacts pc
             WHERE pc.person_id = b.person_id AND pc.contact_type = 'email'
-              AND lower(trim(pc.value)) = lower(trim($6))
+              AND lower(trim(pc.value)) = lower(trim($6::text))
           ) ELSE false END) AS email_match,
-          (CASE WHEN $7 IS NOT NULL AND $7 <> '' THEN
-            COALESCE(regexp_replace(p.philhealth_number, '[^0-9]', '', 'g') = regexp_replace($7, '[^0-9]', '', 'g'), false)
+          (CASE WHEN $7::text IS NOT NULL AND $7::text <> '' THEN
+            COALESCE(regexp_replace(p.philhealth_number, '[^0-9]', '', 'g') = regexp_replace($7::text, '[^0-9]', '', 'g'), false)
           ELSE false END) AS philhealth_match,
-          (CASE WHEN $8 IS NOT NULL AND $8 <> '' THEN EXISTS (
+          (CASE WHEN $8::text IS NOT NULL AND $8::text <> '' THEN EXISTS (
             SELECT 1 FROM person_addresses pa
             WHERE pa.person_id = b.person_id AND pa.address_type = 'current'
-              AND lower(trim(pa.barangay)) = lower(trim($8))
+              AND lower(trim(pa.barangay)) = lower(trim($8::text))
           ) ELSE false END) AS barangay_match
         FROM households h
         JOIN beneficiaries b ON h.primary_beneficiary_id = b.id

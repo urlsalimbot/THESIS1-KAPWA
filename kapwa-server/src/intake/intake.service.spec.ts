@@ -542,6 +542,33 @@ describe('IntakeService', () => {
       expect((dataSourceMock.query as jest.Mock).mock.calls[0][0]).not.toContain('GREATEST');
     });
 
+    it('pins every SQL parameter type with explicit casts (empty familyMembers regression)', async () => {
+      // Postgres raises "could not determine data type of parameter $4" when a
+      // parameter's first use is a bare operator / IS NOT NULL: operator
+      // contexts never infer a type, so the parameter stays UNKNOWN and the
+      // whole matchCheck query fails to parse — on every submission, empty
+      // familyMembers or not. Every parameter must carry an explicit cast.
+      dataSourceMock.query = jest.fn().mockResolvedValue([]);
+
+      await service.matchCheck(
+        { surname: 'Dela Cruz', firstName: 'Juan', familyMembers: [] },
+        [],
+      );
+
+      const sql = (dataSourceMock.query as jest.Mock).mock.calls[0][0] as string;
+      expect(sql).toContain('$1::text');
+      expect(sql).toContain('$2::text');
+      expect(sql).toContain('$3::text[]');
+      expect(sql).toContain('$4::text');
+      expect(sql).toContain('$5::text');
+      expect(sql).toContain('$6::text');
+      expect(sql).toContain('$7::text');
+      expect(sql).toContain('$8::text');
+      // No parameter may appear without an explicit cast (bare `$4 IS NOT NULL`
+      // is exactly the failure mode above).
+      expect(sql).not.toMatch(/\$[1-8](?!::)/);
+    });
+
     it('keeps only households that pass the two-part name rule, ranked by score', async () => {
       dataSourceMock.query = jest.fn().mockResolvedValue([
         {

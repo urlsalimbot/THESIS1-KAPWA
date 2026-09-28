@@ -119,7 +119,7 @@ export class CasesService {
     return cases;
   }
 
-  async findAll(page = 1, limit = 10, filters?: { status?: CaseStatus; search?: string; barangay?: string; category?: string; gender?: string; ageRange?: string; sla?: string; dateFrom?: string; dateTo?: string }) {
+  async findAll(page = 1, limit = 10, filters?: { status?: CaseStatus; search?: string; barangay?: string; category?: string; gender?: string; ageRange?: string; sla?: string; dateFrom?: string; dateTo?: string; beneficiaryId?: string }) {
     const qb = this.caseRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'beneficiary')
       .leftJoinAndSelect('beneficiary.person', 'person')
@@ -132,6 +132,11 @@ export class CasesService {
 
     if (filters?.status) {
       qb.andWhere('c.status = :status', { status: filters.status });
+    }
+    // Beneficiary profile "Cases" panel: /cases?beneficiaryId=X must return
+    // only that beneficiary's cases (omitted = unfiltered).
+    if (filters?.beneficiaryId) {
+      qb.andWhere('c.beneficiaryId = :beneficiaryId', { beneficiaryId: filters.beneficiaryId });
     }
     if (filters?.search) {
       qb.andWhere(

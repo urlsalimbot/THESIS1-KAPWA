@@ -223,6 +223,32 @@ describe('CasesService', () => {
       expect(result.total).toBe(1);
     });
 
+    it('filters by beneficiaryId when provided (beneficiary profile Cases panel)', async () => {
+      const cases = [{ id: '1', beneficiaryId: 'ben-1' }] as Case[];
+      const qbMock = repoMock.createQueryBuilder();
+      qbMock.getManyAndCount.mockResolvedValue([cases, 1]);
+
+      const result = await service.findAll(1, 10, { beneficiaryId: 'ben-1' });
+
+      expect(result.data).toHaveLength(1);
+      const filterCall = (qbMock.andWhere as jest.Mock).mock.calls
+        .find((c: [string, unknown]) => c[0].includes('c.beneficiaryId'));
+      expect(filterCall?.[0]).toBe('c.beneficiaryId = :beneficiaryId');
+      expect(filterCall?.[1]).toEqual({ beneficiaryId: 'ben-1' });
+    });
+
+    it('leaves the list unfiltered when beneficiaryId is omitted', async () => {
+      const qbMock = repoMock.createQueryBuilder();
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll(1, 10);
+
+      const filterCalls = (qbMock.andWhere as jest.Mock).mock.calls
+        .filter((c: [string, unknown]) => c[0].includes('c.beneficiaryId'));
+      expect(filterCalls).toHaveLength(0);
+      expect(qbMock.getManyAndCount).toHaveBeenCalledTimes(1);
+    });
+
     it('pushes ageRange and category filters into SQL before pagination', async () => {
       const qbMock = repoMock.createQueryBuilder();
       qbMock.getManyAndCount.mockResolvedValue([[], 0]);

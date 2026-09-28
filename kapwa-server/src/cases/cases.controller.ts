@@ -61,8 +61,9 @@ export class CasesController {
     @Query('sla') sla?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
+    @Query('beneficiaryId') beneficiaryId?: string,
   ) {
-    return this.casesService.findAll(page, limit, { status, search, barangay, category, gender, ageRange, sla, dateFrom, dateTo });
+    return this.casesService.findAll(page, limit, { status, search, barangay, category, gender, ageRange, sla, dateFrom, dateTo, beneficiaryId: beneficiaryId || undefined });
   }
 
   @Get('disbursed/pending-intervention')

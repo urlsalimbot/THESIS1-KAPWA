@@ -68,35 +68,51 @@ export class DashboardService {
       const transitioning = await caseQb.clone()
         .andWhere('c.status = :status', { status: CaseStatus.TRANSITIONING }).getCount();
 
+      // byStatus must obey the same barangay scoping as the counts above:
+      // the coordinator dashboard reads it directly (and derives pendingReview
+      // from it), so an unscoped query leaks every barangay's status counts.
       const byStatusQb = this.caseRepo
         .createQueryBuilder('c')
         .select('c.status', 'status')
         .addSelect('COUNT(*)', 'count')
+        .leftJoin('c.beneficiary', 'b')
+        .leftJoin('b.person', 'p')
         .groupBy('c.status');
+      if (barangay) {
+        byStatusQb.where('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
+      }
       if (startDate) byStatusQb.andWhere('c.created_at >= :start', { start: `${startDate}T00:00:00Z` });
       if (endExclusive) byStatusQb.andWhere('c.created_at < :end', { end: `${endExclusive}T00:00:00Z` });
       const byStatus = await byStatusQb.getRawMany();
 
       // Real disbursement + recent-intervention numbers (were hardcoded 0).
-      const intervWhere = startDate || endExclusive
-        ? `WHERE delivery_date >= $1 AND delivery_date < $2`
+      // The date window keeps its fixed $1/$2 slots (defaults are a no-op), so
+      // the optional barangay scope can occupy $3 without shifting numbering.
+      const intervParams: (string | null)[] = [startDate ?? '1970-01-01', endExclusive ?? '2999-12-31'];
+      const barangayExists = barangay
+        ? `AND EXISTS (
+             SELECT 1 FROM cases c2
+             JOIN beneficiaries b2 ON b2.id = c2.beneficiary_id
+             JOIN persons p2 ON p2.id = b2.person_id
+             WHERE c2.id::text = ci.case_id
+               AND EXISTS (SELECT 1 FROM person_addresses pa2
+                 WHERE pa2.person_id = p2.id AND (pa2.barangay ILIKE $3 OR pa2.raw ILIKE $3)))`
         : '';
-      const intervParams = startDate || endExclusive
-        ? [startDate ?? '1970-01-01', endExclusive ?? '2999-12-31']
-        : [];
+      if (barangay) intervParams.push(`%${barangay}%`);
       const disbursed = await this.caseRepo.manager.query(
         `SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS interventions
-         FROM case_interventions ${intervWhere}`,
+         FROM case_interventions ci
+         WHERE ci.delivery_date >= $1 AND ci.delivery_date < $2 ${barangayExists}`,
         intervParams,
       );
       const totalDisbursed = Number(disbursed[0]?.total ?? 0);
       // Period-aware recent interventions: intersects the selected period with
       // the rolling 7-day window.
       const recentRows = await this.caseRepo.manager.query(
-        `SELECT COUNT(*) AS count FROM case_interventions
-         WHERE delivery_date >= GREATEST(CURRENT_DATE - INTERVAL '7 days', $1::date)
-           AND delivery_date < $2::date`,
-        [startDate ?? '1970-01-01', endExclusive ?? '2999-12-31'],
+        `SELECT COUNT(*) AS count FROM case_interventions ci
+         WHERE ci.delivery_date >= GREATEST(CURRENT_DATE - INTERVAL '7 days', $1::date)
+           AND ci.delivery_date < $2::date ${barangayExists}`,
+        intervParams,
       );
       const recentInterventions = Number(recentRows[0]?.count ?? 0);
 
@@ -105,9 +121,9 @@ export class DashboardService {
         `SELECT COUNT(DISTINCT b.household_id) AS count
          FROM cases c JOIN beneficiaries b ON b.id = c.beneficiary_id
          WHERE b.household_id IS NOT NULL
-           AND c.created_at >= $1::timestamp AND c.created_at < $2::timestamp`,
-        [startDate ? `${startDate}T00:00:00Z` : '1970-01-01T00:00:00Z',
-         endExclusive ? `${endExclusive}T00:00:00Z` : '2999-12-31T00:00:00Z'],
+           AND c.created_at >= $1::timestamp AND c.created_at < $2::timestamp
+           ${barangay ? `AND EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = b.person_id AND (pa2.barangay ILIKE $3 OR pa2.raw ILIKE $3))` : ''}`,
+        intervParams,
       );
       const uniqueHouseholds = Number(householdRows[0]?.count ?? 0);
 
@@ -247,16 +263,22 @@ export class DashboardService {
     }
   }
 
-  async getSlaCompliance() {
+  async getSlaCompliance(barangay?: string) {
     const now = new Date();
     const threeDaysAgo = new Date(now.getTime() - SLA_OVERDUE_DAYS * 24 * 60 * 60 * 1000);
-    const overdue = await this.caseRepo
+    const qb = this.caseRepo
       .createQueryBuilder('c')
       .where('c.created_at < :date', { date: threeDaysAgo })
       .andWhere('c.status IN (:...statuses)', {
         statuses: [CaseStatus.ENROLLED, CaseStatus.ASSESSED, CaseStatus.IN_REVIEW],
-      })
-      .getCount();
+      });
+    // Coordinators see only their assigned barangay's overdue count.
+    if (barangay) {
+      qb.leftJoin('c.beneficiary', 'b')
+        .leftJoin('b.person', 'p')
+        .andWhere('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :slaBarangay OR pa2.raw ILIKE :slaBarangay))', { slaBarangay: `%${barangay}%` });
+    }
+    const overdue = await qb.getCount();
 
     return {
       overdueCount: overdue,

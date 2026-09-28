@@ -27,7 +27,7 @@ export class DashboardController {
         : undefined;
       const [metrics, sla, servedToday, lastSync] = await Promise.all([
         this.dashService.getMetrics(userBarangay),
-        this.dashService.getSlaCompliance(),
+        this.dashService.getSlaCompliance(userBarangay),
         this.dashService.getServedToday(),
         this.dashService.getLastSync(),
       ]);

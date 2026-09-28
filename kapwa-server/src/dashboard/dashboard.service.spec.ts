@@ -78,6 +78,71 @@ describe('DashboardService', () => {
     expect(result.recentInterventions).toBe(7);
   });
 
+  it('scopes every metric component to a coordinator barangay', async () => {
+    caseRepoMock.manager.query.mockResolvedValue([{ total: '17500', count: '7' }]);
+
+    await service.getMetrics('Bigte');
+
+    const [countsQb, byStatusQb] = caseRepoMock.createQueryBuilder.mock.results.map((r: any) => r.value);
+    const existsCalls = [
+      ...(countsQb.where as jest.Mock).mock.calls,
+      ...(byStatusQb.where as jest.Mock).mock.calls,
+    ].filter(([sql]: [string]) => sql.includes('person_addresses'));
+    // Both the counts QB and the byStatus QB must carry the EXISTS scope.
+    expect(existsCalls).toHaveLength(2);
+    for (const [sql, params] of existsCalls) {
+      expect(sql).toContain('EXISTS (SELECT 1 FROM person_addresses pa2');
+      expect(params).toEqual({ barangay: '%Bigte%' });
+    }
+
+    const queryCalls = (caseRepoMock.manager.query as jest.Mock).mock.calls as Array<[string, unknown[]]>;
+    expect(queryCalls).toHaveLength(3); // disbursed, recent interventions, unique households
+    for (const [sql, params] of queryCalls) {
+      expect(sql).toContain('person_addresses'); // every raw metric is barangay-scoped
+      expect(params).toContain('%Bigte%');
+    }
+  });
+
+  it('leaves metrics unscoped when no barangay is passed', async () => {
+    caseRepoMock.manager.query.mockResolvedValue([{ total: '17500', count: '7' }]);
+
+    await service.getMetrics();
+
+    const [countsQb, byStatusQb] = caseRepoMock.createQueryBuilder.mock.results.map((r: any) => r.value);
+    const existsSqls = [
+      ...(countsQb.where as jest.Mock).mock.calls,
+      ...(byStatusQb.where as jest.Mock).mock.calls,
+    ]
+      .map((c: [string]) => c[0])
+      .filter((sql: string) => sql.includes('person_addresses'));
+    expect(existsSqls).toHaveLength(0);
+    const queryCalls = (caseRepoMock.manager.query as jest.Mock).mock.calls as Array<[string, unknown[]]>;
+    for (const [sql, params] of queryCalls) {
+      expect(sql).not.toContain('person_addresses');
+      expect(params).not.toContain('%');
+    }
+  });
+
+  it('scopes SLA compliance to a coordinator barangay', async () => {
+    const qbMock = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      getCount: jest.fn().mockResolvedValue(2),
+    };
+    caseRepoMock.createQueryBuilder = jest.fn().mockReturnValue(qbMock);
+
+    const result = await service.getSlaCompliance('Bigte');
+
+    expect(qbMock.leftJoin).toHaveBeenCalledWith('c.beneficiary', 'b');
+    expect(qbMock.leftJoin).toHaveBeenCalledWith('b.person', 'p');
+    const existsCall = (qbMock.andWhere as jest.Mock).mock.calls
+      .find((c: [string, unknown]) => c[0].includes('person_addresses'));
+    expect(existsCall?.[0]).toContain('EXISTS (SELECT 1 FROM person_addresses pa2');
+    expect(existsCall?.[1]).toEqual({ slaBarangay: '%Bigte%' });
+    expect(result).toEqual({ overdueCount: 2, slaStatus: 'violated' });
+  });
+
   it('returns report breakdowns (zero-PII dimensions)', async () => {
     caseRepoMock.manager.query
       .mockResolvedValueOnce([{ count: '5' }])            // beneficiariesServed
