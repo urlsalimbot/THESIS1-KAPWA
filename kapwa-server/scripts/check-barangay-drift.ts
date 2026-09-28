@@ -15,18 +15,13 @@
  */
 import { DataSource } from 'typeorm';
 import { BARANGAY_NAMES } from '../src/common/constants';
+// Where to look lives there, not here: `barangay-columns.spec.ts` pins it
+// against the entities' metadata, so a normalization that moves a barangay
+// column fails a test instead of quietly leaving this script nothing to read.
+import { BARANGAY_COLUMNS } from '../src/common/barangay-columns';
 import { AppDataSource } from '../src/database/data-source';
 
 const KNOWN = new Set<string>(BARANGAY_NAMES);
-
-// Every column that stores a barangay, and whether it holds a single value or
-// a JSON/array of them. `permitted_barangays` is the one array column.
-const TARGETS: { table: string; column: string; kind: 'single' | 'array' }[] = [
-  { table: 'users', column: 'assigned_barangay', kind: 'single' },
-  { table: 'users', column: 'permitted_barangays', kind: 'array' },
-  { table: 'access_card_services', column: 'source_barangay', kind: 'single' },
-  { table: 'households', column: 'barangay', kind: 'single' },
-];
 
 async function hasColumn(
   qs: DataSource,
@@ -46,7 +41,6 @@ async function readColumn(
   qs: DataSource,
   table: string,
   column: string,
-  kind: 'single' | 'array',
 ): Promise<string[]> {
   // Guard both the table and the column. A table that does not exist yet, or a
   // schema that has not been migrated, must be *reported* as such rather than
@@ -63,54 +57,28 @@ async function readColumn(
   const out: string[] = [];
   for (const r of rows) {
     const v = r.v;
-    if (kind === 'array') {
-      if (Array.isArray(v)) {
-        out.push(...v.filter((x): x is string => typeof x === 'string' && x.length > 0));
-      } else if (typeof v === 'string' && v.length > 0) {
-        // jsonb arrives parsed, but a text-encoded array (or a column holding a
-        // bare string) still has to be inspected rather than skipped.
-        try {
-          const parsed: unknown = JSON.parse(v);
-          if (Array.isArray(parsed)) {
-            out.push(...parsed.filter((x): x is string => typeof x === 'string' && x.length > 0));
-            continue;
-          }
-          if (typeof parsed === 'string' && parsed.length > 0) {
-            out.push(parsed);
-            continue;
-          }
-        } catch {
-          /* not JSON — report the raw text below */
-        }
-        out.push(v);
-      } else if (v != null) {
-        out.push(JSON.stringify(v));
-      }
-    } else if (typeof v === 'string' && v.length > 0) {
-      out.push(v);
-    } else if (v != null && typeof v !== 'string') {
-      // A non-string, non-array value (e.g. a Postgres array literal arriving
-      // as an object) is itself drift — surface it verbatim.
-      out.push(JSON.stringify(v));
-    }
+    // A non-string value (e.g. a Postgres array literal arriving as an object)
+    // is itself drift — surface it verbatim rather than skipping the row.
+    if (typeof v === 'string' && v.length > 0) out.push(v);
+    else if (v != null && typeof v !== 'string') out.push(JSON.stringify(v));
   }
   return out;
 }
 
 async function main(): Promise<number> {
   const ds = AppDataSource;
-  let findings: { target: string; value: string; count: number }[] = [];
+  const findings: { target: string; value: string; count: number }[] = [];
 
   const missing: string[] = [];
 
   try {
     await ds.initialize();
-    for (const { table, column, kind } of TARGETS) {
+    for (const { table, column } of BARANGAY_COLUMNS) {
       if (!(await hasColumn(ds, table, column))) {
         missing.push(`${table}.${column}`);
         continue;
       }
-      const values = await readColumn(ds, table, column, kind);
+      const values = await readColumn(ds, table, column);
       const offenders = values.filter(v => !KNOWN.has(v));
       for (const value of offenders) {
         const count = values.filter(v => v === value).length;
