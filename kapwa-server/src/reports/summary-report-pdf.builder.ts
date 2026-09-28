@@ -199,19 +199,22 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
 }
 
 function drawSignatories(doc: any, data: SummaryReportData) {
-  doc.y += 18;
+  // Anchor the block once — every line is positioned relative to this, never
+  // to the mutating doc.y (which pushed the right half off the page).
+  const top = doc.y + 18;
   doc.font('Helvetica').fontSize(8).fillColor('#111')
-    .text('Prepared by:', LEFT + 10, doc.y, { lineBreak: false });
+    .text('Prepared by:', LEFT + 10, top, { lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-    .text(data.preparedBy, LEFT + 10, doc.y + 26, { lineBreak: false });
+    .text(data.preparedBy, LEFT + 10, top + 26, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#333')
-    .text(data.preparedByRole, LEFT + 10, doc.y + 38, { lineBreak: false });
+    .text(data.preparedByRole, LEFT + 10, top + 38, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#111')
-    .text('Noted by:', LEFT + WIDTH / 2, doc.y, { lineBreak: false });
+    .text('Noted by:', LEFT + WIDTH / 2, top, { lineBreak: false });
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#111')
-    .text(data.notedBy, LEFT + WIDTH / 2, doc.y + 26, { lineBreak: false });
+    .text(data.notedBy, LEFT + WIDTH / 2, top + 26, { lineBreak: false });
   doc.font('Helvetica').fontSize(8).fillColor('#333')
-    .text(data.notedByRole, LEFT + WIDTH / 2, doc.y + 38, { lineBreak: false });
+    .text(data.notedByRole, LEFT + WIDTH / 2, top + 38, { lineBreak: false });
+  doc.y = top + 50;
 }
 
 // ---------------------------------------------------------------------------
