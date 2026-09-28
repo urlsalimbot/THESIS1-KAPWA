@@ -51,6 +51,7 @@ const ALLOWED_IDENTICAL = new Set([
   'auth.manualEntryKey',
   'auth.mfaTitle',
   'auth.mswdoTagline',
+  'auth.nameExtensionPlaceholder',
   'auth.oneTimePassword',
   'auth.passwordLabel',
   'auth.passwordReset',
