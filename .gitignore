@@ -81,3 +81,6 @@ kapwa-server/.preview-build/
 pdf/preview/
 # GIS header image assets are committed despite the global *.png rule
 !kapwa-server/src/gis/assets/*.png
+
+# local git worktree directory
+.worktrees/
