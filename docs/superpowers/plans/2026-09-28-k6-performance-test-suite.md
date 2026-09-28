@@ -245,7 +245,9 @@ elif docker info >/dev/null 2>&1; then
   k6_status=$?
 elif command -v podman >/dev/null 2>&1; then
   runner=podman
-  podman run --rm --network host --user "$(id -u):$(id -g)" \
+  # Rootless podman maps container UID 1000 to a subuid; --userns=keep-id
+  # makes the container user the host user so /results stays writable.
+  podman run --rm --network host --userns=keep-id --user "$(id -u):$(id -g)" \
     -v "$K6_DIR:/scripts:ro" -v "$RUN_DIR:/results" \
     -e BASE_URL="$BASE_URL" -e PROFILE="$profile" -e RESULTS_DIR=/results -e UPLOAD="$upload" \
     docker.io/grafana/k6 run /scripts/main.js
