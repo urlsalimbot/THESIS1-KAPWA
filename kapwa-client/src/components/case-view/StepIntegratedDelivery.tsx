@@ -146,7 +146,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
         </div>
       )}
 
-      {/* Status transitions */}
+      {/* Status transition */}
       {caseData?.status === 'in_review' && userRole === 'admin' && (
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
           <div className="flex items-center justify-between">
@@ -155,17 +155,6 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
               <p className="text-xs text-muted-foreground">{t('caseView.integrated.readyForApprovalHint', 'Case is in review. Approve to activate services.')}</p>
             </div>
             <ApproveButton caseId={caseId} mutate={mutate} />
-          </div>
-        </div>
-      )}
-      {caseData?.status === 'active' && userRole === 'admin' && (
-        <div className="rounded-lg border bg-primary/5 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-primary">{t('caseView.integrated.servicesDelivered', 'Services delivered')}</p>
-              <p className="text-xs text-muted-foreground">{t('caseView.integrated.servicesDeliveredHint', 'Mark case as transitioning to begin graduation process.')}</p>
-            </div>
-            <DisburseButton caseId={caseId} mutate={mutate} />
           </div>
         </div>
       )}
@@ -212,27 +201,6 @@ function ApproveButton({ caseId, mutate }: { caseId: string; mutate: any }) {
   return (
     <Button onClick={handleApprove} disabled={loading} size="sm">
       {loading ? t('caseView.approving', 'Approving...') : t('caseView.integrated.approveCase', '✓ Approve Case')}
-    </Button>
-  );
-}
-
-function DisburseButton({ caseId, mutate }: { caseId: string; mutate: any }) {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
-  async function handleDisburse() {
-    setLoading(true);
-    try {
-      await api.patch(`/cases/${caseId}/disburse`, { status: 'transitioning' });
-      await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to disburse:', e);
-    } finally {
-      setLoading(false);
-    }
-  }
-  return (
-    <Button onClick={handleDisburse} disabled={loading} size="sm">
-      {loading ? t('caseView.processing', 'Processing...') : t('caseView.integrated.markForGraduation', '→ Mark for Graduation')}
     </Button>
   );
 }

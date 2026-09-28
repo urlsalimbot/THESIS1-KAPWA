@@ -28,8 +28,13 @@ export function StepAssessment({
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
   const [transitioning, setTransitioning] = useState(false);
+  // "Done" here is what the stepper and the review gate also require: the
+  // narrative fields AND a DSWD tool score. Without the score the FSM blocks
+  // assessed -> in_review, so offering "Complete Assessment" without it would
+  // let a worker advance the case into a state the next step cannot finish.
   const assessmentDone = !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment && !!caseData?.clientCategory;
-  const canTransition = assessmentDone && caseData?.status === 'enrolled' && (userRole === 'social_worker' || userRole === 'admin');
+  const hasScore = !!(caseData?.frvaScore || caseData?.swdiScore);
+  const canTransition = assessmentDone && hasScore && caseData?.status === 'enrolled' && (userRole === 'social_worker' || userRole === 'admin');
 
   async function markAssessmentComplete() {
     setTransitioning(true);
@@ -94,6 +99,11 @@ export function StepAssessment({
               <Button onClick={onSave} disabled={saving}>
                 {saving ? t('caseView.saving', 'Saving...') : t('caseView.assessment.saveAssessment', 'Save Assessment')}
               </Button>
+              {assessmentDone && !hasScore && caseData?.status === 'enrolled' && (
+                <span className="text-xs text-muted-foreground">
+                  {t('caseView.assessment.scoreRequiredHint', 'Add an FRVA or SWDI score above to complete the assessment.')}
+                </span>
+              )}
               {canTransition && (
                 <Button onClick={markAssessmentComplete} disabled={transitioning} variant="default">
                   {transitioning ? t('caseView.completing', 'Completing...') : t('caseView.assessment.completeAssessment', '✓ Complete Assessment → Proceed to Intervention')}
@@ -140,11 +150,8 @@ export function StepAssessment({
               onChange={e => onAssessmentChange(a => ({ ...a, familyDialogueNotes: e.target.value }))}
               placeholder={t('caseView.assessment.familyDialoguePlaceholder', 'Notes from family dialogue session...')} disabled={readOnly} />
           </div>
-          {!readOnly && (
-            <Button onClick={onSave} disabled={saving}>
-              {saving ? t('caseView.saving', 'Saving...') : t('caseView.assessment.saveTools', 'Save Assessment Tools')}
-            </Button>
-          )}
+          {/* One Save per step — the button above persists this card's fields
+              too (the whole assessment object is saved together). */}
         </div>
       </div>
     </div>

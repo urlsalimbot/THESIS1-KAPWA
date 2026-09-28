@@ -114,6 +114,7 @@ const en = {
       "problemsPresented": "Problem/s Presented *",
       "saveAssessment": "Save Assessment",
       "saveTools": "Save Assessment Tools",
+      "scoreRequiredHint": "Add an FRVA or SWDI score above to complete the assessment.",
       "socialWorkerAssessment": "Social Worker's Assessment *",
       "swdiPlaceholder": "Social Welfare Development Index",
       "swdiScore": "SWDI Score (0-100)",

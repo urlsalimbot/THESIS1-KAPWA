@@ -135,6 +135,45 @@ describe('CaseViewPage — government ID photo', () => {
     expect(await screen.findByText('Purok 1, Barangay 1')).toBeTruthy();
   });
 
+  it('does not duplicate status-transition CTAs in the header — the step panels own them', async () => {
+    // assessed + intervention: the old header duplicates ("Request Review",
+    // "Submit for Review →") must not return.
+    mockUseAuth.mockReturnValue({ user: { id: '3', fullName: 'SW', role: 'social_worker' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([{ id: 'i1', programId: 'p1', serviceName: 'Burial Assistance' }]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, status: 'assessed', interventionNotNeeded: false });
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<CaseViewPage />);
+    await screen.findByText('Juan Dela Cruz');
+    expect(screen.queryByText('Request Review')).toBeNull();
+    expect(screen.queryByText('Submit for Review →')).toBeNull();
+  });
+
+  it('labels an in-case renewal with the linked case control number, not a UUID fragment', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, renewalOfCaseId: 'C-002' });
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<CaseViewPage />);
+    expect(await screen.findByText('Renewal of case')).toBeTruthy();
+    // The linked case resolves to the mocked case record -> its control number.
+    const renewalLink = await screen.findByRole('button', { name: 'NORZ-2026-0042' });
+    expect(renewalLink).toBeTruthy();
+  });
+
   it('renders PSGC codes in the beneficiary address as names', async () => {
     mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
     mockApiGet.mockImplementation((key: unknown) => {

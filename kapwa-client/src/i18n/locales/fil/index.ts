@@ -1556,6 +1556,7 @@ const fil: EnLocale = {
       "problemsPresented": "Mga Problemang Inilahad *",
       "saveAssessment": "I-save ang Assessment",
       "saveTools": "I-save ang Assessment Tools",
+      "scoreRequiredHint": "Magdagdag ng FRVA o SWDI na iskor sa itaas upang makumpleto ang assessment.",
       "socialWorkerAssessment": "Pagsusuri ng Social Worker *",
       "swdiPlaceholder": "Social Welfare Development Index",
       "swdiScore": "SWDI Iskor (0-100)"

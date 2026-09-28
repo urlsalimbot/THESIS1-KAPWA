@@ -12,7 +12,6 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useCaseActions } from '../hooks/useCaseActions';
 import { api, downloadCsrPdf, downloadFilingDoc, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
@@ -123,7 +122,6 @@ export function CaseViewPage() {
   }
 
   const [currentStep, setCurrentStep] = useState(0);
-  const { actionLoading, handleAction } = useCaseActions();
   const initialNavDone = useRef(false);
 
   const { data: caseData, isLoading } = useSWR<any>(
@@ -228,6 +226,11 @@ export function CaseViewPage() {
     if (id && caseData?.updatedAt) mutateHistory();
   }, [id, caseData?.updatedAt, mutateHistory]);
   const benId = caseData?.beneficiary?.id;
+  // The renewal link labels the previous case with its control number instead
+  // of a raw UUID fragment — fetched from the linked case's own record.
+  const { data: renewalCase } = useSWR<any>(
+    caseData?.renewalOfCaseId ? queryKeys.cases.detail(caseData.renewalOfCaseId) : null,
+  );
   const { data: famGraph, isLoading: famLoading } = useSWR<{ members: Array<Record<string, unknown>>; primary: Record<string, unknown> }>(
     benId ? queryKeys.beneficiaries.familyGraph(benId) : null,
   );
@@ -402,22 +405,9 @@ export function CaseViewPage() {
     },
   });
 
-  const canRequestReview = caseData.status === 'enrolled'
-    && caseData.problemsPresented && caseData.socialWorkerAssessment && caseData.clientCategory
-    && user?.role === 'social_worker';
-
   // Rejection is a Phase-In triage decision, available to both case roles.
   const canReject = ['admin', 'social_worker'].includes(user?.role ?? '')
     && ['enrolled', 'assessed', 'in_review'].includes(caseData.status);
-
-  // `assessed` cases are submitted for admin review from the case view. Mirrors
-  // the StepImplementHIP gate (an intervention — or the recorded "no
-  // intervention" decision — must exist before review because activation
-  // requires at least one of intervention or referral). Also rendered in the
-  // header so the action is discoverable without switching steps.
-  const canSubmitReview = caseData.status === 'assessed'
-    && (interventions.length > 0 || !!caseData?.interventionNotNeeded)
-    && user?.role === 'social_worker';
 
   return (
     <PageShell
@@ -477,28 +467,6 @@ export function CaseViewPage() {
                 )}
               </dl>
               <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                {canRequestReview && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-1.5"
-                    disabled={actionLoading === id}
-                    onClick={() => handleAction('request-review', id!)}
-                  >
-                    <Send size={14} aria-hidden="true" /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('cases.requestReview', 'Request Review')}
-                  </Button>
-                )}
-                {canSubmitReview && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-1.5"
-                    disabled={actionLoading === id}
-                    onClick={() => handleAction('submit-review', id!)}
-                  >
-                    <Send size={14} aria-hidden="true" /> {actionLoading === id ? t('cases.saving', 'Saving…') : t('caseView.implement.submitForReview', 'Submit for Review →')}
-                  </Button>
-                )}
                 {user?.role === 'admin' && !caseData.certificateUrl && (
                   <Button variant="outline" size="sm" className="gap-1.5" disabled={issuing === 'coe'} onClick={() => issueDoc('coe')}>
                     <FileText size={14} aria-hidden="true" /> {issuing === 'coe' ? t('cases.issuing', 'Issuing…') : t('cases.issueCoe', 'Issue COE')}
@@ -554,7 +522,7 @@ export function CaseViewPage() {
                     className="rounded text-primary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                     onClick={() => navigate(`/cases/${caseData.renewalOfCaseId}`)}
                   >
-                    {String(caseData.renewalOfCaseId).slice(0, 8)}…
+                    {renewalCase?.controlNo || String(caseData.renewalOfCaseId).slice(0, 8)}
                   </button>
                 </p>
               </>
