@@ -75,9 +75,9 @@ export function ForecastTab({ filters }: { filters: Record<string, unknown> }) {
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip contentStyle={{ fontSize: '12px' }} />
               <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Area type="monotone" dataKey="range" name="95%" stroke="none" fill="#3b82f6" fillOpacity={0.15} />
-              <Line type="monotone" dataKey="value" name={t('analytics.forecast.cases', 'Cases')} stroke="#111827" dot={false} />
-              <Line type="monotone" dataKey="fitted" name="Fitted" stroke="#9ca3af" dot={false} />
+              <Area type="monotone" dataKey="range" name={t('analytics.forecast.band', '95% band')} stroke="none" fill="#3b82f6" fillOpacity={0.15} />
+              <Line type="monotone" dataKey="value" name={metric === 'cases' ? t('analytics.forecast.cases', 'Cases') : t('analytics.forecast.disbursement', 'Disbursement')} stroke="#111827" dot={false} />
+              <Line type="monotone" dataKey="fitted" name={t('analytics.forecast.fitted', 'Fitted')} stroke="#9ca3af" dot={false} />
               <Line type="monotone" dataKey="forecast" name="Forecast" stroke="#3b82f6" dot={false} />
             </ComposedChart>
           </ResponsiveContainer>

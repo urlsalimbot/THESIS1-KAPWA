@@ -2365,8 +2365,8 @@ const en = {
       "clustering": "Households are described by the selected features, standardized, and grouped with seeded k-means across candidate k values from 2 to 8. k is chosen with the elbow (inertia) and silhouette scores; every run is saved and reproducible by seed. Segments below 5 households, and one additional segment when the totals would reveal a small one, are suppressed.",
       "concentration": "Each barangay's share of cases and of assistance. HHI = sum of squared shares, labelled dispersed below 0.15, moderate from 0.15 to 0.25, and concentrated above 0.25. At least three barangays with data are required; small cells and one complementary cell are suppressed.",
       "equity": "Compares each barangay's share of served households with its share of all households. The coverage ratio = served share divided by household share, and quartiles rank the ratios across barangays. Barangays with no served households appear with suppressed ratios. Ratios based on fewer than 5 households or served households are suppressed.",
-      "inequality": "Household incomes above zero are ranked; the Gini coefficient measures inequality from 0 (equal) to 1 (one household holds everything). The Lorenz curve plots cumulative population against cumulative income share, and deciles are the income cut-offs at each tenth. At least 20 incomes are required.",
-      "forecast": "Monthly totals for the last 24 months are fit with Holt's linear trend (alpha and beta chosen by grid search). The 95% band widens with the square root of the horizon; accuracy is reported as MAPE against the last 6 months and compared with a 3-month moving-average baseline.",
+      "inequality": "Household incomes above zero are ranked; the Gini coefficient measures inequality from 0 (equal) to 1 (one household holds everything). The Lorenz curve plots cumulative population against cumulative income share, and deciles are the income cut-offs at each tenth. At least 20 incomes are required. Income is a current household snapshot, so the date range does not apply; the barangay filter does.",
+      "forecast": "Monthly totals for the last 24 months are fit with Holt's linear trend (alpha and beta chosen by grid search). The 95% band widens with the square root of the horizon; accuracy is reported as MAPE against the last 6 months and compared with a 3-month moving-average baseline. This model uses a fixed 24-month window and does not apply the date or barangay filters. Monthly buckets are model inputs and are not small-cell suppressed.",
       "associations": "Cases in range are transactions and distinct services rendered are items. Pairwise rules report support (share of cases with both), confidence (share of A cases that also have B), and lift (confidence divided by B's overall rate). Rules whose counts fall below 5 are suppressed together with their ratios."
     },
     "hhi": {
@@ -2435,6 +2435,7 @@ const en = {
       "gini": "Gini coefficient",
       "top10": "Top 10% income share",
       "count": "Households with income",
+      "excluded": "Excluded (missing income): {{count}}",
       "lorenz": "Lorenz curve",
       "deciles": "Income deciles",
       "decileLabel": "D{{n}}"
@@ -2447,7 +2448,9 @@ const en = {
       "mape": "Model MAPE",
       "baselineMape": "MA(3) baseline MAPE",
       "params": "Fitted alpha {{alpha}}, beta {{beta}}",
-      "history": "History and forecast"
+      "history": "History and forecast",
+      "fitted": "Fitted",
+      "band": "95% band"
     },
     "associations": {
       "total": "{{count}} cases analyzed",
@@ -2458,7 +2461,8 @@ const en = {
       "lift": "Lift",
       "countBoth": "Cases with both",
       "minSupport": "Min support",
-      "minConfidence": "Min confidence"
+      "minConfidence": "Min confidence",
+      "topNote": "Shows the top 20 rules by lift"
     }
   },
 } as const;

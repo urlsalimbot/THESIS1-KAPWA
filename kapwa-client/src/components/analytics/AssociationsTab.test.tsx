@@ -31,6 +31,12 @@ describe('AssociationsTab', () => {
     expect((await screen.findAllByText('Food')).length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('Medical').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    expect(screen.getAllByTitle('Suppressed (<5)').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders the top-rules footnote', async () => {
+    renderTab();
+    expect(await screen.findByText(/Shows the top 20 rules by lift/i)).toBeTruthy();
   });
 
   it('renders the insufficient-data state', async () => {

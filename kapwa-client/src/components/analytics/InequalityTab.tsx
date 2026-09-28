@@ -9,6 +9,7 @@ interface InequalityResponse {
   gini: number;
   top10Share: number;
   count: number;
+  excludedMissing: number;
   lorenz: Array<{ p: number; share: number }>;
   deciles: number[];
 }
@@ -40,7 +41,10 @@ export function InequalityTab({ filters }: { filters: Record<string, unknown> })
         </Card>
         <Card>
           <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">{t('analytics.inequality.count', 'Households with income')}</CardTitle></CardHeader>
-          <CardContent><p className="text-2xl font-semibold">{data.count.toLocaleString()}</p></CardContent>
+          <CardContent>
+            <p className="text-2xl font-semibold">{data.count.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">{t('analytics.inequality.excluded', 'Excluded (missing income): {{count}}', { count: data.excludedMissing })}</p>
+          </CardContent>
         </Card>
       </div>
       <Card>

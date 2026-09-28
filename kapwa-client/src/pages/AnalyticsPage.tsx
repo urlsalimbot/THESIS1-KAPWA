@@ -24,7 +24,7 @@ export function AnalyticsPage() {
   return (
     <PageShell
       title={t('analytics.title', 'Analytics')}
-      description={t('analytics.description', 'Demographics, clustering, inequality, forecasting, and associations')}
+      description={t('analytics.description', 'Demographics, clustering, inequality, forecast, concentration, equity, and associations')}
     >
       <div className="rounded-xl border bg-card p-3 shadow-sm">
         <AnalyticsFilters value={filterValue} onChange={setFilterValue} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,8 +13,8 @@ interface Rule {
 }
 interface AssociationsResponse { totalTransactions: number; rules: Rule[] }
 
-function cellText(cell: Cell | undefined): string {
-  if (!cell || 'suppressed' in cell) return '—';
+function cellText(cell: Cell | undefined, suppressedTitle: string): ReactNode {
+  if (!cell || 'suppressed' in cell) return <span title={suppressedTitle}>—</span>;
   return cell.value.toLocaleString(undefined, { maximumFractionDigits: 3 });
 }
 
@@ -34,17 +34,19 @@ export function AssociationsTab({ filters }: { filters: Record<string, unknown> 
   }
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">{t('analytics.loading', 'Loading…')}</p>;
 
+  const suppressedTitle = t('analytics.suppressed', 'Suppressed (<5)');
+
   return (
     <div className="space-y-4">
       <MethodologyNote textKey="analytics.methodology.associations" />
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="assoc-support">{t('analytics.associations.minSupport', 'Min support')} (%)</label>
-          <input id="assoc-support" type="number" min={0} max={100} className="flex h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" value={minSupport} onChange={e => setMinSupport(Number(e.target.value))} />
+          <input id="assoc-support" type="number" min={0} max={100} className="flex h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" value={minSupport} onChange={e => setMinSupport(Math.max(0, Math.min(100, Number(e.target.value))))} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="assoc-confidence">{t('analytics.associations.minConfidence', 'Min confidence')} (%)</label>
-          <input id="assoc-confidence" type="number" min={0} max={100} className="flex h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" value={minConfidence} onChange={e => setMinConfidence(Number(e.target.value))} />
+          <input id="assoc-confidence" type="number" min={0} max={100} className="flex h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" value={minConfidence} onChange={e => setMinConfidence(Math.max(0, Math.min(100, Number(e.target.value))))} />
         </div>
         <p className="text-xs text-muted-foreground">{t('analytics.associations.total', '{{count}} cases analyzed', { count: data.totalTransactions })}</p>
       </div>
@@ -67,10 +69,10 @@ export function AssociationsTab({ filters }: { filters: Record<string, unknown> 
                 <tr key={`${rule.a}|${rule.b}`} className="border-t">
                   <td className="py-1">{rule.a}</td>
                   <td>{rule.b}</td>
-                  <td>{cellText(rule.countBoth)}</td>
-                  <td>{cellText(rule.support)}</td>
-                  <td>{cellText(rule.confidence)}</td>
-                  <td>{cellText(rule.lift)}</td>
+                  <td>{cellText(rule.countBoth, suppressedTitle)}</td>
+                  <td>{cellText(rule.support, suppressedTitle)}</td>
+                  <td>{cellText(rule.confidence, suppressedTitle)}</td>
+                  <td>{cellText(rule.lift, suppressedTitle)}</td>
                 </tr>
               ))}
               {data.rules.length === 0 && (
@@ -78,6 +80,7 @@ export function AssociationsTab({ filters }: { filters: Record<string, unknown> 
               )}
             </tbody>
           </table>
+          <p className="mt-2 text-xs text-muted-foreground">{t('analytics.associations.topNote', 'Shows the top 20 rules by lift')}</p>
         </CardContent>
       </Card>
     </div>

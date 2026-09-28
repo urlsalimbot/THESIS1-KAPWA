@@ -18,7 +18,7 @@ describe('InequalityTab', () => {
   beforeEach(() => {
     mockApiGet.mockReset();
     mockApiGet.mockResolvedValue({
-      gini: 0.42, top10Share: 0.31, count: 120,
+      gini: 0.42, top10Share: 0.31, count: 120, excludedMissing: 3,
       lorenz: [{ p: 0, share: 0 }, { p: 0.5, share: 0.2 }, { p: 1, share: 1 }],
       deciles: [2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
     });
@@ -29,6 +29,7 @@ describe('InequalityTab', () => {
     expect(await screen.findByText('0.420')).toBeTruthy();
     expect(screen.getByText(/31/)).toBeTruthy();
     expect(screen.getByText('₱10,000')).toBeTruthy();
+    expect(screen.getByText('Excluded (missing income): 3')).toBeTruthy();
   });
 
   it('renders the insufficient-data state', async () => {

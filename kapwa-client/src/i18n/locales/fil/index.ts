@@ -2368,8 +2368,8 @@ const fil: EnLocale = {
       "clustering": "Inilalarawan ang mga sambahayan gamit ang napiling mga katangian, isinastandardize, at pinagsasama-sama sa seeded k-means para sa mga kandidatong k mula 2 hanggang 8. Pinipili ang k sa elbow (inertia) at silhouette; naka-save ang bawat run at reproduksible sa seed. Nakubli ang mga segment na wala pang 5 sambahayan, at isa pang segment kapag maibubunyag ng kabuuan ang maliit na isa.",
       "concentration": "Ang bahagi ng bawat barangay sa mga kaso at sa tulong. HHI = kabuuan ng mga parisukat ng bahagi, may tatak na nakakalat kung wala pang 0.15, katamtaman mula 0.15 hanggang 0.25, at konsentrado kung higit sa 0.25. Kailangan ang hindi bababa sa tatlong barangay na may datos; nakubli ang maliliit na selda at isa pang komplementaryong selda.",
       "equity": "Inihahambing ang bahagi ng naserbisyuhang sambahayan ng bawat barangay sa bahagi nito sa lahat ng sambahayan. Ang coverage ratio = bahagi ng naserbisyuhan na hinati sa bahagi ng sambahayan, at ang mga quartile ay nagraranggo ng mga ratio sa mga barangay. Lumalabas ang mga barangay na walang naserbisyuhan na may nakubling ratio. Nakubli ang mga ratio na batay sa wala pang 5 sambahayan o naserbisyuhang sambahayan.",
-      "inequality": "Ang mga kita ng sambahayan na higit sa zero ay niraranggo; sinusukat ng Gini coefficient ang hindi pagkakapantay-pantay mula 0 (pantay) hanggang 1 (isang sambahayan ang may lahat). Ang Lorenz curve ay naglalagay ng cumulative na populasyon laban sa cumulative na bahagi ng kita, at ang mga desil ay ang mga hangganan ng kita sa bawat ika-sampu. Kailangan ng hindi bababa sa 20 kita.",
-      "forecast": "Ang buwanang kabuuan ng huling 24 na buwan ay pinapasa sa Holt's linear trend (alpha at beta pinipili sa grid search). Ang 95% na banda ay lumalawak kasabay ng square root ng abot-tanaw; ang katumpakan ay MAPE laban sa huling 6 na buwan at inihahambing sa 3-buwang moving-average baseline.",
+      "inequality": "Ang mga kita ng sambahayan na higit sa zero ay niraranggo; sinusukat ng Gini coefficient ang hindi pagkakapantay-pantay mula 0 (pantay) hanggang 1 (isang sambahayan ang may lahat). Ang Lorenz curve ay naglalagay ng cumulative na populasyon laban sa cumulative na bahagi ng kita, at ang mga desil ay ang mga hangganan ng kita sa bawat ika-sampu. Kailangan ng hindi bababa sa 20 kita. Kasalukuyang snapshot ng kita ang ginagamit, kaya hindi nalalapat ang saklaw ng petsa; nalalapat ang filter ng barangay.",
+      "forecast": "Ang buwanang kabuuan ng huling 24 na buwan ay pinapasa sa Holt's linear trend (alpha at beta pinipili sa grid search). Ang 95% na banda ay lumalawak kasabay ng square root ng abot-tanaw; ang katumpakan ay MAPE laban sa huling 6 na buwan at inihahambing sa 3-buwang moving-average baseline. Gumagamit ang modelong ito ng nakapirming 24-buwang window at hindi nalalapat ang mga filter ng petsa o barangay. Ang mga buwanang bucket ay input ng modelo at hindi nakukubli.",
       "associations": "Ang mga kaso sa saklaw ay transaksyon at ang mga natatanging serbisyong naibigay ay item. Ang pairwise na tuntunin ay nag-uulat ng support (bahagi ng kaso na may pareho), confidence (bahagi ng A na may B), at lift (confidence na hinati sa pangkalahatang rate ng B). Ang mga tuntuning may bilang na mas mababa sa 5 ay nakubli kasama ang kanilang mga ratio."
     },
     "hhi": {
@@ -2438,6 +2438,7 @@ const fil: EnLocale = {
       "gini": "Koepisyenteng Gini",
       "top10": "Bahagi ng kita ng nangungunang 10%",
       "count": "Sambahayang may kita",
+      "excluded": "Hindi kasama (kulang ang kita): {{count}}",
       "lorenz": "Kurba ng Lorenz",
       "deciles": "Mga desil ng kita",
       "decileLabel": "Desil {{n}}"
@@ -2450,7 +2451,9 @@ const fil: EnLocale = {
       "mape": "MAPE ng modelo",
       "baselineMape": "MAPE ng MA(3) baseline",
       "params": "Nakalapat na alpha {{alpha}}, beta {{beta}}",
-      "history": "Kasaysayan at hula"
+      "history": "Kasaysayan at hula",
+      "fitted": "Nakalapat",
+      "band": "95% na banda"
     },
     "associations": {
       "total": "{{count}} kaso ang sinuri",
@@ -2460,8 +2463,9 @@ const fil: EnLocale = {
       "confidence": "Kumpiyansa",
       "lift": "Pag-angat",
       "countBoth": "Kaso na may pareho",
-      "minSupport": "Pinakamababang support",
-      "minConfidence": "Pinakamababang confidence"
+      "minSupport": "Pinakamababang suporta",
+      "minConfidence": "Pinakamababang kumpiyansa",
+      "topNote": "Ipinapakita ang nangungunang 20 tuntunin ayon sa lift"
     }
   }
 };

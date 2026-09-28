@@ -6,6 +6,29 @@ import { ForecastTab } from './ForecastTab';
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 vi.mock('../../lib/api', () => ({ api: { get: (...a: unknown[]) => mockApiGet(...a) } }));
 
+// recharts only mounts chart children once the ResponsiveContainer has a
+// positive size, which jsdom never provides without a ResizeObserver.
+const globalWithObserver = globalThis as unknown as { ResizeObserver?: unknown };
+const originalResizeObserver = globalWithObserver.ResizeObserver;
+
+class ResizeObserverStub {
+  private readonly callback: ResizeObserverCallback;
+
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+  }
+
+  observe(target: Element) {
+    this.callback(
+      [{ target, contentRect: { width: 640, height: 280 } } as unknown as ResizeObserverEntry],
+      this as unknown as ResizeObserver,
+    );
+  }
+
+  unobserve() {}
+  disconnect() {}
+}
+
 function renderTab() {
   return render(
     <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
@@ -45,5 +68,19 @@ describe('ForecastTab', () => {
       const called = mockApiGet.mock.calls.some(args => JSON.stringify(args[0]).includes('disbursement'));
       expect(called).toBe(true);
     });
+  });
+
+  it('names the value legend after the selected metric', async () => {
+    globalWithObserver.ResizeObserver = ResizeObserverStub;
+    try {
+      renderTab();
+      await screen.findByText('8.0%');
+      fireEvent.change(screen.getByLabelText('Metric'), { target: { value: 'disbursement' } });
+      await waitFor(() => {
+        expect(screen.getByText('Disbursement', { selector: '.recharts-legend-item-text' })).toBeTruthy();
+      });
+    } finally {
+      globalWithObserver.ResizeObserver = originalResizeObserver;
+    }
   });
 });
