@@ -1017,7 +1017,10 @@ threshold fails.
   data change will mostly measure the cache. Restart the server (or vary filters) for
   cold-path numbers.
 - The writes scenario grows the `kapwa_perf` database by design; use `--reset-db` to
-  start clean and to keep run-to-run comparisons honest.
+  start clean and to keep run-to-run comparisons honest. **Repeat seeding without a
+  reset currently fails** because a repeated intake for an existing person hits an app
+  bug (`Cannot set property age of #<Person> which has only a getter`); use
+  `--reset-db` until that app-side bug is fixed.
 - CSRF and rate limiting are real: the suite bootstraps the `csrf-token` cookie and
   raises `THROTTLE_LIMIT`, so measured latency reflects the app, not the guards.
 - Not covered: socket.io/chat load (would need the `xk6-socketio` extension), TLS, and
