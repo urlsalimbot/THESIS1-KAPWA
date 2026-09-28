@@ -236,13 +236,23 @@ if command -v k6 >/dev/null 2>&1; then
   runner=local
   BASE_URL="$BASE_URL" PROFILE="$profile" RESULTS_DIR="$RUN_DIR" UPLOAD="$upload" k6 run "$K6_DIR/main.js"
   k6_status=$?
-else
+elif docker info >/dev/null 2>&1; then
   runner=docker
   docker run --rm --network host --user "$(id -u):$(id -g)" \
     -v "$K6_DIR:/scripts:ro" -v "$RUN_DIR:/results" \
     -e BASE_URL="$BASE_URL" -e PROFILE="$profile" -e RESULTS_DIR=/results -e UPLOAD="$upload" \
     grafana/k6 run /scripts/main.js
   k6_status=$?
+elif command -v podman >/dev/null 2>&1; then
+  runner=podman
+  podman run --rm --network host --user "$(id -u):$(id -g)" \
+    -v "$K6_DIR:/scripts:ro" -v "$RUN_DIR:/results" \
+    -e BASE_URL="$BASE_URL" -e PROFILE="$profile" -e RESULTS_DIR=/results -e UPLOAD="$upload" \
+    docker.io/grafana/k6 run /scripts/main.js
+  k6_status=$?
+else
+  echo "no k6 runner available: install k6, or start docker, or install podman" >&2
+  exit 2
 fi
 set -e
 
@@ -430,7 +440,7 @@ export const ACCOUNTS = {
 };
 
 export function profileConfig(profile) {
-  const smoke = { executor: 'per-vu-iterations', vus: 1, iterations: 1 };
+  const smoke = { executor: 'per-vu-iterations', vus: 1, iterations: 1, exec: 'smoke' };
   switch (profile) {
     case 'smoke':
       return { smoke };
