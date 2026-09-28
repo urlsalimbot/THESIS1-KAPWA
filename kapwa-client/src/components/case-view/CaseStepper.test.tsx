@@ -106,6 +106,41 @@ describe('CaseStepper rendering', () => {
     );
     expect(stepButton('Inter-agency Referrals').textContent).toContain('3');
   });
+
+  it('locks Evaluate Help Given when the referral step is done but the intervention step is not', () => {
+    const onClick = vi.fn();
+    render(
+      <CaseStepper
+        currentStep={2}
+        onStepClick={onClick}
+        caseData={{ ...baseCase, referralNotNeeded: true }}
+        interventionCount={0}
+        requirementsMet={true}
+      />,
+    );
+    const step4 = stepButton('Evaluate Help Given');
+    expect(step4.getAttribute('aria-disabled')).toBe('true');
+    step4.click();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('unlocks Evaluate Help Given when both implementation steps are done', () => {
+    const onClick = vi.fn();
+    render(
+      <CaseStepper
+        currentStep={1}
+        onStepClick={onClick}
+        caseData={{ ...baseCase, referralNotNeeded: true }}
+        interventionCount={1}
+        requirementsMet={true}
+        interventionNotNeeded={false}
+      />,
+    );
+    const step4 = stepButton('Evaluate Help Given');
+    expect(step4.getAttribute('aria-disabled')).not.toBe('true');
+    step4.click();
+    expect(onClick).toHaveBeenCalledWith(3);
+  });
 });
 
 describe('stepperStepDone — Phase-Out steps require the case to reach Phase-Out', () => {

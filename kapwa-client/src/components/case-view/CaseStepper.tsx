@@ -94,6 +94,24 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
     // the assessment done, Service Delivery is reachable regardless of whether
     // an intervention exists, because a case may be referral-only.
     const implementationReachable = stepperStepDone(0, caseData, interventionCount, progress);
+    // Phase-Out (Evaluate Help Given, Case Study & Closure) requires BOTH
+    // implementation steps to be finished — never reachable around an
+    // incomplete intervention or referral step.
+    const implementationDone =
+      stepperStepDone(1, caseData, interventionCount, progress) &&
+      stepperStepDone(2, caseData, interventionCount, progress);
+    if (i >= 3 && !implementationDone) {
+      toast.error(
+        t('caseView.stepper.completeImplementationSteps', 'Finish implementation steps first'),
+        {
+          description: t(
+            'caseView.stepper.completeImplementationStepsDesc',
+            'Step 4 (Evaluate Help Given) unlocks only after Step 2 (Intervention & Requirements) and Step 3 (Inter-agency Referrals) are both complete.',
+          ),
+        },
+      );
+      return;
+    }
     if (done || i <= highestReachable + 1 || (i === 2 && implementationReachable)) {
       onStepClick(i);
       return;
@@ -140,7 +158,10 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                   const step = STEPS[stepIdx];
                   const done = stepperStepDone(stepIdx, caseData, interventionCount, progress);
                   const isActive = stepIdx === currentStep;
-                  const isClickable = done || stepIdx <= highestReachable + 1;
+                  const implementationDone =
+                    stepperStepDone(1, caseData, interventionCount, progress) &&
+                    stepperStepDone(2, caseData, interventionCount, progress);
+                  const isClickable = done || (stepIdx === 2 && stepperStepDone(0, caseData, interventionCount, progress)) || (stepIdx <= highestReachable + 1 && (stepIdx < 3 || implementationDone));
                   return (
                     <button
                       key={stepIdx}

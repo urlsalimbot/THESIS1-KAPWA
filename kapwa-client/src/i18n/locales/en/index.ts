@@ -244,6 +244,8 @@ const en = {
     },
     "stepper": {
       "accomplishStepFirst": "Accomplish current step first.",
+      "completeImplementationSteps": "Finish implementation steps first",
+      "completeImplementationStepsDesc": "Step 4 (Evaluate Help Given) unlocks only after Step 2 (Intervention & Requirements) and Step 3 (Inter-agency Referrals) are both complete.",
       "assessment": "Assess & Interview",
       "assessmentDesc": "Interview and FRVA/SWDI analysis",
       "closure": "Case Study & Closure",

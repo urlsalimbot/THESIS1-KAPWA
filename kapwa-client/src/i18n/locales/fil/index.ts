@@ -1710,6 +1710,8 @@ const fil: EnLocale = {
     },
     "stepper": {
       "accomplishStepFirst": "Kumpletuhin muna ang kasalukuyang hakbang.",
+      "completeImplementationSteps": "Tapusin muna ang mga hakbang ng implementasyon",
+      "completeImplementationStepsDesc": "Magbubukas lamang ang Hakbang 4 (Evaluate Help Given) kapag parehong kumpleto ang Hakbang 2 (Intervention & Requirements) at Hakbang 3 (Inter-agency Referrals).",
       "assessment": "Pagtatasa at Panayam",
       "assessmentDesc": "Panayam at pagsusuri ng FRVA/SWDI",
       "closure": "Pag-aaral ng Kaso at Pagsasara",
