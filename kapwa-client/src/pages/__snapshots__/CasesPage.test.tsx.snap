@@ -51,6 +51,71 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
               All Barangays
             </option>
             <option
+              value="Bangkal"
+            >
+              Bangkal
+            </option>
+            <option
+              value="Baraka"
+            >
+              Baraka
+            </option>
+            <option
+              value="Bigte"
+            >
+              Bigte
+            </option>
+            <option
+              value="Bitungol"
+            >
+              Bitungol
+            </option>
+            <option
+              value="Friendship Village Resources (FVR)"
+            >
+              Friendship Village Resources (FVR)
+            </option>
+            <option
+              value="Matictic"
+            >
+              Matictic
+            </option>
+            <option
+              value="Minuyan"
+            >
+              Minuyan
+            </option>
+            <option
+              value="Partida"
+            >
+              Partida
+            </option>
+            <option
+              value="Pinagtulayan"
+            >
+              Pinagtulayan
+            </option>
+            <option
+              value="Poblacion"
+            >
+              Poblacion
+            </option>
+            <option
+              value="San Lorenzo"
+            >
+              San Lorenzo
+            </option>
+            <option
+              value="San Mateo"
+            >
+              San Mateo
+            </option>
+            <option
+              value="Tigbe"
+            >
+              Tigbe
+            </option>
+            <option
               value="Barangay 1"
             >
               Barangay 1
@@ -73,6 +138,51 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
               value=""
             >
               All Categories
+            </option>
+            <option
+              value="Children in Need of Special Protection"
+            >
+              Children in Need of Special Protection
+            </option>
+            <option
+              value="Youth in Need of Special Protection"
+            >
+              Youth in Need of Special Protection
+            </option>
+            <option
+              value="Women in Especially Difficult Circumstances"
+            >
+              Women in Especially Difficult Circumstances
+            </option>
+            <option
+              value="Person with Disability"
+            >
+              Person with Disability
+            </option>
+            <option
+              value="Senior Citizen"
+            >
+              Senior Citizen
+            </option>
+            <option
+              value="Indigent"
+            >
+              Indigent
+            </option>
+            <option
+              value="4Ps"
+            >
+              4Ps
+            </option>
+            <option
+              value="Indigenous Person"
+            >
+              Indigenous Person
+            </option>
+            <option
+              value="Family Head and Other Needy Adult"
+            >
+              Family Head and Other Needy Adult
             </option>
           </select>
         </div>
@@ -143,57 +253,19 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
               All Genders
             </option>
             <option
+              value="Male"
+            >
+              Male
+            </option>
+            <option
+              value="Female"
+            >
+              Female
+            </option>
+            <option
               value="M"
             >
               M
-            </option>
-          </select>
-        </div>
-        <div
-          class="flex flex-col gap-0.5"
-        >
-          <label
-            class="text-xs text-muted-foreground font-medium"
-          >
-            Age Range
-          </label>
-          <select
-            aria-label="Age Range"
-            class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-32"
-          >
-            <option
-              value=""
-            >
-              All Ages
-            </option>
-          </select>
-        </div>
-        <div
-          class="flex flex-col gap-0.5"
-        >
-          <label
-            class="text-xs text-muted-foreground font-medium"
-          >
-            SLA
-          </label>
-          <select
-            aria-label="SLA"
-            class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-32"
-          >
-            <option
-              value=""
-            >
-              All SLA
-            </option>
-            <option
-              value="overdue"
-            >
-              Overdue
-            </option>
-            <option
-              value="on_track"
-            >
-              On Track
             </option>
           </select>
         </div>

@@ -5,6 +5,7 @@ import useSWR, { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDateTime } from '../lib/format';
+import { BARANGAYS, CLIENT_CATEGORIES_V2 } from '../lib/constants';
 import { statusLabel, categoryLabel } from '@/i18n/display';
 import { Search, Download, AlertTriangle, Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
@@ -53,6 +54,7 @@ const STATUS_LABELS: Record<string, string> = {
   closed: 'Closed',
 };
 const STATUS_KEYS = Object.keys(STATUS_LABELS);
+const GENDERS = ['Male', 'Female'] as const;
 
 function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
   const ben = (c.beneficiary as Record<string, unknown>) || {};
@@ -126,8 +128,6 @@ export function CasesPage() {
   const urlCategory = searchParams.get('category') || '';
   const urlStatus = searchParams.get('status') || '';
   const urlGender = searchParams.get('gender') || '';
-  const urlAgeRange = searchParams.get('ageRange') || '';
-  const urlSla = searchParams.get('sla') || '';
   const urlDateFrom = searchParams.get('dateFrom') || '';
   const urlDateTo = searchParams.get('dateTo') || '';
 
@@ -149,7 +149,7 @@ export function CasesPage() {
 
   useEffect(() => {
     setSearchInput(urlSearch);
-  }, [urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
+  }, [urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlDateFrom, urlDateTo]);
 
   function handleSearch() {
     if (searchInput !== urlSearch) {
@@ -167,12 +167,10 @@ export function CasesPage() {
     if (urlBarangay) p.barangay = urlBarangay;
     if (urlCategory) p.category = urlCategory;
     if (urlGender) p.gender = urlGender;
-    if (urlAgeRange) p.ageRange = urlAgeRange;
-    if (urlSla) p.sla = urlSla;
     if (urlDateFrom) p.dateFrom = urlDateFrom;
     if (urlDateTo) p.dateTo = urlDateTo;
     return p;
-  }, [urlPage, urlLimit, urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlAgeRange, urlSla, urlDateFrom, urlDateTo]);
+  }, [urlPage, urlLimit, urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlDateFrom, urlDateTo]);
 
   const { data: caseResponse, isLoading, error, mutate } = useSWR<{ data: Record<string, unknown>[]; total: number }>(
     queryKeys.cases.list(listParams),
@@ -185,16 +183,32 @@ export function CasesPage() {
   const uniqueBarangays = useMemo(() => [...new Set(allCases.map(c => c.barangay).filter(Boolean))], [allCases]);
   const uniqueCategories = useMemo(() => [...new Set(allCases.map(c => c.category).filter(Boolean))], [allCases]);
   const uniqueGenders = useMemo(() => [...new Set(allCases.map(c => c.gender).filter(Boolean))], [allCases]);
-  const uniqueAgeRanges = useMemo(() => [...new Set(allCases.map(c => c.ageRange).filter(Boolean))], [allCases]);
 
-  const hasAnyFilter = Boolean(urlSearch || urlBarangay || urlCategory || urlStatus || urlGender || urlAgeRange || urlSla || urlDateFrom || urlDateTo);
+  // Options cover every possible value: the canonical vocabulary first, plus any
+  // extra value present in the loaded rows so nothing on screen is unfilterable.
+  const barangayOptions = useMemo(() => [
+    { value: '', label: t('cases.allBarangays', 'All Barangays') },
+    ...[...BARANGAYS, ...uniqueBarangays.filter(b => !(BARANGAYS as readonly string[]).includes(b))].map(b => ({ value: b, label: b })),
+  ], [uniqueBarangays, t]);
+
+  const categoryOptions = useMemo(() => [
+    { value: '', label: t('cases.allCategories', 'All Categories') },
+    ...[...CLIENT_CATEGORIES_V2, ...uniqueCategories.filter(c => !(CLIENT_CATEGORIES_V2 as readonly string[]).includes(c))].map(c => ({ value: c, label: categoryLabel(t, c) })),
+  ], [uniqueCategories, t]);
+
+  const genderOptions = useMemo(() => [
+    { value: '', label: t('cases.allGenders', 'All Genders') },
+    ...[...GENDERS, ...uniqueGenders.filter(g => !(GENDERS as readonly string[]).includes(g))].map(g => ({ value: g, label: g })),
+  ], [uniqueGenders, t]);
+
+  const hasAnyFilter = Boolean(urlSearch || urlBarangay || urlCategory || urlStatus || urlGender || urlDateFrom || urlDateTo);
 
   const clearFilters = useCallback(() => {
     setSearchInput('');
     updateURL({
       search: undefined, barangay: undefined, category: undefined,
-      status: undefined, gender: undefined, ageRange: undefined,
-      sla: undefined, dateFrom: undefined, dateTo: undefined, page: undefined,
+      status: undefined, gender: undefined,
+      dateFrom: undefined, dateTo: undefined, page: undefined,
     });
   }, [updateURL]);
 
@@ -244,17 +258,13 @@ export function CasesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 flex-wrap">
           <FilterSelect label={t('cases.barangay', 'Barangay')} value={urlBarangay} onChange={(v) => updateURL({ barangay: v || undefined, page: '1' })}
-            options={[{ value: '', label: t('cases.allBarangays', 'All Barangays') }, ...uniqueBarangays.map(b => ({ value: b, label: b }))]} className="w-40" />
+            options={barangayOptions} className="w-40" />
           <FilterSelect label={t('cases.category', 'Category')} value={urlCategory} onChange={(v) => updateURL({ category: v || undefined, page: '1' })}
-            options={[{ value: '', label: t('cases.allCategories', 'All Categories') }, ...uniqueCategories.map(c => ({ value: c, label: c }))]} className="w-44" />
+            options={categoryOptions} className="w-44" />
           <FilterSelect label={t('cases.status', 'Status')} value={urlStatus} onChange={(v) => updateURL({ status: v || undefined, page: '1' })}
             options={[{ value: '', label: t('cases.allStatuses', 'All Statuses') }, ...STATUS_KEYS.map(k => ({ value: k, label: statusLabel(t, k) }))]} className="w-36" />
           <FilterSelect label={t('cases.gender', 'Gender')} value={urlGender} onChange={(v) => updateURL({ gender: v || undefined, page: '1' })}
-            options={[{ value: '', label: t('cases.allGenders', 'All Genders') }, ...uniqueGenders.map(g => ({ value: g, label: g }))]} className="w-32" />
-          <FilterSelect label={t('cases.ageRange', 'Age Range')} value={urlAgeRange} onChange={(v) => updateURL({ ageRange: v || undefined, page: '1' })}
-            options={[{ value: '', label: t('cases.allAges', 'All Ages') }, ...uniqueAgeRanges.map(a => ({ value: a, label: a }))]} className="w-32" />
-          <FilterSelect label="SLA" value={urlSla} onChange={(v) => updateURL({ sla: v || undefined, page: '1' })}
-            options={[{ value: '', label: t('cases.allSla', 'All SLA') }, { value: 'overdue', label: t('cases.overdue', 'Overdue') }, { value: 'on_track', label: t('cases.onTrack', 'On Track') }]} className="w-32" />
+            options={genderOptions} className="w-32" />
           <div className="flex flex-col gap-0.5">
             <label className="text-xs text-muted-foreground font-medium">{t('cases.dateFrom', 'Date From')}</label>
             <Input type="date" aria-label={t('cases.dateFrom', 'Date From')} className="w-36" value={urlDateFrom} onChange={e => updateURL({ dateFrom: e.target.value || undefined, page: '1' })} />

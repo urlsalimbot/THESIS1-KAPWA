@@ -88,7 +88,6 @@ const ALLOWED_IDENTICAL = new Set([
   'cases.caseStudyReport',
   'cases.claimant',
   'cases.gisPdf',
-  'cases.overdue',
   'cases.overdueBadge',
   'cases.override',
   'cases.pettyCashVoucher',

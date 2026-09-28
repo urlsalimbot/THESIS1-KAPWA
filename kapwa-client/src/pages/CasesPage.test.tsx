@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
 import { CasesPage } from './CasesPage';
+import { BARANGAYS, CLIENT_CATEGORIES_V2 } from '../lib/constants';
 
 const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiPatch, mockApiDel, mockQueueFsm, mockIsOnline } = vi.hoisted(() => ({
   mockCases: [
@@ -95,6 +96,29 @@ describe('CasesPage', () => {
   it('renders search input', async () => {
     renderWithSWR(<CasesPage />);
     expect(await screen.findByPlaceholderText('Search records...')).toBeTruthy();
+  });
+
+  it('removed the SLA and Age Range filters', async () => {
+    renderWithSWR(<CasesPage />);
+    await screen.findByRole('heading', { name: 'Case Tracker' });
+    expect(screen.queryByLabelText('SLA')).toBeNull();
+    expect(screen.queryByLabelText('Age Range')).toBeNull();
+  });
+
+  it('offers every possible value in the remaining filters, plus data extras', async () => {
+    renderWithSWR(<CasesPage />);
+    await screen.findByText('Dela Cruz');
+    const optionValues = (label: string) =>
+      Array.from((screen.getByLabelText(label) as HTMLSelectElement).options).map(o => o.value);
+
+    for (const b of BARANGAYS) expect(optionValues('Barangay')).toContain(b);
+    for (const c of CLIENT_CATEGORIES_V2) expect(optionValues('Category')).toContain(c);
+    expect(optionValues('Gender')).toEqual(expect.arrayContaining(['Male', 'Female']));
+    expect(optionValues('Status')).toEqual(
+      expect.arrayContaining(['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed']),
+    );
+    // Values present in the loaded rows stay filterable even when outside the canonical list.
+    expect(optionValues('Barangay')).toContain('Barangay 1');
   });
 
   it('snapshot: CasesPage rendered DOM with table layout + status badges + filter controls', async () => {
