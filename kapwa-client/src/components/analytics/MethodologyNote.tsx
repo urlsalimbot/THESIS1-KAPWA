@@ -4,7 +4,10 @@ export type MethodologyKey =
   | 'analytics.methodology.demographics'
   | 'analytics.methodology.clustering'
   | 'analytics.methodology.concentration'
-  | 'analytics.methodology.equity';
+  | 'analytics.methodology.equity'
+  | 'analytics.methodology.inequality'
+  | 'analytics.methodology.forecast'
+  | 'analytics.methodology.associations';
 
 /**
  * Small plain-language methodology disclosure rendered per analytics tab.

@@ -2328,7 +2328,7 @@ const en = {
   },
   "analytics": {
     "title": "Analytics",
-    "description": "Demographics, household clustering, concentration, and equity",
+    "description": "Demographics, clustering, concentration, equity, inequality, forecasting, and associations",
     "filters": {
       "range": "Date range",
       "range30d": "Last 30 days",
@@ -2344,7 +2344,10 @@ const en = {
       "demographics": "Demographics",
       "clustering": "Clustering",
       "concentration": "Concentration",
-      "equity": "Equity"
+      "equity": "Equity",
+      "inequality": "Inequality",
+      "forecast": "Forecast",
+      "associations": "Associations"
     },
     "suppressed": "Suppressed (<5)",
     "noData": "No data for the selected filters",
@@ -2357,7 +2360,10 @@ const en = {
       "demographics": "Counts come from served persons (each person linked to a case with an intervention in the date range), deduplicated by person. Age and sex, civil status, income bands, and household size are partitions with small-cell suppression (under 5) and complementary suppression. Income bands are relative, not official poverty thresholds. The dependency ratio = (0-14 + 60+) / (15-59) and is shown only when both groups reach the minimum cell size.",
       "clustering": "Households are described by the selected features, standardized, and grouped with seeded k-means across candidate k values from 2 to 8. k is chosen with the elbow (inertia) and silhouette scores; every run is saved and reproducible by seed. Segments below 5 households, and one additional segment when the totals would reveal a small one, are suppressed.",
       "concentration": "Each barangay's share of cases and of assistance. HHI = sum of squared shares, labelled dispersed below 0.15, moderate from 0.15 to 0.25, and concentrated above 0.25. At least three barangays with data are required; small cells and one complementary cell are suppressed.",
-      "equity": "Compares each barangay's share of served households with its share of all households. The coverage ratio = served share divided by household share, and quartiles rank the ratios across barangays. Barangays with no served households appear with suppressed ratios. Ratios based on fewer than 5 households or served households are suppressed."
+      "equity": "Compares each barangay's share of served households with its share of all households. The coverage ratio = served share divided by household share, and quartiles rank the ratios across barangays. Barangays with no served households appear with suppressed ratios. Ratios based on fewer than 5 households or served households are suppressed.",
+      "inequality": "Household incomes above zero are ranked; the Gini coefficient measures inequality from 0 (equal) to 1 (one household holds everything). The Lorenz curve plots cumulative population against cumulative income share, and deciles are the income cut-offs at each tenth. At least 20 incomes are required.",
+      "forecast": "Monthly totals for the last 24 months are fit with Holt's linear trend (alpha and beta chosen by grid search). The 95% band widens with the square root of the horizon; accuracy is reported as MAPE against the last 6 months and compared with a 3-month moving-average baseline.",
+      "associations": "Cases in range are transactions and distinct services rendered are items. Pairwise rules report support (share of cases with both), confidence (share of A cases that also have B), and lift (confidence divided by B's overall rate). Rules whose counts fall below 5 are suppressed together with their ratios."
     },
     "hhi": {
       "dispersed": "dispersed",
@@ -2420,6 +2426,35 @@ const en = {
       "coverageQuartile": "Coverage quartile",
       "fourPsShare": "4Ps household share",
       "note": "Ratios compare each barangay's served share with its share of all households"
+    },
+    "inequality": {
+      "gini": "Gini coefficient",
+      "top10": "Top 10% income share",
+      "count": "Households with income",
+      "lorenz": "Lorenz curve",
+      "deciles": "Income deciles",
+      "decileLabel": "D{{n}}"
+    },
+    "forecast": {
+      "metric": "Metric",
+      "cases": "Cases",
+      "disbursement": "Disbursement",
+      "horizon": "Horizon (months)",
+      "mape": "Model MAPE",
+      "baselineMape": "MA(3) baseline MAPE",
+      "params": "Fitted alpha {{alpha}}, beta {{beta}}",
+      "history": "History and forecast"
+    },
+    "associations": {
+      "total": "{{count}} cases analyzed",
+      "itemA": "Service A",
+      "itemB": "Service B",
+      "support": "Support",
+      "confidence": "Confidence",
+      "lift": "Lift",
+      "countBoth": "Cases with both",
+      "minSupport": "Min support",
+      "minConfidence": "Min confidence"
     }
   },
 } as const;

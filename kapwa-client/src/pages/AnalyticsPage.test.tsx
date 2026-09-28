@@ -38,6 +38,15 @@ describe('AnalyticsPage', () => {
       if (k.includes('equity')) {
         return Promise.resolve({ barangays: [] });
       }
+      if (k.includes('inequality')) {
+        return Promise.resolve({ gini: 0.4, top10Share: 0.3, count: 25, lorenz: [], deciles: [] });
+      }
+      if (k.includes('forecast')) {
+        return Promise.resolve({ metric: 'cases', months: 24, history: [], fitted: [], forecast: [], mape: null, baselineMape: null, alpha: 0.5, beta: 0.3 });
+      }
+      if (k.includes('associations')) {
+        return Promise.resolve({ totalTransactions: 0, rules: [] });
+      }
       return Promise.resolve({
         summary: { personsServed: { suppressed: true }, householdsCovered: { suppressed: true }, barangaysCovered: { suppressed: true } },
         ageSex: [], civilStatus: [], occupation: [], incomeBands: [], householdSize: [], dependencyRatio: null, philhealthCoverage: { suppressed: true },
@@ -45,13 +54,16 @@ describe('AnalyticsPage', () => {
     });
   });
 
-  it('renders the shell with all four tabs', async () => {
+  it('renders the shell with all seven tabs', async () => {
     renderPage();
     expect(await screen.findByRole('heading', { name: /Analytics/i })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Demographics/i })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Clustering/i })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Concentration/i })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Equity/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Inequality/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Forecast/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Associations/i })).toBeTruthy();
   });
 
   it('renders each tab panel', async () => {
@@ -69,5 +81,14 @@ describe('AnalyticsPage', () => {
 
     fireEvent.mouseDown(screen.getByRole('tab', { name: /Equity/i }), { button: 0 });
     expect(await screen.findByText(/Ratios compare each barangay/i)).toBeTruthy();
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Inequality/i }), { button: 0 });
+    expect((await screen.findAllByText(/Gini coefficient/i)).length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Forecast/i }), { button: 0 });
+    expect(await screen.findByText(/Model MAPE/i)).toBeTruthy();
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Associations/i }), { button: 0 });
+    expect(await screen.findByText(/Min support/i)).toBeTruthy();
   });
 });

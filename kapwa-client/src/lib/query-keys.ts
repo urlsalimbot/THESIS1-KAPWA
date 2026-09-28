@@ -49,6 +49,12 @@ export const queryKeys = {
       memo(`analytics.concentration.${JSON.stringify(filters)}`, () => ['analytics', 'concentration', filters] as const),
     equity: (filters: Record<string, unknown>) =>
       memo(`analytics.equity.${JSON.stringify(filters)}`, () => ['analytics', 'equity', filters] as const),
+    inequality: (filters: Record<string, unknown>) =>
+      memo(`analytics.inequality.${JSON.stringify(filters)}`, () => ['analytics', 'inequality', filters] as const),
+    forecast: (params: Record<string, unknown>) =>
+      memo(`analytics.forecast.${JSON.stringify(params)}`, () => ['analytics', 'forecast', params] as const),
+    associations: (filters: Record<string, unknown>) =>
+      memo(`analytics.associations.${JSON.stringify(filters)}`, () => ['analytics', 'associations', filters] as const),
     runs: (limit: number) =>
       memo(`analytics.clustering.runs.${limit}`, () => ['analytics', 'clustering', 'runs', { limit }] as const),
     run: (id: string) => memo(`analytics.clustering.run.${id}`, () => ['analytics', 'clustering', 'runs', id] as const),
