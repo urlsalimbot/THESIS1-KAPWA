@@ -107,10 +107,12 @@ fi
 (cd "$ROOT/kapwa-server" && env $(db_env) npx ts-node src/database/seed-programs.ts >"$RUN_DIR/seed-programs.log" 2>&1)
 
 # 5. Server
-(cd "$ROOT/kapwa-server" && env $(db_env) PORT="$SERVER_PORT" THROTTLE_LIMIT=100000 THROTTLE_TTL_MS=60000 NODE_ENV=development \
-  node dist/main.js >"$RUN_DIR/server.log" 2>&1 &
- echo $! > "$RUN_DIR/server.pid")
-SERVER_PID=$(cat "$RUN_DIR/server.pid")
+(
+  cd "$ROOT/kapwa-server"
+  exec env $(db_env) PORT="$SERVER_PORT" THROTTLE_LIMIT=100000 THROTTLE_TTL_MS=60000 NODE_ENV=development \
+    node dist/main.js >"$RUN_DIR/server.log" 2>&1
+) &
+SERVER_PID=$!
 
 wait_health() {
   for _ in $(seq 1 60); do
@@ -124,8 +126,8 @@ wait_health() {
 }
 wait_health
 
-# 6. Demo seed (API-driven; uploads warn without MinIO)
-(cd "$ROOT/kapwa-server" && env $(db_env) API_BASE="$BASE_URL" npx ts-node src/database/seed-demo.ts >"$RUN_DIR/seed-demo.log" 2>&1)
+# 6. Perf seed data (API-driven, CSRF-aware; deterministic volume)
+API_BASE="$BASE_URL" SEED_CASES="${SEED_CASES:-25}" node "$ROOT/perf/seed/seed-data.mjs" >"$RUN_DIR/seed-data.log" 2>&1
 
 if [ "$mode" = stack ]; then
   printf 'SERVER_PID=%s\nPG_STARTED_BY_US=%s\nRUN_DIR=%s\n' "$SERVER_PID" "$PG_STARTED_BY_US" "$RUN_DIR" > "$STATE_FILE"
