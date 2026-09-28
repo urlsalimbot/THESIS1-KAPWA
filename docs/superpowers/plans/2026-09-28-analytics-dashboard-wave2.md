@@ -53,9 +53,10 @@ describe('forecast models', () => {
     const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     const result = holtLinear(values, { horizon: 3 });
     expect(result.forecast).toHaveLength(3);
-    expect(result.forecast[0]).toBeCloseTo(11, 0);
-    expect(result.forecast[2]).toBeCloseTo(13, 0);
-    expect(result.fitted[9]).toBeCloseTo(10, 0);
+    expect(result.forecast[0]).toBeCloseTo(11, 6);
+    expect(result.forecast[2]).toBeCloseTo(13, 6);
+    expect(result.fitted[9]).toBeCloseTo(10, 6);
+    expect(result.residualStd).toBeCloseTo(0, 6);
   });
 
   it('reports zero MAPE for exact predictions and null when nothing is comparable', () => {
@@ -124,9 +125,10 @@ function holtWithParams(values: number[], alpha: number, beta: number, horizon: 
   }
   let level = values[0];
   let trend = values.length > 1 ? values[1] - values[0] : 0;
-  const fitted: number[] = [];
+  // The seed level is the first fitted value; one-step residuals exist from t=1.
+  const fitted: number[] = [values[0]];
   const residuals: number[] = [];
-  for (let i = 0; i < values.length; i++) {
+  for (let i = 1; i < values.length; i++) {
     const prediction = level + trend;
     fitted.push(prediction);
     residuals.push(values[i] - prediction);
