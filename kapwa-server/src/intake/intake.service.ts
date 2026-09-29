@@ -132,6 +132,25 @@ export class IntakeService {
     await manager.update(InterAgencyReferral, id, { caseId });
   }
 
+  // A PhilHealth number is unique per client. Only treat the holder as "the
+  // same client" when surname + firstName (and dob, when both sides carry one)
+  // agree — otherwise the number belongs to someone else and the intake must be
+  // rejected, never silently reuse/overwrite that person's record.
+  private isSameClient(
+    existing: Partial<Person>,
+    incoming: Partial<Person>,
+  ): boolean {
+    const sameName =
+      String(existing.surname ?? '').trim().toLowerCase() ===
+        String(incoming.surname ?? '').trim().toLowerCase() &&
+      String(existing.firstName ?? '').trim().toLowerCase() ===
+        String(incoming.firstName ?? '').trim().toLowerCase();
+    if (!sameName) return false;
+    if (!existing.dob || !incoming.dob) return true;
+    return new Date(existing.dob as any).toDateString() ===
+      new Date(incoming.dob as any).toDateString();
+  }
+
   private async findOrCreatePerson(
     data: Partial<Person> & { surname: string; firstName: string; gender: string; dob: Date },
     queryRunner?: any,
@@ -146,12 +165,20 @@ export class IntakeService {
       ? queryRunner.manager.save(Person, entity)
       : this.personRepo.save(entity);
 
+    // Duplicate-PhilHealth guard, on every path (dedup-reuse and fresh-create
+    // alike): a number already registered to a DIFFERENT client was previously
+    // either silently merged into that client's record or blew up as a generic
+    // 500 (DB unique violation). Surface it as a field-targeted 409 instead.
+    let existing: Person | null = null;
+    if (data.philhealthNumber) {
+      existing = await find({ philhealthNumber: data.philhealthNumber });
+      if (existing && !this.isSameClient(existing, data)) {
+        throw new ConflictException('PhilHealth number already registered to another client');
+      }
+    }
+
     let saved: Person;
     if (deduplicate) {
-      let existing: Person | null = null;
-      if (data.philhealthNumber) {
-        existing = await find({ philhealthNumber: data.philhealthNumber });
-      }
       if (!existing) {
         const barangay = scope?.currentAddress?.barangay;
         if (barangay) {
@@ -550,6 +577,16 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         this.logger.warn(`submitIntake rejected: ${error.message}`);
         throw error;
       }
+      // Safety net for the duplicate-PhilHealth guard: if a prod-only unique
+      // index on persons.philhealth_number rejects the insert (e.g. the dedup
+      // lookup raced two different identities under the same number), report it
+      // as the same field-targeted 409 instead of the generic 500.
+      if (
+        (error as { code?: string; message?: string })?.code === '23505' &&
+        /philhealth/i.test((error as { message?: string })?.message ?? '')
+      ) {
+        throw new ConflictException('PhilHealth number already registered to another client');
+      }
       this.logger.error('submitIntake failed', error instanceof Error ? error.stack : undefined);
       throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
     } finally {
@@ -856,6 +893,13 @@ const caseEntity = this.caseRepo.create({
       if (error instanceof HttpException) {
         this.logger.warn(`confirmMatch rejected: ${error.message}`);
         throw error;
+      }
+      // Same duplicate-PhilHealth safety net as submitIntake.
+      if (
+        (error as { code?: string; message?: string })?.code === '23505' &&
+        /philhealth/i.test((error as { message?: string })?.message ?? '')
+      ) {
+        throw new ConflictException('PhilHealth number already registered to another client');
       }
       this.logger.error('confirmMatch failed', error instanceof Error ? error.stack : undefined);
       throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');

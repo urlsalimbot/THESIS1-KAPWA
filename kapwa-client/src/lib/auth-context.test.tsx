@@ -4,6 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth-context';
 import { setPendingBeneficiaryIdPhoto, getPendingBeneficiaryIdPhoto } from './intake-id-photo';
 
+// logout() redirects through the router exported by routes.tsx (lazy import).
+// Mock the module so the redirect is observable without booting the whole app.
+const { mockRouterNavigate } = vi.hoisted(() => ({ mockRouterNavigate: vi.fn() }));
+vi.mock('../routes', () => ({ router: { navigate: mockRouterNavigate } }));
+
 function AuthProbe({ onAuth }: { onAuth: (auth: { user: unknown; token: string | null }) => void }) {
   const auth = useAuth();
   // Expose auth state via the onAuth callback on every render
@@ -93,6 +98,40 @@ describe('AuthProvider — kapwa:auth:logout subscriber', () => {
     await waitFor(() => {
       const lastCall = onAuth.mock.calls[onAuth.mock.calls.length - 1][0];
       expect(lastCall.user).toBeNull();
+    });
+  });
+
+  it('navigates to /login after an event-driven logout so the shell cannot stay stale', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin' } }),
+    });
+
+    const onAuth = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={onAuth} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const lastCall = onAuth.mock.calls[onAuth.mock.calls.length - 1][0];
+      expect(lastCall.user).not.toBeNull();
+    });
+
+    // Background 401 → kapwa:auth:logout → logout() must leave the
+    // authenticated shell by redirecting, not just clearing state.
+    mockRouterNavigate.mockClear();
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('kapwa:auth:logout', { detail: { reason: 'refresh_failed' } }));
+    });
+
+    await waitFor(() => {
+      expect(mockRouterNavigate).toHaveBeenCalledWith('/login', { replace: true });
     });
   });
 });

@@ -73,21 +73,24 @@ export class CasesController {
   }
 
   @Get('tracker/daily')
-  @Roles('admin', 'social_worker', 'mayor', 'auditor')
-  async getTrackerDaily(@Query('date') date?: string, @Query('status') status?: string) {
-    return this.casesService.getTrackerDaily(date, status);
+  @Roles('admin', 'social_worker', 'mayor', 'auditor', 'coordinator')
+  async getTrackerDaily(@Query('date') date?: string, @Query('status') status?: string, @Request() req?: any) {
+    const barangay = req?.user?.role === 'coordinator' ? req.user?.assignedBarangay : undefined;
+    return this.casesService.getTrackerDaily(date, status, barangay);
   }
 
   @Get('tracker/range')
-  @Roles('admin', 'social_worker', 'mayor', 'auditor')
-  async getTrackerRange(@Query('start') start: string, @Query('end') end: string, @Query('status') status?: string) {
-    return this.casesService.getTrackerRange(start, end, status);
+  @Roles('admin', 'social_worker', 'mayor', 'auditor', 'coordinator')
+  async getTrackerRange(@Query('start') start: string, @Query('end') end: string, @Query('status') status?: string, @Request() req?: any) {
+    const barangay = req?.user?.role === 'coordinator' ? req.user?.assignedBarangay : undefined;
+    return this.casesService.getTrackerRange(start, end, status, barangay);
   }
 
   @Get('tracker/stats')
-  @Roles('admin', 'social_worker', 'mayor', 'auditor')
-  async getTrackerStats() {
-    return this.casesService.getTrackerStats();
+  @Roles('admin', 'social_worker', 'mayor', 'auditor', 'coordinator')
+  async getTrackerStats(@Request() req?: any) {
+    const barangay = req?.user?.role === 'coordinator' ? req.user?.assignedBarangay : undefined;
+    return this.casesService.getTrackerStats(barangay);
   }
 
   @Get(':id')

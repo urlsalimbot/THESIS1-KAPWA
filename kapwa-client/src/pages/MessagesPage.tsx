@@ -276,6 +276,10 @@ export function MessagesPage() {
   const existingConvIds = new Set(conversations.map(c => c.userId));
   const unreadCount = (userId: string) => conversations.find(c => c.userId === userId)?.unread ?? 0;
   const isTyping = activeConv ? typingUsers.has(activeConv) : false;
+  // /chat/users can legitimately be empty (e.g. a claimant with no assigned
+  // MSWDO worker). A dead "New" dialog that says "No contacts found" is a
+  // dead end — disable the entry point instead and say who will reach out.
+  const hasContacts = rawUsers.length > 0;
 
   return (
     <PageShell title={t('messages.title', 'Messages')} description={t('messages.description', 'Chat with your team')}>
@@ -293,7 +297,7 @@ export function MessagesPage() {
             </div>
             <Dialog open={showNewChat} onOpenChange={setShowNewChat}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="default" className="h-8 gap-1.5">
+                <Button size="sm" variant="default" className="h-8 gap-1.5" disabled={!hasContacts} title={!hasContacts ? t('messages.noContactsHint', 'No contacts yet — MSWDO staff will message you') : undefined} aria-disabled={!hasContacts}>
                   <Plus size={14} /> {t('messages.new', 'New')}
                 </Button>
               </DialogTrigger>
@@ -346,6 +350,12 @@ export function MessagesPage() {
             </Dialog>
           </div>
 
+          {!hasContacts && (
+            <p className="text-[11px] text-muted-foreground px-4 py-2 border-b border-border/40 bg-muted/20">
+              {t('messages.noContactsHint', 'No contacts yet — MSWDO staff will message you')}
+            </p>
+          )}
+
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
@@ -366,7 +376,13 @@ export function MessagesPage() {
                   <MessageSquare size={24} className="opacity-40" />
                 </div>
                 <p className="text-sm font-medium">{t('messages.noConversations', 'No conversations yet')}</p>
-                <p className="text-xs mt-1 text-center">{t('messages.clickNewPrefix', 'Click')} <strong>{t('messages.new', 'New')}</strong> {t('messages.clickNewSuffix', 'to start messaging a team member.')}</p>
+                <p className="text-xs mt-1 text-center">
+                  {hasContacts ? (
+                    <>{t('messages.clickNewPrefix', 'Click')} <strong>{t('messages.new', 'New')}</strong> {t('messages.clickNewSuffix', 'to start messaging a team member.')}</>
+                  ) : (
+                    t('messages.noContactsHint', 'No contacts yet — MSWDO staff will message you')
+                  )}
+                </p>
               </div>
             ) : (
               <div className="py-1">

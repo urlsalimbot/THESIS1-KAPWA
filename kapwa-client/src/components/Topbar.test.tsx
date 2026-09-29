@@ -94,6 +94,38 @@ describe('Topbar', () => {
     expect(results).toHaveNoViolations();
   });
 
+  it('logs out via the confirm dialog', async () => {
+    const user = userEvent.setup();
+    const logoutSpy = vi.fn();
+    mockUseAuth.mockReturnValue({
+      user: { id: '1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' },
+      token: 'test-tok',
+      loading: false,
+      login: vi.fn(),
+      logout: logoutSpy,
+      mfaChallenge: null,
+      resolveMfa: vi.fn(),
+      cancelMfa: vi.fn(),
+    });
+    renderWithRouter(<Topbar />);
+    await user.click(screen.getByRole('button', { name: 'Open user menu' }));
+    await user.click(screen.getByText('Logout'));
+    // Confirm the destructive action; logout() + navigate('/login') must fire.
+    await user.click(screen.getByRole('button', { name: 'Log out' }));
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
+    // restore the default mock for subsequent tests
+    mockUseAuth.mockReturnValue({
+      user: { id: '1', email: 'a@b.com', fullName: 'A B', role: 'social_worker' },
+      token: 'test-tok',
+      loading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      mfaChallenge: null,
+      resolveMfa: vi.fn(),
+      cancelMfa: vi.fn(),
+    });
+  });
+
   it('renders Language menu items and switches locale', async () => {
     const user = userEvent.setup();
     renderWithRouter(<Topbar />);

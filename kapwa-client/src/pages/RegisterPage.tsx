@@ -352,6 +352,12 @@ export function RegisterPage() {
                         <FormControl>
                           <Input type="password" placeholder={t('auth.passwordLabel', 'Password')} className="h-11 md:h-10" {...field} />
                         </FormControl>
+                        {/* Proactive length hint: don't wait for an invalid submit
+                            to teach the constraint. Replaced by the error message
+                            once validation actually fires. */}
+                        {(!field.value || field.value.length < 8) && !form.formState.errors.password && (
+                          <p className="text-xs text-muted-foreground">{t('auth.passwordHint', 'At least 8 characters')}</p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

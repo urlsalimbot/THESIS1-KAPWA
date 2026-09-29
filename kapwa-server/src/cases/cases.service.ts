@@ -140,7 +140,7 @@ export class CasesService {
     }
     if (filters?.search) {
       qb.andWhere(
-        '(person.surname ILIKE :search OR person.first_name ILIKE :search OR person.middle_name ILIKE :search)',
+        '(person.surname ILIKE :search OR person.first_name ILIKE :search OR person.middle_name ILIKE :search OR c.controlNo ILIKE :search)',
         { search: `%${filters.search}%` },
       );
     }
@@ -700,24 +700,27 @@ export class CasesService {
     return c;
   }
 
-  async getTrackerDaily(date?: string, status?: string) {
+  async getTrackerDaily(date?: string, status?: string, barangay?: string) {
     const target = date ? new Date(date) : new Date();
     const start = new Date(target);
     start.setHours(0, 0, 0, 0);
     const end = new Date(target);
     end.setHours(23, 59, 59, 999);
-    return this.getTrackerEntries(start, end, status);
+    return this.getTrackerEntries(start, end, status, barangay);
   }
 
-  async getTrackerRange(startDate: string, endDate: string, status?: string) {
+  async getTrackerRange(startDate: string, endDate: string, status?: string, barangay?: string) {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
-    return this.getTrackerEntries(start, end, status);
+    return this.getTrackerEntries(start, end, status, barangay);
   }
 
-  private async getTrackerEntries(start: Date, end: Date, status?: string) {
+  private async getTrackerEntries(start: Date, end: Date, status?: string, barangay?: string) {
+    // Sanitize free-form barangay text before SQL interpolation (same pattern
+    // as the existing status interpolation).
+    const b = barangay ? barangay.replace(/'/g, "''") : null;
     const rows = await this.caseRepo.query(
       `SELECT
         c.id,
@@ -743,6 +746,7 @@ export class CasesService {
       LEFT JOIN persons p ON p.id = b.person_id
       WHERE c.created_at >= $1 AND c.created_at <= $2 AND c.status <> 'closed'
         ${status ? `AND c.status = '${status}'` : ''}
+        ${b ? `AND EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE '%${b}%' OR pa2.raw ILIKE '%${b}%'))` : ''}
       ORDER BY c.created_at DESC, "dailySeqNum" ASC`,
       [start, end],
     );
@@ -763,7 +767,7 @@ export class CasesService {
     }));
   }
 
-  async getTrackerStats() {
+  async getTrackerStats(barangay?: string) {
     // Cases created since the Monday of the current calendar week (Mon–Sun).
     const now = new Date();
     const diffToMonday = (now.getDay() + 6) % 7;
@@ -771,8 +775,16 @@ export class CasesService {
     monday.setDate(now.getDate() - diffToMonday);
     monday.setHours(0, 0, 0, 0);
 
+    const b = barangay ? barangay.replace(/'/g, "''") : null;
+    const scopeClause = b
+      ? ` AND EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = pp.id AND (pa2.barangay ILIKE '%${b}%' OR pa2.raw ILIKE '%${b}%'))`
+      : '';
+
     const weekResult = await this.caseRepo.query(
-      `SELECT COUNT(*) AS count FROM cases WHERE created_at >= $1`,
+      `SELECT COUNT(*) AS count FROM cases c
+        LEFT JOIN beneficiaries bb ON bb.id = c.beneficiary_id
+        LEFT JOIN persons pp ON pp.id = bb.person_id
+        WHERE c.created_at >= $1${scopeClause}`,
       [monday],
     );
     const thisWeekCases = parseInt(weekResult[0]?.count || '0', 10);
@@ -780,7 +792,10 @@ export class CasesService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayResult = await this.caseRepo.query(
-      `SELECT COUNT(*) AS count FROM cases WHERE created_at >= $1`,
+      `SELECT COUNT(*) AS count FROM cases c
+        LEFT JOIN beneficiaries bb ON bb.id = c.beneficiary_id
+        LEFT JOIN persons pp ON pp.id = bb.person_id
+        WHERE c.created_at >= $1${scopeClause}`,
       [today],
     );
     const todayEntries = parseInt(todayResult[0]?.count || '0', 10);

@@ -159,6 +159,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     setToken(null);
     setUser(null);
+    // Leave the authenticated shell even when the logout came from a background
+    // 401/refresh failure (kapwa:auth:logout event), not just the Topbar button.
+    // Without this the last-rendered protected page stays on screen until a
+    // reload. Guard on the current path so the redirect can't loop: an already
+    // unauthenticated guard navigates to the same destination.
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      // Lazy import breaks the static cycle routes.tsx -> auth-context.tsx;
+      // the module is already loaded by the time logout() runs.
+      import('../routes')
+        .then(({ router }) => router.navigate('/login', { replace: true }))
+        .catch(() => {
+          // Router unavailable (embedded/test edge) — the ProtectedRoute
+          // unauthenticated guard redirects on its own.
+        });
+    }
   }
 
   return (

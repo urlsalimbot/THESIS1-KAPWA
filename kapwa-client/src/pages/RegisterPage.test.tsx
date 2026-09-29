@@ -72,6 +72,11 @@ describe('RegisterPage', () => {
     expect(screen.getByText('Password')).toBeTruthy();
   });
 
+  it('shows a proactive password length hint before any submit', () => {
+    render(<BrowserRouter><RegisterPage /></BrowserRouter>);
+    expect(screen.getByText('At least 8 characters')).toBeTruthy();
+  });
+
   it('renders Barangay field', () => {
     render(<BrowserRouter><RegisterPage /></BrowserRouter>);
     expect(screen.getByText('Barangay')).toBeTruthy();

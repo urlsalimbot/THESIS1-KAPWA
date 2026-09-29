@@ -67,6 +67,28 @@ describe('MessagesPage', () => {
     expect(await screen.findByRole('button', { name: /New/i })).toBeTruthy();
   });
 
+  it('disables New and says MSWDO staff will reach out when the contact list is empty', async () => {
+    renderWithSWR(<MessagesPage />);
+    const newBtn = await screen.findByRole('button', { name: /New/i });
+    expect(newBtn).toBeDisabled();
+    const hints = await screen.findAllByText(/MSWDO staff will message you/i);
+    expect(hints.length).toBeGreaterThan(0);
+  });
+
+  it('enables New when chat contacts exist', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('users')) return Promise.resolve([{ id: 'u9', fullName: 'Ate Glo', role: 'admin' }]);
+      if (k.includes('conversations') || k.includes('list')) return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<MessagesPage />);
+    const newBtn = await screen.findByRole('button', { name: /New/i });
+    await vi.waitFor(() => {
+      expect(newBtn).not.toBeDisabled();
+    });
+  });
+
   it('has no a11y violations', async () => {
     const { container } = renderWithSWR(<MessagesPage />);
     const headings = await screen.findAllByRole('heading', { level: 1 });

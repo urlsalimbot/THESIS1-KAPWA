@@ -314,6 +314,63 @@ describe('IntakeService', () => {
       expect(benRepo.create).not.toHaveBeenCalled();
     });
 
+    it('rejects (409) a philhealth number already registered to a different client', async () => {
+      queryRunnerMock.manager.findOne = jest.fn().mockImplementation((entity: unknown) =>
+        entity === Person
+          ? Promise.resolve({ id: 'other-person', surname: 'Reyes', firstName: 'Ana', dob: new Date('1980-01-01') })
+          : Promise.resolve(null),
+      );
+
+      await expect(
+        service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW }),
+      ).rejects.toThrow('PhilHealth number already registered to another client');
+
+      expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalled();
+      expect(queryRunnerMock.commitTransaction).not.toHaveBeenCalled();
+      expect(personRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('maps a DB unique violation on philhealth to a 409 instead of a generic 500', async () => {
+      const saveMock = mockSaveSequence();
+      saveMock.mockRejectedValueOnce({
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "persons_philhealth_number_key"',
+      });
+      stubCreates();
+
+      await expect(
+        service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW }),
+      ).rejects.toThrow('PhilHealth number already registered to another client');
+
+      expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalled();
+      expect(queryRunnerMock.commitTransaction).not.toHaveBeenCalled();
+    });
+
+    it('passes a unique philhealth number straight through to person creation', async () => {
+      const saveMock = mockSaveSequence();
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid-1' })
+        .mockResolvedValueOnce({ id: benUuid })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: claimUuid })
+        .mockResolvedValueOnce({ id: bcUuid })
+        .mockResolvedValueOnce({ id: hhUuid })
+        .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001' })
+        .mockResolvedValueOnce({ id: clUuid });
+      stubCreates();
+
+      const result = await service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW });
+
+      expect(result.controlNo).toBe('KAPWA-2026-00001');
+      expect(personRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ philhealthNumber: '123456789001' }),
+      );
+      expect(queryRunnerMock.rollbackTransaction).not.toHaveBeenCalled();
+    });
+
     it('should return control_no in KAPWA-YYYY-XXXXX format', async () => {
       const saveMock = mockSaveSequence();
       saveMock

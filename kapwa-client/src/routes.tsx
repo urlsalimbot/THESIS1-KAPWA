@@ -90,7 +90,10 @@ function LandingPageRedirect() {
   return user ? <Navigate to={ROLE_REDIRECT_MAP[user.role] ?? '/dashboard'} replace /> : <LandingPage />;
 }
 
-const router = createBrowserRouter([
+// Exported so auth-context can drive a logout redirect without a reload
+// (a background 401 — kapwa:auth:logout — clears the session while the user
+// sits on a protected route; the shell must leave the authenticated layout).
+export const router = createBrowserRouter([
   // === PUBLIC ROUTES ===
   {
     element: <PublicLayout />,
@@ -144,6 +147,10 @@ const router = createBrowserRouter([
   { path: '/coordinator/referrals', element: <Private roles={['coordinator']}><CoordinatorReferralListPage /></Private> },
   { path: '/coordinator/referrals/new', element: <Private roles={['coordinator']}><CoordinatorReferralFormPage /></Private> },
   { path: '/coordinator/referrals/:id', element: <Private roles={['coordinator']}><CoordinatorReferralDetailPage /></Private> },
+  // Coordinators expect a Daily Tracker path under their own namespace; mount
+  // the same CaseTrackerPage the MSWDO roles use (data availability is the
+  // server's role gate — the client guard mirrors /tracker style here).
+  { path: '/coordinator/tracker', element: <Private roles={['coordinator']}><CaseTrackerPage /></Private> },
   { path: '/coordinator/access-cards', element: <Private roles={['coordinator']}><CoordinatorAccessCardsPage /></Private> },
   { path: '/referrals', element: <Private roles={['admin','social_worker','coordinator']}><ReferralsPage /></Private> },
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },

@@ -271,6 +271,35 @@ describe('CasesService', () => {
       expect(seniorSql).toBe("person.dob <= NOW() - INTERVAL '60 years'");
     });
 
+    it('matches control numbers in the search filter (Tracker search)', async () => {
+      const cases = [{ id: '1', controlNo: 'KAPWA-2026-00020' }] as Case[];
+      const qbMock = repoMock.createQueryBuilder();
+      qbMock.getManyAndCount.mockResolvedValue([cases, 1]);
+
+      const result = await service.findAll(1, 10, { search: 'KAPWA-2026-00020' });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(1);
+      const searchCall = (qbMock.andWhere as jest.Mock).mock.calls
+        .find((c: [string, unknown]) => c[0].includes('ILIKE :search'));
+      expect(searchCall?.[0]).toContain('c.controlNo ILIKE :search');
+      expect(searchCall?.[1]).toEqual({ search: '%KAPWA-2026-00020%' });
+    });
+
+    it('still matches names when the search filter runs', async () => {
+      const cases = [{ id: '1' }] as Case[];
+      const qbMock = repoMock.createQueryBuilder();
+      qbMock.getManyAndCount.mockResolvedValue([cases, 1]);
+
+      await service.findAll(1, 10, { search: 'Dela Cruz' });
+
+      const searchCall = (qbMock.andWhere as jest.Mock).mock.calls
+        .find((c: [string, unknown]) => c[0].includes('ILIKE :search'));
+      expect(searchCall?.[0]).toContain('person.surname ILIKE :search');
+      expect(searchCall?.[0]).toContain('person.first_name ILIKE :search');
+      expect(searchCall?.[0]).toContain('person.middle_name ILIKE :search');
+    });
+
     it('computes sla filter over a candidate set and paginates in memory', async () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date('2026-09-04T00:00:00Z'));

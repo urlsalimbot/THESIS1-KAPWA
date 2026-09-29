@@ -250,6 +250,7 @@ describe('AccessCardsService', () => {
   describe('findByCard', () => {
     it('returns services for a card code ordered by date desc', async () => {
       const services = [{ id: '1', accessCardCode: 'NORZ-AC-2026-0042', serviceDate: new Date() }];
+      repoMock.query.mockResolvedValue([{ id: 'b1' }]);
       repoMock.find.mockResolvedValue(services);
       const result = await service.findByCard('NORZ-AC-2026-0042', { role: 'admin' } as any);
       expect(repoMock.find).toHaveBeenCalledWith({
@@ -257,6 +258,22 @@ describe('AccessCardsService', () => {
         order: { serviceDate: 'DESC' },
       });
       expect(result).toEqual(services);
+    });
+
+    it('returns an empty list for a KNOWN card that has no logged services yet', async () => {
+      repoMock.query.mockResolvedValue([{ id: 'b1' }]);
+      repoMock.find.mockResolvedValue([]);
+      const result = await service.findByCard('NORZ-AC-2026-0042', { role: 'admin' } as any);
+      expect(result).toEqual([]);
+      expect(repoMock.find).toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the card code belongs to no beneficiary (Verify tab)', async () => {
+      repoMock.query.mockResolvedValue([]);
+      await expect(
+        service.findByCard('NORZ-AC-2026-9999', { role: 'admin' } as any),
+      ).rejects.toThrow('Access card not found');
+      expect(repoMock.find).not.toHaveBeenCalled();
     });
   });
 

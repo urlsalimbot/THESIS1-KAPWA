@@ -94,6 +94,11 @@ function ProfileTab() {
 
   const [phone, setPhone] = useState(user?.phone || '');
   const [phoneSaving, setPhoneSaving] = useState(false);
+  // The server is the source of truth after a save; hold its response so the
+  // "Current:" line reflects the just-saved number without waiting on a reload
+  // or a /auth/me round-trip.
+  const [savedPhone, setSavedPhone] = useState<string | null>(null);
+  const displayPhone = savedPhone ?? user?.phone ?? '';
 
   async function handleSavePhone() {
     if (!phone || phone.length < 10) {
@@ -102,9 +107,13 @@ function ProfileTab() {
     }
     setPhoneSaving(true);
     try {
-      await api.post('/auth/update-phone', { phone });
+      const res = await api.post<{ phone?: string }>('/auth/update-phone', { phone });
+      setSavedPhone(res?.phone ?? phone);
       toast.success(t('settings.phoneUpdated', 'Phone number updated'), { description: t('settings.contactSaved', 'Your contact info has been saved.') });
       globalMutate(queryKeys.auth.me());
+      // Sync the auth-context user so other shell surfaces (topbar, popovers)
+      // show the new number too.
+      refresh();
     } catch (err: any) {
       toast.error(t('settings.phoneUpdateFailed', 'Failed to update phone'), { description: humanizeError(err) });
     } finally {
@@ -210,15 +219,15 @@ function ProfileTab() {
                 {t('settings.phoneHint', 'Used for SMS notifications and login OTP verification')}
               </p>
             </div>
-            <Button onClick={handleSavePhone} disabled={phoneSaving || !phone || phone === (user?.phone || '')} className="gap-1.5 shrink-0">
+            <Button onClick={handleSavePhone} disabled={phoneSaving || !phone || phone === displayPhone} className="gap-1.5 shrink-0">
               <Save size={14} />
               {phoneSaving ? t('settings.saving', 'Saving...') : t('settings.save', 'Save')}
             </Button>
           </div>
-          {user?.phone && (
+          {displayPhone && (
             <div className="mt-3 rounded-lg bg-muted/30 border border-border/60 px-3 py-2 text-sm text-muted-foreground flex items-center gap-2">
               <CheckCircle size={14} className="text-emerald-500 shrink-0" />
-              {t('settings.current', 'Current:')} <span className="font-medium text-foreground">{user.phone}</span>
+              {t('settings.current', 'Current:')} <span className="font-medium text-foreground">{displayPhone}</span>
             </div>
           )}
         </div>

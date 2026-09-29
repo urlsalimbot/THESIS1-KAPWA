@@ -65,6 +65,33 @@ describe('SettingsPage', () => {
     expect(document.documentElement.lang).toBe('en');
   });
 
+  it('updates the displayed Current phone from the save response', async () => {
+    const api = await import('@/lib/api');
+    vi.mocked(api.api.post).mockResolvedValue({ phone: '+639170000001' });
+    vi.mocked(api.api.get).mockResolvedValue({
+      user: { id: 'u1', email: 'a@b', fullName: 'A B', role: 'admin', phone: '+639179999999' },
+    });
+    renderWithProviders(<SettingsPage />);
+    const input = screen.getByLabelText(/phone number/i);
+    fireEvent.change(input, { target: { value: '+639170000001' } });
+    fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    await vi.waitFor(() => {
+      // The POST returned the saved number; "Current:" must show it without a reload.
+      expect(screen.getByText(/current:/i).textContent).toContain('+639170000001');
+    });
+    expect(vi.mocked(api.api.post)).toHaveBeenCalledWith('/auth/update-phone', { phone: '+639170000001' });
+  });
+
+  it('translates tab labels and page title in fil mode', async () => {
+    renderWithProviders(<SettingsPage />);
+    fireEvent.click(screen.getByLabelText('Filipino'));
+    expect(await screen.findByText('Mga Setting')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /seguridad/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /mga abiso/i })).toBeInTheDocument();
+    // switch back to English for isolation (i18n is a module singleton)
+    fireEvent.click(screen.getByLabelText('English'));
+  });
+
   it('hides the SMS preference column when the server reports SMS unconfigured', async () => {
     const api = await import('@/lib/api');
     vi.mocked(api.api.get).mockImplementation((key: unknown) => {

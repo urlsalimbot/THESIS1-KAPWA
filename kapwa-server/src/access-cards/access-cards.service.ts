@@ -337,6 +337,19 @@ export class AccessCardsService {
 
   async findByCard(cardCode: string, caller?: User) {
     await this.assertCardAccess(caller, { cardCode });
+    // A card code only exists when a beneficiary owns it. Staff roles skip the
+    // ownership gate above, so an unknown code used to fall straight through to
+    // the service list and answer 200 [] — the Verify tab read an invented
+    // NORZ-AC-2026-9999 as a valid card. Verify the code resolves to a
+    // beneficiary first; a known card with zero logged services still returns
+    // an empty list, exactly as before.
+    const ben = await this.repo.query(
+      'SELECT b.id FROM beneficiaries b LEFT JOIN households h ON h.id = b.household_id LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id WHERE COALESCE(h.access_card_code, br.access_card_code) = $1 LIMIT 1',
+      [cardCode]
+    );
+    if (!ben?.[0]) {
+      throw new NotFoundException('Access card not found');
+    }
     return this.repo.find({ where: { accessCardCode: cardCode }, order: { serviceDate: 'DESC' } });
   }
 
