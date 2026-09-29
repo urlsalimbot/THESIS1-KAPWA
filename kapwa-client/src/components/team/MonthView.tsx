@@ -188,7 +188,7 @@ export function MonthView({
                             e.stopPropagation();
                             onBlockClick?.(block);
                           }}
-                          className="relative grid h-8 w-8 -m-2 cursor-pointer place-items-center"
+                          className="relative grid h-8 w-8 -m-3 cursor-pointer place-items-center"
                         >
                           <span className={dotClass} />
                         </button>

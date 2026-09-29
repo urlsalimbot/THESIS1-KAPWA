@@ -278,7 +278,8 @@ describe('MonthView', () => {
     // Target size lives on the button; the negative margin keeps flow position.
     expect(btn.className).toContain('h-8');
     expect(btn.className).toContain('w-8');
-    expect(btn.className).toContain('-m-2');
+    // -m-3 exactly cancels the extra 24px so dots keep their original 8px advance.
+    expect(btn.className).toContain('-m-3');
     // The visible dot is untouched inside the button.
     const dot = btn.querySelector('.rounded-full') as HTMLElement;
     expect(dot.className).toContain('h-2');
