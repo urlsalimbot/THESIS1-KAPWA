@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { HandHeart, Menu, X, Sun, Moon, Monitor, Languages, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from './public/PageContainer';
 import { useTheme } from '@/lib/theme-context';
@@ -56,7 +57,8 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 transition-shadow duration-200 group-hover:shadow-md">
             <HandHeart size={22} className="text-accent" aria-hidden="true" />
           </div>
-          <span className="font-heading text-xl font-bold tracking-tight text-foreground">
+          {/* Wordmark hidden on phone widths — the icon + CTA carry the header */}
+          <span className="hidden font-heading text-xl font-bold tracking-tight text-foreground sm:inline">
             KAPWA
           </span>
         </Link>
@@ -87,67 +89,10 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
           })}
         </nav>
 
-        {/* Right side: appearance/lang toggles + CTA + mobile menu */}
+        {/* Right side: CTA + mobile menu. Appearance and language live in the
+            drawer on small screens — two icon buttons in the header row were
+            wasted space next to the Login CTA and the burger. */}
         <div className="flex shrink-0 items-center gap-1.5">
-          {/* Appearance — Light / Dark / System, mirrors the app-shell Topbar */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="touch-sm flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                aria-label={t('topbar.theme', 'Theme')}
-              >
-                {mounted && resolvedTheme === 'dark' ? (
-                  <Moon size={18} aria-hidden="true" />
-                ) : (
-                  <Sun size={18} aria-hidden="true" />
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="w-44">
-              <DropdownMenuLabel className="font-semibold">{t('topbar.theme', 'Theme')}</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setTheme('light')}>
-                <Sun size={16} className="mr-2" />
-                {t('topbar.themeLight', 'Light')}
-                {theme === 'light' && <Check size={14} className="ml-auto text-primary" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('dark')}>
-                <Moon size={16} className="mr-2" />
-                {t('topbar.themeDark', 'Dark')}
-                {theme === 'dark' && <Check size={14} className="ml-auto text-primary" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('system')}>
-                <Monitor size={16} className="mr-2" />
-                {t('topbar.themeSystem', 'System')}
-                {theme === 'system' && <Check size={14} className="ml-auto text-primary" />}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Language — English / Filipino, same source as the app shell */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="touch-sm flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                aria-label={t('topbar.language', 'Language')}
-              >
-                <Languages size={18} aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="w-44">
-              <DropdownMenuLabel className="font-semibold">{t('topbar.language', 'Language')}</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setLang('en')}>
-                <Languages size={16} className="mr-2" />
-                {t('nav.english', 'English')}
-                {lang === 'en' && <Check size={14} className="ml-auto text-primary" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang('fil')}>
-                <Languages size={16} className="mr-2" />
-                {t('nav.filipino', 'Filipino')}
-                {lang === 'fil' && <Check size={14} className="ml-auto text-primary" />}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {!loading &&
             (user ? (
               <Button variant="outline" size="sm" className="touch-sm" asChild>
@@ -214,6 +159,68 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                   );
                 })}
               </nav>
+              {/* Appearance + language live here on small screens — the header
+                  row keeps only the CTA and the burger */}
+              <Separator />
+              <div className="flex items-center gap-2 px-4 pb-4 pt-3">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="touch-sm flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-border text-sm text-muted-foreground transition-colors hover:bg-muted"
+                      aria-label={t('topbar.theme', 'Theme')}
+                    >
+                      {mounted && resolvedTheme === 'dark' ? (
+                        <Moon size={16} aria-hidden="true" />
+                      ) : (
+                        <Sun size={16} aria-hidden="true" />
+                      )}
+                      {t('topbar.theme', 'Theme')}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={8} className="w-44">
+                    <DropdownMenuLabel className="font-semibold">{t('topbar.theme', 'Theme')}</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setTheme('light')}>
+                      <Sun size={16} className="mr-2" />
+                      {t('topbar.themeLight', 'Light')}
+                      {theme === 'light' && <Check size={14} className="ml-auto text-primary" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme('dark')}>
+                      <Moon size={16} className="mr-2" />
+                      {t('topbar.themeDark', 'Dark')}
+                      {theme === 'dark' && <Check size={14} className="ml-auto text-primary" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme('system')}>
+                      <Monitor size={16} className="mr-2" />
+                      {t('topbar.themeSystem', 'System')}
+                      {theme === 'system' && <Check size={14} className="ml-auto text-primary" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="touch-sm flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-border text-sm text-muted-foreground transition-colors hover:bg-muted"
+                      aria-label={t('topbar.language', 'Language')}
+                    >
+                      <Languages size={16} aria-hidden="true" />
+                      {t('topbar.language', 'Language')}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={8} className="w-44">
+                    <DropdownMenuLabel className="font-semibold">{t('topbar.language', 'Language')}</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setLang('en')}>
+                      <Languages size={16} className="mr-2" />
+                      {t('nav.english', 'English')}
+                      {lang === 'en' && <Check size={14} className="ml-auto text-primary" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLang('fil')}>
+                      <Languages size={16} className="mr-2" />
+                      {t('nav.filipino', 'Filipino')}
+                      {lang === 'fil' && <Check size={14} className="ml-auto text-primary" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </SheetContent>
           </Sheet>
         </div>

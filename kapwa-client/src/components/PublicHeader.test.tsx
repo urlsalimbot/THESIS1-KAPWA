@@ -64,6 +64,7 @@ describe('PublicHeader', () => {
   it('opens the appearance switcher with Light / Dark / System', async () => {
     const user = userEvent.setup();
     renderHeader();
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
     await user.click(screen.getByRole('button', { name: 'Theme' }));
     expect(screen.getByText('Light')).toBeTruthy();
     expect(screen.getByText('Dark')).toBeTruthy();
@@ -75,6 +76,7 @@ describe('PublicHeader', () => {
   it('switches language through the language menu', async () => {
     const user = userEvent.setup();
     renderHeader();
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
     await user.click(screen.getByRole('button', { name: 'Language' }));
     expect(screen.getByText('English')).toBeTruthy();
     expect(screen.getByText('Filipino')).toBeTruthy();
