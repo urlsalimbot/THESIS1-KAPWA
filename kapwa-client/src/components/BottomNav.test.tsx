@@ -38,13 +38,6 @@ describe('BottomNav', () => {
   });
 
   describe('role filtering', () => {
-    it('shows only agency portal tabs for agency_staff', () => {
-      vi.mocked(useAuth).mockReturnValue({ user: { role: 'agency_staff' } } as ReturnType<typeof useAuth>);
-      render(<MemoryRouter><BottomNav /></MemoryRouter>);
-      expect(screen.queryByText(/cases/i)).toBeNull();
-      expect(screen.queryByText(/beneficiaries/i)).toBeNull();
-    });
-
     it('shows intake quick action for social_worker', () => {
       vi.mocked(useAuth).mockReturnValue({ user: { role: 'social_worker' } } as ReturnType<typeof useAuth>);
       render(<MemoryRouter><BottomNav /></MemoryRouter>);
@@ -57,10 +50,5 @@ describe('BottomNav', () => {
       expect(screen.getByLabelText('New Referral (Quick Action)')).toBeDefined();
     });
 
-    it('labels the quick action as New Referral for agency_staff', () => {
-      vi.mocked(useAuth).mockReturnValue({ user: { role: 'agency_staff' } } as ReturnType<typeof useAuth>);
-      render(<MemoryRouter><BottomNav /></MemoryRouter>);
-      expect(screen.getByLabelText('New Referral (Quick Action)')).toBeDefined();
-    });
   });
 });

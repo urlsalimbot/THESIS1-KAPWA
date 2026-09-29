@@ -28,7 +28,7 @@ vi.mock('react-router-dom', async (importOriginal) => ({
 }));
 
 vi.mock('@/lib/auth-context', () => ({
-  useAuth: () => ({ user: { role: 'agency_staff', agencyId: 'ag-2' } }),
+  useAuth: () => ({ user: { role: 'social_worker', agencyId: 'ag-2' } }),
 }));
 
 const referral = {

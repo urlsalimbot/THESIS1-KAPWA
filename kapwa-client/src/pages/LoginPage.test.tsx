@@ -137,7 +137,7 @@ describe('session notice', () => {
 
 describe('role-access constants', () => {
   it('redirect map covers every known role', () => {
-    const roles = ['social_worker', 'admin', 'coordinator', 'claimant', 'mayor', 'auditor', 'agency_staff'];
+    const roles = ['social_worker', 'admin', 'coordinator', 'claimant'];
     for (const r of roles) {
       expect(ROLE_REDIRECT_MAP[r]).toBeDefined();
     }
@@ -145,12 +145,13 @@ describe('role-access constants', () => {
 
   it('notification roles are mutually consistent with server @Roles', () => {
     expect(NOTIFICATION_ROLES).toContain('admin');
-    expect(NOTIFICATION_ROLES).toContain('auditor');
+    expect(NOTIFICATION_ROLES).toContain('social_worker');
   });
 
-  it('chat roles exclude mayor, auditor, agency_staff', () => {
-    expect(CHAT_ROLES).not.toContain('mayor');
-    expect(CHAT_ROLES).not.toContain('auditor');
-    expect(CHAT_ROLES).not.toContain('agency_staff');
+  it('notification and chat roles carry none of the sunset roles', () => {
+    for (const r of ['mayor', 'auditor', 'agency_staff']) {
+      expect(NOTIFICATION_ROLES).not.toContain(r);
+      expect(CHAT_ROLES).not.toContain(r);
+    }
   });
 });

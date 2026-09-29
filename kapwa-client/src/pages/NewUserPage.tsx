@@ -24,9 +24,6 @@ const ROLE_LABELS: Record<string, string> = {
   social_worker: 'MSWDO Social Worker',
   coordinator: 'Barangay Coordinator',
   claimant: 'Claimant',
-  mayor: "Mayor's Office",
-  auditor: 'Auditor',
-  agency_staff: 'Agency Staff',
 };
 
 const ROLE_OPTIONS = Object.keys(ROLE_LABELS);
@@ -90,14 +87,6 @@ export function NewUserPage() {
       if (values.assignedBarangay) body.assignedBarangay = values.assignedBarangay;
       if (values.permittedBarangays?.trim()) {
         body.permittedBarangays = values.permittedBarangays.split(',').map(b => b.trim()).filter(Boolean);
-      }
-      if (role === 'agency_staff') {
-        const agencyId = form.getValues('agencyId') as string | undefined;
-        if (!agencyId) {
-          toast.error(t('usersPanel.agencyRequired', 'Please select an agency.'));
-          return;
-        }
-        body.agencyId = agencyId;
       }
       await api.post('/users', body);
       toast.success(t('usersPanel.userCreated', 'User created'));
@@ -234,24 +223,6 @@ export function NewUserPage() {
                     </FormItem>
                   )}
                 />
-                {role === 'agency_staff' && (
-                  <div className="space-y-1">
-                    <Label htmlFor="new-agency">{t('usersPanel.agency', 'Agency')} *</Label>
-                    <Select
-                      value={(form.getValues('agencyId') as string) || ''}
-                      onValueChange={(v) => form.setValue('agencyId' as any, v)}
-                    >
-                      <SelectTrigger id="new-agency" className="h-10" aria-label={t('usersPanel.agency', 'Agency')}>
-                        <SelectValue placeholder={t('usersPanel.selectAgency', 'Select agency...')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(agencies || []).map(a => (
-                          <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
                 <FormField
                   control={form.control}
                   name="assignedBarangay"

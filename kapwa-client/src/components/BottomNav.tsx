@@ -18,14 +18,11 @@ const QUICK_ACTIONS: Record<string, string | null> = {
   social_worker: '/intake',
   coordinator: '/coordinator/referrals/new',
   claimant: null,
-  mayor: null,
-  auditor: null,
-  agency_staff: '/agency/referrals',
 };
 
 function quickActionLabel(t: (key: string, defaultValue: string) => string, path: string): string {
   if (path === '/intake') return t('shell.quickIntake', 'New Intake (Quick Action)');
-  if (path === '/coordinator/referrals/new' || path === '/agency/referrals') return t('shell.quickReferral', 'New Referral (Quick Action)');
+  if (path === '/coordinator/referrals/new') return t('shell.quickReferral', 'New Referral (Quick Action)');
   return t('shell.quickAction', 'Quick Action');
 }
 

@@ -1,8 +1,8 @@
 import {
   FilePlus, LayoutDashboard, Users, CheckCircle,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
-  FileWarning, IdCard, ScrollText, BarChart3, History, Send, BadgeCheck,
-  Megaphone, Building2,
+  FileWarning, IdCard, ScrollText, BarChart3, Send, BadgeCheck,
+  Megaphone,
 } from 'lucide-react';
 import { FEATURE_ANALYTICS_ENABLED } from './feature-flags';
 
@@ -29,15 +29,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/cases', label: 'Cases', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/coordinator/access-cards', label: 'Access Cards', icon: <BadgeCheck size={20} />, roles: ['coordinator'] },
-    ],
-  },
-  {
-    label: 'Agency Portal',
-    items: [
-      { path: '/agency/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['agency_staff'] },
-      { path: '/agency/referrals', label: 'Inter-Agency Referrals', icon: <Send size={20} />, roles: ['agency_staff'] },
-      { path: '/agency/card-activities', label: 'Card Activities', icon: <BadgeCheck size={20} />, roles: ['agency_staff'] },
-      { path: '/agency/profile', label: 'Agency Profile', icon: <Building2 size={20} />, roles: ['agency_staff'] },
     ],
   },
   {
@@ -68,29 +59,15 @@ export const NAV_GROUPS: NavGroup[] = [
       ? [{
           label: 'Insights',
           items: [
-            { path: '/analytics', label: 'Analytics', icon: <BarChart3 size={20} />, roles: ['admin', 'social_worker', 'mayor'] },
+            { path: '/analytics', label: 'Analytics', icon: <BarChart3 size={20} />, roles: ['admin', 'social_worker'] },
           ],
         }]
       : []),
 
   {
-    label: 'Mayor',
-    items: [
-      { path: '/reports', label: 'Reports', icon: <BarChart3 size={20} />, roles: ['mayor'] },
-    ],
-  },
-
-  {
-    label: 'Auditor',
-    items: [
-      { path: '/audit-logs', label: 'Audit Logs', icon: <History size={20} />, roles: ['auditor'] },
-    ],
-  },
-
-  {
     label: 'System',
     items: [
-      { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'mayor', 'auditor', 'claimant'] },
+      { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: ['admin', 'social_worker', 'coordinator', 'claimant'] },
     ],
   },
 ];

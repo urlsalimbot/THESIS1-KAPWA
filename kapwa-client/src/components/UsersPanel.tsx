@@ -46,9 +46,6 @@ const ROLE_LABELS: Record<string, string> = {
   social_worker: 'MSWDO Social Worker',
   coordinator: 'Barangay Coordinator',
   claimant: 'Claimant',
-  mayor: "Mayor's Office",
-  auditor: 'Auditor',
-  agency_staff: 'Agency Staff',
 };
 
 const ROLE_OPTIONS = Object.keys(ROLE_LABELS);
@@ -430,21 +427,7 @@ export default function UsersPanel() {
                 </Select>
               )}
             </div>
-            {editRole === 'agency_staff' && editUser?.role !== CLAIMANT_ROLE && (
-              <div className="space-y-1">
-                <Label htmlFor="edit-agency">{t('usersPanel.agency', 'Agency')}</Label>
-                <Select value={editAgencyId} onValueChange={setEditAgencyId}>
-                  <SelectTrigger id="edit-agency">
-                    <SelectValue placeholder={t('usersPanel.selectAgency', 'Select agency...')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(agencies || []).map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+
             <div className="space-y-1">
               <Label htmlFor="edit-barangay">{t('usersPanel.assignedBarangay', 'Assigned Barangay')}</Label>
               <Input id="edit-barangay" value={editBarangay} onChange={e => setEditBarangay(e.target.value)} />

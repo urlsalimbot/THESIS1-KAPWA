@@ -96,8 +96,8 @@ describe('ClusteringTab', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/Not enough data \(needs 20, found 4\)/);
   });
 
-  it('hides the run controls for the mayor and never posts', async () => {
-    mockUseAuth.mockReturnValue({ user: { id: '2', role: 'mayor' } });
+  it('hides the run controls for a read-only viewer and never posts', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '2', role: 'coordinator' } });
     renderTab();
     expect(await screen.findByText(/Chosen k/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Run clustering/i })).toBeNull();

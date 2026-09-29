@@ -19,7 +19,7 @@ vi.mock('@/hooks/use-cache-staleness', () => ({
 }));
 
 const mockUseAuth = vi.hoisted(() => () => ({
-  user: { id: '1', email: 'mayor@test.com', fullName: 'Mayor', role: 'mayor' },
+  user: { id: '1', email: 'worker1@mswdo.test', fullName: 'Juan Dela Cruz', role: 'social_worker' },
   token: null,
   loading: false,
 }));

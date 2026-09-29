@@ -41,11 +41,7 @@ const CoordinatorReferralListPage = lazy(() => import('./pages/CoordinatorReferr
 const CoordinatorReferralDetailPage = lazy(() => import('./pages/CoordinatorReferralDetailPage').then(m => ({ default: m.CoordinatorReferralDetailPage })));
 const ReferralReviewPage = lazy(() => import('./pages/ReferralReviewPage').then(m => ({ default: m.ReferralReviewPage })));
 const ReferralsPage = lazy(() => import('./pages/ReferralsPage').then(m => ({ default: m.ReferralsPage })));
-const AgencyDashboardPage = lazy(() => import('./pages/AgencyDashboardPage').then(m => ({ default: m.AgencyDashboardPage })));
-const AgencyReferralsPage = lazy(() => import('./pages/AgencyReferralsPage').then(m => ({ default: m.AgencyReferralsPage })));
 const AgencyReferralDetailPage = lazy(() => import('./pages/AgencyReferralDetailPage').then(m => ({ default: m.AgencyReferralDetailPage })));
-const AgencyCardActivitiesPage = lazy(() => import('./pages/AgencyCardActivitiesPage').then(m => ({ default: m.AgencyCardActivitiesPage })));
-const AgencyProfilePage = lazy(() => import('./pages/AgencyProfilePage').then(m => ({ default: m.AgencyProfilePage })));
 const AccessCardViewPage = lazy(() => import('./pages/AccessCardViewPage').then(m => ({ default: m.AccessCardViewPage })));
 const CoordinatorAccessCardsPage = lazy(() => import('./pages/CoordinatorAccessCardsPage').then(m => ({ default: m.CoordinatorAccessCardsPage })));
 const AccessCardPrintView = lazy(() => import('./pages/AccessCardPrintView').then(m => ({ default: m.AccessCardPrintView })));
@@ -55,8 +51,6 @@ const AnnouncementEditPage = lazy(() => import('./components/announcements/Annou
 const CreateAnnouncementPage = lazy(() => import('./components/announcements/CreateAnnouncementPage').then(m => ({ default: m.CreateAnnouncementPage })));
 const AnnouncementDetailPage = lazy(() => import('./components/announcements/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
 const ClaimantAccessCardPage = lazy(() => import('./pages/ClaimantAccessCardPage').then(m => ({ default: m.ClaimantAccessCardPage })));
-const MayorReportsPage = lazy(() => import('./pages/MayorReportsPage').then(m => ({ default: m.MayorReportsPage })));
-const AuditorPage = lazy(() => import('./pages/AuditorPage').then(m => ({ default: m.AuditorPage })));
 const IrfDetailPage = lazy(() => import('./pages/IrfDetailPage').then(m => ({ default: m.IrfDetailPage })));
 const CreateIrfPage = lazy(() => import('./pages/CreateIrfPage').then(m => ({ default: m.CreateIrfPage })));
 const CreateProgramPage = lazy(() => import('./pages/CreateProgramPage').then(m => ({ default: m.CreateProgramPage })));
@@ -126,11 +120,11 @@ export const router = createBrowserRouter([
   { path: '/cases/:caseId/4ps-compliance', element: <Private roles={['admin','social_worker','coordinator']}><FourPsCompliancePage /></Private> },
   { path: '/cases/:caseId/payouts', element: <Private roles={['admin','social_worker','coordinator']}><PayoutSchedulePage /></Private> },
   ...(FEATURE_ANALYTICS_ENABLED
-    ? [{ path: '/analytics', element: <Private roles={['admin','social_worker','mayor']}><AnalyticsPage /></Private> }]
+    ? [{ path: '/analytics', element: <Private roles={['admin','social_worker']}><AnalyticsPage /></Private> }]
     : []),
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
-  { path: '/tracker', element: <Private roles={['admin','social_worker','mayor','auditor']}><CaseTrackerPage /></Private> },
+  { path: '/tracker', element: <Private roles={['admin','social_worker']}><CaseTrackerPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
   { path: '/admin/users/new', element: <Private roles={['admin']}><NewUserPage /></Private> },
   { path: '/approvals', element: <Private roles={['admin','social_worker']}><ApprovalPipelinePage /></Private> },
@@ -156,19 +150,12 @@ export const router = createBrowserRouter([
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },
-  { path: '/agency', element: <Navigate to="/agency/dashboard" replace /> },
-  { path: '/agency/dashboard', element: <Private roles={['agency_staff']}><AgencyDashboardPage /></Private> },
-  { path: '/agency/referrals', element: <Private roles={['agency_staff']}><AgencyReferralsPage /></Private> },
-  { path: '/agency/referrals/:id', element: <Private roles={['admin','social_worker','agency_staff']}><AgencyReferralDetailPage /></Private> },
-  { path: '/agency/card-activities', element: <Private roles={['agency_staff']}><AgencyCardActivitiesPage /></Private> },
-  { path: '/agency/profile', element: <Private roles={['agency_staff']}><AgencyProfilePage /></Private> },
+  { path: '/agency/referrals/:id', element: <Private roles={['admin','social_worker']}><AgencyReferralDetailPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },
   { path: '/notifications', element: <Private><NotificationsPage /></Private> },
 
-  { path: '/reports', element: <Private roles={['mayor']}><MayorReportsPage /></Private> },
-  { path: '/audit-logs', element: <Private roles={['auditor']}><AuditorPage /></Private> },
   { path: '/my-dashboard', element: <Private roles={['claimant']}><ClaimantDashboardPage /></Private> },
   { path: '/announcements/manage', element: <Private roles={['admin','social_worker']}><AnnouncementsPage /></Private> },
   { path: '/announcements/manage/new', element: <Private roles={['admin','social_worker']}><CreateAnnouncementPage /></Private> },

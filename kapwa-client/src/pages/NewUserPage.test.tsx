@@ -51,44 +51,4 @@ describe('NewUserPage', () => {
     expect(screen.getByLabelText('Email *')).toBeTruthy();
     expect(screen.queryByLabelText('Password *')).toBeNull();
   });
-
-  it('reveals the agency select when role agency_staff is selected', async () => {
-    const user = userEvent.setup();
-    renderWithSWR(<NewUserPage />);
-    await user.click(await screen.findByRole('combobox', { name: 'Role' }));
-    await user.click(await screen.findByRole('option', { name: 'Agency Staff' }));
-    expect(await screen.findByRole('combobox', { name: 'Agency' })).toBeTruthy();
-  });
-
-  it('posts name parts + agency_id for an agency_staff user', async () => {
-    const user = userEvent.setup();
-    renderWithSWR(<NewUserPage />);
-
-    await user.type(screen.getByLabelText('First Name *'), 'Jane');
-    await user.type(screen.getByLabelText('Middle Name'), 'Marie');
-    await user.type(screen.getByLabelText('Last Name *'), 'Dela Cruz');
-    await user.type(screen.getByLabelText('Name Extension'), 'Jr.');
-    await user.type(screen.getByLabelText('Email *'), 'staff@agency.test');
-
-    await user.click(screen.getByRole('combobox', { name: 'Role' }));
-    await user.click(await screen.findByRole('option', { name: 'Agency Staff' }));
-    await user.click(screen.getByRole('combobox', { name: 'Agency' }));
-    await user.click(await screen.findByRole('option', { name: /RHU/ }));
-
-    await user.click(screen.getByRole('button', { name: 'Create User' }));
-
-    await vi.waitFor(() => {
-      expect(mockApiPost).toHaveBeenCalledWith(
-        '/users',
-        expect.objectContaining({
-          firstName: 'Jane',
-          middleName: 'Marie',
-          lastName: 'Dela Cruz',
-          nameExtension: 'Jr.',
-          role: 'agency_staff',
-          agencyId: 'ag-rhu',
-        }),
-      );
-    });
-  });
 });

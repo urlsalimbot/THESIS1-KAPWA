@@ -12,8 +12,6 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   '/approvals': 'Approvals',
   '/admin/programs': 'Programs',
   '/tracker': 'Daily Tracker',
-  '/reports': 'Reports',
-  '/audit-logs': 'Audit Logs',
   '/admin': 'Admin Panel',
   '/settings/mfa': 'MFA Settings',
   '/my-dashboard': 'My Dashboard',

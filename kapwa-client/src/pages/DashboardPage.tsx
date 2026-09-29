@@ -19,8 +19,6 @@ import { useAuth } from '@/lib/auth-context';
 import { downloadMonthlyFunds, downloadSummaryReport } from '@/lib/api';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ClaimantWidgets } from '@/components/dashboard/widgets/ClaimantWidgets';
-import { MayorWidgets } from '@/components/dashboard/widgets/MayorWidgets';
-import { AuditorWidgets } from '@/components/dashboard/widgets/AuditorWidgets';
 import { CoordinatorWidgets } from '@/components/dashboard/widgets/CoordinatorWidgets';
 import { SlaTimer } from '@/components/sla/SlaTimer';
 import { StatsRow } from '@/components/dashboard/StatsRow';
@@ -191,22 +189,14 @@ export function DashboardPage() {
   }
 
   if (!WORKER_ROLES.includes(role)) {
+    // The mayor/auditor dashboards went with the roles. Any role value still
+    // reaching here that is none of the four (a stale session from before the
+    // sunset) is shown the EmptyState rather than a blank page.
     return (
-      <PageShell title={t('dashboard.title', 'Dashboard')} description={t('dashboard.description', 'Overview of social welfare operations and metrics.')}
-        actions={
-          ['mayor', 'auditor'].includes(role) ? (
-            <div className="flex gap-2">
-              {fundUtilizationButton}
-              {role === 'mayor' && summaryExportControls}
-              {exportError && <span className="text-xs text-destructive self-center">{exportError}</span>}
-            </div>
-          ) : undefined
-        }>
+      <PageShell title={t('dashboard.title', 'Dashboard')} description={t('dashboard.description', 'Overview of social welfare operations and metrics.')}>
         {role === 'claimant' && <ClaimantWidgets />}
-        {role === 'mayor' && <MayorWidgets />}
-        {role === 'auditor' && <AuditorWidgets />}
         {role === 'coordinator' && <CoordinatorWidgets />}
-        {!['claimant', 'mayor', 'auditor', 'coordinator'].includes(role) && <EmptyState variant="no-access" />}
+        {!['claimant', 'coordinator'].includes(role) && <EmptyState variant="no-access" />}
       </PageShell>
     );
   }

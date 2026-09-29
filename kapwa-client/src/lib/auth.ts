@@ -5,7 +5,7 @@ const USER_KEY = 'current_user';
 export interface AuthUser {
   id: string;
   email: string;
-  role: 'social_worker' | 'admin' | 'coordinator' | 'claimant' | 'mayor' | 'auditor';
+  role: 'social_worker' | 'admin' | 'coordinator' | 'claimant';
   fullName?: string;
 }
 

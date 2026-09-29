@@ -199,30 +199,7 @@ const ROUTE_HELP: Record<string, RouteHelp> = {
       { q: 'Can I assign cases to specific social workers?', a: 'Yes — use the Assign option in any case detail view.' },
     ],
   },
-  '/reports': {
-    title: 'Reports (Mayor)',
-    tips: [
-      'Access municipal-level program and compliance overviews.',
-      'Filter reports by barangay, program, or date range.',
-      'Export reports for presentation to the municipal council.',
-    ],
-    faqs: [
-      { q: 'What reports are available?', a: 'Program compliance, beneficiary counts, disbursement summaries, and case statistics.' },
-      { q: 'Can I schedule recurring reports?', a: 'This feature is not yet available. Reports are generated on-demand.' },
-    ],
-  },
-  '/audit-logs': {
-    title: 'Auditor Page',
-    tips: [
-      'Review all system activity for compliance monitoring.',
-      'Filter logs by user, action type, or date range.',
-      'Export audit trails for external audit requirements.',
-    ],
-    faqs: [
-      { q: 'How far back do audit logs go?', a: 'Logs are retained for 12 months per MSWDO data retention policy.' },
-      { q: 'Can I export the entire audit log?', a: 'Yes — use the Export button. Large datasets may take several minutes to generate.' },
-    ],
-  },
+
 };
 
 function resolveHelp(pathname: string): RouteHelp | null {

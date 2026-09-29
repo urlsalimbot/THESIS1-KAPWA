@@ -17,7 +17,7 @@ import {
 interface WorkflowStep { stepName: string; approverRole: string; slaDays: string; }
 const emptyStep = (): WorkflowStep => ({ stepName: '', approverRole: '', slaDays: '3' });
 
-const APPROVER_ROLES = ['admin', 'social_worker', 'coordinator', 'mayor'];
+const APPROVER_ROLES = ['admin', 'social_worker', 'coordinator'];
 
 function Section({
   icon, title, action, children, description,

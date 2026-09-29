@@ -37,9 +37,9 @@ describe('usePiiMasking', () => {
     expect(result.current.shouldMask).toBe(true);
   });
 
-  test('shouldMask is true for non-worker role (mayor)', () => {
+  test('shouldMask is true for a non-worker role', () => {
     mockUseAuth.mockReturnValue({
-      user: { id: '1', email: 'mayor@test.com', fullName: 'Mayor', role: 'mayor' },
+      user: { id: '1', email: 'pedro.claimant@test.com', fullName: 'Pedro Reyes', role: 'claimant' },
       token: '',
       loading: false,
     });
@@ -59,7 +59,7 @@ describe('usePiiMasking', () => {
 
   test('getDisplayValue returns masked string when shouldMask is true', () => {
     mockUseAuth.mockReturnValue({
-      user: { id: '1', email: 'mayor@test.com', fullName: 'Mayor', role: 'mayor' },
+      user: { id: '1', email: 'pedro.claimant@test.com', fullName: 'Pedro Reyes', role: 'claimant' },
       token: '',
       loading: false,
     });
