@@ -30,6 +30,8 @@ export interface BlockEditorDialogProps {
   date?: string | null; // YYYY-MM-DD
   /** Edit mode: pass the block being edited; create mode when null. */
   block?: TeamBlock | null;
+  /** Read-only mode (coordinators): hides Save/Delete affordances. */
+  readOnly?: boolean;
   onSave: (input: TeamBlockInput) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 }
@@ -46,6 +48,7 @@ export function BlockEditorDialog({
   staffId,
   date,
   block = null,
+  readOnly = false,
   onSave,
   onDelete,
 }: BlockEditorDialogProps) {
@@ -78,7 +81,7 @@ export function BlockEditorDialog({
   const editing = Boolean(block);
 
   const handleSave = () => {
-    if (!userId || !dateStr) return;
+    if (readOnly || !userId || !dateStr) return;
     void onSave({
       userId,
       blockDate: dateStr,
@@ -90,7 +93,7 @@ export function BlockEditorDialog({
   };
 
   const handleDelete = () => {
-    if (block && onDelete) void onDelete(block.id);
+    if (!readOnly && block && onDelete) void onDelete(block.id);
   };
 
   return (
@@ -172,7 +175,7 @@ export function BlockEditorDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          {editing && onDelete ? (
+          {!readOnly && editing && onDelete ? (
             <Button variant="destructive" onClick={handleDelete}>
               Delete
             </Button>
@@ -183,9 +186,11 @@ export function BlockEditorDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!userId || !dateStr}>
-              {editing ? 'Save changes' : 'Create block'}
-            </Button>
+            {!readOnly && (
+              <Button onClick={handleSave} disabled={!userId || !dateStr}>
+                {editing ? 'Save changes' : 'Create block'}
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

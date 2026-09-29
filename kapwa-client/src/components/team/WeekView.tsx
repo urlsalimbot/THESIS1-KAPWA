@@ -15,6 +15,8 @@ export interface WeekViewProps {
   events: TeamEvent[];
   from: Date; // Monday of the displayed week (local)
   staff: TeamStaffAchievement[];
+  /** Read-only mode (coordinators): disables slot/block click affordances. */
+  readOnly?: boolean;
   onSlotClick: (staffId: string, date: string) => void;
   onBlockClick: (block: TeamBlock) => void;
 }
@@ -46,7 +48,15 @@ const GRID_COLS = 'grid-cols-[7rem_repeat(7,minmax(5rem,1fr))]';
  * 24-hour CSS grid cell with blocks absolutely positioned inside it. Office
  * events land on an all-day strip above the grid (repeat rules expanded).
  */
-export function WeekView({ blocks, events, from, staff, onSlotClick, onBlockClick }: WeekViewProps) {
+export function WeekView({
+  blocks,
+  events,
+  from,
+  staff,
+  readOnly = false,
+  onSlotClick,
+  onBlockClick,
+}: WeekViewProps) {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(from, i)), [from]);
   const dayStrs = days.map(localIsoDay);
 
@@ -143,6 +153,7 @@ export function WeekView({ blocks, events, from, staff, onSlotClick, onBlockClic
                     <button
                       key={block.id}
                       type="button"
+                      disabled={readOnly}
                       onClick={() => onBlockClick(block)}
                       aria-label={`${member.name} — ${BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType} on ${day}`}
                       title={
@@ -161,6 +172,7 @@ export function WeekView({ blocks, events, from, staff, onSlotClick, onBlockClic
                   ))}
                   <button
                     type="button"
+                    disabled={readOnly}
                     aria-label={`New block for ${member.name} on ${day}`}
                     onClick={() => onSlotClick(member.userId, day)}
                     className="absolute inset-0"

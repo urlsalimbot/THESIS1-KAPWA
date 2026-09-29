@@ -4,28 +4,29 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { TeamWorkspacePage } from './TeamWorkspacePage';
+import { BlockEditorDialog } from '../components/team/BlockEditorDialog';
 import { weekStart, addDays, localIsoDay } from '../components/team/team-utils';
 import { formatDate } from '../lib/format';
 
-const { mockApiGet, mockApiPut } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPut, mockApiPost, mockUser } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPut: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockUser: { id: 'u1', role: 'admin', fullName: 'Ana Admin', email: 'ana@kapwa.ph' },
 }));
 
 vi.mock('../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
     put: (...args: unknown[]) => mockApiPut(...args),
-    post: vi.fn(),
+    post: (...args: unknown[]) => mockApiPost(...args),
     patch: vi.fn(),
     del: vi.fn(),
   },
 }));
 
 vi.mock('../lib/auth-context', () => ({
-  useAuth: () => ({
-    user: { id: 'u1', role: 'admin', fullName: 'Ana Admin', email: 'ana@kapwa.ph' },
-  }),
+  useAuth: () => ({ user: mockUser }),
 }));
 
 function renderWithSWR(ui: React.ReactNode) {
@@ -46,21 +47,39 @@ const STATUSES = [
   { userId: 'u2', status: 'field_day', note: 'Bgy. Bigte FDS', updatedAt: '2026-09-28T02:00:00.000Z' },
 ];
 
+// One day block for Ana on the current week's Monday so block-click gating
+// has something to click. Kept week-relative so tests never depend on a
+// fixed calendar date.
+const WEEK_FROM = localIsoDay(weekStart(new Date()));
+const WEEK_TO = localIsoDay(addDays(weekStart(new Date()), 6));
+const DAY_BLOCK = {
+  id: 'b1',
+  userId: 'u1',
+  blockDate: WEEK_FROM,
+  blockType: 'in_office',
+  startTime: null,
+  endTime: null,
+  note: null,
+};
+
+/**
+ * The schedule SWR hook must go through team-api.getSchedule, which merges
+ * GET /team/blocks + GET /team/events (real string paths hitting api.get).
+ * There is NO GET /team/schedule endpoint server-side, so the mock keys off
+ * the string paths — if the page regressed to the global fetcher, the tuple
+ * key ['team','schedule',...] would reach mockApiGet and nothing would
+ * satisfy the blocks/events branches.
+ */
 function defaultMock() {
   mockApiGet.mockImplementation((key: unknown) => {
     const k = JSON.stringify(key);
-    if (k.includes('schedule')) {
-      return Promise.resolve({ from: '2026-09-28', to: '2026-10-04', blocks: [], events: [] });
-    }
+    if (k.includes('/team/blocks')) return Promise.resolve([DAY_BLOCK]);
+    if (k.includes('/team/events')) return Promise.resolve([]);
     if (k.includes('achievements')) {
-      return Promise.resolve({ perStaff: PER_STAFF, range: { from: '2026-09-28', to: '2026-10-04' } });
+      return Promise.resolve({ perStaff: PER_STAFF, range: { from: WEEK_FROM, to: WEEK_TO } });
     }
-    if (k.includes('statuses')) {
-      return Promise.resolve(STATUSES);
-    }
-    if (k.includes('"status"')) {
-      return Promise.resolve(STATUSES[0]);
-    }
+    if (k.includes('statuses')) return Promise.resolve(STATUSES);
+    if (k.includes('"status"')) return Promise.resolve(STATUSES[0]);
     return Promise.resolve(null);
   });
 }
@@ -69,6 +88,8 @@ describe('TeamWorkspacePage', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();
     mockApiPut.mockReset();
+    mockApiPost.mockReset();
+    mockUser.role = 'admin';
     defaultMock();
     await mutate(() => true, undefined, { revalidate: false });
   });
@@ -89,7 +110,7 @@ describe('TeamWorkspacePage', () => {
   it('disables the New block button until a slot is selected, then enables it', async () => {
     renderWithSWR(<TeamWorkspacePage />);
 
-    const newBtn = screen.getByRole('button', { name: /New block/i });
+    const newBtn = screen.getByRole('button', { name: /^New block$/ });
     expect(newBtn).toBeDisabled();
 
     // Pick an empty slot in the week grid (Ana Admin, the first day).
@@ -99,6 +120,19 @@ describe('TeamWorkspacePage', () => {
     fireEvent.click(slots[0]);
 
     await waitFor(() => expect(newBtn).not.toBeDisabled());
+  });
+
+  it('fetches the week schedule through the client-side merge (blocks+events), never /team/schedule', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+
+    // getSchedule(from, to) → Promise.all(getBlocks, getEvents) → api.get with
+    // the real string paths. A regression to the global fetcher would send the
+    // ['team','schedule',…] tuple instead and these assertions would fail.
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(`/team/blocks?from=${WEEK_FROM}&to=${WEEK_TO}`);
+      expect(mockApiGet).toHaveBeenCalledWith(`/team/events?from=${WEEK_FROM}&to=${WEEK_TO}`);
+    });
+    expect(mockApiGet).not.toHaveBeenCalledWith(expect.stringContaining('/team/schedule'));
   });
 
   it('renders staff chips in the status bar from the status board', async () => {
@@ -133,5 +167,89 @@ describe('TeamWorkspacePage', () => {
     await waitFor(() =>
       expect(mockApiPut).toHaveBeenCalledWith('/team/status', { status: 'on_leave', note: null }),
     );
+  });
+
+  it('opens the block editor from a grid block with Delete/Save for editors', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+
+    const blockBtn = await screen.findByRole('button', {
+      name: new RegExp(`Ana Admin — In office on ${WEEK_FROM}`),
+    });
+    fireEvent.click(blockBtn);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: /Delete/i })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: /Save changes/i })).toBeTruthy();
+  });
+
+  it('coordinator is read-only: New/Event disabled, grid clicks open no editor', async () => {
+    mockUser.role = 'coordinator';
+    renderWithSWR(<TeamWorkspacePage />);
+
+    expect(screen.getByRole('button', { name: /^New block$/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^New event$/ })).toBeDisabled();
+
+    // Every empty-slot affordance is disabled, so clicks cannot open the dialog.
+    const slots = await screen.findAllByRole('button', { name: /New block for Ana Admin on/ });
+    expect(slots.length).toBeGreaterThan(0);
+    for (const slot of slots) expect(slot).toBeDisabled();
+    fireEvent.click(slots[0]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Block bars are disabled too — no edit dialog for coordinators.
+    const blockBtn = await screen.findByRole('button', {
+      name: new RegExp(`Ana Admin — In office on ${WEEK_FROM}`),
+    });
+    expect(blockBtn).toBeDisabled();
+    fireEvent.click(blockBtn);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('BlockEditorDialog hides Save/Delete affordances when readOnly', async () => {
+    render(
+      <MemoryRouter>
+        <BlockEditorDialog
+          open
+          onOpenChange={() => {}}
+          staff={PER_STAFF}
+          staffId="u1"
+          date={WEEK_FROM}
+          readOnly
+          onSave={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: /Create block/i })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: /Delete/i })).toBeNull();
+    expect(within(dialog).getByRole('button', { name: /Cancel/i })).toBeTruthy();
+  });
+
+  it('clears the draft slot after creating a block, so New returns to disabled', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+    const user = userEvent.setup();
+
+    // Slot click prefills the dialog (staffId + date come from the draft).
+    const slot = await screen.findByRole('button', {
+      name: new RegExp(`New block for Ana Admin on ${WEEK_FROM}`),
+    });
+    fireEvent.click(slot);
+
+    const dialog = await screen.findByRole('dialog');
+
+    // Create saves via the channel POST (not the nonexistent /team/schedule),
+    // closes the dialog and clears the draft so New falls back to disabled.
+    await user.click(within(dialog).getByRole('button', { name: /Create block/i }));
+
+    await waitFor(() =>
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/team/blocks',
+        expect.objectContaining({ userId: 'u1', blockDate: WEEK_FROM }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^New block$/ })).toBeDisabled());
   });
 });

@@ -14,6 +14,7 @@ import {
   updateEvent,
   deleteEvent,
   putStatus,
+  getSchedule,
 } from '@/lib/team-api';
 import type {
   TeamBlock,
@@ -60,7 +61,11 @@ export function TeamWorkspacePage() {
 
   // Schedule = client-side merge (GET /team/blocks + GET /team/events) — see
   // team-api.getSchedule's note; queryKeys.team.schedule maps to the same key.
-  const { data: schedule } = useSWR<TeamSchedule>(queryKeys.team.schedule(fromStr, toStr));
+  // The explicit fetcher is REQUIRED: the global fetcher (api.get) would hit
+  // GET /team/schedule, which does not exist server-side (404 → empty views).
+  const { data: schedule } = useSWR<TeamSchedule>(queryKeys.team.schedule(fromStr, toStr), () =>
+    getSchedule(fromStr, toStr),
+  );
   const { data: statuses } = useSWR<TeamStatus[]>(queryKeys.team.statuses());
   // Staff roster: achievements.perStaff is the only team-scoped staff list —
   // it zero-fills every admin + social_worker (verified: no /team/staff
@@ -96,6 +101,7 @@ export function TeamWorkspacePage() {
     else await createBlock(input);
     setBlockDialogOpen(false);
     setActiveBlock(null);
+    setDraftSlot(null);
     await revalidateWeek();
   };
 
@@ -127,11 +133,13 @@ export function TeamWorkspacePage() {
   };
 
   const handleSlotClick = (staffId: string, date: string) => {
+    if (!canEdit) return; // coordinators are read-only (server also 403s)
     setDraftSlot({ staffId, date });
     openNewBlock();
   };
 
   const handleBlockClick = (block: TeamBlock) => {
+    if (!canEdit) return; // coordinators are read-only (server also 403s)
     setActiveBlock(block);
     setBlockDialogOpen(true);
   };
@@ -209,6 +217,7 @@ export function TeamWorkspacePage() {
             events={schedule?.events ?? []}
             from={from}
             staff={staff}
+            readOnly={!canEdit}
             onSlotClick={handleSlotClick}
             onBlockClick={handleBlockClick}
           />
@@ -228,6 +237,7 @@ export function TeamWorkspacePage() {
           staffId={draftSlot?.staffId ?? (canEdit ? myUserId : null)}
           date={draftSlot?.date ?? (canEdit ? fromStr : null)}
           block={activeBlock}
+          readOnly={!canEdit}
           onSave={handleSaveBlock}
           onDelete={handleDeleteBlock}
         />
