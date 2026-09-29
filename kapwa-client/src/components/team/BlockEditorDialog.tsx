@@ -29,7 +29,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { BLOCK_TYPES, BLOCK_TYPE_LABEL_KEYS } from './team-utils';
-import type { TeamBlock, TeamBlockInput, TeamStaffAchievement } from '../../lib/team-api';
+import type { TeamBlock, TeamBlockInput, TeamStaffAchievement, TeamVisibleTo } from '../../lib/team-api';
 
 export interface BlockEditorDialogProps {
   open: boolean;
@@ -66,6 +66,7 @@ export function BlockEditorDialog({
   const [userId, setUserId] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [blockType, setBlockType] = useState<string>(BLOCK_TYPES[0]);
+  const [visibleTo, setVisibleTo] = useState<TeamVisibleTo>('team');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [note, setNote] = useState('');
@@ -77,6 +78,9 @@ export function BlockEditorDialog({
       setUserId(block.userId);
       setDateStr(block.blockDate);
       setBlockType(block.blockType);
+      // Round-trip: the stored visibility prefills the toggle (the server
+      // always returns it; the guard keeps pre-amendment rows safe).
+      setVisibleTo(block.visibleTo ?? 'team');
       setStartTime(block.startTime ?? '');
       setEndTime(block.endTime ?? '');
       setNote(block.note ?? '');
@@ -84,6 +88,7 @@ export function BlockEditorDialog({
       setUserId(staffId ?? '');
       setDateStr(date ?? '');
       setBlockType(BLOCK_TYPES[0]);
+      setVisibleTo('team'); // amendment default: team-wide unless toggled
       setStartTime('');
       setEndTime('');
       setNote('');
@@ -98,6 +103,7 @@ export function BlockEditorDialog({
       userId,
       blockDate: dateStr,
       blockType,
+      visibleTo,
       ...(startTime ? { startTime } : {}),
       ...(endTime ? { endTime } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
@@ -167,6 +173,19 @@ export function BlockEditorDialog({
                     </SelectItem>
                   );
                 })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="block-visibility">{t('team.blockEditor.visibilityLabel')}</Label>
+            <Select value={visibleTo} onValueChange={v => setVisibleTo(v as TeamVisibleTo)}>
+              <SelectTrigger id="block-visibility" className="w-full">
+                <SelectValue placeholder={t('team.blockEditor.visibilityPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="team">{t('team.blockEditor.visibilityTeam')}</SelectItem>
+                <SelectItem value="team_coordinators">{t('team.blockEditor.visibilityTeamCoordinators')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -79,6 +79,33 @@ const WEEKLY_EVENT = {
   visibleTo: 'staff',
 };
 
+// Ben (u2) suggests a Monday home-visit block for Ana; Carla suggests a
+// Tuesday block. i1 is accepted in the bell-panel tests.
+const INVITES = [
+  {
+    id: 'i1',
+    fromUserId: 'u2',
+    toUserId: 'u1',
+    inviteDate: WEEK_FROM,
+    blockType: 'home_visit',
+    note: 'FDS at Bgy. Bigte',
+    status: 'pending',
+    createdAt: '2026-09-28T01:00:00.000Z',
+    senderName: 'Ben Social',
+  },
+  {
+    id: 'i2',
+    fromUserId: 'u3',
+    toUserId: 'u1',
+    inviteDate: WEEK_TO,
+    blockType: 'field_day',
+    note: null,
+    status: 'pending',
+    createdAt: '2026-09-28T02:00:00.000Z',
+    senderName: 'Carla Worker',
+  },
+];
+
 /**
  * The schedule SWR hook must go through team-api.getSchedule, which merges
  * GET /team/blocks + GET /team/events (real string paths hitting api.get).
@@ -92,6 +119,7 @@ function defaultMock() {
     const k = JSON.stringify(key);
     if (k.includes('/team/blocks')) return Promise.resolve([DAY_BLOCK]);
     if (k.includes('/team/events')) return Promise.resolve([WEEKLY_EVENT]);
+    if (k.includes('/team/invites/incoming')) return Promise.resolve(INVITES);
     if (k.includes('achievements')) {
       return Promise.resolve({ perStaff: PER_STAFF, range: { from: WEEK_FROM, to: WEEK_TO } });
     }
@@ -174,7 +202,7 @@ describe('TeamWorkspacePage', () => {
     expect(await screen.findByText(label)).toBeTruthy();
   });
 
-  it('status dropdown calls putStatus and revalidates the status keys', async () => {
+  it('status dropdown calls putStatus (with the default team visibility) and revalidates the status keys', async () => {
     renderWithSWR(<TeamWorkspacePage />);
     const user = userEvent.setup();
 
@@ -183,7 +211,11 @@ describe('TeamWorkspacePage', () => {
     await user.click(item);
 
     await waitFor(() =>
-      expect(mockApiPut).toHaveBeenCalledWith('/team/status', { status: 'on_leave', note: null }),
+      expect(mockApiPut).toHaveBeenCalledWith('/team/status', {
+        status: 'on_leave',
+        note: null,
+        visibleTo: 'team',
+      }),
     );
   });
 
@@ -200,12 +232,21 @@ describe('TeamWorkspacePage', () => {
     expect(within(dialog).getByRole('button', { name: /Save changes/i })).toBeTruthy();
   });
 
-  it('coordinator is read-only: New/Event disabled, grid clicks open no editor', async () => {
+  it('coordinator is read-only: no invite affordances, New/Event disabled, grid clicks open no editor', async () => {
     mockUser.role = 'coordinator';
     renderWithSWR(<TeamWorkspacePage />);
 
     expect(screen.getByRole('button', { name: /^New block$/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: /^New event$/ })).toBeDisabled();
+    // Amendment: coordinators get NO schedule-suggestion affordances — no
+    // header Suggest button, no incoming-invites bell.
+    expect(screen.queryByRole('button', { name: /Suggest a schedule/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Incoming schedule suggestions/i })).toBeNull();
+    // …and the invites fetch is skipped entirely (null key, no request).
+    await waitFor(() =>
+      expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('/team/blocks')),
+    );
+    expect(mockApiGet).not.toHaveBeenCalledWith('/team/invites/incoming');
 
     // Every empty-slot affordance is disabled, so clicks cannot open the dialog.
     const slots = await screen.findAllByRole('button', { name: /New block for Ana Admin on/ });
@@ -329,5 +370,73 @@ describe('TeamWorkspacePage', () => {
     );
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(screen.getByRole('button', { name: /^New block$/ })).toBeDisabled());
+  });
+
+  it('clicking a colleague empty slot opens the Suggest dialog (owner rule), never the block editor', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+    const user = userEvent.setup();
+
+    // Ben Social (u2) ≠ me (u1): the slot must route to the invite dialog.
+    const benSlot = await screen.findByRole('button', {
+      name: new RegExp(`New block for Ben Social on ${WEEK_FROM}`),
+    });
+    fireEvent.click(benSlot);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Suggest a schedule' })).toBeTruthy();
+    expect(within(dialog).getByRole('combobox', { name: 'Staff member' })).toHaveTextContent('Ben Social');
+    expect(within(dialog).getByLabelText('Date')).toHaveValue(WEEK_FROM);
+
+    // Sending posts the suggestion for Ben's date + default type.
+    await user.click(within(dialog).getByRole('button', { name: 'Send suggestion' }));
+
+    await waitFor(() =>
+      expect(mockApiPost).toHaveBeenCalledWith('/team/invites', {
+        toUserId: 'u2',
+        inviteDate: WEEK_FROM,
+        blockType: 'in_office',
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('header Suggest button opens the invite dialog blank for admins/workers', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Suggest a schedule/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Suggest a schedule' })).toBeTruthy();
+    expect(within(dialog).getByRole('combobox', { name: 'Staff member' })).toHaveTextContent(
+      'Select staff member', // blank state → the placeholder, no prefill
+    );
+    expect(within(dialog).getByLabelText('Date')).toHaveValue('');
+  });
+
+  it('bell panel accept patches /team/invites/:id/accept and revalidates', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: /Incoming schedule suggestions/i }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('From Ben Social')).toBeTruthy();
+
+    const row = within(dialog).getByTestId('invite-row-i1');
+    await user.click(within(row).getByRole('button', { name: /Accept/i }));
+
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith('/team/invites/i1/accept'));
+  });
+
+  it('bell panel decline patches /team/invites/:id/decline', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: /Incoming schedule suggestions/i }));
+    const dialog = await screen.findByRole('dialog');
+
+    const row = within(dialog).getByTestId('invite-row-i2');
+    await user.click(within(row).getByRole('button', { name: /Decline/i }));
+
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith('/team/invites/i2/decline'));
   });
 });

@@ -24,7 +24,7 @@ const PER_STAFF: TeamStaffAchievement[] = [
 ];
 
 const STATUSES: TeamStatus[] = [
-  { userId: 'u1', status: 'in_office', note: 'Intake', updatedAt: '2026-09-28T01:00:00.000Z' },
+  { userId: 'u1', status: 'in_office', note: 'Intake', visibleTo: 'team', updatedAt: '2026-09-28T01:00:00.000Z' },
   // u2 has no status row → "No status set".
 ];
 

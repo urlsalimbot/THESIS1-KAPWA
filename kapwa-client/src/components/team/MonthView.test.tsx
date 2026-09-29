@@ -23,6 +23,7 @@ const BLOCKS: TeamBlock[] = [
     startTime: null,
     endTime: null,
     note: null,
+    visibleTo: 'team' as const,
   },
   {
     id: 'b2',
@@ -32,6 +33,7 @@ const BLOCKS: TeamBlock[] = [
     startTime: null,
     endTime: null,
     note: null,
+    visibleTo: 'team' as const,
   },
   {
     id: 'b3',
@@ -41,6 +43,7 @@ const BLOCKS: TeamBlock[] = [
     startTime: null,
     endTime: null,
     note: null,
+    visibleTo: 'team' as const,
   },
 ];
 

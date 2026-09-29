@@ -17,6 +17,7 @@ const BLOCK: TeamBlock = {
   startTime: '09:00',
   endTime: '12:00',
   note: 'Intake',
+  visibleTo: 'team_coordinators',
 };
 
 function renderDialog(
@@ -58,6 +59,7 @@ describe('BlockEditorDialog', () => {
       userId: 'u2',
       blockDate: '2026-09-29',
       blockType: 'in_office',
+      visibleTo: 'team', // amendment default: team-wide unless toggled
     });
   });
 
@@ -72,6 +74,10 @@ describe('BlockEditorDialog', () => {
     expect(within(dialog).getByLabelText('Start time')).toHaveValue('09:00');
     expect(within(dialog).getByLabelText('End time')).toHaveValue('12:00');
     expect(within(dialog).getByLabelText('Note')).toHaveValue('Intake');
+    // Visibility round-trips: the stored toggle prefills the select.
+    expect(within(dialog).getByRole('combobox', { name: 'Visible to' })).toHaveTextContent(
+      'Team + coordinators',
+    );
 
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
 
@@ -79,10 +85,25 @@ describe('BlockEditorDialog', () => {
       userId: 'u1',
       blockDate: '2026-09-28',
       blockType: 'home_visit',
+      visibleTo: 'team_coordinators',
       startTime: '09:00',
       endTime: '12:00',
       note: 'Intake',
     });
+  });
+
+  it('toggling visibility in create mode sends visibleTo: team_coordinators', async () => {
+    const { onSave } = renderDialog({ staffId: 'u2', date: '2026-09-29' });
+    const user = userEvent.setup();
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Visible to' }));
+    await user.click(await screen.findByRole('option', { name: 'Team + coordinators' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Create block' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ visibleTo: 'team_coordinators' }),
+    );
   });
 
   it('delete asks for confirmation before calling onDelete (cancel path too)', async () => {

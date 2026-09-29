@@ -41,10 +41,15 @@ export function useTeamStatus(myUserId?: string): void {
 
     const sock = connectNotificationSocket(token);
     const onStatusUpdated = (payload: TeamStatusEvent) => {
+      // The gateway broadcast omits visibleTo, so the optimistic board row
+      // defaults to team-wide; the board chips do not render visibility, and
+      // coordinator filtering is server-side (a coordinator still sees the
+      // row only if the server sent it to them at all).
       const row: TeamStatus = {
         userId: payload.userId,
         status: payload.status,
         note: payload.note ?? null,
+        visibleTo: 'team',
         updatedAt: payload.updatedAt,
       };
       mutate(

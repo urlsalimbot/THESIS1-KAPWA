@@ -14,6 +14,11 @@ import {
   putStatus,
   getStatuses,
   getAchievements,
+  getIncomingInvites,
+  getOutgoingInvites,
+  sendInvite,
+  acceptInvite,
+  declineInvite,
 } from './team-api';
 
 vi.mock('@/lib/api', () => ({
@@ -109,5 +114,43 @@ describe('team-api', () => {
   it('getAchievements GETs /team/achievements with from/to params', () => {
     getAchievements('2026-09-01', '2026-09-30');
     expect(mocked.get).toHaveBeenCalledWith('/team/achievements?from=2026-09-01&to=2026-09-30');
+  });
+
+  // Invite endpoints pinned against kapwa-server/src/team/team-invites.controller.ts:
+  // POST /team/invites, GET /team/invites/incoming|outgoing, PATCH
+  // /team/invites/:id/accept|decline (accept returns the created TeamBlock).
+  it('getIncomingInvites GETs /team/invites/incoming', () => {
+    getIncomingInvites();
+    expect(mocked.get).toHaveBeenCalledWith('/team/invites/incoming');
+  });
+
+  it('getOutgoingInvites GETs /team/invites/outgoing', () => {
+    getOutgoingInvites();
+    expect(mocked.get).toHaveBeenCalledWith('/team/invites/outgoing');
+  });
+
+  it('sendInvite POSTs the suggestion body to /team/invites', () => {
+    const input = { toUserId: 'u2', inviteDate: '2026-10-01', blockType: 'home_visit', note: 'FDS' };
+    sendInvite(input);
+    expect(mocked.post).toHaveBeenCalledWith('/team/invites', input);
+  });
+
+  it('sendInvite forwards a note-less suggestion (note optional)', () => {
+    sendInvite({ toUserId: 'u2', inviteDate: '2026-10-01', blockType: 'in_office' });
+    expect(mocked.post).toHaveBeenCalledWith('/team/invites', {
+      toUserId: 'u2',
+      inviteDate: '2026-10-01',
+      blockType: 'in_office',
+    });
+  });
+
+  it('acceptInvite PATCHes /team/invites/:id/accept (returns the created block)', () => {
+    acceptInvite('inv1');
+    expect(mocked.patch).toHaveBeenCalledWith('/team/invites/inv1/accept');
+  });
+
+  it('declineInvite PATCHes /team/invites/:id/decline', () => {
+    declineInvite('inv1');
+    expect(mocked.patch).toHaveBeenCalledWith('/team/invites/inv1/decline');
   });
 });

@@ -5,6 +5,12 @@ import { api } from './api';
 // strings everywhere — the same convention the server's parseDay helpers
 // enforce — and ranges are inclusive server-side.
 
+// Visibility vocabulary (amendment): `team` (default) — everyone in the
+// workspace sees the block/status; `team_coordinators` — barangay
+// coordinators additionally see it. Mirrors the server's VISIBLE_TO sets
+// (kapwa-server/src/team/team-schedule.service.ts / team-status.service.ts).
+export type TeamVisibleTo = 'team' | 'team_coordinators';
+
 export interface TeamBlockInput {
   userId: string;
   blockDate: string;
@@ -12,6 +18,7 @@ export interface TeamBlockInput {
   startTime?: string;
   endTime?: string;
   note?: string;
+  visibleTo?: TeamVisibleTo;
 }
 
 export interface TeamBlock {
@@ -22,6 +29,7 @@ export interface TeamBlock {
   startTime?: string | null;
   endTime?: string | null;
   note?: string | null;
+  visibleTo: TeamVisibleTo;
 }
 
 export interface TeamEventInput {
@@ -49,13 +57,42 @@ export interface TeamEvent {
 export interface TeamStatusInput {
   status: string;
   note?: string | null;
+  visibleTo?: TeamVisibleTo;
 }
 
 export interface TeamStatus {
   userId: string;
   status: string;
   note?: string | null;
+  visibleTo: TeamVisibleTo;
   updatedAt: string;
+}
+
+// Schedule invitations ("suggest a block for a colleague"). Field names match
+// the server's InviteListItem (kapwa-server/src/team/team-invites.service.ts):
+// the joined peer is `senderName` on incoming lists and `recipientName` on
+// outgoing lists — first-name-first like the users fullName getter.
+export interface TeamInviteInput {
+  toUserId: string;
+  inviteDate: string; // YYYY-MM-DD — the suggested block date
+  blockType: string;
+  note?: string | null;
+}
+
+export interface TeamInvite {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  inviteDate: string;
+  blockType: string;
+  note?: string | null;
+  status: 'pending' | 'accepted' | 'declined' | string;
+  createdAt?: string | null;
+  respondedAt?: string | null;
+  /** Incoming lists: the suggester's name. */
+  senderName?: string | null;
+  /** Outgoing lists: the invitee's name. */
+  recipientName?: string | null;
 }
 
 export interface TeamStaffAchievement {
@@ -132,6 +169,19 @@ export const getMyStatus = () => api.get<TeamStatus | null>('/team/status');
 export const putStatus = (input: TeamStatusInput) =>
   api.put<TeamStatus>('/team/status', input);
 export const getStatuses = () => api.get<TeamStatus[]>('/team/statuses');
+
+// Schedule invites — admin + social_worker only (coordinators are read-only
+// and the server 403s them before these run). Accepting materializes the
+// suggested block AS the invitee (PATCH /team/invites/:id/accept returns the
+// created TeamBlock); declaring records the refusal and returns the invite.
+export const getIncomingInvites = () => api.get<TeamInvite[]>('/team/invites/incoming');
+export const getOutgoingInvites = () => api.get<TeamInvite[]>('/team/invites/outgoing');
+export const sendInvite = (input: TeamInviteInput) =>
+  api.post<TeamInvite>('/team/invites', input);
+export const acceptInvite = (id: string) =>
+  api.patch<TeamBlock>(`/team/invites/${id}/accept`);
+export const declineInvite = (id: string) =>
+  api.patch<TeamInvite>(`/team/invites/${id}/decline`);
 
 // Derived per-staff rollup; both bounds are required (400 otherwise).
 export const getAchievements = (from: string, to: string) =>

@@ -22,6 +22,7 @@ const BLOCKS: TeamBlock[] = [
     startTime: '09:00',
     endTime: '12:00',
     note: null,
+    visibleTo: 'team' as const,
   },
   {
     id: 'b2',
@@ -31,6 +32,7 @@ const BLOCKS: TeamBlock[] = [
     startTime: null,
     endTime: null,
     note: null,
+    visibleTo: 'team' as const,
   },
   {
     id: 'b3',
@@ -40,6 +42,7 @@ const BLOCKS: TeamBlock[] = [
     startTime: null,
     endTime: null,
     note: null,
+    visibleTo: 'team' as const,
   },
   // Outside the grid window (Mon Oct 12) — must be filtered out.
   {
@@ -50,6 +53,7 @@ const BLOCKS: TeamBlock[] = [
     startTime: null,
     endTime: null,
     note: null,
+    visibleTo: 'team' as const,
   },
 ];
 

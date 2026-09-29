@@ -21,6 +21,7 @@ const FULL_DAY_BLOCK: TeamBlock = {
   startTime: null,
   endTime: null,
   note: null,
+  visibleTo: 'team',
 };
 
 const TIMED_BLOCK: TeamBlock = {
@@ -31,6 +32,7 @@ const TIMED_BLOCK: TeamBlock = {
   startTime: '09:00',
   endTime: '12:00',
   note: 'Intake',
+  visibleTo: 'team',
 };
 
 // UTC instants — the strip groups by the Asia/Manila calendar day.
@@ -280,6 +282,7 @@ describe('WeekView mobile agenda', () => {
       startTime: '09:00',
       endTime: '12:00',
       note: null,
+      visibleTo: 'team',
     };
     const tomorrowBlock: TeamBlock = {
       id: 'm2',
@@ -289,6 +292,7 @@ describe('WeekView mobile agenda', () => {
       startTime: null,
       endTime: null,
       note: null,
+      visibleTo: 'team',
     };
 
     render(

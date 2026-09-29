@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { ChevronLeft, ChevronRight, Plus, CalendarPlus, CalendarRange } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CalendarPlus, CalendarRange, CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
@@ -16,6 +17,10 @@ import {
   deleteEvent,
   putStatus,
   getSchedule,
+  getIncomingInvites,
+  sendInvite,
+  acceptInvite,
+  declineInvite,
 } from '@/lib/team-api';
 import type {
   TeamBlock,
@@ -25,6 +30,8 @@ import type {
   TeamSchedule,
   TeamStatus,
   TeamStatusInput,
+  TeamInvite,
+  TeamInviteInput,
   AchievementsRollup,
 } from '@/lib/team-api';
 import { weekStart, addDays, localIsoDay } from '@/components/team/team-utils';
@@ -35,6 +42,8 @@ import { TeamStatusBar } from '@/components/team/TeamStatusBar';
 import { StaffView } from '@/components/team/StaffView';
 import { BlockEditorDialog } from '@/components/team/BlockEditorDialog';
 import { EventEditorDialog } from '@/components/team/EventEditorDialog';
+import { InviteDialog } from '@/components/team/InviteDialog';
+import { IncomingInvitesPanel } from '@/components/team/IncomingInvitesPanel';
 import { useTeamStatus } from '@/hooks/useTeamStatus';
 
 type ViewMode = 'week' | 'month' | 'agenda' | 'staff';
@@ -58,6 +67,10 @@ export function TeamWorkspacePage() {
   const [activeBlock, setActiveBlock] = useState<TeamBlock | null>(null);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [activeEvent, setActiveEvent] = useState<TeamEvent | null>(null);
+  // Schedule-suggestion state (amendment): the dialog prefills from a clicked
+  // colleague slot; the header Suggest button opens it blank.
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [invitePrefill, setInvitePrefill] = useState<{ staffId: string; date: string } | null>(null);
 
   const fromStr = localIsoDay(from);
   const toStr = localIsoDay(addDays(from, 6));
@@ -79,6 +92,13 @@ export function TeamWorkspacePage() {
     getSchedule(viewFromStr, viewToStr),
   );
   const { data: statuses } = useSWR<TeamStatus[]>(queryKeys.team.statuses());
+  // Incoming schedule invites — admin + social_worker only. Coordinators are
+  // read-only (server 403s the invites routes), so the key is null for them
+  // and no request leaves the page.
+  const { data: incomingInvites } = useSWR<TeamInvite[]>(
+    user?.role !== 'coordinator' ? queryKeys.team.invites.incoming() : null,
+    getIncomingInvites,
+  );
   // Staff roster: achievements.perStaff is the only team-scoped staff list —
   // it zero-fills every admin + social_worker (verified: no /team/staff
   // endpoint exists, and the client has no users-list fetcher; queryKeys.users
@@ -146,8 +166,49 @@ export function TeamWorkspacePage() {
 
   const handleSlotClick = (staffId: string, date: string) => {
     if (!canEdit) return; // coordinators are read-only (server also 403s)
-    setDraftSlot({ staffId, date });
-    openNewBlock();
+    // Owner rule (amendment): only the block's own staff member may create or
+    // edit it. Clicking YOUR empty slot opens the block editor; clicking a
+    // colleague's slot opens the "Suggest a schedule" invite dialog instead
+    // (the colleague decides whether to accept).
+    if (staffId === myUserId) {
+      setDraftSlot({ staffId, date });
+      openNewBlock();
+    } else {
+      setInvitePrefill({ staffId, date });
+      setInviteDialogOpen(true);
+    }
+  };
+
+  const handleSendInvite = async (input: TeamInviteInput) => {
+    await sendInvite(input);
+    setInviteDialogOpen(false);
+    setInvitePrefill(null);
+    await Promise.all([
+      mutate(queryKeys.team.invites.incoming()),
+      mutate(queryKeys.team.invites.outgoing()),
+    ]);
+    toast.success(t('team.invite.sent'));
+  };
+
+  const handleAcceptInvite = async (id: string) => {
+    // Accepting materializes the suggested block AS the invitee (owner =
+    // me) with team visibility — the returned TeamBlock is the created row.
+    await acceptInvite(id);
+    await Promise.all([
+      mutate(queryKeys.team.invites.incoming()),
+      mutate(queryKeys.team.invites.outgoing()),
+      revalidateView(),
+    ]);
+    toast.success(t('team.invite.accepted'));
+  };
+
+  const handleDeclineInvite = async (id: string) => {
+    await declineInvite(id);
+    await Promise.all([
+      mutate(queryKeys.team.invites.incoming()),
+      mutate(queryKeys.team.invites.outgoing()),
+    ]);
+    toast.success(t('team.invite.declined'));
   };
 
   const handleBlockClick = (block: TeamBlock) => {
@@ -210,6 +271,26 @@ export function TeamWorkspacePage() {
             {weekLabel}
           </span>
           <div className="ml-auto flex items-center gap-2">
+            {canEdit && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setInvitePrefill(null);
+                    setInviteDialogOpen(true);
+                  }}
+                  aria-label={t('team.invite.suggestAria')}
+                >
+                  <CalendarClock size={14} className="mr-1" /> {t('team.invite.suggestButton')}
+                </Button>
+                <IncomingInvitesPanel
+                  invites={incomingInvites ?? []}
+                  onAccept={handleAcceptInvite}
+                  onDecline={handleDeclineInvite}
+                />
+              </>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -276,6 +357,15 @@ export function TeamWorkspacePage() {
           readOnly={!canEdit}
           onSave={handleSaveEvent}
           onDelete={handleDeleteEvent}
+        />
+        <InviteDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          staff={staff}
+          myUserId={myUserId}
+          staffId={invitePrefill?.staffId ?? null}
+          date={invitePrefill?.date ?? null}
+          onSend={handleSendInvite}
         />
       </div>
     </PageShell>

@@ -201,6 +201,10 @@ export const queryKeys = {
     statuses: () => memo('team.statuses', () => ['team', 'statuses'] as const),
     achievements: (from: string, to: string) =>
       memo(`team.achievements.${from}.${to}`, () => ['team', 'achievements', { from, to }] as const),
+    invites: {
+      incoming: () => memo('team.invites.incoming', () => ['team', 'invites', 'incoming'] as const),
+      outgoing: () => memo('team.invites.outgoing', () => ['team', 'invites', 'outgoing'] as const),
+    },
   },
   auth: {
     me: () => memo('auth.me', () => ['auth', 'me'] as const),

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,7 +7,7 @@ import {
   STATUS_COLOR_FALLBACK,
   STATUS_LABEL_KEYS,
 } from './team-utils';
-import type { TeamStatus, TeamStatusInput, TeamStaffAchievement } from '../../lib/team-api';
+import type { TeamStatus, TeamStatusInput, TeamStaffAchievement, TeamVisibleTo } from '../../lib/team-api';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,6 +16,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
 export interface TeamStatusBarProps {
@@ -35,10 +42,17 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
   const { t } = useTranslation();
   const [note, setNote] = useState('');
   const [open, setOpen] = useState(false);
+  // Visibility of the NEXT status write; syncs to the stored row each time
+  // the dropdown opens (default team-wide).
+  const [visibleTo, setVisibleTo] = useState<TeamVisibleTo>('team');
 
   const statusByUser = new Map(statuses.map(s => [s.userId, s]));
 
   const myStatus = statusByUser.get(myUserId);
+
+  useEffect(() => {
+    if (open) setVisibleTo(myStatus?.visibleTo ?? 'team');
+  }, [open, myStatus?.visibleTo]);
 
   return (
     <div
@@ -85,11 +99,35 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
                   />
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {/* Visibility toggle (amendment): the same vocabulary as the
+                    block editor — team-wide default, or also visible to
+                    coordinators. Applied to the NEXT status write. */}
+                <DropdownMenuLabel className="flex items-center justify-between gap-2 font-normal">
+                  <span className="text-xs text-muted-foreground">{t('team.blockEditor.visibilityLabel')}</span>
+                  <Select value={visibleTo} onValueChange={v => setVisibleTo(v as TeamVisibleTo)}>
+                    <SelectTrigger
+                      id="status-visibility"
+                      aria-label={t('team.statusBar.visibilityAria')}
+                      className="h-8 w-44 text-xs"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="team">{t('team.blockEditor.visibilityTeam')}</SelectItem>
+                      <SelectItem value="team_coordinators">{t('team.blockEditor.visibilityTeamCoordinators')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {STATUS_VALUES.map(value => (
                   <DropdownMenuItem
                     key={value}
                     onClick={() => {
-                      onSetStatus({ status: value, note: note.trim() ? note.trim() : null });
+                      onSetStatus({
+                        status: value,
+                        note: note.trim() ? note.trim() : null,
+                        visibleTo,
+                      });
                       setNote('');
                     }}
                   >

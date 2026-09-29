@@ -80,7 +80,13 @@ describe('useTeamStatus', () => {
       updatedAt: '2026-09-28T02:00:00.000Z',
     });
     expect(result.current.data).toEqual([
-      { userId: 'u1', status: 'field_day', note: 'Bgy. Bigte FDS', updatedAt: '2026-09-28T02:00:00.000Z' },
+      {
+        userId: 'u1',
+        status: 'field_day',
+        note: 'Bgy. Bigte FDS',
+        visibleTo: 'team', // broadcast omits visibility → default team-wide
+        updatedAt: '2026-09-28T02:00:00.000Z',
+      },
     ]);
 
     // A second broadcast for the same user replaces, never duplicates.
@@ -90,6 +96,7 @@ describe('useTeamStatus', () => {
       userId: 'u1',
       status: 'in_office',
       note: null,
+      visibleTo: 'team',
       updatedAt: '2026-09-28T03:00:00.000Z',
     });
   });
