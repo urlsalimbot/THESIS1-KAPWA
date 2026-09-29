@@ -70,6 +70,33 @@ describe('OfficeEventsService', () => {
     expect(findWhere.startsAt).toBeDefined();
   });
 
+  it('listEvents uses an overlap predicate: spanning events return, out-of-window events do not', async () => {
+    repoMock.find.mockResolvedValue([]);
+    const from = new Date('2026-10-01T00:00:00Z');
+    const to = new Date('2026-10-07T00:00:00Z');
+    await service.listEvents(from, to, 'admin');
+    const findWhere = repoMock.find.mock.calls[0][0].where;
+
+    // startsAt <= to AND endsAt >= from (both inclusive).
+    expect(findWhere.startsAt.type).toBe('lessThanOrEqual');
+    expect(findWhere.startsAt.value).toEqual(to);
+    expect(findWhere.endsAt.type).toBe('moreThanOrEqual');
+    expect(findWhere.endsAt.value).toEqual(from);
+
+    // Emulate the SQL predicate against candidate events (ms comparison).
+    const inWindow = (startsAt: string, endsAt: string) =>
+      new Date(startsAt).getTime() <= findWhere.startsAt.value.getTime() &&
+      new Date(endsAt).getTime() >= findWhere.endsAt.value.getTime();
+
+    // Spans the window, starting 3 days before `from` — MUST be returned
+    // (spec edge case #3: continuation chips across the boundary).
+    expect(inWindow('2026-09-28T09:00:00Z', '2026-10-06T10:00:00Z')).toBe(true);
+    // Ended fully before the window — NOT returned.
+    expect(inWindow('2026-09-25T09:00:00Z', '2026-09-30T10:00:00Z')).toBe(false);
+    // Starts after the window — NOT returned.
+    expect(inWindow('2026-10-08T09:00:00Z', '2026-10-09T10:00:00Z')).toBe(false);
+  });
+
   it('createEvent persists repeatRule jsonb and sets owner to requester', async () => {
     repoMock.create.mockImplementation((d: any) => d);
     repoMock.save.mockImplementation(async (d: any) => ({ id: 'e1', ...d }));

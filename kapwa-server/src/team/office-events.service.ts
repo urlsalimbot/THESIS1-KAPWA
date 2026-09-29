@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { AuditLogService } from '../audit/audit-log.service';
 import { OfficeEvent } from './office-event.entity';
 
@@ -72,10 +72,14 @@ export class OfficeEventsService {
     // kept for interface parity with the schedule service and future scoping.
     _requesterBarangay?: string,
   ): Promise<OfficeEvent[]> {
-    // Date bounds are inclusive, matching the plan's dates-inclusive
-    // constraint: `starts_at BETWEEN $1 AND $2` (UTC timestamptz).
+    // Overlap predicate (inclusive bounds): an event is returned when its
+    // range intersects the window — `starts_at <= to AND ends_at >= from`.
+    // Events spanning the window but starting before `from` still appear so
+    // the client can render continuation chips across the boundary (spec:
+    // events show on EACH day of their range).
     const where: FindOptionsWhere<OfficeEvent> = {
-      startsAt: Between(from, to),
+      startsAt: LessThanOrEqual(to),
+      endsAt: MoreThanOrEqual(from),
     };
 
     if (requesterRole === 'coordinator') {
