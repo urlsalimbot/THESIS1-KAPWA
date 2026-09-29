@@ -22,6 +22,7 @@
     "seed:programs": "npx ts-node src/database/seed-programs.ts",
     "test:unit": "jest --testPathPattern=unit",
     "seed:demo": "npx ts-node src/database/seed-demo.ts",
+    "seed:analytics": "npx ts-node src/database/seed-analytics.ts",
     "check:barangay-drift": "npx ts-node --transpile-only scripts/check-barangay-drift.ts"
   },
   "dependencies": {
