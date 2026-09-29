@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, FindOptionsWhere, In, Repository } from 'typeorm';
+import { LessThanOrEqual, Raw, FindOptionsWhere, In, Repository } from 'typeorm';
 import { AuditLogService } from '../audit/audit-log.service';
 import { TeamScheduleBlock } from './team-schedule-block.entity';
 
@@ -26,6 +26,7 @@ export const BLOCK_VISIBLE_TO: ReadonlySet<string> = new Set([
 export interface TeamBlockInput {
   userId: string;
   blockDate: string;
+  endDate?: string | null;
   blockType: string;
   startTime?: string;
   endTime?: string;
@@ -68,6 +69,21 @@ export class TeamScheduleService {
     }
   }
 
+  // Multi-day blocks (amendment): `endDate` is optional — absent/null keeps
+  // the block single-day (COALESCE(end_date, block_date) semantics). When
+  // present it must parse as YYYY-MM-DD (same shape as block_date) and be on
+  // or after the start date; the comparison is lexical, which is safe for
+  // zero-padded ISO dates.
+  private static assertEndDate(endDate: string | null | undefined, blockDate: string): void {
+    if (endDate === null || endDate === undefined) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate) || Number.isNaN(new Date(`${endDate}T00:00:00Z`).getTime())) {
+      throw new BadRequestException(`Invalid end date "${endDate}". Expected YYYY-MM-DD.`);
+    }
+    if (endDate < blockDate) {
+      throw new BadRequestException('End date must be on or after the start date');
+    }
+  }
+
   private static dayString(d: Date): string {
     return d.toISOString().slice(0, 10);
   }
@@ -79,11 +95,20 @@ export class TeamScheduleService {
     requesterRole?: string,
     requesterBarangay?: string,
   ): Promise<TeamScheduleBlock[]> {
-    // Date bounds are inclusive, matching the plan's "dates inclusive
-    // server-side" constraint: `block_date BETWEEN $1 AND $2` with
-    // YYYY-MM-DD strings.
+    // Overlap predicate (inclusive bounds, mirrors the office-events fix): a
+    // block is returned when its [block_date, COALESCE(end_date, block_date)]
+    // range intersects the window — `block_date <= to AND COALESCE(end_date,
+    // block_date) >= from`. Multi-day blocks that START before `from` but
+    // overlap the window are included so the client can render continuation
+    // chips across the boundary; single-day rows satisfy the second clause
+    // via the COALESCE fallback. Date strings are zero-padded ISO AAAA-MM-DD,
+    // so lexical comparison is chronological.
     const where: FindOptionsWhere<TeamScheduleBlock> = {
-      blockDate: Between(TeamScheduleService.dayString(from), TeamScheduleService.dayString(to)),
+      blockDate: LessThanOrEqual(TeamScheduleService.dayString(to)),
+      endDate: Raw(
+        alias => `COALESCE(${alias}, block_date) >= :from`,
+        { from: TeamScheduleService.dayString(from) },
+      ),
     };
 
     if (requesterRole === 'coordinator') {
@@ -114,6 +139,10 @@ export class TeamScheduleService {
 
   async createBlock(dto: TeamBlockInput, requester: TeamBlockRequester): Promise<TeamScheduleBlock> {
     this.assertBlockType(dto.blockType);
+    // Multi-day (amendment): validate endDate BEFORE any write — absent/null
+    // is a single-day block (stored NULL, COALESCE semantics); present values
+    // must parse and be on/after blockDate.
+    TeamScheduleService.assertEndDate(dto.endDate, dto.blockDate);
     const visibleTo = dto.visibleTo ?? 'team';
     this.assertVisibleTo(visibleTo);
     // OWNER-ONLY (amendment): staff manage their own day; admin enjoys no
@@ -124,6 +153,7 @@ export class TeamScheduleService {
     const row = this.repo.create({
       userId: dto.userId,
       blockDate: dto.blockDate,
+      endDate: dto.endDate ?? null,
       blockType: dto.blockType,
       startTime: dto.startTime,
       endTime: dto.endTime,
@@ -146,9 +176,10 @@ export class TeamScheduleService {
     if (block.userId !== requester.id) {
       throw new ForbiddenException('Forbidden: you can only edit your own blocks.');
     }
-    // Ownership lives on `userId`, and the PATCH path applies the raw body via
-    // Object.assign — the owner must never be able to MUTATE a block's owner
-    // either (no admin-reassign carve-out exists for anyone). Sending the
+    // Ownership lives on `userId`, and the PATCH path assigns the body onto
+    // the loaded entity (endDate-undefined stripped below) — the owner must
+    // never be able to MUTATE a block's owner either (no admin-reassign
+    // carve-out exists for anyone). Sending the
     // unchanged owner id is a no-op and stays allowed (full-representation
     // clients include it); any other value is an ownership change and is
     // rejected.
@@ -157,7 +188,21 @@ export class TeamScheduleService {
     }
     if (dto.blockType !== undefined) this.assertBlockType(dto.blockType);
     if (dto.visibleTo !== undefined) this.assertVisibleTo(dto.visibleTo);
-    Object.assign(block, dto);
+    // Multi-day (amendment): endDate must parse and stay on/after the block's
+    // start date — the start is the PATCHed blockDate when both change in the
+    // same request, else the loaded row's. Absent/null leaves the range
+    // single-day (COALESCE semantics).
+    if (dto.endDate !== undefined) {
+      TeamScheduleService.assertEndDate(dto.endDate, dto.blockDate ?? block.blockDate);
+    }
+    // endDate participates in the multi-day validation above; like every
+    // other field it must not leak as `undefined` onto the entity via
+    // Object.assign (absent in a JSON PATCH body it simply isn't a key, but a
+    // JS caller passing `undefined` would clobber the loaded value — drop it
+    // so the stored row is untouched).
+    const patch: Partial<TeamBlockInput> = { ...dto };
+    if (patch.endDate === undefined) delete patch.endDate;
+    Object.assign(block, patch);
     return this.repo.save(block);
   }
 

@@ -891,6 +891,9 @@ export async function migrate() {
   // (ZAddTeamVisibilityAndInvites migration)
   await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS visible_to varchar(32) NOT NULL DEFAULT 'team'`);
   await q.query(`ALTER TABLE team_status ADD COLUMN IF NOT EXISTS visible_to varchar(32) NOT NULL DEFAULT 'team'`);
+  // Team workspace amendment: multi-day blocks — optional inclusive end date;
+  // NULL keeps the block single-day (ZAddTeamScheduleBlockEndDate migration)
+  await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS end_date date NULL`);
   await q.query(`CREATE TABLE IF NOT EXISTS team_invites (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
     from_user_id uuid NOT NULL REFERENCES users(id),

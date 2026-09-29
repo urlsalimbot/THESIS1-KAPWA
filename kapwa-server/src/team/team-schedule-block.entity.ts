@@ -16,6 +16,14 @@ export class TeamScheduleBlock extends BaseEntity {
   @Column({ name: 'block_date', type: 'date' })
   blockDate!: string;
 
+  // Multi-day blocks (amendment): optional inclusive end date. NULL/absent
+  // means single-day — the effective range is
+  // [block_date, COALESCE(end_date, block_date)], mirrored by the list
+  // overlap predicate and the invites materialization (which stays
+  // single-day: accept writes block_date only).
+  @Column({ name: 'end_date', type: 'date', nullable: true })
+  endDate?: string | null;
+
   @Column({ name: 'block_type', type: 'varchar', length: 32 })
   blockType!: string;
 
