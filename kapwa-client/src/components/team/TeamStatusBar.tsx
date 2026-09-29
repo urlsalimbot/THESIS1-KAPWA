@@ -1,0 +1,125 @@
+import { useState } from 'react';
+import { ChevronDown, Check } from 'lucide-react';
+import {
+  STATUS_VALUES,
+  STATUS_COLORS,
+  STATUS_COLOR_FALLBACK,
+  STATUS_LABELS,
+} from './team-utils';
+import type { TeamStatus, TeamStatusInput, TeamStaffAchievement } from '../../lib/team-api';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+
+export interface TeamStatusBarProps {
+  statuses: TeamStatus[];
+  staff: TeamStaffAchievement[];
+  myUserId: string;
+  canEdit?: boolean; // coordinators read the board but cannot set their own status
+  onSetStatus: (input: TeamStatusInput) => void | Promise<void>;
+}
+
+/**
+ * Live whereabouts board: one chip per staff member (dot + name + status
+ * label). The viewer's own chip carries a dropdown quick-set (the five block
+ * statuses + offline) with an optional note field.
+ */
+export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSetStatus }: TeamStatusBarProps) {
+  const [note, setNote] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const statusByUser = new Map(statuses.map(s => [s.userId, s]));
+
+  const myStatus = statusByUser.get(myUserId);
+
+  return (
+    <div
+      role="region"
+      aria-label="Team status"
+      className="flex flex-wrap items-center gap-1.5 rounded-lg border bg-background px-3 py-2"
+    >
+      {staff.map(member => {
+        const status = statusByUser.get(member.userId);
+        if (member.userId === myUserId && canEdit) {
+          return (
+            <DropdownMenu key={member.userId} open={open} onOpenChange={setOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Set my status"
+                  className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1 text-xs font-medium hover:bg-primary/10"
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      status ? (STATUS_COLORS[status.status] ?? STATUS_COLOR_FALLBACK) : STATUS_COLOR_FALLBACK
+                    }`}
+                  />
+                  <span className="font-semibold">{member.name}</span>
+                  {status && (
+                    <span className="text-muted-foreground">
+                      {STATUS_LABELS[status.status] ?? status.status}
+                    </span>
+                  )}
+                  <ChevronDown size={12} className="text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={6} className="w-64">
+                <DropdownMenuLabel className="font-normal">
+                  <Input
+                    value={note}
+                    onChange={e => setNote(e.target.value)}
+                    placeholder="Note (optional)"
+                    aria-label="Status note"
+                    className="h-8 text-xs"
+                  />
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {STATUS_VALUES.map(value => (
+                  <DropdownMenuItem
+                    key={value}
+                    onClick={() => {
+                      onSetStatus({ status: value, note: note.trim() ? note.trim() : null });
+                      setNote('');
+                    }}
+                  >
+                    <span
+                      className={`mr-2 h-2 w-2 rounded-full ${
+                        STATUS_COLORS[value] ?? STATUS_COLOR_FALLBACK
+                      }`}
+                    />
+                    {STATUS_LABELS[value] ?? value}
+                    {status?.status === value && <Check size={14} className="ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        }
+        return (
+          <div
+            key={member.userId}
+            title={status?.note ?? undefined}
+            className="flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs"
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                status ? (STATUS_COLORS[status.status] ?? STATUS_COLOR_FALLBACK) : STATUS_COLOR_FALLBACK
+              }`}
+            />
+            <span className="font-medium">{member.name}</span>
+            {status && (
+              <span className="text-muted-foreground">{STATUS_LABELS[status.status] ?? status.status}</span>
+            )}
+          </div>
+        );
+      })}
+      {staff.length === 0 && <span className="text-xs text-muted-foreground">No staff yet.</span>}
+    </div>
+  );
+}
