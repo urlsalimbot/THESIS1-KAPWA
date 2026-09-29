@@ -810,7 +810,9 @@ export function IntakePage() {
           {confirmedHousehold && (
             <div className="flex items-start justify-between gap-2 border-b bg-primary/5 px-6 py-3 text-sm">
               <p className="text-muted-foreground">
-                {t('intake.matchProbeAttached', 'Will attach to {{name}}\u2019s household — family composition loaded below. Review and edit as needed.', { name: `${confirmedHousehold.primaryBeneficiary.firstName} ${confirmedHousehold.primaryBeneficiary.surname}` })}
+                {confirmedHousehold.matchedPerson?.role === 'member'
+                  ? t('intake.matchProbeAttachedMember', 'Will attach to {{name}}\u2019s household and open a new case for this client — family composition loaded below. Review and edit as needed.', { name: `${confirmedHousehold.primaryBeneficiary.firstName} ${confirmedHousehold.primaryBeneficiary.surname}` })
+                  : t('intake.matchProbeAttached', 'Will attach to {{name}}\u2019s household — family composition loaded below. Review and edit as needed.', { name: `${confirmedHousehold.primaryBeneficiary.firstName} ${confirmedHousehold.primaryBeneficiary.surname}` })}
               </p>
               <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmedHousehold(null)}>
                 {t('intake.matchProbeUndo', 'Remove')}

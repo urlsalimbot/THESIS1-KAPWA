@@ -51,7 +51,7 @@ let mockLocationState: any = {
     {
       householdId: 'hh-2',
       score: 0.45,
-      caseExistsWithin30Days: true,
+      caseExistsWithin30Days: false,
       primaryBeneficiary: {
         id: 'ben-2', surname: 'Cruz', firstName: 'Rosa',
         gender: 'Female', age: 38, phone: '09171234599',
@@ -134,7 +134,7 @@ describe('IntakeReviewPage', () => {
         {
           householdId: 'hh-2',
           score: 0.45,
-          caseExistsWithin30Days: true,
+          caseExistsWithin30Days: false,
           primaryBeneficiary: {
             id: 'ben-2', surname: 'Cruz', firstName: 'Rosa',
             gender: 'Female', age: 38, phone: '09171234599',
@@ -202,6 +202,19 @@ describe('IntakeReviewPage', () => {
   });
 
   it('states the active-case outcome conditionally, not as a fixed promise', async () => {
+    mockLocationState = {
+      candidates: [
+        {
+          householdId: 'hh-active', score: 0.9, matchedOn: ['both_names'], caseExistsWithin30Days: true,
+          primaryBeneficiary: { id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', age: 40, occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married', currentAddress: { barangay: 'Bigte' } },
+          matchedPerson: { id: 'ben-1', role: 'beneficiary', surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', age: 40, occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married', currentAddress: { barangay: 'Bigte' } },
+          allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
+          familyMembers: [],
+          pastCases: [], lastApprovedCaseDate: null,
+        },
+      ],
+      intakeData: { beneficiary: { surname: 'Dela Cruz', firstName: 'Juan' }, claimant: {}, familyMembers: [], case: {} },
+    };
     render(
       <MemoryRouter>
         <IntakeReviewPage />
@@ -439,5 +452,32 @@ describe('IntakeReviewPage', () => {
     expect(screen.getByText(/Why this was flagged/i)).toBeDefined();
     expect(screen.getByText(/Phone match/i)).toBeDefined();
     expect(screen.getByText(/Both names/i)).toBeDefined();
+  });
+});
+
+describe('IntakeReviewPage — member-match case semantics', () => {
+  it('offers "create case" and the member note even when the household has a recent case', async () => {
+    mockLocationState = {
+      candidates: [
+        {
+          householdId: 'hh-member', score: 0.9, matchedOn: ['both_names'], caseExistsWithin30Days: false,
+          primaryBeneficiary: { id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo', gender: 'Male', age: 48, occupation: 'Farmer', estimatedMonthlyIncome: 8000, civilStatus: 'Married', currentAddress: { barangay: 'Partida' } },
+          matchedPerson: { id: 'person-liza', role: 'member', relationship: 'Child', surname: 'Querubin', firstName: 'Liza', gender: 'Female', age: 11, dob: '2015-03-30', occupation: 'Student', estimatedMonthlyIncome: 0, civilStatus: 'Single', currentAddress: { barangay: 'Partida' } },
+          allBeneficiaries: [{ id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo' }],
+          familyMembers: [],
+          pastCases: [{ controlNo: 'KAPWA-2026-00026', beneficiaryName: 'Pablo Querubin', status: 'active', createdAt: '2026-09-20T00:00:00Z' }],
+          lastApprovedCaseDate: '2026-09-20T00:00:00.000Z',
+        },
+      ],
+      intakeData: { beneficiary: { surname: 'Querubin', firstName: 'Liza' }, claimant: {}, familyMembers: [], case: {} },
+    };
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByRole('button', { name: /Yes, update info & create case/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Matched as a household member — a new case will be opened/i)).toBeDefined();
   });
 });

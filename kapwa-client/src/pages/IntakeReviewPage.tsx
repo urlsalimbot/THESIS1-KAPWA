@@ -82,6 +82,14 @@ function confidenceLabel(score: number, t: TFunction): { label: string; classNam
 }
 
 function eligibilityNote(candidate: MatchCandidate, t: TFunction): { text: string; icon: 'check' | 'info' } {
+  if (candidate.matchedPerson?.role === 'member') {
+    // A member match is not an exact beneficiary match: confirming always opens
+    // a new case for this client, even when the household has a recent case.
+    return {
+      text: t('intake.eligMemberNewCase', 'Matched as a household member — a new case will be opened for this client in this household.'),
+      icon: 'check',
+    };
+  }
   if (candidate.caseExistsWithin30Days) {
     // Conditional wording: the outcome depends on which action the worker picks,
     // so state what each choice does rather than asserting one outcome.
@@ -359,9 +367,9 @@ export function IntakeReviewPage() {
                   >
                     {loadingId === c.householdId
                       ? t('intake.updating', 'Updating...')
-                      : c.caseExistsWithin30Days
-                        ? t('intake.updateInfo', 'Yes, update info')
-                        : t('intake.updateAndCreate', 'Yes, update info & create case')}
+                      : c.matchedPerson?.role === 'member' || !c.caseExistsWithin30Days
+                        ? t('intake.updateAndCreate', 'Yes, update info & create case')
+                        : t('intake.updateInfo', 'Yes, update info')}
                   </Button>
                   <Button
                     variant="outline"

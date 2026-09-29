@@ -894,6 +894,12 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       let savedBeneficiary = await queryRunner.manager.findOne(Beneficiary, {
         where: { personId: benPerson.id },
       });
+      // An "exact beneficiary match": the confirmed person already has a
+      // Beneficiary record, so their recent household case can be reused. If
+      // they were not a beneficiary before (e.g. a household member match), a
+      // NEW case must be opened for them even when the household has a recent
+      // case belonging to someone else.
+      const wasAlreadyBeneficiary = Boolean(savedBeneficiary);
       if (!savedBeneficiary) {
         savedBeneficiary = await queryRunner.manager.save(queryRunner.manager.create(Beneficiary, {
           personId: benPerson.id,
@@ -960,10 +966,10 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         order: { createdAt: 'DESC' },
       });
 
-      const controlNo = recentCase ? undefined : await this.casesService.generateControlNo();
+      const controlNo = recentCase && wasAlreadyBeneficiary ? undefined : await this.casesService.generateControlNo();
 
       let savedCase = null;
-      if (!recentCase) {
+      if (!recentCase || !wasAlreadyBeneficiary) {
 const caseEntity = this.caseRepo.create({
           controlNo,
           beneficiaryId: savedBeneficiary.id,
@@ -1011,15 +1017,15 @@ const caseEntity = this.caseRepo.create({
 
       return {
         updated: true,
-        caseCreated: !recentCase,
+        caseCreated: Boolean(savedCase),
         beneficiaryId: savedBeneficiary.id,
         caseId: savedCase?.id || null,
         controlNo: controlNo || null,
-        status: recentCase ? null : CaseStatus.ENROLLED,
+        status: savedCase ? CaseStatus.ENROLLED : null,
         existingCaseDate,
-        message: recentCase
-          ? `Info updated. No new case created — this household already has a case from ${new Date(recentCase.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}.`
-          : 'Info updated and new case created.',
+        message: savedCase
+          ? 'Info updated and new case created.'
+          : `Info updated. No new case created — this household already has a case from ${new Date(recentCase!.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}.`,
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();

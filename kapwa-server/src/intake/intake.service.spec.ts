@@ -907,6 +907,66 @@ describe('IntakeService', () => {
         expect.objectContaining({ relationship: 'Unrelated Caretaker', isPrimary: false }),
       );
     });
+
+    it('opens a new case for a non-exact beneficiary match even when the household has a recent case', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+      // A recent case exists in the household (belongs to someone else).
+      caseRepo.findOne = jest.fn().mockResolvedValue({ id: 'case-recent', controlNo: 'KAPWA-2026-00009', createdAt: new Date('2026-09-01T00:00:00Z'), status: 'active' }) as any;
+
+      const saveMock = queryRunnerMock.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid' })
+        .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: 'claim-uuid' })
+        .mockResolvedValueOnce({ id: 'bc-uuid' })
+        .mockResolvedValueOnce({ id: 'hm-claim-uuid' })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'new-case-id', controlNo: 'KAPWA-2026-00010' })
+        .mockResolvedValueOnce({ id: 'cl-1' });
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+
+      const result = await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], { id: 'caller-1', role: UserRole.SW });
+
+      expect(caseRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ beneficiaryId: 'new-ben-id', status: CaseStatus.ENROLLED }),
+      );
+      expect(result).toMatchObject({ caseCreated: true, status: CaseStatus.ENROLLED });
+    });
+
+    it('reuses the recent household case for an exact beneficiary match', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+      caseRepo.findOne = jest.fn().mockResolvedValue({ id: 'case-recent', controlNo: 'KAPWA-2026-00009', createdAt: new Date('2026-09-01T00:00:00Z'), status: 'active' }) as any;
+      // The confirmed person already has a Beneficiary record (exact match).
+      queryRunnerMock.manager.findOne = jest.fn().mockImplementation((entity: unknown) =>
+        Promise.resolve(entity === Beneficiary ? { id: 'ben-existing', householdId: 'existing-hh' } : null),
+      );
+
+      const saveMock = queryRunnerMock.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid' })
+        .mockResolvedValueOnce({ id: 'bc-uuid' })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'cl-1' });
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+
+      const result = await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], { id: 'caller-1', role: UserRole.SW });
+
+      expect(caseRepo.create).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ caseCreated: false, caseId: null });
+    });
   });
 
   describe('family member person build', () => {
