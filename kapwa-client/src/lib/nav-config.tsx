@@ -2,7 +2,7 @@ import {
   FilePlus, LayoutDashboard, Users, CheckCircle,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
   FileWarning, IdCard, ScrollText, BarChart3, History, Send, BadgeCheck,
-  Megaphone, Building2,
+  Megaphone, Building2, CalendarDays,
 } from 'lucide-react';
 import { FEATURE_ANALYTICS_ENABLED } from './feature-flags';
 
@@ -27,6 +27,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/intake', label: 'General Intake', icon: <FilePlus size={20} />, roles: ['admin', 'social_worker',] },
       { path: '/referrals', label: 'Referrals', icon: <Send size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/cases', label: 'Cases', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
+      { path: '/team', label: 'Team Workspace', icon: <CalendarDays size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/coordinator/access-cards', label: 'Access Cards', icon: <BadgeCheck size={20} />, roles: ['coordinator'] },
     ],

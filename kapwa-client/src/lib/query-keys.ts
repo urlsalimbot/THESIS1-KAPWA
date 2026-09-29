@@ -189,6 +189,19 @@ export const queryKeys = {
     caseIdPhoto: (caseId: string) =>
       memo(`filing.caseIdPhoto.${caseId}`, () => ['filing', { caseIdPhoto: caseId }] as const),
   },
+  team: {
+    all: ['team'] as const,
+    schedule: (from: string, to: string) =>
+      memo(`team.schedule.${from}.${to}`, () => ['team', 'schedule', { from, to }] as const),
+    blocks: (from: string, to: string) =>
+      memo(`team.blocks.${from}.${to}`, () => ['team', 'blocks', { from, to }] as const),
+    events: (from: string, to: string) =>
+      memo(`team.events.${from}.${to}`, () => ['team', 'events', { from, to }] as const),
+    status: () => memo('team.status', () => ['team', 'status'] as const),
+    statuses: () => memo('team.statuses', () => ['team', 'statuses'] as const),
+    achievements: (from: string, to: string) =>
+      memo(`team.achievements.${from}.${to}`, () => ['team', 'achievements', { from, to }] as const),
+  },
   auth: {
     me: () => memo('auth.me', () => ['auth', 'me'] as const),
   },
