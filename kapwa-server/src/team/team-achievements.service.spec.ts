@@ -100,13 +100,15 @@ describe('TeamAchievementsService', () => {
     await service.rollup(FROM, TO);
 
     // Sixth query: COUNT(DISTINCT created_at::date) grouped by the coalesced
-    // actor/assigned worker, with the spec fallback (actor- NULL entries count
-    // under the case's assigned worker).
+    // actor/assigned worker, with the spec fallback (actor-NULL entries count
+    // under the case's assigned worker). The join and COALESCE must carry the
+    // uuid→text casts (varchar case_id/changed_by_id vs uuid cases columns).
     const trackerSql = dsMock.query.mock.calls[5][0] as string;
     expect(trackerSql).toContain('COUNT(DISTINCT ch.created_at::date)');
-    expect(trackerSql).toContain('LEFT JOIN cases');
-    expect(trackerSql).toContain('changed_by_id IS NULL');
-    expect(trackerSql).toContain('GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)');
+    expect(trackerSql).toContain('LEFT JOIN cases c ON ch.case_id = c.id::text');
+    expect(trackerSql).toContain('COALESCE(ch.changed_by_id, c.assigned_worker_id::text)');
+    expect(trackerSql).toContain('GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id::text)');
+    expect(trackerSql).toContain('ch.changed_by_id IS NULL');
   });
 
   it('counts actor-less case history entries under the case assigned worker (spec fallback)', async () => {
@@ -121,12 +123,20 @@ describe('TeamAchievementsService', () => {
     const rollup = await service.rollup(FROM, TO);
 
     // Cases query must carry the OR predicate: actor = staff OR (actor IS NULL
-    // AND the case's assigned_worker_id = staff).
+    // AND the case's assigned_worker_id = staff), and the fallback JOIN/COALESCE
+    // must bridge the varchar/uuid mismatch by casting the uuid side to text
+    // (Option A: never cast the legacy varchar actor column to uuid).
     const caseSql = dsMock.query.mock.calls[1][0] as string;
-    expect(caseSql).toContain('LEFT JOIN cases');
-    expect(caseSql).toContain('COALESCE(ch.changed_by_id, c.assigned_worker_id)');
-    expect(caseSql).toContain('ch.changed_by_id IS NULL AND c.assigned_worker_id IS NOT NULL');
-    expect(caseSql).toContain('GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)');
+    expect(caseSql).toContain('LEFT JOIN cases c ON ch.case_id = c.id::text');
+    expect(caseSql).toContain('c.id::text');
+    expect(caseSql).toContain('COALESCE(ch.changed_by_id, c.assigned_worker_id::text)');
+    expect(caseSql).toContain('ch.changed_by_id IS NULL AND c.assigned_worker_id::text IS NOT NULL');
+    expect(caseSql).toContain('GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id::text)');
+    // Pin Option A: the actor column is never cast to uuid (legacy text may be
+    // a non-uuid), and the uuid-typed case columns are not compared bare.
+    expect(caseSql).not.toContain('changed_by_id::uuid');
+    expect(caseSql).not.toContain('c.id = ch.case_id');
+    expect(caseSql).not.toContain('assigned_worker_id)');
 
     // The fallback branch's rows land on the assigned worker's tally.
     expect(rollup.perStaff[0]).toMatchObject({ userId: 'u1', cases: 4, trackerDays: 1 });

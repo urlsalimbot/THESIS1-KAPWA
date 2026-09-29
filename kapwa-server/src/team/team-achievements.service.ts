@@ -64,13 +64,21 @@ export class TeamAchievementsService {
     // fallback — an entry that lacks an actor (changed_by_id NULL) is counted
     // under the case's assigned worker instead of nobody. Rows with neither
     // actor nor assigned worker drop out (group under NULL, never a staff id).
+    //
+    // Type note (round 2 fix): `case_history.case_id` / `changed_by_id` are
+    // VARCHAR while `cases.id` / `assigned_worker_id` are UUID, so the join and
+    // the COALESCE compare/merge across types. Postgres refuses `uuid =
+    // varchar` outright — the uuid side is cast to text (`c.id::text`,
+    // `c.assigned_worker_id::text`). `changed_by_id` is deliberately NOT cast
+    // to uuid: legacy text values may not be real uuids, so uuid is normalized
+    // DOWN to text instead of text being coerced up.
     const caseRows: CountRow[] = await this.dataSource.query(
-      `SELECT COALESCE(ch.changed_by_id, c.assigned_worker_id) AS user_id, COUNT(*)::int AS cases
+      `SELECT COALESCE(ch.changed_by_id, c.assigned_worker_id::text) AS user_id, COUNT(*)::int AS cases
        FROM case_history ch
-       LEFT JOIN cases c ON c.id = ch.case_id
+       LEFT JOIN cases c ON ch.case_id = c.id::text
        WHERE ch.created_at >= $1 AND ch.created_at < $2
-         AND (ch.changed_by_id IS NOT NULL OR (ch.changed_by_id IS NULL AND c.assigned_worker_id IS NOT NULL))
-       GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)`,
+         AND (ch.changed_by_id IS NOT NULL OR (ch.changed_by_id IS NULL AND c.assigned_worker_id::text IS NOT NULL))
+       GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id::text)`,
       [from, upper],
     );
 
@@ -107,14 +115,15 @@ export class TeamAchievementsService {
     );
 
     // Tracker days: distinct dates on which the staff has case_history rows
-    // (same actor + assigned-worker fallback rule as cases served).
+    // (same actor + assigned-worker fallback rule as cases served — and the
+    // same uuid-vs-varchar cast treatment, see the cases query above).
     const trackerRows: CountRow[] = await this.dataSource.query(
-      `SELECT COALESCE(ch.changed_by_id, c.assigned_worker_id) AS user_id, COUNT(DISTINCT ch.created_at::date)::int AS tracker_days
+      `SELECT COALESCE(ch.changed_by_id, c.assigned_worker_id::text) AS user_id, COUNT(DISTINCT ch.created_at::date)::int AS tracker_days
        FROM case_history ch
-       LEFT JOIN cases c ON c.id = ch.case_id
+       LEFT JOIN cases c ON ch.case_id = c.id::text
        WHERE ch.created_at >= $1 AND ch.created_at < $2
-         AND (ch.changed_by_id IS NOT NULL OR (ch.changed_by_id IS NULL AND c.assigned_worker_id IS NOT NULL))
-       GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)`,
+         AND (ch.changed_by_id IS NOT NULL OR (ch.changed_by_id IS NULL AND c.assigned_worker_id::text IS NOT NULL))
+       GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id::text)`,
       [from, upper],
     );
 
