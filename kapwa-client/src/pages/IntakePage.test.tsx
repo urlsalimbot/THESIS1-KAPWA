@@ -825,3 +825,202 @@ describe('IntakePage — draft recovery for a referral hand-off', () => {
     expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 });
+
+describe('IntakePage — match pop-up', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+    (api.post as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+      if (path === '/intake/match-check') {
+        return Promise.resolve({ candidates: [candidateFixture()] });
+      }
+      if (path.startsWith('/intake/confirm/')) {
+        return Promise.resolve({ caseCreated: true, caseId: 'case-9', message: 'Attached to household' });
+      }
+      return Promise.resolve({ caseId: 'case-id-1', controlNo: 'NORZ-2026-0001' });
+    });
+  });
+
+  it('opens on beneficiary completion, shows household info + past cases, and attaches on confirm', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByRole('button', { name: /Check records/i })).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    // The check button enables once the beneficiary section is valid.
+    expect(screen.getByRole('button', { name: /Check records/i })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /Check records/i }));
+
+    expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
+    expect(screen.getByText(/Household of.*Juan Dela Cruz/i)).toBeDefined();
+    expect(screen.getByText(/Household members \(2\)/i)).toBeDefined();
+    // Members and past cases are laid out as separate fields, so assert the
+    // values rather than the punctuation that used to glue them together.
+    expect(screen.getAllByText(/Ana Dela Cruz/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/· Child/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('KAPWA-2026-00001')).toBeDefined();
+    expect(screen.getByText('Juan Dela Cruz')).toBeDefined();
+    expect(screen.getByText(/Household member · Child/i)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /This is the client/i }));
+
+    // Family composition prefilled + attach notice. The matched member (Ana,
+    // Child) is removed from the family list; the head and spouse are inverted
+    // to Parent relative to her.
+    expect(await screen.findByText(/Will attach to Juan Dela Cruz/i)).toBeDefined();
+    expect(screen.getAllByLabelText('FM surname').length).toBe(2);
+    const fmNames = screen.getAllByLabelText('FM first name').map(el => (el as HTMLInputElement).value);
+    expect(fmNames).toEqual(['Juan', 'Lorna']);
+    const relationships = screen.getAllByLabelText('FM relationship').map(el => (el as HTMLSelectElement).value);
+    expect(relationships).toEqual(['Parent', 'Parent']);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+    await waitFor(() => {
+      expect(
+        (api.post as ReturnType<typeof vi.fn>).mock.calls.some(
+          (call: unknown[]) => String(call[0]) === '/intake/confirm/hh-1',
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it('continues with a normal submission when the worker dismisses the pop-up', async () => {
+    render(
+      <MemoryRouter>
+        <IntakePage />
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('button', { name: /Check records/i }));
+
+    expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: /None of these — continue/i }));
+    expect(screen.queryByText(/Possible existing household/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+    await waitFor(() => {
+      expect(
+        (api.post as ReturnType<typeof vi.fn>).mock.calls.some((call: unknown[]) => call[0] === '/intake'),
+      ).toBe(true);
+    });
+    expect(
+      (api.post as ReturnType<typeof vi.fn>).mock.calls.some((call: unknown[]) => String(call[0]).startsWith('/intake/confirm/')),
+    ).toBe(false);
+  });
+});
+
+function candidateFixture() {
+  return {
+    householdId: 'hh-1',
+    score: 0.8,
+    matchedOn: ['phone'],
+    caseExistsWithin30Days: false,
+    primaryBeneficiary: {
+      id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', age: 40,
+      phone: '09171234000', occupation: 'Farmer', estimatedMonthlyIncome: 8500,
+      civilStatus: 'Married', currentAddress: { barangay: 'Bangkal' }, philhealthNumber: '07-1',
+    },
+    matchedPerson: {
+      id: 'person-2', role: 'member', relationship: 'Child', surname: 'Dela Cruz', firstName: 'Ana',
+      gender: 'Female', age: 14, dob: '2012-01-01', phone: '',
+      occupation: 'Student', estimatedMonthlyIncome: 0, civilStatus: 'Single',
+      currentAddress: { barangay: 'Bangkal' }, philhealthNumber: undefined,
+    },
+    allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
+    familyMembers: [
+      { id: 'fm-1', fullName: 'Ana Dela Cruz', surname: 'Dela Cruz', firstName: 'Ana', gender: 'Female', dob: '2012-01-01', relationship: 'Child', age: 14, occupation: 'Student', income: 0, status: 'Active' },
+      { id: 'fm-2', fullName: 'Lorna Dela Cruz', surname: 'Dela Cruz', firstName: 'Lorna', gender: 'Female', dob: '1985-03-03', relationship: 'Spouse', age: 41, occupation: 'Housewife', income: 0, status: 'Active' },
+    ],
+    pastCases: [
+      { controlNo: 'KAPWA-2026-00001', beneficiaryName: 'Juan Dela Cruz', status: 'active', createdAt: '2026-01-15T00:00:00Z' },
+    ],
+    lastApprovedCaseDate: null,
+  };
+}
+
+describe('IntakePage — submit review safety net', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
+  it('routes to the review page at submit when candidates exist and the pop-up was never used', async () => {
+    (api.post as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+      if (path === '/intake/match-check') {
+        return Promise.resolve({ candidates: [candidateFixture()] });
+      }
+      return Promise.resolve({ caseId: 'case-id-1', controlNo: 'NORZ-2026-0001' });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/intake']}>
+        <Routes>
+          <Route path="/intake" element={<IntakePage />} />
+          <Route path="/intake/review" element={<div data-testid="review-page">REVIEW</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    expect(await screen.findByTestId('review-page')).toBeDefined();
+    // The draft is kept for the review step; nothing was submitted yet.
+    expect(
+      (api.post as ReturnType<typeof vi.fn>).mock.calls.some(
+        (call: unknown[]) => call[0] === '/intake' || String(call[0]).startsWith('/intake/confirm/'),
+      ),
+    ).toBe(false);
+  });
+
+  it('skips the review page at submit when matches were already shown in the pop-up', async () => {
+    (api.post as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+      if (path === '/intake/match-check') {
+        return Promise.resolve({ candidates: [candidateFixture()] });
+      }
+      return Promise.resolve({ caseId: 'case-id-1', controlNo: 'NORZ-2026-0001' });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/intake']}>
+        <Routes>
+          <Route path="/intake" element={<IntakePage />} />
+          <Route path="/intake/review" element={<div data-testid="review-page">REVIEW</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+
+    fireEvent.click(screen.getByRole('button', { name: /Check records/i }));
+    expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: /None of these — continue/i }));
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    await waitFor(() => {
+      expect(
+        (api.post as ReturnType<typeof vi.fn>).mock.calls.some((call: unknown[]) => call[0] === '/intake'),
+      ).toBe(true);
+    });
+    expect(screen.queryByTestId('review-page')).toBeNull();
+  });
+});

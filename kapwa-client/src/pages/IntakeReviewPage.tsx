@@ -1,107 +1,22 @@
 import { useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 import { api } from '../lib/api';
-import { formatDate } from '../lib/format';
 import { PageShell } from '@/components/PageShell';
+import { buildPrefilledFamily } from '@/components/intake/prefillFamily';
+import { MatchCandidateCard, type MatchCandidate } from '@/components/intake/MatchCardSections';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { AlertTriangle, Check, CheckCircle, Info, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadIntakeIdPhotos } from '@/lib/intake-id-photo';
 import { useAuth } from '@/lib/auth-context';
 import { clearDraft } from '@/hooks/useIntakeAutosave';
 
-interface MatchCandidate {
-  householdId: string;
-  score: number;
-  matchedOn: string[];
-  caseExistsWithin30Days: boolean;
-  primaryBeneficiary: {
-    id: string; surname: string; firstName: string; middleName?: string;
-    gender: string; age: number; dob?: string; phone: string; email?: string;
-    occupation: string; estimatedMonthlyIncome: number; civilStatus: string;
-    currentAddress: Record<string, string> | null;
-    philhealthNumber?: string; category?: string;
-  };
-  allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;
-  familyMembers: Array<{ id: string; fullName: string; relationship: string; age: number; occupation: string; income: number; status: string }>;
-  lastApprovedCaseDate: string | null;
-}
-
 interface LocationState {
   candidates: MatchCandidate[];
   intakeData: any;
-}
-
-// Server-issued reason tokens (match-scoring MATCH_REASON_TOKENS) shown on the
-// card. Keys are localized; fallbacks keep unknown token changes from leaking.
-const MATCHED_ON_KEY: Record<string, string> = {
-  phone: 'intake.matchedOnPhone',
-  email: 'intake.matchedOnEmail',
-  philhealth: 'intake.matchedOnPhilHealth',
-  both_names: 'intake.matchedOnBothNames',
-  dob_name: 'intake.matchedOnDobName',
-  phonetic_surname: 'intake.matchedOnPhoneticSurname',
-  family_member: 'intake.matchedOnFamilyMember',
-};
-const MATCHED_ON_FALLBACK: Record<string, string> = {
-  phone: 'Phone match',
-  email: 'Email match',
-  philhealth: 'PhilHealth match',
-  both_names: 'Both names',
-  dob_name: 'DOB + name',
-  phonetic_surname: 'Sound-alike surname',
-  family_member: 'Family member',
-};
-
-function confidenceLabel(score: number, t: TFunction): { label: string; className: string } {
-  if (score >= 0.6) return { label: t('intake.confidenceVeryLikely', 'Very likely the same person'), className: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
-  if (score >= 0.35) return { label: t('intake.confidenceSome', 'Some similarities'), className: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
-  return { label: t('intake.confidenceSameSurname', 'Possible match'), className: 'bg-gray-100 text-gray-600 border-gray-300' };
-}
-
-function eligibilityNote(candidate: MatchCandidate, t: TFunction): { text: string; icon: 'check' | 'info' } {
-  if (candidate.caseExistsWithin30Days) {
-    // Conditional wording: the outcome depends on which action the worker picks,
-    // so state what each choice does rather than asserting one outcome.
-    return {
-      text: t(
-        'intake.eligActiveCase',
-        'Has an active case — choosing "Yes, update info" will update it instead of creating a new case.',
-      ),
-      icon: 'info',
-    };
-  }
-  if (candidate.lastApprovedCaseDate) {
-    const d = new Date(candidate.lastApprovedCaseDate);
-    return { text: t('intake.eligLastCase', 'Last case: {{date}} — eligible for a new case.', { date: formatDate(d) }), icon: 'check' };
-  }
-  return { text: t('intake.eligNoPrior', 'No prior case on record — a new case will be created.'), icon: 'check' };
-}
-
-function MatchRow({ label, newVal, existingVal, t }: { label: string; newVal: string; existingVal: string; t: TFunction }) {
-  const match = newVal.toLowerCase() === existingVal.toLowerCase();
-  const status = match ? t('intake.matches', 'Match') : t('intake.differs', 'Differs');
-  return (
-    <div className="grid grid-cols-[7rem_1fr_1fr_28px] gap-2 items-center py-1.5 border-b border-gray-100 last:border-0 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right text-muted-foreground truncate" title={newVal || '—'}>{newVal || '—'}</span>
-      <span className="truncate font-medium" title={existingVal || '—'}>{existingVal || '—'}</span>
-      <span role="img" aria-label={status} title={status}>
-        {match ? <Check size={14} className="text-emerald-600" aria-hidden /> : <X size={14} className="text-gray-300" aria-hidden />}
-      </span>
-    </div>
-  );
-}
-
-function formatIntakeField(beneficiary: Record<string, any>, field: string): string {
-  if (field === 'age') return String(beneficiary.age || '');
-  if (field === 'barangay') return beneficiary.currentAddress?.barangay || '';
-  if (field === 'estimatedMonthlyIncome') return `₱${(beneficiary.estimatedMonthlyIncome || 0).toLocaleString()}`;
-  return String(beneficiary[field] || '');
 }
 
 export function IntakeReviewPage() {
@@ -134,7 +49,6 @@ export function IntakeReviewPage() {
 
   const { candidates, intakeData } = state;
   const intake = (intakeData as any)?.beneficiary || {};
-  const family = (intakeData as any)?.familyMembers || [];
 
   const sorted = [...candidates].sort((a, b) => b.score - a.score);
   const filtered = sorted.filter(c => !dismissed.has(c.householdId));
@@ -165,9 +79,33 @@ export function IntakeReviewPage() {
   async function handleConfirm(householdId: string) {
     setLoadingId(householdId);
     try {
+      const candidate = sorted.find(c => c.householdId === householdId);
+      let body = intakeData;
+      if (candidate?.matchedPerson?.role === 'member' && intakeData?.beneficiary) {
+        // Member matches follow the same inversion as the pop-up prefill: the
+        // matched person becomes the beneficiary, so the roster's relationships
+        // (stored relative to the old head) are re-expressed relative to them —
+        // old head Parent -> new beneficiary Child, and so on — and the
+        // matched person is removed from the family list.
+        body = {
+          ...intakeData,
+          familyMembers: buildPrefilledFamily(candidate).map(m => ({
+            surname: m.surname,
+            firstName: m.firstName,
+            middleName: m.middleName || '',
+            gender: m.gender,
+            dob: m.dob,
+            age: m.age,
+            relationship: m.relationship,
+            occupation: m.occupation,
+            income: m.income != null ? Number(m.income) : undefined,
+            status: m.status || '',
+          })),
+        };
+      }
       const result = await api.post<{ caseCreated: boolean; caseId?: string; message: string }>(
         `/intake/confirm/${householdId}`,
-        intakeData,
+        body,
       );
       // The intake has been consumed either way (case created, or existing case
       // updated), so the draft is spent.
@@ -226,86 +164,36 @@ export function IntakeReviewPage() {
 
       <div className="space-y-6">
         {filtered.map((c) => {
-          const cLabel = confidenceLabel(c.score, t);
-          const elig = eligibilityNote(c, t);
-          const fullName = `${c.primaryBeneficiary.firstName} ${c.primaryBeneficiary.surname}`;
+          const matched = c.matchedPerson ?? c.primaryBeneficiary;
+          const fullName = `${matched.firstName} ${matched.surname}`;
           return (
-            <Card
+            <MatchCandidateCard
               key={c.householdId}
-              className="overflow-hidden"
-              data-testid="match-card"
-              role="region"
-              aria-label={t('intake.cardRegion', '{{name}} — possible match', { name: fullName })}
+              candidate={c}
+              intake={intake}
+              testId="match-card"
+              regionLabel={t('intake.cardRegion', '{{name}} — possible match', { name: fullName })}
             >
-              <div className={`px-4 py-2 border-b text-sm font-medium ${cLabel.className}`}>
-                {cLabel.label}
-              </div>
-
-              <div className="p-4 space-y-3">
-                <p className="text-base font-semibold">
-                  {t('intake.isThis', 'Is this')} <span className="text-primary">{fullName}</span>{t('intake.isThisQ', '?')}
-                </p>
-
-                <div className="bg-gray-50 rounded-lg p-4 space-y-1">
-                  <div className="grid grid-cols-[7rem_1fr_1fr_28px] gap-2 text-xs text-muted-foreground pb-1 border-b border-gray-200 mb-1">
-                    <span />
-                    <span className="text-right">{t('intake.youEntered', 'You entered')}</span>
-                    <span>{t('intake.existingRecord', 'Existing record')}</span>
-                    <span />
-                  </div>
-
-                  <MatchRow label={t('intake.name', 'Name')} newVal={`${intake.surname}, ${intake.firstName}`} existingVal={`${c.primaryBeneficiary.surname}, ${c.primaryBeneficiary.firstName}`} t={t} />
-                  <MatchRow label={t('intake.reviewDob', 'Date of birth')} newVal={formatIntakeField(intake, 'dob')} existingVal={c.primaryBeneficiary.dob || ''} t={t} />
-                  <MatchRow label={t('intake.age', 'Age')} newVal={formatIntakeField(intake, 'age')} existingVal={String(c.primaryBeneficiary.age)} t={t} />
-                  <MatchRow label={t('intake.reviewPhone', 'Phone')} newVal={formatIntakeField(intake, 'cellularNumber')} existingVal={c.primaryBeneficiary.phone || ''} t={t} />
-                  <MatchRow label={t('intake.reviewEmail', 'Email')} newVal={formatIntakeField(intake, 'email')} existingVal={c.primaryBeneficiary.email || ''} t={t} />
-                  <MatchRow label={t('intake.barangay', 'Barangay')} newVal={formatIntakeField(intake, 'barangay')} existingVal={c.primaryBeneficiary.currentAddress?.barangay || ''} t={t} />
-                  {c.primaryBeneficiary.philhealthNumber && (
-                    <MatchRow label={t('intake.philhealth', 'PhilHealth')} newVal={formatIntakeField(intake, 'philhealthNumber')} existingVal={c.primaryBeneficiary.philhealthNumber} t={t} />
-                  )}
-                </div>
-
-                <div className={`flex items-start gap-2 text-sm p-3 rounded-lg ${elig.icon === 'info' ? 'bg-primary/5 text-primary' : 'bg-emerald-50 text-emerald-800'}`}>
-                  {elig.icon === 'info' ? <Info size={16} className="mt-0.5 shrink-0" /> : <CheckCircle size={16} className="mt-0.5 shrink-0" />}
-                  <span>{elig.text}</span>
-                </div>
-
-                {c.matchedOn && c.matchedOn.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground">{t('intake.whyFlagged', 'Why this was flagged')}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {c.matchedOn.map(token => (
-                        <span key={token} className="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
-                          {t(MATCHED_ON_KEY[token] || token, MATCHED_ON_FALLBACK[token] || token)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleConfirm(c.householdId)}
-                    disabled={loadingId === c.householdId}
-                  >
-                    {loadingId === c.householdId
-                      ? t('intake.updating', 'Updating...')
-                      : c.caseExistsWithin30Days
-                        ? t('intake.updateInfo', 'Yes, update info')
-                        : t('intake.updateAndCreate', 'Yes, update info & create case')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDismiss(c)}
-                  >
-                    {t('intake.differentPerson', 'Not this person')}
-                  </Button>
-                </div>
-              </div>
-            </Card>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => handleConfirm(c.householdId)}
+                disabled={loadingId === c.householdId}
+              >
+                {loadingId === c.householdId
+                  ? t('intake.updating', 'Updating...')
+                  : c.matchedPerson?.role === 'member' || !c.caseExistsWithin30Days
+                    ? t('intake.updateAndCreate', 'Yes, update info & create case')
+                    : t('intake.updateInfo', 'Yes, update info')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDismiss(c)}
+              >
+                {t('intake.differentPerson', 'Not this person')}
+              </Button>
+            </MatchCandidateCard>
           );
         })}
 

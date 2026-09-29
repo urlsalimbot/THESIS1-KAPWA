@@ -435,15 +435,49 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
         </div>
       </div>
       <div
-        class="flex items-center justify-between px-2 py-4"
+        class="flex items-center justify-between gap-4 px-2 py-4"
       >
-        <p
-          class="text-sm text-muted-foreground"
-        >
-          Page 1 of 1 (1–2 of 2 total)
-        </p>
         <div
-          class="flex items-center gap-1"
+          class="flex items-center gap-3"
+        >
+          <p
+            class="text-sm text-muted-foreground"
+          >
+            Page 1 of 1 (1–2 of 2 total)
+          </p>
+          <label
+            class="flex items-center gap-1.5 text-sm text-muted-foreground"
+          >
+            Per page
+            <select
+              aria-label="Per page"
+              class="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
+            >
+              <option
+                value="10"
+              >
+                10
+              </option>
+              <option
+                value="20"
+              >
+                20
+              </option>
+              <option
+                value="50"
+              >
+                50
+              </option>
+              <option
+                value="100"
+              >
+                100
+              </option>
+            </select>
+          </label>
+        </div>
+        <div
+          class="flex items-center gap-1 overflow-x-auto"
         >
           <nav
             aria-label="pagination"

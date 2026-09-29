@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { IntakeReviewPage } from './IntakeReviewPage';
 import { uploadIntakeIdPhotos } from '@/lib/intake-id-photo';
+import { api } from '../lib/api';
 import { axe } from 'vitest-axe';
 
 vi.mock('@/lib/intake-id-photo', () => ({
@@ -33,7 +34,15 @@ let mockLocationState: any = {
           dob: '1985-01-20',
           email: 'juan.delacruz@example.com',
       },
-      allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
+      matchedPerson: {
+            id: 'ben-1', role: 'beneficiary', surname: 'Dela Cruz', firstName: 'Juan',
+            gender: 'Male', age: 40, dob: '1985-01-20', phone: '09171234567',
+            email: 'juan.delacruz@example.com',
+            occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married',
+            currentAddress: { barangay: 'Bigte', street: '123 Purok 1' },
+            philhealthNumber: '123456789',
+          },
+          allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
       familyMembers: [
         { id: 'fm-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 35, occupation: 'Housewife', income: 0, status: 'Unemployed' },
       ],
@@ -42,7 +51,7 @@ let mockLocationState: any = {
     {
       householdId: 'hh-2',
       score: 0.45,
-      caseExistsWithin30Days: true,
+      caseExistsWithin30Days: false,
       primaryBeneficiary: {
         id: 'ben-2', surname: 'Cruz', firstName: 'Rosa',
         gender: 'Female', age: 38, phone: '09171234599',
@@ -50,7 +59,14 @@ let mockLocationState: any = {
         civilStatus: 'Married', currentAddress: null,
         philhealthNumber: undefined, category: undefined,
       },
-      allBeneficiaries: [{ id: 'ben-2', surname: 'Cruz', firstName: 'Rosa' }],
+      matchedPerson: {
+            id: 'ben-2', role: 'member', relationship: 'Child', surname: 'Cruz', firstName: 'Rosa',
+            gender: 'Female', age: 38, phone: '09171234599',
+            occupation: 'Vendor', estimatedMonthlyIncome: 5000,
+            civilStatus: 'Married', currentAddress: null,
+            philhealthNumber: undefined,
+          },
+          allBeneficiaries: [{ id: 'ben-2', surname: 'Cruz', firstName: 'Rosa' }],
       familyMembers: [],
       lastApprovedCaseDate: new Date().toISOString(),
     },
@@ -101,6 +117,14 @@ describe('IntakeReviewPage', () => {
           dob: '1985-01-20',
           email: 'juan.delacruz@example.com',
           },
+          matchedPerson: {
+            id: 'ben-1', role: 'beneficiary', surname: 'Dela Cruz', firstName: 'Juan',
+            gender: 'Male', age: 40, dob: '1985-01-20', phone: '09171234567',
+            email: 'juan.delacruz@example.com',
+            occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married',
+            currentAddress: { barangay: 'Bigte', street: '123 Purok 1' },
+            philhealthNumber: '123456789',
+          },
           allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
           familyMembers: [
             { id: 'fm-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 35, occupation: 'Housewife', income: 0, status: 'Unemployed' },
@@ -110,13 +134,20 @@ describe('IntakeReviewPage', () => {
         {
           householdId: 'hh-2',
           score: 0.45,
-          caseExistsWithin30Days: true,
+          caseExistsWithin30Days: false,
           primaryBeneficiary: {
             id: 'ben-2', surname: 'Cruz', firstName: 'Rosa',
             gender: 'Female', age: 38, phone: '09171234599',
             occupation: 'Vendor', estimatedMonthlyIncome: 5000,
             civilStatus: 'Married', currentAddress: null,
             philhealthNumber: undefined, category: undefined,
+          },
+          matchedPerson: {
+            id: 'ben-2', role: 'member', relationship: 'Child', surname: 'Cruz', firstName: 'Rosa',
+            gender: 'Female', age: 38, phone: '09171234599',
+            occupation: 'Vendor', estimatedMonthlyIncome: 5000,
+            civilStatus: 'Married', currentAddress: null,
+            philhealthNumber: undefined,
           },
           allBeneficiaries: [{ id: 'ben-2', surname: 'Cruz', firstName: 'Rosa' }],
           familyMembers: [],
@@ -171,6 +202,19 @@ describe('IntakeReviewPage', () => {
   });
 
   it('states the active-case outcome conditionally, not as a fixed promise', async () => {
+    mockLocationState = {
+      candidates: [
+        {
+          householdId: 'hh-active', score: 0.9, matchedOn: ['both_names'], caseExistsWithin30Days: true,
+          primaryBeneficiary: { id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', age: 40, occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married', currentAddress: { barangay: 'Bigte' } },
+          matchedPerson: { id: 'ben-1', role: 'beneficiary', surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', age: 40, occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married', currentAddress: { barangay: 'Bigte' } },
+          allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
+          familyMembers: [],
+          pastCases: [], lastApprovedCaseDate: null,
+        },
+      ],
+      intakeData: { beneficiary: { surname: 'Dela Cruz', firstName: 'Juan' }, claimant: {}, familyMembers: [], case: {} },
+    };
     render(
       <MemoryRouter>
         <IntakeReviewPage />
@@ -221,6 +265,58 @@ describe('IntakeReviewPage', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalled();
     });
+  });
+
+  it('inverts household relationships when confirming a member match', async () => {
+    mockLocationState = {
+      candidates: [
+        {
+          householdId: 'hh-querubin', score: 0.9, matchedOn: ['both_names'], caseExistsWithin30Days: false,
+          primaryBeneficiary: {
+            id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo', gender: 'Male', age: 48,
+            dob: '1978-12-01', occupation: 'Farmer', estimatedMonthlyIncome: 8000,
+            civilStatus: 'Married', currentAddress: { barangay: 'Partida' },
+          },
+          matchedPerson: {
+            id: 'person-liza', role: 'member', relationship: 'Child', surname: 'Querubin', firstName: 'Liza',
+            gender: 'Female', age: 11, dob: '2015-03-30', occupation: 'Student', estimatedMonthlyIncome: 0,
+            civilStatus: 'Single', currentAddress: { barangay: 'Partida' },
+          },
+          allBeneficiaries: [{ id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo' }],
+          familyMembers: [
+            { id: 'fm-liza', fullName: 'Liza Querubin', surname: 'Querubin', firstName: 'Liza', gender: 'Female', dob: '2015-03-30', relationship: 'Child', age: 11, occupation: 'Student', income: 0, status: 'Active' },
+            { id: 'fm-consuelo', fullName: 'Consuelo Querubin', surname: 'Querubin', firstName: 'Consuelo', gender: 'Female', dob: '1985-05-05', relationship: 'Spouse', age: 41, occupation: 'Housewife', income: 0, status: 'Active' },
+          ],
+          pastCases: [], lastApprovedCaseDate: null,
+        },
+      ],
+      intakeData: {
+        beneficiary: { surname: 'Querubin', firstName: 'Liza', gender: 'Female', dob: '2015-03-30', currentAddress: { barangay: 'Partida' } },
+        claimant: { surname: 'Querubin', firstName: 'Consuelo', relationshipToBeneficiary: 'Parent' },
+        familyMembers: [],
+        case: {},
+      },
+    };
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+
+    const confirmBtn = screen.getAllByRole('button', { name: /update info/i })[0];
+    fireEvent.click(confirmBtn);
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/intake/confirm/hh-querubin', expect.anything());
+    });
+    const call = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+      (c: unknown[]) => c[0] === '/intake/confirm/hh-querubin',
+    );
+    const fm = (call![1] as { familyMembers: Array<{ firstName: string; relationship: string }> }).familyMembers;
+    expect(fm.map(m => ({ firstName: m.firstName, relationship: m.relationship }))).toEqual([
+      { firstName: 'Pablo', relationship: 'Parent' },
+      { firstName: 'Consuelo', relationship: 'Parent' },
+    ]);
+    expect(fm.some(m => m.firstName === 'Liza')).toBe(false);
   });
 
   it('uploads the pending ID photo once a case is confirmed', async () => {
@@ -338,6 +434,15 @@ describe('IntakeReviewPage', () => {
     expect(screen.queryByText(/none of these match/i)).toBeNull();
   });
 
+  it('labels a candidate matched as a household member', async () => {
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/Household member · Child/i)).toBeDefined();
+  });
+
   it('reveals why a candidate was flagged', async () => {
     render(
       <MemoryRouter>
@@ -347,5 +452,32 @@ describe('IntakeReviewPage', () => {
     expect(screen.getByText(/Why this was flagged/i)).toBeDefined();
     expect(screen.getByText(/Phone match/i)).toBeDefined();
     expect(screen.getByText(/Both names/i)).toBeDefined();
+  });
+});
+
+describe('IntakeReviewPage — member-match case semantics', () => {
+  it('offers "create case" and the member note even when the household has a recent case', async () => {
+    mockLocationState = {
+      candidates: [
+        {
+          householdId: 'hh-member', score: 0.9, matchedOn: ['both_names'], caseExistsWithin30Days: false,
+          primaryBeneficiary: { id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo', gender: 'Male', age: 48, occupation: 'Farmer', estimatedMonthlyIncome: 8000, civilStatus: 'Married', currentAddress: { barangay: 'Partida' } },
+          matchedPerson: { id: 'person-liza', role: 'member', relationship: 'Child', surname: 'Querubin', firstName: 'Liza', gender: 'Female', age: 11, dob: '2015-03-30', occupation: 'Student', estimatedMonthlyIncome: 0, civilStatus: 'Single', currentAddress: { barangay: 'Partida' } },
+          allBeneficiaries: [{ id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo' }],
+          familyMembers: [],
+          pastCases: [{ controlNo: 'KAPWA-2026-00026', beneficiaryName: 'Pablo Querubin', status: 'active', createdAt: '2026-09-20T00:00:00Z' }],
+          lastApprovedCaseDate: '2026-09-20T00:00:00.000Z',
+        },
+      ],
+      intakeData: { beneficiary: { surname: 'Querubin', firstName: 'Liza' }, claimant: {}, familyMembers: [], case: {} },
+    };
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByRole('button', { name: /Yes, update info & create case/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Matched as a household member — a new case will be opened/i)).toBeDefined();
   });
 });
