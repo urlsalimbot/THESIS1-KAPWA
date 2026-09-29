@@ -4,6 +4,7 @@ import {
   addDays,
   localIsoDay,
   manilaDay,
+  blockDayRange,
   expandRepeat,
   BLOCK_COLORS,
   BLOCK_COLOR_FALLBACK,
@@ -60,24 +61,26 @@ export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
     for (const block of blocks) {
       // Data arrives window-scoped from the page; keep the filter defensive
       // so the view never leaks entries outside its own range.
-      if (block.blockDate < window.from || block.blockDate > window.to) continue;
-      const typeKey = BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType;
-      const typeLabel = t(typeKey, typeKey);
-      out.push({
-        date: block.blockDate,
-        time: block.startTime ?? '00:00',
-        kind: 'block',
-        title: nameByUserId.get(block.userId) ?? t('team.week.staff'),
-        detail:
-          block.startTime && block.endTime
-            ? t('team.agenda.blockDetailTimed', {
-                type: typeLabel,
-                start: block.startTime,
-                end: block.endTime,
-              })
-            : t('team.agenda.blockDetailAllDay', { type: typeLabel }),
-        colorClass: BLOCK_COLORS[block.blockType] ?? BLOCK_COLOR_FALLBACK,
-      });
+      for (const day of blockDayRange(block)) {
+        if (day < window.from || day > window.to) continue;
+        const typeKey = BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType;
+        const typeLabel = t(typeKey, typeKey);
+        out.push({
+          date: day,
+          time: block.startTime ?? '00:00',
+          kind: 'block',
+          title: nameByUserId.get(block.userId) ?? t('team.week.staff'),
+          detail:
+            block.startTime && block.endTime
+              ? t('team.agenda.blockDetailTimed', {
+                  type: typeLabel,
+                  start: block.startTime,
+                  end: block.endTime,
+                })
+              : t('team.agenda.blockDetailAllDay', { type: typeLabel }),
+          colorClass: BLOCK_COLORS[block.blockType] ?? BLOCK_COLOR_FALLBACK,
+        });
+      }
     }
     for (const event of events) {
       // One row per repeat instance within the window (one-shot events yield

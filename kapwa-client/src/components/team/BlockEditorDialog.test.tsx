@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BlockEditorDialog } from './BlockEditorDialog';
 import type { TeamBlock, TeamStaffAchievement } from '../../lib/team-api';
@@ -39,12 +39,19 @@ function renderDialog(
 }
 
 describe('BlockEditorDialog', () => {
-  it('prefills the staff and date from the clicked slot in create mode', async () => {
+  it('prefills the staff and dates from the clicked slot in create mode', async () => {
     renderDialog({ staffId: 'u2', date: '2026-09-29' });
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('combobox', { name: 'Staff' })).toHaveTextContent('Ben Social');
-    expect(within(dialog).getByLabelText('Date')).toHaveValue('2026-09-29');
+    expect(within(dialog).getByLabelText('Start date')).toHaveValue('2026-09-29');
+  });
+
+  it('defaults the end date to the start date in create mode', async () => {
+    renderDialog({ staffId: 'u2', date: '2026-09-29' });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('End date')).toHaveValue('2026-09-29');
   });
 
   it('save emits the prefilled create input (the page then posts + revalidates)', async () => {
@@ -58,9 +65,44 @@ describe('BlockEditorDialog', () => {
     expect(onSave).toHaveBeenCalledWith({
       userId: 'u2',
       blockDate: '2026-09-29',
+      endDate: null, // same-day → single-day block
       blockType: 'in_office',
       visibleTo: 'team', // amendment default: team-wide unless toggled
     });
+  });
+
+  it('a later end date is sent as the block endDate', async () => {
+    const { onSave } = renderDialog({ staffId: 'u2', date: '2026-09-29' });
+    const user = userEvent.setup();
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('End date'), {
+      target: { value: '2026-10-02' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Create block' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blockDate: '2026-09-29',
+        endDate: '2026-10-02',
+      }),
+    );
+  });
+
+  it('moving the start date glues the untouched end date to it', async () => {
+    const { onSave } = renderDialog({ staffId: 'u2', date: '2026-09-29' });
+    const user = userEvent.setup();
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Start date'), {
+      target: { value: '2026-09-30' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Create block' }));
+
+    // End followed the start → still same-day → endDate null.
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ blockDate: '2026-09-30', endDate: null }),
+    );
   });
 
   it('edit mode prefills the block and emits the same shape on save', async () => {
@@ -70,7 +112,8 @@ describe('BlockEditorDialog', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: 'Edit block' })).toBeTruthy();
     expect(within(dialog).getByRole('combobox', { name: 'Staff' })).toHaveTextContent('Ana Admin');
-    expect(within(dialog).getByLabelText('Date')).toHaveValue('2026-09-28');
+    expect(within(dialog).getByLabelText('Start date')).toHaveValue('2026-09-28');
+    expect(within(dialog).getByLabelText('End date')).toHaveValue('2026-09-28'); // single-day round-trip
     expect(within(dialog).getByLabelText('Start time')).toHaveValue('09:00');
     expect(within(dialog).getByLabelText('End time')).toHaveValue('12:00');
     expect(within(dialog).getByLabelText('Note')).toHaveValue('Intake');
@@ -84,12 +127,42 @@ describe('BlockEditorDialog', () => {
     expect(onSave).toHaveBeenCalledWith({
       userId: 'u1',
       blockDate: '2026-09-28',
+      endDate: null, // same-day block stays single-day
       blockType: 'home_visit',
       visibleTo: 'team_coordinators',
       startTime: '09:00',
       endTime: '12:00',
       note: 'Intake',
     });
+  });
+
+  it('edit mode restores a stored endDate (multi-day round-trip)', async () => {
+    const multiDay: TeamBlock = { ...BLOCK, id: 'b2', endDate: '2026-09-30' };
+    const { onSave } = renderDialog({ block: multiDay });
+    const user = userEvent.setup();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('End date')).toHaveValue('2026-09-30');
+
+    // Saving without touching the dates keeps the range.
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blockDate: '2026-09-28',
+        endDate: '2026-09-30',
+      }),
+    );
+
+    // Collapsing the end back onto the start clears the range again.
+    fireEvent.change(within(dialog).getByLabelText('End date'), {
+      target: { value: '2026-09-28' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    expect(onSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({ blockDate: '2026-09-28', endDate: null }),
+    );
   });
 
   it('toggling visibility in create mode sends visibleTo: team_coordinators', async () => {

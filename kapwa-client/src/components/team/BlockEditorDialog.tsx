@@ -65,6 +65,7 @@ export function BlockEditorDialog({
   const { t } = useTranslation();
   const [userId, setUserId] = useState('');
   const [dateStr, setDateStr] = useState('');
+  const [endDateStr, setEndDateStr] = useState('');
   const [blockType, setBlockType] = useState<string>(BLOCK_TYPES[0]);
   const [visibleTo, setVisibleTo] = useState<TeamVisibleTo>('team');
   const [startTime, setStartTime] = useState('');
@@ -77,6 +78,9 @@ export function BlockEditorDialog({
     if (block) {
       setUserId(block.userId);
       setDateStr(block.blockDate);
+      // Round-trip the stored range; single-day blocks (no endDate) prefill
+      // the end field with the start day so both inputs always show a value.
+      setEndDateStr(block.endDate ?? block.blockDate);
       setBlockType(block.blockType);
       // Round-trip: the stored visibility prefills the toggle (the server
       // always returns it; the guard keeps pre-amendment rows safe).
@@ -87,6 +91,7 @@ export function BlockEditorDialog({
     } else {
       setUserId(staffId ?? '');
       setDateStr(date ?? '');
+      setEndDateStr(date ?? '');
       setBlockType(BLOCK_TYPES[0]);
       setVisibleTo('team'); // amendment default: team-wide unless toggled
       setStartTime('');
@@ -97,11 +102,20 @@ export function BlockEditorDialog({
 
   const editing = Boolean(block);
 
+  /** Start-date edit: keep the end date glued to the start until the user
+   *  moves it themselves (end === old start or never touched). */
+  const handleStartDateChange = (value: string) => {
+    setDateStr(value);
+    setEndDateStr(end => (end === '' || end === dateStr ? value : end));
+  };
+
   const handleSave = () => {
     if (readOnly || !userId || !dateStr) return;
     void onSave({
       userId,
       blockDate: dateStr,
+      // Same-day → endDate null (single-day); a later end → the range.
+      endDate: endDateStr && endDateStr !== dateStr ? endDateStr : null,
       blockType,
       visibleTo,
       ...(startTime ? { startTime } : {}),
@@ -148,14 +162,25 @@ export function BlockEditorDialog({
             </Select>
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="block-date">{t('team.blockEditor.dateLabel')}</Label>
-            <Input
-              id="block-date"
-              type="date"
-              value={dateStr}
-              onChange={e => setDateStr(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="block-date">{t('team.blockEditor.startDateLabel')}</Label>
+              <Input
+                id="block-date"
+                type="date"
+                value={dateStr}
+                onChange={e => handleStartDateChange(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="block-end-date">{t('team.blockEditor.endDateLabel')}</Label>
+              <Input
+                id="block-end-date"
+                type="date"
+                value={endDateStr}
+                onChange={e => setEndDateStr(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="grid gap-1.5">

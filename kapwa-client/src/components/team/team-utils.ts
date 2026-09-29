@@ -159,6 +159,31 @@ export function manilaDay(d: Date): string {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
+/**
+ * Inclusive day range of a schedule block: [blockDate .. endDate], with
+ * `endDate` COALESCE `blockDate` — the server stores NULL for single-day
+ * blocks and returns overlapping multi-day ranges with `endDate` populated.
+ * Days come back as YYYY-MM-DD strings (parsed as UTC midnight, then mapped
+ * to the Manila calendar day — same convention as `expandRepeat`'s bounds),
+ * ascending. `endDate < blockDate` is defensive (the server 400s it).
+ */
+export function blockDayRange(block: {
+  blockDate: string;
+  endDate?: string | null;
+}): string[] {
+  const end = block.endDate ?? block.blockDate;
+  if (end <= block.blockDate) return [block.blockDate];
+  const days: string[] = [];
+  const cursor = new Date(toDate(block.blockDate).getTime());
+  for (let i = 0; i < 400; i += 1) {
+    const day = manilaDay(cursor);
+    days.push(day);
+    if (day >= end) break;
+    cursor.setTime(cursor.getTime() + DAY_MS);
+  }
+  return days;
+}
+
 // --- Repeat expansion ---
 
 export interface RepeatInstance {

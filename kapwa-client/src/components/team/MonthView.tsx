@@ -4,6 +4,7 @@ import {
   addDays,
   localIsoDay,
   manilaDay,
+  blockDayRange,
   expandRepeat,
   BLOCK_TYPES,
   BLOCK_COLORS,
@@ -46,9 +47,12 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
   const blocksByDay = useMemo(() => {
     const map = new Map<string, TeamBlock[]>();
     for (const block of blocks) {
-      const list = map.get(block.blockDate);
-      if (list) list.push(block);
-      else map.set(block.blockDate, [block]);
+      // Multi-day blocks dot every covered day of the range.
+      for (const day of blockDayRange(block)) {
+        const list = map.get(day);
+        if (list) list.push(block);
+        else map.set(day, [block]);
+      }
     }
     return map;
   }, [blocks]);

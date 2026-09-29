@@ -125,6 +125,39 @@ describe('MonthView', () => {
     expect(fallbackDot.className).toContain(BLOCK_COLOR_FALLBACK.split(' ')[0]);
   });
 
+  it('dots every covered day of a multi-day block range', () => {
+    const multiDay: TeamBlock = {
+      id: 'b8',
+      userId: 'u3',
+      blockDate: '2026-09-28',
+      endDate: '2026-09-30',
+      blockType: 'remote',
+      startTime: null,
+      endTime: null,
+      note: null,
+      visibleTo: 'team' as const,
+    };
+    renderMonth({ blocks: [multiDay] });
+
+    // One dot in each of the three covered cells (Sep 28/29/30)…
+    for (const day of ['28', '29', '30']) {
+      const cell = screen.getByText(day).closest('div') as HTMLElement;
+      const dots = cell.querySelectorAll('.rounded-full');
+      expect(dots).toHaveLength(1);
+      expect((dots[0] as HTMLElement).className).toContain(
+        BLOCK_COLORS.remote.split(' ')[0],
+      );
+    }
+    // …and none on the neighboring days (Sun Sep 27, Thu Oct 1).
+    const sep27Cell = screen.getByText('27').closest('div') as HTMLElement;
+    expect(sep27Cell.querySelectorAll('.rounded-full')).toHaveLength(0);
+    // '1' matches Sep 1 AND Oct 1 — neither neighbor day has a dot.
+    for (const label of screen.getAllByText('1')) {
+      const cell = label.closest('div') as HTMLElement;
+      expect(cell.querySelectorAll('.rounded-full')).toHaveLength(0);
+    }
+  });
+
   it('renders the legend mapping every block type to its dot color', () => {
     renderMonth();
 

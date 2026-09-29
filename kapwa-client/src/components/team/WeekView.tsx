@@ -5,6 +5,7 @@ import {
   addDays,
   localIsoDay,
   manilaDay,
+  blockDayRange,
   expandRepeat,
   toDate,
   DAY_MS,
@@ -60,6 +61,29 @@ interface DayEventChip {
   /** True when this chip sits on a day after the event's start day, or the
    *  event occurrence itself started before the displayed window. */
   continuation: boolean;
+}
+
+/**
+ * One rendered slice of a block in a day cell. A multi-day block
+ * ([blockDate .. endDate]) paints one slice per covered day — the first and
+ * last slices carry the outer edges, intermediate slices are flush/flat so
+ * the bar reads as one continuous shape across the cells.
+ */
+interface BlockSlice {
+  block: TeamBlock;
+  /** First slice of the range: left border + left rounding, start label. */
+  first: boolean;
+  /** Last slice of the range: right rounding, end label. */
+  last: boolean;
+}
+
+/** Edge/positioning classes for a slice. Single-day slices keep the exact
+ *  pre-multi-day look (`rounded-sm border-l-2 inset-x-0.5`). */
+function sliceClasses(slice: BlockSlice): string {
+  if (slice.first && slice.last) return 'rounded-sm border-l-2 inset-x-0.5';
+  if (slice.first) return 'rounded-l-sm border-l-2 left-0.5 right-0';
+  if (slice.last) return 'rounded-r-sm border-l-0 left-0 right-0.5 block-slice-last';
+  return 'rounded-none border-l-0 left-0 right-0 block-slice-continuation';
 }
 
 /**
@@ -122,15 +146,20 @@ function MobileDayAgenda({
   }, [events, dayStr]);
 
   const blocksByStaff = useMemo(() => {
-    const map = new Map<string, TeamBlock[]>();
+    const map = new Map<string, { block: TeamBlock; dayIndex: number; dayCount: number }[]>();
     for (const block of blocks) {
-      if (block.blockDate !== dayStr) continue;
+      const days = blockDayRange(block);
+      const dayIndex = days.indexOf(dayStr);
+      if (dayIndex < 0) continue; // multi-day blocks appear on EVERY day in range
       const list = map.get(block.userId);
-      if (list) list.push(block);
-      else map.set(block.userId, [block]);
+      const entry = { block, dayIndex, dayCount: days.length };
+      if (list) list.push(entry);
+      else map.set(block.userId, [entry]);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99'));
+      list.sort((a, b) =>
+        (a.block.startTime ?? '99:99').localeCompare(b.block.startTime ?? '99:99'),
+      );
     }
     return map;
   }, [blocks, dayStr]);
@@ -209,7 +238,8 @@ function MobileDayAgenda({
             {(blocksByStaff.get(member.userId) ?? []).length === 0 && (
               <li className="py-0.5 text-xs text-muted-foreground">{t('team.week.noBlocks')}</li>
             )}
-            {(blocksByStaff.get(member.userId) ?? []).map(block => {
+            {(blocksByStaff.get(member.userId) ?? []).map(entry => {
+              const block = entry.block;
               const typeKey = BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType;
               const label = t(typeKey, typeKey);
               return (
@@ -232,6 +262,11 @@ function MobileDayAgenda({
                     className={`flex w-full items-center gap-2 rounded-sm border-l-2 px-1.5 py-1 text-left text-xs font-medium ${BLOCK_COLORS[block.blockType] ?? BLOCK_COLOR_FALLBACK}`}
                   >
                     <span className="min-w-0 flex-1 truncate">{label}</span>
+                    {entry.dayCount > 1 && (
+                      <span className="shrink-0 text-[10px] opacity-80">
+                        {t('team.multidayDay', { n: entry.dayIndex + 1 })}/{entry.dayCount}
+                      </span>
+                    )}
                     <span className="shrink-0 text-[10px] opacity-80">
                       {block.startTime && block.endTime
                         ? `${block.startTime}–${block.endTime}`
@@ -276,12 +311,18 @@ export function WeekView({
   const dayStrs = useMemo(() => days.map(localIsoDay), [days]);
 
   const blocksByStaffDay = useMemo(() => {
-    const map = new Map<string, TeamBlock[]>();
+    const map = new Map<string, BlockSlice[]>();
     for (const block of blocks) {
-      const key = `${block.userId}|${block.blockDate}`;
-      const list = map.get(key);
-      if (list) list.push(block);
-      else map.set(key, [block]);
+      // Multi-day ranges paint one slice per covered day; the day keys that
+      // fall outside the displayed week are simply never queried.
+      const days = blockDayRange(block);
+      for (let i = 0; i < days.length; i += 1) {
+        const key = `${block.userId}|${days[i]}`;
+        const slice: BlockSlice = { block, first: i === 0, last: i === days.length - 1 };
+        const list = map.get(key);
+        if (list) list.push(slice);
+        else map.set(key, [slice]);
+      }
     }
     return map;
   }, [blocks]);
@@ -408,37 +449,40 @@ export function WeekView({
                   className={`relative min-h-[16rem] ${i === 0 ? 'border-l-0' : 'border-l'}`}
                   style={{ display: 'grid', gridTemplateRows: 'repeat(24, minmax(1.05rem, 1fr))' }}
                 >
-                  {dayBlocks.map(block => (
-                    <button
-                      key={block.id}
-                      type="button"
-                      disabled={readOnly}
-                      onClick={() => onBlockClick(block)}
-                      aria-label={t('team.week.blockAria', {
-                        name: member.name,
-                        type: t(
+                  {dayBlocks.map(slice => {
+                    const block = slice.block;
+                    return (
+                      <button
+                        key={block.id}
+                        type="button"
+                        disabled={readOnly}
+                        onClick={() => onBlockClick(block)}
+                        aria-label={t('team.week.blockAria', {
+                          name: member.name,
+                          type: t(
+                            BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
+                            BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
+                          ),
+                          date: day,
+                        })}
+                        title={
+                          block.note ??
+                          (block.startTime && block.endTime
+                            ? `${block.startTime}–${block.endTime}`
+                            : t('team.week.allDay'))
+                        }
+                        className={`absolute z-10 truncate px-1 text-left text-[10px] font-medium ${
+                          sliceClasses(slice)
+                        } ${BLOCK_COLORS[block.blockType] ?? BLOCK_COLOR_FALLBACK}`}
+                        style={blockBarStyle(block)}
+                      >
+                        {t(
                           BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
                           BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
-                        ),
-                        date: day,
-                      })}
-                      title={
-                        block.note ??
-                        (block.startTime && block.endTime
-                          ? `${block.startTime}–${block.endTime}`
-                          : t('team.week.allDay'))
-                      }
-                      className={`absolute inset-x-0.5 z-10 truncate rounded-sm border-l-2 px-1 text-left text-[10px] font-medium ${
-                        BLOCK_COLORS[block.blockType] ?? BLOCK_COLOR_FALLBACK
-                      }`}
-                      style={blockBarStyle(block)}
-                    >
-                      {t(
-                        BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
-                        BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
-                      )}
-                    </button>
-                  ))}
+                        )}
+                      </button>
+                    );
+                  })}
                   <button
                     type="button"
                     disabled={readOnly}

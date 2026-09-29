@@ -109,6 +109,42 @@ describe('AgendaView', () => {
     expect(screen.getAllByText('Weekly Sync')).toHaveLength(3);
   });
 
+  it('lists a multi-day block on every covered day within the window', () => {
+    const multiDay: TeamBlock = {
+      id: 'b5',
+      userId: 'u2',
+      blockDate: '2026-09-28',
+      endDate: '2026-09-29',
+      blockType: 'in_office',
+      startTime: '09:00',
+      endTime: '12:00',
+      note: null,
+      visibleTo: 'team' as const,
+    };
+    // Spans outside the window (Oct 12–13) — must be filtered out entirely.
+    const outside: TeamBlock = {
+      id: 'b6',
+      userId: 'u1',
+      blockDate: '2026-10-12',
+      endDate: '2026-10-13',
+      blockType: 'field_day',
+      startTime: null,
+      endTime: null,
+      note: null,
+      visibleTo: 'team' as const,
+    };
+    render(<AgendaView blocks={[multiDay, outside]} events={[]} staff={STAFF} from={FROM} />);
+
+    // The same block row exists under both day headers…
+    expect(dayList('2026-09-28').textContent).toContain('In office · 09:00–12:00');
+    expect(dayList('2026-09-29').textContent).toContain('In office · 09:00–12:00');
+    // …while a range fully outside the window leaks nothing.
+    expect(dayList('2026-09-28').textContent).not.toContain('Field day');
+    expect(dayList('2026-09-29').textContent).not.toContain('Field day');
+    expect(screen.queryByText(formatDate('2026-10-12'))).toBeNull();
+    expect(screen.queryByText(formatDate('2026-10-13'))).toBeNull();
+  });
+
   it('sorts ascending by day, all-day entries first within a day', () => {
     render(<AgendaView blocks={BLOCKS} events={[WEEKLY]} staff={STAFF} from={FROM} />);
 

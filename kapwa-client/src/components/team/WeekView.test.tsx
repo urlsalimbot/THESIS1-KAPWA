@@ -40,6 +40,19 @@ const TIMED_BLOCK: TeamBlock = {
   visibleTo: 'team',
 };
 
+// Spans Mon Sep 28 – Wed Sep 30 2026 → one slice per covered day.
+const MULTI_DAY_BLOCK: TeamBlock = {
+  id: 'b4',
+  userId: 'u1',
+  blockDate: '2026-09-28',
+  endDate: '2026-09-30',
+  blockType: 'home_visit',
+  startTime: null,
+  endTime: null,
+  note: null,
+  visibleTo: 'team',
+};
+
 // UTC instants — the strip groups by the Asia/Manila calendar day.
 const MEETING: TeamEvent = {
   id: 'e1',
@@ -174,6 +187,58 @@ describe('WeekView', () => {
 
     expect(onBlockClick).toHaveBeenCalledTimes(1);
     expect(onBlockClick).toHaveBeenCalledWith(TIMED_BLOCK);
+  });
+
+  it('renders a multi-day block as one slice per covered day with flush continuation edges', () => {
+    renderWeek({ blocks: [MULTI_DAY_BLOCK] });
+
+    // One slice in each of the three consecutive covered cells…
+    const first = screen.getByRole('button', { name: 'Ana Admin — Home visit on 2026-09-28' });
+    const middle = screen.getByRole('button', { name: 'Ana Admin — Home visit on 2026-09-29' });
+    const last = screen.getByRole('button', { name: 'Ana Admin — Home visit on 2026-09-30' });
+
+    // …with the continuity edges: first keeps left rounding + border, the
+    // middle is flush/flat (continuation class), the last right-rounded.
+    expect(first.className).toContain('rounded-l-sm');
+    expect(first.className).toContain('border-l-2');
+    expect(middle.className).toContain('block-slice-continuation');
+    expect(middle.className).not.toContain('rounded-l-sm');
+    expect(middle.className).not.toContain('border-l-2');
+    expect(last.className).toContain('rounded-r-sm');
+    expect(last.className).not.toContain('border-l-2');
+
+    // Every slice keeps the block's type color.
+    expect(first.className).toContain(BLOCK_COLORS.home_visit);
+    expect(middle.className).toContain(BLOCK_COLORS.home_visit);
+    expect(last.className).toContain(BLOCK_COLORS.home_visit);
+
+    // No slice outside the range (Thu Oct 1 has none).
+    expect(
+      screen.queryByRole('button', { name: 'Ana Admin — Home visit on 2026-10-01' }),
+    ).toBeNull();
+  });
+
+  it('clicking any slice opens the same logical block', () => {
+    const { onBlockClick } = renderWeek({ blocks: [MULTI_DAY_BLOCK] });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ana Admin — Home visit on 2026-09-29' }),
+    );
+
+    expect(onBlockClick).toHaveBeenCalledTimes(1);
+    expect(onBlockClick).toHaveBeenCalledWith(MULTI_DAY_BLOCK);
+  });
+
+  it('a same-day block still renders exactly one full-rounded slice', () => {
+    renderWeek({ blocks: [FULL_DAY_BLOCK] });
+
+    const bar = screen.getByRole('button', { name: 'Ana Admin — Home visit on 2026-09-28' });
+    expect(bar.className).toContain('rounded-sm');
+    expect(bar.className).toContain('border-l-2');
+    expect(bar.className).not.toContain('block-slice-continuation');
+    expect(
+      screen.queryByRole('button', { name: 'Ana Admin — Home visit on 2026-09-29' }),
+    ).toBeNull();
   });
 
   it('shows events on the all-day strip and a continuation chip for multi-day events', () => {
@@ -376,6 +441,50 @@ describe('WeekView mobile agenda', () => {
     expect(within(headings[1]).queryByText('You')).toBeNull();
     expect(headings[2]).toHaveTextContent('Carla Worker');
     expect(within(headings[2]).queryByText('You')).toBeNull();
+  });
+
+  it('lists a multi-day block on every day of its range with a day counter', () => {
+    installMatchMedia(true);
+    const today = new Date(); // fixed by fake timers (Mon Sep 28 2026)
+    const tomorrow = addDays(today, 1);
+    const todayStr = localIsoDay(today);
+    const tomorrowStr = localIsoDay(tomorrow);
+
+    const multiDay: TeamBlock = {
+      id: 'm3',
+      userId: 'u1',
+      blockDate: todayStr,
+      endDate: tomorrowStr,
+      blockType: 'home_visit',
+      startTime: null,
+      endTime: null,
+      note: null,
+      visibleTo: 'team',
+    };
+
+    render(
+      <WeekView
+        blocks={[multiDay]}
+        events={[]}
+        from={weekStart(today)}
+        staff={STAFF}
+        onSlotClick={vi.fn()}
+        onBlockClick={vi.fn()}
+      />,
+    );
+
+    // Today's row carries "Day 1/2"; the day after shows the same block as
+    // "Day 2/2" — one row per covered day.
+    const todayRow = screen.getByRole('button', {
+      name: 'Ana Admin — Home visit on ' + todayStr,
+    });
+    expect(todayRow.textContent).toContain('Day 1/2');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next day' }));
+    const tomorrowRow = screen.getByRole('button', {
+      name: 'Ana Admin — Home visit on ' + tomorrowStr,
+    });
+    expect(tomorrowRow.textContent).toContain('Day 2/2');
   });
 
   it('hides the desktop 7-day grid on mobile (no day columns, no slot affordances)', () => {

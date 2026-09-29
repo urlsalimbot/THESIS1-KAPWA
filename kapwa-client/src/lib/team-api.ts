@@ -14,6 +14,9 @@ export type TeamVisibleTo = 'team' | 'team_coordinators';
 export interface TeamBlockInput {
   userId: string;
   blockDate: string;
+  /** Optional inclusive end day (YYYY-MM-DD); absent/null → single-day block
+   *  (the server stores NULL and views treat the range as [blockDate .. endDate]). */
+  endDate?: string | null;
   blockType: string;
   startTime?: string;
   endTime?: string;
@@ -25,6 +28,8 @@ export interface TeamBlock {
   id: string;
   userId: string;
   blockDate: string;
+  /** Inclusive end day (YYYY-MM-DD); null → single-day block. */
+  endDate?: string | null;
   blockType: string;
   startTime?: string | null;
   endTime?: string | null;
