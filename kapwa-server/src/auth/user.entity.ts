@@ -8,10 +8,7 @@ export enum UserRole {
   SW = 'social_worker',
   ADMIN = 'admin',
   COORDINATOR = 'coordinator',
-  CLAIMANT = 'claimant',
-  MAYOR = 'mayor',
-  AUDITOR = 'auditor',
-  AGENCY_STAFF = 'agency_staff'
+  CLAIMANT = 'claimant'
 }
 
 export enum MfaMethod {

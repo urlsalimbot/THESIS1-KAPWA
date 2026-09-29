@@ -21,7 +21,7 @@ export class ReportsController {
   ) {}
 
   @Get('summary')
-  @Roles('mayor', 'admin', 'social_worker')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'GAD Summary Report (annual, quarterly, case list) as PDF' })
   @ApiQuery({ name: 'year', required: false, example: 2025 })
   @ApiQuery({ name: 'quarter', required: false, example: 2 })

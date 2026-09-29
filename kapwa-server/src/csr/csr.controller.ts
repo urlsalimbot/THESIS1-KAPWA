@@ -20,7 +20,7 @@ export class CsrController {
   }
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator', 'mayor', 'auditor')
+  @Roles('admin', 'social_worker', 'coordinator')
   async findAll() {
     return this.csrService.findAll();
   }

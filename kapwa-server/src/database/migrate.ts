@@ -933,15 +933,12 @@ export async function migrate() {
   await q.query(`CREATE POLICY consent_admin_all ON consent_ledger FOR ALL USING (current_setting('app.current_role') = 'admin')`);
   await q.query(`CREATE POLICY consent_self ON consent_ledger FOR SELECT USING (current_setting('app.current_role') = 'social_worker' AND beneficiary_id IS NOT NULL)`);
 
-  // -- RLS policies for mayor and auditor roles (read-only access)
+  // -- Former mayor/auditor RLS policies: the roles are sunset, so their
+  //    read-only policies must not exist on any bootstrap. Dropped but never
+  //    recreated; chain migration SunsetRolePolicies does the same for DBs that
+  //    never run this bootstrap.
   await q.query(`DROP POLICY IF EXISTS ben_mayor_auditor ON beneficiaries`);
   await q.query(`DROP POLICY IF EXISTS cases_mayor_auditor ON cases`);
-  await q.query(`CREATE POLICY ben_mayor_auditor ON beneficiaries FOR SELECT USING (
-    current_setting('app.current_role') IN ('mayor', 'auditor')
-  )`);
-  await q.query(`CREATE POLICY cases_mayor_auditor ON cases FOR SELECT USING (
-    current_setting('app.current_role') IN ('mayor', 'auditor')
-  )`);
 
   // -- RLS for persons: barangay-scoped select (mirrors DropPersonLegacyColumns
   //    migration; scoped to person_addresses, never the dropped persons.address).

@@ -51,7 +51,7 @@ export class IrfController {
   }
 
   @Get(':id')
-  @Roles('admin', 'social_worker', 'auditor')
+  @Roles('admin', 'social_worker')
   @Sensitivity('internal')
   @ApiOperation({ summary: 'Get IRF case (narration masked, names masked)' })
   async findOne(@Param('id') id: string) {

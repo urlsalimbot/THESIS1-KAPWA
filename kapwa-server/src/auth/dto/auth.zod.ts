@@ -8,7 +8,7 @@ export const UserCreateSchema = z.object({
   // (auth.service.register does `data.role || 'claimant'`). A schema default
   // would override that fallback and grant every public registrant a staff
   // role. Staff accounts are created only through the admin /users endpoints.
-  role: z.enum(['social_worker', 'admin', 'coordinator', 'claimant', 'mayor', 'auditor']).optional(),
+  role: z.enum(['social_worker', 'admin', 'coordinator', 'claimant']).optional(),
   firstName: z.string().min(1).optional(),
   middleName: z.string().optional(),
   lastName: z.string().min(1).optional(),

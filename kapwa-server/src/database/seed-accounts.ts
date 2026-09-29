@@ -9,23 +9,12 @@ const SALT_ROUNDS = 12;
 // what the user DTOs validate against. Defining them here as well is how the
 // seed and the enforcement point drifted apart before.
 
-const AGENCIES: { code: string; email: string; password: string; firstName: string; lastName: string; phone: string }[] = [
-  { code: 'RHU', email: 'rhu.staff@norzagaray.test', password: 'rhu123', firstName: 'RHU', lastName: 'Staff', phone: '09179999001' },
-  { code: 'WCPD', email: 'wcpd.staff@norzagaray.test', password: 'wcpd123', firstName: 'WCPD', lastName: 'Staff', phone: '09179999002' },
-  { code: 'PESO', email: 'peso.staff@norzagaray.test', password: 'peso123', firstName: 'PESO', lastName: 'Staff', phone: '09179999003' },
-  { code: 'DILG', email: 'dilg.staff@norzagaray.test', password: 'dilg123', firstName: 'DILG', lastName: 'Staff', phone: '09179999004' },
-  { code: 'DSWD', email: 'dswd.staff@norzagaray.test', password: 'dswd123', firstName: 'DSWD', lastName: 'Staff', phone: '09179999005' },
-  { code: 'DepEd', email: 'deped.staff@norzagaray.test', password: 'deped123', firstName: 'DepEd', lastName: 'Staff', phone: '09179999006' },
-];
-
 const BASE_ACCOUNTS: { key: string; email: string; role: string; firstName: string; middleName?: string; lastName: string; nameExtension?: string; phone: string }[] = [
   { key: 'admin', email: 'admin@mswdo.test', role: 'admin', firstName: 'Rosario', middleName: 'G.', lastName: 'Mendoza', phone: '09171000001' },
   { key: 'worker1', email: 'worker1@mswdo.test', role: 'social_worker', firstName: 'Juan', lastName: 'Dela Cruz', phone: '09171000002' },
   { key: 'worker2', email: 'worker2@mswdo.test', role: 'social_worker', firstName: 'Lorna', middleName: 'B.', lastName: 'Santos', phone: '09171000003' },
   { key: 'claimant1', email: 'pedro.claimant@test.com', role: 'claimant', firstName: 'Pedro', middleName: 'P.', lastName: 'Reyes', phone: '09171000005' },
   { key: 'claimant2', email: 'ana.claimant@test.com', role: 'claimant', firstName: 'Ana Marie', middleName: 'L.', lastName: 'Fernandez', phone: '09171000006' },
-  { key: 'mayor', email: 'mayor@mswdo.test', role: 'mayor', firstName: 'Felicisimo', middleName: 'I.', lastName: 'Santiago', nameExtension: 'Jr.', phone: '09171000007' },
-  { key: 'auditor', email: 'auditor@mswdo.test', role: 'auditor', firstName: 'Teresita', middleName: 'Q.', lastName: 'Valdez', phone: '09171000008' },
 ];
 
 const BASE_CREDENTIALS: Record<string, string> = {
@@ -34,8 +23,6 @@ const BASE_CREDENTIALS: Record<string, string> = {
   worker2: 'worker123',
   claimant1: 'claimant123',
   claimant2: 'claimant123',
-  mayor: 'mayor123',
-  auditor: 'auditor123',
 };
 
 interface SeedAccount {
@@ -83,17 +70,6 @@ function buildAccounts(): SeedAccount[] {
       phone: `09171001${String(BARANGAYS.indexOf(b) + 1).padStart(2, '0')}`,
       assignedBarangay: b.name,
       permittedBarangays: [b.name],
-    });
-  }
-
-  for (const a of AGENCIES) {
-    accounts.push({
-      email: a.email,
-      password: a.password,
-      role: 'agency_staff',
-      firstName: a.firstName,
-      lastName: a.lastName,
-      phone: a.phone,
     });
   }
 

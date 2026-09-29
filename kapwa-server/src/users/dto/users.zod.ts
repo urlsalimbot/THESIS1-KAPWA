@@ -2,7 +2,7 @@ import { BARANGAY_NAMES } from '../../common/constants';
 import { z } from 'zod';
 
 export const UserRoleEnum = z.enum([
-  'admin', 'social_worker', 'coordinator', 'claimant', 'mayor', 'auditor', 'agency_staff'
+  'admin', 'social_worker', 'coordinator', 'claimant'
 ]);
 
 export const CreateUserInputSchema = z.object({
@@ -22,15 +22,7 @@ export const CreateUserInputSchema = z.object({
   assignedBarangay: z.enum(BARANGAY_NAMES).optional(),
   permittedBarangays: z.array(z.enum(BARANGAY_NAMES)).optional(),
   agencyId: z.string().uuid().optional(),
-}).strict().superRefine((data, ctx) => {
-  if (data.role === 'agency_staff' && !data.agencyId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['agencyId'],
-      message: 'Agency is required for agency_staff users',
-    });
-  }
-});
+}).strict();
 
 export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
 

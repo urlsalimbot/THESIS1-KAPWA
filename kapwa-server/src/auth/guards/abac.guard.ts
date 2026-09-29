@@ -142,18 +142,6 @@ export class AbacGuard implements CanActivate {
       return true;
     }
 
-    // Mayor/auditor: unrestricted geographic scope; restricted access still
-    // requires a legal basis.
-    if (user.role === 'mayor' || user.role === 'auditor') {
-      const legalBasis = query?.legalBasis || body?.legalBasis;
-      if (resourceSensitivity === 'restricted' && !legalBasis) {
-        throw new ForbiddenException(
-          'This record is restricted. A legal basis is required to access it.',
-        );
-      }
-      return true;
-    }
-
     return true;
   }
 }

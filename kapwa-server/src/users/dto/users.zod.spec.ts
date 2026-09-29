@@ -26,14 +26,16 @@ describe('CreateUserInputSchema', () => {
     expect(r.success).toBe(false);
   });
 
-  it('accepts an agency_staff user with an agencyId', () => {
-    const r = CreateUserInputSchema.safeParse({
-      ...uiPayload,
-      role: 'agency_staff',
-      agencyId: '11111111-1111-4111-8111-111111111111',
-    });
-    expect(r.success).toBe(true);
-  });
+  it.each(['mayor', 'auditor', 'agency_staff'])(
+    'rejects the sunset role %s outright',
+    role => {
+      // These roles are gone from the system entirely. Accepting them here
+      // would let an admin panel create an account that matches no @Roles list
+      // and no route — a user nobody can sign in as meaningfully.
+      const r = CreateUserInputSchema.safeParse({ ...uiPayload, role });
+      expect(r.success).toBe(false);
+    },
+  );
 
   it('rejects unknown keys (strict)', () => {
     const r = CreateUserInputSchema.safeParse({ ...uiPayload, nope: true });

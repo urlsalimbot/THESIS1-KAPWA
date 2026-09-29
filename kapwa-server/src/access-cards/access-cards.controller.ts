@@ -42,7 +42,7 @@ export class AccessCardsController {
   }
 
   @Get('beneficiary/:id/card')
-  @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'claimant', 'coordinator')
   @ApiOperation({ summary: 'Get beneficiary card details' })
   async findBeneficiaryCard(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.findBeneficiaryCard(id, req.user);
@@ -52,7 +52,7 @@ export class AccessCardsController {
   // beneficiary UUID — the UUID endpoint above 400s on a code. Declared before
   // the catch-all `:cardCode` route so it wins for the /by-code/… prefix.
   @Get('by-code/:code/card')
-  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get beneficiary card details by card code' })
   async findCardByCode(@Param('code') code: string, @Request() req: AuthenticatedRequest) {
     return this.svc.findCardByCode(code, req.user);
@@ -73,7 +73,7 @@ export class AccessCardsController {
   }
 
   @Post('log')
-  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Log a service to an access card' })
   async logService(
     @Body(new ZodPipe(LogServiceSchema)) body: LogServiceInput,
@@ -88,14 +88,14 @@ export class AccessCardsController {
   }
 
   @Get(':code/summary')
-  @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'claimant', 'coordinator')
   @ApiOperation({ summary: 'Get agency view of a card: rendered, other-agency, referrals' })
   async agencySummary(@Param('code') code: string, @Request() req: AuthenticatedRequest) {
     return this.svc.getAgencySummary(code, req.user);
   }
 
   @Get(':cardCode')
-  @Roles('admin', 'social_worker', 'claimant', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'claimant', 'coordinator')
   @ApiOperation({ summary: 'Get services by card code' })
   async findByCard(@Param('cardCode') cardCode: string, @Request() req: AuthenticatedRequest) {
     return this.svc.findByCard(cardCode, req.user);

@@ -22,7 +22,7 @@ export class AbacService {
   constructor(@Inject(REQUEST) private readonly request: Request) {}
 
   evaluate(context: AbacContext): boolean {
-    if (['admin', 'mayor', 'auditor'].includes(context.role)) return true;
+    if (['admin'].includes(context.role)) return true;
     if (!this.evaluateBarangayScope(context)) return false;
     if (!this.evaluateConsent(context)) return false;
     if (!this.evaluateSensitivity(context)) return false;

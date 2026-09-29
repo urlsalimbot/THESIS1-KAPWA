@@ -85,11 +85,6 @@ export class InterAgencyReferralsService {
       createdBy: caller.id,
     });
     const saved = await this.repo.save(ref);
-    try {
-      await this.notifyAgency(toAgency.id, 'New Inter-Agency Referral', `New referral from ${fromAgencyId}: ${dto.reason}`);
-    } catch (err) {
-      this.logger.warn(`Failed to send referral notification: ${err instanceof Error ? err.message : err}`);
-    }
     return saved;
   }
 
@@ -446,20 +441,6 @@ export class InterAgencyReferralsService {
         channel: NotificationType.IN_APP,
       });
     }
-  }
-
-  private async notifyAgency(agencyId: string, title: string, message: string) {
-    const staff = await this.userRepo.find({ where: { agencyId, role: UserRole.AGENCY_STAFF } });
-    if (staff.length === 0) return;
-    await this.notifService.createMany(
-      staff.map(s => ({
-        recipientId: s.id,
-        title,
-        message,
-        category: NotificationCategory.CASE_UPDATE,
-        channel: NotificationType.IN_APP,
-      })),
-    );
   }
 
   private async resolvePersonId(dto: CreateInterAgencyReferralInput): Promise<string> {

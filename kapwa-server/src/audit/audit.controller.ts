@@ -13,14 +13,14 @@ export class AuditController {
   constructor(private auditService: AuditService) {}
 
   @Get('verify-all')
-  @Roles('admin', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Verify hash chain integrity across all audit tables' })
   async verifyAllChains() {
     return this.auditService.verifyAllChains();
   }
 
   @Get('logs')
-  @Roles('admin', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Get audit logs' })
   async getLogs(
     @Query('table') table?: string,
@@ -31,7 +31,7 @@ export class AuditController {
   }
 
     @Get('consent-ledger')
-  @Roles('admin', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Read consent ledger (auditor read-only)' })
   async getConsentLedger(
     @Query('beneficiaryId') beneficiaryId?: string,
@@ -42,7 +42,7 @@ export class AuditController {
   }
 
   @Get('coa-export')
-  @Roles('admin', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Export for COA' })
   async exportForCoa(
     @Query('startDate') startDate: string,

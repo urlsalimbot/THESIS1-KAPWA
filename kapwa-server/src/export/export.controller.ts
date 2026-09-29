@@ -30,7 +30,7 @@ export class ExportController {
   constructor(private readonly exportService: ExportService) {}
 
   @Get('audit-logs')
-  @Roles('admin', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Export audit logs as CSV' })
   @ApiQuery({ name: 'format', required: true, enum: ['csv'] })
   @ApiQuery({ name: 'startDate', required: false })
@@ -59,7 +59,7 @@ export class ExportController {
   }
 
   @Get('service-summary')
-  @Roles('admin', 'mayor', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Export service summary as CSV or XLSX' })
   @ApiQuery({ name: 'format', required: true, enum: ['csv', 'xlsx'] })
   @ApiQuery({ name: 'startDate', required: false })
@@ -96,7 +96,7 @@ export class ExportController {
   }
 
   @Get('monthly-funds')
-  @Roles('admin', 'mayor', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Export fund utilization (monthly or date range) as an Excel workbook' })
   @ApiQuery({ name: 'month', required: false, example: '2026-08', description: 'Month in YYYY-MM format (used when no explicit range)' })
   @ApiQuery({ name: 'startDate', required: false, example: '2026-01-01' })
@@ -128,7 +128,7 @@ export class ExportController {
   }
 
   @Get('compliance')
-  @Roles('admin', 'auditor', 'mayor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Export compliance report as CSV' })
   @ApiQuery({ name: 'format', required: true, enum: ['csv'] })
   async exportCompliance(

@@ -14,7 +14,7 @@ export class ConsentGuard implements CanActivate {
     const { user, params, body } = context.switchToHttp().getRequest();
 
     if (!user) return false;
-    if (user.role === 'admin' || user.role === 'auditor') return true;
+    if (user.role === 'admin') return true;
 
     const routePath = context.switchToHttp().getRequest().route?.path || context.switchToHttp().getRequest().url || '';
     const isCaseRoute = /\/cases(\/|$)/.test(routePath);

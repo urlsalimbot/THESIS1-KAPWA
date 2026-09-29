@@ -27,42 +27,42 @@ export class AnalyticsController {
   ) {}
 
   @Get('demographics')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Demographic analysis for a date range and barangay' })
   async demographics(@Query(new ZodPipe(AnalyticsRangeSchema)) query: AnalyticsRangeInput) {
     return this.analytics.getDemographics(query);
   }
 
   @Get('concentration')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Geographic concentration of cases and assistance (HHI)' })
   async concentration(@Query(new ZodPipe(AnalyticsRangeSchema)) query: AnalyticsRangeInput) {
     return this.analytics.getConcentration(query);
   }
 
   @Get('equity')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Barangay equity and coverage ratios' })
   async equity(@Query(new ZodPipe(AnalyticsRangeSchema)) query: AnalyticsRangeInput) {
     return this.analytics.getEquity(query);
   }
 
   @Get('inequality')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Household income inequality (Gini, Lorenz, deciles)' })
   async inequality(@Query(new ZodPipe(AnalyticsRangeSchema)) query: AnalyticsRangeInput) {
     return this.analytics.getInequality(query);
   }
 
   @Get('forecast')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Caseload or disbursement forecast (Holt linear, 6-month default)' })
   async forecast(@Query(new ZodPipe(ForecastQuerySchema)) query: ForecastQueryInput) {
     return this.analytics.getForecast(query);
   }
 
   @Get('associations')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Service association rules (support, confidence, lift)' })
   async associations(@Query(new ZodPipe(AssociationsQuerySchema)) query: AssociationsQueryInput) {
     return this.analytics.getAssociations(query);
@@ -79,14 +79,14 @@ export class AnalyticsController {
   }
 
   @Get('clustering/runs')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'List clustering runs (newest first)' })
   async listRuns(@Query(new ZodPipe(RunListQuerySchema)) query: RunListQueryInput) {
     return this.clustering.listRuns(query.limit);
   }
 
   @Get('clustering/runs/:id')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Get a clustering run with cluster profiles' })
   async getRun(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.clustering.getRun(id);
@@ -104,7 +104,7 @@ export class AnalyticsController {
   }
 
   @Get('clustering/runs/:id/export')
-  @Roles('admin', 'social_worker', 'mayor')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Export a run summary as an aggregate CSV' })
   async exportCsv(@Param('id', new ParseUUIDPipe()) id: string, @Res() res: any) {
     const { buffer, filename } = await this.clustering.exportRunCsv(id);

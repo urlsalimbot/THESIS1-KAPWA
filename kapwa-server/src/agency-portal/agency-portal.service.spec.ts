@@ -4,7 +4,7 @@ import { AgencyPortalService } from './agency-portal.service';
 import { InterAgencyReferralsService } from '../inter-agency-referrals/inter-agency-referrals.service';
 import { AgenciesService } from '../agencies/agencies.service';
 
-function agencyUser(id: string, agencyId: string, role = 'agency_staff') {
+function agencyUser(id: string, agencyId: string, role = 'admin') {
   return { id, role, agencyId } as any;
 }
 

@@ -78,7 +78,7 @@ describe('AccessCardsController', () => {
 
     it('is scoped to staff + agency_staff (claimant excluded)', () => {
       const roles = Reflect.getMetadata(ROLES_KEY, AccessCardsController.prototype.findCardByCode);
-      expect(roles).toEqual(['admin', 'social_worker', 'coordinator', 'agency_staff']);
+      expect(roles).toEqual(['admin', 'social_worker', 'coordinator']);
     });
   });
 });

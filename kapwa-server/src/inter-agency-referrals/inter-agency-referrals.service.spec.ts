@@ -297,43 +297,6 @@ describe('InterAgencyReferralsService', () => {
     });
   });
 
-  describe('referral notifications', () => {
-    it('notifies receiving agency staff when a referral is created', async () => {
-      const createManyMock = jest.fn().mockResolvedValue([]);
-      const staff = [{ id: 'staff-1', agencyId: 'agency-to', role: 'agency_staff' }];
-
-      const service = new InterAgencyReferralsService(
-        repoMock as any, agencyRepoMock as any, benRepoMock as any, caseRepoMock as any, casesServiceMock as any,
-        userRepoMock as any, { createMany: createManyMock } as any,
-      );
-      (service as any).userRepo = { find: jest.fn().mockResolvedValue(staff) };
-      (agencyRepoMock.findOne as jest.Mock).mockResolvedValue({ id: 'agency-to', isActive: true, name: 'RHU' });
-      repoMock.create.mockImplementation((dto: any) => dto);
-      repoMock.save.mockImplementation(async (dto: any) => ({ id: 'r1', ...dto }));
-
-      await service.create({ toAgencyId: 'agency-to', reason: 'medical', legalBasisCode: 'LB-1' } as any, { id: 'sw-1', agencyId: 'agency-from' } as any);
-
-      expect(createManyMock).toHaveBeenCalled();
-    });
-
-    it('notifies all agency staff in one bulk createMany call', async () => {
-      userRepoMock.find.mockResolvedValue([
-        { id: 's1', role: 'agency_staff' },
-        { id: 's2', role: 'agency_staff' },
-      ]);
-      const notifMock = (service as any).notifService;
-      notifMock.createMany = jest.fn().mockResolvedValue([]);
-
-      await (service as any).notifyAgency('ag-1', 'New Referral', 'Incoming referral');
-
-      expect(notifMock.createMany).toHaveBeenCalledTimes(1);
-      expect(notifMock.createMany).toHaveBeenCalledWith([
-        expect.objectContaining({ recipientId: 's1', title: 'New Referral' }),
-        expect.objectContaining({ recipientId: 's2', title: 'New Referral' }),
-      ]);
-      expect(notifMock.create).not.toHaveBeenCalled();
-    });
-  });
 
   describe('getPersonBenefitLedger', () => {
     const query = () => benRepoMock.manager.query as jest.Mock;
@@ -435,7 +398,7 @@ describe('InterAgencyReferralsService', () => {
         return [];
       });
 
-      const result = await service.getPersonBenefitLedger('p1', { id: 'u-lto', role: 'agency_staff', agencyId: 'ag-lto' } as any);
+      const result = await service.getPersonBenefitLedger('p1', { id: 'u-admin', role: 'admin' } as any);
 
       expect(result.byAgency.length).toBe(2);
       expect(result.services.some((s: any) => s.agencyId === 'ag-lto')).toBe(true);

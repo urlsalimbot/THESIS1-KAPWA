@@ -20,7 +20,7 @@ export class BeneficiariesController {
   constructor(private benService: BeneficiariesService) {}
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator', 'mayor')
+  @Roles('admin', 'social_worker', 'coordinator')
   @Sensitivity('internal')
   async findAll(
     @Query('barangay') barangay?: string,

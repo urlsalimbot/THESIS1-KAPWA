@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, Request, Logger, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -99,47 +99,6 @@ export class DashboardController {
     return this.dashService.getMetrics(userBarangay);
   }
 
-    @Get('reports/mayor')
-  @Roles('mayor')
-  @ApiOperation({ summary: 'Mayor aggregate reports - zero PII' })
-  @ApiQuery({ name: 'startDate', required: false, example: '2026-01-01' })
-  @ApiQuery({ name: 'endDate', required: false, example: '2026-12-31' })
-  async getMayorReports(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    const dateRe = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-    if ((startDate && !dateRe.test(startDate)) || (endDate && !dateRe.test(endDate))) {
-      throw new BadRequestException('startDate/endDate must be YYYY-MM-DD');
-    }
-    const [metrics, sla, servedToday, breakdowns, trends] = await Promise.all([
-      this.dashService.getMetrics(undefined, startDate, endDate),
-      this.dashService.getSlaCompliance(),
-      this.dashService.getServedToday(),
-      this.dashService.getReportBreakdowns(startDate, endDate),
-      this.dashService.getTrends(),
-    ]);
-    return {
-      period: { startDate: startDate ?? null, endDate: endDate ?? null },
-      fundUtilization: metrics.totalDisbursedAmount,
-      uniqueHouseholds: metrics.uniqueHouseholds,
-      caseStatusDistribution: metrics.byStatus,
-      totalCases: metrics.totalCases,
-      slaCompliance: sla,
-      servedToday,
-      recentInterventions: metrics.recentInterventions,
-      beneficiariesServed: breakdowns.beneficiariesServed,
-      byProgram: breakdowns.byProgram,
-      byFundSource: breakdowns.byFundSource,
-      byGender: breakdowns.byGender,
-      byAgeBracket: breakdowns.byAgeBracket,
-      byBarangay: breakdowns.byBarangay,
-      byCategory: breakdowns.byCategory,
-      referrals: breakdowns.referrals,
-      trends,
-    };
-  }
-
   @Get('trends')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get case/disbursement trends for a range (1w | 1m | 3m | 6m)' })
@@ -164,7 +123,7 @@ export class DashboardController {
   }
 
   @Get('sla')
-  @Roles('admin', 'auditor')
+  @Roles('admin')
   @ApiOperation({ summary: 'Get SLA compliance status' })
   async getSlaCompliance() {
     return this.dashService.getSlaCompliance();

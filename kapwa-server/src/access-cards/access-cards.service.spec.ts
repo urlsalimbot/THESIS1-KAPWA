@@ -151,29 +151,14 @@ describe('AccessCardsService', () => {
         .rejects.toThrow('No access card found for this code');
     });
 
-    it('allows agency_staff when a referral links their agency to the card', async () => {
-      // assertCardAccess: beneficiary lookup, then referral link check, then
-      // the findCardByCode beneficiary lookup.
-      repoMock.query
-        .mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }])
-        .mockResolvedValueOnce([{ '?column?': 1 }])
-        .mockResolvedValueOnce([{ id: 'b1', access_card_code: 'NORZ-AC-2026-0042', surname: 'Doe', first_name: 'John' }]);
-      repoMock.find.mockResolvedValueOnce([]);
-
-      const result = await service.findCardByCode(
-        'NORZ-AC-2026-0042',
-        { id: 'a1', role: 'agency_staff', agencyId: 'ag-1' } as any,
-      );
-      expect(result.code).toBe('NORZ-AC-2026-0042');
-    });
-
-    it('blocks agency_staff with no referral link via the same gate as findByCard', async () => {
-      repoMock.query
-        .mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }])
-        .mockResolvedValueOnce([]);
+    it('denies agency_staff even when a referral links their agency', async () => {
+      // The role no longer exists: assertCardAccess has no agency branch, so a
+      // staff account that used to reach a card through a referral now falls
+      // through to the same 'Not allowed' as anything else unrecognised.
+      repoMock.query.mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }]);
       await expect(
-        service.findCardByCode('NORZ-AC-2026-0042', { id: 'a1', role: 'agency_staff', agencyId: 'ag-9' } as any),
-      ).rejects.toThrow('No referral links');
+        service.findCardByCode('NORZ-AC-2026-0042', { id: 'a1', role: 'agency_staff', agencyId: 'ag-1' } as any),
+      ).rejects.toThrow('Not allowed');
     });
   });
 
@@ -618,13 +603,11 @@ describe('AccessCardsService.generateAccessCardPdf', () => {
       ).resolves.toMatchObject({ code: 'NORZ-AC-2026-0002' });
     });
 
-    it('blocks agency_staff when no referral links their agency', async () => {
-      repoMock.query
-        .mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }])
-        .mockResolvedValueOnce([]);
+    it('denies agency_staff on findByCard too', async () => {
+      repoMock.query.mockResolvedValueOnce([{ beneficiary_id: 'b1', user_id: null, person_id: 'p1' }]);
       await expect(
         service.findByCard('NORZ-AC-2026-0001', { id: 'a', role: 'agency_staff', agencyId: 'ag-9' } as any),
-      ).rejects.toThrow('No referral links');
+      ).rejects.toThrow('Not allowed');
     });
   });
 });

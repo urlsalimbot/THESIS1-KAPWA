@@ -35,14 +35,14 @@ export class InterAgencyReferralsController {
   constructor(private readonly svc: InterAgencyReferralsService) {}
 
   @Get('inbox')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'List referrals for the caller agency' })
   async inbox(@Request() req: AuthenticatedRequest) {
     return this.svc.findInbox(req.user);
   }
 
   @Get('person/:personId')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'List referrals for a person' })
   async byPerson(
     @Param('personId', new ParseUUIDPipe()) personId: string,
@@ -52,7 +52,7 @@ export class InterAgencyReferralsController {
   }
 
   @Get('person/:personId/benefit-ledger')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({
     summary:
       'Inter-facility aide ledger for a person: aggregates MSWDO interventions, cross-agency access-card services, and referrals grouped by office, with duplicate-aide flags',
@@ -65,7 +65,7 @@ export class InterAgencyReferralsController {
   }
 
   @Get('case/:caseId')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'List referrals for a case (case workflow)' })
   async byCase(
     @Param('caseId', new ParseUUIDPipe()) caseId: string,
@@ -75,21 +75,21 @@ export class InterAgencyReferralsController {
   }
 
   @Get('beneficiary-search')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Search referral-derived beneficiaries by name for the caller agency' })
   async beneficiarySearch(@Query('q') q: string, @Request() req: AuthenticatedRequest) {
     return this.svc.searchBeneficiaries(q || '', req.user);
   }
 
   @Get(':id')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Get a single referral (participant or MSWDO staff only)' })
   async getOne(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.findOne(id, req.user);
   }
 
   @Post()
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Create an inter-agency referral' })
   async create(
     @Body(new ZodPipe(CreateInterAgencyReferralSchema)) dto: any,
@@ -99,21 +99,21 @@ export class InterAgencyReferralsController {
   }
 
   @Patch(':id/receive')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Mark referral as received' })
   async receive(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.receive(id, req.user);
   }
 
   @Patch(':id/action')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Mark referral as actioned' })
   async action(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.action(id, req.user);
   }
 
   @Patch(':id/close')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Close referral with outcome' })
   async close(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -124,7 +124,7 @@ export class InterAgencyReferralsController {
   }
 
   @Patch(':id/decline')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Decline a referred referral' })
   async decline(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -135,7 +135,7 @@ export class InterAgencyReferralsController {
   }
 
   @Post(':id/promote-to-case')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Promote a referral into a case' })
   async promoteToCase(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.promoteToCase(id, req.user);

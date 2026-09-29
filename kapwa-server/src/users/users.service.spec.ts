@@ -120,11 +120,11 @@ describe('UsersService', () => {
       expect(mockRepo.save).not.toHaveBeenCalled();
     });
 
-    it('should persist agencyId for agency_staff role', async () => {
+    it('should persist agencyId', async () => {
       const dto = {
         email: 'rhu@norzagaray.test',
         password: 'password123',
-        role: UserRole.AGENCY_STAFF,
+        role: UserRole.SW,
         agencyId: 'ag-rhu',
       };
 
@@ -135,7 +135,7 @@ describe('UsersService', () => {
       const result = await service.createUser(dto);
 
       expect(result.agencyId).toBe('ag-rhu');
-      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ agencyId: 'ag-rhu', role: UserRole.AGENCY_STAFF }));
+      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ agencyId: 'ag-rhu', role: UserRole.SW }));
     });
   });
 
@@ -231,7 +231,7 @@ describe('UsersService', () => {
 
   describe('update', () => {
     it('should persist agencyId', async () => {
-      const user = { id: 'u1', role: UserRole.AGENCY_STAFF, agencyId: undefined, save: jest.fn() };
+      const user = { id: 'u1', role: UserRole.SW, agencyId: undefined, save: jest.fn() };
       mockRepo.findOne.mockResolvedValue(user);
 
       await service.update('u1', { agencyId: 'ag-rhu' });

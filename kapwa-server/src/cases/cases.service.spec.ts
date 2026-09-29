@@ -548,7 +548,7 @@ describe('FSM — rejectCase', () => {
 
   it('refuses roles other than admin / social_worker', async () => {
     repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ASSESSED } as Case);
-    await expect(service.reject('1', 'Not eligible', 'mayor')).rejects.toThrow('cannot reject a case');
+    await expect(service.reject('1', 'Not eligible', 'claimant')).rejects.toThrow('cannot reject a case');
   });
 
   it('refuses to reject a case that already left Phase-In', async () => {

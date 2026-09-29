@@ -25,44 +25,44 @@ export class NotificationsController {
   }
 
   @Post(':id/send-with-consent')
-  @Roles('admin', 'social_worker', 'agency_staff')
+  @Roles('admin', 'social_worker')
   async sendWithConsent(@Param('id') id: string) {
     return this.notifService.sendWithConsent(id);
   }
 
   @Get('my')
-  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async getMyNotifications(@Request() req: AuthenticatedRequest) {
     return this.notifService.getByUser(req.user.id);
   }
 
   @Get('unread')
-  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async getUnreadCount(@Request() req: AuthenticatedRequest) {
     const count = await this.notifService.getUnreadCount(req.user.id);
     return { count };
   }
 
   @Post(':id/read')
-  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async markAsRead(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.notifService.markAsRead(id, req.user.id);
   }
 
   @Post('read-all')
-  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async markAllAsRead(@Request() req: AuthenticatedRequest) {
     return this.notifService.markAllAsRead(req.user.id);
   }
 
   @Get('preferences')
-  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async getMyPreferences(@Request() req: AuthenticatedRequest) {
     return this.notifService.getPreferences(req.user.id);
   }
 
   @Put('preferences')
-  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async setPreference(
     @Request() req: AuthenticatedRequest,
     @Body(new ZodPipe(UpdatePreferenceSchema)) body: UpdatePreferenceInput
@@ -71,7 +71,7 @@ export class NotificationsController {
   }
 
   @Put('preferences/bulk')
-  @Roles('admin', 'social_worker', 'coordinator', 'claimant', 'auditor', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async bulkSetPreferences(
     @Request() req: AuthenticatedRequest,
     @Body(new ZodPipe(BulkUpdatePreferencesSchema)) body: BulkUpdatePreferencesInput

@@ -133,18 +133,6 @@ export class AccessCardsService {
       throw new ForbiddenException('You can only view your own access card');
     }
 
-    if (caller.role === 'agency_staff') {
-      if (!caller.agencyId) throw new ForbiddenException('Agency not set for this account');
-      const ref = await this.repo.query(
-        `SELECT 1 FROM inter_agency_referrals r
-          WHERE r.beneficiary_id = $1::uuid AND (r.from_agency_id = $2::uuid OR r.to_agency_id = $2::uuid)
-          LIMIT 1`,
-        [ben.beneficiary_id, caller.agencyId],
-      );
-      if (ref?.[0]) return;
-      throw new ForbiddenException('No referral links your agency to this card');
-    }
-
     throw new ForbiddenException('Not allowed');
   }
 

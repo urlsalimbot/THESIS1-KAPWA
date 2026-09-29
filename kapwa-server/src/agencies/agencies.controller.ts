@@ -18,14 +18,14 @@ export class AgenciesController {
   constructor(private readonly svc: AgenciesService) {}
 
   @Get()
-  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'List active agencies' })
   async findAll() {
     return this.svc.findAll();
   }
 
   @Get(':id')
-  @Roles('admin', 'social_worker', 'coordinator', 'agency_staff')
+  @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get an agency by id' })
   async findById(@Param('id', new ParseUUIDPipe()) id: string) {
     const agency = await this.svc.findById(id);
