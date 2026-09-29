@@ -33,7 +33,15 @@ let mockLocationState: any = {
           dob: '1985-01-20',
           email: 'juan.delacruz@example.com',
       },
-      allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
+      matchedPerson: {
+            id: 'ben-1', role: 'beneficiary', surname: 'Dela Cruz', firstName: 'Juan',
+            gender: 'Male', age: 40, dob: '1985-01-20', phone: '09171234567',
+            email: 'juan.delacruz@example.com',
+            occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married',
+            currentAddress: { barangay: 'Bigte', street: '123 Purok 1' },
+            philhealthNumber: '123456789',
+          },
+          allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
       familyMembers: [
         { id: 'fm-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 35, occupation: 'Housewife', income: 0, status: 'Unemployed' },
       ],
@@ -50,7 +58,14 @@ let mockLocationState: any = {
         civilStatus: 'Married', currentAddress: null,
         philhealthNumber: undefined, category: undefined,
       },
-      allBeneficiaries: [{ id: 'ben-2', surname: 'Cruz', firstName: 'Rosa' }],
+      matchedPerson: {
+            id: 'ben-2', role: 'member', relationship: 'Child', surname: 'Cruz', firstName: 'Rosa',
+            gender: 'Female', age: 38, phone: '09171234599',
+            occupation: 'Vendor', estimatedMonthlyIncome: 5000,
+            civilStatus: 'Married', currentAddress: null,
+            philhealthNumber: undefined,
+          },
+          allBeneficiaries: [{ id: 'ben-2', surname: 'Cruz', firstName: 'Rosa' }],
       familyMembers: [],
       lastApprovedCaseDate: new Date().toISOString(),
     },
@@ -101,6 +116,14 @@ describe('IntakeReviewPage', () => {
           dob: '1985-01-20',
           email: 'juan.delacruz@example.com',
           },
+          matchedPerson: {
+            id: 'ben-1', role: 'beneficiary', surname: 'Dela Cruz', firstName: 'Juan',
+            gender: 'Male', age: 40, dob: '1985-01-20', phone: '09171234567',
+            email: 'juan.delacruz@example.com',
+            occupation: 'Farmer', estimatedMonthlyIncome: 8500, civilStatus: 'Married',
+            currentAddress: { barangay: 'Bigte', street: '123 Purok 1' },
+            philhealthNumber: '123456789',
+          },
           allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
           familyMembers: [
             { id: 'fm-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 35, occupation: 'Housewife', income: 0, status: 'Unemployed' },
@@ -117,6 +140,13 @@ describe('IntakeReviewPage', () => {
             occupation: 'Vendor', estimatedMonthlyIncome: 5000,
             civilStatus: 'Married', currentAddress: null,
             philhealthNumber: undefined, category: undefined,
+          },
+          matchedPerson: {
+            id: 'ben-2', role: 'member', relationship: 'Child', surname: 'Cruz', firstName: 'Rosa',
+            gender: 'Female', age: 38, phone: '09171234599',
+            occupation: 'Vendor', estimatedMonthlyIncome: 5000,
+            civilStatus: 'Married', currentAddress: null,
+            philhealthNumber: undefined,
           },
           allBeneficiaries: [{ id: 'ben-2', surname: 'Cruz', firstName: 'Rosa' }],
           familyMembers: [],
@@ -336,6 +366,15 @@ describe('IntakeReviewPage', () => {
     expect(screen.getByText(/No possible matches left to review/i)).toBeDefined();
     expect(screen.getByRole('button', { name: /Continue as new client/i })).toBeDefined();
     expect(screen.queryByText(/none of these match/i)).toBeNull();
+  });
+
+  it('labels a candidate matched as a household member', async () => {
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/Household member · Child/i)).toBeDefined();
   });
 
   it('reveals why a candidate was flagged', async () => {

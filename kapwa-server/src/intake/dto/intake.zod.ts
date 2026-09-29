@@ -121,6 +121,25 @@ export interface MatchCandidate {
     civilStatus: string;
     currentAddress: Record<string, string> | null;
     philhealthNumber?: string;
+  };
+  /** The roster person who actually matched (beneficiary or household member). */
+  matchedPerson: {
+    id: string;
+    role: 'beneficiary' | 'member';
+    relationship?: string;
+    surname: string;
+    firstName: string;
+    middleName?: string;
+    gender: string;
+    age: number;
+    dob?: string;
+    phone: string;
+    email?: string;
+    occupation: string;
+    estimatedMonthlyIncome: number;
+    civilStatus: string;
+    currentAddress: Record<string, string> | null;
+    philhealthNumber?: string;
     category?: string;
   };
   allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;

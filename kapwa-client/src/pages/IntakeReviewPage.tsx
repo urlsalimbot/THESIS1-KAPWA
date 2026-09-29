@@ -24,7 +24,18 @@ interface MatchCandidate {
     gender: string; age: number; dob?: string; phone: string; email?: string;
     occupation: string; estimatedMonthlyIncome: number; civilStatus: string;
     currentAddress: Record<string, string> | null;
-    philhealthNumber?: string; category?: string;
+    philhealthNumber?: string;
+  };
+  matchedPerson: {
+    id: string;
+    role: 'beneficiary' | 'member';
+    relationship?: string;
+    surname: string; firstName: string; middleName?: string;
+    gender: string; age: number; dob?: string; phone: string; email?: string;
+    occupation: string; estimatedMonthlyIncome: number; civilStatus: string;
+    currentAddress: Record<string, string> | null;
+    philhealthNumber?: string;
+    category?: string;
   };
   allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;
   familyMembers: Array<{ id: string; fullName: string; relationship: string; age: number; occupation: string; income: number; status: string }>;
@@ -228,7 +239,11 @@ export function IntakeReviewPage() {
         {filtered.map((c) => {
           const cLabel = confidenceLabel(c.score, t);
           const elig = eligibilityNote(c, t);
-          const fullName = `${c.primaryBeneficiary.firstName} ${c.primaryBeneficiary.surname}`;
+          // Roster matching can surface a household member rather than the
+          // beneficiary; compare the intake against whoever actually matched.
+          const matched = c.matchedPerson ?? c.primaryBeneficiary;
+          const fullName = `${matched.firstName} ${matched.surname}`;
+          const isMember = c.matchedPerson?.role === 'member';
           return (
             <Card
               key={c.householdId}
@@ -242,9 +257,16 @@ export function IntakeReviewPage() {
               </div>
 
               <div className="p-4 space-y-3">
-                <p className="text-base font-semibold">
-                  {t('intake.isThis', 'Is this')} <span className="text-primary">{fullName}</span>{t('intake.isThisQ', '?')}
-                </p>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-base font-semibold">
+                    {t('intake.isThis', 'Is this')} <span className="text-primary">{fullName}</span>{t('intake.isThisQ', '?')}
+                  </p>
+                  {isMember && (
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                      {t('intake.roleMember', 'Household member')}{c.matchedPerson!.relationship ? ` · ${c.matchedPerson!.relationship}` : ''}
+                    </span>
+                  )}
+                </div>
 
                 <div className="bg-gray-50 rounded-lg p-4 space-y-1">
                   <div className="grid grid-cols-[7rem_1fr_1fr_28px] gap-2 text-xs text-muted-foreground pb-1 border-b border-gray-200 mb-1">
@@ -254,14 +276,14 @@ export function IntakeReviewPage() {
                     <span />
                   </div>
 
-                  <MatchRow label={t('intake.name', 'Name')} newVal={`${intake.surname}, ${intake.firstName}`} existingVal={`${c.primaryBeneficiary.surname}, ${c.primaryBeneficiary.firstName}`} t={t} />
-                  <MatchRow label={t('intake.reviewDob', 'Date of birth')} newVal={formatIntakeField(intake, 'dob')} existingVal={c.primaryBeneficiary.dob || ''} t={t} />
-                  <MatchRow label={t('intake.age', 'Age')} newVal={formatIntakeField(intake, 'age')} existingVal={String(c.primaryBeneficiary.age)} t={t} />
-                  <MatchRow label={t('intake.reviewPhone', 'Phone')} newVal={formatIntakeField(intake, 'cellularNumber')} existingVal={c.primaryBeneficiary.phone || ''} t={t} />
-                  <MatchRow label={t('intake.reviewEmail', 'Email')} newVal={formatIntakeField(intake, 'email')} existingVal={c.primaryBeneficiary.email || ''} t={t} />
-                  <MatchRow label={t('intake.barangay', 'Barangay')} newVal={formatIntakeField(intake, 'barangay')} existingVal={c.primaryBeneficiary.currentAddress?.barangay || ''} t={t} />
-                  {c.primaryBeneficiary.philhealthNumber && (
-                    <MatchRow label={t('intake.philhealth', 'PhilHealth')} newVal={formatIntakeField(intake, 'philhealthNumber')} existingVal={c.primaryBeneficiary.philhealthNumber} t={t} />
+                  <MatchRow label={t('intake.name', 'Name')} newVal={`${intake.surname}, ${intake.firstName}`} existingVal={`${matched.surname}, ${matched.firstName}`} t={t} />
+                  <MatchRow label={t('intake.reviewDob', 'Date of birth')} newVal={formatIntakeField(intake, 'dob')} existingVal={matched.dob || ''} t={t} />
+                  <MatchRow label={t('intake.age', 'Age')} newVal={formatIntakeField(intake, 'age')} existingVal={String(matched.age)} t={t} />
+                  <MatchRow label={t('intake.reviewPhone', 'Phone')} newVal={formatIntakeField(intake, 'cellularNumber')} existingVal={matched.phone || ''} t={t} />
+                  <MatchRow label={t('intake.reviewEmail', 'Email')} newVal={formatIntakeField(intake, 'email')} existingVal={matched.email || ''} t={t} />
+                  <MatchRow label={t('intake.barangay', 'Barangay')} newVal={formatIntakeField(intake, 'barangay')} existingVal={matched.currentAddress?.barangay || ''} t={t} />
+                  {matched.philhealthNumber && (
+                    <MatchRow label={t('intake.philhealth', 'PhilHealth')} newVal={formatIntakeField(intake, 'philhealthNumber')} existingVal={matched.philhealthNumber} t={t} />
                   )}
                 </div>
 

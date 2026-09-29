@@ -27,6 +27,17 @@ function isCaseWorker(role?: string): boolean {
   return role === UserRole.ADMIN || role === UserRole.SW;
 }
 
+// Claimant relationships that mean the claimant lives in the beneficiary's
+// household. A claimant with one of these is recorded as a household member;
+// everyone else (Legal Guardian, Unrelated Caretaker, Self, …) is linked via
+// beneficiary_claimants only and is NOT added to the household.
+const FAMILY_HOUSEHOLD_RELATIONSHIPS = new Set(['spouse', 'child', 'parent', 'sibling', 'relative']);
+
+function isFamilyHouseholdRelationship(relationship?: string | null): boolean {
+  const normalized = (relationship ?? '').trim().toLowerCase();
+  return normalized.length > 0 && FAMILY_HOUSEHOLD_RELATIONSHIPS.has(normalized);
+}
+
 @Injectable()
 export class IntakeService {
   private readonly logger = new Logger(IntakeService.name);
@@ -282,6 +293,28 @@ export class IntakeService {
     }
   }
 
+  /**
+   * Add a person to a household's roster (idempotent). Used for claimants who
+   * are household/family relations, so they appear in the roster and in
+   * match-check alongside beneficiaries and other members.
+   */
+  private async ensureHouseholdMembership(
+    em: EntityManager,
+    personId: string,
+    householdId: string,
+    relationship: string,
+  ): Promise<void> {
+    const existing = await em.findOne(HouseholdMembership, { where: { personId, householdId } });
+    if (!existing) {
+      await em.save(em.create(HouseholdMembership, {
+        personId,
+        householdId,
+        relationship,
+        isPrimary: false,
+      }));
+    }
+  }
+
   private personFromInput(data: {
     surname: string; firstName: string; middleName?: string; extension?: string;
     gender: string; dob: string; age?: number; placeOfBirth?: string;
@@ -394,6 +427,10 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
               calendarYear: new Date().getFullYear(),
             }));
           }
+          // Family-relation claimants live in the household: roster them as members too.
+          if (isFamilyHouseholdRelationship(data.claimant.relationshipToBeneficiary)) {
+            await this.ensureHouseholdMembership(queryRunner.manager, claimPerson.id, existingHousehold.id, data.claimant.relationshipToBeneficiary);
+          }
           if (data.familyMembers && data.familyMembers.length > 0) {
             const validMembers = data.familyMembers.filter(m => m.surname && m.surname.trim().length > 0);
             for (const fm of validMembers) {
@@ -491,6 +528,11 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           });
           await queryRunner.manager.save(membership);
         }
+      }
+
+      // 7b. Family-relation claimants live in the household: roster them as members too.
+      if (isFamilyHouseholdRelationship(data.claimant.relationshipToBeneficiary)) {
+        await this.ensureHouseholdMembership(queryRunner.manager, claimPerson.id, savedHousehold.id, data.claimant.relationshipToBeneficiary);
       }
 
       // 8. Generate controlNo
@@ -600,12 +642,47 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
     // Score in SQL (pg_trgm + cheap exact-PII flags), decide in TS:
     // the coarse WHERE is multi-pass blocking (name trigram OR any PII block)
     // that keeps every row that could still qualify under assessMatchCandidate.
+    // Roster: every person linked to the household — all beneficiaries sharing
+    // the household plus household_memberships rows — deduplicated per person
+    // (beneficiary wins over member). One candidate per household, carrying the
+    // best-scoring matched person.
     const raw = await this.dataSource.query(
-      `WITH household_scores AS (
+      `WITH roster AS (
         SELECT
-          h.id,
-          similarity(p.surname, $1::text) AS sim_surname,
-          similarity(p.first_name, $2::text) AS sim_first,
+          h.id AS household_id,
+          b.id AS ben_id,
+          p.id AS person_id,
+          'beneficiary' AS role,
+          NULL::text AS member_relationship,
+          p.surname, p.first_name, p.middle_name, p.gender, p.dob,
+          p.philhealth_number, p.occupation, p.estimated_monthly_income, p.civil_status
+        FROM households h
+        JOIN beneficiaries b ON b.household_id = h.id
+        JOIN persons p ON p.id = b.person_id
+        UNION ALL
+        SELECT
+          h.id, NULL, p.id, 'member', hm.relationship,
+          p.surname, p.first_name, p.middle_name, p.gender, p.dob,
+          p.philhealth_number, p.occupation, p.estimated_monthly_income, p.civil_status
+        FROM households h
+        JOIN household_memberships hm ON hm.household_id = h.id
+        JOIN persons p ON p.id = hm.person_id
+      ),
+      ranked AS (
+        SELECT r.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY r.household_id, r.person_id
+            ORDER BY CASE r.role WHEN 'beneficiary' THEN 0 ELSE 1 END
+          ) AS rn
+        FROM roster r
+      ),
+      scores AS (
+        SELECT
+          hs.household_id, hs.person_id, hs.ben_id, hs.role, hs.member_relationship,
+          hs.surname, hs.first_name, hs.middle_name, hs.gender,
+          hs.dob, hs.philhealth_number, hs.occupation, hs.estimated_monthly_income, hs.civil_status,
+          similarity(hs.surname, $1::text) AS sim_surname,
+          similarity(hs.first_name, $2::text) AS sim_first,
           CASE WHEN $3::text[] IS NOT NULL AND array_length($3::text[], 1) > 0 THEN (
             SELECT COALESCE(AVG(sub.best), 0)
             FROM (
@@ -613,48 +690,60 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
               FROM household_memberships hm2
               JOIN persons p2 ON p2.id = hm2.person_id
               CROSS JOIN unnest($3::text[]) AS u(name)
-              WHERE hm2.household_id = h.id
+              WHERE hm2.household_id = hs.household_id
               GROUP BY u.name
             ) sub
           ) ELSE 0 END AS family_score,
-          (CASE WHEN $4::text IS NOT NULL AND $4::text ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN p.dob = $4::date ELSE false END) AS dob_match,
+          (CASE WHEN $4::text IS NOT NULL AND $4::text ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN hs.dob = $4::date ELSE false END) AS dob_match,
           (CASE WHEN $5::text IS NOT NULL AND $5::text <> '' THEN EXISTS (
             SELECT 1 FROM person_contacts pc
-            WHERE pc.person_id = b.person_id AND pc.contact_type = 'phone'
+            WHERE pc.person_id = hs.person_id AND pc.contact_type = 'phone'
               AND right('0000000000' || regexp_replace(pc.value, '[^0-9]', '', 'g'), 10)
                 = right('0000000000' || regexp_replace($5::text, '[^0-9]', '', 'g'), 10)
           ) ELSE false END) AS phone_match,
           (CASE WHEN $6::text IS NOT NULL AND $6::text <> '' THEN EXISTS (
             SELECT 1 FROM person_contacts pc
-            WHERE pc.person_id = b.person_id AND pc.contact_type = 'email'
+            WHERE pc.person_id = hs.person_id AND pc.contact_type = 'email'
               AND lower(trim(pc.value)) = lower(trim($6::text))
           ) ELSE false END) AS email_match,
           (CASE WHEN $7::text IS NOT NULL AND $7::text <> '' THEN
-            COALESCE(regexp_replace(p.philhealth_number, '[^0-9]', '', 'g') = regexp_replace($7::text, '[^0-9]', '', 'g'), false)
+            COALESCE(regexp_replace(hs.philhealth_number, '[^0-9]', '', 'g') = regexp_replace($7::text, '[^0-9]', '', 'g'), false)
           ELSE false END) AS philhealth_match,
           (CASE WHEN $8::text IS NOT NULL AND $8::text <> '' THEN EXISTS (
             SELECT 1 FROM person_addresses pa
-            WHERE pa.person_id = b.person_id AND pa.address_type = 'current'
+            WHERE pa.person_id = hs.person_id AND pa.address_type = 'current'
               AND lower(trim(pa.barangay)) = lower(trim($8::text))
           ) ELSE false END) AS barangay_match
-        FROM households h
-        JOIN beneficiaries b ON h.primary_beneficiary_id = b.id
-        JOIN persons p ON p.id = b.person_id
+        FROM ranked hs
+        WHERE hs.rn = 1
       )
       SELECT
-        hs.id AS household_id,
+        hs.household_id AS household_id,
         hs.sim_surname, hs.sim_first, hs.family_score,
         hs.dob_match, hs.phone_match, hs.email_match, hs.philhealth_match, hs.barangay_match,
-        b.id AS ben_id, p.surname, p.first_name,
-        (SELECT pa2.raw FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' LIMIT 1) AS address,
-        (SELECT pc2.value FROM person_contacts pc2 WHERE pc2.person_id = p.id AND pc2.contact_type = 'phone' LIMIT 1) AS phone,
-        (SELECT pc2e.value FROM person_contacts pc2e WHERE pc2e.person_id = p.id AND pc2e.contact_type = 'email' LIMIT 1) AS email,
-        p.occupation, p.estimated_monthly_income,
-        p.civil_status,
-        to_char(p.dob, 'YYYY-MM-DD') AS dob,
+        hs.person_id, hs.ben_id, hs.role, hs.member_relationship,
+        hs.surname, hs.first_name, hs.middle_name, hs.gender,
+        (SELECT pa2.raw FROM person_addresses pa2 WHERE pa2.person_id = hs.person_id AND pa2.address_type = 'current' LIMIT 1) AS address,
+        (SELECT pc2.value FROM person_contacts pc2 WHERE pc2.person_id = hs.person_id AND pc2.contact_type = 'phone' LIMIT 1) AS phone,
+        (SELECT pc2e.value FROM person_contacts pc2e WHERE pc2e.person_id = hs.person_id AND pc2e.contact_type = 'email' LIMIT 1) AS email,
+        hs.occupation, hs.estimated_monthly_income,
+        hs.civil_status,
+        to_char(hs.dob, 'YYYY-MM-DD') AS dob,
         (SELECT jsonb_build_object('barangay', pa3.barangay, 'city', pa3.city, 'province', pa3.province)
-         FROM person_addresses pa3 WHERE pa3.person_id = p.id AND pa3.address_type = 'current' LIMIT 1) AS current_address,
-        p.philhealth_number, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.gender, p.middle_name, br.category,
+         FROM person_addresses pa3 WHERE pa3.person_id = hs.person_id AND pa3.address_type = 'current' LIMIT 1) AS current_address,
+        hs.philhealth_number, EXTRACT(YEAR FROM AGE(NOW(), hs.dob))::integer AS age, br.category,
+        bp.id AS primary_ben_id, pp.surname AS primary_surname, pp.first_name AS primary_first_name,
+        pp.middle_name AS primary_middle_name, pp.gender AS primary_gender,
+        EXTRACT(YEAR FROM AGE(NOW(), pp.dob))::integer AS primary_age,
+        to_char(pp.dob, 'YYYY-MM-DD') AS primary_dob,
+        (SELECT pc2p.value FROM person_contacts pc2p WHERE pc2p.person_id = pp.id AND pc2p.contact_type = 'phone' LIMIT 1) AS primary_phone,
+        (SELECT pc2pe.value FROM person_contacts pc2pe WHERE pc2pe.person_id = pp.id AND pc2pe.contact_type = 'email' LIMIT 1) AS primary_email,
+        pp.occupation AS primary_occupation, pp.estimated_monthly_income AS primary_income,
+        pp.civil_status AS primary_civil_status,
+        (SELECT jsonb_build_object('barangay', pa3p.barangay, 'city', pa3p.city, 'province', pa3p.province)
+         FROM person_addresses pa3p WHERE pa3p.person_id = pp.id AND pa3p.address_type = 'current' LIMIT 1) AS primary_current_address,
+        pp.philhealth_number AS primary_philhealth_number,
+        h.barangay AS household_barangay,
         (SELECT json_agg(json_build_object('id', b2.id, 'surname', p2.surname, 'first_name', p2.first_name))
          FROM beneficiaries b2
          JOIN persons p2 ON p2.id = b2.person_id
@@ -676,11 +765,11 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         (SELECT MAX(c.created_at) FROM cases c
          JOIN beneficiaries b3 ON b3.id = c.beneficiary_id
           WHERE b3.household_id = h.id AND c.status = 'active') AS last_case_date
-      FROM household_scores hs
-      JOIN households h ON h.id = hs.id
-      JOIN beneficiaries b ON b.id = h.primary_beneficiary_id
-      JOIN persons p ON p.id = b.person_id
-      LEFT JOIN beneficiary_roles br ON br.person_id = b.person_id
+      FROM scores hs
+      JOIN households h ON h.id = hs.household_id
+      JOIN beneficiaries bp ON bp.id = h.primary_beneficiary_id
+      JOIN persons pp ON pp.id = bp.person_id
+      LEFT JOIN beneficiary_roles br ON br.person_id = hs.person_id
       WHERE hs.sim_surname >= 0.4 OR hs.sim_first >= 0.4 OR hs.family_score >= 0.6
         OR hs.dob_match OR hs.phone_match OR hs.email_match OR hs.philhealth_match OR hs.barangay_match
       ORDER BY (0.6 * ((hs.sim_surname + hs.sim_first) / 2) + 0.4 * hs.family_score) DESC
@@ -707,9 +796,8 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       .filter(({ assessment, row }) => {
         if (!assessment.isMatch) return false;
         if (workerBarangays.length === 0) return true;
-        const addr = row.current_address as Record<string, string> | null;
-        const barangay = addr?.barangay || '';
-        return workerBarangays.includes(barangay);
+        // Permission scope is the household's barangay, not the matched person's.
+        return workerBarangays.includes(row.household_barangay || '');
       })
       .sort((a, b) => b.assessment.score - a.assessment.score)
       .slice(0, 10)
@@ -719,7 +807,25 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         matchedOn: assessment.matchedOn,
         caseExistsWithin30Days: Boolean(r.case_exists_30d),
         primaryBeneficiary: {
-          id: r.ben_id,
+          id: r.primary_ben_id,
+          surname: r.primary_surname,
+          firstName: r.primary_first_name,
+          middleName: r.primary_middle_name || undefined,
+          gender: r.primary_gender,
+          age: r.primary_age,
+          dob: r.primary_dob || undefined,
+          phone: r.primary_phone || '',
+          email: r.primary_email || undefined,
+          occupation: r.primary_occupation || '',
+          estimatedMonthlyIncome: r.primary_income ? parseFloat(r.primary_income) : 0,
+          civilStatus: r.primary_civil_status || '',
+          currentAddress: r.primary_current_address || null,
+          philhealthNumber: r.primary_philhealth_number || undefined,
+        },
+        matchedPerson: {
+          id: r.person_id,
+          role: r.role === 'member' ? 'member' : 'beneficiary',
+          relationship: r.member_relationship || undefined,
           surname: r.surname,
           firstName: r.first_name,
           middleName: r.middle_name || undefined,
@@ -797,6 +903,11 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           isPrimary: true,
           calendarYear: new Date().getFullYear(),
         }));
+      }
+
+      // Family-relation claimants live in the household: roster them as members too.
+      if (isFamilyHouseholdRelationship(data.claimant.relationshipToBeneficiary)) {
+        await this.ensureHouseholdMembership(queryRunner.manager, claimPerson.id, householdId, data.claimant.relationshipToBeneficiary);
       }
 
       if (data.familyMembers && data.familyMembers.length > 0) {

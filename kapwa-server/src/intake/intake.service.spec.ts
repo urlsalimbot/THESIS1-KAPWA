@@ -184,7 +184,9 @@ describe('IntakeService', () => {
 
     it('should create Person + Beneficiary + Claimant + HouseholdMemberships + Case + ConsentLedger on successful intake', async () => {
       const saveMock = mockSaveSequence();
-      // save order: Person(beneficiary), Beneficiary, BeneficiaryRole, Person(claimant), BeneficiaryClaimant, Household, Beneficiary(update), Person(FM), HouseholdMembership, Case, ConsentLedger
+      // save order: Person(beneficiary), Beneficiary, BeneficiaryRole, Person(claimant),
+      // BeneficiaryClaimant, Household, Beneficiary(update), Person(FM), HouseholdMembership(FM),
+      // HouseholdMembership(claimant, family relation), Case, ConsentLedger
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
         .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz', consentStatus: 'active' })
@@ -195,6 +197,7 @@ describe('IntakeService', () => {
         .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
         .mockResolvedValueOnce({ id: 'fm-person-1' })
         .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'hm-claim-uuid-1' })
         .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001', status: CaseStatus.ENROLLED })
         .mockResolvedValueOnce({ id: clUuid, status: 'active' });
 
@@ -218,6 +221,56 @@ describe('IntakeService', () => {
           controlNo: 'KAPWA-2026-00001',
           status: CaseStatus.ENROLLED,
         }),
+      );
+    });
+
+    it('adds a family-relation claimant to the new household roster', async () => {
+      const saveMock = mockSaveSequence();
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid-1' })
+        .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz', consentStatus: 'active' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: claimUuid })
+        .mockResolvedValueOnce({ id: bcUuid })
+        .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
+        .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'hm-claim-uuid-1' })
+        .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001', status: CaseStatus.ENROLLED })
+        .mockResolvedValueOnce({ id: clUuid, status: 'active' });
+      stubCreates();
+
+      await service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW });
+
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({ personId: claimUuid, householdId: hhUuid, relationship: 'Spouse', isPrimary: false }),
+      );
+    });
+
+    it('does not add a non-family claimant (guardian/caretaker) to the household roster on intake', async () => {
+      const saveMock = mockSaveSequence();
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid-1' })
+        .mockResolvedValueOnce({ id: benUuid, surname: 'Dela Cruz', consentStatus: 'active' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: claimUuid })
+        .mockResolvedValueOnce({ id: bcUuid })
+        .mockResolvedValueOnce({ id: hhUuid, primaryBeneficiaryId: benUuid })
+        .mockResolvedValueOnce({ id: benUuid, householdId: hhUuid })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: caseUuid, controlNo: 'KAPWA-2026-00001', status: CaseStatus.ENROLLED })
+        .mockResolvedValueOnce({ id: clUuid, status: 'active' });
+      stubCreates();
+
+      await service.submitIntake(
+        { ...validIntakeInput, claimant: { ...validIntakeInput.claimant, relationshipToBeneficiary: 'Unrelated Caretaker' } },
+        { id: 'caller-1', role: UserRole.SW },
+      );
+
+      expect(saveMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({ relationship: 'Unrelated Caretaker', isPrimary: false }),
       );
     });
 
@@ -555,6 +608,7 @@ describe('IntakeService', () => {
         .mockResolvedValueOnce({ id: 'ben-uuid-1', householdId: 'hh-uuid-1' })
         .mockResolvedValueOnce({ id: 'fm-person-1' })
         .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'hm-claim-uuid-1' })
         .mockResolvedValueOnce({ id: 'case-uuid-1', controlNo: 'KAPWA-2026-00001', status: CaseStatus.ENROLLED })
         .mockResolvedValueOnce({ id: 'cl-uuid-1', status: 'active' });
       (personRepo.create as jest.Mock).mockReturnValue({});
@@ -670,6 +724,29 @@ describe('IntakeService', () => {
       expect(result.candidates[0].matchedOn).toEqual(['phone']);
     });
 
+    it('surfaces a matching household member (not only beneficiaries)', async () => {
+      dataSourceMock.query = jest.fn().mockResolvedValue([
+        {
+          household_id: 'hh-1', sim_surname: 1, sim_first: 1, family_score: 0,
+          dob_match: false, phone_match: false, email_match: false, philhealth_match: false, barangay_match: false,
+          person_id: 'person-member', ben_id: null, role: 'member', member_relationship: 'Child',
+          surname: 'Santos', first_name: 'Lorna', gender: 'Female', age: 12,
+          household_barangay: 'Bigte',
+          primary_ben_id: 'ben-1', primary_surname: 'Santos', primary_first_name: 'Josh', primary_age: 40,
+          all_beneficiaries: [], family_members: [], case_exists_30d: false, last_case_date: null,
+        },
+      ]);
+
+      const result = await service.matchCheck({ surname: 'Santos', firstName: 'Lorna' }, ['Bigte']);
+
+      expect(result.candidates).toHaveLength(1);
+      expect(result.candidates[0].matchedPerson.role).toBe('member');
+      expect(result.candidates[0].matchedPerson.relationship).toBe('Child');
+      expect(result.candidates[0].matchedPerson.firstName).toBe('Lorna');
+      // Household context stays the primary beneficiary.
+      expect(result.candidates[0].primaryBeneficiary.firstName).toBe('Josh');
+    });
+
     it('should return empty candidates when no matches', async () => {
       dataSourceMock.query = jest.fn().mockResolvedValue([]);
 
@@ -764,6 +841,70 @@ describe('IntakeService', () => {
 
       expect(caseRepo.create).toHaveBeenCalledWith(
         expect.not.objectContaining({ assignedWorkerId: 'coord-1' }),
+      );
+    });
+
+    it('adds a family-relation claimant to the household roster on confirm', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+      caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
+
+      const saveMock = queryRunnerMock.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid' })
+        .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: 'claim-uuid' })
+        .mockResolvedValueOnce({ id: 'bc-uuid' })
+        .mockResolvedValueOnce({ id: 'hm-claim-uuid' })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'new-case-id', controlNo: 'KAPWA-2026-00001' })
+        .mockResolvedValueOnce({ id: 'cl-1' });
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+
+      await service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], { id: 'caller-1', role: UserRole.SW });
+
+      expect(saveMock).toHaveBeenCalledWith(
+        expect.objectContaining({ personId: 'claim-uuid', householdId: 'existing-hh', relationship: 'Spouse', isPrimary: false }),
+      );
+    });
+
+    it('does not add a non-family claimant (guardian/caretaker) to the household roster on confirm', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+      caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
+
+      const saveMock = queryRunnerMock.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid' })
+        .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: 'claim-uuid' })
+        .mockResolvedValueOnce({ id: 'bc-uuid' })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'new-case-id', controlNo: 'KAPWA-2026-00001' })
+        .mockResolvedValueOnce({ id: 'cl-1' });
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+
+      await service.confirmMatch(
+        'existing-hh',
+        { ...validIntakeInput, claimant: { ...validIntakeInput.claimant, relationshipToBeneficiary: 'Unrelated Caretaker' } },
+        ['Bigte'],
+        { id: 'caller-1', role: UserRole.SW },
+      );
+
+      expect(saveMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({ relationship: 'Unrelated Caretaker', isPrimary: false }),
       );
     });
   });

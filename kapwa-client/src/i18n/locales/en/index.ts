@@ -1531,6 +1531,7 @@ const en = {
     "reviewEmail": "Email",
     "reviewHelper": "Compare the details, then choose which record to continue with.",
     "reviewPhone": "Phone",
+    "roleMember": "Household member",
     "undo": "Undo",
     "whyFlagged": "Why this was flagged",
     "matchReview": "Match Review",

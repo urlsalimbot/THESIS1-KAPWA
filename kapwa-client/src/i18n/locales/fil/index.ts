@@ -823,6 +823,7 @@ const fil: EnLocale = {
     "reviewEmail": "E-mail",
     "reviewHelper": "Ihambing ang mga detalye, pagkatapos ay piliin kung aling talaan ang ipagpapatuloy.",
     "reviewPhone": "Telepono",
+    "roleMember": "Miyembro ng sambahayan",
     "undo": "Bawiin",
     "whyFlagged": "Bakit ito napag-tugma",
     "matchReview": "Pagsusuri ng Tugma",
