@@ -9,6 +9,8 @@ import { OfficeEventsService } from './office-events.service';
 import { OfficeEventsController } from './office-events.controller';
 import { TeamStatusService } from './team-status.service';
 import { TeamStatusController } from './team-status.controller';
+import { TeamAchievementsService } from './team-achievements.service';
+import { TeamAchievementsController } from './team-achievements.controller';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -27,7 +29,7 @@ import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
     // NotificationsModule for this purpose); the TeamStatus repo is local.
     NotificationsModule,
   ],
-  controllers: [TeamScheduleController, OfficeEventsController, TeamStatusController],
-  providers: [TeamScheduleService, OfficeEventsService, TeamStatusService],
+  controllers: [TeamScheduleController, OfficeEventsController, TeamStatusController, TeamAchievementsController],
+  providers: [TeamScheduleService, OfficeEventsService, TeamStatusService, TeamAchievementsService],
 })
 export class TeamModule {}
