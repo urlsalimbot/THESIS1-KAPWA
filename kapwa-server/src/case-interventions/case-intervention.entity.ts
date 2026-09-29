@@ -34,6 +34,11 @@ export class CaseIntervention extends BaseEntity {
   @Column({ name: 'delivered_by', nullable: true })
   deliveredBy?: string;
 
+  // Staff who created the intervention (uuid FK users). NULL for legacy rows
+  // created before this column existed — they count to nobody in achievements.
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  createdBy?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

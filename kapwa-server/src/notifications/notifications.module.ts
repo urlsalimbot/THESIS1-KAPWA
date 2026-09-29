@@ -20,6 +20,8 @@ import { EmailModule } from '../email/email.module';
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsGateway],
-  exports: [NotificationsService],
+  // The gateway is exported so the team module can push whereabouts
+  // broadcasts (team.status.updated) after status upserts.
+  exports: [NotificationsService, NotificationsGateway],
 })
 export class NotificationsModule {}

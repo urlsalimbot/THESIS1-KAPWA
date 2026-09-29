@@ -26,6 +26,11 @@ export class CaseReferral extends BaseEntity {
   @Column({ name: 'contact_info', type: 'text', nullable: true })
   contactInfo?: string;
 
+  // Staff who added the referral (uuid FK users). NULL for legacy rows created
+  // before this column existed — they count to nobody in achievements.
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  createdBy?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

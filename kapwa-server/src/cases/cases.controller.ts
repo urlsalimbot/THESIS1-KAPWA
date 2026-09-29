@@ -212,8 +212,9 @@ export class CasesController {
   async updateTransitionPlan(
     @Param('id') id: string,
     @Body(new ZodPipe(TransitionPlanSchema)) body: TransitionPlanInput,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.casesService.updateTransitionPlan(id, body);
+    return this.casesService.updateTransitionPlan(id, body, req.user?.id);
   }
 
   @Patch(':id/requirements')

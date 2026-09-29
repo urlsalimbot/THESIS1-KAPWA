@@ -21,7 +21,7 @@ export class CaseInterventionsService {
     });
   }
 
-  async create(caseId: string, data: CreateCaseInterventionInput) {
+  async create(caseId: string, data: CreateCaseInterventionInput, callerId?: string) {
     // RA 10173: a revoked consent blocks new service delivery against the
     // beneficiary's case — historical records stay, new interventions stop.
     const rows = await this.interventionRepo.manager.query(
@@ -39,7 +39,9 @@ export class CaseInterventionsService {
     const cleaned = Object.fromEntries(
       Object.entries(data).map(([k, v]) => [k, v === null ? undefined : v]),
     );
-    const intervention = this.interventionRepo.create({ caseId, ...cleaned });
+    // callerId is optional for legacy call paths; achievements count rows by
+    // created_by, and rows recorded without it count to nobody.
+    const intervention = this.interventionRepo.create({ caseId, ...cleaned, createdBy: callerId });
     const saved = await this.interventionRepo.save(intervention);
 
     try {

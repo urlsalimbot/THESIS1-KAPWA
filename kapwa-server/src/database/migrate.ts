@@ -171,6 +171,7 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_case ON case_interventions(case_id)`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 
@@ -334,6 +335,7 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_referrals_case ON case_referrals(case_id)`);
   await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS reason TEXT`);
   await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS contact_info TEXT`);
+  await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
   await q.query(`UPDATE case_referrals SET reason = '' WHERE reason IS NULL`);
   await q.query(`ALTER TABLE case_referrals ALTER COLUMN reason SET NOT NULL`);
   await q.query(`INSERT INTO case_referrals (case_id, agency, status, notes)
@@ -851,6 +853,72 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
   await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS hash TEXT`);
   await q.query(`ALTER TABLE consent_ledger ADD COLUMN IF NOT EXISTS prev_hash TEXT`);
+  // Team workspace: staff day blocks, internal office events, whereabouts status
+  // (ZAddTeamWorkspace migration)
+  await q.query(`CREATE TABLE IF NOT EXISTS team_schedule_blocks (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    user_id uuid NOT NULL REFERENCES users(id),
+    block_date date NOT NULL,
+    block_type varchar(32) NOT NULL,
+    start_time time NULL,
+    end_time time NULL,
+    note text NULL,
+    created_by uuid NULL REFERENCES users(id),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_team_blocks_user_date ON team_schedule_blocks (user_id, block_date)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS office_events (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    title text NOT NULL,
+    starts_at timestamptz NOT NULL,
+    ends_at timestamptz NOT NULL,
+    repeat_rule jsonb NULL,
+    visible_to varchar(32) NOT NULL DEFAULT 'staff',
+    location text NULL,
+    owner_id uuid NOT NULL REFERENCES users(id),
+    notes text NULL,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_office_events_start ON office_events (starts_at)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS team_status (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    user_id uuid NOT NULL UNIQUE REFERENCES users(id),
+    status varchar(32) NOT NULL,
+    note text NULL,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  // Team workspace amendment: per-entry visibility toggles + schedule invites
+  // (ZAddTeamVisibilityAndInvites migration)
+  await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS visible_to varchar(32) NOT NULL DEFAULT 'team'`);
+  await q.query(`ALTER TABLE team_status ADD COLUMN IF NOT EXISTS visible_to varchar(32) NOT NULL DEFAULT 'team'`);
+  // Team workspace amendment: multi-day blocks — optional inclusive end date;
+  // NULL keeps the block single-day (ZAddTeamScheduleBlockEndDate migration)
+  await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS end_date date NULL`);
+  // Multi-day blocks backstop: end_date (when set) must stay on/after
+  // block_date — DB-level CHECK so no writer can persist end_date < block_date.
+  // PostgreSQL lacks ADD CONSTRAINT IF NOT EXISTS, so the DO block guards on
+  // pg_constraint by name (ZAddTeamScheduleBlockEndDateCheck migration).
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_team_schedule_blocks_end_date') THEN
+      ALTER TABLE team_schedule_blocks ADD CONSTRAINT chk_team_schedule_blocks_end_date CHECK (end_date IS NULL OR end_date >= block_date);
+    END IF;
+  END $$;`);
+  await q.query(`CREATE TABLE IF NOT EXISTS team_invites (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    from_user_id uuid NOT NULL REFERENCES users(id),
+    to_user_id uuid NOT NULL REFERENCES users(id),
+    invite_date date NOT NULL,
+    block_type varchar(32) NOT NULL,
+    note text NULL,
+    status varchar(16) NOT NULL DEFAULT 'pending',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    responded_at timestamptz NULL
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_team_invites_to_status ON team_invites (to_user_id, status)`);
+  // Team workspace amendment fix: one pending invite per (from, to, date) —
+  // duplicate pending POSTs and concurrent accepts cannot twin rows
+  // (ZAddTeamInvitePendingUnique migration)
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_team_invites_pending ON team_invites (from_user_id, to_user_id, invite_date) WHERE status = 'pending'`);
 
   // -- Hash chain: runtime writer so the auditor's verifyHashChain is not
   //    vacuous. Chain semantics (must match audit.service.verifyHashChain):

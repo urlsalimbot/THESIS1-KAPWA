@@ -41,6 +41,7 @@ const CoordinatorReferralListPage = lazy(() => import('./pages/CoordinatorReferr
 const CoordinatorReferralDetailPage = lazy(() => import('./pages/CoordinatorReferralDetailPage').then(m => ({ default: m.CoordinatorReferralDetailPage })));
 const ReferralReviewPage = lazy(() => import('./pages/ReferralReviewPage').then(m => ({ default: m.ReferralReviewPage })));
 const ReferralsPage = lazy(() => import('./pages/ReferralsPage').then(m => ({ default: m.ReferralsPage })));
+const TeamWorkspacePage = lazy(() => import('./pages/TeamWorkspacePage').then(m => ({ default: m.TeamWorkspacePage })));
 const AgencyReferralDetailPage = lazy(() => import('./pages/AgencyReferralDetailPage').then(m => ({ default: m.AgencyReferralDetailPage })));
 const AccessCardViewPage = lazy(() => import('./pages/AccessCardViewPage').then(m => ({ default: m.AccessCardViewPage })));
 const CoordinatorAccessCardsPage = lazy(() => import('./pages/CoordinatorAccessCardsPage').then(m => ({ default: m.CoordinatorAccessCardsPage })));
@@ -147,6 +148,7 @@ export const router = createBrowserRouter([
   { path: '/coordinator/tracker', element: <Private roles={['coordinator']}><CaseTrackerPage /></Private> },
   { path: '/coordinator/access-cards', element: <Private roles={['coordinator']}><CoordinatorAccessCardsPage /></Private> },
   { path: '/referrals', element: <Private roles={['admin','social_worker','coordinator']}><ReferralsPage /></Private> },
+  { path: '/team', element: <Private roles={['admin','social_worker','coordinator']}><TeamWorkspacePage /></Private> },
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },

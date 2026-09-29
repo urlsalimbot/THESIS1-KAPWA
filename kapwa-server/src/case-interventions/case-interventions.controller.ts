@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
+import { AuthenticatedRequest } from '../auth/types';
 import { CaseInterventionsService } from './case-interventions.service';
 import { CreateCaseInterventionSchema, UpdateCaseInterventionSchema, CreateCaseInterventionInput, UpdateCaseInterventionInput } from './dto/case-interventions.zod';
 
@@ -19,8 +20,12 @@ export class CaseInterventionsController {
 
   @Post()
   @Roles('admin', 'social_worker')
-  create(@Param('caseId') caseId: string, @Body(new ZodPipe(CreateCaseInterventionSchema)) body: CreateCaseInterventionInput) {
-    return this.service.create(caseId, body);
+  create(
+    @Param('caseId') caseId: string,
+    @Body(new ZodPipe(CreateCaseInterventionSchema)) body: CreateCaseInterventionInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.service.create(caseId, body, req.user?.id);
   }
 
   @Patch(':id')
