@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   Request,
+  Res,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -22,6 +23,8 @@ import {
   CloseReferralSchema,
   CreateInterAgencyReferralSchema,
   DeclineReferralSchema,
+  IssueEndorsementLetterInput,
+  IssueEndorsementLetterSchema,
 } from './dto/inter-agency-referrals.zod';
 import { AuthenticatedRequest } from '../auth/types';
 
@@ -49,6 +52,39 @@ export class InterAgencyReferralsController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.svc.findByPerson(personId, req.user);
+  }
+
+  @Post('case/:caseId/endorsement-letter')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Issue an endorsement letter — records the referral and returns the PDF' })
+  async issueEndorsementLetter(
+    @Param('caseId', new ParseUUIDPipe()) caseId: string,
+    @Body(new ZodPipe(IssueEndorsementLetterSchema)) body: IssueEndorsementLetterInput,
+    @Request() req: AuthenticatedRequest,
+    @Res() res: any,
+  ) {
+    const { referral, pdf } = await this.svc.issueEndorsementLetter(caseId, body, req.user);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="ENDORSEMENT-${referral.id.slice(0, 8).toUpperCase()}.pdf"`,
+    });
+    res.send(pdf);
+  }
+
+  @Get(':id/endorsement-letter')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Download an already-issued endorsement letter' })
+  async endorsementLetter(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Request() req: AuthenticatedRequest,
+    @Res() res: any,
+  ) {
+    const pdf = await this.svc.endorsementLetterPdf(id, req.user);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="ENDORSEMENT-${id.slice(0, 8).toUpperCase()}.pdf"`,
+    });
+    res.send(pdf);
   }
 
   @Get('person/:personId/benefit-ledger')

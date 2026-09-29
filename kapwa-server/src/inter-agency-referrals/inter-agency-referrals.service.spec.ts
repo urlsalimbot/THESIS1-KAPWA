@@ -405,4 +405,70 @@ describe('InterAgencyReferralsService', () => {
       expect(result.services.some((s: any) => s.agencyName === 'Unassigned office')).toBe(true);
     });
   });
+
+  describe('endorsement letter', () => {
+    const fullReferral = {
+      id: 'r1',
+      caseId: 'c1',
+      fromAgencyId: 'ag-mswdo',
+      toAgencyId: 'ag-rhu',
+      reason: 'Medical coordination',
+      notes: 'Bring philhealth id',
+      legalBasisCode: 'public_authority_sec13',
+      person: { firstName: 'Juan', middleName: 'B.', surname: 'Dela Cruz' },
+      toAgency: { name: 'Rural Health Unit - Norzagaray' },
+      fromAgency: { name: 'MSWDO Norzagaray' },
+      case: { controlNo: 'CASE-2026-0009', clientCategory: 'Indigent' },
+      status: 'referred',
+      createdAt: new Date(),
+    } as any;
+
+    function seedIssueFlow() {
+      agencyRepoMock.findOne.mockImplementation((opts: any) => {
+        if (opts.where?.code === 'MSWDO') return Promise.resolve({ id: 'ag-mswdo', name: 'MSWDO Norzagaray' });
+        return Promise.resolve({ id: 'ag-rhu', name: 'Rural Health Unit - Norzagaray' });
+      });
+      caseRepoMock.findOne.mockResolvedValue({ id: 'c1', beneficiaryId: 'b1' });
+      benRepoMock.findOne.mockResolvedValue({ id: 'b1', personId: 'p1' });
+      repoMock.create.mockImplementation((d: any) => d);
+      repoMock.save.mockImplementation(async (d: any) => ({ id: 'r1', ...d }));
+      repoMock.findOne.mockResolvedValue(fullReferral);
+    }
+
+    it('records the referral and returns a letter PDF', async () => {
+      seedIssueFlow();
+      const actor = { id: 'u1', role: 'admin', fullName: 'Rosario Mendoza' } as any;
+
+      const { referral, pdf } = await service.issueEndorsementLetter(
+        'c1',
+        { toAgencyId: 'ag-rhu', reason: 'Medical coordination', legalBasisCode: 'public_authority_sec13', notes: 'Bring philhealth id' },
+        actor,
+      );
+
+      expect(referral.caseId).toBe('c1');
+      expect(referral.toAgencyId).toBe('ag-rhu');
+      expect(pdf.subarray(0, 4).toString('latin1')).toBe('%PDF');
+      expect(pdf.length).toBeGreaterThan(1000);
+    });
+
+    it('denies the letter for a referral outside the caller agency', async () => {
+      repoMock.findOne.mockResolvedValue({ ...fullReferral, fromAgencyId: 'ag-other', toAgencyId: 'ag-other' });
+
+      await expect(
+        service.endorsementLetterPdf('r1', { id: 'x', role: 'social_worker', agencyId: 'ag-rhu' } as any),
+      ).rejects.toThrow('not associated with your agency');
+    });
+
+    it('re-downloads the letter for an existing referral', async () => {
+      repoMock.findOne.mockResolvedValue(fullReferral);
+      agencyRepoMock.findOne.mockResolvedValue({ id: 'ag-mswdo', name: 'MSWDO Norzagaray' });
+
+      const pdf = await service.endorsementLetterPdf('r1', { id: 'u1', role: 'admin' } as any);
+
+      expect(pdf.subarray(0, 4).toString('latin1')).toBe('%PDF');
+      expect(repoMock.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'r1' } }),
+      );
+    });
+  });
 });

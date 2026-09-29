@@ -27,7 +27,9 @@ import {
   CloseReferralInput,
   CreateInterAgencyReferralInput,
   DeclineReferralInput,
+  IssueEndorsementLetterInput,
 } from './dto/inter-agency-referrals.zod';
+import { buildEndorsementLetterPdf, EndorsementLetterData } from './endorsement-letter.builder';
 
 const TRANSITIONS: Record<InterAgencyReferralStatus, InterAgencyReferralStatus[]> = {
   referred: ['received', 'declined'],
@@ -485,5 +487,70 @@ export class InterAgencyReferralsService {
         `Cannot transition from "${current}" to "${next}". Allowed: ${allowed?.join(', ') || 'none'}`,
       );
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Endorsement letter — the referral step's only action.
+  // ------------------------------------------------------------------
+
+  async issueEndorsementLetter(
+    caseId: string,
+    dto: IssueEndorsementLetterInput,
+    caller: User,
+  ): Promise<{ referral: InterAgencyReferral; pdf: Buffer }> {
+    const referral = await this.create({ ...dto, caseId }, caller);
+    const pdf = await this.endorsementLetterPdf(referral.id, caller);
+    return { referral, pdf };
+  }
+
+  async endorsementLetterPdf(referralId: string, caller: User): Promise<Buffer> {
+    const ref = await this.repo.findOne({
+      where: { id: referralId },
+      relations: ['toAgency', 'fromAgency', 'case', 'person'],
+    });
+    if (!ref) throw new NotFoundException('Referral not found');
+    if (
+      caller.role !== 'admin' &&
+      caller.agencyId !== ref.fromAgencyId &&
+      caller.agencyId !== ref.toAgencyId
+    ) {
+      throw new ForbiddenException('Referral is not associated with your agency');
+    }
+
+    const [mswdo, office] = await Promise.all([
+      this.agencyRepo.findOne({ where: { code: 'MSWDO', isActive: true } }),
+      ref.toAgency?.name,
+    ]);
+    const officeName = mswdo?.name || 'MSWDO Norzagaray';
+
+    const person = ref.person;
+    const nameParts = [
+      person?.firstName,
+      person?.middleName,
+      person?.surname,
+      person?.extension,
+    ].filter((p): p is string => Boolean(p));
+    const beneficiaryName = nameParts.join(' ').trim() || 'Client';
+
+    const data: EndorsementLetterData = {
+      officeName,
+      letterNo: ref.case?.controlNo || ref.id.slice(0, 8).toUpperCase(),
+      dateLabel: new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Manila',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }).format(new Date()),
+      toAgencyName: office || ref.toAgencyId,
+      beneficiaryName,
+      caseCategory: ref.case?.clientCategory,
+      reason: ref.reason,
+      legalBasis: ref.legalBasisCode,
+      notes: ref.notes,
+      preparedBy: caller.fullName || 'MSWDO',
+      preparedByRole: caller.role === 'admin' ? 'MSWDO Admin' : caller.role === 'social_worker' ? 'MSWDO Social Worker' : undefined,
+    };
+
+    return buildEndorsementLetterPdf(data);
   }
 }
