@@ -88,7 +88,7 @@ export class SummaryReportService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
-  async build(year = new Date().getFullYear(), quarter = Math.floor(new Date().getMonth() / 3) + 1): Promise<SummaryReportData> {
+  async build(year = new Date().getFullYear(), semester = Math.floor(new Date().getMonth() / 6) + 1): Promise<SummaryReportData> {
     const yearStart = new Date(`${year}-01-01T00:00:00+08:00`);
     const yearEnd = new Date(`${year + 1}-01-01T00:00:00+08:00`);
     const [rows, programRows] = await Promise.all([
@@ -99,7 +99,7 @@ export class SummaryReportService {
     const columns = buildColumns();
 
     const annual = emptyCounts(columns);
-    const monthly = [0, 1, 2].map((i) => monthRange(year, (quarter - 1) * 3 + i));
+    const monthly = [0, 1, 2, 3, 4, 5].map((i) => monthRange(year, (semester - 1) * 6 + i));
     const monthlyCounts = monthly.map(() => emptyCounts(columns));
     const caseList: CaseListRow[] = [];
 
@@ -122,7 +122,7 @@ export class SummaryReportService {
       caseList.push(this.toCaseListRow(r, index + 1, col.code));
     });
 
-    const quarterSummary = monthlyCounts.reduce((acc, c) => {
+    const semesterSummary = monthlyCounts.reduce((acc, c) => {
       acc.male += c.male; acc.female += c.female; acc.total += c.total;
       for (const k of Object.keys(c.byColumn)) acc.byColumn[k] += c.byColumn[k];
       return acc;
@@ -135,10 +135,10 @@ export class SummaryReportService {
     ]);
 
     return {
-      year, quarter, columns,
+      year, semester, columns,
       annual: { title: `SUMMARY REPORT ${year}`, counts: annual },
       monthly: monthly.map((m, i) => ({ title: m.label, counts: monthlyCounts[i] })),
-      quarterSummary: { title: `${ORDINAL[quarter - 1]} QUARTER SUMMARY`, counts: quarterSummary },
+      semesterSummary: { title: `${ORDINAL[semester - 1]} SEMESTER SUMMARY`, counts: semesterSummary },
       caseList,
       officeName,
       preparedBy: prepared?.fullName || REPORT_FALLBACK_SIGNATORIES.preparedBy,

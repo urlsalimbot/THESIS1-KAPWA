@@ -92,7 +92,7 @@ export function DashboardPage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [summaryYear, setSummaryYear] = useState(now.getFullYear());
-  const [summaryQuarter, setSummaryQuarter] = useState(Math.floor(now.getMonth() / 3) + 1);
+  const [summarySemester, setSummarySemester] = useState(Math.floor(now.getMonth() / 6) + 1);
   const [summaryExporting, setSummaryExporting] = useState(false);
 
   async function handleExportSummary() {
@@ -100,7 +100,7 @@ export function DashboardPage() {
     setSummaryExporting(true);
     setExportError(null);
     try {
-      await downloadSummaryReport(summaryYear, summaryQuarter);
+      await downloadSummaryReport(summaryYear, summarySemester);
     } catch (err: any) {
       setExportError(err.message || t('dashboard.exportFailed', 'Export failed'));
       setTimeout(() => setExportError(null), 4000);
@@ -116,10 +116,11 @@ export function DashboardPage() {
         className="h-8 rounded-md border bg-background px-2 text-xs">
         {[0, 1, 2, 3].map((d) => { const y = now.getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}
       </select>
-      <select aria-label={t('reports.summaryQuarter', 'Summary report quarter')} value={summaryQuarter}
-        onChange={(e) => setSummaryQuarter(Number(e.target.value))}
+      <select aria-label={t('reports.summarySemester', 'Summary report semester')} value={summarySemester}
+        onChange={(e) => setSummarySemester(Number(e.target.value))}
         className="h-8 rounded-md border bg-background px-2 text-xs">
-        {[1, 2, 3, 4].map((q) => <option key={q} value={q}>Q{q}</option>)}
+        <option value={1}>{t('reports.semester1', '1st Semester (Q1+Q2)')}</option>
+        <option value={2}>{t('reports.semester2', '2nd Semester (Q3+Q4)')}</option>
       </select>
       <Button size="sm" variant="outline" onClick={handleExportSummary} disabled={summaryExporting}>
         <Download size={14} className="mr-1" /> {summaryExporting ? t('dashboard.generating', 'Generating...') : t('reports.exportSummary', 'Export Summary Report')}

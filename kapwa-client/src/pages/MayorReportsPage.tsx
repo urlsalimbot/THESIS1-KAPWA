@@ -90,7 +90,7 @@ export function MayorReportsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [summaryYear, setSummaryYear] = useState(new Date().getFullYear());
-  const [summaryQuarter, setSummaryQuarter] = useState(Math.floor(new Date().getMonth() / 3) + 1);
+  const [summarySemester, setSummarySemester] = useState(Math.floor(new Date().getMonth() / 6) + 1);
 
   const isCustom = Boolean(customFrom || customTo);
   const range = isCustom
@@ -121,7 +121,7 @@ export function MayorReportsPage() {
     setExporting(true);
     setExportError(null);
     try {
-      await downloadSummaryReport(summaryYear, summaryQuarter);
+      await downloadSummaryReport(summaryYear, summarySemester);
     } catch (err: any) {
       setExportError(err.message || t('dashboard.exportFailed', 'Export failed'));
       setTimeout(() => setExportError(null), 4000);
@@ -275,12 +275,13 @@ export function MayorReportsPage() {
           {[0, 1, 2, 3].map((d) => { const y = new Date().getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}
         </select>
         <select
-          aria-label={t('reports.summaryQuarter', 'Summary report quarter')}
-          value={summaryQuarter}
-          onChange={(e) => setSummaryQuarter(Number(e.target.value))}
+          aria-label={t('reports.summarySemester', 'Summary report semester')}
+          value={summarySemester}
+          onChange={(e) => setSummarySemester(Number(e.target.value))}
           className="h-8 rounded-md border bg-background px-2 text-xs"
         >
-          {[1, 2, 3, 4].map((q) => <option key={q} value={q}>Q{q}</option>)}
+          <option value={1}>{t('reports.semester1', '1st Semester (Q1+Q2)')}</option>
+          <option value={2}>{t('reports.semester2', '2nd Semester (Q3+Q4)')}</option>
         </select>
         <span className="text-xs text-muted-foreground">{periodLabel}</span>
         {exportError && <span className="text-xs text-destructive">{exportError}</span>}

@@ -52,7 +52,7 @@ describe('SummaryReportService.build', () => {
       row({ case_id: 'c3', gender: 'Female', referral_text: 'Referred to PCSO' }),
       row({ case_id: 'c4', gender: 'Male', has_csr: true }),
     ]);
-    const data = await service.build(2025, 2);
+    const data = await service.build(2025, 1);
     const c = data.annual.counts;
     expect(c.male + c.female).toBe(c.total);
     expect(c.total).toBe(4);
@@ -65,14 +65,17 @@ describe('SummaryReportService.build', () => {
     expect(c.byColumn['CSR']).toBe(1);
   });
 
-  it('builds three month tables plus a quarter summary for Q2', async () => {
+  it('builds six month tables plus a semester summary', async () => {
     const { service } = makeService([
-      row({ created_at: new Date('2025-05-02T02:00:00Z'), program_id: 'p-med', program_name: 'Medical Assistance' }),
+      row({ created_at: new Date('2025-08-02T02:00:00Z'), program_id: 'p-med', program_name: 'Medical Assistance' }),
     ]);
     const data = await service.build(2025, 2);
-    expect(data.monthly.map((m) => m.title)).toEqual(['April 1-30, 2025', 'May 1-31, 2025', 'June 1-30, 2025']);
+    expect(data.monthly.map((m) => m.title)).toEqual([
+      'July 1-31, 2025', 'August 1-31, 2025', 'September 1-30, 2025',
+      'October 1-31, 2025', 'November 1-30, 2025', 'December 1-31, 2025',
+    ]);
     expect(data.monthly[1].counts.total).toBe(1);
-    expect(data.quarterSummary.title).toBe('2nd QUARTER SUMMARY');
+    expect(data.semesterSummary.title).toBe('2nd SEMESTER SUMMARY');
   });
 
   it('uses leap-year February and falls back to constants when no users exist', async () => {
@@ -85,7 +88,7 @@ describe('SummaryReportService.build', () => {
 
   it('exposes the fixed 18-column reference set', async () => {
     const { service } = makeService([]);
-    const data = await service.build(2025, 2);
+    const data = await service.build(2025, 1);
     const keys = columnKeys(data);
     expect(keys).toHaveLength(18);
     expect(keys[0]).toBe('MALE');
@@ -100,7 +103,7 @@ describe('SummaryReportService.build', () => {
     const { service } = makeService([
       row({ case_id: 'c9', gender: 'Female', client_category: 'IP', has_csr: true }),
     ]);
-    const data: SummaryReportData = await service.build(2025, 2);
+    const data: SummaryReportData = await service.build(2025, 1);
     const r = data.caseList[0];
     expect(r.gender).toBe('F');
     expect(r.categories.ip).toBe(true);
@@ -113,7 +116,7 @@ describe('SummaryReportService.build', () => {
       row({ case_id: 'c11', referral_agencies: 'DSWD Field Office III, PCSO' }),
       row({ case_id: 'c12', referral_agencies: '' }),
     ]);
-    const data: SummaryReportData = await service.build(2025, 2);
+    const data: SummaryReportData = await service.build(2025, 1);
     expect(data.caseList[0].intervention).toBe('Referred to PAO');
     expect(data.caseList[1].intervention).toBe('Referred to DSWD Field Office III, PCSO');
     // No referral → the ad-hoc service text is aligned to the most relevant
@@ -136,7 +139,7 @@ describe('SummaryReportService.build', () => {
       }),
       row({ case_id: 'c15', referral_agencies: 'DSWD FO3' }),
     ]);
-    const data: SummaryReportData = await service.build(2025, 2);
+    const data: SummaryReportData = await service.build(2025, 1);
     expect(data.caseList[0].intervention).toBe('Referred to PAO');
     expect(data.caseList[1].intervention).toBe('FA');
     expect(data.caseList[2].intervention).toBe('Referred to DSWD FO3');

@@ -231,15 +231,18 @@ const summaryEmptyTable = (title) => {
 
 const summaryReportData = {
   year: 2025,
-  quarter: 2,
+  semester: 2,
   columns: SUMMARY_PROG_COLUMNS,
   annual: summaryEmptyTable('SUMMARY REPORT 2025'),
   monthly: [
-    summaryEmptyTable('April 1-30, 2025'),
-    summaryEmptyTable('May 1-31, 2025'),
-    summaryEmptyTable('June 1-30, 2025'),
+    summaryEmptyTable('July 1-31, 2025'),
+    summaryEmptyTable('August 1-31, 2025'),
+    summaryEmptyTable('September 1-30, 2025'),
+    summaryEmptyTable('October 1-31, 2025'),
+    summaryEmptyTable('November 1-30, 2025'),
+    summaryEmptyTable('December 1-31, 2025'),
   ],
-  quarterSummary: summaryEmptyTable('2nd QUARTER SUMMARY'),
+  semesterSummary: summaryEmptyTable('2nd SEMESTER SUMMARY'),
   caseList: [
     {
       no: 1,
@@ -312,7 +315,7 @@ const documents = [
   {
     n: '14',
     slug: '14-summary-report',
-    label: 'GAD Summary Report (annual/quarter/case list)',
+    label: 'GAD Summary Report (annual/semestral/case list)',
     source: 'reports/summary-report-pdf.builder.ts',
     paper: 'US Legal landscape',
     build: () => buildSummaryReportPdf(summaryReportData),
