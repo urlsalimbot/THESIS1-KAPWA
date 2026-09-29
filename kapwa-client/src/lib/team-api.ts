@@ -28,7 +28,8 @@ export interface TeamEventInput {
   title: string;
   startsAt: string;
   endsAt: string;
-  repeatRule?: Record<string, unknown>;
+  /** null clears a stored repeat rule (PATCH — the server overwrites only when the field is present). */
+  repeatRule?: Record<string, unknown> | null;
   visibleTo: string;
   location?: string;
   notes?: string;

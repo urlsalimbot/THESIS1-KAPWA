@@ -259,6 +259,30 @@ describe('TeamWorkspacePage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('unchecking Repeat weekly sends repeatRule: null in the PATCH, removing the stored rule', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+    const user = userEvent.setup();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Weekly sync' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('checkbox', { name: 'Repeat weekly' })).toBeChecked();
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Repeat weekly' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    // Server updateEvent only overwrites repeat_rule when the field is
+    // present (`dto.repeatRule !== undefined`), so removal must be explicit
+    // null — omitting it would leave the stored rule untouched.
+    await waitFor(() =>
+      expect(mockApiPatch).toHaveBeenCalledWith(
+        '/team/events/e1',
+        expect.objectContaining({ repeatRule: null }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
   it('BlockEditorDialog hides Save/Delete affordances when readOnly', async () => {
     render(
       <MemoryRouter>

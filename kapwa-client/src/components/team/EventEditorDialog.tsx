@@ -102,6 +102,7 @@ export function EventEditorDialog({
       setInterval(
         weekly && rule && typeof rule.interval === 'number' ? `${rule.interval}` : '1',
       );
+      // Round-trip: an instant until becomes date-only, which includes the boundary instance (instants excluded it).
       setUntil(
         weekly && rule && typeof rule.until === 'string' ? normalizeUntilDate(rule.until) : '',
       );
@@ -132,7 +133,7 @@ export function EventEditorDialog({
       endsAt: new Date(endsAt).toISOString(),
       ...(repeatWeekly
         ? { repeatRule: { freq: 'weekly', interval: intervalN, ...(until ? { until } : {}) } }
-        : {}),
+        : { repeatRule: null }),
       visibleTo,
       ...(location.trim() ? { location: location.trim() } : {}),
       ...(notes.trim() ? { notes: notes.trim() } : {}),

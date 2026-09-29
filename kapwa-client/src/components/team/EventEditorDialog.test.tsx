@@ -184,7 +184,7 @@ describe('EventEditorDialog', () => {
     );
   });
 
-  it('unchecking Repeat weekly drops the rule from the saved payload (edit mode)', async () => {
+  it('unchecking Repeat weekly sends repeatRule: null so the stored rule is removed (edit mode)', async () => {
     const { onSave } = renderDialog({ event: EVENT });
     const user = userEvent.setup();
 
@@ -195,6 +195,9 @@ describe('EventEditorDialog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith(expect.not.objectContaining({ repeatRule: expect.anything() }));
+    // The server only overwrites repeatRule when the field is present
+    // (`dto.repeatRule !== undefined`), so unchecking must send null
+    // explicitly — omitting it would leave the stored rule in place.
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ repeatRule: null }));
   });
 });
