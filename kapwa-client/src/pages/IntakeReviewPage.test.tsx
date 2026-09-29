@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { IntakeReviewPage } from './IntakeReviewPage';
 import { uploadIntakeIdPhotos } from '@/lib/intake-id-photo';
+import { api } from '../lib/api';
 import { axe } from 'vitest-axe';
 
 vi.mock('@/lib/intake-id-photo', () => ({
@@ -251,6 +252,58 @@ describe('IntakeReviewPage', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalled();
     });
+  });
+
+  it('inverts household relationships when confirming a member match', async () => {
+    mockLocationState = {
+      candidates: [
+        {
+          householdId: 'hh-querubin', score: 0.9, matchedOn: ['both_names'], caseExistsWithin30Days: false,
+          primaryBeneficiary: {
+            id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo', gender: 'Male', age: 48,
+            dob: '1978-12-01', occupation: 'Farmer', estimatedMonthlyIncome: 8000,
+            civilStatus: 'Married', currentAddress: { barangay: 'Partida' },
+          },
+          matchedPerson: {
+            id: 'person-liza', role: 'member', relationship: 'Child', surname: 'Querubin', firstName: 'Liza',
+            gender: 'Female', age: 11, dob: '2015-03-30', occupation: 'Student', estimatedMonthlyIncome: 0,
+            civilStatus: 'Single', currentAddress: { barangay: 'Partida' },
+          },
+          allBeneficiaries: [{ id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo' }],
+          familyMembers: [
+            { id: 'fm-liza', fullName: 'Liza Querubin', surname: 'Querubin', firstName: 'Liza', gender: 'Female', dob: '2015-03-30', relationship: 'Child', age: 11, occupation: 'Student', income: 0, status: 'Active' },
+            { id: 'fm-consuelo', fullName: 'Consuelo Querubin', surname: 'Querubin', firstName: 'Consuelo', gender: 'Female', dob: '1985-05-05', relationship: 'Spouse', age: 41, occupation: 'Housewife', income: 0, status: 'Active' },
+          ],
+          pastCases: [], lastApprovedCaseDate: null,
+        },
+      ],
+      intakeData: {
+        beneficiary: { surname: 'Querubin', firstName: 'Liza', gender: 'Female', dob: '2015-03-30', currentAddress: { barangay: 'Partida' } },
+        claimant: { surname: 'Querubin', firstName: 'Consuelo', relationshipToBeneficiary: 'Parent' },
+        familyMembers: [],
+        case: {},
+      },
+    };
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+
+    const confirmBtn = screen.getAllByRole('button', { name: /update info/i })[0];
+    fireEvent.click(confirmBtn);
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/intake/confirm/hh-querubin', expect.anything());
+    });
+    const call = (api.post as ReturnType<typeof vi.fn>).mock.calls.find(
+      (c: unknown[]) => c[0] === '/intake/confirm/hh-querubin',
+    );
+    const fm = (call![1] as { familyMembers: Array<{ firstName: string; relationship: string }> }).familyMembers;
+    expect(fm.map(m => ({ firstName: m.firstName, relationship: m.relationship }))).toEqual([
+      { firstName: 'Pablo', relationship: 'Parent' },
+      { firstName: 'Consuelo', relationship: 'Parent' },
+    ]);
+    expect(fm.some(m => m.firstName === 'Liza')).toBe(false);
   });
 
   it('uploads the pending ID photo once a case is confirmed', async () => {

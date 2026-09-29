@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { statusLabel } from '@/i18n/display';
 import { PageShell } from '@/components/PageShell';
+import { buildPrefilledFamily } from '@/components/intake/prefillFamily';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -182,9 +183,33 @@ export function IntakeReviewPage() {
   async function handleConfirm(householdId: string) {
     setLoadingId(householdId);
     try {
+      const candidate = sorted.find(c => c.householdId === householdId);
+      let body = intakeData;
+      if (candidate?.matchedPerson?.role === 'member' && intakeData?.beneficiary) {
+        // Member matches follow the same inversion as the pop-up prefill: the
+        // matched person becomes the beneficiary, so the roster's relationships
+        // (stored relative to the old head) are re-expressed relative to them —
+        // old head Parent -> new beneficiary Child, and so on — and the
+        // matched person is removed from the family list.
+        body = {
+          ...intakeData,
+          familyMembers: buildPrefilledFamily(candidate).map(m => ({
+            surname: m.surname,
+            firstName: m.firstName,
+            middleName: m.middleName || '',
+            gender: m.gender,
+            dob: m.dob,
+            age: m.age,
+            relationship: m.relationship,
+            occupation: m.occupation,
+            income: m.income != null ? Number(m.income) : undefined,
+            status: m.status || '',
+          })),
+        };
+      }
       const result = await api.post<{ caseCreated: boolean; caseId?: string; message: string }>(
         `/intake/confirm/${householdId}`,
-        intakeData,
+        body,
       );
       // The intake has been consumed either way (case created, or existing case
       // updated), so the draft is spent.
