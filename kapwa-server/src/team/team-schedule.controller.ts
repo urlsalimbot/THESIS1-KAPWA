@@ -54,14 +54,14 @@ export class TeamScheduleController {
 
   @Post()
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Create a schedule block (admin for anyone, worker for self)' })
+  @ApiOperation({ summary: 'Create a schedule block (owner only)' })
   create(@Body() dto: TeamBlockInput, @Request() req: AuthenticatedRequest) {
     return this.svc.createBlock(dto, req.user);
   }
 
   @Patch(':id')
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Update a schedule block (admin or owner)' })
+  @ApiOperation({ summary: 'Update a schedule block (admin or owner; admin may reassign)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: Partial<TeamBlockInput>,

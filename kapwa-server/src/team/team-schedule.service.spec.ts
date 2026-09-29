@@ -48,16 +48,17 @@ describe('TeamScheduleService', () => {
     expect(repoMock.save).not.toHaveBeenCalled();
   });
 
-  it('201 path: admin creates a block for another staff', async () => {
-    // repo.create+save mocked; expected saved row returned with createdBy admin id
-    repoMock.create.mockImplementation((d: any) => d);
-    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
-    const row = await service.createBlock(
-      { userId: 'w2', blockDate: '2026-10-01', blockType: 'home_visit' } as any,
-      adminReq as any,
-    );
-    expect(repoMock.save).toHaveBeenCalled();
-    expect(row).toEqual(expect.objectContaining({ id: 'b1', userId: 'w2', createdBy: 'a1' }));
+  it('403 when an admin creates a block for another staff (owner-strict amendment)', async () => {
+    // Amendment: no admin create-for-others path — admin follows the same
+    // owner-only rule as workers.
+    await expect(
+      service.createBlock(
+        { userId: 'w2', blockDate: '2026-10-01', blockType: 'home_visit' } as any,
+        adminReq as any,
+      ) as any,
+    ).rejects.toThrow(/Forbidden|403/);
+    expect(repoMock.create).not.toHaveBeenCalled();
+    expect(repoMock.save).not.toHaveBeenCalled();
   });
 
   it('a worker can create a block for themselves', async () => {
@@ -69,6 +70,38 @@ describe('TeamScheduleService', () => {
     );
     expect(row.createdBy).toBe('w1');
     expect(repoMock.save).toHaveBeenCalled();
+  });
+
+  it('createBlock defaults visibleTo to team when absent', async () => {
+    repoMock.create.mockImplementation((d: any) => d);
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b3', ...d }));
+    const row = await service.createBlock(
+      { userId: 'w1', blockDate: '2026-10-02', blockType: 'remote' } as any,
+      workerReq as any,
+    );
+    expect(repoMock.save).toHaveBeenCalledWith(expect.objectContaining({ visibleTo: 'team' }));
+    expect(row.visibleTo).toBe('team');
+  });
+
+  it('createBlock persists an explicit visibleTo toggle for self', async () => {
+    repoMock.create.mockImplementation((d: any) => d);
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b4', ...d }));
+    const row = await service.createBlock(
+      { userId: 'w1', blockDate: '2026-10-02', blockType: 'field_day', visibleTo: 'team_coordinators' } as any,
+      workerReq as any,
+    );
+    expect(repoMock.save).toHaveBeenCalledWith(expect.objectContaining({ visibleTo: 'team_coordinators' }));
+    expect(row.visibleTo).toBe('team_coordinators');
+  });
+
+  it('rejects an invalid visibleTo with 400', async () => {
+    await expect(
+      service.createBlock(
+        { userId: 'w1', blockDate: '2026-10-01', blockType: 'in_office', visibleTo: 'secret' } as any,
+        workerReq as any,
+      ) as any,
+    ).rejects.toThrow(/Unknown block visibility|Bad Request/);
+    expect(repoMock.save).not.toHaveBeenCalled();
   });
 
   it('rejects an unknown block type with 400', async () => {
@@ -125,6 +158,22 @@ describe('TeamScheduleService', () => {
     expect(repoMock.save).toHaveBeenCalled();
   });
 
+  it('updateBlock allows the owner to toggle their own visibleTo', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', visibleTo: 'team' });
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
+    const row = await service.updateBlock('b1', { visibleTo: 'team_coordinators' } as any, workerReq as any);
+    expect(row.visibleTo).toBe('team_coordinators');
+    expect(repoMock.save).toHaveBeenCalled();
+  });
+
+  it('updateBlock rejects an invalid visibleTo with 400 before saving', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', visibleTo: 'team' });
+    await expect(
+      service.updateBlock('b1', { visibleTo: 'secret' } as any, workerReq as any) as any,
+    ).rejects.toThrow(/Unknown block visibility|Bad Request/);
+    expect(repoMock.save).not.toHaveBeenCalled();
+  });
+
   it('updateBlock allows an admin to reassign a block to another staff', async () => {
     repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1' });
     repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
@@ -164,8 +213,26 @@ describe('TeamScheduleService', () => {
         where: expect.objectContaining({
           // In(['w1','w3']) → FindOperator carrying the resolved staff ids
           userId: expect.objectContaining({ _type: 'in', _value: ['w1', 'w3'] }),
+          // Amendment: coordinators only see blocks toggled to them
+          visibleTo: 'team_coordinators',
         }),
       }),
+    );
+    expect(result).toHaveLength(1);
+  });
+
+  it('coordinator list excludes team-visible-only blocks via the visibleTo filter', async () => {
+    repoMock.manager.query.mockResolvedValue([{ user_id: 'w1' }]);
+    repoMock.find.mockResolvedValue([{ id: 'b1', userId: 'w1', visibleTo: 'team_coordinators' }]);
+    const result = await service.listBlocks(
+      new Date('2026-09-28T00:00:00Z'),
+      new Date('2026-10-04T00:00:00Z'),
+      undefined,
+      'coordinator',
+      'Bigte',
+    );
+    expect(repoMock.find).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ visibleTo: 'team_coordinators' }) }),
     );
     expect(result).toHaveLength(1);
   });

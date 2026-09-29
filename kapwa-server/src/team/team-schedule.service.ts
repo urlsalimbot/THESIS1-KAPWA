@@ -15,6 +15,14 @@ export const BLOCK_TYPES: ReadonlySet<string> = new Set([
   'remote',
 ]);
 
+// Canonical block-visibility vocabulary (plan constraint): a block is visible
+// to the whole team by default, or additionally to barangay coordinators.
+// Stored as varchar(32) and validated here — the same shape as BLOCK_TYPES.
+export const BLOCK_VISIBLE_TO: ReadonlySet<string> = new Set([
+  'team',
+  'team_coordinators',
+]);
+
 export interface TeamBlockInput {
   userId: string;
   blockDate: string;
@@ -22,6 +30,7 @@ export interface TeamBlockInput {
   startTime?: string;
   endTime?: string;
   note?: string;
+  visibleTo?: string;
 }
 
 // Structural subset of the authenticated user (`req.user`): only the fields
@@ -47,6 +56,14 @@ export class TeamScheduleService {
     if (!BLOCK_TYPES.has(blockType)) {
       throw new BadRequestException(
         `Unknown block type "${blockType}". Allowed: ${[...BLOCK_TYPES].join(', ')}.`,
+      );
+    }
+  }
+
+  private assertVisibleTo(visibleTo: string): void {
+    if (!BLOCK_VISIBLE_TO.has(visibleTo)) {
+      throw new BadRequestException(
+        `Unknown block visibility "${visibleTo}". Allowed: ${[...BLOCK_VISIBLE_TO].join(', ')}.`,
       );
     }
   }
@@ -85,6 +102,9 @@ export class TeamScheduleService {
       const ids = rows.map(r => r.user_id);
       if (!ids.length) return [];
       where.userId = In(ids);
+      // Coordinator visibility (amendment): only blocks the owner toggled to
+      // `team_coordinators` are exposed — team-visible rows stay hidden.
+      where.visibleTo = 'team_coordinators';
     } else if (staffId) {
       where.userId = staffId;
     }
@@ -94,9 +114,11 @@ export class TeamScheduleService {
 
   async createBlock(dto: TeamBlockInput, requester: TeamBlockRequester): Promise<TeamScheduleBlock> {
     this.assertBlockType(dto.blockType);
-    // Workers manage their own day; only an admin may book on someone else's
-    // behalf.
-    if (requester.role !== 'admin' && dto.userId !== requester.id) {
+    const visibleTo = dto.visibleTo ?? 'team';
+    this.assertVisibleTo(visibleTo);
+    // OWNER-ONLY (amendment): staff manage their own day; admin enjoys no
+    // create-for-others path — the same rule applies to every role.
+    if (dto.userId !== requester.id) {
       throw new ForbiddenException('Forbidden: you can only create blocks for yourself.');
     }
     const row = this.repo.create({
@@ -106,6 +128,7 @@ export class TeamScheduleService {
       startTime: dto.startTime,
       endTime: dto.endTime,
       note: dto.note,
+      visibleTo,
       createdBy: requester.id,
     });
     return this.repo.save(row);
@@ -130,6 +153,7 @@ export class TeamScheduleService {
       throw new ForbiddenException('Forbidden: only admins can reassign a block to a staff member.');
     }
     if (dto.blockType !== undefined) this.assertBlockType(dto.blockType);
+    if (dto.visibleTo !== undefined) this.assertVisibleTo(dto.visibleTo);
     Object.assign(block, dto);
     return this.repo.save(block);
   }

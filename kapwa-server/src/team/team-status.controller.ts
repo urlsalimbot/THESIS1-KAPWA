@@ -34,8 +34,8 @@ export class TeamStatusController {
 
   @Get('statuses')
   @Roles('admin', 'social_worker', 'coordinator')
-  @ApiOperation({ summary: 'List all staff whereabouts statuses, most recently updated first' })
-  async listStatuses() {
-    return this.svc.listStatuses();
+  @ApiOperation({ summary: 'List staff whereabouts statuses, most recently updated first (coordinators see toggled-only)' })
+  async listStatuses(@Request() req: AuthenticatedRequest) {
+    return this.svc.listStatuses(req.user?.role, req.user?.assignedBarangay);
   }
 }

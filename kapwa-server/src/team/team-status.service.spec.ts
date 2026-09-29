@@ -25,6 +25,7 @@ describe('TeamStatusService', () => {
       upsert: jest.fn(),
       findOne: jest.fn(),
       find: jest.fn(),
+      manager: { query: jest.fn() },
     };
     gatewayMock = { broadcastTeamStatus: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
@@ -49,6 +50,14 @@ describe('TeamStatusService', () => {
     expect(gatewayMock.broadcastTeamStatus).not.toHaveBeenCalled();
   });
 
+  it('rejects an invalid visibleTo with 400 before touching the repo', async () => {
+    await expect(
+      service.setStatus('w1', { status: 'in_office', visibleTo: 'secret' } as any) as any,
+    ).rejects.toThrow(/Unknown status visibility|Bad Request/);
+    expect(repoMock.upsert).not.toHaveBeenCalled();
+    expect(gatewayMock.broadcastTeamStatus).not.toHaveBeenCalled();
+  });
+
   it('upserts on user_id conflict, refetches, and broadcasts once with the returned row', async () => {
     repoMock.upsert.mockResolvedValue({}); // InsertResult is discarded
     repoMock.findOne.mockResolvedValue(savedRow);
@@ -60,6 +69,7 @@ describe('TeamStatusService', () => {
         userId: 'w1',
         status: 'in_office',
         note: 'At desk',
+        visibleTo: 'team', // default visibility when the toggle is absent
         updatedAt: expect.any(Date), // explicit bump so ON CONFLICT refreshes the timestamp
       }),
       { conflictPaths: ['userId'] },
@@ -88,6 +98,26 @@ describe('TeamStatusService', () => {
     );
   });
 
+  it('setStatus round-trips an explicit visibleTo toggle', async () => {
+    repoMock.upsert.mockResolvedValue({});
+    repoMock.findOne.mockResolvedValue({ ...savedRow, visibleTo: 'team_coordinators' });
+
+    await service.setStatus('w1', { status: 'in_office', visibleTo: 'team_coordinators' });
+
+    expect(repoMock.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'w1', visibleTo: 'team_coordinators' }),
+      { conflictPaths: ['userId'] },
+    );
+    // Broadcast payload is unchanged — visibleTo is a server-side filter only
+    // in v1 (spec: payload keeps its current shape).
+    expect(gatewayMock.broadcastTeamStatus).toHaveBeenCalledWith({
+      userId: 'w1',
+      status: 'in_office',
+      note: 'At desk',
+      updatedAt: savedRow.updatedAt.toISOString(),
+    });
+  });
+
   it('never broadcasts when the upsert fails', async () => {
     repoMock.upsert.mockRejectedValue(new Error('db down'));
     await expect(service.setStatus('w1', { status: 'remote' }) as any).rejects.toThrow('db down');
@@ -99,7 +129,39 @@ describe('TeamStatusService', () => {
     repoMock.find.mockResolvedValue([savedRow]);
     const rows = await service.listStatuses();
     expect(rows).toEqual([savedRow]);
-    expect(repoMock.find).toHaveBeenCalledWith({ order: { updatedAt: 'DESC' } });
+    expect(repoMock.find).toHaveBeenCalledWith(expect.objectContaining({ order: { updatedAt: 'DESC' } }));
+  });
+
+  it('listStatuses for a coordinator with no barangay returns an empty list (never all)', async () => {
+    const rows = await service.listStatuses('coordinator', undefined);
+    expect(rows).toEqual([]);
+    expect(repoMock.find).not.toHaveBeenCalled();
+  });
+
+  it('listStatuses for a coordinator filters to toggled statuses of their barangay staff', async () => {
+    repoMock.manager.query.mockResolvedValue([{ user_id: 'w1' }, { user_id: 'w3' }]);
+    repoMock.find.mockResolvedValue([savedRow]);
+    const rows = await service.listStatuses('coordinator', 'Bigte');
+    expect(repoMock.manager.query).toHaveBeenCalledWith(
+      expect.stringContaining('user_barangay_assignments'),
+      ['Bigte'],
+    );
+    expect(repoMock.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: expect.objectContaining({ _type: 'in', _value: ['w1', 'w3'] }),
+          visibleTo: 'team_coordinators',
+        }),
+      }),
+    );
+    expect(rows).toEqual([savedRow]);
+  });
+
+  it('listStatuses for staff stays unfiltered', async () => {
+    repoMock.find.mockResolvedValue([savedRow]);
+    await service.listStatuses('admin', undefined);
+    expect(repoMock.find).toHaveBeenCalledWith(expect.objectContaining({ order: { updatedAt: 'DESC' } }));
+    expect(repoMock.manager.query).not.toHaveBeenCalled();
   });
 
   it('getMyStatus returns the caller\u2019s row, or null when never set', async () => {
