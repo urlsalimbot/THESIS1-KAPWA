@@ -18,6 +18,7 @@ import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
 import { MatchProbeDialog, type MatchCandidate } from '@/components/intake/MatchProbeDialog';
+import { buildPrefilledFamily } from '@/components/intake/prefillFamily';
 import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -461,23 +462,23 @@ export function IntakePage() {
   function handleProbeConfirm(c: MatchCandidate) {
     setProbeCandidates(null);
     setConfirmedHousehold(c);
-    // Auto-fill the family composition from the confirmed household's roster.
-    const members: FamilyMember[] = c.familyMembers
-      .filter(m => m.surname && m.firstName)
-      .map((m, i) => ({
-        id: `prefill-${i}`,
-        surname: m.surname,
-        firstName: m.firstName,
-        middleName: m.middleName || '',
-        extension: '',
-        gender: m.gender === 'Female' ? 'Female' : 'Male',
-        dob: m.dob || '',
-        relationship: m.relationship,
-        occupation: m.occupation || '',
-        income: m.income != null ? String(m.income) : '',
-        status: m.status || '',
-        done: false,
-      }));
+    // Auto-fill the family composition from the confirmed household. For a
+    // member match the relationships are inverted around the matched person
+    // (who is removed from the family list — they are the one being registered).
+    const members: FamilyMember[] = buildPrefilledFamily(c).map((m, i) => ({
+      id: `prefill-${i}`,
+      surname: m.surname,
+      firstName: m.firstName,
+      middleName: m.middleName,
+      extension: '',
+      gender: m.gender === 'Female' ? 'Female' : 'Male',
+      dob: m.dob,
+      relationship: m.relationship,
+      occupation: m.occupation,
+      income: m.income != null ? String(m.income) : '',
+      status: m.status,
+      done: false,
+    }));
     if (members.length > 0) setFamily(members);
   }
 

@@ -867,9 +867,15 @@ describe('IntakePage — match pop-up', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /This is the client/i }));
 
-    // Family composition prefilled + attach notice.
+    // Family composition prefilled + attach notice. The matched member (Ana,
+    // Child) is removed from the family list; the head and spouse are inverted
+    // to Parent relative to her.
     expect(await screen.findByText(/Will attach to Juan Dela Cruz/i)).toBeDefined();
     expect(screen.getAllByLabelText('FM surname').length).toBe(2);
+    const fmNames = screen.getAllByLabelText('FM first name').map(el => (el as HTMLInputElement).value);
+    expect(fmNames).toEqual(['Juan', 'Lorna']);
+    const relationships = screen.getAllByLabelText('FM relationship').map(el => (el as HTMLSelectElement).value);
+    expect(relationships).toEqual(['Parent', 'Parent']);
 
     fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
     submitForm();
