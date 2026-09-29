@@ -5,6 +5,8 @@ import { OfficeEvent } from './office-event.entity';
 import { TeamStatus } from './team-status.entity';
 import { TeamScheduleService } from './team-schedule.service';
 import { TeamScheduleController } from './team-schedule.controller';
+import { OfficeEventsService } from './office-events.service';
+import { OfficeEventsController } from './office-events.controller';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
@@ -19,7 +21,7 @@ import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
     AuthModule,
     AuditModule,
   ],
-  controllers: [TeamScheduleController],
-  providers: [TeamScheduleService],
+  controllers: [TeamScheduleController, OfficeEventsController],
+  providers: [TeamScheduleService, OfficeEventsService],
 })
 export class TeamModule {}
