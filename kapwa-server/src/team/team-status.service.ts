@@ -64,7 +64,11 @@ export class TeamStatusService {
     return this.repo.findOne({ where: { userId } });
   }
 
-  async setStatus(userId: string, dto: TeamStatusInput): Promise<TeamStatus> {
+  async setStatus(
+    userId: string,
+    dto: TeamStatusInput,
+    barangay?: string | null,
+  ): Promise<TeamStatus> {
     this.assertStatus(dto.status);
     // Default visibility is team-wide; toggling exposes the status to
     // coordinators (amend spec: `team` default | `team_coordinators`).
@@ -89,11 +93,17 @@ export class TeamStatusService {
     }
     // Broadcast AFTER a successful upsert only (RULING-1): the team room gets
     // the same shape the gateway's `team.status.updated` consumers expect.
+    // The payload carries the visibility toggle + the status owner's barangay
+    // so client-side coordinator viewers can mirror the server's
+    // listStatuses filter (team-only and out-of-barangay rows must not appear
+    // on a coordinator's live board).
     this.gateway.broadcastTeamStatus({
       userId: row.userId,
       status: row.status,
       note: row.note ?? null,
       updatedAt: row.updatedAt.toISOString(),
+      visibleTo: row.visibleTo,
+      barangay: barangay ?? null,
     });
     return row;
   }

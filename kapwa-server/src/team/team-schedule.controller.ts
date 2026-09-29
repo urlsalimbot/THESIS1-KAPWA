@@ -61,7 +61,7 @@ export class TeamScheduleController {
 
   @Patch(':id')
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Update a schedule block (admin or owner; admin may reassign)' })
+  @ApiOperation({ summary: 'Update a schedule block (owner only)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: Partial<TeamBlockInput>,
@@ -72,7 +72,7 @@ export class TeamScheduleController {
 
   @Delete(':id')
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Delete a schedule block (admin or owner, audit-logged)' })
+  @ApiOperation({ summary: 'Delete a schedule block (owner only, audit-logged)' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: AuthenticatedRequest) {
     return this.svc.deleteBlock(id, req.user, req.user?.id);
   }

@@ -63,8 +63,6 @@ export class TeamInvitesService {
   constructor(
     @InjectRepository(TeamInvite)
     private repo: Repository<TeamInvite>,
-    @InjectRepository(TeamScheduleBlock)
-    private blocksRepo: Repository<TeamScheduleBlock>,
   ) {}
 
   private assertBlockType(blockType: string): void {
@@ -160,26 +158,35 @@ export class TeamInvitesService {
     if (invite.toUserId !== requester.id) {
       throw new ForbiddenException('Forbidden: only the invitee can accept this invite.');
     }
-    if (invite.status !== 'pending') {
-      throw new BadRequestException('Invite has already been responded to.');
-    }
-    // Accepting materializes the suggested block AS the invitee: owner,
-    // creator and visibility all belong to the invitee (spec: the accepted
-    // invite creates the block AS OWNER, visible_to 'team').
-    const block = await this.blocksRepo.save(
-      this.blocksRepo.create({
-        userId: invite.toUserId,
-        blockDate: invite.inviteDate,
-        blockType: invite.blockType,
-        note: invite.note ?? null,
-        visibleTo: 'team',
-        createdBy: invite.toUserId,
-      }),
-    );
-    invite.status = 'accepted';
-    invite.respondedAt = new Date();
-    await this.repo.save(invite);
-    return block;
+    // Single transaction: the status re-check runs INSIDE it, so two
+    // concurrent accepts cannot both materialize a block — the loser re-reads
+    // a non-pending invite and gets 400 (fix for the double-materialize race;
+    // the partial unique index uq_team_invites_pending covers the
+    // duplicate-pending-POST twin-row race at the DB level).
+    return this.repo.manager.transaction(async em => {
+      const fresh = await em.findOne(TeamInvite, { where: { id } });
+      if (!fresh || fresh.status !== 'pending') {
+        throw new BadRequestException('Invite has already been responded to.');
+      }
+      // Accepting materializes the suggested block AS the invitee: owner,
+      // creator and visibility all belong to the invitee (spec: the accepted
+      // invite creates the block AS OWNER, visible_to 'team').
+      const blocks = em.getRepository(TeamScheduleBlock);
+      const block = await blocks.save(
+        blocks.create({
+          userId: fresh.toUserId,
+          blockDate: fresh.inviteDate,
+          blockType: fresh.blockType,
+          note: fresh.note ?? null,
+          visibleTo: 'team',
+          createdBy: fresh.toUserId,
+        }),
+      );
+      fresh.status = 'accepted';
+      fresh.respondedAt = new Date();
+      await em.save(fresh);
+      return block;
+    });
   }
 
   async decline(id: string, requester: TeamInviteRequester): Promise<TeamInvite> {

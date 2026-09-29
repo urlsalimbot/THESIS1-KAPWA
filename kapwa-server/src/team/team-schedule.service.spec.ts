@@ -130,10 +130,28 @@ describe('TeamScheduleService', () => {
     expect(auditMock.log).not.toHaveBeenCalled();
   });
 
+  it('deleteBlock forbids an ADMIN deleting another staff block (owner-strict amendment)', async () => {
+    // Amendment: admin enjoys no other-staff write — owner rule for all roles.
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w2' });
+    await expect(service.deleteBlock('b1', adminReq as any, 'a1') as any).rejects.toThrow(/Forbidden|403/);
+    expect(repoMock.delete).not.toHaveBeenCalled();
+    expect(auditMock.log).not.toHaveBeenCalled();
+  });
+
   it('updateBlock forbids a worker editing another staff block', async () => {
     repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w2' });
     await expect(
       service.updateBlock('b1', { note: 'mine now' } as any, workerReq as any) as any,
+    ).rejects.toThrow(/Forbidden|403/);
+    expect(repoMock.save).not.toHaveBeenCalled();
+  });
+
+  it('updateBlock forbids an ADMIN editing another staff block (owner-strict amendment)', async () => {
+    // Amendment: admin enjoys no other-staff write — the owner rule applies
+    // to every role, admin included.
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w2' });
+    await expect(
+      service.updateBlock('b1', { note: 'reassigning work' } as any, adminReq as any) as any,
     ).rejects.toThrow(/Forbidden|403/);
     expect(repoMock.save).not.toHaveBeenCalled();
   });
@@ -174,12 +192,14 @@ describe('TeamScheduleService', () => {
     expect(repoMock.save).not.toHaveBeenCalled();
   });
 
-  it('updateBlock allows an admin to reassign a block to another staff', async () => {
+  it('updateBlock forbids an ADMIN reassigning a block to another staff (no admin carve-out)', async () => {
+    // Amendment: the admin-reassign carve-out is gone — userId can never be
+    // changed on PATCH, for any role.
     repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1' });
-    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
-    const row = await service.updateBlock('b1', { userId: 'w2' } as any, adminReq as any);
-    expect(row.userId).toBe('w2');
-    expect(repoMock.save).toHaveBeenCalled();
+    await expect(
+      service.updateBlock('b1', { userId: 'w2' } as any, adminReq as any) as any,
+    ).rejects.toThrow(/Forbidden|403/);
+    expect(repoMock.save).not.toHaveBeenCalled();
   });
 
   it('coordinator list with no assigned barangay returns an empty list (never all)', async () => {

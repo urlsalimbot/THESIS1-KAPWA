@@ -29,7 +29,9 @@ export class TeamStatusController {
   @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Set the caller\u2019s whereabouts status (last write wins; broadcasts over the team socket)' })
   async setStatus(@Body() dto: TeamStatusInput, @Request() req: AuthenticatedRequest) {
-    return this.svc.setStatus(req.user.id, dto);
+    // The requester's barangay travels with the broadcast payload so
+    // coordinator viewers can scope live rows to their own barangay.
+    return this.svc.setStatus(req.user.id, dto, req.user?.assignedBarangay);
   }
 
   @Get('statuses')

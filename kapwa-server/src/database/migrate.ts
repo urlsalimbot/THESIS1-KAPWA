@@ -903,6 +903,10 @@ export async function migrate() {
     responded_at timestamptz NULL
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_team_invites_to_status ON team_invites (to_user_id, status)`);
+  // Team workspace amendment fix: one pending invite per (from, to, date) —
+  // duplicate pending POSTs and concurrent accepts cannot twin rows
+  // (ZAddTeamInvitePendingUnique migration)
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_team_invites_pending ON team_invites (from_user_id, to_user_id, invite_date) WHERE status = 'pending'`);
 
   // -- Hash chain: runtime writer so the auditor's verifyHashChain is not
   //    vacuous. Chain semantics (must match audit.service.verifyHashChain):

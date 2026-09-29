@@ -17,6 +17,7 @@ describe('TeamStatusService', () => {
     userId: 'w1',
     status: 'in_office',
     note: 'At desk',
+    visibleTo: 'team',
     updatedAt: new Date('2026-09-29T01:00:00.000Z'),
   };
 
@@ -76,13 +77,33 @@ describe('TeamStatusService', () => {
     );
     expect(repoMock.findOne).toHaveBeenCalledWith({ where: { userId: 'w1' } });
     expect(row).toBe(savedRow);
-    // Broadcast exactly once, payload assembled from the persisted row
+    // Broadcast exactly once, payload assembled from the persisted row: the
+    // visibility toggle + the status owner's barangay ride along so client
+    // coordinator viewers can scope their live board.
     expect(gatewayMock.broadcastTeamStatus).toHaveBeenCalledTimes(1);
     expect(gatewayMock.broadcastTeamStatus).toHaveBeenCalledWith({
       userId: 'w1',
       status: 'in_office',
       note: 'At desk',
       updatedAt: savedRow.updatedAt.toISOString(),
+      visibleTo: 'team',
+      barangay: null,
+    });
+  });
+
+  it('broadcast carries the requester\u2019s barangay when the call site passes it', async () => {
+    repoMock.upsert.mockResolvedValue({});
+    repoMock.findOne.mockResolvedValue({ ...savedRow, visibleTo: 'team_coordinators' });
+
+    await service.setStatus('w1', { status: 'in_office', visibleTo: 'team_coordinators' }, 'Bigte');
+
+    expect(gatewayMock.broadcastTeamStatus).toHaveBeenCalledWith({
+      userId: 'w1',
+      status: 'in_office',
+      note: 'At desk',
+      updatedAt: savedRow.updatedAt.toISOString(),
+      visibleTo: 'team_coordinators',
+      barangay: 'Bigte',
     });
   });
 
@@ -108,13 +129,15 @@ describe('TeamStatusService', () => {
       expect.objectContaining({ userId: 'w1', visibleTo: 'team_coordinators' }),
       { conflictPaths: ['userId'] },
     );
-    // Broadcast payload is unchanged — visibleTo is a server-side filter only
-    // in v1 (spec: payload keeps its current shape).
+    // Broadcast payload reflects the toggled visibility (fix: visibleTo rides
+    // the broadcast so coordinator viewers can drop team-only rows).
     expect(gatewayMock.broadcastTeamStatus).toHaveBeenCalledWith({
       userId: 'w1',
       status: 'in_office',
       note: 'At desk',
       updatedAt: savedRow.updatedAt.toISOString(),
+      visibleTo: 'team_coordinators',
+      barangay: null,
     });
   });
 

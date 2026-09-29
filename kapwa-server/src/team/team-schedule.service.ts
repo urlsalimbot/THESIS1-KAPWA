@@ -141,16 +141,19 @@ export class TeamScheduleService {
   ): Promise<TeamScheduleBlock> {
     const block = await this.repo.findOne({ where: { id } });
     if (!block) throw new NotFoundException('Schedule block not found');
-    if (requester.role !== 'admin' && block.userId !== requester.id) {
+    // OWNER-ONLY (amendment): admin enjoys no other-staff write — the same
+    // owner rule applies to every role, including admin.
+    if (block.userId !== requester.id) {
       throw new ForbiddenException('Forbidden: you can only edit your own blocks.');
     }
     // Ownership lives on `userId`, and the PATCH path applies the raw body via
-    // Object.assign — a non-admin must never be able to MUTATE a block's owner
-    // (only admins reassign). Sending the unchanged owner id is a no-op and
-    // stays allowed (full-representation clients include it); any other value
-    // is an ownership change and is rejected.
-    if (requester.role !== 'admin' && dto.userId !== undefined && dto.userId !== block.userId) {
-      throw new ForbiddenException('Forbidden: only admins can reassign a block to a staff member.');
+    // Object.assign — the owner must never be able to MUTATE a block's owner
+    // either (no admin-reassign carve-out exists for anyone). Sending the
+    // unchanged owner id is a no-op and stays allowed (full-representation
+    // clients include it); any other value is an ownership change and is
+    // rejected.
+    if (dto.userId !== undefined && dto.userId !== block.userId) {
+      throw new ForbiddenException('Forbidden: you cannot reassign a block to another staff member.');
     }
     if (dto.blockType !== undefined) this.assertBlockType(dto.blockType);
     if (dto.visibleTo !== undefined) this.assertVisibleTo(dto.visibleTo);
@@ -161,7 +164,9 @@ export class TeamScheduleService {
   async deleteBlock(id: string, requester: TeamBlockRequester, actorId?: string): Promise<{ deleted: boolean }> {
     const block = await this.repo.findOne({ where: { id } });
     if (!block) throw new NotFoundException('Schedule block not found');
-    if (requester.role !== 'admin' && block.userId !== requester.id) {
+    // OWNER-ONLY (amendment): admin enjoys no other-staff write — the same
+    // owner rule applies to every role, including admin.
+    if (block.userId !== requester.id) {
       throw new ForbiddenException('Forbidden: you can only delete your own blocks.');
     }
     await this.repo.delete(id);

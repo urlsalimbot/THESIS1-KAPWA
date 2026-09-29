@@ -30,7 +30,14 @@ describe('TeamInvitesService', () => {
       create: jest.fn(),
       save: jest.fn(),
       findOne: jest.fn(),
-      manager: { query: jest.fn() },
+      manager: {
+        query: jest.fn(),
+        // Transaction wrapper: the callback receives the same mocked manager
+        // as `em`, so the in-transaction re-read, block save and invite save
+        // all resolve through the existing mocks.
+        transaction: jest.fn(async (cb: (em: any) => unknown) => cb(repoMock)),
+      },
+      getRepository: jest.fn(() => blocksRepoMock),
     };
     blocksRepoMock = {
       create: jest.fn(),
@@ -158,6 +165,29 @@ describe('TeamInvitesService', () => {
     await expect(service.accept('i1', otherReq as any) as any).rejects.toThrow(/Forbidden|403/);
     expect(blocksRepoMock.save).not.toHaveBeenCalled();
     expect(repoMock.save).not.toHaveBeenCalled();
+    // The ownership check short-circuits BEFORE the transaction opens.
+    expect(repoMock.manager.transaction).not.toHaveBeenCalled();
+  });
+
+  it('a second concurrent accept after the first re-reads a non-pending invite inside the transaction → 400, no second block', async () => {
+    // Simulate the race at the mock-repo level: the outer pre-check reads
+    // 'pending', but by the time the transaction's inner re-read runs the
+    // first accept has already flipped the invite to 'accepted'.
+    repoMock.findOne
+      .mockResolvedValueOnce(pendingInvite)
+      .mockResolvedValueOnce({ ...pendingInvite, status: 'accepted', respondedAt: new Date() });
+    blocksRepoMock.create.mockImplementation((d: any) => d);
+    blocksRepoMock.save.mockImplementation(async (d: any) => ({ id: 'b9', ...d }));
+
+    await expect(service.accept('i1', inviteeReq as any) as any).rejects.toThrow(/already been responded|Bad Request/);
+
+    // The re-check branch won: no block materialized, invite not re-saved.
+    expect(blocksRepoMock.save).not.toHaveBeenCalled();
+    expect(repoMock.save).not.toHaveBeenCalled();
+    // The status was re-read INSIDE the transaction (outer pre-check + inner
+    // re-read = two findOne calls).
+    expect(repoMock.manager.transaction).toHaveBeenCalledTimes(1);
+    expect(repoMock.findOne).toHaveBeenCalledTimes(2);
   });
 
   it('400 when accepting an already-responded invite', async () => {

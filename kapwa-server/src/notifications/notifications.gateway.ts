@@ -89,6 +89,8 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     status: string;
     note?: string | null;
     updatedAt: string;
+    visibleTo?: string;
+    barangay?: string | null;
   }) {
     this.server.to('team').emit('team.status.updated', payload);
   }
