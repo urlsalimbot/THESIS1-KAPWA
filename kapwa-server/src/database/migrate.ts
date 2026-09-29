@@ -171,6 +171,7 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_case ON case_interventions(case_id)`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 
@@ -334,6 +335,7 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_referrals_case ON case_referrals(case_id)`);
   await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS reason TEXT`);
   await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS contact_info TEXT`);
+  await q.query(`ALTER TABLE case_referrals ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
   await q.query(`UPDATE case_referrals SET reason = '' WHERE reason IS NULL`);
   await q.query(`ALTER TABLE case_referrals ALTER COLUMN reason SET NOT NULL`);
   await q.query(`INSERT INTO case_referrals (case_id, agency, status, notes)
