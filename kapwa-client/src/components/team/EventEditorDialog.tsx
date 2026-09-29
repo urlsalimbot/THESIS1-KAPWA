@@ -19,6 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 import type { TeamEvent, TeamEventInput } from '../../lib/team-api';
 
 export interface EventEditorDialogProps {
@@ -26,6 +35,8 @@ export interface EventEditorDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Edit mode: pass the event being edited; create mode when null. */
   event?: TeamEvent | null;
+  /** Read-only mode (coordinators): hides Save/Delete affordances. */
+  readOnly?: boolean;
   onSave: (input: TeamEventInput) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 }
@@ -42,13 +53,14 @@ function toLocalInputValue(iso: string): string {
 
 /**
  * Create/edit an office event. Basic v1: title, start/end, weekly repeat
- * (interval + until), visibility, location, notes. Task 13 refines the
- * repeat + visibility affordances.
+ * (interval + until), visibility, location, notes. Task 13: readOnly mode
+ * (coordinators) + confirm-before-delete.
  */
 export function EventEditorDialog({
   open,
   onOpenChange,
   event = null,
+  readOnly = false,
   onSave,
   onDelete,
 }: EventEditorDialogProps) {
@@ -61,6 +73,7 @@ export function EventEditorDialog({
   const [visibleTo, setVisibleTo] = useState<string>('staff');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +111,7 @@ export function EventEditorDialog({
   const editing = Boolean(event);
 
   const handleSave = () => {
-    if (!title.trim() || !startsAt || !endsAt) return;
+    if (readOnly || !title.trim() || !startsAt || !endsAt) return;
     const intervalN = Math.max(1, Number.parseInt(interval, 10) || 1);
     void onSave({
       title: title.trim(),
@@ -114,11 +127,18 @@ export function EventEditorDialog({
   };
 
   const handleDelete = () => {
+    // Delete is destructive — confirm before emitting.
+    if (!readOnly && event && onDelete) setConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    setConfirmDeleteOpen(false);
     if (event && onDelete) void onDelete(event.id);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit event' : 'New event'}</DialogTitle>
@@ -224,7 +244,7 @@ export function EventEditorDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          {editing && onDelete ? (
+          {!readOnly && editing && onDelete ? (
             <Button variant="destructive" onClick={handleDelete}>
               Delete
             </Button>
@@ -235,12 +255,32 @@ export function EventEditorDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!title.trim() || !startsAt || !endsAt}>
-              {editing ? 'Save changes' : 'Create event'}
-            </Button>
+            {!readOnly && (
+              <Button onClick={handleSave} disabled={!title.trim() || !startsAt || !endsAt}>
+                {editing ? 'Save changes' : 'Create event'}
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete event?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Remove “{title.trim() || 'this event'}”. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <Button variant="destructive" onClick={confirmDelete}>
+            Delete
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }

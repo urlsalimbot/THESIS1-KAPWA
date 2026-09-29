@@ -259,6 +259,7 @@ export function TeamWorkspacePage() {
           open={eventDialogOpen}
           onOpenChange={setEventDialogOpen}
           event={activeEvent}
+          readOnly={!canEdit}
           onSave={handleSaveEvent}
           onDelete={handleDeleteEvent}
         />
