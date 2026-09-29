@@ -26,3 +26,21 @@ describe('StepTransition — self-reliance recommendation', () => {
     expect(screen.getByText(/subject to case renewal/i)).toBeTruthy();
   });
 });
+
+describe('StepTransition — savable until closure', () => {
+  it('keeps the Save Transition Plan button when the plan is saved but the case is not closed', () => {
+    // Regression: CaseViewPage must not flip readOnly once stepDone[3] (plan
+    // saved) — the worker still adds follow-up visits and must be able to save.
+    renderStep({ selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' });
+    expect(screen.getByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
+  });
+
+  it('hides the Save Transition Plan button only when readOnly (case closed)', () => {
+    render(
+      <SWRConfig value={{ provider: () => new Map(), fetcher: vi.fn() }}>
+        <StepTransition caseId="c1" caseData={{ selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' }} userRole="admin" readOnly />
+      </SWRConfig>,
+    );
+    expect(screen.queryByRole('button', { name: /Save Transition Plan/i })).toBeNull();
+  });
+});

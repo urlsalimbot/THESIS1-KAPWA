@@ -1742,7 +1742,7 @@ const fil: EnLocale = {
       "phaseOut": "Phase-Out",
       "serviceDelivery": "Mga Inter-Agency Referral",
       "documentsRequired": "I-upload muna ang mga kinakailangang dokumento",
-      "documentsRequiredDesc": "May mga hindi pa natutugunang pangangailangang dokumentaryo ang Hakbang 2 (Interbensyon at mga Kinakailangan). I-upload o i-verify ang bawat kinakailangang dokumento, o markahan na naipasa ito sa opisina, bago magpatuloy.",
+      "documentsRequiredDesc": "May mga hindi pa natutugunang pangangailangang dokumentaryo sa mga naunang hakbang na hindi pa tapos. Kumpletuhin at i-verify ang bawat kinakailangang dokumento ng mga naunang hakbang bago magpatuloy.",
       "serviceDeliveryDesc": "Kailangan ba ng referral: oo o hindi",
       "stepNotAvailable": "Hindi available ang hakbang",
       "transition": "Suriin ang Tulong na Naibigay",

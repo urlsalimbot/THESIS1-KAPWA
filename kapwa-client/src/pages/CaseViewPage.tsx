@@ -397,7 +397,11 @@ export function CaseViewPage() {
       userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />,
     <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
     <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
-    <StepTransition key="transition" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={stepDone[3] || caseClosed} />,
+    // Transition plan + follow-up visits stay savable for the whole active
+    // phase: stepDone[3] (plan saved) must NOT flip readOnly or the worker is
+    // left adding follow-up visits with the only "Save Transition Plan" button
+    // hidden. Only closure locks the step.
+    <StepTransition key="transition" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
     <StepClosure key="closure" caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed} />,
   ];
 
@@ -484,12 +488,12 @@ export function CaseViewPage() {
                 )}
               </dl>
               <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                {user?.role === 'admin' && !caseData.certificateUrl && (
+                {user?.role === 'admin' && caseData.status === 'active' && !caseData.certificateUrl && (
                   <Button variant="outline" size="sm" className="gap-1.5" disabled={issuing === 'coe'} onClick={() => issueDoc('coe')}>
                     <FileText size={14} aria-hidden="true" /> {issuing === 'coe' ? t('cases.issuing', 'Issuing…') : t('cases.issueCoe', 'Issue COE')}
                   </Button>
                 )}
-                {user?.role === 'admin' && !caseData.pettyCashVoucherUrl && (
+                {user?.role === 'admin' && caseData.status === 'active' && !caseData.pettyCashVoucherUrl && (
                   <Button variant="outline" size="sm" className="gap-1.5" disabled={issuing === 'pcv'} onClick={() => issueDoc('pcv')}>
                     <FileText size={14} aria-hidden="true" /> {issuing === 'pcv' ? t('cases.issuing', 'Issuing…') : t('cases.issuePcv', 'Issue PCV')}
                   </Button>

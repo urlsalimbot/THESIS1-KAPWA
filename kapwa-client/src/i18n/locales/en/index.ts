@@ -258,7 +258,7 @@ const en = {
       "phaseOut": "Phase-Out",
       "serviceDelivery": "Inter-agency Referrals",
       "documentsRequired": "Upload the required documents first",
-      "documentsRequiredDesc": "Step 2 (Intervention & Requirements) still has unmet documentary needs. Upload or verify each required document, or mark it passed on-site, before continuing.",
+      "documentsRequiredDesc": "Unfinished earlier steps still have unmet documentary needs. Complete and verify every required document of the earlier steps before continuing.",
       "serviceDeliveryDesc": "Referral needed: yes or no",
       "stepNotAvailable": "Step not available",
       "transition": "Evaluate Help Given",

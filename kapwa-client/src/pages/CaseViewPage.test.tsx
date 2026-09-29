@@ -216,6 +216,26 @@ describe('CaseViewPage — government ID photo', () => {
     expect(screen.getByRole('button', { name: /Issue PCV/i })).toBeTruthy();
   });
 
+  it('hides Issue COE and Issue PCV from an admin while the case is not active', async () => {
+    // The server rejects issuing COE/PCV before activation (400) — showing the
+    // buttons on an assessed case is a dead affordance with no error feedback.
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' }, loading: false });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, status: 'assessed' });
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<CaseViewPage />);
+    await screen.findByRole('button', { name: /GIS \(PDF\)/i });
+    expect(screen.queryByRole('button', { name: /Issue COE/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Issue PCV/i })).toBeNull();
+  });
+
   it('hides Issue COE and Issue PCV from non-admins', async () => {
     mockUseAuth.mockReturnValue({ user: { id: '2', fullName: 'Worker', role: 'social_worker' }, loading: false });
     renderWithSWR(<CaseViewPage />);
@@ -414,5 +434,46 @@ describe('CaseViewPage — stepper gating', () => {
     const step3 = await waitFor(deliveryStepButton);
     expect(step3.textContent).not.toContain('3');
     expect(step3.querySelector('svg')).not.toBeNull();
+  });
+
+  it('keeps the transition plan savable after the plan is saved while the case is active', async () => {
+    // Regression: once the plan is saved (stepDone[3] flips true) the old
+    // readOnly={stepDone[3] || caseClosed} hid the only "Save Transition Plan"
+    // button — the worker could add follow-up visits but never persist them.
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    let detailFetches = 0;
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve(interventionMock);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve(programsMock);
+      if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf', verifiedAt: '2026-07-02T00:00:00Z' }]);
+      if (k.includes('cases')) {
+        detailFetches += 1;
+        return Promise.resolve(detailFetches === 1
+          ? { ...assumptionCase, status: 'active', referralNotNeeded: true, requirementsChecklist: { 'Valid ID': true } }
+          : { ...assumptionCase, status: 'active', referralNotNeeded: true, requirementsChecklist: { 'Valid ID': true }, selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+
+    // Steps 0-2 done + plan not saved yet -> initial nav lands on Evaluate Help Given.
+    const saveBtn = await screen.findByRole('button', { name: /Save Transition Plan/i });
+    expect(saveBtn).toBeTruthy();
+
+    // Fill in the plan and save it.
+    fireEvent.click(screen.getByLabelText(/Level 3 - Self-Sufficient/i));
+    fireEvent.change(screen.getAllByRole('textbox')[0] as HTMLElement, { target: { value: 'sari-sari store' } });
+    fireEvent.click(saveBtn);
+
+    // The refetched case now has the plan saved (stepDone[3] = true) — the
+    // Save button must NOT disappear while the case is still active.
+    await waitFor(() => expect(detailFetches).toBe(2));
+    expect(screen.getByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
   });
 });

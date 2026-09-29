@@ -403,7 +403,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
               <p className="text-sm font-medium text-primary">{interventions.length > 0 ? t('caseView.implement.recorded', 'Interventions recorded') : t('caseView.implement.noInterventionRecorded', 'No intervention needed — referral-only case')}</p>
               <p className="text-xs text-muted-foreground">{t('caseView.implement.submitForReviewHint', 'Submit for admin review to activate the case.')}</p>
             </div>
-            <ReviewButton caseId={caseId} mutate={mutate} />
+            <ReviewButton caseId={caseId} />
           </div>
         </div>
       )}
@@ -411,14 +411,20 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
   );
 }
 
-function ReviewButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+function ReviewButton({ caseId }: { caseId: string }) {
   const { t } = useTranslation();
+  const { mutate } = useSWRConfig();
   const [loading, setLoading] = useState(false);
   async function handleReview() {
     setLoading(true);
     try {
       await api.patch(`/cases/${caseId}/status`, { status: 'in_review' });
-      await mutate(queryKeys.cases.detail(caseId));
+      // The panel's own bound mutate targets only the interventions key — using
+      // it here never touched the case detail, so the header status badge stayed
+      // stale until reload. Revalidate the detail key and the cases list through
+      // the global mutate (same pattern as useCaseActions.handleAction).
+      await mutate(queryKeys.cases.detail(caseId), undefined, { revalidate: true });
+      await mutate(queryKeys.cases.all, undefined, { revalidate: true });
     } catch (e) {
       console.error('Failed to submit for review:', e);
     } finally {

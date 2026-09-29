@@ -106,11 +106,11 @@ describe('ClaimantAccessCardPage', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('renders a friendly empty state when no card is on record (404)', async () => {
-    // A beneficiary without an access card gets a 404 from
+  it('renders a friendly empty state when no card is on record ({ card: null })', async () => {
+    // A beneficiary without an access card gets 200 `{ card: null }` from
     // /beneficiaries/me/access-card. That is "you have no card yet", not a
-    // broken page — the old generic error text read as a server failure.
-    mockApiGet.mockRejectedValue(new ApiError(404, { message: 'No access card on record' }));
+    // broken page — no SWR error path, just the empty state.
+    mockApiGet.mockResolvedValue({ card: null });
 
     renderWithSWR(<ClaimantAccessCardPage />);
 

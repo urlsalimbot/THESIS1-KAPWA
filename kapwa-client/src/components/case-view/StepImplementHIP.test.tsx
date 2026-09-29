@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { SWRConfig } from 'swr';
+import useSWR, { SWRConfig } from 'swr';
 import { StepImplementHIP } from './StepImplementHIP';
 
-const { mockApiGet, mockApiPost, mockUpload } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPost, mockApiPatch, mockUpload } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPost: vi.fn(),
+  mockApiPatch: vi.fn(),
   mockUpload: vi.fn(),
 }));
 
@@ -14,7 +15,7 @@ vi.mock('@/lib/api', () => ({
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
     put: vi.fn(),
-    patch: vi.fn(),
+    patch: (...args: unknown[]) => mockApiPatch(...args),
     del: vi.fn(),
   },
   uploadWithProgress: (...args: unknown[]) => mockUpload(...args),
@@ -42,9 +43,11 @@ describe('StepImplementHIP adhoc intervention', () => {
   beforeEach(() => {
     mockApiGet.mockReset();
     mockApiPost.mockReset();
+    mockApiPatch.mockReset();
     mockUpload.mockReset();
     mockApiGet.mockResolvedValue([]);
     mockApiPost.mockResolvedValue({});
+    mockApiPatch.mockResolvedValue({});
     mockUpload.mockResolvedValue({});
   });
 
@@ -130,5 +133,45 @@ describe('StepImplementHIP adhoc intervention', () => {
 
     expect(screen.getByText(/Interventions recorded/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Submit for Review/i })).toBeTruthy();
+  });
+
+  it('revalidates the case detail (and not just interventions) after submit-for-review', async () => {
+    // Regression: the panel's bound mutate only targets its own interventions
+    // key — the old code passed the detail key to it, which SWR treats as the
+    // *data* argument, so the page's header status badge stayed "Assessed"
+    // until a full reload. The probe below stands in for CaseViewPage's detail
+    // subscription (revalidation only fires when a hook listens on the key).
+    mockApiGet.mockImplementation(async (key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('interventions')) {
+        return [{ id: 'iv-1', caseId: 'case-1', serviceName: 'Medical Assistance', amount: 500 }];
+      }
+      if (k.includes('programs')) return [];
+      return [];
+    });
+
+    function DetailProbe() {
+      useSWR(['cases', 'case-1']);
+      return null;
+    }
+
+    render(
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+        <StepImplementHIP caseId="case-1" caseData={caseData} userRole="social_worker" readOnly />
+        <DetailProbe />
+      </SWRConfig>,
+    );
+    expect(await screen.findByText(/Interventions recorded/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Submit for Review/i }));
+
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith('/cases/case-1/status', { status: 'in_review' }));
+    // The case detail key — the one the CaseViewPage header badge reads —
+    // must be re-fetched after the transition (initial probe fetch + the
+    // post-submit revalidation).
+    await waitFor(() => {
+      const detailFetches = mockApiGet.mock.calls.filter((c) => JSON.stringify(c[0]) === JSON.stringify(['cases', 'case-1']));
+      expect(detailFetches.length).toBeGreaterThanOrEqual(2);
+    });
   });
 });
