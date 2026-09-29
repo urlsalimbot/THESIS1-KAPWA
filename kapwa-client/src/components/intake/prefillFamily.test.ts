@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildPrefilledFamily } from './prefillFamily';
-import type { MatchCandidate } from './MatchProbeDialog';
+import type { MatchCandidate } from './MatchCardSections';
 
 function candidate(over: Partial<MatchCandidate>): MatchCandidate {
   return {

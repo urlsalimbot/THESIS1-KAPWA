@@ -861,8 +861,12 @@ describe('IntakePage — match pop-up', () => {
     expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
     expect(screen.getByText(/Household of.*Juan Dela Cruz/i)).toBeDefined();
     expect(screen.getByText(/Household members \(2\)/i)).toBeDefined();
-    expect(screen.getByText(/Ana Dela Cruz — Child/i)).toBeDefined();
-    expect(screen.getByText(/KAPWA-2026-00001 · Juan Dela Cruz/i)).toBeDefined();
+    // Members and past cases are laid out as separate fields, so assert the
+    // values rather than the punctuation that used to glue them together.
+    expect(screen.getAllByText(/Ana Dela Cruz/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/· Child/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('KAPWA-2026-00001')).toBeDefined();
+    expect(screen.getByText('Juan Dela Cruz')).toBeDefined();
     expect(screen.getByText(/Household member · Child/i)).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: /This is the client/i }));

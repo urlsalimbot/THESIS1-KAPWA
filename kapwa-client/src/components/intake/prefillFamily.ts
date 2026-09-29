@@ -1,4 +1,4 @@
-import type { MatchCandidate } from './MatchProbeDialog';
+import type { MatchCandidate } from './MatchCardSections';
 
 export interface PrefillMember {
   surname: string;

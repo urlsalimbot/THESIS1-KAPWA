@@ -17,7 +17,8 @@ import { psgcNameFor } from '@/lib/psgc';
 import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
-import { MatchProbeDialog, type MatchCandidate } from '@/components/intake/MatchProbeDialog';
+import { MatchProbeDialog } from '@/components/intake/MatchProbeDialog';
+import type { MatchCandidate } from '@/components/intake/MatchCardSections';
 import { buildPrefilledFamily } from '@/components/intake/prefillFamily';
 import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera, Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -1003,6 +1004,7 @@ export function IntakePage() {
       {probeCandidates && probeCandidates.length > 0 && (
         <MatchProbeDialog
           candidates={probeCandidates}
+          intake={beneficiary}
           onConfirm={handleProbeConfirm}
           onDismiss={() => setProbeCandidates(null)}
         />
