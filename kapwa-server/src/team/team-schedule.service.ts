@@ -121,6 +121,14 @@ export class TeamScheduleService {
     if (requester.role !== 'admin' && block.userId !== requester.id) {
       throw new ForbiddenException('Forbidden: you can only edit your own blocks.');
     }
+    // Ownership lives on `userId`, and the PATCH path applies the raw body via
+    // Object.assign — a non-admin must never be able to MUTATE a block's owner
+    // (only admins reassign). Sending the unchanged owner id is a no-op and
+    // stays allowed (full-representation clients include it); any other value
+    // is an ownership change and is rejected.
+    if (requester.role !== 'admin' && dto.userId !== undefined && dto.userId !== block.userId) {
+      throw new ForbiddenException('Forbidden: only admins can reassign a block to a staff member.');
+    }
     if (dto.blockType !== undefined) this.assertBlockType(dto.blockType);
     Object.assign(block, dto);
     return this.repo.save(block);

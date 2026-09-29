@@ -105,6 +105,34 @@ describe('TeamScheduleService', () => {
     expect(repoMock.save).not.toHaveBeenCalled();
   });
 
+  it('updateBlock forbids a worker reassigning their own block to another staff', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1' });
+    await expect(
+      service.updateBlock('b1', { userId: 'w2' } as any, workerReq as any) as any,
+    ).rejects.toThrow(/Forbidden|403/);
+    expect(repoMock.save).not.toHaveBeenCalled();
+  });
+
+  it('updateBlock allows a worker to keep their own userId (or omit it)', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1' });
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
+    const row = await service.updateBlock(
+      'b1',
+      { userId: 'w1', note: 'shift' } as any,
+      workerReq as any,
+    );
+    expect(row.userId).toBe('w1');
+    expect(repoMock.save).toHaveBeenCalled();
+  });
+
+  it('updateBlock allows an admin to reassign a block to another staff', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1' });
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
+    const row = await service.updateBlock('b1', { userId: 'w2' } as any, adminReq as any);
+    expect(row.userId).toBe('w2');
+    expect(repoMock.save).toHaveBeenCalled();
+  });
+
   it('coordinator list with no assigned barangay returns an empty list (never all)', async () => {
     const result = await service.listBlocks(
       new Date('2026-09-28T00:00:00Z'),
