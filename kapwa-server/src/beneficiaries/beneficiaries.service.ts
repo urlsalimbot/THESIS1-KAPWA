@@ -527,12 +527,15 @@ export class BeneficiariesService {
 
   async getAccessCard(userId: string) {
     const ben = await this.resolveMyBeneficiary(userId);
-    if (!ben) throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
+    // No beneficiary or no issued card is "you have no card yet", not an
+    // error: return 200 with a null card so the claimant page renders an
+    // empty state instead of firing 404 console noise + SWR error path.
+    if (!ben) return { card: null };
     const withHousehold = await this.benRepo.findOne({ where: { id: ben.id }, relations: ['person', 'household'] });
     const resolved = withHousehold || ben;
     const household = (resolved as any).household;
     if (!household?.accessCardCode) {
-      throw new NotFoundException('No Access Card found. Please contact the MSWDO office.');
+      return { card: null };
     }
     // The card is the household's accounting ledger — surface its entries so
     // the claimant's /my-access-card view is populated, not empty.

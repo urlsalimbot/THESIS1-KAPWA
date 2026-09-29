@@ -17,6 +17,7 @@ describe('BeneficiariesService', () => {
   let personRepoMock: any;
   let benRepoMock: any;
   let consentRepoMock: any;
+  let caseRepoMock: any;
 
   beforeEach(async () => {
     personRepoMock = { findOne: jest.fn(), create: jest.fn(), save: jest.fn() };
@@ -31,7 +32,7 @@ describe('BeneficiariesService', () => {
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: { findOne: jest.fn() } },
         { provide: getRepositoryToken(ConsentLedger), useValue: consentRepoMock },
         { provide: getRepositoryToken(HouseholdMembership), useValue: { query: jest.fn() } },
-        { provide: getRepositoryToken(Case), useValue: { find: jest.fn(), findOne: jest.fn() } },
+        { provide: getRepositoryToken(Case), useValue: (caseRepoMock = { find: jest.fn(), findOne: jest.fn(), manager: { query: jest.fn() } }) },
         { provide: getRepositoryToken(User), useValue: { findOne: jest.fn(), query: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
@@ -93,6 +94,50 @@ describe('BeneficiariesService', () => {
     it('throws when the beneficiary has no household', async () => {
       benRepoMock.findOne.mockResolvedValue({ id: 'ben-1', household: null });
       await expect(service.setHouseholdNhtsPr('ben-1', 'X')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getAccessCard', () => {
+    it('returns { card: null } (200) when the claimant has no beneficiary', async () => {
+      // resolveMyBeneficiary direct hit misses, userRepo.findOne yields no
+      // person, so no beneficiary resolves at all.
+      benRepoMock.findOne.mockResolvedValue(undefined);
+
+      await expect(service.getAccessCard('user-1')).resolves.toEqual({ card: null });
+
+      expect(caseRepoMock.manager.query).not.toHaveBeenCalled();
+    });
+
+    it('returns { card: null } (200) when the household has no access card', async () => {
+      benRepoMock.findOne
+        .mockResolvedValueOnce({ id: 'ben-1' }) // resolveMyBeneficiary direct hit
+        .mockResolvedValueOnce({ id: 'ben-1', household: null }); // withHousehold lookup
+
+      await expect(service.getAccessCard('user-1')).resolves.toEqual({ card: null });
+
+      expect(caseRepoMock.manager.query).not.toHaveBeenCalled();
+    });
+
+    it('returns the card shape when the household has an access card', async () => {
+      benRepoMock.findOne
+        .mockResolvedValueOnce({ id: 'ben-1' })
+        .mockResolvedValueOnce({
+          id: 'ben-1',
+          person: { firstName: 'Juan', surname: 'Dela Cruz' },
+          household: { accessCardCode: 'NORZ-AC-2026-0042', barangay: 'Poblacion' },
+        });
+      caseRepoMock.manager.query.mockResolvedValue([
+        { service_rendered: 'Medical Consultation', service_date: new Date('2026-07-20'), cost: 1500, category: 'community_service' },
+      ]);
+
+      const res = await service.getAccessCard('user-1');
+
+      expect(res).toEqual({
+        code: 'NORZ-AC-2026-0042',
+        beneficiary: { name: 'Juan Dela Cruz', barangay: 'Poblacion' },
+        services: [{ serviceRendered: 'Medical Consultation', serviceDate: '2026-07-20', cost: 1500, category: 'community_service' }],
+        remainingSlots: 17,
+      });
     });
   });
 });
