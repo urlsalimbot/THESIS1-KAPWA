@@ -213,6 +213,11 @@ export function TeamWorkspacePage() {
 
   const handleBlockClick = (block: TeamBlock) => {
     if (!canEdit) return; // coordinators are read-only (server also 403s)
+    // Owner-only (fix): editing someone else's block would open an editor
+    // with Save/Delete the server would reject anyway — only the block's own
+    // staff member may edit it (no admin exception). Colleague-block clicks
+    // are a no-op.
+    if (block.userId !== myUserId) return;
     setActiveBlock(block);
     setBlockDialogOpen(true);
   };
@@ -230,7 +235,8 @@ export function TeamWorkspacePage() {
 
   // Live whereabouts: subscribe once to the gateway's team.status.updated
   // broadcast (same /notifications namespace the notification socket uses).
-  useTeamStatus(myUserId);
+  // The viewer's role + barangay scope the live board for coordinators.
+  useTeamStatus(myUserId, user?.role, user?.assignedBarangay);
 
   return (
     <PageShell

@@ -136,6 +136,9 @@ describe('TeamWorkspacePage', () => {
     mockApiPost.mockReset();
     mockApiPatch.mockReset();
     mockUser.role = 'admin';
+    // Tests that flip the signed-in identity (worker/colleague-owner cases)
+    // must not leak their id into later tests.
+    mockUser.id = 'u1';
     defaultMock();
     await mutate(() => true, undefined, { revalidate: false });
   });
@@ -230,6 +233,56 @@ describe('TeamWorkspacePage', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('button', { name: /Delete/i })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: /Save changes/i })).toBeTruthy();
+  });
+
+  it('a worker clicking a COLLEAGUE\'s block opens nothing (owner-only, no admin exception)', async () => {
+    // Ben (u2) views the board: Ana's Monday block (DAY_BLOCK, userId u1) is
+    // a colleague's block. Owner-only means no editor — and unlike empty
+    // slots, no Suggest dialog either: the click is a no-op.
+    mockUser.role = 'social_worker';
+    mockUser.id = 'u2';
+    renderWithSWR(<TeamWorkspacePage />);
+
+    const blockBtn = await screen.findByRole('button', {
+      name: new RegExp(`Ana Admin — In office on ${WEEK_FROM}`),
+    });
+    fireEvent.click(blockBtn);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('an admin clicking a colleague\'s block also opens nothing (no admin exception)', async () => {
+    // Ana (u1, admin) views the board; DAY_BLOCK is her OWN block, so add a
+    // second block owned by Ben to prove the admin carve-out is gone.
+    const colleagueBlock = { ...DAY_BLOCK, id: 'b2', userId: 'u2', blockType: 'home_visit' };
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('/team/blocks')) return Promise.resolve([DAY_BLOCK, colleagueBlock]);
+      if (k.includes('/team/events')) return Promise.resolve([WEEKLY_EVENT]);
+      if (k.includes('/team/invites/incoming')) return Promise.resolve([]);
+      if (k.includes('achievements')) {
+        return Promise.resolve({ perStaff: PER_STAFF, range: { from: WEEK_FROM, to: WEEK_TO } });
+      }
+      if (k.includes('statuses')) return Promise.resolve(STATUSES);
+      if (k.includes('"status"')) return Promise.resolve(STATUSES[0]);
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<TeamWorkspacePage />);
+
+    // Ben's block (u2) is a colleague's block for Ana → no editor opens.
+    const blockBtn = await screen.findByRole('button', {
+      name: new RegExp(`Ben Social — Home visit on ${WEEK_FROM}`),
+    });
+    fireEvent.click(blockBtn);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // …while her own block still opens the editor.
+    const ownBtn = await screen.findByRole('button', {
+      name: new RegExp(`Ana Admin — In office on ${WEEK_FROM}`),
+    });
+    fireEvent.click(ownBtn);
+    expect(await screen.findByRole('dialog')).toBeTruthy();
   });
 
   it('coordinator is read-only: no invite affordances, New/Event disabled, grid clicks open no editor', async () => {

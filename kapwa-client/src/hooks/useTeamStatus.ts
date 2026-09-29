@@ -2,15 +2,19 @@ import { useEffect, useRef } from 'react';
 import { mutate } from 'swr';
 import { connectNotificationSocket } from '../lib/notification-socket';
 import { queryKeys } from '../lib/query-keys';
-import type { TeamStatus } from '../lib/team-api';
+import type { TeamStatus, TeamVisibleTo } from '../lib/team-api';
 
 /** Payload of the gateway's `team.status.updated` broadcast — mirrors
- *  NotificationsGateway.broadcastTeamStatus in kapwa-server. */
+ *  NotificationsGateway.broadcastTeamStatus in kapwa-server. `visibleTo` and
+ *  `barangay` are sent by the server so coordinator viewers can scope their
+ *  live board to toggled rows from their own barangay. */
 export interface TeamStatusEvent {
   userId: string;
   status: string;
   note?: string | null;
   updatedAt: string;
+  visibleTo?: TeamVisibleTo;
+  barangay?: string | null;
 }
 
 /**
@@ -31,9 +35,19 @@ export interface TeamStatusEvent {
  *      signed-in user, so the "my status" read (putStatus round-trip) stays in
  *      sync with the live board.
  */
-export function useTeamStatus(myUserId?: string): void {
+export function useTeamStatus(
+  myUserId?: string,
+  viewerRole?: string,
+  viewerBarangay?: string | null,
+): void {
   const myUserIdRef = useRef(myUserId);
   myUserIdRef.current = myUserId;
+  // Viewer scope travels in refs like myUserId so the effect still subscribes
+  // exactly once; the merge filter reads the freshest role/barangay.
+  const viewerRoleRef = useRef(viewerRole);
+  viewerRoleRef.current = viewerRole;
+  const viewerBarangayRef = useRef(viewerBarangay);
+  viewerBarangayRef.current = viewerBarangay;
 
   useEffect(() => {
     const token = localStorage.getItem('kapwa_token');
@@ -41,15 +55,25 @@ export function useTeamStatus(myUserId?: string): void {
 
     const sock = connectNotificationSocket(token);
     const onStatusUpdated = (payload: TeamStatusEvent) => {
-      // The gateway broadcast omits visibleTo, so the optimistic board row
-      // defaults to team-wide; the board chips do not render visibility, and
-      // coordinator filtering is server-side (a coordinator still sees the
-      // row only if the server sent it to them at all).
+      // Coordinator live board (amendment fix): mirror the server's
+      // listStatuses filter — only rows the owner toggled to
+      // `team_coordinators` and, when the coordinator has an assigned
+      // barangay, only rows from their own barangay. A coordinator with no
+      // assigned barangay keeps every toggled row (the server never sends
+      // them an unfiltered board; don't drop toggled rows either).
+      const isCoordinator = viewerRoleRef.current === 'coordinator';
+      if (
+        isCoordinator &&
+        (payload.visibleTo !== 'team_coordinators' ||
+          (viewerBarangayRef.current != null && payload.barangay !== viewerBarangayRef.current))
+      ) {
+        return; // not meant for this viewer — leave the board untouched
+      }
       const row: TeamStatus = {
         userId: payload.userId,
         status: payload.status,
         note: payload.note ?? null,
-        visibleTo: 'team',
+        visibleTo: payload.visibleTo ?? 'team',
         updatedAt: payload.updatedAt,
       };
       mutate(

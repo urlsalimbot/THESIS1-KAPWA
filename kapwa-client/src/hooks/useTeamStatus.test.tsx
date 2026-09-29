@@ -45,7 +45,14 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <SWRConfig value={{ fetcher, dedupingInterval: 0 }}>{children}</SWRConfig>;
 }
 
-function emit(payload: { userId: string; status: string; note?: string | null; updatedAt: string }) {
+function emit(payload: {
+  userId: string;
+  status: string;
+  note?: string | null;
+  updatedAt: string;
+  visibleTo?: string;
+  barangay?: string | null;
+}) {
   act(() => {
     listeners.get('team.status.updated')?.(payload);
   });
@@ -116,6 +123,77 @@ describe('useTeamStatus', () => {
 
     expect(result.current.data).toHaveLength(2);
     expect(result.current.data?.map(s => s.userId).sort()).toEqual(['u1', 'u2']);
+  });
+
+  it('coordinator drops team-only rows and out-of-barangay rows; keeps toggled + in-barangay', async () => {
+    const { result } = renderHook(
+      () => {
+        useTeamStatus('me', 'coordinator', 'Bigte');
+        return useSWR<TeamStatus[]>(queryKeys.team.statuses());
+      },
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.data).toEqual([]));
+
+    // Team-only row (not toggled to coordinators) → dropped.
+    emit({ userId: 'u1', status: 'in_office', visibleTo: 'team', barangay: 'Bigte', updatedAt: '2026-09-28T01:00:00.000Z' });
+    // Toggled row but from another barangay → dropped.
+    emit({ userId: 'u2', status: 'home_visit', visibleTo: 'team_coordinators', barangay: 'Kalayaan', updatedAt: '2026-09-28T02:00:00.000Z' });
+    expect(result.current.data).toEqual([]);
+
+    // Toggled + in-barangay → merged.
+    emit({ userId: 'u3', status: 'remote', note: 'FDS Bigte', visibleTo: 'team_coordinators', barangay: 'Bigte', updatedAt: '2026-09-28T03:00:00.000Z' });
+    expect(result.current.data).toEqual([
+      {
+        userId: 'u3',
+        status: 'remote',
+        note: 'FDS Bigte',
+        visibleTo: 'team_coordinators',
+        updatedAt: '2026-09-28T03:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('coordinator without an assigned barangay keeps every toggled row', async () => {
+    const { result } = renderHook(
+      () => {
+        useTeamStatus('me', 'coordinator', null);
+        return useSWR<TeamStatus[]>(queryKeys.team.statuses());
+      },
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.data).toEqual([]));
+
+    // Toggled rows merge regardless of the owner's barangay; team-only still dropped.
+    emit({ userId: 'u1', status: 'field_day', visibleTo: 'team', barangay: 'Bigte', updatedAt: '2026-09-28T01:00:00.000Z' });
+    emit({ userId: 'u2', status: 'on_leave', visibleTo: 'team_coordinators', barangay: 'Kalayaan', updatedAt: '2026-09-28T02:00:00.000Z' });
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data?.[0]).toEqual(
+      expect.objectContaining({ userId: 'u2', visibleTo: 'team_coordinators' }),
+    );
+  });
+
+  it('non-coordinator viewers merge rows regardless of visibility or barangay', async () => {
+    const { result } = renderHook(
+      () => {
+        useTeamStatus('me', 'social_worker', undefined);
+        return useSWR<TeamStatus[]>(queryKeys.team.statuses());
+      },
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.data).toEqual([]));
+
+    emit({ userId: 'u1', status: 'in_office', visibleTo: 'team_coordinators', barangay: 'Bigte', updatedAt: '2026-09-28T01:00:00.000Z' });
+    expect(result.current.data).toEqual([
+      {
+        userId: 'u1',
+        status: 'in_office',
+        note: null,
+        visibleTo: 'team_coordinators',
+        updatedAt: '2026-09-28T01:00:00.000Z',
+      },
+    ]);
   });
 
   it('revalidates own status only when the event targets the signed-in user', async () => {
