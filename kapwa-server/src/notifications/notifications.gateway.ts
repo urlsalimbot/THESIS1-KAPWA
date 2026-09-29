@@ -64,4 +64,19 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   emitToUser(userId: string, event: string, data: unknown) {
     this.server.to(`user:${userId}`).emit(event, data);
   }
+
+  /**
+   * Broadcasts a staff member's status change to every socket attached to the
+   * shared `team` room (staff and coordinators that joined `team` to follow
+   * live whereabouts). Mirrors emitToUser's server.to(room).emit(event, data)
+   * pattern.
+   */
+  broadcastTeamStatus(payload: {
+    userId: string;
+    status: string;
+    note?: string | null;
+    updatedAt: string;
+  }) {
+    this.server.to('team').emit('team.status.updated', payload);
+  }
 }
