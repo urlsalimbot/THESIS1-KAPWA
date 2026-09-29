@@ -2291,7 +2291,12 @@ const fil: EnLocale = {
     "agenda": {
       "blockDetailAllDay": "{{type}} • Buong araw",
       "blockDetailTimed": "{{type}} • {{start}} hanggang {{end}}",
+      "entryCount": "{{count}} na entry",
       "nothingScheduled": "Walang naka-iskedyul sa panahong ito.",
+    },
+    "month": {
+      "editBlockAria": "I-edit ang {{type}} noong {{date}}",
+      "placeBlockAria": "Ilagay ang iyong block sa {{date}}",
     },
     "staff": {
       "achievementsFor": "Mga nagawa — {{name}}",

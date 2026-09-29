@@ -548,4 +548,65 @@ describe('TeamWorkspacePage', () => {
 
     await waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith('/team/invites/i2/decline'));
   });
+
+  // --- Month-view placement ---
+
+  // The month grid always contains the 15th of the anchored month, in-month;
+  // the page anchor is weekStart(new Date()) → the same month the grid shows.
+  const monthDay15 = localIsoDay(
+    new Date(weekStart(new Date()).getFullYear(), weekStart(new Date()).getMonth(), 15),
+  );
+
+  it('a worker clicking a month cell opens the block editor prefilled with their own id + that date', async () => {
+    mockUser.role = 'social_worker';
+    mockUser.id = 'u1';
+    renderWithSWR(<TeamWorkspacePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Month' }));
+    const cell = screen.getByText('15').closest('div') as HTMLElement;
+    fireEvent.click(cell);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'New block' })).toBeTruthy();
+    // Prefill: the clicked day + the viewer's own staff row (no Suggest).
+    expect(within(dialog).getByLabelText('Start date')).toHaveValue(monthDay15);
+    expect(within(dialog).getByRole('combobox', { name: 'Staff' })).toHaveTextContent('Ana Admin');
+    expect(within(dialog).getByRole('button', { name: /Create block/i })).toBeTruthy();
+  });
+
+  it('a coordinator month click opens nothing: no + chips, cells inert', async () => {
+    mockUser.role = 'coordinator';
+    renderWithSWR(<TeamWorkspacePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Month' }));
+
+    // No placement affordance anywhere…
+    expect(screen.queryByRole('button', { name: /^Place your block on/ })).toBeNull();
+    // …and clicking an in-month cell does not open any dialog.
+    const cell = screen.getByText('15').closest('div') as HTMLElement;
+    fireEvent.click(cell);
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Let the month-window schedule refetch (view switch changed the SWR
+    // key) settle inside act so it cannot warn after the test body.
+    await waitFor(() =>
+      expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('/team/blocks')),
+    );
+  });
+
+  it('an admin month + chip click opens the editor with the self-prefilled day', async () => {
+    renderWithSWR(<TeamWorkspacePage />); // default: admin u1
+
+    fireEvent.click(screen.getByRole('button', { name: 'Month' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: `Place your block on ${monthDay15}` }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'New block' })).toBeTruthy();
+    expect(within(dialog).getByLabelText('Start date')).toHaveValue(monthDay15);
+    // The prefill is the admin's OWN row, never a colleague's.
+    expect(within(dialog).getByRole('combobox', { name: 'Staff' })).toHaveTextContent('Ana Admin');
+    expect(within(dialog).getByRole('button', { name: /Create block/i })).toBeTruthy();
+  });
 });

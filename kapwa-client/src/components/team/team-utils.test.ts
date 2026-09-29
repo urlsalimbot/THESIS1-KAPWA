@@ -1,6 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { weekStart, expandRepeat, manilaDay, addDays, localIsoDay, withSelfPinned } from './team-utils';
+import {
+  weekStart,
+  expandRepeat,
+  manilaDay,
+  addDays,
+  localIsoDay,
+  withSelfPinned,
+  staffInitials,
+} from './team-utils';
 import type { TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
+
+describe('staffInitials', () => {
+  it('takes the first letters of the first and last words', () => {
+    expect(staffInitials('Ana Admin')).toBe('AA');
+    expect(staffInitials('Juan Dela Cruz')).toBe('JC');
+    expect(staffInitials('ben social')).toBe('BS');
+  });
+
+  it('falls back to the first two characters for a single-word or empty name', () => {
+    expect(staffInitials('Staff')).toBe('ST');
+    expect(staffInitials('')).toBe('');
+  });
+});
 
 describe('withSelfPinned', () => {
   const member = (userId: string, name: string): TeamStaffAchievement => ({

@@ -18,6 +18,14 @@ export interface MonthViewProps {
   events: TeamEvent[];
   blocks: TeamBlock[];
   from: Date; // anchor: any date in the month to display
+  /** Signed-in user can create/edit blocks (admin + social_worker). */
+  canEdit?: boolean;
+  /** Signed-in user's id — only their own block dots become clickable. */
+  myUserId?: string;
+  /** Place a new block on a day (in-month cells + the "+" chip). */
+  onPlaceBlock?: (dateStr: string) => void;
+  /** Click-to-edit an own block dot. */
+  onBlockClick?: (block: TeamBlock) => void;
 }
 
 const GRID_COLS = 'grid-cols-[repeat(7,minmax(6rem,1fr))]';
@@ -32,8 +40,22 @@ function mondayOnOrBefore(date: Date): Date {
  * containing `from`. Each cell shows event chips and per-staff block dots
  * keyed by `BLOCK_COLORS[type]`; cells outside the current month are muted
  * and today is ring-outlined. Legend below maps type → dot color.
+ *
+ * Placement (editors only): in-month cells are clickable and carry a "+"
+ * chip (visible on hover/keyboard focus) that calls `onPlaceBlock`; a staff
+ * member's OWN block dots become edit buttons (`onBlockClick`), while other
+ * staff dots stay inert. Out-of-month cells stay inert — no placement
+ * affordance, so muted cells cannot be clicked by accident.
  */
-export function MonthView({ events, blocks, from }: MonthViewProps) {
+export function MonthView({
+  events,
+  blocks,
+  from,
+  canEdit = false,
+  myUserId = '',
+  onPlaceBlock,
+  onBlockClick,
+}: MonthViewProps) {
   const { t } = useTranslation();
   const monthStart = useMemo(() => new Date(from.getFullYear(), from.getMonth(), 1), [from]);
   const gridStart = useMemo(() => mondayOnOrBefore(monthStart), [monthStart]);
@@ -99,15 +121,35 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
           const cellEvents = eventsByDay.get(dayStr) ?? [];
           const inMonth = date.getMonth() === monthStart.getMonth();
           const isToday = dayStr === todayStr;
+          const placeable = canEdit && inMonth;
+          const placeAria = t('team.month.placeBlockAria', { date: dayStr });
           return (
             <div
               key={dayStr}
+              onClick={
+                placeable && onPlaceBlock
+                  ? () => onPlaceBlock(dayStr)
+                  : undefined
+              }
               className={`min-h-[5.5rem] border-b border-r border-l-0 border-t-0 p-1.5 ${
                 i % 7 === 0 ? 'border-l-0' : 'border-l'
               } ${inMonth ? '' : 'bg-muted/20'} ${
                 isToday ? 'ring-1 ring-inset ring-primary' : ''
-              }`}
+              } ${placeable ? 'group relative cursor-pointer' : ''}`}
             >
+              {placeable && (
+                <button
+                  type="button"
+                  aria-label={placeAria}
+                  onClick={e => {
+                    e.stopPropagation();
+                    onPlaceBlock?.(dayStr);
+                  }}
+                  className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-sm bg-muted text-[11px] font-bold leading-none text-muted-foreground opacity-0 transition-opacity hover:bg-muted-foreground/20 focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  +
+                </button>
+              )}
               <p className={`text-xs font-semibold ${inMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {date.getDate()}
               </p>
@@ -123,18 +165,29 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
                 ))}
                 {cellBlocks.length > 0 && (
                   <div className="flex flex-wrap gap-0.5 pt-0.5">
-                    {cellBlocks.slice(0, 5).map(block => (
-                      <span
-                        key={block.id}
-                        title={t(
-                          BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
-                          BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
-                        )}
-                        className={`h-2 w-2 rounded-full ${
-                          BLOCK_COLORS[block.blockType]?.split(' ')[0] ?? BLOCK_COLOR_FALLBACK.split(' ')[0]
-                        }`}
-                      />
-                    ))}
+                    {cellBlocks.slice(0, 5).map(block => {
+                      const typeKey = BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType;
+                      const typeLabel = t(typeKey, typeKey);
+                      const dotClass = `h-2 w-2 rounded-full ${
+                        BLOCK_COLORS[block.blockType]?.split(' ')[0] ?? BLOCK_COLOR_FALLBACK.split(' ')[0]
+                      }`;
+                      const own = canEdit && block.userId === myUserId;
+                      return own ? (
+                        <button
+                          key={block.id}
+                          type="button"
+                          aria-label={t('team.month.editBlockAria', { type: typeLabel, date: dayStr })}
+                          title={typeLabel}
+                          onClick={e => {
+                            e.stopPropagation();
+                            onBlockClick?.(block);
+                          }}
+                          className={`${dotClass} cursor-pointer`}
+                        />
+                      ) : (
+                        <span key={block.id} title={typeLabel} className={dotClass} />
+                      );
+                    })}
                     {cellBlocks.length > 5 && (
                       <span className="text-[9px] text-muted-foreground">+{cellBlocks.length - 5}</span>
                     )}

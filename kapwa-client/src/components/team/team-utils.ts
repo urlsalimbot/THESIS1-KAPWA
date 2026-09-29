@@ -116,6 +116,18 @@ export function withSelfPinned(
   ];
 }
 
+/**
+ * Two-letter avatar initials for a staff name: first letters of the first and
+ * last words ("Ana Admin" → "AA", "Juan Dela Cruz" → "JC"); a single-word or
+ * empty name falls back to its first two characters ("Staff" → "ST").
+ */
+export function staffInitials(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+}
+
 // --- Week math ---
 
 export const DAY_MS = 86_400_000;

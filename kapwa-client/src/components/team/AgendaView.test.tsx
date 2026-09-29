@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import i18n from '@/i18n';
 import { AgendaView } from './AgendaView';
-import { BLOCK_COLORS } from './team-utils';
+import { BLOCK_COLORS, WEEKDAY_LABEL_KEYS } from './team-utils';
 import { formatDate } from '../../lib/format';
 import type { TeamBlock, TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
 
@@ -74,47 +75,75 @@ const MEETING: TeamEvent = {
   startsAt: '2026-09-29T01:00:00.000Z',
   endsAt: '2026-09-29T02:00:00.000Z',
   visibleTo: 'staff',
+  location: 'Session Hall',
 };
 
-/** The <ul> of the day group whose header formats to `dayStr`. */
-function dayList(dayStr: string): HTMLElement {
-  const header = screen.getByText(formatDate(dayStr));
+const WEEKDAY_INDEX = (day: string) => {
+  const [y, m, d] = day.split('-').map(Number);
+  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+};
+
+/** Exact day-header text the component renders for `day` + `count` entries. */
+function headerText(day: string, count: number): string {
+  return `${i18n.t(WEEKDAY_LABEL_KEYS[WEEKDAY_INDEX(day)])}, ${formatDate(day)} · ${count} entries`;
+}
+
+/** The <ul> of the day group whose header renders `day` with `count` entries. */
+function dayList(day: string, count: number): HTMLElement {
+  const header = screen.getByText(headerText(day, count));
   const dayDiv = header.parentElement as HTMLElement; // header div → day div
   return dayDiv.querySelector('ul') as HTMLElement;
 }
 
 describe('AgendaView', () => {
-  it('groups blocks and events by day and shows type labels', () => {
+  it('renders a day header with weekday, formatted date and the entry count', () => {
     render(<AgendaView blocks={BLOCKS} events={[WEEKLY, MEETING]} staff={STAFF} from={FROM} />);
 
-    // Day headers exist for the days that have entries…
-    expect(screen.getByText(formatDate('2026-09-28'))).toBeTruthy();
-    expect(screen.getByText(formatDate('2026-09-29'))).toBeTruthy(); // Quarterly Meeting
-    expect(screen.getByText(formatDate('2026-10-02'))).toBeTruthy();
-    // …but the block outside the window does not leak into the agenda.
-    expect(screen.queryByText(formatDate('2026-10-12'))).toBeNull();
+    // Sep 28: two blocks + the weekly sync → 3 entries; header is exact.
+    expect(screen.getByText(headerText('2026-09-28', 3))).toBeTruthy();
+    // Single-entry days carry the count too.
+    expect(screen.getByText(headerText('2026-09-29', 1))).toBeTruthy();
+    expect(screen.getByText(headerText('2026-10-02', 1))).toBeTruthy();
+    // The out-of-window block does not leak a day group.
+    expect(screen.queryByText(headerText('2026-10-12', 1))).toBeNull();
+  });
 
-    // Type label + time window on a timed block; All day on an untimed one.
-    const day28 = dayList('2026-09-28');
+  it('shows the time column: timed ranges and All day, plus the type label and initials', () => {
+    render(<AgendaView blocks={BLOCKS} events={[]} staff={STAFF} from={FROM} />);
+
+    const day28 = dayList('2026-09-28', 2);
     const texts = Array.from(day28.querySelectorAll('li')).map(li => li.textContent ?? '');
-    expect(texts.some(t => t.includes('In office · 09:00–12:00'))).toBe(true);
-    expect(texts.some(t => t.includes('Home visit · All day'))).toBe(true);
-    expect(dayList('2026-10-02').textContent).toContain('Field day · All day');
+    expect(texts[0]).toContain('All day');
+    expect(texts[0]).toContain('Ben Social');
+    expect(texts[0]).toContain('BS'); // initials avatar
+    expect(texts[0]).toContain('Home visit');
+    expect(texts[1]).toContain('09:00–12:00');
+    expect(texts[1]).toContain('Ana Admin');
+    expect(texts[1]).toContain('AA'); // initials avatar
+    expect(texts[1]).toContain('In office');
   });
 
-  it('expands weekly repeat events into one row per instance in the window', () => {
-    render(<AgendaView blocks={[]} events={[WEEKLY]} staff={STAFF} from={FROM} />);
+  it('renders the block note when present and omits the column otherwise', () => {
+    const noted: TeamBlock = {
+      ...BLOCKS[1],
+      id: 'b9',
+      blockDate: '2026-10-01',
+      note: 'FDS at Bgy. Bigte',
+    };
+    render(<AgendaView blocks={[noted, BLOCKS[0]]} events={[]} staff={STAFF} from={FROM} />);
 
-    // Sep 21, Sep 28, Oct 5 — three Mondays inside Mon Aug 31 – Sun Oct 11.
-    expect(screen.getAllByText('Weekly Sync')).toHaveLength(3);
+    const dayOct1 = dayList('2026-10-01', 1);
+    expect(dayOct1.textContent).toContain('FDS at Bgy. Bigte');
+    // The note-less day's rows carry no note text.
+    expect(dayList('2026-09-28', 1).textContent).not.toContain('FDS at Bgy. Bigte');
   });
 
-  it('lists a multi-day block on every covered day within the window', () => {
+  it('renders multi-day spans as one full row + dimmed Day n/total continuation rows', () => {
     const multiDay: TeamBlock = {
       id: 'b5',
       userId: 'u2',
       blockDate: '2026-09-28',
-      endDate: '2026-09-29',
+      endDate: '2026-09-30',
       blockType: 'in_office',
       startTime: '09:00',
       endTime: '12:00',
@@ -135,22 +164,66 @@ describe('AgendaView', () => {
     };
     render(<AgendaView blocks={[multiDay, outside]} events={[]} staff={STAFF} from={FROM} />);
 
-    // The same block row exists under both day headers…
-    expect(dayList('2026-09-28').textContent).toContain('In office · 09:00–12:00');
-    expect(dayList('2026-09-29').textContent).toContain('In office · 09:00–12:00');
-    // …while a range fully outside the window leaks nothing.
-    expect(dayList('2026-09-28').textContent).not.toContain('Field day');
-    expect(dayList('2026-09-29').textContent).not.toContain('Field day');
-    expect(screen.queryByText(formatDate('2026-10-12'))).toBeNull();
-    expect(screen.queryByText(formatDate('2026-10-13'))).toBeNull();
+    // First covered day: the full compact row (time, initials, name, type).
+    const day28 = dayList('2026-09-28', 1);
+    expect(day28.textContent).toContain('09:00–12:00');
+    expect(day28.textContent).toContain('Ben Social');
+    expect(day28.textContent).toContain('In office');
+
+    // Later covered days: dimmed continuation rows with the day counter.
+    const day29Row = dayList('2026-09-29', 1).querySelector('li') as HTMLElement;
+    expect(day29Row.textContent).toBe('↳ In office · Day 2/3');
+    expect(day29Row.className).toContain('text-muted-foreground');
+    const day30Row = dayList('2026-09-30', 1).querySelector('li') as HTMLElement;
+    expect(day30Row.textContent).toBe('↳ In office · Day 3/3');
+
+    // The range fully outside the window leaks nothing.
+    expect(screen.queryByText(headerText('2026-10-12', 1))).toBeNull();
+    expect(screen.queryByText(headerText('2026-10-13', 1))).toBeNull();
+  });
+
+  it('styles event rows with the indigo strip instead of a dot', () => {
+    render(<AgendaView blocks={[]} events={[MEETING]} staff={STAFF} from={FROM} />);
+
+    const row = dayList('2026-09-29', 1).querySelector('li') as HTMLElement;
+    expect(row.className).toContain('border-indigo-500');
+    expect(row.className).toContain('border-l-2');
+    // Title + time range + location all survive on the row.
+    expect(row.textContent).toContain('Quarterly Meeting');
+    expect(row.textContent).toContain('Session Hall');
+    expect(row.textContent).toMatch(/9:00 AM – 10:00 AM/);
+  });
+
+  it('adds no per-row borders to block rows (only the day header carries one)', () => {
+    render(<AgendaView blocks={BLOCKS} events={[MEETING]} staff={STAFF} from={FROM} />);
+
+    const day28Rows = dayList('2026-09-28', 2).querySelectorAll('li');
+    for (const row of day28Rows) {
+      expect(row.className).not.toMatch(/border/);
+    }
+    // Continuation rows are border-free too.
+    expect(dayList('2026-10-02', 1).querySelector('li')?.className).not.toMatch(/border/);
+  });
+
+  it('expands weekly repeat events into one row per instance in the window', () => {
+    render(<AgendaView blocks={[]} events={[WEEKLY]} staff={STAFF} from={FROM} />);
+
+    // Sep 21, Sep 28, Oct 5 — three Mondays inside Mon Aug 31 – Sun Oct 11.
+    expect(screen.getAllByText('Weekly Sync')).toHaveLength(3);
   });
 
   it('sorts ascending by day, all-day entries first within a day', () => {
     render(<AgendaView blocks={BLOCKS} events={[WEEKLY]} staff={STAFF} from={FROM} />);
 
     // Day headers must appear in calendar order.
-    const headers = ['2026-09-21', '2026-09-28', '2026-10-02', '2026-10-05'].map(
-      d => screen.getByText(formatDate(d)),
+    const counts: Record<string, number> = {
+      '2026-09-21': 1,
+      '2026-09-28': 3,
+      '2026-10-02': 1,
+      '2026-10-05': 1,
+    };
+    const headers = ['2026-09-21', '2026-09-28', '2026-10-02', '2026-10-05'].map(d =>
+      screen.getByText(headerText(d, counts[d])),
     );
     for (let i = 1; i < headers.length; i += 1) {
       expect(
@@ -158,13 +231,32 @@ describe('AgendaView', () => {
       ).toBeTruthy();
     }
 
-    // Inside Sep 28: the all-day home visit sorts before every timed entry;
-    // the block carries its staff name and the type-colored dot.
-    const items = Array.from(dayList('2026-09-28').querySelectorAll('li'));
+    // Inside Sep 28: the all-day home visit sorts before every timed entry
+    // and keeps the small type-colored dot.
+    const items = Array.from(dayList('2026-09-28', 3).querySelectorAll('li'));
     expect(items[0].textContent).toContain('Ben Social');
-    expect(items[0].textContent).toContain('Home visit · All day');
+    expect(items[0].textContent).toContain('All day');
     const dot = items[0].querySelector('.rounded-full') as HTMLElement;
     expect(dot.className).toContain(BLOCK_COLORS.home_visit.split(' ')[0]);
+  });
+
+  it('falls back to the generic staff label when the roster lacks the block owner', () => {
+    const orphan: TeamBlock = {
+      id: 'b7',
+      userId: 'zzz',
+      blockDate: '2026-10-01',
+      blockType: 'remote',
+      startTime: null,
+      endTime: null,
+      note: null,
+      visibleTo: 'team' as const,
+    };
+    render(<AgendaView blocks={[orphan]} events={[]} staff={STAFF} from={FROM} />);
+
+    const row = dayList('2026-10-01', 1).querySelector('li') as HTMLElement;
+    expect(row.textContent).toContain(i18n.t('team.week.staff'));
+    expect(row.textContent).toContain('Remote');
+    expect(row.textContent).toContain('All day');
   });
 
   it('shows an empty state when nothing is scheduled', () => {

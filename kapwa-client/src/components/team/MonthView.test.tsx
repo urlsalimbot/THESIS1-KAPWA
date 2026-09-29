@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import i18n from '@/i18n';
 import { MonthView } from './MonthView';
 import {
@@ -198,5 +198,96 @@ describe('MonthView', () => {
 
     expect(ringCells).toHaveLength(1);
     expect(ringCells[0].textContent).toBe(String(today.getDate()));
+  });
+
+  // --- Placement + edit affordances (canEdit) ---
+
+  it('renders no placement/editing affordances when canEdit is false', () => {
+    const onPlaceBlock = vi.fn();
+    const onBlockClick = vi.fn();
+    renderMonth({
+      blocks: [BLOCKS[0]], // Ana's own block, but read-only viewer
+      canEdit: false,
+      myUserId: 'u1',
+      onPlaceBlock,
+      onBlockClick,
+    });
+
+    // No "+" chips anywhere, and no editable dot buttons.
+    expect(screen.queryByRole('button', { name: /^Place your block on/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Edit / })).toBeNull();
+
+    // Clicking the day cell and the block dot fire neither callback.
+    const cell = screen.getByText('28').closest('div') as HTMLElement;
+    fireEvent.click(cell);
+    const dot = cell.querySelector('.rounded-full') as HTMLElement;
+    fireEvent.click(dot);
+    expect(onPlaceBlock).not.toHaveBeenCalled();
+    expect(onBlockClick).not.toHaveBeenCalled();
+  });
+
+  it('shows the "+" chip only on in-month cells when canEdit', () => {
+    renderMonth({ canEdit: true, myUserId: 'u1' });
+
+    // September 2026 has 30 in-month days → exactly 30 place buttons.
+    expect(screen.getAllByRole('button', { name: /^Place your block on/ })).toHaveLength(30);
+
+    // Out-of-month cells (Aug 31, Oct 10) get no placement affordance.
+    expect(screen.queryByRole('button', { name: 'Place your block on 2026-08-31' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Place your block on 2026-10-10' })).toBeNull();
+  });
+
+  it('clicking an in-month cell body places on that exact day; out-of-month cells do nothing', () => {
+    const onPlaceBlock = vi.fn();
+    renderMonth({ canEdit: true, myUserId: 'u1', onPlaceBlock });
+
+    const cell = screen.getByText('28').closest('div') as HTMLElement;
+    fireEvent.click(cell);
+    expect(onPlaceBlock).toHaveBeenCalledWith('2026-09-28');
+
+    // A muted neighbor-month cell is inert — no placement from it.
+    const outCell = screen.getByText('31').closest('div') as HTMLElement; // Aug 31
+    fireEvent.click(outCell);
+    expect(onPlaceBlock).toHaveBeenCalledTimes(1);
+  });
+
+  it('turns the OWN block dot into an edit button that opens onBlockClick (not placement)', () => {
+    const onPlaceBlock = vi.fn();
+    const onBlockClick = vi.fn();
+    renderMonth({
+      blocks: [BLOCKS[0], BLOCKS[1]], // u1 own + u2 colleague on Sep 28
+      canEdit: true,
+      myUserId: 'u1',
+      onPlaceBlock,
+      onBlockClick,
+    });
+
+    const ownBtn = screen.getByRole('button', {
+      name: 'Edit Home visit on 2026-09-28',
+    }) as HTMLElement;
+    fireEvent.click(ownBtn);
+    expect(onBlockClick).toHaveBeenCalledWith(BLOCKS[0]);
+    // The dot click must not ALSO open placement for the day.
+    expect(onPlaceBlock).not.toHaveBeenCalled();
+  });
+
+  it('leaves colleague block dots inert — onBlockClick never fires for them', () => {
+    const onBlockClick = vi.fn();
+    renderMonth({
+      blocks: [BLOCKS[0], BLOCKS[1]],
+      canEdit: true,
+      myUserId: 'u1',
+      onPlaceBlock: vi.fn(),
+      onBlockClick,
+    });
+
+    // Ben's (u2) on_leave dot on Sep 28 is a plain span, not a button.
+    expect(screen.queryByRole('button', { name: /^Edit On leave/ })).toBeNull();
+
+    const cell = screen.getByText('28').closest('div') as HTMLElement;
+    const dots = cell.querySelectorAll('.rounded-full');
+    expect(dots).toHaveLength(2);
+    fireEvent.click(dots[1]); // the colleague dot
+    expect(onBlockClick).not.toHaveBeenCalled();
   });
 });

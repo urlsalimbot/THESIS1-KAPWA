@@ -230,6 +230,14 @@ export function TeamWorkspacePage() {
     setBlockDialogOpen(true);
   };
 
+  const handleMonthDayClick = (date: string) => {
+    if (!canEdit) return; // coordinators are read-only (server also 403s)
+    // Month placement is for YOUR OWN block only — no Suggest flow from the
+    // month view: the cell click mirrors handleSlotClick's self branch.
+    setDraftSlot({ staffId: myUserId, date });
+    openNewBlock();
+  };
+
   const openNewEvent = () => {
     setActiveEvent(null);
     setEventDialogOpen(true);
@@ -342,7 +350,15 @@ export function TeamWorkspacePage() {
           />
         )}
         {view === 'month' && (
-          <MonthView blocks={schedule?.blocks ?? []} events={schedule?.events ?? []} from={from} />
+          <MonthView
+            blocks={schedule?.blocks ?? []}
+            events={schedule?.events ?? []}
+            from={from}
+            canEdit={canEdit}
+            myUserId={myUserId}
+            onPlaceBlock={handleMonthDayClick}
+            onBlockClick={handleBlockClick}
+          />
         )}
         {view === 'agenda' && (
           <AgendaView

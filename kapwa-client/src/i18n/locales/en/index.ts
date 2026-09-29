@@ -2280,7 +2280,12 @@ const en = {
     "agenda": {
       "blockDetailAllDay": "{{type}} · All day",
       "blockDetailTimed": "{{type}} · {{start}}–{{end}}",
+      "entryCount": "{{count}} entries",
       "nothingScheduled": "Nothing scheduled in this period.",
+    },
+    "month": {
+      "editBlockAria": "Edit {{type}} on {{date}}",
+      "placeBlockAria": "Place your block on {{date}}",
     },
     "staff": {
       "achievementsFor": "Achievements — {{name}}",
