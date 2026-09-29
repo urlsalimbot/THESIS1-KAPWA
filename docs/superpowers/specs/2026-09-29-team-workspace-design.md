@@ -23,9 +23,9 @@ team, derived automatically from the system's own data.
 
 | Role | Schedule blocks | Events | Status | Achievements |
 |---|---|---|---|---|
-| admin | full CRUD, including blocks for other staff | full CRUD (all) | set own | read all |
-| social_worker | CRUD own rows | CRUD own; view all | set own | read all |
-| coordinator | read-only | read-only (visible_to = staff_coordinators only) | view | read all |
+| admin | own blocks only; may INVITE others (suggest a schedule) | full CRUD (all) | set own | read all |
+| social_worker | own blocks only; may INVITE others | CRUD own; view all | set own | read all |
+| coordinator | read-only, only blocks toggled `visible_to = team_coordinators` | read-only (visible_to = staff_coordinators only) | view (toggled) | read all |
 | claimant | no access | no access | no access | no access |
 
 Enforced server-side in the controller; the client hides edit affordances
@@ -42,13 +42,18 @@ convention (next sequential migration key `…0000000000067`).
 | column | type | notes |
 |---|---|---|
 | id | uuid pk | |
-| user_id | uuid fk users | staff the block belongs to |
+| user_id | uuid fk users | OWNER — only the owner (or an accepted invite) may create/edit/delete; admin has no special write access |
 | block_date | date | single-day blocks (multi-day = multiple rows in v1) |
 | block_type | enum | `in_office` `home_visit` `field_day` `on_leave` `remote` |
 | start_time / end_time | time nullable | optional bounds (08:00–12:00) |
 | note | text nullable | |
-| created_by | uuid fk users | admin may create for others |
+| visible_to | enum | `team` (default) \| `team_coordinators` — team sees all blocks; coordinators see only toggled ones |
+| created_by | uuid fk users | creator (owner, or the invite-sender when the owner accepted? no — accepted invite creates the block AS OWNER; created_by = owner) |
 | updated_at | timestamptz | |
+
+### `office_events`
+
+unchanged (office-shared; coordinators see `staff_coordinators` events).
 
 ### `office_events`
 
@@ -74,18 +79,34 @@ One active whereabouts marker per staff member; last-write-wins upsert.
 | user_id | uuid fk users | unique |
 | status | enum | `in_office` `home_visit` `field_day` `on_leave` `remote` `offline` |
 | note | text nullable | e.g. "Barangay Bigte — FDS session" |
+| visible_to | enum | `team` (default) \| `team_coordinators` |
 | updated_at | timestamptz | |
+
+### `team_invites` — schedule suggestions ("invite to have a schedule on a date")
+
+| column | type | notes |
+|---|---|---|
+| id | uuid pk | |
+| from_user_id | uuid fk users | suggester (any staff incl. admin) |
+| to_user_id | uuid fk users | invitee |
+| invite_date | date | suggested block date |
+| block_type | enum | suggested type |
+| note | text nullable | suggestion context |
+| status | enum | `pending` \| `accepted` \| `declined` |
+| created_at / responded_at | timestamptz | |
+
+Accepting creates the suggested block owned by the invitee (visible_to `team`); declining records the refusal. Only the invitee may respond; any staff + admin may send.
 
 ## API (`/api/v1/team/*`)
 
 - `GET /team/schedule?from=&to=` — merged week payload: blocks + events.
-- `POST /team/blocks` · `PATCH /team/blocks/:id` · `DELETE /team/blocks/:id`
+- `POST /team/blocks` (OWNER-only — creates for self) · `PATCH /team/blocks/:id` (owner) · `DELETE /team/blocks/:id` (owner); admin enjoys no other-staff write.
 - `POST /team/events` · `PATCH /team/events/:id` · `DELETE /team/events/:id`
-- `GET /team/status` (own) · `PUT /team/status` · `GET /team/statuses` (team)
+- `GET /team/status` (own) · `PUT /team/status` (own) · `GET /team/statuses` (team; coordinators see toggled only)
 - `GET /team/achievements?from=&to=` — per-staff derived rollup.
+- `POST /team/invites` { toUserId, inviteDate, blockType, note? } · `GET /team/invites/incoming` · `GET /team/invites/outgoing` · `PATCH /team/invites/:id/accept|decline` (invitee only).
 
-Coordinator payloads are filtered server-side: only events with
-`visible_to = staff_coordinators`; blocks for their office team.
+Coordinator payloads filter server-side: events `visible_to = staff_coordinators`; blocks + statuses `visible_to = team_coordinators` (still within their assigned barangay staff set where the barangay dimension applies).
 
 ## Achievements Aggregation
 
