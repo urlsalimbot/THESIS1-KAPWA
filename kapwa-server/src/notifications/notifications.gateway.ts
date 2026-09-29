@@ -6,6 +6,13 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '../auth/user.entity';
+
+// Roles whose live whereabouts are staff-visible. Only sockets with one of
+// these roles join the shared 'team' room; claimants and other roles never
+// receive whereabouts broadcasts (the notifications namespace also serves
+// claimants).
+const TEAM_ROLES = [UserRole.ADMIN, UserRole.SW, UserRole.COORDINATOR];
 
 // CORS origins for the notifications socket. Accepts the NOTIF_WS_ORIGIN
 // allowlist (comma-separated, e.g. "https://kapwa.software") plus the APP_URL
@@ -52,6 +59,12 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       }
       client.data.userId = userId;
       client.join(`user:${userId}`);
+      // Staff roles follow live whereabouts via the shared 'team' room;
+      // claimants and other roles never join it. Role comes from the verified
+      // JWT payload (same payload the JwtStrategy validates for HTTP routes).
+      if (TEAM_ROLES.includes(payload.role)) {
+        client.join('team');
+      }
       client.emit('connected', { userId });
     } catch {
       client.emit('error', 'Invalid token');

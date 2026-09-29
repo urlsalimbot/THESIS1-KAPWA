@@ -7,6 +7,9 @@ interface FakeSocket {
   rooms: Set<string>;
   emit: jest.Mock;
   join: jest.Mock;
+  handshake: { auth: Record<string, unknown>; query: Record<string, unknown> };
+  data: Record<string, unknown>;
+  disconnect: jest.Mock;
 }
 
 /**
@@ -26,7 +29,7 @@ function makeFakeServer(sockets: FakeSocket[]) {
   };
 }
 
-function makeFakeSocket(id: string): FakeSocket {
+function makeFakeSocket(id: string, token?: string): FakeSocket {
   const socket: FakeSocket = {
     id,
     rooms: new Set(),
@@ -34,6 +37,9 @@ function makeFakeSocket(id: string): FakeSocket {
     join: jest.fn((room: string) => {
       socket.rooms.add(room);
     }),
+    handshake: { auth: token ? { token } : {}, query: {} },
+    data: {},
+    disconnect: jest.fn(),
   };
   return socket;
 }
@@ -101,5 +107,53 @@ describe('NotificationsGateway', () => {
       'team.status.updated',
       expect.objectContaining({ userId: 'u3', status: 'out_of_office' }),
     );
+  });
+
+  describe('handleConnection team-room join', () => {
+    it.each(['admin', 'social_worker', 'coordinator'])(
+      '%s socket joins the team room on connection',
+      async (role) => {
+        jwtMock.verify.mockReturnValue({ sub: 'u-staff', role });
+        const socket = makeFakeSocket('staff-socket', 'token');
+        await gateway.handleConnection(socket as any);
+        expect(socket.join).toHaveBeenCalledWith('team');
+        expect(socket.rooms.has('team')).toBe(true);
+      },
+    );
+
+    it.each(['claimant', 'mayor', 'auditor', 'agency_staff'])(
+      '%s socket does NOT join the team room on connection',
+      async (role) => {
+        jwtMock.verify.mockReturnValue({ sub: 'u-other', role });
+        const socket = makeFakeSocket('other-socket', 'token');
+        await gateway.handleConnection(socket as any);
+        expect(socket.join).not.toHaveBeenCalledWith('team');
+        expect(socket.rooms.has('team')).toBe(false);
+        expect(socket.join).toHaveBeenCalledWith('user:u-other');
+      },
+    );
+
+    it('broadcast reaches only staff sockets that joined team on connection', async () => {
+      jwtMock.verify.mockReturnValue({ sub: 'u-sw', role: 'social_worker' });
+      const staff = makeFakeSocket('staff-socket-1', 'token');
+      await gateway.handleConnection(staff as any);
+
+      jwtMock.verify.mockReturnValue({ sub: 'u-c', role: 'claimant' });
+      const claimant = makeFakeSocket('claimant-socket-1', 'token');
+      await gateway.handleConnection(claimant as any);
+
+      gateway.server = makeFakeServer([staff, claimant]) as any;
+      gateway.broadcastTeamStatus({
+        userId: 'u-sw',
+        status: 'in_office',
+        updatedAt: '2026-09-29T11:00:00.000Z',
+      });
+
+      expect(staff.emit).toHaveBeenCalledWith(
+        'team.status.updated',
+        expect.objectContaining({ userId: 'u-sw', status: 'in_office' }),
+      );
+      expect(claimant.emit).not.toHaveBeenCalledWith('team.status.updated', expect.anything());
+    });
   });
 });
