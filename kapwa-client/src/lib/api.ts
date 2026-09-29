@@ -451,6 +451,48 @@ export async function downloadFilingDoc(id: string, fallbackName = 'document'): 
   URL.revokeObjectURL(url);
 }
 
+// Issue an endorsement letter for a case: records the inter-agency referral
+// server-side and downloads the generated letter PDF. The referral step's only
+// confirmation action.
+export async function downloadEndorsementLetter(
+  caseId: string,
+  body: { toAgencyId: string; reason: string; legalBasisCode: string; notes?: string },
+): Promise<void> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/inter-agency-referrals/case/${caseId}/endorsement-letter`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Endorsement letter failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = dispositionFilename(res, exportFileName('ENDORSEMENT', caseId));
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Re-download an already-issued endorsement letter from its referral.
+export async function downloadEndorsementLetterById(referralId: string): Promise<void> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE}/inter-agency-referrals/${referralId}/endorsement-letter`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Endorsement letter failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = dispositionFilename(res, exportFileName('ENDORSEMENT', referralId));
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /**
  * Extract the filing document id from a `/filing/:id/download` URL (the shape
  * server-stored fields like certificateUrl / pettyCashVoucherUrl hold), so the

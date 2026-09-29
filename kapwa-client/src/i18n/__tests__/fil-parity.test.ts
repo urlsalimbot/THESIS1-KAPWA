@@ -32,6 +32,7 @@ const ALLOWED_IDENTICAL = new Set([
   'analytics.clustering.profile',
   'analytics.clustering.silhouette',
   'analytics.concentration.barangay',
+  'caseView.integrated.endorsementLetter',
   'analytics.demographics.dependency',
   'analytics.equity.coverageRatio',
   'analytics.filters.barangay',

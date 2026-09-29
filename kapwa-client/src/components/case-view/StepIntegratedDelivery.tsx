@@ -2,18 +2,13 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
 import useSWR, { useSWRConfig } from 'swr';
-import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Send, Plus, Lock, Ban, CheckCircle2 } from 'lucide-react';
-import { CreateReferralForm } from '@/components/referrals/CreateReferralForm';
-import { ReferralCard } from '@/components/referrals/ReferralCard';
-import { Agency, InterAgencyReferral } from '@/components/referrals/referral-utils';
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/EmptyState';
+import { Lock, FileText } from 'lucide-react';
+import { downloadEndorsementLetter, downloadEndorsementLetterById } from '@/lib/api';
+import { Agency, LEGAL_BASIS_OPTIONS } from '@/components/referrals/referral-utils';
 import { useTranslation } from 'react-i18next';
 
 interface StepIntegratedDeliveryProps {
@@ -23,184 +18,175 @@ interface StepIntegratedDeliveryProps {
   readOnly?: boolean;
 }
 
-export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }: StepIntegratedDeliveryProps) {
+// The referral step has exactly one confirmation: issue the endorsement letter.
+// That action records the inter-agency referral server-side and downloads the
+// generated letter, so the letter *is* the referral. Once a referral exists the
+// same single button re-downloads it.
+export function StepIntegratedDelivery({ caseId, readOnly }: StepIntegratedDeliveryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
-  const [referralSaving, setReferralSaving] = useState(false);
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [toAgencyId, setToAgencyId] = useState('');
+  const [reason, setReason] = useState('');
+  const [legalBasisCode, setLegalBasisCode] = useState(LEGAL_BASIS_OPTIONS[0]);
+  const [notes, setNotes] = useState('');
+  const [issuing, setIssuing] = useState(false);
 
-  const { data: referrals, isLoading, mutate: revalidate } = useSWR<InterAgencyReferral[]>(
+  const { data: referrals, mutate: revalidate } = useSWR<{ id: string; toAgencyId: string }[]>(
     queryKeys.interAgencyReferrals.byCase(caseId),
   );
   const { data: agencies } = useSWR<Agency[]>(queryKeys.agencies.list());
 
-  const ben = caseData?.beneficiary as Record<string, unknown> | undefined;
-  const initialBeneficiary = ben?.id
-    ? { beneficiaryId: ben.id as string, label: `${ben.firstName || ''} ${ben.surname || ''}`.trim() }
-    : undefined;
-
   const hasReferrals = (referrals || []).length > 0;
+  const latestReferralId = referrals?.[0]?.id;
 
-  async function transition(id: string, action: string, body?: Record<string, string>) {
-    setTransitioning(true);
+  async function issue(e: React.FormEvent) {
+    e.preventDefault();
+    if (issuing) return;
+    setIssuing(true);
     try {
-      await api.patch(`/inter-agency-referrals/${id}/${action}`, body);
+      await downloadEndorsementLetter(caseId, {
+        toAgencyId,
+        reason: reason.trim(),
+        legalBasisCode,
+        notes: notes.trim() || undefined,
+      });
+      setIssueOpen(false);
       await revalidate();
       await mutate(queryKeys.cases.detail(caseId));
     } catch (err: any) {
-      toast.error(t('caseView.integrated.failedUpdateReferral', 'Could not update referral'), { description: humanizeError(err) });
+      toast.error(t('caseView.integrated.issueFailed', 'Could not issue the endorsement letter'), { description: humanizeError(err) });
     } finally {
-      setTransitioning(false);
+      setIssuing(false);
     }
   }
 
-  async function saveDecision(notNeeded: boolean) {
-    setReferralSaving(true);
+  async function redownload() {
+    if (!latestReferralId || issuing) return;
+    setIssuing(true);
     try {
-      await api.patch(`/cases/${caseId}/referral-decision`, { notNeeded });
-      await mutate(queryKeys.cases.detail(caseId));
+      await downloadEndorsementLetterById(latestReferralId);
     } catch (err: any) {
-      toast.error(t('caseView.integrated.failedReferralDecision', 'Could not save referral decision'), { description: humanizeError(err) });
+      toast.error(t('caseView.integrated.issueFailed', 'Could not issue the endorsement letter'), { description: humanizeError(err) });
     } finally {
-      setReferralSaving(false);
+      setIssuing(false);
     }
   }
 
   return (
     <div className="space-y-4">
-      {/* Inter-Agency Referrals */}
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <FileText size={16} className="text-primary" />
             <h3 className="text-sm font-semibold">{t('caseView.integrated.interAgencyReferrals', 'Inter-Agency Referrals')}</h3>
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
-          {!readOnly && (
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus size={14} className="mr-1" /> {t('caseView.integrated.createReferral', 'Create Referral')}
-            </Button>
-          )}
         </div>
-        <Separator />
-        <div className="px-4 py-3 space-y-3">
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-3">{t('caseView.integrated.loadingReferrals', 'Loading referrals...')}</p>
-          ) : !referrals || referrals.length === 0 ? (
-            <EmptyState variant="no-data" />
+        <div className="border-t px-4 py-4 flex items-center justify-center">
+          {readOnly ? (
+            <p className="text-xs text-muted-foreground">
+              {hasReferrals
+                ? t('caseView.integrated.issuedHint', 'Endorsement letter issued for this case.')
+                : t('caseView.integrated.noReferralsHint', 'No endorsement letter issued.')}
+            </p>
           ) : (
-            referrals.map(r => (
-              <ReferralCard
-                key={r.id}
-                referral={r}
-                myAgencyId={user?.agencyId}
-                onTransition={transition}
-                disabled={transitioning}
-              />
-            ))
+            <Button
+              size="sm"
+              onClick={hasReferrals ? redownload : () => setIssueOpen(true)}
+              disabled={issuing}
+              aria-label={hasReferrals ? t('caseView.integrated.endorsementLetter', 'Endorsement Letter') : undefined}
+            >
+              <FileText size={14} className="mr-1" />
+              {issuing
+                ? t('caseView.integrated.issuing', 'Issuing...')
+                : hasReferrals
+                ? t('caseView.integrated.endorsementLetter', 'Endorsement Letter')
+                : t('caseView.integrated.issueEndorsementLetter', 'Issue Endorsement Letter')}
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Referral decision — only when no referral has been issued. Once a
-          referral exists, Service Delivery is complete on that referral and the
-          "mark not needed" prompt no longer applies. */}
-      {!hasReferrals && (userRole === 'admin' || userRole === 'social_worker') && (
-        <div className="rounded-lg border bg-card">
-          <div className="px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {caseData?.referralNotNeeded
-                ? <CheckCircle2 size={16} className="text-primary" />
-                : <Ban size={16} className="text-muted-foreground" />}
-              <h3 className="text-sm font-semibold">{t('caseView.integrated.referralDecision', 'Referral Decision')}</h3>
-            </div>
-            {caseData?.referralNotNeeded && (
-              <Badge variant="outline" className="text-[10px]">{t('caseView.integrated.referralNotNeededBadge', 'Referral not needed')}</Badge>
-            )}
-          </div>
-          <Separator />
-          <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">
-              {caseData?.referralNotNeeded
-                ? t('caseView.integrated.referralNotNeededActive', 'No inter-agency referral is required for this case.')
-                : t('caseView.integrated.referralNotNeededHint', 'If coordination shows no referral is required, record the decision to complete Service Delivery.')}
-            </p>
-            {(!readOnly || caseData?.referralNotNeeded) && (
-              <Button
-                variant={caseData?.referralNotNeeded ? 'outline' : 'secondary'}
-                size="sm"
-                disabled={referralSaving}
-                onClick={() => saveDecision(!caseData?.referralNotNeeded)}
-              >
-                {caseData?.referralNotNeeded
-                  ? t('caseView.integrated.undoReferralNotNeeded', 'Undo decision')
-                  : (
-                    <>
-                      <Ban size={14} className="mr-1" /> {t('caseView.integrated.markReferralNotNeeded', 'Mark referral not needed')}
-                    </>
-                  )}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Status transition */}
-      {caseData?.status === 'in_review' && userRole === 'admin' && (
-        <div className="rounded-lg border bg-primary/5 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-primary">{t('caseView.integrated.readyForApproval', 'Ready for approval')}</p>
-              <p className="text-xs text-muted-foreground">{t('caseView.integrated.readyForApprovalHint', 'Case is in review. Approve to activate services.')}</p>
-            </div>
-            <ApproveButton caseId={caseId} mutate={mutate} />
-          </div>
-        </div>
-      )}
-
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={issueOpen} onOpenChange={setIssueOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send size={16} className="text-primary" /> {t('caseView.integrated.createIarTitle', 'Create Inter-Agency Referral')}
-            </DialogTitle>
+            <DialogTitle>{t('caseView.integrated.issueTitle', 'Issue Endorsement Letter')}</DialogTitle>
             <DialogDescription>
-              {t('caseView.integrated.createIarDesc', "Refer this case's beneficiary to a partner agency for coordinated services.")}
+              {t('caseView.integrated.issueDesc', 'This records the inter-agency referral and generates the endorsement letter for the receiving agency.')}
             </DialogDescription>
           </DialogHeader>
-          <CreateReferralForm
-            agencies={agencies || []}
-            caseId={caseId}
-            initialBeneficiary={initialBeneficiary}
-            onCreated={() => {
-              setCreateOpen(false);
-              revalidate();
-            }}
-          />
+          <form onSubmit={issue} className="space-y-3">
+            <div className="space-y-1">
+              <label htmlFor="endorse-agency" className="text-xs font-medium text-muted-foreground">
+                {t('caseView.integrated.targetAgency', 'Target Agency *')}
+              </label>
+              <select
+                id="endorse-agency"
+                required
+                value={toAgencyId}
+                onChange={(e) => setToAgencyId(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">{t('caseView.integrated.selectAgency', 'Select agency...')}</option>
+                {(agencies || []).map((a) => (
+                  <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="endorse-reason" className="text-xs font-medium text-muted-foreground">
+                {t('caseView.integrated.reason', 'Reason *')}
+              </label>
+              <textarea
+                id="endorse-reason"
+                required
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="endorse-legal" className="text-xs font-medium text-muted-foreground">
+                {t('caseView.integrated.legalBasis', 'Legal Basis *')}
+              </label>
+              <select
+                id="endorse-legal"
+                required
+                value={legalBasisCode}
+                onChange={(e) => setLegalBasisCode(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {LEGAL_BASIS_OPTIONS.map((o) => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="endorse-notes" className="text-xs font-medium text-muted-foreground">
+                {t('caseView.integrated.notes', 'Notes (optional)')}
+              </label>
+              <textarea
+                id="endorse-notes"
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIssueOpen(false)}>
+                {t('caseView.cancel', 'Cancel')}
+              </Button>
+              <Button type="submit" size="sm" disabled={issuing || !toAgencyId || !reason.trim()}>
+                {issuing ? t('caseView.integrated.issuing', 'Issuing...') : t('caseView.integrated.issue', 'Issue')}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function ApproveButton({ caseId, mutate }: { caseId: string; mutate: any }) {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
-  async function handleApprove() {
-    setLoading(true);
-    try {
-      await api.patch(`/cases/${caseId}/approve`, { status: 'active', signature: '' });
-      await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to approve:', e);
-    } finally {
-      setLoading(false);
-    }
-  }
-  return (
-    <Button onClick={handleApprove} disabled={loading} size="sm">
-      {loading ? t('caseView.approving', 'Approving...') : t('caseView.integrated.approveCase', '✓ Approve Case')}
-    </Button>
   );
 }
