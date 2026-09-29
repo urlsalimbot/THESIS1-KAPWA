@@ -7,22 +7,17 @@ import { DataSource } from 'typeorm';
 // inclusive [from, to] date range, and zero-filled so every staff member
 // appears even with no activity in the range.
 //
-// SCHEMA DRIFT (verified against entities + migrate.ts bootstrap, 2026-09-29):
-// the approved spec names `case_interventions.created_by` and
-// `case_referrals.created_by` for two of these metrics, but NEITHER column
-// exists in the schema:
-//   - `case_interventions` has no `created_by`; its only person column is
-//     `delivered_by` (TEXT, client-supplied, may hold names/'MSWDO' rather
-//     than user ids). Interventions therefore count rows whose `delivered_by`
-//     equals a staff user id — rows with non-id text never match and count 0.
-//   - `case_referrals` has NO user column at all (id, case_id, agency, status,
-//     notes, reason, contact_info, timestamps). The only referral table that
-//     records a staff creator is `inter_agency_referrals.created_by` (uuid FK
-//     users, set from the caller at creation in inter-agency-referrals.service).
-//     Referrals therefore count `inter_agency_referrals` rows instead.
-// Both deviations are flagged in .superpowers/sdd/2026-09-29-team-workspace/
-// task-7-report.md; a schema migration (add `created_by` to the case child
-// tables) is the clean fix if the spec is to be honored exactly.
+// SCHEMA HISTORY (2026-09-29): the spec names `case_interventions.created_by`
+// and `case_referrals.created_by` for two of these metrics. Neither column
+// existed at first implementation (case_interventions only had client-supplied
+// `delivered_by` free text; case_referrals had no staff column at all), so the
+// metrics were proxied on `delivered_by` / `inter_agency_referrals.created_by`.
+// Migration AddCaseChildCreatedBy0000000000069 (+ the migrate.ts bootstrap)
+// now adds both columns as nullable UUID FKs to users, and the creation points
+// record `created_by = caller.id` (case-interventions create, cases
+// updateTransitionPlan → case_referrals). Legacy rows created before the
+// migration stay NULL — they count to nobody, which is the intended reading of
+// a nullable author column.
 
 export interface TeamStaffAchievement {
   userId: string;
@@ -65,31 +60,35 @@ export class TeamAchievementsService {
          ORDER BY first_name, last_name`,
       );
 
-    // Cases served: `case_history` rows the staff acted on (actor-based only —
-    // rows whose changed_by_id is NULL belong to no staff member's count).
+    // Cases served: `case_history` rows the staff acted on, with the spec's
+    // fallback — an entry that lacks an actor (changed_by_id NULL) is counted
+    // under the case's assigned worker instead of nobody. Rows with neither
+    // actor nor assigned worker drop out (group under NULL, never a staff id).
     const caseRows: CountRow[] = await this.dataSource.query(
-      `SELECT changed_by_id AS user_id, COUNT(*)::int AS cases
-       FROM case_history
-       WHERE changed_by_id IS NOT NULL AND created_at >= $1 AND created_at < $2
-       GROUP BY changed_by_id`,
+      `SELECT COALESCE(ch.changed_by_id, c.assigned_worker_id) AS user_id, COUNT(*)::int AS cases
+       FROM case_history ch
+       LEFT JOIN cases c ON c.id = ch.case_id
+       WHERE ch.created_at >= $1 AND ch.created_at < $2
+         AND (ch.changed_by_id IS NOT NULL OR (ch.changed_by_id IS NULL AND c.assigned_worker_id IS NOT NULL))
+       GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)`,
       [from, upper],
     );
 
-    // Interventions: see SCHEMA DRIFT note above — spec's `created_by` does
-    // not exist; counted on `delivered_by`, the only person column present.
+    // Interventions: spec's `created_by`, recorded at creation (see SCHEMA
+    // HISTORY above). Legacy NULL rows are excluded and count to nobody.
     const interventionRows: CountRow[] = await this.dataSource.query(
-      `SELECT delivered_by AS user_id, COUNT(*)::int AS interventions
+      `SELECT created_by AS user_id, COUNT(*)::int AS interventions
        FROM case_interventions
-       WHERE delivered_by IS NOT NULL AND created_at >= $1 AND created_at < $2
-       GROUP BY delivered_by`,
+       WHERE created_by IS NOT NULL AND created_at >= $1 AND created_at < $2
+       GROUP BY created_by`,
       [from, upper],
     );
 
-    // Referrals: see SCHEMA DRIFT note above — `case_referrals` has no user
-    // column; counted on `inter_agency_referrals.created_by` instead.
+    // Referrals: spec's `case_referrals.created_by`, recorded at creation via
+    // the transition plan (see SCHEMA HISTORY above).
     const referralRows: CountRow[] = await this.dataSource.query(
       `SELECT created_by AS user_id, COUNT(*)::int AS referrals
-       FROM inter_agency_referrals
+       FROM case_referrals
        WHERE created_by IS NOT NULL AND created_at >= $1 AND created_at < $2
        GROUP BY created_by`,
       [from, upper],
@@ -108,12 +107,14 @@ export class TeamAchievementsService {
     );
 
     // Tracker days: distinct dates on which the staff has case_history rows
-    // (same actor rule as cases served).
+    // (same actor + assigned-worker fallback rule as cases served).
     const trackerRows: CountRow[] = await this.dataSource.query(
-      `SELECT changed_by_id AS user_id, COUNT(DISTINCT created_at::date)::int AS tracker_days
-       FROM case_history
-       WHERE changed_by_id IS NOT NULL AND created_at >= $1 AND created_at < $2
-       GROUP BY changed_by_id`,
+      `SELECT COALESCE(ch.changed_by_id, c.assigned_worker_id) AS user_id, COUNT(DISTINCT ch.created_at::date)::int AS tracker_days
+       FROM case_history ch
+       LEFT JOIN cases c ON c.id = ch.case_id
+       WHERE ch.created_at >= $1 AND ch.created_at < $2
+         AND (ch.changed_by_id IS NOT NULL OR (ch.changed_by_id IS NULL AND c.assigned_worker_id IS NOT NULL))
+       GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)`,
       [from, upper],
     );
 

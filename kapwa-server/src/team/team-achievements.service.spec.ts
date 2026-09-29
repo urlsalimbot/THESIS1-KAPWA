@@ -88,7 +88,7 @@ describe('TeamAchievementsService', () => {
     }
   });
 
-  it('parses tracker days as distinct dates over the same actor rule as cases', async () => {
+  it('parses tracker days as distinct dates over the same actor+fallback rule as cases', async () => {
     dsMock.query
       .mockResolvedValueOnce(staff)
       .mockResolvedValueOnce([])
@@ -99,12 +99,61 @@ describe('TeamAchievementsService', () => {
 
     await service.rollup(FROM, TO);
 
-    // Sixth query: COUNT(DISTINCT created_at::date) grouped by changed_by_id
-    // with the actor-based exclusion of NULL actors.
+    // Sixth query: COUNT(DISTINCT created_at::date) grouped by the coalesced
+    // actor/assigned worker, with the spec fallback (actor- NULL entries count
+    // under the case's assigned worker).
     const trackerSql = dsMock.query.mock.calls[5][0] as string;
-    expect(trackerSql).toContain('COUNT(DISTINCT created_at::date)');
-    expect(trackerSql).toContain('changed_by_id IS NOT NULL');
-    expect(trackerSql).toContain('GROUP BY changed_by_id');
+    expect(trackerSql).toContain('COUNT(DISTINCT ch.created_at::date)');
+    expect(trackerSql).toContain('LEFT JOIN cases');
+    expect(trackerSql).toContain('changed_by_id IS NULL');
+    expect(trackerSql).toContain('GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)');
+  });
+
+  it('counts actor-less case history entries under the case assigned worker (spec fallback)', async () => {
+    dsMock.query
+      .mockResolvedValueOnce(staff)
+      .mockResolvedValueOnce([{ user_id: 'u1', cases: 4 }]) // 4 entries, some with no actor
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ user_id: 'u1', tracker_days: 1 }]); // one fallback date
+
+    const rollup = await service.rollup(FROM, TO);
+
+    // Cases query must carry the OR predicate: actor = staff OR (actor IS NULL
+    // AND the case's assigned_worker_id = staff).
+    const caseSql = dsMock.query.mock.calls[1][0] as string;
+    expect(caseSql).toContain('LEFT JOIN cases');
+    expect(caseSql).toContain('COALESCE(ch.changed_by_id, c.assigned_worker_id)');
+    expect(caseSql).toContain('ch.changed_by_id IS NULL AND c.assigned_worker_id IS NOT NULL');
+    expect(caseSql).toContain('GROUP BY COALESCE(ch.changed_by_id, c.assigned_worker_id)');
+
+    // The fallback branch's rows land on the assigned worker's tally.
+    expect(rollup.perStaff[0]).toMatchObject({ userId: 'u1', cases: 4, trackerDays: 1 });
+  });
+
+  it('counts interventions and referrals from the spec author columns (created_by)', async () => {
+    dsMock.query
+      .mockResolvedValueOnce(staff)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ user_id: 'u1', interventions: 2 }])
+      .mockResolvedValueOnce([{ user_id: 'u2', referrals: 3 }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await service.rollup(FROM, TO);
+
+    const interventionSql = dsMock.query.mock.calls[2][0] as string;
+    expect(interventionSql).toContain('FROM case_interventions');
+    expect(interventionSql).toContain('created_by IS NOT NULL');
+    expect(interventionSql).toContain('GROUP BY created_by');
+    expect(interventionSql).not.toContain('delivered_by');
+
+    const referralSql = dsMock.query.mock.calls[3][0] as string;
+    expect(referralSql).toContain('FROM case_referrals');
+    expect(referralSql).toContain('created_by IS NOT NULL');
+    expect(referralSql).toContain('GROUP BY created_by');
+    expect(referralSql).not.toContain('inter_agency_referrals');
   });
 
   it('counts documents only for approval_document/requirement categories', async () => {

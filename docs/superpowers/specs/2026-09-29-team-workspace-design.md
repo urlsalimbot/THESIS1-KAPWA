@@ -94,8 +94,8 @@ interventions, referrals, docs, trackerDays }], range }`, counted from
 existing tables within the inclusive range:
 
 - **cases served**: `case_history` rows where actor = staff in range
-  (authoritative). Fallback when an entry lacks an actor: treat the case's
-  `assigned_worker_id` updated within range as the staff's case.
+  (authoritative). Fallback when an entry lacks an actor: count it under the
+  case's `assigned_worker_id` (the entry itself must still fall within range).
 - **interventions**: `case_interventions.created_by` in range.
 - **referrals**: `case_referrals.created_by` in range.
 - **documents issued**: `document_vault.uploaded_by` in range

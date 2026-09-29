@@ -553,14 +553,16 @@ export class CasesService {
     return saved;
   }
 
-  async updateTransitionPlan(id: string, data: TransitionPlanInput) {
+  async updateTransitionPlan(id: string, data: TransitionPlanInput, actorId?: string) {
     const caseEntity = await this.caseRepo.findOne({ where: { id } });
     if (!caseEntity) throw new NotFoundException('Case not found');
     const { referrals, followUpVisits, ...rest } = data;
     Object.assign(caseEntity, rest);
     if (referrals !== undefined && referrals !== null) {
+      // actorId is optional for legacy call paths; achievements count referral
+      // rows by created_by, and rows recorded without it count to nobody.
       caseEntity.referralRows = referrals.map(r =>
-        this.caseRepo.manager.create(CaseReferral, { caseId: caseEntity.id, agency: r.agencyName, status: r.status, notes: r.notes ?? undefined, reason: r.reason, contactInfo: r.contactInfo ?? undefined }),
+        this.caseRepo.manager.create(CaseReferral, { caseId: caseEntity.id, agency: r.agencyName, status: r.status, notes: r.notes ?? undefined, reason: r.reason, contactInfo: r.contactInfo ?? undefined, createdBy: actorId }),
       );
     }
     await this.caseRepo.save(caseEntity);
