@@ -18,7 +18,7 @@ import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
 import { MatchProbeDialog, type MatchCandidate } from '@/components/intake/MatchProbeDialog';
-import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera } from 'lucide-react';
+import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   setPendingBeneficiaryIdPhoto, getPendingBeneficiaryIdPhoto, setPendingClaimantIdPhoto, getPendingClaimantIdPhoto,
@@ -220,7 +220,7 @@ export function IntakePage() {
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [probeCandidates, setProbeCandidates] = useState<MatchCandidate[] | null>(null);
   const [confirmedHousehold, setConfirmedHousehold] = useState<MatchCandidate | null>(null);
-  const probeSettled = useRef(false);
+  const [probing, setProbing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [beneficiaryIsClaimant, setBeneficiaryIsClaimant] = useState(false);
@@ -434,10 +434,11 @@ export function IntakePage() {
     return Object.keys(validatePerson(flat)).length === 0;
   }, [beneficiary]);
 
-  useEffect(() => {
-    if (!beneficiaryComplete || probeSettled.current) return;
-    const timer = window.setTimeout(() => {
-      api.post<{ candidates: MatchCandidate[] }>('/intake/match-check', {
+  async function runMatchProbe() {
+    if (probing) return;
+    setProbing(true);
+    try {
+      const res = await api.post<{ candidates: MatchCandidate[] }>('/intake/match-check', {
         surname: beneficiary.surname,
         firstName: beneficiary.firstName,
         middleName: beneficiary.middleName || undefined,
@@ -447,15 +448,15 @@ export function IntakePage() {
         phone: beneficiary.cellularNumber || undefined,
         email: beneficiary.email || undefined,
         philhealthNumber: beneficiary.philhealthNumber || undefined,
-      })
-        .then(res => {
-          if (res.candidates && res.candidates.length > 0) setProbeCandidates(res.candidates);
-        })
-        .catch(() => { /* the pop-up is best-effort; server-side guards still protect */ })
-        .finally(() => { probeSettled.current = true; });
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }, [beneficiaryComplete, beneficiary, family]);
+      });
+      if (res.candidates && res.candidates.length > 0) setProbeCandidates(res.candidates);
+      else toast(t('intake.matchNoRecords', 'No existing records found for this client.'));
+    } catch {
+      toast.error(t('intake.matchProbeError', 'Record check unavailable — please try again.'));
+    } finally {
+      setProbing(false);
+    }
+  }
 
   function handleProbeConfirm(c: MatchCandidate) {
     setProbeCandidates(null);
@@ -702,10 +703,22 @@ export function IntakePage() {
       )}
       <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6">
         {/* Section I: Beneficiary */}
-        <div className="rounded-lg border bg-card shadow-sm">
+        <div className="relative rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
             <User size={16} className="text-muted-foreground" />
             <h2 className="text-sm font-semibold">{t('intake.sectionBeneficiary', 'I. Beneficiary Information')}</h2>
+            <div className="ml-auto">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={runMatchProbe}
+                disabled={!beneficiaryComplete || probing}
+                title={beneficiaryComplete ? t('intake.matchCheckTooltip', 'Check for existing household records') : t('intake.matchCheckHint', 'Finish the beneficiary section to check for existing records')}
+              >
+                <Search size={14} className="mr-1" /> {probing ? t('intake.matchChecking', 'Checking...') : t('intake.matchCheckButton', 'Check records')}
+              </Button>
+            </div>
           </div>
           <div className="p-6">
             <PersonFields prefix="ben" form={beneficiary} onChange={updateBeneficiary} onAddressChange={updateBenAddress} errors={benErrors} />

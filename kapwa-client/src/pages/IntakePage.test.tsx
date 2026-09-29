@@ -851,12 +851,12 @@ describe('IntakePage — match pop-up', () => {
     );
     await screen.findByRole('heading', { name: /General Intake Form/i });
 
+    expect(screen.getByRole('button', { name: /Check records/i })).toBeDisabled();
     fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
     await fillBeneficiary();
-    // Fire the debounced silent probe.
-    vi.useFakeTimers();
-    await vi.advanceTimersByTimeAsync(900);
-    vi.useRealTimers();
+    // The check button enables once the beneficiary section is valid.
+    expect(screen.getByRole('button', { name: /Check records/i })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /Check records/i }));
 
     expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
     expect(screen.getByText(/Household of.*Juan Dela Cruz/i)).toBeDefined();
@@ -892,9 +892,7 @@ describe('IntakePage — match pop-up', () => {
 
     fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
     await fillBeneficiary();
-    vi.useFakeTimers();
-    await vi.advanceTimersByTimeAsync(900);
-    vi.useRealTimers();
+    fireEvent.click(screen.getByRole('button', { name: /Check records/i }));
 
     expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: /None of these — continue/i }));
