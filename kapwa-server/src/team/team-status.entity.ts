@@ -18,7 +18,7 @@ export class TeamStatus extends BaseEntity {
   status!: string;
 
   @Column({ type: 'text', nullable: true })
-  note?: string;
+  note?: string | null;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
