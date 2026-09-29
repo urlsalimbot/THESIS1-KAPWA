@@ -592,11 +592,11 @@ export async function downloadMonthlyFunds(month: string, startDate?: string, en
   URL.revokeObjectURL(url);
 }
 
-export async function downloadSummaryReport(year?: number, quarter?: number): Promise<void> {
+export async function downloadSummaryReport(year?: number, semester?: number): Promise<void> {
   const token = getToken();
   const params = new URLSearchParams();
   if (year) params.set('year', String(year));
-  if (quarter) params.set('quarter', String(quarter));
+  if (semester) params.set('semester', String(semester));
   const res = await fetch(`${API_BASE}/reports/summary?${params.toString()}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -605,7 +605,7 @@ export async function downloadSummaryReport(year?: number, quarter?: number): Pr
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `summary-report-${year ?? 'current'}-Q${quarter ?? ''}.pdf`;
+  a.download = `summary-report-${year ?? 'current'}-S${semester ?? ''}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -216,11 +216,12 @@ export interface CaseListRow {
 
 export interface SummaryReportData {
   year: number;
-  quarter: number;
+  /** 1 = Q1+Q2 (Jan–Jun), 2 = Q3+Q4 (Jul–Dec). */
+  semester: number;
   columns: ReportColumn[];
   annual: SummaryTable;
   monthly: SummaryTable[];
-  quarterSummary: SummaryTable;
+  semesterSummary: SummaryTable;
   caseList: CaseListRow[];
   officeName: string;
   preparedBy: string;

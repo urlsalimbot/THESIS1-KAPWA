@@ -22,22 +22,22 @@ export class ReportsController {
 
   @Get('summary')
   @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'GAD Summary Report (annual, quarterly, case list) as PDF' })
+  @ApiOperation({ summary: 'GAD Summary Report (annual, semestral, case list) as PDF' })
   @ApiQuery({ name: 'year', required: false, example: 2025 })
-  @ApiQuery({ name: 'quarter', required: false, example: 2 })
-  async summary(@Query('year') year: string, @Query('quarter') quarter: string, @Res() res: Response) {
-    let parsed: { year: number; quarter: number };
+  @ApiQuery({ name: 'semester', required: false, example: 2, description: '1 = Q1+Q2 (Jan–Jun), 2 = Q3+Q4 (Jul–Dec)' })
+  async summary(@Query('year') year: string, @Query('semester') semester: string, @Res() res: Response) {
+    let parsed: { year: number; semester: number };
     try {
-      parsed = SummaryReportQuerySchema.parse({ year, quarter });
+      parsed = SummaryReportQuerySchema.parse({ year, semester });
     } catch {
-      throw new BadRequestException('year must be 2000-2100 and quarter must be 1-4');
+      throw new BadRequestException('year must be 2000-2100 and semester must be 1-2');
     }
-    const { year: y, quarter: q } = parsed;
-    const data = await this.summaryReport.build(y, q);
+    const { year: y, semester: s } = parsed;
+    const data = await this.summaryReport.build(y, s);
     const buffer = await this.builder.build(data);
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="summary-report-${y}-Q${q}.pdf"`,
+      'Content-Disposition': `attachment; filename="summary-report-${y}-S${s}.pdf"`,
       'Content-Length': buffer.length,
     });
     res.send(buffer);

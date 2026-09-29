@@ -2,17 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import { buildSummaryReportPdf } from './summary-report-pdf.builder';
 import { ReportColumn, SummaryReportData, SummaryTable, buildColumns } from './summary-report.types';
 
-// Program fixture mirrors a small deployment; columns are the fixed 18-slot
-// reference set regardless of the catalogue.
-const PROGRAMS = [
-  { id: 'p-burial', name: 'Burial Assistance', category: 'Burial' },
-  { id: 'p-med', name: 'Medical Assistance', category: 'Medical' },
-  { id: 'p-pwd', name: 'PWD Assistance', category: 'PWD Welfare' },
-  { id: 'p-pao', name: 'Legal Referral (PAO)', category: 'Legal' },
-  { id: 'p-ref', name: 'Referral – Others', category: 'Legal' },
-  { id: 'p-csr', name: 'Case Study Report (CSR)', category: 'Technical' },
-  { id: 'p-hv', name: 'Home Visit', category: 'Technical' },
-];
+// Columns are the fixed 18-slot reference set regardless of the catalogue.
 
 const COLUMNS: ReportColumn[] = buildColumns();
 
@@ -26,11 +16,14 @@ function emptyTable(title: string): SummaryTable {
 }
 
 const data: SummaryReportData = {
-  year: 2025, quarter: 2,
+  year: 2025, semester: 2,
   columns: COLUMNS,
   annual: emptyTable('SUMMARY REPORT 2025'),
-  monthly: [emptyTable('April 1-30, 2025'), emptyTable('May 1-31, 2025'), emptyTable('June 1-30, 2025')],
-  quarterSummary: emptyTable('2nd QUARTER SUMMARY'),
+  monthly: [
+    emptyTable('July 1-31, 2025'), emptyTable('August 1-31, 2025'), emptyTable('September 1-30, 2025'),
+    emptyTable('October 1-31, 2025'), emptyTable('November 1-30, 2025'), emptyTable('December 1-31, 2025'),
+  ],
+  semesterSummary: emptyTable('2nd SEMESTER SUMMARY'),
   caseList: [{ no: 1, date: '01-02-25', surname: 'Magno', firstName: 'Michael', middleName: 'H', gender: 'M', categories: { cedc: false, wedc: false, pwd: false, senior: false, indigent: true, fourPs: false, ip: false }, barangay: 'Poblacion', intervention: 'FA' }],
   officeName: 'Municipal Social Welfare and Development Office',
   preparedBy: 'ARLYNDA F. GAMUTIA', preparedByRole: 'MSWD - STAFF',
@@ -54,19 +47,22 @@ function searchableText(buf: Buffer): string {
 }
 
 describe('buildSummaryReportPdf', () => {
-  it('produces three US Legal landscape pages', async () => {
+  it('produces US Legal landscape pages (two aggregate pages for six months)', async () => {
     const doc = await PDFDocument.load(await buildSummaryReportPdf(data));
-    expect(doc.getPageCount()).toBe(3);
-    const { width, height } = doc.getPage(0).getSize();
-    expect(Math.round(width)).toBe(936);
-    expect(Math.round(height)).toBe(612);
+    // P1 annual, P2 months 1–3, P3 months 4–6 + semester summary, P4 case list.
+    expect(doc.getPageCount()).toBe(4);
+    for (let i = 0; i < doc.getPageCount(); i += 1) {
+      const { width, height } = doc.getPage(i).getSize();
+      expect(Math.round(width)).toBe(936);
+      expect(Math.round(height)).toBe(612);
+    }
   });
 
   it('prints page titles, reference bands, signatories, and case rows', async () => {
     const text = searchableText(await buildSummaryReportPdf(data));
     for (const s of [
-      'SUMMARY REPORT 2025', 'GAD DATABASE CASE TRACKER', '2nd QUARTER REPORT',
-      'April 1-30, 2025', 'May 1-31, 2025', 'June 1-30, 2025', '2nd QUARTER SUMMARY',
+      'SUMMARY REPORT 2025', 'GAD DATABASE CASE TRACKER', '2nd SEMESTER REPORT',
+      'July 1-31, 2025', 'August 1-31, 2025', 'September 1-30, 2025', '2nd SEMESTER SUMMARY',
       'GAD DATABASE CASE LIST', 'SR. CITIZEN', 'INDIGENT', 'Intervention/Remarks',
       'SEX', 'Financial', 'Legal', 'Technical', 'Burial', 'Medical', 'Case Study',
       'Prepared by:', 'Noted by:', 'ARLYNDA F. GAMUTIA', 'ANNALYN JOY C. SAN PEDRO',
@@ -76,9 +72,9 @@ describe('buildSummaryReportPdf', () => {
 
   it('merges sub-bands once per table', async () => {
     const text = searchableText(await buildSummaryReportPdf(data));
-    // 1 annual + 3 monthly + 1 quarter summary = 5 tables, one merged cell each.
-    expect((text.match(/Financial Assistance/g) ?? []).length).toBe(5);
-    expect((text.match(/Referral/g) ?? []).length).toBe(5);
+    // 1 annual + 6 monthly + 1 semester summary = 8 tables, one merged cell each.
+    expect((text.match(/Financial Assistance/g) ?? []).length).toBe(8);
+    expect((text.match(/Referral/g) ?? []).length).toBe(8);
   });
 
   it('paginates a long case list without crashing', async () => {

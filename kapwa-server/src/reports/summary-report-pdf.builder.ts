@@ -4,6 +4,9 @@ import { BAND_LABELS, CaseListRow, ReportColumn, SummaryReportData, SummaryTable
 
 const PAGE: [number, number] = [936, 612]; // US Legal landscape (8.5in x 13in)
 const M = 28;
+// Reference density: three monthly tables per page. A semester (six months)
+// therefore renders as two aggregate pages.
+const MONTHS_PER_PAGE = 3;
 const LEFT = M;
 const RIGHT = PAGE[0] - M;
 const WIDTH = RIGHT - LEFT;
@@ -24,22 +27,33 @@ const CLIENTS = ['CEDC', 'WEDC', 'PWD', 'SR. CITIZEN', 'INDIGENT', '4Ps', 'IP'] 
 
 export async function buildSummaryReportPdf(data: SummaryReportData): Promise<Buffer> {
   const PDFDocument = require('pdfkit');
-  const doc = new PDFDocument({ size: PAGE, margins: { top: M, bottom: M, left: M, right: M }, info: { Title: `Summary Report ${data.year} Q${data.quarter}`, Author: data.officeName, Subject: 'GAD Database Case Tracker' } });
+  const doc = new PDFDocument({ size: PAGE, margins: { top: M, bottom: M, left: M, right: M }, info: { Title: `Summary Report ${data.year} Semester ${data.semester}`, Author: data.officeName, Subject: 'GAD Database Case Tracker' } });
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));
 
   drawLetterhead(doc, data);
   drawTitle(doc, data.annual.title, `GAD DATABASE CASE TRACKER`);
-  drawGroupedTable(doc, data.annual, data.columns);
+  drawGroupedTable(doc, data.annual, data.columns, data);
 
-  doc.addPage();
-  drawLetterhead(doc, data);
-  drawTitle(doc, `${data.year}`, `${ordinal(data.quarter)} QUARTER REPORT`);
-  data.monthly.forEach((m) => { drawSectionTitle(doc, m.title); drawGroupedTable(doc, m, data.columns); });
-  drawSectionTitle(doc, data.quarterSummary.title);
-  drawGroupedTable(doc, data.quarterSummary, data.columns);
-  drawSignatories(doc, data);
+  // Month tables are chunked three per page (the reference density), so a
+  // six-month semester spans two pages instead of overflowing one.
+  const monthChunks: SummaryTable[][] = [];
+  for (let i = 0; i < data.monthly.length; i += MONTHS_PER_PAGE) {
+    monthChunks.push(data.monthly.slice(i, i + MONTHS_PER_PAGE));
+  }
+  if (monthChunks.length === 0) monthChunks.push([]);
+  monthChunks.forEach((chunk, i) => {
+    doc.addPage();
+    drawLetterhead(doc, data);
+    drawTitle(doc, `${data.year}`, `${ordinal(data.semester)} SEMESTER REPORT`);
+    chunk.forEach((m) => { drawSectionTitle(doc, m.title); drawGroupedTable(doc, m, data.columns, data); });
+    if (i === monthChunks.length - 1) {
+      drawSectionTitle(doc, data.semesterSummary.title);
+      drawGroupedTable(doc, data.semesterSummary, data.columns, data);
+      drawSignatories(doc, data);
+    }
+  });
 
   doc.addPage();
   drawLetterhead(doc, data);
@@ -122,8 +136,18 @@ function colWeight(c: ReportColumn): number {
   return 11;
 }
 
-function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]) {
-  const topOfTable = doc.y;
+function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[], data?: SummaryReportData) {
+  const tierH = [13, 14, 12];
+  const headerH = tierH[0] + tierH[1] + tierH[2];
+  const needed = headerH + 20 + 6;
+  let topOfTable = doc.y;
+  // Overflow guard: a table that cannot fit starts a fresh page instead of
+  // letting pdfkit cascade a new page for every subsequent text draw.
+  if (data && topOfTable + needed > PAGE[1] - M) {
+    doc.addPage();
+    drawLetterhead(doc, data);
+    topOfTable = doc.y;
+  }
   const weights = columns.map(colWeight);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const colX: number[] = [];
@@ -136,8 +160,6 @@ function drawGroupedTable(doc: any, table: SummaryTable, columns: ReportColumn[]
   //   R2  (blank) | FINANCIAL ASSISTANCE | PWD | REFERRAL | Birth Discrepancy ...
   //   R3  Male | Female | BURIAL | MEDICAL | ASSISTIVE DEVICES | (PWD blank) |
   //       LEGAL/PAO | OTHERS | (technical blanks) | TOTAL
-  const tierH = [13, 14, 12];
-  const headerH = tierH[0] + tierH[1] + tierH[2];
   const headerBottom = topOfTable + headerH;
   const R1top = topOfTable;
   const R2top = topOfTable + tierH[0];

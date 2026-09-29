@@ -58,32 +58,18 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
             </option>
           </select>
           <select
-            aria-label="Summary report quarter"
+            aria-label="Summary report semester"
             class="h-8 rounded-md border bg-background px-2 text-xs"
           >
             <option
               value="1"
             >
-              Q
-              1
+              1st Semester (Q1+Q2)
             </option>
             <option
               value="2"
             >
-              Q
-              2
-            </option>
-            <option
-              value="3"
-            >
-              Q
-              3
-            </option>
-            <option
-              value="4"
-            >
-              Q
-              4
+              2nd Semester (Q3+Q4)
             </option>
           </select>
           <button
