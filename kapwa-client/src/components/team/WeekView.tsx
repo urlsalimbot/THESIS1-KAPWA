@@ -256,9 +256,11 @@ export function WeekView({
   onEventClick,
 }: WeekViewProps) {
   const { t } = useTranslation();
+  // "Under md" per the brief: Tailwind's `md:` breakpoint is 768px, so the
+  // mobile branch is max-width: 767px — the same query BottomNav.tsx uses.
   // setup's jsdom matchMedia stub reports no match → desktop branch in tests;
   // the mobile test flips the max-width query to matches:true.
-  const isMobile = useMediaQuery('(max-width: 639px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(from, i)), [from]);
   const dayStrs = useMemo(() => days.map(localIsoDay), [days]);

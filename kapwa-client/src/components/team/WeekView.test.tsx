@@ -217,11 +217,11 @@ describe('WeekView', () => {
 
 // --- Mobile: single-day-per-staff agenda ---
 
-/** Toggle the setup's matchMedia stub so `(max-width: 639px)` reports the
+/** Toggle the setup's matchMedia stub so `(max-width: 767px)` reports the
  *  wanted answer (tests/setup.ts default is no-match → desktop grid). */
 function installMatchMedia(mobile: boolean) {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: query === '(max-width: 639px)' ? mobile : false,
+    matches: query === '(max-width: 767px)' ? mobile : false,
     media: query,
     onchange: null,
     addListener: vi.fn(),
@@ -232,7 +232,39 @@ function installMatchMedia(mobile: boolean) {
   }));
 }
 
+describe('WeekView breakpoint boundary', () => {
+  it('renders the desktop 7-day grid at/above md (768px — 767px query no-match)', () => {
+    // Explicit no-match for `(max-width: 767px)`, i.e. a viewport ≥ 768px.
+    installMatchMedia(false);
+
+    renderWeek({ events: [MEETING] });
+
+    expect(screen.getByTestId('week-events-strip-2026-09-29')).toBeTruthy();
+    expect(screen.queryByTestId('mobile-day-label')).toBeNull();
+  });
+
+  it('renders the single-day mobile agenda under md (767px query matches)', () => {
+    installMatchMedia(true);
+
+    renderWeek();
+
+    expect(screen.getByTestId('mobile-day-label')).toBeTruthy();
+    expect(screen.queryByTestId(/^week-events-strip-/)).toBeNull();
+  });
+});
+
 describe('WeekView mobile agenda', () => {
+  // Fixed "today" (Mon Sep 28 2026, 08:00 local) so the agenda fixtures never
+  // depend on the wall clock — a midnight-crossing run cannot flake.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 28, 8, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders a single-day staff agenda with a day stepper at narrow widths', () => {
     installMatchMedia(true);
     const today = new Date();
