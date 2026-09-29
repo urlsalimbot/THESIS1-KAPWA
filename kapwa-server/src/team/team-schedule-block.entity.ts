@@ -26,7 +26,13 @@ export class TeamScheduleBlock extends BaseEntity {
   endTime?: string;
 
   @Column({ type: 'text', nullable: true })
-  note?: string;
+  note?: string | null;
+
+  // Visibility toggle (amendment): `team` (default) — everyone sees it;
+  // `team_coordinators` — coordinators additionally see it. Same
+  // varchar(32) + service-level validation shape as block_type.
+  @Column({ name: 'visible_to', type: 'varchar', length: 32, default: 'team' })
+  visibleTo!: string;
 
   @Column({ name: 'created_by', nullable: true })
   createdBy?: string;

@@ -887,6 +887,22 @@ export async function migrate() {
     note text NULL,
     updated_at timestamptz NOT NULL DEFAULT now()
   )`);
+  // Team workspace amendment: per-entry visibility toggles + schedule invites
+  // (ZAddTeamVisibilityAndInvites migration)
+  await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS visible_to varchar(32) NOT NULL DEFAULT 'team'`);
+  await q.query(`ALTER TABLE team_status ADD COLUMN IF NOT EXISTS visible_to varchar(32) NOT NULL DEFAULT 'team'`);
+  await q.query(`CREATE TABLE IF NOT EXISTS team_invites (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    from_user_id uuid NOT NULL REFERENCES users(id),
+    to_user_id uuid NOT NULL REFERENCES users(id),
+    invite_date date NOT NULL,
+    block_type varchar(32) NOT NULL,
+    note text NULL,
+    status varchar(16) NOT NULL DEFAULT 'pending',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    responded_at timestamptz NULL
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_team_invites_to_status ON team_invites (to_user_id, status)`);
 
   // -- Hash chain: runtime writer so the auditor's verifyHashChain is not
   //    vacuous. Chain semantics (must match audit.service.verifyHashChain):
