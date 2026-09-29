@@ -17,6 +17,7 @@ import { psgcNameFor } from '@/lib/psgc';
 import { IntakeAddressBlock } from '@/components/IntakeAddressBlock';
 import type { AddressFields } from '@/components/IntakeAddressBlock';
 import { CIVIL_STATUSES, NAME_EXTENSIONS, FAMILY_MEMBER_STATUSES } from '../lib/constants';
+import { MatchProbeDialog, type MatchCandidate } from '@/components/intake/MatchProbeDialog';
 import { Check, UserCheck, User, Users, ShieldCheck, AlertCircle, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -217,6 +218,9 @@ export function IntakePage() {
   const [claimant, setClaimant] = useState<PersonForm>(emptyPerson);
   const [relationshipToBeneficiary, setRelationshipToBeneficiary] = useState('');
   const [family, setFamily] = useState<FamilyMember[]>([]);
+  const [probeCandidates, setProbeCandidates] = useState<MatchCandidate[] | null>(null);
+  const [confirmedHousehold, setConfirmedHousehold] = useState<MatchCandidate | null>(null);
+  const probeSettled = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [beneficiaryIsClaimant, setBeneficiaryIsClaimant] = useState(false);
@@ -413,6 +417,69 @@ export function IntakePage() {
     });
   }
 
+  // The client's identity (beneficiary section) is complete when the same
+  // validation used at submit passes. Once complete, silently probe for an
+  // existing household so the worker can confirm it and skip re-typing the
+  // family composition.
+  const beneficiaryComplete = useMemo(() => {
+    const flat: PersonFormValues = {
+      ...beneficiary,
+      street: beneficiary.currentAddress.street,
+      barangay: beneficiary.currentAddress.barangay,
+      city: beneficiary.currentAddress.city,
+      province: beneficiary.currentAddress.province,
+      region: beneficiary.currentAddress.region,
+      postalCode: beneficiary.currentAddress.postalCode,
+    };
+    return Object.keys(validatePerson(flat)).length === 0;
+  }, [beneficiary]);
+
+  useEffect(() => {
+    if (!beneficiaryComplete || probeSettled.current) return;
+    const timer = window.setTimeout(() => {
+      api.post<{ candidates: MatchCandidate[] }>('/intake/match-check', {
+        surname: beneficiary.surname,
+        firstName: beneficiary.firstName,
+        middleName: beneficiary.middleName || undefined,
+        familyMembers: family.filter(m => m.surname.trim()).map(f => ({ surname: f.surname, firstName: f.firstName })),
+        barangay: beneficiary.currentAddress.barangay || undefined,
+        dob: beneficiary.dob || undefined,
+        phone: beneficiary.cellularNumber || undefined,
+        email: beneficiary.email || undefined,
+        philhealthNumber: beneficiary.philhealthNumber || undefined,
+      })
+        .then(res => {
+          if (res.candidates && res.candidates.length > 0) setProbeCandidates(res.candidates);
+        })
+        .catch(() => { /* the pop-up is best-effort; server-side guards still protect */ })
+        .finally(() => { probeSettled.current = true; });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [beneficiaryComplete, beneficiary, family]);
+
+  function handleProbeConfirm(c: MatchCandidate) {
+    setProbeCandidates(null);
+    setConfirmedHousehold(c);
+    // Auto-fill the family composition from the confirmed household's roster.
+    const members: FamilyMember[] = c.familyMembers
+      .filter(m => m.surname && m.firstName)
+      .map((m, i) => ({
+        id: `prefill-${i}`,
+        surname: m.surname,
+        firstName: m.firstName,
+        middleName: m.middleName || '',
+        extension: '',
+        gender: m.gender === 'Female' ? 'Female' : 'Male',
+        dob: m.dob || '',
+        relationship: m.relationship,
+        occupation: m.occupation || '',
+        income: m.income != null ? String(m.income) : '',
+        status: m.status || '',
+        done: false,
+      }));
+    if (members.length > 0) setFamily(members);
+  }
+
   function addFamilyMember() {
     setFamily(prev => [...prev, {
       id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -590,44 +657,26 @@ export function IntakePage() {
     };
 
     try {
-      const matchResult = await api.post<{ candidates: unknown[] }>('/intake/match-check', {
-        surname: beneficiary.surname,
-        firstName: beneficiary.firstName,
-        middleName: beneficiary.middleName || undefined,
-        familyMembers: family.filter(m => m.surname.trim()).map(f => ({ surname: f.surname, firstName: f.firstName })),
-        barangay: beneficiary.currentAddress.barangay || undefined,
-        dob: beneficiary.dob || undefined,
-        phone: beneficiary.cellularNumber || undefined,
-        email: beneficiary.email || undefined,
-        philhealthNumber: beneficiary.philhealthNumber || undefined,
-      });
-
-      if (matchResult.candidates && matchResult.candidates.length > 0) {
-        // The draft is intentionally NOT cleared here: the review step receives
-        // its payload through router state, so a reload there would otherwise
-        // lose the whole intake with nothing to recover from. It is cleared once
-        // a case actually exists — below, and in IntakeReviewPage.
-        navigate('/intake/review', {
-          state: { candidates: matchResult.candidates, intakeData: intakePayload },
-        });
+      clearDraft(userId);
+      if (confirmedHousehold) {
+        // Attach to the household the worker confirmed in the match pop-up;
+        // the server creates the beneficiary + case there (or reuses a recent one).
+        const result = await api.post<{ caseCreated: boolean; caseId?: string }>(
+          `/intake/confirm/${confirmedHousehold.householdId}`,
+          intakePayload,
+        );
+        if (result.caseId) {
+          completeIntake(result.caseId);
+        } else {
+          navigate('/cases');
+        }
       } else {
-        clearDraft(userId);
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);
         clearPendingIdPhoto();
       }
     } catch (err: unknown) {
-      try {
-        // The duplicate check failed (network/rate-limit). Do not bypass it
-        // silently — tell the worker the dedup step was skipped.
-        toast.warning(t('intake.duplicateCheckSkipped', 'Duplicate check unavailable — submitting without it.'));
-        clearDraft(userId);
-        const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
-        completeIntake(data.caseId);
-        clearPendingIdPhoto();
-      } catch (fallbackErr: unknown) {
-        setError(fallbackErr instanceof Error ? fallbackErr.message : t('intake.submitFailed', 'Failed to submit intake'));
-      }
+      setError(err instanceof Error ? err.message : t('intake.submitFailed', 'Failed to submit intake'));
     } finally {
       setSubmitting(false);
     }
@@ -717,6 +766,16 @@ export function IntakePage() {
               <Button type="button" variant="outline" size="sm" onClick={addFamilyMember}>{t('intake.addMember', '+ Add Member')}</Button>
             </div>
           </div>
+          {confirmedHousehold && (
+            <div className="flex items-start justify-between gap-2 border-b bg-primary/5 px-6 py-3 text-sm">
+              <p className="text-muted-foreground">
+                {t('intake.matchProbeAttached', 'Will attach to {{name}}\u2019s household — family composition loaded below. Review and edit as needed.', { name: `${confirmedHousehold.primaryBeneficiary.firstName} ${confirmedHousehold.primaryBeneficiary.surname}` })}
+              </p>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmedHousehold(null)}>
+                {t('intake.matchProbeUndo', 'Remove')}
+              </Button>
+            </div>
+          )}
           <div className="p-6">
             {family.length === 0 && <p className="text-sm text-muted-foreground italic">{t('intake.noFamilyMembers', 'No family members added')}</p>}
             {family.map(m => {
@@ -898,6 +957,13 @@ export function IntakePage() {
           </AlertDialog>
         </div>
       </form>
+      {probeCandidates && probeCandidates.length > 0 && (
+        <MatchProbeDialog
+          candidates={probeCandidates}
+          onConfirm={handleProbeConfirm}
+          onDismiss={() => setProbeCandidates(null)}
+        />
+      )}
     </PageShell>
   );
 }

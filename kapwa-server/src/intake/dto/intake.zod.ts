@@ -143,7 +143,13 @@ export interface MatchCandidate {
     category?: string;
   };
   allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;
-  familyMembers: Array<{ id: string; fullName: string; relationship: string; age: number; occupation: string; income: number; status: string }>;
+  familyMembers: Array<{
+    id: string; fullName: string; surname: string; firstName: string;
+    middleName?: string; gender: string; dob?: string; relationship: string;
+    age: number; occupation: string; income: number; status: string;
+  }>;
+  /** Cases for the household (any beneficiary) plus the matched person's own, newest first. */
+  pastCases: Array<{ controlNo: string; beneficiaryName: string; status: string; createdAt: string }>;
   lastApprovedCaseDate: string | null;
 }
 

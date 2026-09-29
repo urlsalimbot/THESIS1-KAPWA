@@ -20,7 +20,6 @@ import { lazy, Suspense } from 'react';
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const IntakePage = lazy(() => import('./pages/IntakePage').then(m => ({ default: m.IntakePage })));
-const IntakeReviewPage = lazy(() => import('./pages/IntakeReviewPage').then(m => ({ default: m.IntakeReviewPage })));
 const CasesPage = lazy(() => import('./pages/CasesPage').then(m => ({ default: m.CasesPage })));
 const CaseViewPage = lazy(() => import('./pages/CaseViewPage').then(m => ({ default: m.CaseViewPage })));
 const SearchResultsPage = lazy(() => import('./pages/SearchResultsPage').then(m => ({ default: m.SearchResultsPage })));
@@ -120,7 +119,6 @@ export const router = createBrowserRouter([
   // === PROTECTED ROUTES ===
   { path: 'dashboard', element: <Private roles={['admin','social_worker']}><DashboardPage /></Private> },
   { path: '/intake', element: <Private roles={['admin','social_worker']}><IntakePage /></Private> },
-  { path: '/intake/review', element: <Private roles={['admin','social_worker']}><IntakeReviewPage /></Private> },
   { path: '/cases', element: <Private roles={['admin','social_worker']}><CasesPage /></Private> },
   { path: '/cases/:id', element: <Private roles={['admin','social_worker']}><CaseViewPage /></Private> },
   { path: '/cases/:caseId/4ps-compliance', element: <Private roles={['admin','social_worker','coordinator']}><FourPsCompliancePage /></Private> },

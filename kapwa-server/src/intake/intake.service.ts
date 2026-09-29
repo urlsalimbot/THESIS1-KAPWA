@@ -750,6 +750,8 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
          WHERE b2.household_id = h.id) AS all_beneficiaries,
         (SELECT json_agg(json_build_object(
           'id', hm.id, 'fullName', TRIM(CONCAT(p3.first_name, ' ', p3.surname)),
+          'surname', p3.surname, 'firstName', p3.first_name, 'middleName', p3.middle_name,
+          'gender', p3.gender, 'dob', to_char(p3.dob, 'YYYY-MM-DD'),
           'relationship', hm.relationship,
           'age', EXTRACT(YEAR FROM AGE(NOW(), p3.dob))::integer, 'occupation', p3.occupation,
           'income', p3.estimated_monthly_income, 'status', hm.status
@@ -764,7 +766,26 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         )) AS case_exists_30d,
         (SELECT MAX(c.created_at) FROM cases c
          JOIN beneficiaries b3 ON b3.id = c.beneficiary_id
-          WHERE b3.household_id = h.id AND c.status = 'active') AS last_case_date
+          WHERE b3.household_id = h.id AND c.status = 'active') AS last_case_date,
+        (SELECT COALESCE(json_agg(x ORDER BY x."createdAt" DESC), '[]'::json)
+         FROM (
+           SELECT c.control_no AS "controlNo",
+                  TRIM(CONCAT(pc1.first_name, ' ', pc1.surname)) AS "beneficiaryName",
+                  c.status, c.created_at AS "createdAt"
+           FROM cases c
+           JOIN beneficiaries b4 ON b4.id = c.beneficiary_id
+           JOIN persons pc1 ON pc1.id = b4.person_id
+           WHERE b4.household_id = h.id
+           UNION ALL
+           SELECT c.control_no,
+                  TRIM(CONCAT(pc2.first_name, ' ', pc2.surname)),
+                  c.status, c.created_at
+           FROM cases c
+           JOIN beneficiaries b5 ON b5.id = c.beneficiary_id
+           JOIN persons pc2 ON pc2.id = b5.person_id
+           WHERE b5.person_id = hs.person_id
+         ) x
+         LIMIT 6) AS past_cases
       FROM scores hs
       JOIN households h ON h.id = hs.household_id
       JOIN beneficiaries bp ON bp.id = h.primary_beneficiary_id
@@ -843,6 +864,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         },
         allBeneficiaries: r.all_beneficiaries || [],
         familyMembers: r.family_members || [],
+        pastCases: r.past_cases || [],
         lastApprovedCaseDate: r.last_case_date ? r.last_case_date.toISOString() : null,
       }));
 
