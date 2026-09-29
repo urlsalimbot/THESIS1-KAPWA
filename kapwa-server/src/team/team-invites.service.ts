@@ -163,8 +163,16 @@ export class TeamInvitesService {
     // a non-pending invite and gets 400 (fix for the double-materialize race;
     // the partial unique index uq_team_invites_pending covers the
     // duplicate-pending-POST twin-row race at the DB level).
+    // The re-read takes a pessimistic write lock (SELECT ... FOR UPDATE): a
+    // truly simultaneous second accept blocks on the same row until the first
+    // commits, then re-reads status 'accepted' → 400. Without the lock,
+    // read-committed snapshots let both pass the status re-check and
+    // materialize duplicate blocks (no unique constraint backstops that).
     return this.repo.manager.transaction(async em => {
-      const fresh = await em.findOne(TeamInvite, { where: { id } });
+      const fresh = await em.findOne(TeamInvite, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
       if (!fresh || fresh.status !== 'pending') {
         throw new BadRequestException('Invite has already been responded to.');
       }

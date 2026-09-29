@@ -185,9 +185,16 @@ describe('TeamInvitesService', () => {
     expect(blocksRepoMock.save).not.toHaveBeenCalled();
     expect(repoMock.save).not.toHaveBeenCalled();
     // The status was re-read INSIDE the transaction (outer pre-check + inner
-    // re-read = two findOne calls).
+    // re-read = two findOne calls), and the re-read took a pessimistic write
+    // lock so a simultaneous accept would block on the row until the first
+    // commits — closing the read-committed gap where both could pass the
+    // status check and materialize duplicate blocks.
     expect(repoMock.manager.transaction).toHaveBeenCalledTimes(1);
     expect(repoMock.findOne).toHaveBeenCalledTimes(2);
+    expect(repoMock.findOne).toHaveBeenNthCalledWith(2, TeamInvite, {
+      where: { id: 'i1' },
+      lock: { mode: 'pessimistic_write' },
+    });
   });
 
   it('400 when accepting an already-responded invite', async () => {
