@@ -1,6 +1,51 @@
 import { describe, it, expect } from 'vitest';
-import { weekStart, expandRepeat, manilaDay, addDays, localIsoDay } from './team-utils';
-import type { TeamEvent } from '../../lib/team-api';
+import { weekStart, expandRepeat, manilaDay, addDays, localIsoDay, withSelfPinned } from './team-utils';
+import type { TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
+
+describe('withSelfPinned', () => {
+  const member = (userId: string, name: string): TeamStaffAchievement => ({
+    userId,
+    name,
+    cases: 0,
+    interventions: 0,
+    referrals: 0,
+    docs: 0,
+    trackerDays: 0,
+  });
+
+  it('moves the signed-in user FIRST, keeping the rest in their existing order (stable)', () => {
+    const roster = [member('u1', 'Ana Admin'), member('u2', 'Ben Social'), member('u3', 'Carla Worker')];
+    expect(withSelfPinned(roster, 'u2', 'Ben Social').map(m => m.userId)).toEqual(['u2', 'u1', 'u3']);
+    expect(withSelfPinned(roster, 'u3', 'Carla Worker').map(m => m.userId)).toEqual(['u3', 'u1', 'u2']);
+  });
+
+  it('leaves the order untouched when the user is already first', () => {
+    const roster = [member('u1', 'Ana Admin'), member('u2', 'Ben Social')];
+    expect(withSelfPinned(roster, 'u1', 'Ana Admin')).toBe(roster);
+  });
+
+  it('appends a zero-filled self row to the front when the user is missing from the roster', () => {
+    // Coordinators are not in perStaff (server zero-fills admin + social_worker only).
+    const roster = [member('u1', 'Ana Admin'), member('u2', 'Ben Social')];
+    const pinned = withSelfPinned(roster, 'u9', 'Dora Coordinator');
+    expect(pinned.map(m => m.userId)).toEqual(['u9', 'u1', 'u2']);
+    expect(pinned[0]).toMatchObject({
+      userId: 'u9',
+      name: 'Dora Coordinator',
+      cases: 0,
+      interventions: 0,
+      referrals: 0,
+      docs: 0,
+      trackerDays: 0,
+    });
+  });
+
+  it('returns the roster unchanged when there is no signed-in id or no staff', () => {
+    const roster = [member('u1', 'Ana Admin')];
+    expect(withSelfPinned(roster, '', 'Ana Admin')).toBe(roster);
+    expect(withSelfPinned([], 'u1', 'Ana Admin')).toEqual([]);
+  });
+});
 
 describe('weekStart', () => {
   it('maps a mid-week day to the Monday 00:00 of the same week', () => {

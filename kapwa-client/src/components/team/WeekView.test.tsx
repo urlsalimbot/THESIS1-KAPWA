@@ -1,13 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { WeekView } from './WeekView';
-import { BLOCK_COLORS, BLOCK_COLOR_FALLBACK, addDays, localIsoDay, weekStart } from './team-utils';
+import { BLOCK_COLORS, BLOCK_COLOR_FALLBACK, addDays, localIsoDay, weekStart, withSelfPinned } from './team-utils';
 import { formatDate } from '../../lib/format';
 import type { TeamBlock, TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
 
 const STAFF: TeamStaffAchievement[] = [
   { userId: 'u1', name: 'Ana Admin', cases: 2, interventions: 1, referrals: 0, docs: 1, trackerDays: 2 },
   { userId: 'u2', name: 'Ben Social', cases: 0, interventions: 3, referrals: 1, docs: 0, trackerDays: 1 },
+];
+
+const MANY_STAFF: TeamStaffAchievement[] = [
+  ...STAFF,
+  { userId: 'u3', name: 'Carla Worker', cases: 0, interventions: 0, referrals: 0, docs: 0, trackerDays: 0 },
 ];
 
 // Fixed fixture week: Mon Sep 28 – Sun Oct 4 2026 (local).
@@ -95,6 +100,31 @@ describe('WeekView', () => {
     const dayCells =
       headerText.match(/Mon\d+|Tue\d+|Wed\d+|Thu\d+|Fri\d+|Sat\d+|Sun\d+/g) ?? [];
     expect(dayCells).toHaveLength(7);
+  });
+
+  it('pins the signed-in user row first and shows the You badge on that row only', () => {
+    // Roster with many members, self (Ben) in the MIDDLE of the API order —
+    // the page-level pinning moves Ben up; Ana + Carla keep their order.
+    const staff = withSelfPinned(MANY_STAFF, 'u2', 'Ben Social');
+    renderWeek({ staff, myUserId: 'u2' });
+
+    const labels = screen.getAllByText(/Ana Admin|Ben Social|Carla Worker/);
+    expect(labels).toHaveLength(3);
+    expect(labels[0]).toHaveTextContent('Ben Social');
+    expect(labels[1]).toHaveTextContent('Ana Admin');
+    expect(labels[2]).toHaveTextContent('Carla Worker');
+
+    // Badge: exactly one, on the self row only.
+    expect(screen.getAllByText('You')).toHaveLength(1);
+    const selfLabel = labels[0].closest('div') as HTMLElement;
+    expect(within(selfLabel).getByText('You')).toBeTruthy();
+    expect(within(labels[1].closest('div') as HTMLElement).queryByText('You')).toBeNull();
+    expect(within(labels[2].closest('div') as HTMLElement).queryByText('You')).toBeNull();
+  });
+
+  it('does not show the You badge when no signed-in user is supplied', () => {
+    renderWeek({ staff: withSelfPinned(MANY_STAFF, 'u2', 'Ben Social') });
+    expect(screen.queryByText('You')).toBeNull();
   });
 
   it('renders a block bar with the type color class (and the fallback for unknown types)', () => {
@@ -320,6 +350,32 @@ describe('WeekView mobile agenda', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next day' }));
     expect(screen.getByRole('button', { name: 'Ben Social — In office on ' + tomorrowStr })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Ana Admin —/ })).toBeNull();
+  });
+
+  it('pins the self staff section first and badges it on mobile', () => {
+    installMatchMedia(true);
+    render(
+      <WeekView
+        blocks={[]}
+        events={[]}
+        from={FROM}
+        staff={withSelfPinned(MANY_STAFF, 'u2', 'Ben Social')}
+        myUserId="u2"
+        onSlotClick={vi.fn()}
+        onBlockClick={vi.fn()}
+      />,
+    );
+
+    // Sections follow the pinned roster: Ben (self) first, then the stable
+    // API order for everyone else.
+    const headings = screen.getAllByRole('heading');
+    expect(headings).toHaveLength(3);
+    expect(headings[0]).toHaveTextContent('Ben Social');
+    expect(within(headings[0]).getByText('You')).toBeTruthy();
+    expect(headings[1]).toHaveTextContent('Ana Admin');
+    expect(within(headings[1]).queryByText('You')).toBeNull();
+    expect(headings[2]).toHaveTextContent('Carla Worker');
+    expect(within(headings[2]).queryByText('You')).toBeNull();
   });
 
   it('hides the desktop 7-day grid on mobile (no day columns, no slot affordances)', () => {

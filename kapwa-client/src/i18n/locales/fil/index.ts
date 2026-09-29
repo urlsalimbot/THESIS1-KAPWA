@@ -2257,6 +2257,7 @@ const fil: EnLocale = {
       "viewSwitcher": "Tagapili ng view",
       "viewWeek": "Linggo",
     },
+    "you": "Ikaw",
     "status": {
       "fieldDay": "Araw sa larangan",
       "homeVisit": "Pagdalaw sa tahanan",

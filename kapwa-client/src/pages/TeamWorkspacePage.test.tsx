@@ -47,6 +47,11 @@ const PER_STAFF = [
   { userId: 'u2', name: 'Ben Social', cases: 0, interventions: 3, referrals: 1, docs: 0, trackerDays: 1 },
 ];
 
+const MANY_STAFF = [
+  ...PER_STAFF,
+  { userId: 'u3', name: 'Carla Worker', cases: 0, interventions: 0, referrals: 0, docs: 0, trackerDays: 0 },
+];
+
 const STATUSES = [
   { userId: 'u1', status: 'in_office', note: null, updatedAt: '2026-09-28T01:00:00.000Z' },
   { userId: 'u2', status: 'field_day', note: 'Bgy. Bigte FDS', updatedAt: '2026-09-28T02:00:00.000Z' },
@@ -139,6 +144,7 @@ describe('TeamWorkspacePage', () => {
     // Tests that flip the signed-in identity (worker/colleague-owner cases)
     // must not leak their id into later tests.
     mockUser.id = 'u1';
+    mockUser.fullName = 'Ana Admin';
     defaultMock();
     await mutate(() => true, undefined, { revalidate: false });
   });
@@ -192,6 +198,56 @@ describe('TeamWorkspacePage', () => {
     expect(within(bar).getByText('Ben Social')).toBeTruthy();
     expect(within(bar).getByText('In office')).toBeTruthy();
     expect(within(bar).getByText('Field day')).toBeTruthy();
+  });
+
+  it('pins the signed-in user row first in the week grid when they are mid-roster, with a You badge on it only', async () => {
+    // Ben (u2) sits in the middle of the API roster; the page pinning moves
+    // his row up while Ana + Carla keep their existing order.
+    mockUser.role = 'admin';
+    mockUser.id = 'u2';
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('/team/blocks')) return Promise.resolve([DAY_BLOCK]);
+      if (k.includes('/team/events')) return Promise.resolve([WEEKLY_EVENT]);
+      if (k.includes('/team/invites/incoming')) return Promise.resolve(INVITES);
+      if (k.includes('achievements')) {
+        return Promise.resolve({ perStaff: MANY_STAFF, range: { from: WEEK_FROM, to: WEEK_TO } });
+      }
+      if (k.includes('statuses')) return Promise.resolve(STATUSES);
+      if (k.includes('"status"')) return Promise.resolve(STATUSES[0]);
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<TeamWorkspacePage />);
+
+    // Desktop grid renders one staff row across the 7 day columns; the first
+    // slot button of each row names its staff member.
+    const slots = await screen.findAllByRole('button', { name: /New block for/ });
+    expect(slots).toHaveLength(21); // 3 staff × 7 days
+    expect(slots[0]).toHaveAccessibleName(new RegExp(`New block for Ben Social on ${WEEK_FROM}`));
+    expect(slots[7]).toHaveAccessibleName(new RegExp(`New block for Ana Admin on ${WEEK_FROM}`));
+    expect(slots[14]).toHaveAccessibleName(new RegExp(`New block for Carla Worker on ${WEEK_FROM}`));
+
+    // Badge: exactly one, on Ben's own row.
+    expect(screen.getAllByText('You')).toHaveLength(1);
+  });
+
+  it('pins a zero-filled self row for a coordinator viewer missing from the roster', async () => {
+    // The server zero-fills admin + social_worker only (perStaff), so a
+    // coordinator viewer has no roster row — the page must synthesize one
+    // and pin it first.
+    mockUser.role = 'coordinator';
+    mockUser.id = 'u9';
+    mockUser.fullName = 'Dora Coordinator';
+    renderWithSWR(<TeamWorkspacePage />);
+
+    const slots = await screen.findAllByRole('button', { name: /New block for/ });
+    expect(slots[0]).toHaveAccessibleName(new RegExp(`New block for Dora Coordinator on ${WEEK_FROM}`));
+    expect(slots[7]).toHaveAccessibleName(new RegExp(`New block for Ana Admin on ${WEEK_FROM}`));
+    expect(slots[14]).toHaveAccessibleName(new RegExp(`New block for Ben Social on ${WEEK_FROM}`));
+
+    // Coordinator rows are read-only (disabled slots) and carry the You badge.
+    expect(slots[0]).toBeDisabled();
+    expect(screen.getAllByText('You')).toHaveLength(1);
   });
 
   it('Today returns to the current week after navigating', async () => {

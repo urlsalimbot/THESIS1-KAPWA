@@ -2246,6 +2246,7 @@ const en = {
       "viewSwitcher": "View switcher",
       "viewWeek": "Week",
     },
+    "you": "You",
     "status": {
       "fieldDay": "Field day",
       "homeVisit": "Home visit",

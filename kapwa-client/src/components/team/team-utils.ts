@@ -1,4 +1,4 @@
-import type { TeamEvent } from '../../lib/team-api';
+import type { TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
 
 // Team Workspace shared calendar math + vocabulary.
 //
@@ -79,6 +79,42 @@ export const WEEKDAY_LABEL_KEYS = [
   'team.day.sat',
   'team.day.sun',
 ] as const;
+
+// --- Own-row pinning ---
+
+/**
+ * Pin the signed-in user's roster row FIRST while keeping every other row in
+ * its existing (API) order — a stable move, never a re-sort.
+ *
+ * The roster comes from achievements.perStaff, which the server zero-fills
+ * for every admin + social_worker (verified in team-achievements.service.ts:
+ * `WHERE role IN ('admin','social_worker')`). A viewer who is NOT in that set
+ * (coordinators — read-only, still view the workspace) has no row to pin, so
+ * a zero-filled self row is appended to the front instead. `selfName` feeds
+ * that synthesized row (the auth user's fullName).
+ */
+export function withSelfPinned(
+  members: TeamStaffAchievement[],
+  myUserId: string,
+  selfName: string,
+): TeamStaffAchievement[] {
+  if (!myUserId || members.length === 0) return members;
+  const idx = members.findIndex(m => m.userId === myUserId);
+  if (idx === 0) return members;
+  if (idx > 0) return [members[idx], ...members.slice(0, idx), ...members.slice(idx + 1)];
+  return [
+    {
+      userId: myUserId,
+      name: selfName,
+      cases: 0,
+      interventions: 0,
+      referrals: 0,
+      docs: 0,
+      trackerDays: 0,
+    },
+    ...members,
+  ];
+}
 
 // --- Week math ---
 

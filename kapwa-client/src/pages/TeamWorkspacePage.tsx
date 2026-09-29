@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import useSWR, { mutate } from 'swr';
 import { ChevronLeft, ChevronRight, Plus, CalendarPlus, CalendarRange, CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +34,7 @@ import type {
   TeamInviteInput,
   AchievementsRollup,
 } from '@/lib/team-api';
-import { weekStart, addDays, localIsoDay } from '@/components/team/team-utils';
+import { weekStart, addDays, localIsoDay, withSelfPinned } from '@/components/team/team-utils';
 import { WeekView } from '@/components/team/WeekView';
 import { MonthView } from '@/components/team/MonthView';
 import { AgendaView } from '@/components/team/AgendaView';
@@ -107,9 +107,17 @@ export function TeamWorkspacePage() {
     queryKeys.team.achievements(fromStr, toStr),
   );
 
-  const staff = achievements?.perStaff ?? [];
   const myUserId = user?.id ?? '';
   const canEdit = user?.role !== 'coordinator';
+  // Own row pinned FIRST for every view that renders staff order (week grid +
+  // mobile agenda staff sections, staff cards, status bar chips, the editor
+  // staff selects). Stable: everyone else keeps the API order. Viewers who are
+  // not in perStaff (coordinators — the server zero-fills admin +
+  // social_worker only) get a synthesized zero-filled self row appended.
+  const staff = useMemo(
+    () => withSelfPinned(achievements?.perStaff ?? [], myUserId, user?.fullName ?? ''),
+    [achievements, myUserId, user],
+  );
 
   const weekLabel = `${formatDate(fromStr)} – ${formatDate(toStr)}`;
 
@@ -326,6 +334,7 @@ export function TeamWorkspacePage() {
             events={schedule?.events ?? []}
             from={from}
             staff={staff}
+            myUserId={myUserId}
             readOnly={!canEdit}
             onSlotClick={handleSlotClick}
             onBlockClick={handleBlockClick}
@@ -343,7 +352,7 @@ export function TeamWorkspacePage() {
             from={from}
           />
         )}
-        {view === 'staff' && <StaffView staff={staff} statuses={statuses ?? []} />}
+        {view === 'staff' && <StaffView staff={staff} statuses={statuses ?? []} myUserId={myUserId} />}
 
         <BlockEditorDialog
           open={blockDialogOpen}

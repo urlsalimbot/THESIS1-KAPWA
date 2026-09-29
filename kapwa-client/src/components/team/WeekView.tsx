@@ -15,6 +15,7 @@ import {
 } from './team-utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { formatDate } from '../../lib/format';
+import { YouBadge } from './YouBadge';
 import type { TeamBlock, TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
 
 export interface WeekViewProps {
@@ -22,6 +23,8 @@ export interface WeekViewProps {
   events: TeamEvent[];
   from: Date; // Monday of the displayed week (local)
   staff: TeamStaffAchievement[];
+  /** Signed-in user's id — their row is pinned first and carries the You badge. */
+  myUserId?: string;
   /** Read-only mode (coordinators): disables slot/block click affordances. */
   readOnly?: boolean;
   onSlotClick: (staffId: string, date: string) => void;
@@ -79,6 +82,7 @@ interface MobileAgendaProps {
   blocks: TeamBlock[];
   events: TeamEvent[];
   staff: TeamStaffAchievement[];
+  myUserId?: string;
   readOnly: boolean;
   onBlockClick: (block: TeamBlock) => void;
   onEventClick?: (event: TeamEvent) => void;
@@ -94,6 +98,7 @@ function MobileDayAgenda({
   blocks,
   events,
   staff,
+  myUserId,
   readOnly,
   onBlockClick,
   onEventClick,
@@ -193,8 +198,12 @@ function MobileDayAgenda({
       )}
       {staff.map(member => (
         <section key={member.userId} className="border-t px-3 py-2">
-          <h3 className="truncate text-xs font-semibold text-muted-foreground" title={member.name}>
-            {member.name}
+          <h3
+            className="flex items-center gap-1 truncate text-xs font-semibold text-muted-foreground"
+            title={member.name}
+          >
+            <span className="truncate">{member.name}</span>
+            {member.userId === myUserId && <YouBadge />}
           </h3>
           <ul className="mt-1 space-y-1">
             {(blocksByStaff.get(member.userId) ?? []).length === 0 && (
@@ -250,6 +259,7 @@ export function WeekView({
   events,
   from,
   staff,
+  myUserId,
   readOnly = false,
   onSlotClick,
   onBlockClick,
@@ -311,6 +321,7 @@ export function WeekView({
         blocks={blocks}
         events={events}
         staff={staff}
+        myUserId={myUserId}
         readOnly={readOnly}
         onBlockClick={onBlockClick}
         onEventClick={onEventClick}
@@ -383,10 +394,11 @@ export function WeekView({
         {staff.map(member => (
           <div key={member.userId} className={`grid ${GRID_COLS} border-b last:border-b-0`}>
             <div
-              className="truncate px-2 py-3 text-xs font-medium"
+              className="flex items-center gap-1 px-2 py-3 text-xs font-medium"
               title={member.name}
             >
-              {member.name}
+              <span className="truncate">{member.name}</span>
+              {member.userId === myUserId && <YouBadge />}
             </div>
             {dayStrs.map((day, i) => {
               const dayBlocks = blocksByStaffDay.get(`${member.userId}|${day}`) ?? [];

@@ -18,12 +18,15 @@ import i18n from '../../i18n';
 import { queryKeys } from '../../lib/query-keys';
 import { getAchievements } from '../../lib/team-api';
 import type { TeamStatus, TeamStaffAchievement, AchievementsRollup } from '../../lib/team-api';
+import { YouBadge } from './YouBadge';
 
 export interface StaffViewProps {
   /** Roster — achievements.perStaff (the only team-scoped staff list), joined
    *  with `statuses` by userId. */
   staff: TeamStaffAchievement[];
   statuses: TeamStatus[];
+  /** Signed-in user's id — their card carries the You badge. */
+  myUserId?: string;
 }
 
 const RANGE_OPTIONS = [
@@ -91,7 +94,7 @@ export function formatUpdatedAt(iso: string): string {
  * Read-only by construction: the view has no status setter — coordinators and
  * staff see the same cards/panel (the page gates status writes elsewhere).
  */
-export function StaffView({ staff, statuses }: StaffViewProps) {
+export function StaffView({ staff, statuses, myUserId }: StaffViewProps) {
   const { t } = useTranslation();
   const [range, setRange] = useState<RangeValue>('week');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -139,7 +142,10 @@ export function StaffView({ staff, statuses }: StaffViewProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{member.name}</p>
+                <p className="flex items-center gap-1 truncate text-sm font-semibold">
+                  <span className="truncate">{member.name}</span>
+                  {member.userId === myUserId && <YouBadge />}
+                </p>
                 {status ? (
                   <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
                     <span

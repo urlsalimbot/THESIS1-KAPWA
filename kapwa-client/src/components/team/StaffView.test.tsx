@@ -3,7 +3,7 @@ import { render, screen, within, waitFor, fireEvent } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { StaffView } from './StaffView';
-import { weekStart, addDays, localIsoDay } from './team-utils';
+import { weekStart, addDays, localIsoDay, withSelfPinned } from './team-utils';
 import type { TeamStaffAchievement, TeamStatus } from '../../lib/team-api';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
@@ -21,6 +21,11 @@ vi.mock('../../lib/api', () => ({
 const PER_STAFF: TeamStaffAchievement[] = [
   { userId: 'u1', name: 'Ana Admin', cases: 2, interventions: 1, referrals: 0, docs: 1, trackerDays: 2 },
   { userId: 'u2', name: 'Ben Social', cases: 0, interventions: 3, referrals: 1, docs: 0, trackerDays: 1 },
+];
+
+const MANY_STAFF: TeamStaffAchievement[] = [
+  ...PER_STAFF,
+  { userId: 'u3', name: 'Carla Worker', cases: 0, interventions: 0, referrals: 0, docs: 0, trackerDays: 0 },
 ];
 
 const STATUSES: TeamStatus[] = [
@@ -63,6 +68,27 @@ describe('StaffView', () => {
     expect(screen.getByText(/Updated .*Sep 28/)).toBeTruthy();
     // Ben: no status row.
     expect(screen.getByText('No status set')).toBeTruthy();
+  });
+
+  it('pins the self card first and shows the You badge on it only', async () => {
+    // Self (Ben) sits in the middle of the API roster; the page pins him up,
+    // and the cards render the badge on his row only.
+    const pinned = withSelfPinned(MANY_STAFF, 'u2', 'Ben Social');
+    render(
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+        <StaffView staff={pinned} statuses={STATUSES} myUserId="u2" />
+      </SWRConfig>,
+    );
+
+    const cards = screen.getAllByRole('button', { name: /View achievements for/ });
+    expect(cards).toHaveLength(3);
+    expect(cards[0]).toHaveAccessibleName('View achievements for Ben Social');
+    expect(cards[1]).toHaveAccessibleName('View achievements for Ana Admin');
+    expect(cards[2]).toHaveAccessibleName('View achievements for Carla Worker');
+
+    expect(within(cards[0]).getByText('You')).toBeTruthy();
+    expect(within(cards[1]).queryByText('You')).toBeNull();
+    expect(within(cards[2]).queryByText('You')).toBeNull();
   });
 
   it('defaults the achievements range to the current week and auto-selects the first member', async () => {
