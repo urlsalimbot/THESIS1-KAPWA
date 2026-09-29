@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EventEditorDialog } from './EventEditorDialog';
+import { manilaDay } from './team-utils';
 import type { TeamEvent } from '../../lib/team-api';
 
 const EVENT: TeamEvent = {
@@ -146,5 +147,54 @@ describe('EventEditorDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSave).not.toHaveBeenCalled();
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('edit mode normalizes an ISO-instant until to date-only and keeps the repeat rule on save', async () => {
+    // Server stores repeatRule jsonb verbatim; an ISO-instant until (the
+    // server's own spec fixture uses '2026-12-31T00:00:00Z') must prefill the
+    // date input as its Manila calendar day and survive the save untouched.
+    const isoRuleEvent: TeamEvent = {
+      ...EVENT,
+      repeatRule: { freq: 'weekly', interval: 2, until: '2026-12-28T16:00:00.000Z' },
+    };
+    const { onSave } = renderDialog({ event: isoRuleEvent });
+    const user = userEvent.setup();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('checkbox', { name: 'Repeat weekly' })).toBeChecked();
+    expect(within(dialog).getByLabelText('Until')).toHaveValue(
+      manilaDay(new Date('2026-12-28T16:00:00.000Z')),
+    );
+
+    // Edit a field and save — the repeat rule (with normalized until) survives.
+    await user.clear(within(dialog).getByLabelText('Title'));
+    await user.type(within(dialog).getByLabelText('Title'), 'Weekly sync (revised)');
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Weekly sync (revised)',
+        repeatRule: {
+          freq: 'weekly',
+          interval: 2,
+          until: manilaDay(new Date('2026-12-28T16:00:00.000Z')),
+        },
+      }),
+    );
+  });
+
+  it('unchecking Repeat weekly drops the rule from the saved payload (edit mode)', async () => {
+    const { onSave } = renderDialog({ event: EVENT });
+    const user = userEvent.setup();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('checkbox', { name: 'Repeat weekly' })).toBeChecked();
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Repeat weekly' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith(expect.not.objectContaining({ repeatRule: expect.anything() }));
   });
 });

@@ -29,6 +29,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import type { TeamEvent, TeamEventInput } from '../../lib/team-api';
+import { manilaDay } from './team-utils';
 
 export interface EventEditorDialogProps {
   open: boolean;
@@ -49,6 +50,20 @@ function toLocalInputValue(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
     d.getMinutes(),
   )}`;
+}
+
+/**
+ * Normalize a stored repeatRule.until into the date-only form the Until
+ * `<input type="date">` speaks: 'YYYY-MM-DD' passes through, an ISO instant
+ * is converted to its Asia/Manila calendar day — the same domain
+ * team-utils.expandRepeat compares `until` against (instance days are Manila
+ * days). Invalid values fall back to '' (the empty until, i.e. no bound).
+ */
+function normalizeUntilDate(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return manilaDay(d);
 }
 
 /**
@@ -88,9 +103,7 @@ export function EventEditorDialog({
         weekly && rule && typeof rule.interval === 'number' ? `${rule.interval}` : '1',
       );
       setUntil(
-        weekly && rule && typeof rule.until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rule.until)
-          ? rule.until
-          : '',
+        weekly && rule && typeof rule.until === 'string' ? normalizeUntilDate(rule.until) : '',
       );
       setVisibleTo(event.visibleTo);
       setLocation(event.location ?? '');

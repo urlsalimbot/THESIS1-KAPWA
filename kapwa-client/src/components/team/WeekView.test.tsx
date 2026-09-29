@@ -52,9 +52,14 @@ const OUTREACH: TeamEvent = {
 
 function renderWeek(
   overrides: Partial<React.ComponentProps<typeof WeekView>> = {},
-): { onSlotClick: ReturnType<typeof vi.fn>; onBlockClick: ReturnType<typeof vi.fn> } {
+): {
+  onSlotClick: ReturnType<typeof vi.fn>;
+  onBlockClick: ReturnType<typeof vi.fn>;
+  onEventClick: ReturnType<typeof vi.fn>;
+} {
   const onSlotClick = vi.fn();
   const onBlockClick = vi.fn();
+  const onEventClick = vi.fn();
   render(
     <WeekView
       blocks={[]}
@@ -63,10 +68,11 @@ function renderWeek(
       staff={STAFF}
       onSlotClick={onSlotClick}
       onBlockClick={onBlockClick}
+      onEventClick={onEventClick}
       {...overrides}
     />,
   );
-  return { onSlotClick, onBlockClick };
+  return { onSlotClick, onBlockClick, onEventClick };
 }
 
 describe('WeekView', () => {
@@ -163,5 +169,23 @@ describe('WeekView', () => {
     fireEvent.click(bar);
     expect(onSlotClick).not.toHaveBeenCalled();
     expect(onBlockClick).not.toHaveBeenCalled();
+  });
+
+  it('calls onEventClick(event) when an event chip is clicked (click-to-edit)', () => {
+    const { onEventClick } = renderWeek({ events: [MEETING] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Team Meeting' }));
+
+    expect(onEventClick).toHaveBeenCalledTimes(1);
+    expect(onEventClick).toHaveBeenCalledWith(MEETING);
+  });
+
+  it('readOnly disables the event chips too, so coordinators cannot open the editor', () => {
+    const { onEventClick } = renderWeek({ events: [MEETING], readOnly: true });
+
+    const chip = screen.getByRole('button', { name: 'Team Meeting' });
+    expect(chip).toBeDisabled();
+    fireEvent.click(chip);
+    expect(onEventClick).not.toHaveBeenCalled();
   });
 });

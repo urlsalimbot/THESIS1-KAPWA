@@ -21,6 +21,8 @@ export interface WeekViewProps {
   readOnly?: boolean;
   onSlotClick: (staffId: string, date: string) => void;
   onBlockClick: (block: TeamBlock) => void;
+  /** Click-to-edit: event chips become buttons calling back with the event. */
+  onEventClick?: (event: TeamEvent) => void;
 }
 
 function minutesOfDay(t: string | null | undefined): number | null {
@@ -80,6 +82,7 @@ export function WeekView({
   readOnly = false,
   onSlotClick,
   onBlockClick,
+  onEventClick,
 }: WeekViewProps) {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(from, i)), [from]);
   const dayStrs = useMemo(() => days.map(localIsoDay), [days]);
@@ -151,17 +154,20 @@ export function WeekView({
               className={`space-y-1 border-l px-1 py-1 ${i === 0 ? 'border-l-0' : ''}`}
             >
               {(eventsByDay.get(day) ?? []).map(item => (
-                <div
+                <button
                   key={item.event.id}
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() => onEventClick?.(item.event)}
                   title={item.continuation ? `${item.event.title} (started earlier)` : item.event.title}
-                  className={`truncate rounded border px-1 py-0.5 text-[10px] font-medium ${
+                  className={`w-full truncate rounded border px-1 py-0.5 text-left text-[10px] font-medium ${
                     item.continuation
                       ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
                       : 'border-indigo-400 bg-indigo-100/70 text-indigo-900'
                   }`}
                 >
                   {item.continuation ? `↳ ${item.event.title}` : item.event.title}
-                </div>
+                </button>
               ))}
             </div>
           ))}

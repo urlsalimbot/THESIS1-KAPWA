@@ -1,16 +1,59 @@
+import { useMemo, useState } from 'react';
+import useSWR from 'swr';
 import {
   Avatar,
   AvatarFallback,
 } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { weekStart, addDays, localIsoDay } from './team-utils';
 import { STATUS_COLORS, STATUS_COLOR_FALLBACK, STATUS_LABELS } from './team-utils';
-import type { TeamStatus, TeamStaffAchievement } from '../../lib/team-api';
+import { queryKeys } from '../../lib/query-keys';
+import { getAchievements } from '../../lib/team-api';
+import type { TeamStatus, TeamStaffAchievement, AchievementsRollup } from '../../lib/team-api';
 
 export interface StaffViewProps {
+  /** Roster — achievements.perStaff (the only team-scoped staff list), joined
+   *  with `statuses` by userId. */
   staff: TeamStaffAchievement[];
   statuses: TeamStatus[];
 }
 
-function initials(name: string): string {
+const RANGE_OPTIONS = [
+  { value: 'week', label: 'This week' },
+  { value: 'month', label: 'This month' },
+] as const;
+type RangeValue = (typeof RANGE_OPTIONS)[number]['value'];
+
+const STAT_DEFS = [
+  { key: 'cases', label: 'Cases' },
+  { key: 'interventions', label: 'Interventions' },
+  { key: 'referrals', label: 'Referrals' },
+  { key: 'docs', label: 'Documents' },
+  { key: 'trackerDays', label: 'Tracker days' },
+] as const;
+
+function rangeBounds(range: RangeValue): { from: string; to: string } {
+  const now = new Date();
+  if (range === 'month') {
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { from: localIsoDay(from), to: localIsoDay(to) };
+  }
+  const start = weekStart(now);
+  return { from: localIsoDay(start), to: localIsoDay(addDays(start, 6)) };
+}
+
+function typeKey(stat: (typeof STAT_DEFS)[number]): keyof Pick<TeamStaffAchievement, 'cases' | 'interventions' | 'referrals' | 'docs' | 'trackerDays'> {
+  return stat.key;
+}
+
+export function initials(name: string): string {
   return name
     .split(/\s+/)
     .filter(Boolean)
@@ -19,48 +62,151 @@ function initials(name: string): string {
     .join('');
 }
 
+/** "Updated Mon, Sep 28, 9:00 AM" — local wall time of the status write. */
+export function formatUpdatedAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const stamp = d.toLocaleString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `Updated ${stamp}`;
+}
+
 /**
- * Per-staff cards: avatar, name, live status chip + note. The achievements
- * panel per staff lands in Task 14 — this is the roster scaffold.
+ * Staff roster + per-staff achievements.
+ *
+ * Cards: avatar initials, name, live status chip + note and when the status
+ * was last updated (statuses joined by userId). Clicking a card selects the
+ * member; the achievements panel below fetches GET /team/achievements for the
+ * picked range (default: the current week; week/month select) and shows the
+ * five counters — the endpoint returns a per-range rollup for ALL staff, so
+ * the SWR key is scoped by range + selected staff and the row is picked from
+ * perStaff client-side.
+ *
+ * Read-only by construction: the view has no status setter — coordinators and
+ * staff see the same cards/panel (the page gates status writes elsewhere).
  */
 export function StaffView({ staff, statuses }: StaffViewProps) {
-  const statusByUser = new Map(statuses.map(s => [s.userId, s]));
+  const [range, setRange] = useState<RangeValue>('week');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const { from, to } = rangeBounds(range);
+  const selectedId = selectedUserId ?? staff[0]?.userId ?? null;
+  // Range + staff scoped key: switching range OR staff re-fetches the rollup.
+  const swrKey = useMemo(
+    () => [...queryKeys.team.achievements(from, to), selectedId ?? 'none'] as const,
+    [from, to, selectedId],
+  );
+  const { data: rollup } = useSWR<AchievementsRollup>(swrKey, () => getAchievements(from, to));
+  const selected = rollup?.perStaff.find(m => m.userId === selectedId) ?? null;
+
+  const statusByUser = useMemo(
+    () => new Map(statuses.map(s => [s.userId, s])),
+    [statuses],
+  );
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {staff.length === 0 && (
-        <p className="col-span-full py-8 text-center text-sm text-muted-foreground">No staff to show.</p>
-      )}
-      {staff.map(member => {
-        const status = statusByUser.get(member.userId);
-        return (
-          <div key={member.userId} className="flex items-center gap-3 rounded-lg border bg-background p-3">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="text-xs font-medium bg-muted text-foreground">
-                {initials(member.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{member.name}</p>
-              {status ? (
-                <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${
-                      STATUS_COLORS[status.status] ?? STATUS_COLOR_FALLBACK
-                    }`}
-                  />
-                  <span className="truncate">
-                    {STATUS_LABELS[status.status] ?? status.status}
-                    {status.note ? ` — ${status.note}` : ''}
-                  </span>
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">No status set</p>
-              )}
-            </div>
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Staff roster">
+        {staff.length === 0 && (
+          <p className="col-span-full py-8 text-center text-sm text-muted-foreground">No staff to show.</p>
+        )}
+        {staff.map(member => {
+          const status = statusByUser.get(member.userId);
+          const isSelected = member.userId === selectedId;
+          return (
+            <button
+              key={member.userId}
+              type="button"
+              onClick={() => setSelectedUserId(member.userId)}
+              aria-pressed={isSelected}
+              aria-label={`View achievements for ${member.name}`}
+              className={`flex items-center gap-3 rounded-lg border bg-background p-3 text-left transition-colors ${
+                isSelected ? 'border-primary/60 ring-1 ring-primary/30' : 'hover:border-primary/40'
+              }`}
+            >
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="text-xs font-medium bg-muted text-foreground">
+                  {initials(member.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{member.name}</p>
+                {status ? (
+                  <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        STATUS_COLORS[status.status] ?? STATUS_COLOR_FALLBACK
+                      }`}
+                    />
+                    <span className="truncate">
+                      {STATUS_LABELS[status.status] ?? status.status}
+                      {status.note ? ` — ${status.note}` : ''}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No status set</p>
+                )}
+                {status?.updatedAt && (
+                  <p className="truncate text-[10px] text-muted-foreground/70">
+                    {formatUpdatedAt(status.updatedAt)}
+                  </p>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="region"
+        aria-label={selected ? `Achievements for ${selected.name}` : 'Achievements'}
+        className="rounded-lg border bg-background p-4"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-semibold">
+            {selected ? `Achievements — ${selected.name}` : 'Achievements'}
+          </h3>
+          <div className="ml-auto w-40">
+            <Select value={range} onValueChange={(v: RangeValue) => setRange(v)}>
+              <SelectTrigger aria-label="Achievements range" className="h-8 w-full text-xs">
+                <SelectValue placeholder="Range" />
+              </SelectTrigger>
+              <SelectContent>
+                {RANGE_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        );
-      })}
+        </div>
+
+        {selected ? (
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {STAT_DEFS.map(def => (
+              <div key={def.key} className="rounded-md border bg-card p-2 text-center">
+                <p className="text-lg font-bold" data-testid={`stat-${def.key}`}>
+                  {selected[typeKey(def)]}
+                </p>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {def.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {staff.length === 0
+              ? 'Select a staff member to see their achievements.'
+              : 'No achievements data for this range.'}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -8,10 +8,11 @@ import { BlockEditorDialog } from '../components/team/BlockEditorDialog';
 import { weekStart, addDays, localIsoDay } from '../components/team/team-utils';
 import { formatDate } from '../lib/format';
 
-const { mockApiGet, mockApiPut, mockApiPost, mockUser } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPut, mockApiPost, mockApiPatch, mockUser } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPut: vi.fn(),
   mockApiPost: vi.fn(),
+  mockApiPatch: vi.fn(),
   mockUser: { id: 'u1', role: 'admin', fullName: 'Ana Admin', email: 'ana@kapwa.ph' },
 }));
 
@@ -20,13 +21,17 @@ vi.mock('../lib/api', () => ({
     get: (...args: unknown[]) => mockApiGet(...args),
     put: (...args: unknown[]) => mockApiPut(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
-    patch: vi.fn(),
+    patch: (...args: unknown[]) => mockApiPatch(...args),
     del: vi.fn(),
   },
 }));
 
 vi.mock('../lib/auth-context', () => ({
   useAuth: () => ({ user: mockUser }),
+}));
+
+vi.mock('../hooks/useTeamStatus', () => ({
+  useTeamStatus: vi.fn(),
 }));
 
 function renderWithSWR(ui: React.ReactNode) {
@@ -62,6 +67,18 @@ const DAY_BLOCK = {
   note: null,
 };
 
+// Repeating weekly event on the current week's Monday (09:00 Manila) with an
+// ISO-instant until — the click-to-edit fixture. The dialog must prefill the
+// Until input with the normalized Manila day ('2026-12-31') and keep the rule.
+const WEEKLY_EVENT = {
+  id: 'e1',
+  title: 'Weekly sync',
+  startsAt: `${WEEK_FROM}T01:00:00.000Z`,
+  endsAt: `${WEEK_FROM}T02:00:00.000Z`,
+  repeatRule: { freq: 'weekly', interval: 1, until: '2026-12-31T00:00:00.000Z' },
+  visibleTo: 'staff',
+};
+
 /**
  * The schedule SWR hook must go through team-api.getSchedule, which merges
  * GET /team/blocks + GET /team/events (real string paths hitting api.get).
@@ -74,7 +91,7 @@ function defaultMock() {
   mockApiGet.mockImplementation((key: unknown) => {
     const k = JSON.stringify(key);
     if (k.includes('/team/blocks')) return Promise.resolve([DAY_BLOCK]);
-    if (k.includes('/team/events')) return Promise.resolve([]);
+    if (k.includes('/team/events')) return Promise.resolve([WEEKLY_EVENT]);
     if (k.includes('achievements')) {
       return Promise.resolve({ perStaff: PER_STAFF, range: { from: WEEK_FROM, to: WEEK_TO } });
     }
@@ -89,6 +106,7 @@ describe('TeamWorkspacePage', () => {
     mockApiGet.mockReset();
     mockApiPut.mockReset();
     mockApiPost.mockReset();
+    mockApiPatch.mockReset();
     mockUser.role = 'admin';
     defaultMock();
     await mutate(() => true, undefined, { revalidate: false });
@@ -203,6 +221,42 @@ describe('TeamWorkspacePage', () => {
     expect(blockBtn).toBeDisabled();
     fireEvent.click(blockBtn);
     expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Event chips are disabled as well — coordinators cannot open the editor.
+    const eventChip = await screen.findByRole('button', { name: 'Weekly sync' });
+    expect(eventChip).toBeDisabled();
+    fireEvent.click(eventChip);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('clicking an event chip opens the editor prefilled and saving patches the event', async () => {
+    renderWithSWR(<TeamWorkspacePage />);
+    const user = userEvent.setup();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Weekly sync' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Edit event' })).toBeTruthy();
+    expect(within(dialog).getByLabelText('Title')).toHaveValue('Weekly sync');
+    expect(within(dialog).getByRole('checkbox', { name: 'Repeat weekly' })).toBeChecked();
+    // ISO-instant until prefills as its Manila calendar day — the repeat rule
+    // must survive the edit (until is only dropped by unchecking the box).
+    expect(within(dialog).getByLabelText('Until')).toHaveValue('2026-12-31');
+
+    await user.clear(within(dialog).getByLabelText('Title'));
+    await user.type(within(dialog).getByLabelText('Title'), 'Weekly sync (edited)');
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() =>
+      expect(mockApiPatch).toHaveBeenCalledWith(
+        '/team/events/e1',
+        expect.objectContaining({
+          title: 'Weekly sync (edited)',
+          repeatRule: { freq: 'weekly', interval: 1, until: '2026-12-31' },
+        }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('BlockEditorDialog hides Save/Delete affordances when readOnly', async () => {

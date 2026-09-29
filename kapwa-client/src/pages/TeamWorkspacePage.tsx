@@ -34,6 +34,7 @@ import { TeamStatusBar } from '@/components/team/TeamStatusBar';
 import { StaffView } from '@/components/team/StaffView';
 import { BlockEditorDialog } from '@/components/team/BlockEditorDialog';
 import { EventEditorDialog } from '@/components/team/EventEditorDialog';
+import { useTeamStatus } from '@/hooks/useTeamStatus';
 
 type ViewMode = 'week' | 'month' | 'agenda' | 'staff';
 
@@ -158,6 +159,16 @@ export function TeamWorkspacePage() {
     setEventDialogOpen(true);
   };
 
+  const openEditEvent = (event: TeamEvent) => {
+    if (!canEdit) return; // coordinators are read-only (server also 403s)
+    setActiveEvent(event);
+    setEventDialogOpen(true);
+  };
+
+  // Live whereabouts: subscribe once to the gateway's team.status.updated
+  // broadcast (same /notifications namespace the notification socket uses).
+  useTeamStatus(myUserId);
+
   return (
     <PageShell
       title="Team Workspace"
@@ -229,6 +240,7 @@ export function TeamWorkspacePage() {
             readOnly={!canEdit}
             onSlotClick={handleSlotClick}
             onBlockClick={handleBlockClick}
+            onEventClick={openEditEvent}
           />
         )}
         {view === 'month' && (
