@@ -1408,7 +1408,8 @@ const en = {
     "weekdayInitials": "Su,Mo,Tu,We,Th,Fr,Sa",
   },
   "dataTable": {
-    "pageInfo_one": "Page {{current}} of {{total}} ({{from}}–{{to}} of {{count}} total)",
+"perPage": "Per page",
+        "pageInfo_one": "Page {{current}} of {{total}} ({{from}}–{{to}} of {{count}} total)",
     "pageInfo_other": "Page {{current}} of {{total}} ({{from}}–{{to}} of {{count}} total)",
     "searchPlaceholder": "Search records...",
   },
