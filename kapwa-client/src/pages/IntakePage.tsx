@@ -222,6 +222,8 @@ export function IntakePage() {
   const [probeCandidates, setProbeCandidates] = useState<MatchCandidate[] | null>(null);
   const [confirmedHousehold, setConfirmedHousehold] = useState<MatchCandidate | null>(null);
   const [probing, setProbing] = useState(false);
+  /** True once the match pop-up has presented candidates this session. */
+  const [probeShown, setProbeShown] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [beneficiaryIsClaimant, setBeneficiaryIsClaimant] = useState(false);
@@ -435,22 +437,29 @@ export function IntakePage() {
     return Object.keys(validatePerson(flat)).length === 0;
   }, [beneficiary]);
 
+  function matchCheckPayload() {
+    return {
+      surname: beneficiary.surname,
+      firstName: beneficiary.firstName,
+      middleName: beneficiary.middleName || undefined,
+      familyMembers: family.filter(m => m.surname.trim()).map(f => ({ surname: f.surname, firstName: f.firstName })),
+      barangay: beneficiary.currentAddress.barangay || undefined,
+      dob: beneficiary.dob || undefined,
+      phone: beneficiary.cellularNumber || undefined,
+      email: beneficiary.email || undefined,
+      philhealthNumber: beneficiary.philhealthNumber || undefined,
+    };
+  }
+
   async function runMatchProbe() {
     if (probing) return;
     setProbing(true);
     try {
-      const res = await api.post<{ candidates: MatchCandidate[] }>('/intake/match-check', {
-        surname: beneficiary.surname,
-        firstName: beneficiary.firstName,
-        middleName: beneficiary.middleName || undefined,
-        familyMembers: family.filter(m => m.surname.trim()).map(f => ({ surname: f.surname, firstName: f.firstName })),
-        barangay: beneficiary.currentAddress.barangay || undefined,
-        dob: beneficiary.dob || undefined,
-        phone: beneficiary.cellularNumber || undefined,
-        email: beneficiary.email || undefined,
-        philhealthNumber: beneficiary.philhealthNumber || undefined,
-      });
-      if (res.candidates && res.candidates.length > 0) setProbeCandidates(res.candidates);
+      const res = await api.post<{ candidates: MatchCandidate[] }>('/intake/match-check', matchCheckPayload());
+      if (res.candidates && res.candidates.length > 0) {
+        setProbeShown(true);
+        setProbeCandidates(res.candidates);
+      }
       else toast(t('intake.matchNoRecords', 'No existing records found for this client.'));
     } catch {
       toast.error(t('intake.matchProbeError', 'Record check unavailable — please try again.'));
@@ -659,10 +668,10 @@ export function IntakePage() {
     };
 
     try {
-      clearDraft(userId);
       if (confirmedHousehold) {
         // Attach to the household the worker confirmed in the match pop-up;
         // the server creates the beneficiary + case there (or reuses a recent one).
+        clearDraft(userId);
         const result = await api.post<{ caseCreated: boolean; caseId?: string }>(
           `/intake/confirm/${confirmedHousehold.householdId}`,
           intakePayload,
@@ -673,6 +682,24 @@ export function IntakePage() {
           navigate('/cases');
         }
       } else {
+        // Safety net: if the worker never saw matches (no pop-up interaction or
+        // a confirmed attach), run the check at submit and surface candidates on
+        // the review page. A household already attached or a match already
+        // shown skips this step.
+        if (!probeShown) {
+          const matchResult = await api.post<{ candidates: MatchCandidate[] }>('/intake/match-check', matchCheckPayload());
+          if (matchResult.candidates && matchResult.candidates.length > 0) {
+            // The draft is intentionally NOT cleared here: the review step
+            // receives its payload through router state, so a reload there
+            // would otherwise lose the whole intake with nothing to recover
+            // from. It is cleared once a case actually exists.
+            navigate('/intake/review', {
+              state: { candidates: matchResult.candidates, intakeData: intakePayload },
+            });
+            return;
+          }
+        }
+        clearDraft(userId);
         const data = await api.post<{ caseId: string; controlNo: string }>('/intake', intakePayload);
         completeIntake(data.caseId);
         clearPendingIdPhoto();

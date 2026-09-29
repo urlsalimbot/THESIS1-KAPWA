@@ -945,3 +945,78 @@ function candidateFixture() {
     lastApprovedCaseDate: null,
   };
 }
+
+describe('IntakePage — submit review safety net', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queueCalls.length = 0;
+    onlineStatus = true;
+    localStorage.clear();
+  });
+
+  it('routes to the review page at submit when candidates exist and the pop-up was never used', async () => {
+    (api.post as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+      if (path === '/intake/match-check') {
+        return Promise.resolve({ candidates: [candidateFixture()] });
+      }
+      return Promise.resolve({ caseId: 'case-id-1', controlNo: 'NORZ-2026-0001' });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/intake']}>
+        <Routes>
+          <Route path="/intake" element={<IntakePage />} />
+          <Route path="/intake/review" element={<div data-testid="review-page">REVIEW</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    expect(await screen.findByTestId('review-page')).toBeDefined();
+    // The draft is kept for the review step; nothing was submitted yet.
+    expect(
+      (api.post as ReturnType<typeof vi.fn>).mock.calls.some(
+        (call: unknown[]) => call[0] === '/intake' || String(call[0]).startsWith('/intake/confirm/'),
+      ),
+    ).toBe(false);
+  });
+
+  it('skips the review page at submit when matches were already shown in the pop-up', async () => {
+    (api.post as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+      if (path === '/intake/match-check') {
+        return Promise.resolve({ candidates: [candidateFixture()] });
+      }
+      return Promise.resolve({ caseId: 'case-id-1', controlNo: 'NORZ-2026-0001' });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/intake']}>
+        <Routes>
+          <Route path="/intake" element={<IntakePage />} />
+          <Route path="/intake/review" element={<div data-testid="review-page">REVIEW</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+
+    fireEvent.click(screen.getByRole('button', { name: /Check records/i }));
+    expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: /None of these — continue/i }));
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    await waitFor(() => {
+      expect(
+        (api.post as ReturnType<typeof vi.fn>).mock.calls.some((call: unknown[]) => call[0] === '/intake'),
+      ).toBe(true);
+    });
+    expect(screen.queryByTestId('review-page')).toBeNull();
+  });
+});
