@@ -271,13 +271,29 @@ describe('MonthView', () => {
     expect(onPlaceBlock).not.toHaveBeenCalled();
   });
 
-  it('leaves colleague block dots inert — onBlockClick never fires for them', () => {
+  it('gives the own-dot button a 32px hit area while the dot stays 8px', () => {
+    renderMonth({ blocks: [BLOCKS[0]], canEdit: true, myUserId: 'u1' });
+
+    const btn = screen.getByRole('button', { name: 'Edit Home visit on 2026-09-28' });
+    // Target size lives on the button; the negative margin keeps flow position.
+    expect(btn.className).toContain('h-8');
+    expect(btn.className).toContain('w-8');
+    expect(btn.className).toContain('-m-2');
+    // The visible dot is untouched inside the button.
+    const dot = btn.querySelector('.rounded-full') as HTMLElement;
+    expect(dot.className).toContain('h-2');
+    expect(dot.className).toContain('w-2');
+    expect(dot.className).toContain(BLOCK_COLORS.home_visit.split(' ')[0]);
+  });
+
+  it('leaves colleague block dots fully inert — neither callback fires', () => {
+    const onPlaceBlock = vi.fn();
     const onBlockClick = vi.fn();
     renderMonth({
       blocks: [BLOCKS[0], BLOCKS[1]],
       canEdit: true,
       myUserId: 'u1',
-      onPlaceBlock: vi.fn(),
+      onPlaceBlock,
       onBlockClick,
     });
 
@@ -288,6 +304,18 @@ describe('MonthView', () => {
     const dots = cell.querySelectorAll('.rounded-full');
     expect(dots).toHaveLength(2);
     fireEvent.click(dots[1]); // the colleague dot
+    // The dot is inside a placeable cell, but clicking it must not place.
+    expect(onBlockClick).not.toHaveBeenCalled();
+    expect(onPlaceBlock).not.toHaveBeenCalled();
+  });
+
+  it('event chips in an in-month cell are inert — no placement dialog', () => {
+    const onPlaceBlock = vi.fn();
+    const onBlockClick = vi.fn();
+    renderMonth({ events: [MEETING], canEdit: true, myUserId: 'u1', onPlaceBlock, onBlockClick });
+
+    fireEvent.click(screen.getByTitle('Team Meeting'));
+    expect(onPlaceBlock).not.toHaveBeenCalled();
     expect(onBlockClick).not.toHaveBeenCalled();
   });
 });

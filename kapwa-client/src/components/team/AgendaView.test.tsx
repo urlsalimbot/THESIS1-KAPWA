@@ -83,9 +83,13 @@ const WEEKDAY_INDEX = (day: string) => {
   return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
 };
 
-/** Exact day-header text the component renders for `day` + `count` entries. */
+/**
+ * Exact day-header text the component renders for `day` + `count` entries.
+ * Pluralized: a single entry reads "1 entry", not "1 entries".
+ */
 function headerText(day: string, count: number): string {
-  return `${i18n.t(WEEKDAY_LABEL_KEYS[WEEKDAY_INDEX(day)])}, ${formatDate(day)} · ${count} entries`;
+  const label = count === 1 ? `${count} entry` : `${count} entries`;
+  return `${i18n.t(WEEKDAY_LABEL_KEYS[WEEKDAY_INDEX(day)])}, ${formatDate(day)} · ${label}`;
 }
 
 /** The <ul> of the day group whose header renders `day` with `count` entries. */
@@ -101,9 +105,10 @@ describe('AgendaView', () => {
 
     // Sep 28: two blocks + the weekly sync → 3 entries; header is exact.
     expect(screen.getByText(headerText('2026-09-28', 3))).toBeTruthy();
-    // Single-entry days carry the count too.
+    // Single-entry days carry the count too, pluralized as "1 entry".
     expect(screen.getByText(headerText('2026-09-29', 1))).toBeTruthy();
     expect(screen.getByText(headerText('2026-10-02', 1))).toBeTruthy();
+    expect(screen.queryByText(/· 1 entries/)).toBeNull();
     // The out-of-window block does not leak a day group.
     expect(screen.queryByText(headerText('2026-10-12', 1))).toBeNull();
   });

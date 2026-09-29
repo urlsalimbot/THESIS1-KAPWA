@@ -158,6 +158,9 @@ export function MonthView({
                   <div
                     key={event.id}
                     title={event.title}
+                    // Chips are read-only here; without this the click bubbles
+                    // to the placeable cell body and opens the New Block dialog.
+                    onClick={e => e.stopPropagation()}
                     className="truncate rounded-sm border border-indigo-400 bg-indigo-100/70 px-1 text-[9px] font-medium text-indigo-900"
                   >
                     {event.title}
@@ -173,6 +176,9 @@ export function MonthView({
                       }`;
                       const own = canEdit && block.userId === myUserId;
                       return own ? (
+                        // The 8px dot alone is far below the 24px minimum
+                        // target, so the button is a 32px grid box (-m-2 keeps
+                        // the flow position identical) wrapping the real dot.
                         <button
                           key={block.id}
                           type="button"
@@ -182,10 +188,19 @@ export function MonthView({
                             e.stopPropagation();
                             onBlockClick?.(block);
                           }}
-                          className={`${dotClass} cursor-pointer`}
-                        />
+                          className="relative grid h-8 w-8 -m-2 cursor-pointer place-items-center"
+                        >
+                          <span className={dotClass} />
+                        </button>
                       ) : (
-                        <span key={block.id} title={typeLabel} className={dotClass} />
+                        <span
+                          key={block.id}
+                          title={typeLabel}
+                          // Colleague dots are inert: swallow the click so it
+                          // cannot bubble to the placeable cell body.
+                          onClick={e => e.stopPropagation()}
+                          className={dotClass}
+                        />
                       );
                     })}
                     {cellBlocks.length > 5 && (

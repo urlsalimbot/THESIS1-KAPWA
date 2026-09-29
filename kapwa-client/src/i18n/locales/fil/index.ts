@@ -2291,7 +2291,10 @@ const fil: EnLocale = {
     "agenda": {
       "blockDetailAllDay": "{{type}} • Buong araw",
       "blockDetailTimed": "{{type}} • {{start}} hanggang {{end}}",
-      "entryCount": "{{count}} na entry",
+      // Tagalog does not mark plural on the noun, so both forms read the same;
+      // both suffixes must exist for the en/fil parity check.
+      "entryCount_one": "{{count}} na entry",
+      "entryCount_other": "{{count}} na entry",
       "nothingScheduled": "Walang naka-iskedyul sa panahong ito.",
     },
     "month": {

@@ -2280,7 +2280,9 @@ const en = {
     "agenda": {
       "blockDetailAllDay": "{{type}} · All day",
       "blockDetailTimed": "{{type}} · {{start}}–{{end}}",
-      "entryCount": "{{count}} entries",
+      // Plural forms (i18next v4 suffixes) so a one-entry day reads "1 entry".
+      "entryCount_one": "{{count}} entry",
+      "entryCount_other": "{{count}} entries",
       "nothingScheduled": "Nothing scheduled in this period.",
     },
     "month": {
