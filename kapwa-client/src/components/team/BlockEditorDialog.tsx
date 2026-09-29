@@ -18,6 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 import { BLOCK_TYPES, BLOCK_TYPE_LABELS } from './team-utils';
 import type { TeamBlock, TeamBlockInput, TeamStaffAchievement } from '../../lib/team-api';
 
@@ -39,7 +48,7 @@ export interface BlockEditorDialogProps {
 /**
  * Create/edit a staff day block. One form for both paths: `block` selects
  * edit (PATCH semantics live in the parent — the dialog only emits inputs).
- * Task 11 refines validation + affordances.
+ * Delete is guarded by an explicit confirmation step.
  */
 export function BlockEditorDialog({
   open,
@@ -58,6 +67,7 @@ export function BlockEditorDialog({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [note, setNote] = useState('');
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -93,11 +103,18 @@ export function BlockEditorDialog({
   };
 
   const handleDelete = () => {
-    if (!readOnly && block && onDelete) void onDelete(block.id);
+    // Delete is destructive — confirm before emitting.
+    if (!readOnly && block && onDelete) setConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    setConfirmDeleteOpen(false);
+    if (block && onDelete) void onDelete(block.id);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit block' : 'New block'}</DialogTitle>
@@ -194,6 +211,26 @@ export function BlockEditorDialog({
           </div>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete block?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove the {BLOCK_TYPE_LABELS[blockType] ?? blockType} block for{' '}
+              {staff.find(member => member.userId === userId)?.name ?? 'this staff member'} on{' '}
+              {dateStr}. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -4,6 +4,8 @@ import {
   localIsoDay,
   manilaDay,
   expandRepeat,
+  toDate,
+  DAY_MS,
   BLOCK_COLORS,
   BLOCK_COLOR_FALLBACK,
   BLOCK_TYPE_LABELS,
@@ -43,6 +45,28 @@ function blockBarStyle(block: TeamBlock): React.CSSProperties {
 
 const GRID_COLS = 'grid-cols-[7rem_repeat(7,minmax(5rem,1fr))]';
 
+interface DayEventChip {
+  event: TeamEvent;
+  /** True when this chip sits on a day after the event's start day. */
+  continuation: boolean;
+}
+
+/**
+ * Calendar days between `first` and `last` (inclusive, YYYY-MM-DD, Manila).
+ * Bounds are clamped before this is called, so the loop always terminates.
+ */
+function coverDays(first: string, last: string): string[] {
+  const days: string[] = [];
+  const cursor = new Date(toDate(first).getTime());
+  for (let i = 0; i < 400; i += 1) {
+    const day = manilaDay(cursor);
+    days.push(day);
+    if (day >= last) break;
+    cursor.setTime(cursor.getTime() + DAY_MS);
+  }
+  return days;
+}
+
 /**
  * Week resource grid: staff = rows down the left, 7 day columns, each day a
  * 24-hour CSS grid cell with blocks absolutely positioned inside it. Office
@@ -58,7 +82,7 @@ export function WeekView({
   onBlockClick,
 }: WeekViewProps) {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(from, i)), [from]);
-  const dayStrs = days.map(localIsoDay);
+  const dayStrs = useMemo(() => days.map(localIsoDay), [days]);
 
   const blocksByStaffDay = useMemo(() => {
     const map = new Map<string, TeamBlock[]>();
@@ -72,15 +96,25 @@ export function WeekView({
   }, [blocks]);
 
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, TeamEvent[]>();
+    const map = new Map<string, DayEventChip[]>();
+    const dayFrom = dayStrs[0];
+    const dayTo = dayStrs[6];
     for (const event of events) {
-      for (const instance of expandRepeat(event, dayStrs[0], dayStrs[6])) {
-        const day = manilaDay(instance.startsAt);
-        const list = map.get(day);
-        if (list) {
-          if (!list.some(existing => existing.id === event.id)) list.push(event);
-        } else {
-          map.set(day, [event]);
+      for (const instance of expandRepeat(event, dayFrom, dayTo)) {
+        const startDay = manilaDay(instance.startsAt);
+        const endDay = manilaDay(instance.endsAt);
+        // Clamp coverage to the strip window; an event that started before
+        // the week reads as a continuation from its first in-window day.
+        const first = startDay < dayFrom ? dayFrom : startDay;
+        const last = endDay < first ? first : endDay > dayTo ? dayTo : endDay;
+        for (const day of coverDays(first, last)) {
+          const chip: DayEventChip = { event, continuation: day !== startDay };
+          const list = map.get(day);
+          if (list) {
+            if (!list.some(existing => existing.event.id === event.id)) list.push(chip);
+          } else {
+            map.set(day, [chip]);
+          }
         }
       }
     }
@@ -116,13 +150,17 @@ export function WeekView({
               key={day}
               className={`space-y-1 border-l px-1 py-1 ${i === 0 ? 'border-l-0' : ''}`}
             >
-              {(eventsByDay.get(day) ?? []).map(event => (
+              {(eventsByDay.get(day) ?? []).map(item => (
                 <div
-                  key={event.id}
-                  title={event.title}
-                  className="truncate rounded border border-indigo-400 bg-indigo-100/70 px-1 py-0.5 text-[10px] font-medium text-indigo-900"
+                  key={item.event.id}
+                  title={item.continuation ? `${item.event.title} (started earlier)` : item.event.title}
+                  className={`truncate rounded border px-1 py-0.5 text-[10px] font-medium ${
+                    item.continuation
+                      ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                      : 'border-indigo-400 bg-indigo-100/70 text-indigo-900'
+                  }`}
                 >
-                  {event.title}
+                  {item.continuation ? `↳ ${item.event.title}` : item.event.title}
                 </div>
               ))}
             </div>
