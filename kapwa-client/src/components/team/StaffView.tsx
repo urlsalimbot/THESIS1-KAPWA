@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
+import { useTranslation } from 'react-i18next';
 import {
   Avatar,
   AvatarFallback,
@@ -12,7 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { weekStart, addDays, localIsoDay } from './team-utils';
-import { STATUS_COLORS, STATUS_COLOR_FALLBACK, STATUS_LABELS } from './team-utils';
+import { STATUS_COLORS, STATUS_COLOR_FALLBACK, STATUS_LABEL_KEYS } from './team-utils';
+import i18n from '../../i18n';
 import { queryKeys } from '../../lib/query-keys';
 import { getAchievements } from '../../lib/team-api';
 import type { TeamStatus, TeamStaffAchievement, AchievementsRollup } from '../../lib/team-api';
@@ -25,17 +27,17 @@ export interface StaffViewProps {
 }
 
 const RANGE_OPTIONS = [
-  { value: 'week', label: 'This week' },
-  { value: 'month', label: 'This month' },
+  { value: 'week', labelKey: 'team.staff.rangeWeek' },
+  { value: 'month', labelKey: 'team.staff.rangeMonth' },
 ] as const;
 type RangeValue = (typeof RANGE_OPTIONS)[number]['value'];
 
 const STAT_DEFS = [
-  { key: 'cases', label: 'Cases' },
-  { key: 'interventions', label: 'Interventions' },
-  { key: 'referrals', label: 'Referrals' },
-  { key: 'docs', label: 'Documents' },
-  { key: 'trackerDays', label: 'Tracker days' },
+  { key: 'cases', labelKey: 'team.staff.statCases' },
+  { key: 'interventions', labelKey: 'team.staff.statInterventions' },
+  { key: 'referrals', labelKey: 'team.staff.statReferrals' },
+  { key: 'docs', labelKey: 'team.staff.statDocs' },
+  { key: 'trackerDays', labelKey: 'team.staff.statTrackerDays' },
 ] as const;
 
 function rangeBounds(range: RangeValue): { from: string; to: string } {
@@ -72,7 +74,7 @@ export function formatUpdatedAt(iso: string): string {
     hour: 'numeric',
     minute: '2-digit',
   });
-  return `Updated ${stamp}`;
+  return i18n.t('team.staff.updatedAt', 'Updated {{stamp}}', { stamp });
 }
 
 /**
@@ -90,6 +92,7 @@ export function formatUpdatedAt(iso: string): string {
  * staff see the same cards/panel (the page gates status writes elsewhere).
  */
 export function StaffView({ staff, statuses }: StaffViewProps) {
+  const { t } = useTranslation();
   const [range, setRange] = useState<RangeValue>('week');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -110,9 +113,11 @@ export function StaffView({ staff, statuses }: StaffViewProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Staff roster">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('team.staff.rosterAria')}>
         {staff.length === 0 && (
-          <p className="col-span-full py-8 text-center text-sm text-muted-foreground">No staff to show.</p>
+          <p className="col-span-full py-8 text-center text-sm text-muted-foreground">
+            {t('team.staff.noStaff')}
+          </p>
         )}
         {staff.map(member => {
           const status = statusByUser.get(member.userId);
@@ -123,7 +128,7 @@ export function StaffView({ staff, statuses }: StaffViewProps) {
               type="button"
               onClick={() => setSelectedUserId(member.userId)}
               aria-pressed={isSelected}
-              aria-label={`View achievements for ${member.name}`}
+              aria-label={t('team.staff.viewAchievementsAria', { name: member.name })}
               className={`flex items-center gap-3 rounded-lg border bg-background p-3 text-left transition-colors ${
                 isSelected ? 'border-primary/60 ring-1 ring-primary/30' : 'hover:border-primary/40'
               }`}
@@ -143,12 +148,15 @@ export function StaffView({ staff, statuses }: StaffViewProps) {
                       }`}
                     />
                     <span className="truncate">
-                      {STATUS_LABELS[status.status] ?? status.status}
-                      {status.note ? ` — ${status.note}` : ''}
+                      {t(
+                      STATUS_LABEL_KEYS[status.status] ?? status.status,
+                      STATUS_LABEL_KEYS[status.status] ?? status.status,
+                    )}
+                    {status.note ? ` — ${status.note}` : ''}
                     </span>
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No status set</p>
+                  <p className="text-xs text-muted-foreground">{t('team.staff.noStatus')}</p>
                 )}
                 {status?.updatedAt && (
                   <p className="truncate text-[10px] text-muted-foreground/70">
@@ -163,22 +171,22 @@ export function StaffView({ staff, statuses }: StaffViewProps) {
 
       <div
         role="region"
-        aria-label={selected ? `Achievements for ${selected.name}` : 'Achievements'}
+        aria-label={selected ? t('team.staff.achievementsRegionFor', { name: selected.name }) : t('team.staff.achievementsRegionAria')}
         className="rounded-lg border bg-background p-4"
       >
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-semibold">
-            {selected ? `Achievements — ${selected.name}` : 'Achievements'}
+            {selected ? t('team.staff.achievementsFor', { name: selected.name }) : t('team.staff.achievementsTitle')}
           </h3>
           <div className="ml-auto w-40">
             <Select value={range} onValueChange={(v: RangeValue) => setRange(v)}>
-              <SelectTrigger aria-label="Achievements range" className="h-8 w-full text-xs">
-                <SelectValue placeholder="Range" />
+              <SelectTrigger aria-label={t('team.staff.rangeLabelAria')} className="h-8 w-full text-xs">
+                <SelectValue placeholder={t('team.staff.rangePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {RANGE_OPTIONS.map(option => (
                   <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -194,7 +202,7 @@ export function StaffView({ staff, statuses }: StaffViewProps) {
                   {selected[typeKey(def)]}
                 </p>
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {def.label}
+                  {t(def.labelKey)}
                 </p>
               </div>
             ))}
@@ -202,8 +210,8 @@ export function StaffView({ staff, statuses }: StaffViewProps) {
         ) : (
           <p className="py-6 text-center text-sm text-muted-foreground">
             {staff.length === 0
-              ? 'Select a staff member to see their achievements.'
-              : 'No achievements data for this range.'}
+              ? t('team.staff.selectPrompt')
+              : t('team.staff.noData')}
           </p>
         )}
       </div>

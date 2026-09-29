@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 import { ChevronLeft, ChevronRight, Plus, CalendarPlus, CalendarRange } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
@@ -38,16 +39,17 @@ import { useTeamStatus } from '@/hooks/useTeamStatus';
 
 type ViewMode = 'week' | 'month' | 'agenda' | 'staff';
 
-const VIEWS: Array<{ id: ViewMode; label: string }> = [
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
-  { id: 'agenda', label: 'Agenda' },
-  { id: 'staff', label: 'Staff' },
+const VIEWS: Array<{ id: ViewMode; labelKey: string }> = [
+  { id: 'week', labelKey: 'team.workspace.viewWeek' },
+  { id: 'month', labelKey: 'team.workspace.viewMonth' },
+  { id: 'agenda', labelKey: 'team.workspace.viewAgenda' },
+  { id: 'staff', labelKey: 'team.workspace.viewStaff' },
 ];
 
 /** Task 10 shell: owns the week state, the SWR schedule/status fetches and
  *  the editor dialogs; hands presentational views the data. */
 export function TeamWorkspacePage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [view, setView] = useState<ViewMode>('week');
   const [from, setFrom] = useState<Date>(() => weekStart(new Date()));
@@ -171,10 +173,10 @@ export function TeamWorkspacePage() {
 
   return (
     <PageShell
-      title="Team Workspace"
-      description="Shared schedule, office events and live whereabouts"
+      title={t('team.workspace.title')}
+      description={t('team.workspace.description')}
       actions={
-        <div className="flex items-center gap-1 rounded-lg border bg-background p-0.5" role="group" aria-label="View switcher">
+        <div className="flex items-center gap-1 rounded-lg border bg-background p-0.5" role="group" aria-label={t('team.workspace.viewSwitcher')}>
           {VIEWS.map(item => (
             <Button
               key={item.id}
@@ -183,7 +185,7 @@ export function TeamWorkspacePage() {
               aria-pressed={view === item.id}
               onClick={() => setView(item.id)}
             >
-              {item.label}
+              {t(item.labelKey, item.labelKey)}
             </Button>
           ))}
         </div>
@@ -193,13 +195,13 @@ export function TeamWorkspacePage() {
         {/* Toolbar: week paging + Today + New entries */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" aria-label="Previous week" onClick={() => setFrom(addDays(from, -7))}>
+            <Button variant="outline" size="icon" aria-label={t('team.workspace.previousWeek')} onClick={() => setFrom(addDays(from, -7))}>
               <ChevronLeft size={16} />
             </Button>
             <Button variant="outline" size="sm" onClick={() => setFrom(weekStart(new Date()))}>
-              Today
+              {t('team.workspace.today')}
             </Button>
-            <Button variant="outline" size="icon" aria-label="Next week" onClick={() => setFrom(addDays(from, 7))}>
+            <Button variant="outline" size="icon" aria-label={t('team.workspace.nextWeek')} onClick={() => setFrom(addDays(from, 7))}>
               <ChevronRight size={16} />
             </Button>
           </div>
@@ -213,12 +215,12 @@ export function TeamWorkspacePage() {
               variant="outline"
               onClick={openNewEvent}
               disabled={!canEdit}
-              aria-label="New event"
+              aria-label={t('team.workspace.newEvent')}
             >
-              <CalendarPlus size={14} className="mr-1" /> Event
+              <CalendarPlus size={14} className="mr-1" /> {t('team.workspace.event')}
             </Button>
-            <Button size="sm" onClick={openNewBlock} disabled={!draftSlot || !canEdit} aria-label="New block">
-              <Plus size={14} className="mr-1" /> New
+            <Button size="sm" onClick={openNewBlock} disabled={!draftSlot || !canEdit} aria-label={t('team.workspace.newBlock')}>
+              <Plus size={14} className="mr-1" /> {t('team.workspace.new')}
             </Button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   addDays,
   localIsoDay,
@@ -6,7 +7,7 @@ import {
   expandRepeat,
   BLOCK_COLORS,
   BLOCK_COLOR_FALLBACK,
-  BLOCK_TYPE_LABELS,
+  BLOCK_TYPE_LABEL_KEYS,
 } from './team-utils';
 import type { TeamBlock, TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
 import { formatDate } from '../../lib/format';
@@ -39,6 +40,7 @@ interface AgendaRow {
  * its own row. Groups by day, ascending, all-day entries first.
  */
 export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
+  const { t } = useTranslation();
   const nameByUserId = useMemo(
     () => new Map(staff.map(member => [member.userId, member.name])),
     [staff],
@@ -59,21 +61,29 @@ export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
       // Data arrives window-scoped from the page; keep the filter defensive
       // so the view never leaks entries outside its own range.
       if (block.blockDate < window.from || block.blockDate > window.to) continue;
+      const typeKey = BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType;
+      const typeLabel = t(typeKey, typeKey);
       out.push({
         date: block.blockDate,
         time: block.startTime ?? '00:00',
         kind: 'block',
-        title: `${nameByUserId.get(block.userId) ?? 'Staff'}`,
+        title: nameByUserId.get(block.userId) ?? t('team.week.staff'),
         detail:
           block.startTime && block.endTime
-            ? `${BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType} · ${block.startTime}–${block.endTime}`
-            : `${BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType} · All day`,
+            ? t('team.agenda.blockDetailTimed', {
+                type: typeLabel,
+                start: block.startTime,
+                end: block.endTime,
+              })
+            : t('team.agenda.blockDetailAllDay', { type: typeLabel }),
         colorClass: BLOCK_COLORS[block.blockType] ?? BLOCK_COLOR_FALLBACK,
       });
     }
     for (const event of events) {
       // One row per repeat instance within the window (one-shot events yield
-      // their single base occurrence when it falls inside).
+      // their single base occurrence when it falls inside; an occurrence that
+      // started before the window but spans into it is clamped to the first
+      // in-window day — spec edge #3).
       for (const instance of expandRepeat(event, window.from, window.to)) {
         const start = instance.startsAt;
         const end = instance.endsAt;
@@ -83,8 +93,9 @@ export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
           minute: '2-digit',
           hour12: true,
         });
+        const rawDay = manilaDay(start);
         out.push({
-          date: manilaDay(start),
+          date: rawDay < window.from ? window.from : rawDay,
           time: start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
           kind: 'event',
           title: event.title,
@@ -99,7 +110,7 @@ export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
     }
     out.sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)));
     return out;
-  }, [blocks, events, nameByUserId, window]);
+  }, [blocks, events, nameByUserId, window, t]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, AgendaRow[]>();
@@ -114,7 +125,9 @@ export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
   return (
     <div className="rounded-lg border bg-background">
       {rows.length === 0 && (
-        <p className="py-10 text-center text-sm text-muted-foreground">Nothing scheduled in this period.</p>
+        <p className="py-10 text-center text-sm text-muted-foreground">
+          {t('team.agenda.nothingScheduled')}
+        </p>
       )}
       {Array.from(byDay.entries()).map(([day, dayRows]) => (
         <div key={day} className="border-b last:border-b-0">

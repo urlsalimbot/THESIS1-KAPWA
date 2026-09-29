@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { BLOCK_TYPES, BLOCK_TYPE_LABELS } from './team-utils';
+import { BLOCK_TYPES, BLOCK_TYPE_LABEL_KEYS } from './team-utils';
 import type { TeamBlock, TeamBlockInput, TeamStaffAchievement } from '../../lib/team-api';
 
 export interface BlockEditorDialogProps {
@@ -61,6 +62,7 @@ export function BlockEditorDialog({
   onSave,
   onDelete,
 }: BlockEditorDialogProps) {
+  const { t } = useTranslation();
   const [userId, setUserId] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [blockType, setBlockType] = useState<string>(BLOCK_TYPES[0]);
@@ -117,20 +119,18 @@ export function BlockEditorDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit block' : 'New block'}</DialogTitle>
+          <DialogTitle>{editing ? t('team.blockEditor.editTitle') : t('team.blockEditor.newTitle')}</DialogTitle>
           <DialogDescription>
-            {editing
-              ? 'Update this day block for the staff member.'
-              : 'Book a day block on the team schedule.'}
+            {editing ? t('team.blockEditor.editDesc') : t('team.blockEditor.newDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3 py-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="block-staff">Staff</Label>
+            <Label htmlFor="block-staff">{t('team.blockEditor.staffLabel')}</Label>
             <Select value={userId} onValueChange={setUserId} disabled={editing || staff.length === 0}>
               <SelectTrigger id="block-staff" className="w-full">
-                <SelectValue placeholder="Select staff member" />
+                <SelectValue placeholder={t('team.blockEditor.staffPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {staff.map(member => (
@@ -143,7 +143,7 @@ export function BlockEditorDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="block-date">Date</Label>
+            <Label htmlFor="block-date">{t('team.blockEditor.dateLabel')}</Label>
             <Input
               id="block-date"
               type="date"
@@ -153,40 +153,43 @@ export function BlockEditorDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="block-type">Type</Label>
+            <Label htmlFor="block-type">{t('team.blockEditor.typeLabel')}</Label>
             <Select value={blockType} onValueChange={setBlockType}>
               <SelectTrigger id="block-type" className="w-full">
-                <SelectValue placeholder="Block type" />
+                <SelectValue placeholder={t('team.blockEditor.typePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                {BLOCK_TYPES.map(type => (
-                  <SelectItem key={type} value={type}>
-                    {BLOCK_TYPE_LABELS[type] ?? type}
-                  </SelectItem>
-                ))}
+                {BLOCK_TYPES.map(type => {
+                  const typeKey = BLOCK_TYPE_LABEL_KEYS[type] ?? type;
+                  return (
+                    <SelectItem key={type} value={type}>
+                      {t(typeKey, typeKey)}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="block-start">Start time</Label>
+              <Label htmlFor="block-start">{t('team.blockEditor.startLabel')}</Label>
               <Input id="block-start" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="block-end">End time</Label>
+              <Label htmlFor="block-end">{t('team.blockEditor.endLabel')}</Label>
               <Input id="block-end" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
             </div>
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="block-note">Note</Label>
+            <Label htmlFor="block-note">{t('team.blockEditor.noteLabel')}</Label>
             <Textarea
               id="block-note"
               rows={2}
               value={note}
               onChange={e => setNote(e.target.value)}
-              placeholder="Optional note"
+              placeholder={t('team.blockEditor.notePlaceholder')}
             />
           </div>
         </div>
@@ -194,18 +197,18 @@ export function BlockEditorDialog({
         <DialogFooter className="gap-2 sm:justify-between">
           {!readOnly && editing && onDelete ? (
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              {t('team.blockEditor.delete')}
             </Button>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('team.blockEditor.cancel')}
             </Button>
             {!readOnly && (
               <Button onClick={handleSave} disabled={!userId || !dateStr}>
-                {editing ? 'Save changes' : 'Create block'}
+                {editing ? t('team.blockEditor.saveChanges') : t('team.blockEditor.create')}
               </Button>
             )}
           </div>
@@ -216,17 +219,22 @@ export function BlockEditorDialog({
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete block?</AlertDialogTitle>
+            <AlertDialogTitle>{t('team.blockEditor.deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Remove the {BLOCK_TYPE_LABELS[blockType] ?? blockType} block for{' '}
-              {staff.find(member => member.userId === userId)?.name ?? 'this staff member'} on{' '}
-              {dateStr}. This cannot be undone.
+              {t('team.blockEditor.deleteDesc', {
+                type: t(
+                  BLOCK_TYPE_LABEL_KEYS[blockType] ?? blockType,
+                  BLOCK_TYPE_LABEL_KEYS[blockType] ?? blockType,
+                ),
+                name: staff.find(member => member.userId === userId)?.name ?? t('team.blockEditor.staffFallback'),
+                date: dateStr,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('team.blockEditor.cancel')}</AlertDialogCancel>
             <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+              {t('team.blockEditor.delete')}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

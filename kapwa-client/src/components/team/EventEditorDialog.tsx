@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,7 @@ export function EventEditorDialog({
   onSave,
   onDelete,
 }: EventEditorDialogProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
@@ -155,30 +157,30 @@ export function EventEditorDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit event' : 'New event'}</DialogTitle>
+          <DialogTitle>{editing ? t('team.eventEditor.editTitle') : t('team.eventEditor.newTitle')}</DialogTitle>
           <DialogDescription>
-            {editing ? 'Update this office event for the team.' : 'Schedule an office event.'}
+            {editing ? t('team.eventEditor.editDesc') : t('team.eventEditor.newDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3 py-2">
           <div className="grid gap-1.5">
-            <Label htmlFor="event-title">Title</Label>
+            <Label htmlFor="event-title">{t('team.eventEditor.titleLabel')}</Label>
             <Input
               id="event-title"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Weekly team meeting"
+              placeholder={t('team.eventEditor.titlePlaceholder')}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="event-start">Starts</Label>
+              <Label htmlFor="event-start">{t('team.eventEditor.startsLabel')}</Label>
               <Input id="event-start" type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="event-end">Ends</Label>
+              <Label htmlFor="event-end">{t('team.eventEditor.endsLabel')}</Label>
               <Input id="event-end" type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
             </div>
           </div>
@@ -190,12 +192,12 @@ export function EventEditorDialog({
                 checked={repeatWeekly}
                 onCheckedChange={(checked) => setRepeatWeekly(checked === true)}
               />
-              Repeat weekly
+              {t('team.eventEditor.repeatWeekly')}
             </label>
             {repeatWeekly && (
               <>
                 <label className="flex items-center gap-1.5 text-sm" htmlFor="event-interval">
-                  Every
+                  {t('team.eventEditor.every')}
                   <Input
                     id="event-interval"
                     type="number"
@@ -204,12 +206,12 @@ export function EventEditorDialog({
                     value={interval}
                     onChange={e => setInterval(e.target.value)}
                     className="h-8 w-16"
-                    aria-label="Repeat interval in weeks"
+                    aria-label={t('team.eventEditor.repeatIntervalAria')}
                   />
-                  week(s)
+                  {t('team.eventEditor.weekSuffix')}
                 </label>
                 <label className="flex items-center gap-1.5 text-sm" htmlFor="event-until">
-                  Until
+                  {t('team.eventEditor.until')}
                   <Input
                     id="event-until"
                     type="date"
@@ -223,36 +225,36 @@ export function EventEditorDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="event-visibility">Visible to</Label>
+            <Label htmlFor="event-visibility">{t('team.eventEditor.visibilityLabel')}</Label>
             <Select value={visibleTo} onValueChange={setVisibleTo}>
               <SelectTrigger id="event-visibility" className="w-full">
-                <SelectValue placeholder="Visibility" />
+                <SelectValue placeholder={t('team.eventEditor.visibilityPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="staff">MSWDO staff</SelectItem>
-                <SelectItem value="staff_coordinators">Staff + coordinators</SelectItem>
+                <SelectItem value="staff">{t('team.eventEditor.visibilityStaff')}</SelectItem>
+                <SelectItem value="staff_coordinators">{t('team.eventEditor.visibilityStaffCoordinators')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="event-location">Location</Label>
+            <Label htmlFor="event-location">{t('team.eventEditor.locationLabel')}</Label>
             <Input
               id="event-location"
               value={location}
               onChange={e => setLocation(e.target.value)}
-              placeholder="Optional"
+              placeholder={t('team.eventEditor.locationPlaceholder')}
             />
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="event-notes">Notes</Label>
+            <Label htmlFor="event-notes">{t('team.eventEditor.notesLabel')}</Label>
             <Textarea
               id="event-notes"
               rows={2}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Optional"
+              placeholder={t('team.eventEditor.notesPlaceholder')}
             />
           </div>
         </div>
@@ -260,18 +262,18 @@ export function EventEditorDialog({
         <DialogFooter className="gap-2 sm:justify-between">
           {!readOnly && editing && onDelete ? (
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              {t('team.eventEditor.delete')}
             </Button>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('team.eventEditor.cancel')}
             </Button>
             {!readOnly && (
               <Button onClick={handleSave} disabled={!title.trim() || !startsAt || !endsAt}>
-                {editing ? 'Save changes' : 'Create event'}
+                {editing ? t('team.eventEditor.saveChanges') : t('team.eventEditor.create')}
               </Button>
             )}
           </div>
@@ -282,15 +284,15 @@ export function EventEditorDialog({
     <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete event?</AlertDialogTitle>
+          <AlertDialogTitle>{t('team.eventEditor.deleteTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
-            Remove “{title.trim() || 'this event'}”. This cannot be undone.
+            {t('team.eventEditor.deleteDesc', { title: title.trim() || t('team.eventEditor.titleFallback') })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('team.eventEditor.cancel')}</AlertDialogCancel>
           <Button variant="destructive" onClick={confirmDelete}>
-            Delete
+            {t('team.eventEditor.delete')}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

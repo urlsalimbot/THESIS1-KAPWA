@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   STATUS_VALUES,
   STATUS_COLORS,
   STATUS_COLOR_FALLBACK,
-  STATUS_LABELS,
+  STATUS_LABEL_KEYS,
 } from './team-utils';
 import type { TeamStatus, TeamStatusInput, TeamStaffAchievement } from '../../lib/team-api';
 import {
@@ -31,6 +32,7 @@ export interface TeamStatusBarProps {
  * statuses + offline) with an optional note field.
  */
 export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSetStatus }: TeamStatusBarProps) {
+  const { t } = useTranslation();
   const [note, setNote] = useState('');
   const [open, setOpen] = useState(false);
 
@@ -41,7 +43,7 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
   return (
     <div
       role="region"
-      aria-label="Team status"
+      aria-label={t('team.statusBar.regionAria')}
       className="flex flex-wrap items-center gap-1.5 rounded-lg border bg-background px-3 py-2"
     >
       {staff.map(member => {
@@ -52,7 +54,7 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  aria-label="Set my status"
+                  aria-label={t('team.statusBar.setMyStatus')}
                   className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1 text-xs font-medium hover:bg-primary/10"
                 >
                   <span
@@ -63,7 +65,10 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
                   <span className="font-semibold">{member.name}</span>
                   {status && (
                     <span className="text-muted-foreground">
-                      {STATUS_LABELS[status.status] ?? status.status}
+                      {t(
+                        STATUS_LABEL_KEYS[status.status] ?? status.status,
+                        STATUS_LABEL_KEYS[status.status] ?? status.status,
+                      )}
                     </span>
                   )}
                   <ChevronDown size={12} className="text-muted-foreground" />
@@ -74,8 +79,8 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
                   <Input
                     value={note}
                     onChange={e => setNote(e.target.value)}
-                    placeholder="Note (optional)"
-                    aria-label="Status note"
+                    placeholder={t('team.statusBar.notePlaceholder')}
+                    aria-label={t('team.statusBar.noteAria')}
                     className="h-8 text-xs"
                   />
                 </DropdownMenuLabel>
@@ -93,7 +98,10 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
                         STATUS_COLORS[value] ?? STATUS_COLOR_FALLBACK
                       }`}
                     />
-                    {STATUS_LABELS[value] ?? value}
+                    {t(
+                      STATUS_LABEL_KEYS[value] ?? value,
+                      STATUS_LABEL_KEYS[value] ?? value,
+                    )}
                     {status?.status === value && <Check size={14} className="ml-auto text-primary" />}
                   </DropdownMenuItem>
                 ))}
@@ -114,12 +122,17 @@ export function TeamStatusBar({ statuses, staff, myUserId, canEdit = true, onSet
             />
             <span className="font-medium">{member.name}</span>
             {status && (
-              <span className="text-muted-foreground">{STATUS_LABELS[status.status] ?? status.status}</span>
+              <span className="text-muted-foreground">
+                {t(
+                  STATUS_LABEL_KEYS[status.status] ?? status.status,
+                  STATUS_LABEL_KEYS[status.status] ?? status.status,
+                )}
+              </span>
             )}
           </div>
         );
       })}
-      {staff.length === 0 && <span className="text-xs text-muted-foreground">No staff yet.</span>}
+      {staff.length === 0 && <span className="text-xs text-muted-foreground">{t('team.statusBar.noStaffYet')}</span>}
     </div>
   );
 }

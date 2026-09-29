@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { WeekView } from './WeekView';
-import { BLOCK_COLORS, BLOCK_COLOR_FALLBACK } from './team-utils';
+import { BLOCK_COLORS, BLOCK_COLOR_FALLBACK, addDays, localIsoDay, weekStart } from './team-utils';
+import { formatDate } from '../../lib/format';
 import type { TeamBlock, TeamEvent, TeamStaffAchievement } from '../../lib/team-api';
 
 const STAFF: TeamStaffAchievement[] = [
@@ -187,5 +188,118 @@ describe('WeekView', () => {
     expect(chip).toBeDisabled();
     fireEvent.click(chip);
     expect(onEventClick).not.toHaveBeenCalled();
+  });
+
+  it('shows a continuation chip on Monday for an event that started before the week and spans into it (spec edge #3)', () => {
+    // One-shot Mon–Fri start/end spanning the boundary: starts Mon Sep 21
+    // 09:00 Manila, ends Fri Oct 9 17:00 Manila. The window Oct 5–11 sits
+    // inside its span, so every in-window day is a continuation chip.
+    const spanning: TeamEvent = {
+      id: 'e3',
+      title: 'All Hands',
+      startsAt: '2026-09-21T01:00:00.000Z',
+      endsAt: '2026-10-09T09:00:00.000Z',
+      visibleTo: 'staff',
+    };
+    renderWeek({ events: [spanning], from: new Date(2026, 9, 5) });
+
+    // Monday's strip cell carries the continuation chip…
+    const monday = screen.getByTestId('week-events-strip-2026-10-05');
+    expect(within(monday).getByText(/^↳ All Hands$/)).toBeTruthy();
+    expect(within(monday).getByTitle('All Hands (started earlier)')).toBeTruthy();
+
+    // …and the chip spans the covered days (Mon–Fri), not the weekend.
+    expect(within(screen.getByTestId('week-events-strip-2026-10-09')).getByText(/^↳ All Hands$/)).toBeTruthy();
+    expect(screen.getByTestId('week-events-strip-2026-10-10').textContent).toBe('');
+    expect(screen.getByTestId('week-events-strip-2026-10-11').textContent).toBe('');
+  });
+});
+
+// --- Mobile: single-day-per-staff agenda ---
+
+/** Toggle the setup's matchMedia stub so `(max-width: 639px)` reports the
+ *  wanted answer (tests/setup.ts default is no-match → desktop grid). */
+function installMatchMedia(mobile: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query === '(max-width: 639px)' ? mobile : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
+describe('WeekView mobile agenda', () => {
+  it('renders a single-day staff agenda with a day stepper at narrow widths', () => {
+    installMatchMedia(true);
+    const today = new Date();
+    const tomorrow = addDays(today, 1);
+    const todayStr = localIsoDay(today);
+    const tomorrowStr = localIsoDay(tomorrow);
+
+    const todayBlock: TeamBlock = {
+      id: 'm1',
+      userId: 'u1',
+      blockDate: todayStr,
+      blockType: 'home_visit',
+      startTime: '09:00',
+      endTime: '12:00',
+      note: null,
+    };
+    const tomorrowBlock: TeamBlock = {
+      id: 'm2',
+      userId: 'u2',
+      blockDate: tomorrowStr,
+      blockType: 'in_office',
+      startTime: null,
+      endTime: null,
+      note: null,
+    };
+
+    render(
+      <WeekView
+        blocks={[todayBlock, tomorrowBlock]}
+        events={[]}
+        from={weekStart(today)}
+        staff={STAFF}
+        onSlotClick={vi.fn()}
+        onBlockClick={vi.fn()}
+      />,
+    );
+
+    // Day label defaults to today; the day's blocks appear under staff headers.
+    expect(screen.getByTestId('mobile-day-label').textContent).toContain(
+      formatDate(todayStr),
+    );
+    expect(screen.getByRole('heading', { name: 'Ana Admin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Ben Social' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ana Admin — Home visit on ' + todayStr })).toBeTruthy();
+    // Tomorrow's block is not on today's agenda.
+    expect(screen.queryByRole('button', { name: /Ben Social —/ })).toBeNull();
+
+    // Stepping to the next day swaps the agenda to that day's blocks.
+    fireEvent.click(screen.getByRole('button', { name: 'Next day' }));
+    expect(screen.getByRole('button', { name: 'Ben Social — In office on ' + tomorrowStr })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Ana Admin —/ })).toBeNull();
+  });
+
+  it('hides the desktop 7-day grid on mobile (no day columns, no slot affordances)', () => {
+    installMatchMedia(true);
+    render(
+      <WeekView
+        blocks={[]}
+        events={[]}
+        from={FROM}
+        staff={STAFF}
+        onSlotClick={vi.fn()}
+        onBlockClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId(/^week-events-strip-/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /New block for/ })).toBeNull();
   });
 });

@@ -125,4 +125,43 @@ describe('expandRepeat', () => {
     const event: TeamEvent = { ...baseEvent, repeatRule: { freq: 'WEEKLY', interval: 1 } };
     expect(expandRepeat(event, WINDOW_FROM, WINDOW_TO)).toHaveLength(2);
   });
+
+  it('includes a one-shot that started before the window when it spans into it (spec edge #3), flagged continues', () => {
+    // Starts Mon Sep 21 09:00 Manila, ends Fri Oct 9 17:00 Manila — the
+    // window Mon Sep 28 – Sun Oct 4 lies inside its span.
+    const spanning: TeamEvent = {
+      ...baseEvent,
+      startsAt: '2026-09-21T01:00:00.000Z',
+      endsAt: '2026-10-09T09:00:00.000Z',
+    };
+    const out = expandRepeat(spanning, WINDOW_FROM, WINDOW_TO);
+    expect(out).toHaveLength(1);
+    expect(out[0].continues).toBe(true);
+    // The real start is preserved; views clamp the visible start themselves.
+    expect(out[0].startsAt.toISOString()).toBe('2026-09-21T01:00:00.000Z');
+
+    // Same event, but its end is before the window start → still excluded.
+    const endedEarly: TeamEvent = {
+      ...baseEvent,
+      startsAt: '2026-09-21T01:00:00.000Z',
+      endsAt: '2026-09-25T09:00:00.000Z',
+    };
+    expect(expandRepeat(endedEarly, WINDOW_FROM, WINDOW_TO)).toHaveLength(0);
+  });
+
+  it('includes a weekly occurrence that started before the window but spans into it, flagged continues', () => {
+    // Anchored Sunday 22:00 → Monday 10:00 Manila, repeating weekly. The
+    // occurrence that began Sun Sep 27 spans into Mon Sep 28 (window start).
+    const overnight: TeamEvent = {
+      ...baseEvent,
+      title: 'Overnight Cleanup',
+      startsAt: '2026-09-27T14:00:00.000Z',
+      endsAt: '2026-09-28T02:00:00.000Z',
+      repeatRule: { freq: 'weekly', interval: 1 },
+    };
+    const out = expandRepeat(overnight, new Date('2026-09-28'), new Date('2026-09-28'));
+    expect(out).toHaveLength(1);
+    expect(out[0].startsAt.toISOString()).toBe('2026-09-27T14:00:00.000Z');
+    expect(out[0].continues).toBe(true);
+  });
 });

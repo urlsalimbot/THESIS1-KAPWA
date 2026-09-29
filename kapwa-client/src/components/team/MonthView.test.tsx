@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import i18n from '@/i18n';
 import { MonthView } from './MonthView';
 import {
   BLOCK_COLORS,
   BLOCK_COLOR_FALLBACK,
   BLOCK_TYPES,
-  BLOCK_TYPE_LABELS,
+  BLOCK_TYPE_LABEL_KEYS,
 } from './team-utils';
 import type { TeamBlock, TeamEvent } from '../../lib/team-api';
 
@@ -125,7 +126,8 @@ describe('MonthView', () => {
     renderMonth();
 
     for (const type of BLOCK_TYPES) {
-      const label = screen.getByText(BLOCK_TYPE_LABELS[type]);
+      const labelKey = BLOCK_TYPE_LABEL_KEYS[type];
+      const label = screen.getByText(i18n.t(labelKey, labelKey));
       const item = label.closest('span') as HTMLElement;
       const dot = item.querySelector('.rounded-full') as HTMLElement;
       expect(dot.className).toContain(BLOCK_COLORS[type].split(' ')[0]);

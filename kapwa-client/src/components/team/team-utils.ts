@@ -48,23 +48,37 @@ export const STATUS_COLORS: Record<string, string> = {
 };
 export const STATUS_COLOR_FALLBACK = 'bg-muted-foreground';
 
-// Display labels (inline strings — Task 15 moves these to i18n en+fil).
-export const STATUS_LABELS: Record<string, string> = {
-  in_office: 'In office',
-  home_visit: 'Home visit',
-  field_day: 'Field day',
-  on_leave: 'On leave',
-  remote: 'Remote',
-  offline: 'Offline',
+// Display labels live in i18n (en+fil) — these maps point vocabulary at their
+// `team.status.*` keys; call `t(KEY[value] ?? value)` to render. Same keys back
+// both the whereabouts chip labels and the block-type labels (offline has no
+// block type).
+export const STATUS_LABEL_KEYS: Record<string, string> = {
+  in_office: 'team.status.inOffice',
+  home_visit: 'team.status.homeVisit',
+  field_day: 'team.status.fieldDay',
+  on_leave: 'team.status.onLeave',
+  remote: 'team.status.remote',
+  offline: 'team.status.offline',
 };
 
-export const BLOCK_TYPE_LABELS: Record<string, string> = {
-  in_office: 'In office',
-  home_visit: 'Home visit',
-  field_day: 'Field day',
-  on_leave: 'On leave',
-  remote: 'Remote',
+export const BLOCK_TYPE_LABEL_KEYS: Record<string, string> = {
+  in_office: 'team.status.inOffice',
+  home_visit: 'team.status.homeVisit',
+  field_day: 'team.status.fieldDay',
+  on_leave: 'team.status.onLeave',
+  remote: 'team.status.remote',
 };
+
+// Monday-first weekday headers shared by the week grid and the month grid.
+export const WEEKDAY_LABEL_KEYS = [
+  'team.day.mon',
+  'team.day.tue',
+  'team.day.wed',
+  'team.day.thu',
+  'team.day.fri',
+  'team.day.sat',
+  'team.day.sun',
+] as const;
 
 // --- Week math ---
 
@@ -115,14 +129,23 @@ export interface RepeatInstance {
   event: TeamEvent;
   startsAt: Date;
   endsAt: Date;
+  /** True when this occurrence started before the requested window and spans
+   *  into it (spec edge #3 across week boundaries). Views render such days
+   *  with the continuation prefix, clamping the visible start to the window. */
+  continues: boolean;
 }
 
 const MAX_INSTANCES = 520;
 
 /**
- * Expand a (possibly repeating) event into concrete occurrences within
+ * Expand a (possibly repeating) event into concrete occurrences that TOUCH
  * [from, to]. Bounds are inclusive and compared as Asia/Manila calendar
  * days, matching the API's inclusive YYYY-MM-DD convention.
+ *
+ * An occurrence is included when its span intersects the window, including
+ * occurrences that START before `from` but END inside it — the server returns
+ * overlapping events for those (spec edge #3), and the views clamp the
+ * visible start to the window while marking the chip `continues`.
  *
  * `repeatRule` is a jsonb passthrough (`{ freq: 'weekly', interval?: number,
  * until?: 'YYYY-MM-DD' | ISO instant }`). Unknown/missing freq → the event
@@ -138,16 +161,18 @@ export function expandRepeat(
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+  const startDay = manilaDay(start);
+  const endDay = start.getTime() <= end.getTime() ? manilaDay(end) : startDay;
 
   const rule = event.repeatRule;
   const freq =
     rule && typeof rule.freq === 'string' ? rule.freq.toLowerCase() : null;
 
   if (freq !== 'weekly') {
-    // One-shot (no rule, or a freq we do not model): include iff its day is
-    // inside the window.
-    const day = manilaDay(start);
-    return day >= fromDay && day <= toDay ? [{ event, startsAt: start, endsAt: end }] : [];
+    // One-shot (no rule, or a freq we do not model): include iff its span
+    // touches the window — including events that began before it.
+    if (startDay > toDay || endDay < fromDay) return [];
+    return [{ event, startsAt: start, endsAt: end, continues: startDay < fromDay }];
   }
 
   const interval =
@@ -168,8 +193,11 @@ export function expandRepeat(
     if (day > toDay) break;
     if (untilIsDateOnly && until && day > until) break;
     if (untilInstant !== null && !Number.isNaN(untilInstant) && s.getTime() > untilInstant) break;
-    if (day >= fromDay) {
-      instances.push({ event, startsAt: s, endsAt: new Date(s.getTime() + duration) });
+    // Include occurrences whose span touches the window — an occurrence that
+    // started before `fromDay` but reaches into it is marked `continues`.
+    const instanceEnd = new Date(s.getTime() + duration);
+    if (manilaDay(instanceEnd) >= fromDay) {
+      instances.push({ event, startsAt: s, endsAt: instanceEnd, continues: day < fromDay });
     }
   }
   return instances;

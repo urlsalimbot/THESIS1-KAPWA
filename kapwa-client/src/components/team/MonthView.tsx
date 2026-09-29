@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   addDays,
   localIsoDay,
@@ -7,7 +8,8 @@ import {
   BLOCK_TYPES,
   BLOCK_COLORS,
   BLOCK_COLOR_FALLBACK,
-  BLOCK_TYPE_LABELS,
+  BLOCK_TYPE_LABEL_KEYS,
+  WEEKDAY_LABEL_KEYS,
 } from './team-utils';
 import type { TeamBlock, TeamEvent } from '../../lib/team-api';
 
@@ -31,6 +33,7 @@ function mondayOnOrBefore(date: Date): Date {
  * and today is ring-outlined. Legend below maps type → dot color.
  */
 export function MonthView({ events, blocks, from }: MonthViewProps) {
+  const { t } = useTranslation();
   const monthStart = useMemo(() => new Date(from.getFullYear(), from.getMonth(), 1), [from]);
   const gridStart = useMemo(() => mondayOnOrBefore(monthStart), [monthStart]);
   const cells = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)), [gridStart]);
@@ -54,7 +57,10 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
     const map = new Map<string, TeamEvent[]>();
     for (const event of events) {
       for (const instance of expandRepeat(event, firstStr, lastStr)) {
-        const day = manilaDay(instance.startsAt);
+        // Chips sit on the occurrence's start day; an occurrence that began
+        // before the grid clamps to the grid's first cell (spec edge #3).
+        const startDay = manilaDay(instance.startsAt);
+        const day = startDay < firstStr ? firstStr : startDay;
         const list = map.get(day);
         if (list) {
           if (!list.some(existing => existing.id === event.id)) list.push(event);
@@ -75,9 +81,9 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
     <div className="rounded-lg border bg-background">
       <div className="border-b px-3 py-2 text-sm font-bold">{monthLabel}</div>
       <div className={`grid ${GRID_COLS} border-b bg-muted/30`}>
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+        {WEEKDAY_LABEL_KEYS.map(day => (
           <div key={day} className="px-2 py-1.5 text-center text-xs font-semibold text-muted-foreground">
-            {day}
+            {t(day)}
           </div>
         ))}
       </div>
@@ -116,7 +122,10 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
                     {cellBlocks.slice(0, 5).map(block => (
                       <span
                         key={block.id}
-                        title={`${BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}`}
+                        title={t(
+                          BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
+                          BLOCK_TYPE_LABEL_KEYS[block.blockType] ?? block.blockType,
+                        )}
                         className={`h-2 w-2 rounded-full ${
                           BLOCK_COLORS[block.blockType]?.split(' ')[0] ?? BLOCK_COLOR_FALLBACK.split(' ')[0]
                         }`}
@@ -135,16 +144,19 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
 
       {/* Legend: block type → dot color */}
       <div className="flex flex-wrap items-center gap-3 border-t px-3 py-2">
-        {BLOCK_TYPES.map(type => (
-          <span key={type} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                BLOCK_COLORS[type]?.split(' ')[0] ?? BLOCK_COLOR_FALLBACK.split(' ')[0]
-              }`}
-            />
-            {BLOCK_TYPE_LABELS[type]}
-          </span>
-        ))}
+        {BLOCK_TYPES.map(type => {
+            const typeKey = BLOCK_TYPE_LABEL_KEYS[type];
+            return (
+              <span key={type} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    BLOCK_COLORS[type]?.split(' ')[0] ?? BLOCK_COLOR_FALLBACK.split(' ')[0]
+                  }`}
+                />
+                {t(typeKey, typeKey)}
+              </span>
+            );
+          })}
       </div>
     </div>
   );
