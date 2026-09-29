@@ -371,6 +371,50 @@ describe('TeamScheduleService', () => {
     expect(saved.endDate).toBe('2026-10-04');
   });
 
+  it('updateBlock rejects a blockDate-only PATCH that moves the start after the stored endDate', async () => {
+    // Raw-API gap fix: endDate is absent from the body, but the merged range
+    // (PATCHed blockDate over the STORED endDate) must still validate —
+    // otherwise Object.assign persists end_date < block_date.
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', blockDate: '2026-10-02', endDate: '2026-10-04' });
+    await expect(
+      service.updateBlock('b1', { blockDate: '2026-10-05' } as any, workerReq as any) as any,
+    ).rejects.toThrow('End date must be on or after the start date');
+    expect(repoMock.save).not.toHaveBeenCalled();
+  });
+
+  it('updateBlock allows a blockDate-only PATCH when the stored endDate is null (single-day)', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', blockDate: '2026-10-02', endDate: null });
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
+    const row = await service.updateBlock('b1', { blockDate: '2026-10-05' } as any, workerReq as any);
+    expect(row.blockDate).toBe('2026-10-05');
+    expect(row.endDate).toBeNull();
+    expect(repoMock.save).toHaveBeenCalled();
+  });
+
+  it('updateBlock keeps the stored endDate when only blockDate moves earlier (range still valid)', async () => {
+    // blockDate 10-05 → 10-02 over stored endDate 10-04: valid after the move,
+    // and the stored endDate is retained (absent field is not assigned).
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', blockDate: '2026-10-05', endDate: '2026-10-04' });
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
+    const row = await service.updateBlock('b1', { blockDate: '2026-10-02' } as any, workerReq as any);
+    expect(row.blockDate).toBe('2026-10-02');
+    expect(row.endDate).toBe('2026-10-04');
+    expect(repoMock.save).toHaveBeenCalled();
+  });
+
+  it('updateBlock accepts a consistent blockDate+endDate PATCH (both change, range valid)', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', blockDate: '2026-10-02', endDate: '2026-10-05' });
+    repoMock.save.mockImplementation(async (d: any) => ({ id: 'b1', ...d }));
+    const row = await service.updateBlock(
+      'b1',
+      { blockDate: '2026-10-03', endDate: '2026-10-06' } as any,
+      workerReq as any,
+    );
+    expect(row.blockDate).toBe('2026-10-03');
+    expect(row.endDate).toBe('2026-10-06');
+    expect(repoMock.save).toHaveBeenCalled();
+  });
+
   it('listBlocks uses inclusive overlap: block_date <= to and COALESCE(end_date, block_date) >= from', async () => {
     repoMock.find.mockResolvedValue([]);
     await service.listBlocks(

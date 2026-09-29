@@ -188,12 +188,19 @@ export class TeamScheduleService {
     }
     if (dto.blockType !== undefined) this.assertBlockType(dto.blockType);
     if (dto.visibleTo !== undefined) this.assertVisibleTo(dto.visibleTo);
-    // Multi-day (amendment): endDate must parse and stay on/after the block's
-    // start date — the start is the PATCHed blockDate when both change in the
-    // same request, else the loaded row's. Absent/null leaves the range
-    // single-day (COALESCE semantics).
-    if (dto.endDate !== undefined) {
-      TeamScheduleService.assertEndDate(dto.endDate, dto.blockDate ?? block.blockDate);
+    // Multi-day (amendment): the stored range must stay consistent whichever
+    // side of it a PATCH touches, so the validation runs on the merged state
+    // (PATCHed values over the loaded row) — not just when endDate is in the
+    // body. A blockDate-only PATCH that moves the start later must be checked
+    // against the STORED endDate: without that, Object.assign would persist
+    // end_date < block_date (raw-API callers can omit endDate; the client
+    // always sends it). endDate must parse and stay on/after the start; the
+    // start is the PATCHed blockDate when it changes, else the loaded row's.
+    // Absent/null endDate leaves the range single-day (COALESCE semantics).
+    const nextStart = dto.blockDate ?? block.blockDate;
+    const nextEnd = dto.endDate !== undefined ? dto.endDate : block.endDate;
+    if (nextEnd != null) {
+      TeamScheduleService.assertEndDate(nextEnd, nextStart);
     }
     // endDate participates in the multi-day validation above; like every
     // other field it must not leak as `undefined` onto the entity via

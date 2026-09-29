@@ -894,6 +894,15 @@ export async function migrate() {
   // Team workspace amendment: multi-day blocks — optional inclusive end date;
   // NULL keeps the block single-day (ZAddTeamScheduleBlockEndDate migration)
   await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS end_date date NULL`);
+  // Multi-day blocks backstop: end_date (when set) must stay on/after
+  // block_date — DB-level CHECK so no writer can persist end_date < block_date.
+  // PostgreSQL lacks ADD CONSTRAINT IF NOT EXISTS, so the DO block guards on
+  // pg_constraint by name (ZAddTeamScheduleBlockEndDateCheck migration).
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_team_schedule_blocks_end_date') THEN
+      ALTER TABLE team_schedule_blocks ADD CONSTRAINT chk_team_schedule_blocks_end_date CHECK (end_date IS NULL OR end_date >= block_date);
+    END IF;
+  END $$;`);
   await q.query(`CREATE TABLE IF NOT EXISTS team_invites (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
     from_user_id uuid NOT NULL REFERENCES users(id),
