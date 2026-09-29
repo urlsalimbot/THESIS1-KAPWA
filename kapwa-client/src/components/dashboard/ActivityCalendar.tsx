@@ -1,5 +1,6 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
+import { todayInManila } from '@/lib/format';
 
 interface DailyCounts {
   [day: string]: { interventions: number; cases: number };
@@ -24,7 +25,9 @@ export function ActivityCalendar({ data, year, month }: ActivityCalendarProps) {
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDay = new Date(year, month - 1, 1).getDay();
-  const today = new Date();
+  // The data keys are Manila calendar days, so "today" must be Manila's today.
+  // The host's local date is a different day for anyone east or west of UTC+8.
+  const todayIso = todayInManila();
 
   const weeks: { day: number; count: number }[][] = [];
   let week: { day: number; count: number }[] = [];
@@ -54,7 +57,8 @@ export function ActivityCalendar({ data, year, month }: ActivityCalendarProps) {
           {weeks.flat().map((cell, i) => {
             if (cell.day === 0) return <div key={i} />;
             const intensity = cell.count > 0 ? Math.min(Math.ceil((cell.count / maxCount) * 4), 4) : 0;
-            const isToday = cell.day === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear();
+            const cellIso = `${year}-${String(month).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`;
+            const isToday = cellIso === todayIso;
             return (
               <div
                 key={i}

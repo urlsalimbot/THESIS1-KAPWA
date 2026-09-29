@@ -1,8 +1,19 @@
 # Local-only override for rootless Podman integration runs.
 # Rootless podman cannot bind host ports < 1024 (net.ipv4.ip_unprivileged_port_start=1024),
 # so drop the privileged 443:443 mapping; the app is reachable on http://localhost:8090.
-# Never commit — not tracked, and not part of the deployment path (deploy.sh targets the base compose).
+# Never commit — not part of the deployment path (deploy.sh targets the base compose).
 services:
+  api:
+    # infra/.env.production targets RDS: DB_SSL=true (rds.force_ssl=1) and an
+    # RDS-minted DB_PASSWORD. Locally we talk to the plaintext `db` service,
+    # which rejects SSL negotiation and has different credentials, so the
+    # local-only .env.localdb is loaded last and wins. Secrets live in that
+    # untracked file, never here.
+    env_file:
+      - ../infra/.env.production
+      - .env.localdb
+    environment:
+      DB_SSL: "false"
   caddy:
     ports: !override
       - "8090:80"

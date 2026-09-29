@@ -130,16 +130,21 @@ export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
         const start = instance.startsAt;
         const end = instance.endsAt;
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+        // Both the rendered time and the 24h sort key must be pinned to
+        // Asia/Manila: `manilaDay` files the row under the office's calendar
+        // day, so an unpinned (host-local) clock would label and order the row
+        // by a different day than the one it is displayed under.
         const time = start.toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: true,
+          timeZone: 'Asia/Manila',
         });
         const rawDay = manilaDay(start);
         out.push({
           seq: seq++,
           date: rawDay < window.from ? window.from : rawDay,
-          time: start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          time: start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Manila' }),
           kind: 'event',
           event,
           title: event.title,
@@ -150,6 +155,7 @@ export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true,
+            timeZone: 'Asia/Manila',
           })}${event.location ? ` · ${event.location}` : ''}`,
           colorClass: 'bg-indigo-200/70 border-indigo-500 text-indigo-900',
           dayIndex: 0,

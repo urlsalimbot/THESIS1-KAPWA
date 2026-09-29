@@ -67,7 +67,12 @@ export function initials(name: string): string {
     .join('');
 }
 
-/** "Updated Mon, Sep 28, 9:00 AM" — local wall time of the status write. */
+/**
+ * "Updated Mon, Sep 28, 9:00 AM" — Asia/Manila wall time of the status write.
+ * Pinned to the office's zone (not the viewer's): an unpinned clock renders
+ * the previous calendar day to anyone west of UTC, which is wrong for a
+ * single-office roster.
+ */
 export function formatUpdatedAt(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -76,6 +81,7 @@ export function formatUpdatedAt(iso: string): string {
     day: '2-digit',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: 'Asia/Manila',
   });
   return i18n.t('team.staff.updatedAt', 'Updated {{stamp}}', { stamp });
 }

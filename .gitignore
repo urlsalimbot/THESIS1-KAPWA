@@ -74,6 +74,7 @@ __pycache__/
 
 # local production-DB debug env (never commit)
 .env.prodlocal
+.env.localdb
 
 # GIS live-preview scratch (watcher emits into .preview-build/ and pdf/preview/)
 .preview-build/
