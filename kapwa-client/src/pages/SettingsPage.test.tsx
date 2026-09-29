@@ -4,6 +4,7 @@ import { SettingsPage } from './SettingsPage';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/lib/auth-context';
 import { SWRConfig } from 'swr';
+import { api } from '@/lib/api';
 
 vi.mock('@/lib/api', () => ({
   api: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
@@ -11,7 +12,7 @@ vi.mock('@/lib/api', () => ({
 
 function renderWithProviders(ui: React.ReactNode) {
   return render(
-    <SWRConfig value={{ dedupingInterval: 0, provider: () => new Map() }}>
+    <SWRConfig value={{ dedupingInterval: 0, fetcher: (key: unknown) => api.get(key as never), provider: () => new Map() }}>
       <BrowserRouter>
         <AuthProvider>
           {ui}
@@ -62,5 +63,36 @@ describe('SettingsPage', () => {
     expect(localStorage.getItem('kapwa-lang')).toBe('fil');
     fireEvent.click(screen.getByLabelText('English'));
     expect(document.documentElement.lang).toBe('en');
+  });
+
+  it('hides the SMS preference column when the server reports SMS unconfigured', async () => {
+    const api = await import('@/lib/api');
+    vi.mocked(api.api.get).mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('config')) return Promise.resolve({ smsEnabled: false });
+      if (k.includes('preferences')) return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+    renderWithProviders(<SettingsPage />);
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }));
+    expect(await screen.findByText('Notification Preferences')).toBeTruthy();
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('columnheader', { name: 'SMS' })).toBeNull();
+    });
+    expect(screen.getByRole('columnheader', { name: 'In-App' })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Email' })).toBeTruthy();
+  });
+
+  it('shows the SMS preference column when SMS is enabled or config is unknown', async () => {
+    const api = await import('@/lib/api');
+    vi.mocked(api.api.get).mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('config')) return Promise.resolve({ smsEnabled: true });
+      if (k.includes('preferences')) return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+    renderWithProviders(<SettingsPage />);
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }));
+    expect(await screen.findByRole('columnheader', { name: 'SMS' })).toBeTruthy();
   });
 });

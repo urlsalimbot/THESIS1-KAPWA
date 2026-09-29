@@ -20,6 +20,12 @@ export class SmsGatewayService {
     }
   }
 
+  /** SMS is usable only when Twilio credentials AND a sender number exist. */
+  isConfigured(): boolean {
+    const sid = process.env.TWILIO_ACCOUNT_SID || '';
+    return sid.startsWith('AC') && !!process.env.TWILIO_AUTH_TOKEN && !!process.env.TWILIO_PHONE_NUMBER;
+  }
+
   async sendSms(phone: string, message: string): Promise<{ success: boolean; provider: string; messageId: string }> {
     const send = async () => {
       if (this.twilioClient && process.env.TWILIO_PHONE_NUMBER) {

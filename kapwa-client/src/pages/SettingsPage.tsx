@@ -518,6 +518,9 @@ function SecurityTab() {
 function NotificationsTab() {
   const { t } = useTranslation();
   const { data: prefs, isLoading, mutate: revalidatePrefs } = useSWR<NotificationPref[]>(queryKeys.notifications.preferences());
+  // Public config: hide the SMS column when Twilio is not configured server-side.
+  const { data: config } = useSWR<{ smsEnabled?: boolean }>(queryKeys.config.public(), { fallbackData: { smsEnabled: true } });
+  const visibleChannels = config?.smsEnabled === false ? CHANNELS.filter(c => c !== 'sms') : CHANNELS;
   const [draft, setDraft] = useState<Record<string, boolean>>({});
   const [draftSynced, setDraftSynced] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -617,7 +620,7 @@ function NotificationsTab() {
             <thead>
               <tr className="border-b border-border/60">
                 <th className="text-left px-4 py-2.5 text-xs text-muted-foreground font-medium">{t('settings.category', 'Category')}</th>
-                {CHANNELS.map(ch => (
+                {visibleChannels.map(ch => (
                   <th key={ch} className="text-center px-4 py-2.5 text-xs text-muted-foreground font-medium">{channelLabels[ch] ? t(channelLabels[ch].key, channelLabels[ch].label) : ch}</th>
                 ))}
               </tr>
@@ -631,7 +634,7 @@ function NotificationsTab() {
                       <span className="text-sm font-medium text-foreground">{categoryLabels[cat] ? t(categoryLabels[cat].key, categoryLabels[cat].label) : cat}</span>
                     </div>
                   </td>
-                  {CHANNELS.map(channel => (
+                  {visibleChannels.map(channel => (
                     <td key={channel} className="px-4 py-3 text-center">
                       <button
                         onClick={() => handleToggle(channel, cat)}

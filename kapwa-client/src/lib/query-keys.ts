@@ -128,6 +128,9 @@ export const queryKeys = {
     publicList: () => memo('programs.public.list', () => ['programs', 'public'] as const),
     publicDetail: (id: string) => memo(`programs.public.${id}`, () => ['programs', 'public', id] as const),
   },
+  config: {
+    public: () => memo('config.public', () => ['config', 'public'] as const),
+  },
   tracker: {
     all: ['tracker'] as const,
     daily: (params: { date: string; status?: string }) =>
