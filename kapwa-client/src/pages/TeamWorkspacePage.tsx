@@ -59,12 +59,21 @@ export function TeamWorkspacePage() {
   const fromStr = localIsoDay(from);
   const toStr = localIsoDay(addDays(from, 6));
 
+  // Month + agenda render the 6-week, Monday-first grid of the month
+  // containing `from`, so those views fetch that whole window (week view
+  // keeps its own week window). The SWR key, mutation keys and the view
+  // props all follow whichever window the active view needs.
+  const monthStart = new Date(from.getFullYear(), from.getMonth(), 1);
+  const gridStart = weekStart(monthStart); // Monday on/before the 1st
+  const viewFromStr = view === 'week' ? fromStr : localIsoDay(gridStart);
+  const viewToStr = view === 'week' ? toStr : localIsoDay(addDays(gridStart, 41));
+
   // Schedule = client-side merge (GET /team/blocks + GET /team/events) — see
   // team-api.getSchedule's note; queryKeys.team.schedule maps to the same key.
   // The explicit fetcher is REQUIRED: the global fetcher (api.get) would hit
   // GET /team/schedule, which does not exist server-side (404 → empty views).
-  const { data: schedule } = useSWR<TeamSchedule>(queryKeys.team.schedule(fromStr, toStr), () =>
-    getSchedule(fromStr, toStr),
+  const { data: schedule } = useSWR<TeamSchedule>(queryKeys.team.schedule(viewFromStr, viewToStr), () =>
+    getSchedule(viewFromStr, viewToStr),
   );
   const { data: statuses } = useSWR<TeamStatus[]>(queryKeys.team.statuses());
   // Staff roster: achievements.perStaff is the only team-scoped staff list —
@@ -89,10 +98,10 @@ export function TeamWorkspacePage() {
     ]);
   };
 
-  const revalidateWeek = async () => {
+  const revalidateView = async () => {
     await Promise.all([
-      mutate(queryKeys.team.schedule(fromStr, toStr)),
-      mutate(queryKeys.team.blocks(fromStr, toStr)),
+      mutate(queryKeys.team.schedule(viewFromStr, viewToStr)),
+      mutate(queryKeys.team.blocks(viewFromStr, viewToStr)),
     ]);
   };
 
@@ -102,14 +111,14 @@ export function TeamWorkspacePage() {
     setBlockDialogOpen(false);
     setActiveBlock(null);
     setDraftSlot(null);
-    await revalidateWeek();
+    await revalidateView();
   };
 
   const handleDeleteBlock = async (id: string) => {
     await deleteBlock(id);
     setBlockDialogOpen(false);
     setActiveBlock(null);
-    await revalidateWeek();
+    await revalidateView();
   };
 
   const handleSaveEvent = async (input: TeamEventInput) => {
@@ -117,14 +126,14 @@ export function TeamWorkspacePage() {
     else await createEvent(input);
     setEventDialogOpen(false);
     setActiveEvent(null);
-    await Promise.all([mutate(queryKeys.team.events(fromStr, toStr)), revalidateWeek()]);
+    await Promise.all([mutate(queryKeys.team.events(viewFromStr, viewToStr)), revalidateView()]);
   };
 
   const handleDeleteEvent = async (id: string) => {
     await deleteEvent(id);
     setEventDialogOpen(false);
     setActiveEvent(null);
-    await Promise.all([mutate(queryKeys.team.events(fromStr, toStr)), revalidateWeek()]);
+    await Promise.all([mutate(queryKeys.team.events(viewFromStr, viewToStr)), revalidateView()]);
   };
 
   const openNewBlock = () => {
@@ -226,7 +235,12 @@ export function TeamWorkspacePage() {
           <MonthView blocks={schedule?.blocks ?? []} events={schedule?.events ?? []} from={from} />
         )}
         {view === 'agenda' && (
-          <AgendaView blocks={schedule?.blocks ?? []} events={schedule?.events ?? []} staff={staff} />
+          <AgendaView
+            blocks={schedule?.blocks ?? []}
+            events={schedule?.events ?? []}
+            staff={staff}
+            from={from}
+          />
         )}
         {view === 'staff' && <StaffView staff={staff} statuses={statuses ?? []} />}
 

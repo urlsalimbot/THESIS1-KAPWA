@@ -14,24 +14,31 @@ import type { TeamBlock, TeamEvent } from '../../lib/team-api';
 export interface MonthViewProps {
   events: TeamEvent[];
   blocks: TeamBlock[];
-  from: Date; // anchor: the current week's Monday → the month to display
+  from: Date; // anchor: any date in the month to display
 }
 
 const GRID_COLS = 'grid-cols-[repeat(7,minmax(6rem,1fr))]';
 
+/** Monday on or before `date` — the Monday-first grid's first column. */
+function mondayOnOrBefore(date: Date): Date {
+  return addDays(date, -((date.getDay() + 6) % 7));
+}
+
 /**
- * Month grid: 6 weeks × 7 days, Sunday-first, anchored on the month
+ * Month grid: 6 weeks × 7 days, Monday-first, anchored on the month
  * containing `from`. Each cell shows event chips and per-staff block dots
- * keyed by `BLOCK_COLORS[type]` (legend below). Task 12 refines this view.
+ * keyed by `BLOCK_COLORS[type]`; cells outside the current month are muted
+ * and today is ring-outlined. Legend below maps type → dot color.
  */
 export function MonthView({ events, blocks, from }: MonthViewProps) {
   const monthStart = useMemo(() => new Date(from.getFullYear(), from.getMonth(), 1), [from]);
-  const gridStart = addDays(monthStart, -monthStart.getDay()); // Sunday on/before the 1st
+  const gridStart = useMemo(() => mondayOnOrBefore(monthStart), [monthStart]);
   const cells = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)), [gridStart]);
 
   const dayStrs = cells.map(localIsoDay);
   const firstStr = dayStrs[0];
   const lastStr = dayStrs[dayStrs.length - 1];
+  const todayStr = localIsoDay(new Date());
 
   const blocksByDay = useMemo(() => {
     const map = new Map<string, TeamBlock[]>();
@@ -68,7 +75,7 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
     <div className="rounded-lg border bg-background">
       <div className="border-b px-3 py-2 text-sm font-bold">{monthLabel}</div>
       <div className={`grid ${GRID_COLS} border-b bg-muted/30`}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
           <div key={day} className="px-2 py-1.5 text-center text-xs font-semibold text-muted-foreground">
             {day}
           </div>
@@ -81,12 +88,15 @@ export function MonthView({ events, blocks, from }: MonthViewProps) {
           const cellBlocks = blocksByDay.get(dayStr) ?? [];
           const cellEvents = eventsByDay.get(dayStr) ?? [];
           const inMonth = date.getMonth() === monthStart.getMonth();
+          const isToday = dayStr === todayStr;
           return (
             <div
               key={dayStr}
               className={`min-h-[5.5rem] border-b border-r border-l-0 border-t-0 p-1.5 ${
                 i % 7 === 0 ? 'border-l-0' : 'border-l'
-              } ${inMonth ? '' : 'bg-muted/20'}`}
+              } ${inMonth ? '' : 'bg-muted/20'} ${
+                isToday ? 'ring-1 ring-inset ring-primary' : ''
+              }`}
             >
               <p className={`text-xs font-semibold ${inMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {date.getDate()}

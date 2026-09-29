@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import {
+  addDays,
+  localIsoDay,
   manilaDay,
+  expandRepeat,
   BLOCK_COLORS,
   BLOCK_COLOR_FALLBACK,
   BLOCK_TYPE_LABELS,
@@ -12,6 +15,12 @@ export interface AgendaViewProps {
   blocks: TeamBlock[];
   events: TeamEvent[];
   staff: TeamStaffAchievement[];
+  from: Date; // anchor: the month whose 6-week window this agenda covers
+}
+
+/** Monday on or before `date` — same Monday-first window as MonthView. */
+function mondayOnOrBefore(date: Date): Date {
+  return addDays(date, -((date.getDay() + 6) % 7));
 }
 
 interface AgendaRow {
@@ -24,20 +33,32 @@ interface AgendaRow {
 }
 
 /**
- * Chronological list of blocks + events, grouped by day, ascending.
- * NOTE: without a from/to range prop the events here are their base
- * occurrences only (no repeat expansion) — Task 12 adds real range +
- * expansion when the view gets its own date state.
+ * Chronological list of blocks + events covering the 6-week month grid that
+ * MonthView renders (Monday-first, anchored on the month containing `from`).
+ * Repeating weekly events are expanded so every instance in the window gets
+ * its own row. Groups by day, ascending, all-day entries first.
  */
-export function AgendaView({ blocks, events, staff }: AgendaViewProps) {
+export function AgendaView({ blocks, events, staff, from }: AgendaViewProps) {
   const nameByUserId = useMemo(
     () => new Map(staff.map(member => [member.userId, member.name])),
     [staff],
   );
 
+  const window = useMemo(() => {
+    const monthStart = new Date(from.getFullYear(), from.getMonth(), 1);
+    const gridStart = mondayOnOrBefore(monthStart);
+    return {
+      from: localIsoDay(gridStart),
+      to: localIsoDay(addDays(gridStart, 41)),
+    };
+  }, [from]);
+
   const rows: AgendaRow[] = useMemo(() => {
     const out: AgendaRow[] = [];
     for (const block of blocks) {
+      // Data arrives window-scoped from the page; keep the filter defensive
+      // so the view never leaks entries outside its own range.
+      if (block.blockDate < window.from || block.blockDate > window.to) continue;
       out.push({
         date: block.blockDate,
         time: block.startTime ?? '00:00',
@@ -51,30 +72,34 @@ export function AgendaView({ blocks, events, staff }: AgendaViewProps) {
       });
     }
     for (const event of events) {
-      const start = new Date(event.startsAt);
-      const end = new Date(event.endsAt);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
-      const time = start.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-      out.push({
-        date: manilaDay(start),
-        time: start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-        kind: 'event',
-        title: event.title,
-        detail: `${time} – ${end.toLocaleTimeString('en-US', {
+      // One row per repeat instance within the window (one-shot events yield
+      // their single base occurrence when it falls inside).
+      for (const instance of expandRepeat(event, window.from, window.to)) {
+        const start = instance.startsAt;
+        const end = instance.endsAt;
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+        const time = start.toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: true,
-        })}${event.location ? ` · ${event.location}` : ''}`,
-        colorClass: 'border-indigo-400 bg-indigo-100/70 text-indigo-900',
-      });
+        });
+        out.push({
+          date: manilaDay(start),
+          time: start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          kind: 'event',
+          title: event.title,
+          detail: `${time} – ${end.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          })}${event.location ? ` · ${event.location}` : ''}`,
+          colorClass: 'bg-indigo-200/70 border-indigo-500 text-indigo-900',
+        });
+      }
     }
     out.sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)));
     return out;
-  }, [blocks, events, nameByUserId]);
+  }, [blocks, events, nameByUserId, window]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, AgendaRow[]>();
@@ -89,7 +114,7 @@ export function AgendaView({ blocks, events, staff }: AgendaViewProps) {
   return (
     <div className="rounded-lg border bg-background">
       {rows.length === 0 && (
-        <p className="py-10 text-center text-sm text-muted-foreground">Nothing scheduled this week.</p>
+        <p className="py-10 text-center text-sm text-muted-foreground">Nothing scheduled in this period.</p>
       )}
       {Array.from(byDay.entries()).map(([day, dayRows]) => (
         <div key={day} className="border-b last:border-b-0">
