@@ -512,17 +512,24 @@ describe('CaseStepLocksService', () => {
      * from. Both are hand-written, so they can drift — and each suite only ever
      * sees its own half, so a drifted entry passes both.
      *
-     * The two halves are tied together here instead. With interventions present
-     * and no no-intervention decision, step 1 is done exactly when
-     * `requirementsMet` is true, so `expected` and the given are the same
-     * statement about the case; and the `it.each` above already proves this
+     * The two halves are tied together here instead. Once an intervention
+     * exists, step 1's first clause (`interventionCount > 0 ||
+     * interventionNotNeeded`) is already true whatever the no-intervention
+     * decision says, so step 1's verdict is exactly `requirementsMet ?? true` —
+     * the same value the branch itself computes, which is why the filter below
+     * keys on `interventionCount > 0` alone and needs nothing about
+     * `interventionNotNeeded`. `expected` and the given are therefore the same
+     * statement about the case, and the `it.each` above already proves this
      * suite's answer follows the *declared* inputs. Asserted on the pair, an
      * entry whose halves disagree fails in one place with both visible.
      */
     it.each(FIXTURE.filter((fx) => fx.requirements && fx.interventionCount > 0))(
       '$name — the given agrees with the declared inputs',
       (fx) => {
-        expect(fx.opts.requirementsMet).toBe(fx.expected);
+        // `?? true` rather than the raw flag, mirroring stepDone's own
+        // `opts.requirementsMet ?? true`: an entry that omits the flag is not
+        // asserting `false`, it is asserting the branch's default.
+        expect(fx.opts.requirementsMet ?? true).toBe(fx.expected);
         // An entry that answers "not met" has to actually name a document the
         // checklist does not satisfy, or it is not testing the branch it claims
         // to. The "imposes nothing" entries legitimately name no document at
@@ -535,6 +542,36 @@ describe('CaseStepLocksService', () => {
         }
       },
     );
+
+    /**
+     * The justification for the `it.each` filter above, as an executable claim
+     * rather than a comment: with an intervention on the case, the recorded
+     * no-intervention decision cannot rescue step 1, because the first clause of
+     * the branch is already satisfied. So an entry carrying
+     * `interventionNotNeeded: true` alongside `interventionCount: 1` still has to
+     * follow `requirementsMet`, and excluding such entries from the filter would
+     * quietly skip checking them rather than protect them.
+     */
+    it('still weighs requirements when a no-intervention decision is also recorded', async () => {
+      findById.mockResolvedValue({
+        id: 'c1', status: 'enrolled', interventionNotNeeded: true,
+        requirementsChecklist: { 'Valid ID': false },
+      } as unknown as Case);
+      interventionCount.mockResolvedValue(1);
+      interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
+      programFind.mockResolvedValue([programRow('p1', [{ key: 'Valid ID', mandatory: true }])]);
+
+      // The decision does not buy the step its way past an unmet document.
+      await expect(service.lock('c1', 1, swUser)).rejects.toThrow(/not complete/i);
+
+      // …and once the document is met, the step is done and the decision is
+      // simply redundant rather than contradictory.
+      findById.mockResolvedValue({
+        id: 'c1', status: 'enrolled', interventionNotNeeded: true,
+        requirementsChecklist: { 'Valid ID': true },
+      } as unknown as Case);
+      await expect(service.lock('c1', 1, swUser)).resolves.toBeDefined();
+    });
 
     // The `default:` arm of the predicate is unreachable through the five
     // stepper indexes, and the index range is validated before the predicate

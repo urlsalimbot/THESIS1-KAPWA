@@ -84,6 +84,11 @@
     "caseData": { "status": "enrolled" },
     "interventionCount": 1,
     "opts": {},
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true }
+    },
     "expected": true
   },
   {
