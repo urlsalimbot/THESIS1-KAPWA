@@ -440,6 +440,8 @@ branch plus the status-floor boundaries that are easy to get wrong."
 - Produces:
   - `CaseStepLocksService.lock(caseId: string, stepIndex: number, caller: User): Promise<CaseStepLock>`
   - `CaseStepLocksService.unlock(caseId: string, stepIndex: number, caller: User): Promise<void>`
+  - `CaseStepLocksService.listForCase(caseId: string): Promise<Array<{ stepIndex: number; lockedByName?: string; lockedAt: Date }>>` — **Task 6's gate and its test both call this**, so it belongs to this task's contract, not to a later addition
+  - `export const CASE_STEP_LABELS: Record<number, string>` exported from this file — the one home for step names, so `cases.service.ts` (Task 6) and the client cannot spell one step two different ways inside a single error message
   - `CasesService.findById(id)` gains `stepLocks: Array<{ stepIndex: number; lockedByName?: string; lockedAt: Date }>`
   - Routes: `POST /cases/:id/steps/:stepIndex/lock` and `DELETE /cases/:id/steps/:stepIndex/lock`, both `@Roles('admin','social_worker')`
 
@@ -871,8 +873,8 @@ git add kapwa-client/src/components/case-view/ \
 git commit -m "feat(case-view): mount StepLockBar on all five steps
 
 The all-locked gate is unsatisfiable until all five steps can be sealed, so all
-five get the control. StepInterventions also gets its layout in this commit so
-its lock and its card are one change rather than two conflicting ones.
+five get the control. StepInterventions gets only the lock mount here; Task 9 does its
+layout, so this commit stays reviewable on its own.
 
 The per-step lock is resolved once in CaseViewPage and passed down, so the step
 components never see the stepLocks array."
@@ -1073,9 +1075,9 @@ signature because the existing schema requires one."
 
 ---
 
-### Task 11: End-to-end verification against the running stack
+### Task 11: End-to-end verification against the dev server
 
-Unit tests prove the pieces. This proves the feature works in the podman stack that the office actually uses, and that the server gate cannot be walked past.
+Unit tests prove the pieces. This proves the feature works against a real API and a real browser, driven through the local dev server on the podman database.
 
 **Files:**
 - Create: `tests/pw-case-locks.mjs` (Playwright MCP suite, untracked by convention)
@@ -1085,17 +1087,39 @@ Unit tests prove the pieces. This proves the feature works in the podman stack t
 - Consumes: everything above.
 - Produces: verification evidence. No production code changes unless a defect is found, in which case fix it in the task that owns it rather than here.
 
-- [ ] **Step 1: Rebuild the client image and restart caddy**
+- [ ] **Step 1: Start the dev server against the podman database**
+
+Per the human partner: verify against a local dev server, not the container
+stack. No image rebuild — the client runs under Vite and the API under Nest,
+both pointed at the podman Postgres. Much faster to iterate when a check fails.
+
+The podman database is already up and publishing 5432 (`kapwa-db`, healthy).
+What must be overridden: `infra/.env.production` points at AWS RDS with
+`DB_SSL=true`. **Do not edit that file** — it is the deployed configuration.
+Override for the dev process only, from the worktree:
 
 ```bash
-cd kapwa-server && podman-compose build client
-podman rm -f kapwa-caddy >/dev/null 2>&1
-podman rm -f kapwa-client >/dev/null 2>&1
-podman-compose up -d client caddy
-sleep 30 && podman ps --format "{{.Names}}: {{.Status}}"
+# from the worktree root, .worktrees/case-step-locks
+podman ps --format "{{.Names}}: {{.Status}}" | grep kapwa-db    # must be healthy
+
+cd kapwa-server
+DB_HOST=127.0.0.1 DB_PORT=5432 DB_SSL=false npm run start:dev
 ```
 
-All five containers must report healthy. `podman rm -f kapwa-client` fails with exit 125 while a dependent container exists — remove `kapwa-caddy` first, as above.
+That is the API on :3000. In a second shell the client — Vite proxies `/api`
+and `/socket.io` to :3000, so nothing else needs configuring:
+
+```bash
+cd kapwa-client && npm run dev
+```
+
+Client on :5173. Wait for Nest to report the API listening before starting
+Vite, or the first proxied request fails and looks like a product bug. The
+server needs the new `case_step_locks` table: run `npm run migration:run`
+once against the podman DB (Task 3 added the migration).
+
+Leave both processes running for Steps 3 and 5. Do not commit any `.env`
+change — the override lives on the command line only.
 
 - [ ] **Step 2: Run the server suite and the client suite once more**
 
