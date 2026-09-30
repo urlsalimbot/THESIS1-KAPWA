@@ -59,6 +59,7 @@ const ProgramDetailPage = lazy(() => import('./pages/ProgramDetailPage').then(m 
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage').then(m => ({ default: m.ProgramsPage })));
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const PublicProgramsPage = lazy(() => import('./pages/PublicProgramsPage').then(m => ({ default: m.PublicProgramsPage })));
+const PublicProgramDetailPage = lazy(() => import('./pages/PublicProgramDetailPage').then(m => ({ default: m.PublicProgramDetailPage })));
 const PublicAnnouncementsPage = lazy(() => import('./pages/PublicAnnouncementsPage').then(m => ({ default: m.PublicAnnouncementsPage })));
 const TermsPage = lazy(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
 const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage').then(m => ({ default: m.AccessibilityPage })));
@@ -99,6 +100,7 @@ export const router = createBrowserRouter([
       { path: 'announcements', element: <PublicAnnouncementsPage /> },
       { path: 'announcements/:slug', element: <AnnouncementPage /> },
       { path: 'programs', element: <PublicProgramsPage /> },
+      { path: 'programs/:id', element: <PublicProgramDetailPage /> },
       { path: 'terms', element: <TermsPage /> },
       { path: 'accessibility', element: <AccessibilityPage /> },
       { path: 'privacy-policy', element: <PrivacyPolicyPage /> },

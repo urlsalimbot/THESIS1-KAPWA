@@ -97,48 +97,6 @@ describe('IrfExportService', () => {
     });
   });
 
-  describe('exportJson', () => {
-    it('should return structured JSON with format WCPD-EXPORT-v1', async () => {
-      irfServiceMock.exportWcpd.mockResolvedValue(sampleCaseData);
-
-      const result = await service.exportJson('irf-1', 'AO-2020-002', 'user-1') as any;
-
-      expect(result).toBeDefined();
-      expect(result.exportMetadata).toBeDefined();
-      expect(result.exportMetadata.format).toBe('WCPD-EXPORT-v1');
-      expect(result.case.blotterEntryNumber).toBe('BLT-2026-0001');
-    });
-
-    it('should log audit entry with EXPORT_JSON action', async () => {
-      irfServiceMock.exportWcpd.mockResolvedValue(sampleCaseData);
-
-      await service.exportJson('irf-1', 'AO-2020-002', 'user-1');
-
-      expect(auditMock.logAccess).toHaveBeenCalledWith(
-        expect.objectContaining({
-          irfId: 'irf-1',
-          action: 'EXPORT_JSON',
-          legalBasis: 'AO-2020-002',
-          format: 'json',
-        })
-      );
-    });
-
-    it('should throw ForbiddenException without legalBasis', async () => {
-      await expect(
-        service.exportJson('irf-1', '', 'user-1')
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should throw NotFoundException when IRF not found', async () => {
-      irfServiceMock.exportWcpd.mockResolvedValue(null);
-
-      await expect(
-        service.exportJson('irf-999', 'AO-2020-002', 'user-1')
-      ).rejects.toThrow('IRF case not found');
-    });
-  });
-
   describe('controlNo', () => {
     it('returns the blotter entry number for export filenames', async () => {
       irfRepoMock.findOne.mockResolvedValue({ id: 'irf-1', blotterEntryNumber: 'BLT-2026-0001' });

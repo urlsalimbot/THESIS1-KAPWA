@@ -3,6 +3,7 @@ import { api, exportIrfPdf } from '../lib/api';
 import { toast } from 'sonner';
 import { humanizeError } from '../lib/errors';
 import i18n from '../i18n';
+import { isKnownLegalBasis } from '../lib/legal-basis';
 
 function composeLegalBasis(basis: string, ref: string): string {
   return basis + (ref ? ` — Ref: ${ref}` : '');
@@ -20,8 +21,10 @@ export function useIrfOperations(id: string | undefined) {
   const [exportPassword, setExportPassword] = useState('');
 
   async function handleDecrypt() {
+    // The basis reaches the API in a request body, so it is checked here as well
+    // as on the button: a disabled control is an affordance, not a guarantee.
+    if (!id || !isKnownLegalBasis(legalBasis)) return;
     const basis = composeLegalBasis(legalBasis, legalBasisRef);
-    if (!id || !legalBasis) return;
     try {
       const result = await api.post<{ narration: string }>(`/irf/${id}/decrypt`, { legalBasis: basis });
       setDecryptedNarration(result.narration);
@@ -34,7 +37,7 @@ export function useIrfOperations(id: string | undefined) {
   }
 
   async function handleUnmaskNames() {
-    if (!id || !legalBasis) return;
+    if (!id || !isKnownLegalBasis(legalBasis)) return;
     const basis = composeLegalBasis(legalBasis, legalBasisRef);
     try {
       const data = await api.get<{ itemAPersonReported?: any; itemBPersonReported?: any }>(`/irf/${id}/unmask-names?legalBasis=${encodeURIComponent(basis)}`);
@@ -47,29 +50,12 @@ export function useIrfOperations(id: string | undefined) {
   }
 
   async function handleExportPdf() {
+    if (!id || !isKnownLegalBasis(exportLegalBasis)) return;
     const basis = composeLegalBasis(exportLegalBasis, exportLegalBasisRef);
-    if (!id || !exportLegalBasis) return;
     try {
       await exportIrfPdf(id, basis, exportPassword || 'default');
     } catch (err) {
       toast.error(i18n.t('irf.pdfExportFailed', 'PDF export failed'), { description: humanizeError(err) });
-    }
-  }
-
-  async function handleExportJson() {
-    const basis = composeLegalBasis(exportLegalBasis, exportLegalBasisRef);
-    if (!id || !exportLegalBasis) return;
-    try {
-      const data = await api.get<any>(`/irf/${id}/export-json?legalBasis=${encodeURIComponent(basis)}`);
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = window.document.createElement('a');
-      a.href = url;
-      a.download = `IRF-${id}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      toast.error(i18n.t('irf.jsonExportFailed', 'JSON export failed'), { description: humanizeError(err) });
     }
   }
 
@@ -97,7 +83,7 @@ export function useIrfOperations(id: string | undefined) {
     unmaskedData, setUnmaskedData,
     exportLegalBasis, setExportLegalBasis, exportLegalBasisRef, setExportLegalBasisRef,
     exportPassword, setExportPassword,
-    handleDecrypt, handleUnmaskNames, handleExportPdf, handleExportJson,
+    handleDecrypt, handleUnmaskNames, handleExportPdf,
     handleDisposition, checkRedacted,
   };
 }

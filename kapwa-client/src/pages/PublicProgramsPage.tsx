@@ -71,7 +71,14 @@ export function PublicProgramsPage() {
                 className="flex flex-col border-border/60 p-6 hover:border-accent/30"
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
-                  <h2 className="font-heading text-lg font-semibold tracking-tight">{p.name}</h2>
+                  <h2 className="font-heading text-lg font-semibold tracking-tight">
+                    <Link
+                      to={`/programs/${p.id}`}
+                      className="text-foreground no-underline transition-colors hover:text-accent"
+                    >
+                      {p.name}
+                    </Link>
+                  </h2>
                   {p.category && (
                     <Badge variant="secondary" className="shrink-0">
                       {p.category}
@@ -135,13 +142,22 @@ export function PublicProgramsPage() {
                   )}
                 </div>
 
-                <Link
-                  to="/contact"
-                  className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-medium text-accent hover:underline"
-                >
-                  {t('programsPublic.inquire', 'Inquire about this program')}
-                  <ArrowRight size={14} aria-hidden="true" />
-                </Link>
+                <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 pt-5">
+                  <Link
+                    to={`/programs/${p.id}`}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+                  >
+                    {t('programsPublic.viewDetails', 'View details')}
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                  <Link
+                    to="/contact"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+                  >
+                    {t('programsPublic.inquire', 'Inquire about this program')}
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                </div>
               </Card>
             ))}
           </div>

@@ -941,13 +941,11 @@ const fil: EnLocale = {
     "exportIrfTitle": "I-export ang IRF",
     "exportJson": "I-export bilang JSON",
     "exportPdf": "I-export bilang PDF",
+    "back": "Bumalik",
     "firstName": "Unang Pangalan",
     "fullName": "Buong Pangalan",
     "incident": "Insidente",
-    "irfList": "Listahan ng IRF",
     "irfTitle": "IRF: {{blotter}}",
-    "json": "JSON",
-    "jsonExportFailed": "Nabigo ang pag-export ng JSON",
     "legalBasis": "Legal na batayan",
     "legalBasisCode": "Code ng Legal na Batayan",
     "legalBasisNote": "Kinakailangan ang code ng legal na batayan alinsunod sa DSWD AO 2020-002. Naka-log ang pag-export na ito.",
@@ -1358,6 +1356,7 @@ const fil: EnLocale = {
   "coordinator": {
     "address": "Tirahan",
     "barangay": "Barangay",
+    "selectBarangay": "Pumili...",
     "caseNo": "Bilang ng Kaso",
     "date": "Petsa",
     "dateOfBirth": "Petsa ng Kapanganakan *",
@@ -2200,15 +2199,20 @@ const fil: EnLocale = {
     "terms": "Mga Tuntunin ng Paggamit"
   },
   "programsPublic": {
+    "backToPrograms": "Bumalik sa mga programa",
     "description": "Mga available na programa at serbisyong panlipunan na inaalok ng MSWDO ng Norzagaray.",
     "empty": "Wala pang nakalistang programa.",
     "fundSources": "Mga Pinagkukunan ng Pondo",
     "inquire": "Magtanong tungkol sa programang ito",
     "legalBasis": "Legal na Batayan",
     "loadFailed": "Nabigo ang pag-load ng mga programa.",
+    "notFound": "Hindi nahanap ang programa",
+    "notFoundBody": "Maaaring binawi na ang programang ito o hindi na ito inaalok.",
     "requiredDocuments": "Mga Kinakailangang Dokumento",
     "title": "Mga Programa ng Social Assistance",
-    "waitingPeriod": "Panahon ng paghihintay: {{days}} araw"
+    "viewDetails": "Tingnan ang detalye",
+    "waitingPeriod": "Panahon ng paghihintay: {{days}} araw",
+    "waitingPeriodValue": "{{days}} araw pagkatapos ng huling tulong"
   },
   "announcementsPublic": {
     "description": "Mga update, paunawa, at impormasyon mula sa MSWDO ng Norzagaray.",

@@ -14,6 +14,9 @@ export class IrfAuditService {
   async logAccess(params: {
     irfId: string;
     userId: string;
+    // EXPORT_JSON is historical only: the JSON export route and service method
+    // are retired, but `audit_log` already holds `IRF_EXPORT_JSON` rows, so the
+    // member stays in the union to keep describing the table's real contents.
     action: 'DECRYPT' | 'UNMASK_NAME' | 'EXPORT_PDF' | 'EXPORT_JSON' | 'DISPOSITION_OVERRIDE';
     legalBasis: string;
     format?: string;

@@ -118,7 +118,6 @@ const ALLOWED_IDENTICAL = new Set([
   'irf.blotterDescription',
   'irf.blotterNo',
   'irf.irfTitle',
-  'irf.json',
   'irf.pdf',
   'nav.english',
   'nav.filipino',

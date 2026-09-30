@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Request, Res, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, Query, Request, Res } from '@nestjs/common';
 import { z } from 'zod';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -39,16 +39,8 @@ export class IrfController {
     private irfExportService: IrfExportService,
   ) {}
 
-  @Get()
-  @Roles('admin', 'social_worker')
-  @Sensitivity('internal')
-  @ApiOperation({ summary: 'List IRF cases (names masked)' })
-  async findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ) {
-    return this.irfService.findAll(page, limit);
-  }
+  // No @Get() list route: the SPA has no IRF index (routes are only /irf/new
+  // and /irf/:id), so a list endpoint had no caller. It outlived the page.
 
   @Get(':id')
   @Roles('admin', 'social_worker')
@@ -181,17 +173,6 @@ export class IrfController {
       'Content-Length': pdf.length,
     });
     res.end(pdf);
-  }
-
-  @Get(':id/export-json')
-  @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Export IRF as structured JSON bundle' })
-  async exportJson(
-    @Param('id') id: string,
-    @Query('legalBasis') legalBasis: string,
-    @Request() req: AuthenticatedRequest,
-  ) {
-    return this.irfExportService.exportJson(id, legalBasis, req.user?.id || 'system');
   }
 }
 

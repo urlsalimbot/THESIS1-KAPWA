@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
 import { useTranslation } from 'react-i18next';
-import { Lock, Unlock, Download, FileJson, Shield, User, Hash, Calendar, ArrowLeft, Eye, EyeOff, ImageIcon } from 'lucide-react';
+import { Lock, Unlock, Download, FileJson, Shield, User, Hash, Calendar, Eye, EyeOff, ImageIcon } from 'lucide-react';
+import { IRF_LEGAL_BASIS_OPTIONS, isKnownLegalBasis } from '@/lib/legal-basis';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { useIrfOperations } from '../hooks/useIrfOperations';
@@ -25,16 +26,7 @@ const DISPOSITION_COLORS: Record<string, string> = {
   'Closed': 'bg-emerald-100 text-emerald-800 border-emerald-300',
 };
 
-const LEGAL_BASIS_OPTIONS = [
-  { value: 'court-order', labelKey: 'irf.lbCourtOrder', label: 'Court Order' },
-  { value: 'subpoena', labelKey: 'irf.lbSubpoena', label: 'Subpoena' },
-  { value: 'data-subject-consent', labelKey: 'irf.lbConsent', label: 'Written Consent of Data Subject' },
-  { value: 'official-investigation', labelKey: 'irf.lbInvestigation', label: 'Official Investigation (DPA)' },
-  { value: 'inter-agency-referral', labelKey: 'irf.lbInterAgency', label: 'Inter-Agency Referral' },
-  { value: 'foi-request', labelKey: 'irf.lbFoi', label: 'Freedom of Information Request' },
-  { value: 'supervisory-review', labelKey: 'irf.lbSupervisory', label: 'Supervisory Review' },
-  { value: 'data-privacy-complaint', labelKey: 'irf.lbComplaint', label: 'Data Privacy Complaint' },
-];
+const LEGAL_BASIS_OPTIONS = IRF_LEGAL_BASIS_OPTIONS;
 
 function LegalBasisFields({ value, onChange, referenceNumber, onReferenceChange }: {
   value: string; onChange: (v: string) => void;
@@ -193,7 +185,7 @@ function UnmaskBanner({ legalBasis, onLegalBasisChange, legalBasisRef, onLegalBa
           <LegalBasisFields value={legalBasis} onChange={onLegalBasisChange}
             referenceNumber={legalBasisRef} onReferenceChange={onLegalBasisRefChange} />
           <Button size="sm" variant="outline" onClick={onUnmask}
-            disabled={!legalBasis} className="self-end">
+            disabled={!isKnownLegalBasis(legalBasis)} className="self-end">
             <Eye size={14} className="mr-1" /> {t('irf.unlockNames', 'Unlock Names')}
           </Button>
         </div>
@@ -228,7 +220,7 @@ function NarrationSection({ irf, decryptedNarration, showDecryptForm, legalBasis
                 <LegalBasisFields value={legalBasis} onChange={onLegalBasisChange}
                   referenceNumber={legalBasisRef} onReferenceChange={onLegalBasisRefChange} />
                 <div className="flex items-center gap-2">
-                  <Button size="sm" onClick={onDecrypt} disabled={!legalBasis}>
+                  <Button size="sm" onClick={onDecrypt} disabled={!isKnownLegalBasis(legalBasis)}>
                     <Unlock size={14} className="mr-1" /> {t('irf.decrypt', 'Decrypt')}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={onToggleForm}>{t('irf.cancel', 'Cancel')}</Button>
@@ -272,11 +264,11 @@ function DispositionActions({ currentState, irfId, onDisposition }: {
   return null;
 }
 
-function ExportSection({ exportLegalBasis, onExportLegalBasisChange, exportLegalBasisRef, onExportLegalBasisRefChange, exportPassword, onExportPasswordChange, onExportPdf, onExportJson }: {
+function ExportSection({ exportLegalBasis, onExportLegalBasisChange, exportLegalBasisRef, onExportLegalBasisRefChange, exportPassword, onExportPasswordChange, onExportPdf }: {
   exportLegalBasis: string; onExportLegalBasisChange: (v: string) => void;
   exportLegalBasisRef: string; onExportLegalBasisRefChange: (v: string) => void;
   exportPassword: string; onExportPasswordChange: (v: string) => void;
-  onExportPdf: () => void; onExportJson: () => void;
+  onExportPdf: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -294,11 +286,8 @@ function ExportSection({ exportLegalBasis, onExportLegalBasisChange, exportLegal
               type="password" aria-label={t('irf.pdfPasswordAria', 'PDF password')} className="h-9" />
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={onExportPdf} disabled={!exportLegalBasis}>
+            <Button size="sm" onClick={onExportPdf} disabled={!isKnownLegalBasis(exportLegalBasis)}>
               <FileJson size={14} className="mr-1" /> {t('irf.pdf', 'PDF')}
-            </Button>
-            <Button size="sm" variant="outline" onClick={onExportJson} disabled={!exportLegalBasis}>
-              <Download size={14} className="mr-1" /> {t('irf.json', 'JSON')}
             </Button>
           </div>
         </div>
@@ -387,7 +376,7 @@ export function IrfDetailPage() {
   return (
     <PageShell title={t('irf.irfTitle', 'IRF: {{blotter}}', { blotter: irf.blotterEntryNumber })}
       description={t('irf.blotterDescription', 'Blotter: {{blotter}} · {{category}}', { blotter: irf.blotterEntryNumber, category: irf.caseCategory })}
-      backTo={{ label: t('irf.irfList', 'IRF List'), onClick: () => navigate(-1) }}
+      backTo={{ label: t('irf.back', 'Back'), onClick: () => navigate(-1) }}
       actions={
         <Badge variant={currentState === 'Closed' ? 'default' : 'secondary'}
           className={DISPOSITION_COLORS[currentState] || ''}>{currentState}</Badge>
@@ -444,7 +433,7 @@ export function IrfDetailPage() {
           <ExportSection exportLegalBasis={ops.exportLegalBasis} onExportLegalBasisChange={ops.setExportLegalBasis}
             exportLegalBasisRef={ops.exportLegalBasisRef} onExportLegalBasisRefChange={ops.setExportLegalBasisRef}
             exportPassword={ops.exportPassword} onExportPasswordChange={ops.setExportPassword}
-            onExportPdf={ops.handleExportPdf} onExportJson={ops.handleExportJson} />
+            onExportPdf={ops.handleExportPdf} />
 
           {canUploadPhotos && (
             <div className="rounded-lg border bg-card">

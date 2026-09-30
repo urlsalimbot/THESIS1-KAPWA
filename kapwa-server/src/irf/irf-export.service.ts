@@ -75,38 +75,6 @@ export class IrfExportService {
     return buffer;
   }
 
-  async exportJson(id: string, legalBasis: string, userId: string): Promise<object> {
-    if (!legalBasis) throw new ForbiddenException('Legal basis code is required');
-
-    const irfData = await this.irfService.exportWcpd(id, legalBasis);
-    if (!irfData) throw new NotFoundException('IRF case not found');
-
-    // Audit before returning data
-    await this.irfAuditService.logAccess({
-      irfId: id,
-      userId,
-      action: 'EXPORT_JSON',
-      legalBasis,
-      format: 'json',
-    });
-
-    const agencyName = await this.agencyLabel();
-
-    return {
-      exportMetadata: {
-        format: 'WCPD-EXPORT-v1',
-        generatedAt: new Date().toISOString(),
-        legalBasis,
-        agency: agencyName,
-        encrypted: false,
-      },
-      case: irfData.case,
-      parties: irfData.parties,
-      narration: irfData.narration,
-      signatures: irfData.signatures,
-    };
-  }
-
   // IRF case number for export filenames (`IRF ${blotterEntryNumber}-${date}.pdf`).
   async controlNo(irfId: string): Promise<string> {
     const irf = await this.irfRepo.findOne({ where: { id: irfId } });

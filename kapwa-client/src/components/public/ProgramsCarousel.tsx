@@ -26,8 +26,9 @@ export interface PublicProgram {
 // The catalogue comes from the database (`/programs/public`), so the public
 // site always reflects the programs the office actually runs. Icons are picked
 // from the program category for a bit of visual signal; unknown categories fall
-// back to the office mark.
-function programIcon(category?: string) {
+// back to the office mark. Exported so the per-program page shows the same mark
+// for a category rather than picking its own.
+export function programIcon(category?: string) {
   const c = (category || '').toLowerCase();
   if (c.includes('medical') || c.includes('health')) return Stethoscope;
   if (c.includes('burial')) return Cross;
@@ -105,7 +106,7 @@ export function ProgramCard({ program, className }: { program: PublicProgram; cl
         )}
 
         <Link
-          to="/programs"
+          to={`/programs/${program.id}`}
           className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-accent hover:underline"
         >
           {t('services.viewProgram', 'View program')}
