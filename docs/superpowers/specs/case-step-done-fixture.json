@@ -80,6 +80,22 @@
     "expected": false
   },
   {
+    "name": "step2 done: recorded no-referral decision",
+    "step": 2,
+    "caseData": { "status": "active", "referrals": [] },
+    "interventionCount": 0,
+    "opts": { "referralNotNeeded": true },
+    "expected": true
+  },
+  {
+    "name": "step2 not done: no referral key at all and no decision",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
     "name": "step3 needs active status: self-reliance on an enrolled case",
     "step": 3,
     "caseData": { "status": "enrolled", "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
