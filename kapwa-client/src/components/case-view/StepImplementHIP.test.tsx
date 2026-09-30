@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import useSWR, { SWRConfig } from 'swr';
 import { StepImplementHIP } from './StepImplementHIP';
+import { formatDate } from '@/lib/format';
 
 const { mockApiGet, mockApiPost, mockApiPatch, mockUpload } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
@@ -270,5 +271,101 @@ describe('StepImplementHIP — completing step 2', () => {
     const amount = screen.getByText('₱5,000');
     expect(amount.className).toContain('font-semibold');
     expect(amount.className).toContain('tabular-nums');
+  });
+});
+
+describe('StepImplementHIP — sealing step 2', () => {
+  type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+
+  beforeEach(() => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPatch.mockReset();
+    mockUpload.mockReset();
+    mockApiPost.mockResolvedValue({});
+    mockApiPatch.mockResolvedValue({});
+    mockUpload.mockResolvedValue({});
+  });
+
+  function renderSeal(opts: {
+    caseData?: Record<string, unknown>;
+    interventions?: unknown[];
+    requirementsMet?: boolean;
+    readOnly?: boolean;
+    stepLock?: Seal;
+  } = {}) {
+    mockApiGet.mockImplementation(async (key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('interventions')) return opts.interventions ?? [];
+      if (k.includes('programs')) return [];
+      return [];
+    });
+    return render(
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+        <StepImplementHIP
+          caseId="case-1"
+          caseData={opts.caseData ?? caseData}
+          userRole="social_worker"
+          readOnly={opts.readOnly}
+          requirementsMet={opts.requirementsMet}
+          stepLock={opts.stepLock}
+        />
+      </SWRConfig>,
+    );
+  }
+
+  const delivered = [{ id: 'iv-1', caseId: 'case-1', serviceName: 'Medical Assistance', amount: 5000 }];
+
+  it('disables Lock while no intervention is recorded', async () => {
+    renderSeal();
+
+    // The intervention list has to have loaded before "no intervention" means
+    // anything, or the assertion would hold for the wrong reason.
+    expect(await screen.findByText(/No interventions recorded yet/i)).toBeTruthy();
+    const lock = screen.getByRole('button', { name: /^lock$/i });
+    expect(lock).toBeDisabled();
+    expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
+  });
+
+  it('enables Lock once a delivery is recorded', async () => {
+    renderSeal({ interventions: delivered });
+
+    expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
+  it('weighs the threaded requirementsMet against a delivery, so a missing document holds the seal', async () => {
+    // The same delivery, the same case, one prop apart: without threading
+    // `requirementsMet` the bar would ignore an unmet program document and
+    // offer a seal the server rejects.
+    renderSeal({ interventions: delivered, requirementsMet: false });
+
+    expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
+  });
+
+  it('shows who sealed this step and offers the release', () => {
+    const stepLock = { stepIndex: 1, lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' };
+    renderSeal({ interventions: delivered, stepLock });
+
+    expect(screen.getByText(`Locked by Lorna Santos · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /unlock/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+  });
+
+  it('offers a viewer neither the seal nor the hint it cannot act on', async () => {
+    renderSeal({ readOnly: true });
+
+    expect(await screen.findByText(/No interventions recorded yet/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+    expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
+  });
+
+  it('leaves a sealed step readable for a viewer, with the release withheld', () => {
+    const stepLock = { stepIndex: 1, lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' };
+    renderSeal({ interventions: delivered, readOnly: true, stepLock });
+
+    expect(screen.getByText(`Locked by Lorna Santos · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();
   });
 });

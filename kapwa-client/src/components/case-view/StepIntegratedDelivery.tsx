@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Lock, FileText, Plus, Ban, CheckCircle2 } from 'lucide-react';
 import { api, downloadEndorsementLetter, downloadEndorsementLetterById } from '@/lib/api';
 import { Agency, LEGAL_BASIS_OPTIONS } from '@/components/referrals/referral-utils';
+import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 
 interface StepIntegratedDeliveryProps {
@@ -17,6 +18,8 @@ interface StepIntegratedDeliveryProps {
   caseData: any;
   userRole?: string;
   readOnly?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
 }
 
 // Step 3 offers the same two mutually exclusive completions as step 2: refer
@@ -26,7 +29,7 @@ interface StepIntegratedDeliveryProps {
 // Until a client UI existed for `PATCH /cases/:id/referral-decision`, the
 // server's `in_review -> active` gate could reject a case for a missing
 // referral decision that no one had any way of recording.
-export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }: StepIntegratedDeliveryProps) {
+export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, stepLock }: StepIntegratedDeliveryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
@@ -240,6 +243,21 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Step 3's seal. No `opts`: the referral decision is on the case row and
+          `stepperStepDone` falls back to it, so passing it here would restate
+          the rule this step already reads for its own badge — and an explicit
+          `false`, which the server coerces and could never honour, would
+          outvote the row. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={2}
+        caseData={caseData}
+        interventionCount={0}
+        locked={stepLock}
+        readOnly={readOnly}
+        onChanged={() => mutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }

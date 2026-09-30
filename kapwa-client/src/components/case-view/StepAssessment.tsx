@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { CLIENT_CATEGORIES_V2 } from '@/lib/constants';
 import { Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { StepLockBar, type StepLock } from './StepLockBar';
 
 interface StepAssessmentProps {
   caseId: string;
@@ -20,10 +21,12 @@ interface StepAssessmentProps {
   saving: boolean;
   userRole?: string;
   readOnly?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
 }
 
 export function StepAssessment({
-  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly,
+  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, stepLock,
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
@@ -154,6 +157,20 @@ export function StepAssessment({
               too (the whole assessment object is saved together). */}
         </div>
       </div>
+
+      {/* Step 1's seal. Mounted here, not in the page, so the control that
+          offers it lives with the step it seals. `readOnly` is this step's own
+          signal, so a viewer is offered no seal and a sealed step stays
+          readable without an Unlock. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={0}
+        caseData={caseData}
+        interventionCount={0}
+        locked={stepLock}
+        readOnly={readOnly}
+        onChanged={() => mutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
 import { Plus, Trash2, Calendar, FileText, Lock, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
 import { CaseRequirements } from './CaseRequirements';
 import { FileUploadList } from './FileUploadList';
+import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../lib/format';
 import { humanizeError } from '@/lib/errors';
@@ -44,9 +45,19 @@ interface StepImplementHIPProps {
   caseData: any;
   userRole?: string;
   readOnly?: boolean;
+  /**
+   * Whether every required document of the linked programs is satisfied, as the
+   * case view weighs it. Threaded rather than recomputed here: the same
+   * `interventionRequirementsMet` result drives the stepper, the checklist and
+   * the server's seal gate, and a local copy of the rule is exactly how those
+   * drift apart.
+   */
+  requirementsMet?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
 }
 
-export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepImplementHIPProps) {
+export function StepImplementHIP({ caseId, caseData, userRole, readOnly, requirementsMet, stepLock }: StepImplementHIPProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
@@ -439,6 +450,21 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
           </div>
         </div>
       )}
+
+      {/* Step 2's seal. The mount only — its placement is a layout question, and
+          this step's layout is settled in its own change. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={1}
+        caseData={caseData}
+        // The count comes from the list this step already renders, which is the
+        // same row set the server counts.
+        interventionCount={interventions.length}
+        opts={requirementsMet === undefined ? undefined : { requirementsMet }}
+        locked={stepLock}
+        readOnly={readOnly}
+        onChanged={() => globalMutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }

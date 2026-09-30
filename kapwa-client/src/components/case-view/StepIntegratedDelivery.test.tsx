@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { Toaster } from 'sonner';
 import { StepIntegratedDelivery } from './StepIntegratedDelivery';
+import { formatDate } from '@/lib/format';
 
 const { mockApiGet, mockApiPatch, mockDownloadLetter, mockDownloadLetterById } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
@@ -31,7 +32,13 @@ const AGENCIES = [
 
 function renderStep(
   referrals: unknown[] = [],
-  opts: { readOnly?: boolean; role?: string; referralNotNeeded?: boolean } = {},
+  opts: {
+    readOnly?: boolean;
+    role?: string;
+    referralNotNeeded?: boolean;
+    stepLock?: { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+    caseDataOverrides?: Record<string, unknown>;
+  } = {},
 ) {
   return render(
     <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
@@ -42,9 +49,11 @@ function renderStep(
           beneficiary: { id: 'b1', firstName: 'Juan', surname: 'Dela Cruz' },
           status: 'assessed',
           referralNotNeeded: opts.referralNotNeeded,
+          ...opts.caseDataOverrides,
         }}
         userRole={opts.role ?? 'social_worker'}
         readOnly={opts.readOnly}
+        stepLock={opts.stepLock}
       />
     </SWRConfig>,
   );
@@ -180,5 +189,71 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     await screen.findByText(/Inter-Agency Referrals/i);
     expect(screen.queryByRole('button', { name: /Add Referral/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /No Referrals issued/i })).toBeNull();
+  });
+});
+
+describe('StepIntegratedDelivery — sealing step 3', () => {
+  beforeEach(() => {
+    mockApiGet.mockReset();
+    mockApiPatch.mockReset();
+    mockDownloadLetter.mockReset();
+    mockDownloadLetterById.mockReset();
+    mockApiPatch.mockResolvedValue({});
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      return Promise.resolve(null);
+    });
+  });
+
+  it('disables Lock while neither a referral nor the no-referral decision exists', async () => {
+    renderStep();
+
+    // The step's own state has to be on screen first, or the disabled button
+    // would be asserting nothing about the predicate.
+    expect(await screen.findByText(/Inter-Agency Referrals/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
+    expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
+  });
+
+  it('enables Lock once a referral is on record', () => {
+    // `stepperStepDone(2, …)` reads the case row's referral getter, which is
+    // where `CaseViewPage` gets its referrals from too.
+    renderStep([], { caseDataOverrides: { referrals: [{ agencyName: 'RHU', status: 'referred' }] } });
+
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
+  it('enables Lock on the case row\'s own no-referral decision, without the page restating it', async () => {
+    renderStep([], { referralNotNeeded: true });
+
+    expect(await screen.findByText(/No referral needed/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
+  it('shows who sealed this step and offers the release', () => {
+    const stepLock = { stepIndex: 2, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    renderStep([], { referralNotNeeded: true, stepLock });
+
+    expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /unlock/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+  });
+
+  it('offers a viewer neither the seal nor the hint it cannot act on', async () => {
+    renderStep([], { readOnly: true });
+
+    expect(await screen.findByText(/Inter-Agency Referrals/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+    expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
+  });
+
+  it('leaves a sealed step readable for a viewer, with the release withheld', () => {
+    const stepLock = { stepIndex: 2, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    renderStep([], { referralNotNeeded: true, readOnly: true, stepLock });
+
+    expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();
   });
 });

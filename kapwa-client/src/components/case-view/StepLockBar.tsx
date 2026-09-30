@@ -27,6 +27,22 @@ export interface StepLockBarProps {
 }
 
 /**
+ * The React key for one step's mount: the case **and** the step index.
+ *
+ * This bar records the outcome of its own write in local state that carries
+ * neither a step index nor a case id, so a reused instance would render
+ * whichever step or case it last sealed. The step number alone does not
+ * cover it: the case view mounts these five steps under keys that outlive a
+ * case-to-case navigation, and a `StepLockBar` that survived from the previous
+ * case would show a seal that case never had. Both halves of the key are
+ * load-bearing, which is why the case view and the tests build it here rather
+ * than spelling it twice.
+ */
+export function stepLockKey(caseId: string, stepIndex: number): string {
+  return `${caseId}:${stepIndex}`;
+}
+
+/**
  * The control that seals one case step, mounted once per step.
  *
  * "Done" is *asked for*, never decided here: `stepperStepDone` already exists

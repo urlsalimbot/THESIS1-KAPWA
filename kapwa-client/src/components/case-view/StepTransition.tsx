@@ -9,6 +9,7 @@ import { Plus, Trash2, Calendar, FileText, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { isSelfSufficient } from '@/lib/self-reliance';
 import { formatDate } from '../../lib/format';
+import { StepLockBar, type StepLock } from './StepLockBar';
 
 interface FollowUpVisit {
   date: string;
@@ -22,9 +23,11 @@ interface StepTransitionProps {
   caseData: any;
   userRole?: string;
   readOnly?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
 }
 
-export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTransitionProps) {
+export function StepTransition({ caseId, caseData, userRole, readOnly, stepLock }: StepTransitionProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
@@ -293,6 +296,17 @@ export function StepTransition({ caseId, caseData, userRole, readOnly }: StepTra
           </div>
         </div>
       )}
+
+      {/* Step 4's seal. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={3}
+        caseData={caseData}
+        interventionCount={0}
+        locked={stepLock}
+        readOnly={readOnly}
+        onChanged={() => mutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }

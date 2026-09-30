@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
+import { stepLockKey, type StepLock } from '@/components/case-view/StepLockBar';
 import { isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
 import { computeAge } from '@/lib/age';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
@@ -235,8 +236,13 @@ export function CaseViewPage() {
     [interventions, programs, caseData],
   );
   const progressOpts: StepperProgressOpts = useMemo(
-    () => ({ requirementsMet, referralNotNeeded: !!caseData?.referralNotNeeded, interventionNotNeeded: !!caseData?.interventionNotNeeded }),
-    [requirementsMet, caseData],
+    // Only `requirementsMet` is threaded. The two "not needed" decisions are
+    // held on the case row and `stepperStepDone` already falls back to it, so
+    // restating them here would be a second copy of one rule — and an explicit
+    // `false` would outvote the row, which the server (coercing to
+    // `Boolean(c.x)`) could never honour.
+    () => ({ requirementsMet }),
+    [requirementsMet],
   );
 
   useEffect(() => {
@@ -410,18 +416,33 @@ export function CaseViewPage() {
     );
   }
 
+  // One step's seal row, or null. Resolved here so a step component is handed
+  // its own row and never sees the `stepLocks` array — five steps reading the
+  // same array to find their own index is five chances to answer for the wrong
+  // step.
+  const lockFor = (i: number): StepLock | null =>
+    ((caseData?.stepLocks ?? []) as StepLock[]).find((l) => l.stepIndex === i) ?? null;
+
+  // The key names the case as well as the step: `StepLockBar` remembers the
+  // outcome of its own write without either, so an instance reused across two
+  // mounts renders the seal of whichever step (or case) it last wrote.
   const stepComponents = [
-    <StepAssessment key="assessment" caseId={id!} caseData={caseData} assessment={assessment}
+    <StepAssessment key={stepLockKey(id!, 0)} caseId={id!} caseData={caseData} assessment={assessment}
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
-      userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />,
-    <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
-    <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
+      userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
+      stepLock={lockFor(0)} />,
+    <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
+      requirementsMet={requirementsMet} stepLock={lockFor(1)} />,
+    <StepIntegratedDelivery key={stepLockKey(id!, 2)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
+      stepLock={lockFor(2)} />,
     // Transition plan + follow-up visits stay savable for the whole active
     // phase: stepDone[3] (plan saved) must NOT flip readOnly or the worker is
     // left adding follow-up visits with the only "Save Transition Plan" button
     // hidden. Only closure locks the step.
-    <StepTransition key="transition" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
-    <StepClosure key="closure" caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed} />,
+    <StepTransition key={stepLockKey(id!, 3)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
+      stepLock={lockFor(3)} />,
+    <StepClosure key={stepLockKey(id!, 4)} caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed}
+      stepLock={lockFor(4)} />,
   ];
 
   const renewCase = () => navigate('/intake', {
@@ -566,7 +587,10 @@ export function CaseViewPage() {
 
           {/* Stepper — sticky so step switching stays reachable on long cases */}
           <div className="sticky top-2 z-10 rounded-lg border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
-            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} referralNotNeeded={!!caseData?.referralNotNeeded} interventionNotNeeded={!!caseData?.interventionNotNeeded} />
+            {/* `requirementsMet` only: the stepper applies the case-row fallback
+                for the two "not needed" decisions itself, so naming them here
+                would restate a rule that lives in one place. */}
+            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} />
           </div>
 
           {/* Generated approval documents — COE + PCV produced at approval,

@@ -13,15 +13,18 @@ import {
 import { FileText, CheckCircle, Clock, Download, Lock } from 'lucide-react';
 import { downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
+import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 
 interface StepClosureProps {
   caseId: string;
   caseData: any;
   readOnly?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
 }
 
-export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
+export function StepClosure({ caseId, caseData, readOnly, stepLock }: StepClosureProps) {
   const { t } = useTranslation();
   const CLOSURE_OUTCOMES = [
     { value: 'graduated', label: t('caseView.closure.outcomeGraduated', 'Graduated'), description: t('caseView.closure.outcomeGraduatedDesc', 'Achieved Level 3 self-sufficiency') },
@@ -307,6 +310,17 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
           <Download size={14} /> {t('caseView.closure.downloadCsr', 'Download Case Study Report (CSR)')}
         </Button>
       </div>
+
+      {/* Step 5's seal. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={4}
+        caseData={caseData}
+        interventionCount={0}
+        locked={stepLock}
+        readOnly={readOnly}
+        onChanged={() => mutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }
