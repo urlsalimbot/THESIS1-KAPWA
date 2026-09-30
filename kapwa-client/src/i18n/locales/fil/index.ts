@@ -1748,6 +1748,15 @@ const fil: EnLocale = {
                                                 "servicesDelivered": "Naihatid na serbisyo",
       "servicesDeliveredHint": "Markahan ang kaso bilang naglilipat upang simulan ang proseso ng graduation.",
           },
+    "lock": {
+      "lock": "I-seal",
+      "lockFailed": "Hindi maiseal ang hakbang na ito",
+      "lockedBy": "Naka-seal ni {{name}} · {{when}}",
+      "lockedByUnknown": "Hindi nakalagay",
+      "notDoneHint": "Kumpletuhin muna ang hakbang na ito bago i-seal.",
+      "unlock": "Alisin ang seal",
+      "unlockFailed": "Hindi maaalis ang seal",
+    },
     "processing": "Pinoproseso...",
     "saving": "Nagsi-save...",
     "signatures": {

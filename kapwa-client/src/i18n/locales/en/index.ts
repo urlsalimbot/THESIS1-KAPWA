@@ -245,6 +245,15 @@ const en = {
                                                 "servicesDelivered": "Services delivered",
       "servicesDeliveredHint": "Mark case as transitioning to begin graduation process.",
           },
+    "lock": {
+      "lock": "Lock",
+      "lockFailed": "Could not seal this step",
+      "lockedBy": "Locked by {{name}} · {{when}}",
+      "lockedByUnknown": "Unknown",
+      "notDoneHint": "Complete this step before sealing it.",
+      "unlock": "Unlock",
+      "unlockFailed": "Could not release the lock",
+    },
     "processing": "Processing...",
     "saving": "Saving...",
     "signatures": {
