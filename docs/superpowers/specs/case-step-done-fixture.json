@@ -64,6 +64,14 @@
     "expected": false
   },
   {
+    "name": "step1 done: an intervention with no outstanding requirement recorded",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": {},
+    "expected": true
+  },
+  {
     "name": "step2 done: a referral exists",
     "step": 2,
     "caseData": { "status": "active", "referrals": [{ "id": "r1" }] },

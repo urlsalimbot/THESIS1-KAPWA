@@ -344,6 +344,48 @@ describe('CasesService', () => {
       repoMock.findOne.mockResolvedValue(null);
       await expect(service.findById('nonexistent')).rejects.toThrow('Case not found');
     });
+
+    // The seal strip reads stepLocks off the detail payload rather than
+    // issuing a second request, so the three fields and their order are part of
+    // the response contract, not an implementation detail.
+    it('carries the sealed steps on the detail payload', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ACTIVE } as Case);
+      stepLocksRepoMock.find.mockResolvedValue([
+        { id: 'r1', caseId: '1', stepIndex: 1, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
+        { id: 'r2', caseId: '1', stepIndex: 3, lockedBy: 'u2', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
+      ]);
+
+      const result: any = await service.findById('1');
+      expect(result.stepLocks).toEqual([
+        { stepIndex: 1, lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
+        { stepIndex: 3, lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
+      ]);
+    });
+
+    // The row id and lockedBy are server-internal; a welfare case file should
+    // not leak a user uuid to the client through the case payload.
+    it('omits the lock row id and locker uuid from the payload', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ACTIVE } as Case);
+      stepLocksRepoMock.find.mockResolvedValue([
+        { id: 'r1', caseId: '1', stepIndex: 0, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date() },
+      ]);
+
+      const result: any = await service.findById('1');
+      expect(Object.keys(result.stepLocks[0]).sort()).toEqual(['lockedAt', 'lockedByName', 'stepIndex']);
+    });
+
+    it('asks for the sealed steps in step order, one query per case', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ENROLLED } as Case);
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      const result: any = await service.findById('1');
+      expect(result.stepLocks).toEqual([]);
+      expect(stepLocksRepoMock.find).toHaveBeenCalledWith({
+        where: { caseId: '1' },
+        order: { stepIndex: 'ASC' },
+      });
+      expect(stepLocksRepoMock.find).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('updateStatus', () => {

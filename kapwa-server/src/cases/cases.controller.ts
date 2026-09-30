@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, HttpCode, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, HttpCode, BadRequestException, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
@@ -22,6 +22,20 @@ const STATUS_ALIASES: Record<string, CaseStatus> = {
 };
 function mapStatus(s: string): CaseStatus {
   return STATUS_ALIASES[s] || (s as CaseStatus);
+}
+
+// Strict step-index parse for the step-lock routes. `parseInt` is the obvious
+// choice and is wrong here: it turns "1.5" into 1, so a request for a step that
+// does not exist would seal step 1 instead and return 201. `ParseIntPipe` does
+// not help either — it parseInts first and only then checks `isInteger`, by
+// which point the truncation has already happened. Only bare decimal digits are
+// accepted; the 0..4 range stays with the service, which owns the message.
+const STEP_INDEX_PATTERN = /^\d+$/;
+function parseStepIndex(raw: string): number {
+  if (!STEP_INDEX_PATTERN.test(raw)) {
+    throw new BadRequestException(`Step index must be a whole number, got "${raw}"`);
+  }
+  return Number(raw);
 }
 
 import {
@@ -237,7 +251,7 @@ export class CasesController {
     @Param('stepIndex') stepIndex: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.stepLocks.lock(id, parseInt(stepIndex, 10), req.user);
+    return this.stepLocks.lock(id, parseStepIndex(stepIndex), req.user);
   }
 
   @Delete(':id/steps/:stepIndex/lock')
@@ -248,7 +262,7 @@ export class CasesController {
     @Param('stepIndex') stepIndex: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    await this.stepLocks.unlock(id, parseInt(stepIndex, 10), req.user);
+    await this.stepLocks.unlock(id, parseStepIndex(stepIndex), req.user);
     return { ok: true };
   }
 

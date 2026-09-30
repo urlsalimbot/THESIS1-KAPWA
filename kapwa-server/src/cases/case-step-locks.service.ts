@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DeepPartial } from 'typeorm';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -70,11 +70,18 @@ export class CaseStepLocksService {
   ) {}
 
   /**
-   * Seal a step. Idempotent: sealing an already-sealed step re-stamps who did
-   * it rather than raising a unique violation on
-   * `uq_case_step_locks_case_step`, because "two staff both sealed it" is not an
-   * error worth a 500. `locked_at` is a CreateDateColumn, so it keeps the
-   * moment of the *first* seal.
+   * Seal a step.
+   *
+   * Written as a single `INSERT ... ON CONFLICT DO UPDATE` rather than the
+   * obvious find-then-save. Two staff clicking "seal" on the same step at the
+   * same moment is ordinary on a shared case file, and a read-then-write would
+   * have both see no existing row and both insert, turning a successful second
+   * click into a 500 on `uq_case_step_locks_case_step`. The upsert makes the
+   * operation atomic, so the second caller re-stamps the row instead.
+   *
+   * Only the two identity columns are overwritten. `locked_at` is not in the
+   * update list, so the row keeps the timestamp of the *first* seal — that is
+   * the moment the step became sealed, which is what a reviewer needs to see.
    */
   async lock(caseId: string, stepIndex: number, caller: User): Promise<CaseStepLock> {
     this.assertKnownStep(stepIndex);
@@ -86,25 +93,34 @@ export class CaseStepLocksService {
       );
     }
 
-    const lockedByName = this.displayName(caller);
-    const existing = await this.repo.findOne({ where: { caseId, stepIndex } });
-    if (existing) {
-      existing.lockedBy = caller.id;
-      existing.lockedByName = lockedByName;
-      const saved = await this.repo.save(existing);
-      await this.auditLog?.log('case.step_lock', caseId, caller.id, { stepIndex });
-      return saved;
-    }
+    const { raw } = await this.repo
+      .createQueryBuilder()
+      .insert()
+      .into(CaseStepLock)
+      .values({
+        caseId,
+        stepIndex,
+        lockedBy: caller.id,
+        lockedByName: this.displayName(caller),
+      })
+      .orUpdate(['locked_by', 'locked_by_name'], ['case_id', 'step_index'])
+      .returning('*')
+      .execute();
 
-    const row = this.repo.create({
-      caseId,
-      stepIndex,
-      lockedBy: caller.id,
-      lockedByName,
-    });
-    const saved = await this.repo.save(row);
     await this.auditLog?.log('case.step_lock', caseId, caller.id, { stepIndex });
-    return saved;
+    // `RETURNING *` yields raw column names, so map them onto the entity's
+    // property names rather than handing back a snake_case object the caller
+    // would have to know about. The fallback covers a driver that reports no
+    // raw rows, so a successful seal still returns the row it wrote.
+    const row = raw?.[0] ?? {};
+    return this.repo.create({
+      id: row.id,
+      caseId: row.case_id ?? caseId,
+      stepIndex: row.step_index ?? stepIndex,
+      lockedBy: row.locked_by ?? caller.id,
+      lockedByName: row.locked_by_name ?? this.displayName(caller),
+      lockedAt: row.locked_at,
+    } as DeepPartial<CaseStepLock>);
   }
 
   /**

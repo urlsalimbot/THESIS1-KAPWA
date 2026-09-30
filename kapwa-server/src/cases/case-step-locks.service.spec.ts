@@ -91,12 +91,39 @@ describe('CaseStepLocksService', () => {
     findById.mockResolvedValue(notDoneCase);
     interventionCount.mockResolvedValue(0);
 
+    // The insert half of the upsert: every builder call returns itself, and
+    // `execute` hands back the row Postgres would have returned.
+    const insertQb = {
+      insert: jest.fn().mockReturnThis(),
+      into: jest.fn().mockReturnThis(),
+      values: jest.fn().mockReturnThis(),
+      orUpdate: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockReturnThis(),
+      // `RETURNING *` hands back the row Postgres stored, in column names. The
+      // stub echoes the inserted values so a caller sees what it wrote, and
+      // stamps a locked_at the way the DEFAULT would.
+      execute: jest.fn(async function (this: any) {
+        const v = this.values.mock.calls.at(-1)?.[0] ?? {};
+        return {
+          raw: [{
+            id: 'row-1',
+            case_id: v.caseId,
+            step_index: v.stepIndex,
+            locked_by: v.lockedBy,
+            locked_by_name: v.lockedByName,
+            locked_at: new Date('2026-10-01'),
+          }],
+        };
+      }),
+    };
     lockRepo = {
       findOne: jest.fn().mockResolvedValue(null),
       find: jest.fn().mockResolvedValue([]),
       create: jest.fn((data: Partial<CaseStepLock>) => ({ ...data })),
       save: jest.fn(async (row: any) => row),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      createQueryBuilder: jest.fn(() => insertQb),
+      insertQb,
     };
     auditLog = { log: jest.fn().mockResolvedValue(undefined) };
 
@@ -140,13 +167,42 @@ describe('CaseStepLocksService', () => {
 
   it('is idempotent when the same step is locked twice', async () => {
     findById.mockResolvedValue(doneCase);
-    const existing = { caseId: 'c1', stepIndex: 0, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz' };
-    lockRepo.findOne.mockResolvedValue(existing);
-    await service.lock('c1', 0, swUser);
+    const first = await service.lock('c1', 0, swUser);
     const again = await service.lock('c1', 0, otherSwUser);
     expect(again.lockedByName).toBe('Lorna B. Santos');
-    expect(lockRepo.create).not.toHaveBeenCalled(); // updated in place, not re-inserted
-    expect(lockRepo.save).toHaveBeenCalledWith(expect.objectContaining({ lockedBy: 'u2' }));
+    expect(again.lockedBy).toBe('u2');
+    expect(again.stepIndex).toBe(0);
+    // A second seal of the same step is one upsert, not an insert that would
+    // violate uq_case_step_locks_case_step.
+    expect(lockRepo.insertQb.execute).toHaveBeenCalledTimes(2);
+    expect(lockRepo.save).not.toHaveBeenCalled();
+    expect(first).toBeDefined();
+  });
+
+  // The old implementation was findOne-then-save, so two concurrent POSTs both
+  // saw null and both inserted. Pin the atomic form: one upsert, conflicting on
+  // the (case, step) unique key, and the seal timestamp left alone so the row
+  // keeps the moment of the *first* seal.
+  it('seals with a single atomic upsert rather than a read-then-write', async () => {
+    findById.mockResolvedValue(doneCase);
+    // Step 2 (Inter-agency Referrals) needs a referral to be done at all.
+    findById.mockResolvedValue({
+      id: 'c1', status: 'active', referrals: [{ agencyName: 'MSWDO' }],
+    } as unknown as Case);
+    await service.lock('c1', 2, swUser);
+    expect(lockRepo.findOne).not.toHaveBeenCalled();
+    expect(lockRepo.insertQb.insert).toHaveBeenCalled();
+    expect(lockRepo.insertQb.into).toHaveBeenCalledWith(CaseStepLock);
+    expect(lockRepo.insertQb.values).toHaveBeenCalledWith({
+      caseId: 'c1', stepIndex: 2, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz',
+    });
+    expect(lockRepo.insertQb.orUpdate).toHaveBeenCalledWith(
+      ['locked_by', 'locked_by_name'],
+      ['case_id', 'step_index'],
+    );
+    // locked_at is deliberately absent: overwriting it would reset the seal
+    // time on every re-seal.
+    expect(lockRepo.insertQb.orUpdate.mock.calls[0][0]).not.toContain('locked_at');
   });
 
   it('unlocks only the named step', async () => {
