@@ -553,3 +553,57 @@ describe('CaseViewPage — who acted on this case', () => {
     expect(approved.textContent).toBe('Lorna Santos — MSWDO Social Worker');
   });
 });
+
+describe('CaseViewPage — inter-agency referral rows', () => {
+  const mockReferral = {
+    id: 'IAR-1',
+    status: 'referred',
+    createdAt: '2026-07-01T00:00:00Z',
+    person: { firstName: 'Maria', surname: 'Reyes' },
+    fromAgency: { code: 'MSWDO', name: 'MSWDO Norzagaray' },
+    toAgency: { code: 'PESO', name: 'PESO Norzagaray' },
+  };
+
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockUseAuth.mockReset();
+    mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' }, loading: false });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      // One row, so the list is populated — an empty-state-only assertion would
+      // pass whether or not the row still pretended to be a link.
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([mockReferral]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve(mockCase);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
+  it('offers no way to leave the case for a referral — the detail route is retired', async () => {
+    renderWithSWR(<CaseViewPage />);
+
+    // The row must be on screen before the "no link" claims mean anything.
+    const row = await screen.findByText('Maria Reyes');
+
+    const hrefs = [...document.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(hrefs.filter((h) => h?.includes('/agency/referrals'))).toEqual([]);
+    expect(screen.queryByRole('link', { name: /view details/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /view details/i })).toBeNull();
+    // Nothing in the row is a navigation affordance at all.
+    expect(row.closest('a, button')).toBeNull();
+  });
+
+  it('still shows the referral as a record — parties and status', async () => {
+    renderWithSWR(<CaseViewPage />);
+
+    expect(await screen.findByText('Maria Reyes')).toBeTruthy();
+    expect(screen.getByText('MSWDO Norzagaray → PESO Norzagaray')).toBeTruthy();
+    expect(screen.getByText('Referred')).toBeTruthy();
+  });
+});

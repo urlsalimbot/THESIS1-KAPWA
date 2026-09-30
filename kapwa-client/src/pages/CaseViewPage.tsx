@@ -781,12 +781,12 @@ export function CaseViewPage() {
                 <p className="text-xs text-muted-foreground">{t('cases.noInterAgencyReferrals', 'No inter-agency referrals for this case')}</p>
               ) : (
                 (iarReferrals || []).map(r => (
-                  <button
+                  // A static record, not a link: /agency/referrals/:id was removed
+                  // with the referral lifecycle (9fa73f5), so the row no longer
+                  // pretends to open anywhere.
+                  <div
                     key={r.id}
-                    type="button"
-                    onClick={() => navigate(`/agency/referrals/${r.id}`, { state: { from: `/cases/${id}` } })}
-                    className="w-full text-left rounded-md border border-border/60 px-3 py-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                    aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id })}
+                    className="w-full text-left rounded-md border border-border/60 px-3 py-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
@@ -802,7 +802,7 @@ export function CaseViewPage() {
                         <ExternalLink size={14} className="text-muted-foreground" aria-hidden="true" />
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))
               )}
             </div>
