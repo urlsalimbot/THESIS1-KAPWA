@@ -29,11 +29,14 @@ const CardHeader = React.forwardRef<
 ))
 CardHeader.displayName = "CardHeader"
 
+// `as` lets a screen that owns the page heading (the standalone auth routes)
+// promote its card title to an h1. It stays a div by default because most
+// CardTitles are widgets inside a page that already has its own h1.
 const CardTitle = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
+  React.HTMLAttributes<HTMLDivElement> & { as?: 'div' | 'h1' | 'h2' | 'h3' }
+>(({ className, as: Tag = 'div', ...props }, ref) => (
+  <Tag
     ref={ref}
     className={cn(
       "text-2xl font-semibold leading-none tracking-tight",

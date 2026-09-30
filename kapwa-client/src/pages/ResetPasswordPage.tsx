@@ -57,7 +57,7 @@ export function ResetPasswordPage() {
               <Lock size={28} className="text-accent" aria-hidden="true" />
             </div>
           )}
-          <CardTitle className="text-2xl tracking-tight">
+          <CardTitle as="h1" className="text-2xl tracking-tight">
             {status === 'success'
               ? t('auth.passwordReset', 'Password Reset')
               : t('auth.setNewPassword', 'Set New Password')}

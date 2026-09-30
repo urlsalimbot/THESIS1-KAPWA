@@ -2208,6 +2208,8 @@ const en = {
     "quickAction": "Quick Action",
     "quickIntake": "New Intake (Quick Action)",
     "quickReferral": "New Referral (Quick Action)",
+    "roleRetired": "This account no longer has access to KAPWA.",
+    "roleRetiredHint": "Contact the MSWDO office to have your account updated.",
     "showingCachedData": "Showing cached data — last sync {{age}} ago",
     "verifyingAccess": "Verifying access...",
   },

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { CoordinatorDashboardPage } from './CoordinatorDashboardPage';
 
@@ -49,6 +49,24 @@ describe('CoordinatorDashboardPage', () => {
   it('renders PageShell heading', async () => {
     render(<MemoryRouter><CoordinatorDashboardPage /></MemoryRouter>);
     expect(await screen.findByRole('heading', { name: 'Coordinator Dashboard' })).toBeTruthy();
+  });
+
+  it('sends View Referrals to /referrals, the role-aware referral entry point', async () => {
+    // This button is a coordinator's route into the referral flow, so it has to
+    // land on a mounted path (it pointed at a /referrals that did not exist).
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/coordinator/dashboard']}>
+        <Routes>
+          <Route path="/coordinator/dashboard" element={<CoordinatorDashboardPage />} />
+          <Route path="/referrals" element={<div>REFERRALS-ROUTE</div>} />
+          <Route path="*" element={<div>NOT-FOUND-ROUTE</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await user.click(await screen.findByRole('button', { name: /View Referrals/i }));
+    expect(await screen.findByText('REFERRALS-ROUTE')).toBeTruthy();
+    expect(screen.queryByText('NOT-FOUND-ROUTE')).toBeNull();
   });
 
   it('has no a11y violations', async () => {

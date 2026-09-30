@@ -100,6 +100,8 @@ const fil: EnLocale = {
     "quickAction": "Mabilis na Aksyon",
     "quickIntake": "Bagong Intake (Mabilis na Aksyon)",
     "quickReferral": "Bagong Referral (Mabilis na Aksyon)",
+    "roleRetired": "Wala nang access sa KAPWA ang account na ito.",
+    "roleRetiredHint": "Makipag-ugnayan sa tanggapan ng MSWDO upang ma-update ang iyong account.",
     "showingCachedData": "Ipinapakita ang naka-cache na data — huling sync {{age}} ang nakalipas",
     "verifyingAccess": "Sinisigurado ang access...",
     "help": "Tulong",

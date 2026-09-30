@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -12,8 +12,17 @@ vi.mock('../lib/auth-context', () => ({
 }));
 
 function authState(over: Record<string, unknown> = {}) {
-  return { user: null, token: null, loading: false, ...over };
+  return { user: null, token: null, loading: false, logout: vi.fn(), ...over };
 }
+
+// A role the client no longer ships a home for (16bda23 retired mayor, auditor
+// and agency_staff, but those accounts still authenticate against the API).
+const retiredRoleUser = {
+  id: '9',
+  email: 'auditor@mswdo.test',
+  fullName: 'A Auditor',
+  role: 'auditor',
+};
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
@@ -93,6 +102,52 @@ describe('ProtectedRoute', () => {
     await waitFor(() => {
       expect(screen.getByText('Protected')).toBeTruthy();
     });
+  });
+
+  it('offers a way out instead of looping when the role has no home route', async () => {
+    // Regression: a retired role fell through ROLE_REDIRECT_MAP to '/dashboard',
+    // which rejects the role, so the guard redirected to the path it was already
+    // on and rendered "Verifying access..." forever. The user must get a real
+    // screen with a sign-out action.
+    mockUseAuth.mockReturnValue(authState({ token: 'test', user: retiredRoleUser }));
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute roles={['admin', 'social_worker']}>
+                <div>Worker Dashboard</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<div>Login Page</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/log out/i)).toBeTruthy();
+    });
+    // The spinner is the loop's symptom: it must not be what the user is left with.
+    expect(screen.queryByText(/Verifying access/i)).toBeNull();
+    expect(screen.queryByText('Worker Dashboard')).toBeNull();
+  });
+
+  it('signs out a retired-role user from the no-home screen', async () => {
+    const logout = vi.fn();
+    mockUseAuth.mockReturnValue(authState({ token: 'test', user: retiredRoleUser, logout }));
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <ProtectedRoute roles={['admin', 'social_worker']}>
+          <div>Worker Dashboard</div>
+        </ProtectedRoute>
+      </MemoryRouter>
+    );
+
+    const signOut = await screen.findByText(/log out/i);
+    fireEvent.click(signOut.closest('button')!);
+    expect(logout).toHaveBeenCalled();
   });
 
   it('redirects a must-change-password user to /settings from any other route', async () => {

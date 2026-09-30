@@ -124,7 +124,7 @@ export function LoginPage() {
                 <Smartphone size={28} className="text-accent" />
               </AvatarFallback>
             </Avatar>
-            <CardTitle className="text-2xl tracking-tight">{isSmsOtp ? t('auth.oneTimePassword', 'One-Time Password') : isEmailOtp ? t('auth.emailCodeTitle', 'Email Verification Code') : t('auth.twoFactor', 'Two-Factor Authentication')}</CardTitle>
+            <CardTitle as="h1" className="text-2xl tracking-tight">{isSmsOtp ? t('auth.oneTimePassword', 'One-Time Password') : isEmailOtp ? t('auth.emailCodeTitle', 'Email Verification Code') : t('auth.twoFactor', 'Two-Factor Authentication')}</CardTitle>
             <CardDescription className="text-base">{isSmsOtp ? t('auth.otpSentToPhone', 'Enter the OTP sent to your phone.') : isEmailOtp ? t('auth.otpSentToEmail', 'Enter the 6-digit code sent to your email.') : t('auth.enterVerificationCode', 'Enter the verification code from your authenticator app.')}</CardDescription>
           </CardHeader>
           <CardContent className="pb-2">
@@ -223,7 +223,7 @@ export function LoginPage() {
           <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3 shadow-sm">
             <HandHeart size={28} className="text-accent" />
           </div>
-          <CardTitle className="text-2xl tracking-tight">{t('auth.welcomeToKapwa', 'Welcome to KAPWA')}</CardTitle>
+          <CardTitle as="h1" className="text-2xl tracking-tight">{t('auth.welcomeToKapwa', 'Welcome to KAPWA')}</CardTitle>
           <CardDescription className="text-base">{t('auth.mswdoTagline', 'MSWDO Norzagaray Social Welfare System')}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -281,19 +281,23 @@ export function LoginPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('auth.passwordLabel', 'Password')}</FormLabel>
-                    <FormControl>
-                      <div className="relative">
+                    {/* FormControl must wrap the Input itself: it is a Radix Slot, so
+                        wrapping a positioned wrapper div put the id and
+                        aria-describedby on that div and left the password field
+                        with no accessible name. */}
+                    <div className="relative">
+                      <FormControl>
                         <Input type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder={t('auth.passwordPlaceholder', 'Enter your password')} className="h-11 pe-10" {...field} />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(v => !v)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                    </FormControl>
+                      </FormControl>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

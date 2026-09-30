@@ -40,6 +40,7 @@ const CoordinatorReferralFormPage = lazy(() => import('./pages/CoordinatorReferr
 const CoordinatorReferralListPage = lazy(() => import('./pages/CoordinatorReferralListPage').then(m => ({ default: m.CoordinatorReferralListPage })));
 const CoordinatorReferralDetailPage = lazy(() => import('./pages/CoordinatorReferralDetailPage').then(m => ({ default: m.CoordinatorReferralDetailPage })));
 const ReferralReviewPage = lazy(() => import('./pages/ReferralReviewPage').then(m => ({ default: m.ReferralReviewPage })));
+const ReferralsPage = lazy(() => import('./pages/ReferralsPage').then(m => ({ default: m.ReferralsPage })));
 const TeamWorkspacePage = lazy(() => import('./pages/TeamWorkspacePage').then(m => ({ default: m.TeamWorkspacePage })));
 const AccessCardViewPage = lazy(() => import('./pages/AccessCardViewPage').then(m => ({ default: m.AccessCardViewPage })));
 const CoordinatorAccessCardsPage = lazy(() => import('./pages/CoordinatorAccessCardsPage').then(m => ({ default: m.CoordinatorAccessCardsPage })));
@@ -151,6 +152,10 @@ export const router = createBrowserRouter([
   { path: '/beneficiary/:id/access-card', element: <Private roles={['admin','social_worker','claimant']}><AccessCardViewPage /></Private> },
   { path: '/beneficiary/:id/card/print', element: <Private roles={['admin','social_worker']}><AccessCardPrintView /></Private> },
   { path: '/intake/referrals', element: <Private roles={['admin','social_worker']}><ReferralReviewPage /></Private> },
+  // The MSWDO <-> barangay referral flow. Role decides the surface inside the
+  // page: a coordinator sends and tracks, MSWDO accepts and processes. This is
+  // the referrals table, not the retired inter-agency referral lifecycle.
+  { path: '/referrals', element: <Private roles={['admin','social_worker','coordinator']}><ReferralsPage /></Private> },
   { path: '/messages', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/messages/:userId', element: <Private roles={['admin','social_worker','coordinator','claimant']}><MessagesPage /></Private> },
   { path: '/search', element: <Private><SearchResultsPage /></Private> },

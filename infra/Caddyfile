@@ -5,60 +5,52 @@
 #   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 :80 {
-    # Rate limiting — 600 events/minute (higher for ngrok tunnel — single egress IP)
-    rate_limit {
-        zone dynamic {
-            key {remote_host}
-            events 600
-            window 1m
-        }
-    }
+	# Rate limiting — 600 events/minute (higher for ngrok tunnel — single egress IP)
+	rate_limit {
+		zone dynamic {
+			key {remote_host}
+			events 600
+			window 1m
+		}
+	}
 
-    # Security headers (applied to all responses)
-    header {
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    }
+	# Security headers (applied to all responses)
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
 
-    # Non-API routes: serve API / socket / health first
-    handle /api/* {
-        reverse_proxy api:3000 {
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Forwarded-Host {host}
-        }
-    }
+	# Non-API routes: serve API / socket / health first
+	handle /api/* {
+		reverse_proxy api:3000
+	}
 
-    handle /socket.io/* {
-        reverse_proxy api:3000 {
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Forwarded-Host {host}
-        }
-    }
+	handle /socket.io/* {
+		reverse_proxy api:3000
+	}
 
-    handle /health {
-        respond "OK" 200
-    }
+	handle /health {
+		respond "OK" 200
+	}
 
-    # Bare /favicon.ico requests (browser default) — the SPA ships favicon.svg,
-    # so answer 204 instead of falling through to the SPA/index.html.
-    handle /favicon.ico {
-        respond 204
-    }
+	# Bare /favicon.ico requests (browser default) — the SPA ships favicon.svg,
+	# so answer 204 instead of falling through to the SPA/index.html.
+	handle /favicon.ico {
+		respond 204
+	}
 
-    # Everything else → SPA client
-    handle {
-        reverse_proxy client:80
-    }
+	# Everything else → SPA client
+	handle {
+		reverse_proxy client:80
+	}
 
-    # Access logging
-    log {
-        output file /var/log/caddy/access.log
-    }
+	# Access logging
+	log {
+		output file /var/log/caddy/access.log
+	}
 }
 
 # Production configuration (uncomment and customize):

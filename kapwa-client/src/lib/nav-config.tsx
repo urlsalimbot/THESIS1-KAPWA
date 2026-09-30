@@ -2,7 +2,7 @@ import {
   FilePlus, LayoutDashboard, Users, CheckCircle,
   ClipboardList, Shield, UserCircle, Stamp, Settings, MessageSquare,
   FileWarning, IdCard, ScrollText, BarChart3, Send, BadgeCheck,
-  Megaphone, CalendarDays,
+  Megaphone, CalendarDays, Share2,
 } from 'lucide-react';
 import { FEATURE_ANALYTICS_ENABLED } from './feature-flags';
 
@@ -25,6 +25,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/coordinator/dashboard', label: 'Barangay Coordinator', icon: <LayoutDashboard size={20} />, roles: ['coordinator'] },
       { path: '/intake', label: 'General Intake', icon: <FilePlus size={20} />, roles: ['admin', 'social_worker',] },
+      // MSWDO <-> barangay referrals. One entry for all three roles; the page
+      // shows the coordinator their sent referrals and MSWDO the pending queue.
+      { path: '/referrals', label: 'Referrals', icon: <Share2 size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/cases', label: 'Cases', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/team', label: 'Team Workspace', icon: <CalendarDays size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
