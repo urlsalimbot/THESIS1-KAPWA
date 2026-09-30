@@ -38,7 +38,7 @@ describe('cases step-locks require graph', () => {
 
     const paramtypes = Reflect.getMetadata('design:paramtypes', locks.CaseStepLocksService) as unknown[];
 
-    expect(paramtypes).toHaveLength(3);
+    expect(paramtypes).toHaveLength(5);
     // Ask the question directly rather than with `toEqual([])`: `toEqual`
     // ignores `undefined` members, so a `[Repository, undefined, X]` array
     // compares equal to `[]` and the whole probe would pass on a broken graph.
@@ -46,6 +46,16 @@ describe('cases step-locks require graph', () => {
     // Optional chaining for the same reason — a bare `.name` here throws a
     // TypeError instead of reporting the missing parameter.
     expect((paramtypes[1] as { name?: string } | undefined)?.name).toBe('CasesService');
+    // The three repositories are TypeScript-only types, so `design:paramtypes`
+    // reports the same `Repository` for all three — `@InjectRepository`
+    // supplies the tokens. Naming them here is what pins the wiring: a
+    // constructor whose emitted metadata no longer lines up with its decorators
+    // fails here rather than only at bootstrap. Order is
+    // (lockRepo, cases, interventions, programs, auditLog).
+    for (const index of [0, 2, 3]) {
+      expect((paramtypes[index] as { name?: string } | undefined)?.name).toBe('Repository');
+    }
+    expect((paramtypes[4] as { name?: string } | undefined)?.name).toBe('AuditLogService');
   });
 
   /**
@@ -60,8 +70,11 @@ describe('cases step-locks require graph', () => {
 
     const paramtypes = Reflect.getMetadata('design:paramtypes', locks.CaseStepLocksService) as unknown[];
 
-    expect(paramtypes).toHaveLength(3);
+    expect(paramtypes).toHaveLength(5);
     expect(paramtypes.some((t) => t === undefined)).toBe(false);
     expect((paramtypes[1] as { name?: string } | undefined)?.name).toBe('CasesService');
+    for (const index of [0, 2, 3]) {
+      expect((paramtypes[index] as { name?: string } | undefined)?.name).toBe('Repository');
+    }
   });
 });

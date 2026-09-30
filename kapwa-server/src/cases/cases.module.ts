@@ -12,6 +12,7 @@ import { CaseAssistance } from './case-assistance.entity';
 import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { Program } from '../programs/program.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
@@ -24,7 +25,12 @@ import { FilingModule } from '../filing/filing.module';
 import { IrfModule } from '../irf/irf.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
+  // `CaseIntervention` and `Program` are registered here rather than reached
+  // through `ProgramsModule`, which already lists several entities owned by
+  // other domains: forFeature is a repository registration and adds no import
+  // edge, so the step-done predicate can read a case's programs without this
+  // module and ProgramsModule requiring each other.
+  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, Program, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
   controllers: [CasesController],
   // CaseStepLocksService reads through CasesService, so it is deliberately not
   // exported: nothing outside this module seals a step, and an export would let

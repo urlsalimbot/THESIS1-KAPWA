@@ -21,6 +21,11 @@
     "caseData": { "status": "enrolled" },
     "interventionCount": 1,
     "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true }
+    },
     "expected": true
   },
   {
@@ -29,6 +34,11 @@
     "caseData": { "status": "enrolled" },
     "interventionCount": 1,
     "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": false }
+    },
     "expected": false
   },
   {
@@ -53,6 +63,11 @@
     "caseData": { "status": "assessed" },
     "interventionCount": 1,
     "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true }
+    },
     "expected": true
   },
   {
@@ -198,5 +213,123 @@
     "interventionCount": 0,
     "opts": {},
     "expected": false
+  },
+  {
+    "name": "step1 not done: a program document never reached the checklist",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            { "key": "Valid ID", "mandatory": true },
+            { "key": "Barangay Certificate", "mandatory": true }
+          ]
+        }
+      ],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": false
+  },
+  {
+    "name": "step1 done: every document the program requires is on the checklist",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            { "key": "Valid ID", "mandatory": true },
+            { "key": "Barangay Certificate", "mandatory": true }
+          ]
+        }
+      ],
+      "checklist": { "Valid ID": true, "Barangay Certificate": true }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 done: an unmet checklist entry belonging to no program is ignored",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true, "Medical Abstract": false }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 not done: an unmet document of a second linked program still blocks the seal",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1", "p2"],
+      "programs": [
+        { "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] },
+        { "id": "p2", "documentKeys": [{ "key": "Medical Abstract", "mandatory": true }] }
+      ],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": false
+  },
+  {
+    "name": "step1 not done: a document the program flags non-mandatory is still required",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            { "key": "Valid ID", "mandatory": true },
+            { "key": "Death certificate (if applicable)", "mandatory": false }
+          ]
+        }
+      ],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": false
+  },
+  {
+    "name": "step1 done: interventions that name no program impose nothing",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": [null],
+      "programs": [],
+      "checklist": { "Valid ID": false }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 done: a linked program that requires no documents imposes nothing",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [] }],
+      "checklist": { "Valid ID": false }
+    },
+    "expected": true
   }
 ]

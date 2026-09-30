@@ -1,9 +1,11 @@
 import { Injectable, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial } from 'typeorm';
+import { Repository, DeepPartial, In } from 'typeorm';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { Program } from '../programs/program.entity';
 import { User } from '../auth/user.entity';
 
 /**
@@ -60,6 +62,17 @@ export class CaseStepLocksService {
     @InjectRepository(CaseStepLock)
     private readonly repo: Repository<CaseStepLock>,
     private readonly cases: CasesService,
+    // The two repositories the requirements predicate reads. `CasesService`
+    // could own them instead, but the predicate is what needs the programs, and
+    // routing it through the cases service would widen that service's
+    // constructor for the benefit of a single caller. Neither entity is
+    // declared in this module: `CaseIntervention` and `Program` are added to
+    // `TypeOrmModule.forFeature` in `cases.module.ts`, which is a registration,
+    // not an import edge, so no new require cycle can form through here.
+    @InjectRepository(CaseIntervention)
+    private readonly interventions: Repository<CaseIntervention>,
+    @InjectRepository(Program)
+    private readonly programs: Repository<Program>,
     @Optional() private readonly auditLog?: AuditLogService,
   ) {}
 
@@ -190,6 +203,17 @@ export class CaseStepLocksService {
 
   private async isStepDone(caseId: string, stepIndex: number): Promise<boolean> {
     const c = await this.cases.findById(caseId);
+    const interventionCount = await this.cases.getInterventionCount(caseId);
+    // Step 1 is the only branch that weighs requirements, and the client only
+    // weighs programs once an intervention exists, so the two program queries
+    // stay off the path for every other step and for a case with nothing to
+    // weigh. Answering `true` here is the client's own empty-set answer, not a
+    // shortcut around the branch: step 1 still requires an intervention (or the
+    // recorded decision) before this value is consulted.
+    const requirementsMet =
+      stepIndex === 1 && interventionCount > 0
+        ? await this.requirementsMet(caseId, c.requirementsChecklist)
+        : true;
     return this.stepDone(
       stepIndex,
       {
@@ -203,9 +227,9 @@ export class CaseStepLocksService {
         clientSignature: c.clientSignature,
         closureOutcome: c.closureOutcome,
       },
-      await this.cases.getInterventionCount(caseId),
+      interventionCount,
       {
-        requirementsMet: this.requirementsMet(c.requirementsChecklist),
+        requirementsMet,
         referralNotNeeded: Boolean(c.referralNotNeeded),
         interventionNotNeeded: Boolean(c.interventionNotNeeded),
       },
@@ -213,16 +237,80 @@ export class CaseStepLocksService {
   }
 
   /**
-   * Server-side stand-in for the client's `interventionRequirementsMet`, which
-   * also weighs the linked programs' required-document keys. The server reads
-   * the same source the client's gate reads — `case_requirements`, surfaced as
-   * the `requirementsChecklist` getter — and treats "nothing recorded" as
-   * nothing outstanding, so the two surfaces cannot disagree about a seal.
+   * Server-side mirror of the client's `interventionRequirementsMet` in
+   * `kapwa-client/src/lib/case-progress.ts`.
+   *
+   * The key set is the *programs'* required documents, not the checklist's keys,
+   * because that is what the client's Lock button is gated on and a seal taken
+   * against a different key set is a claim the UI never made. The two copies
+   * therefore agree on all three inputs: the programs behind the case's
+   * interventions, the same `requiredDocumentDetails`-then-`requiredDocuments`
+   * preference, and the same `case_requirements` checklist as `Case`'s
+   * `requirementsChecklist` getter.
+   *
+   * The two directions this fixes, both of which an earlier checklist-keyed copy
+   * got wrong:
+   *  - A program document that never became a checklist row is invisible to a
+   *    walk over the checklist's keys, so the server answered "met" on a case
+   *    the UI refused to seal. Now the document is in the key set and its
+   *    missing row fails the `=== true` test.
+   *  - A checklist row belonging to no program of the case is not a program
+   *    requirement, so it cannot hold a step hostage. Now it is not in the key
+   *    set at all.
+   *
+   * Read as a whole this is stricter than the copy it replaces and no less
+   * strict than the client, which is the only property that matters: the server
+   * must never be the surface that permits a seal the UI calls not ready.
    */
-  private requirementsMet(checklist: Record<string, boolean> | undefined): boolean {
-    const keys = Object.keys(checklist || {});
-    if (keys.length === 0) return true;
-    return keys.every((k) => checklist?.[k] === true);
+  private async requirementsMet(
+    caseId: string,
+    checklist: Record<string, boolean> | undefined,
+  ): Promise<boolean> {
+    const programIds = await this.linkedProgramIds(caseId);
+    if (programIds.length === 0) return true;
+    // `requiredDocumentRows` is `eager: true`, so a plain `find` hands back
+    // whole programs and both of the getters the client reads stay derived from
+    // real rows rather than from a hand-built shape.
+    const programs = await this.programs.find({ where: { id: In(programIds) } });
+    // The `In` is the scoping the client does with `programIds.includes(p.id)`
+    // over a full program list: only the programs behind *this* case's
+    // interventions contribute keys, so a document some other program requires
+    // is not this case's requirement.
+    const requiredKeys = [...new Set(programs.flatMap((p) => this.requiredDocumentKeys(p)))];
+    if (requiredKeys.length === 0) return true;
+    const met = checklist || {};
+    return requiredKeys.every((key) => met[key] === true);
+  }
+
+  /**
+   * The distinct programs named by the case's interventions. The same table and
+   * the same parameterized-query conventions as `getInterventionCount`, so the
+   * count this predicate is paired with and the programs it weighs are two views
+   * of one set of rows. `program_id IS NOT NULL` drops the interventions
+   * recorded without a program — the client's `.filter(Boolean)` over
+   * `programId` drops the same ones.
+   */
+  private async linkedProgramIds(caseId: string): Promise<string[]> {
+    const rows = await this.interventions.query(
+      'SELECT DISTINCT program_id FROM case_interventions WHERE case_id = $1 AND program_id IS NOT NULL',
+      [caseId],
+    );
+    return (rows as Array<{ program_id?: string | null }>).map((r) => r.program_id).filter(Boolean) as string[];
+  }
+
+  /**
+   * Every documentary need of one program — the client's `requiredDocumentKeys`,
+   * over the same two getters in the same preference order. `mandatory` is
+   * deliberately not consulted: a conditional document counts exactly like any
+   * other, so a server that relaxed on the flag would disagree with the client
+   * on every program that carries one.
+   */
+  private requiredDocumentKeys(program: Program): string[] {
+    const details = program.requiredDocumentDetails;
+    if (Array.isArray(details) && details.length > 0) {
+      return details.map((d) => d?.key).filter(Boolean);
+    }
+    return Array.isArray(program.requiredDocuments) ? program.requiredDocuments : [];
   }
 
   /**
