@@ -25,7 +25,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/coordinator/dashboard', label: 'Barangay Coordinator', icon: <LayoutDashboard size={20} />, roles: ['coordinator'] },
       { path: '/intake', label: 'General Intake', icon: <FilePlus size={20} />, roles: ['admin', 'social_worker',] },
-      { path: '/referrals', label: 'Referrals', icon: <Send size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/cases', label: 'Cases', icon: <ClipboardList size={20} />, roles: ['admin', 'social_worker'] },
       { path: '/team', label: 'Team Workspace', icon: <CalendarDays size={20} />, roles: ['admin', 'social_worker', 'coordinator'] },
       { path: '/beneficiaries', label: 'Beneficiaries', icon: <Users size={20} />, roles: ['admin', 'social_worker'] },
