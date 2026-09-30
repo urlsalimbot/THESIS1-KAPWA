@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
-import { Response } from 'express';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
@@ -31,7 +30,6 @@ import {
   ReferralDecisionSchema,
   CreateCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
   TransitionPlanInput, RequirementsInput, ClosureInput, ReferralDecisionInput,
-  BulkExportSchema, BulkExportInput,
 } from './dto/cases.zod';
 
 @ApiTags('Cases')
@@ -64,12 +62,6 @@ export class CasesController {
     @Query('beneficiaryId') beneficiaryId?: string,
   ) {
     return this.casesService.findAll(page, limit, { status, search, barangay, category, gender, ageRange, sla, dateFrom, dateTo, beneficiaryId: beneficiaryId || undefined });
-  }
-
-  @Get('disbursed/pending-intervention')
-  @Roles('admin', 'social_worker')
-  async getPendingDisbursed() {
-    return this.casesService.getPendingDisbursed();
   }
 
   @Get('tracker/daily')
@@ -109,29 +101,6 @@ export class CasesController {
   @Roles('admin', 'social_worker')
   async create(@Body(new ZodPipe(CreateCaseSchema)) body: CreateCaseInput, @Request() req: AuthenticatedRequest) {
     return this.casesService.create(body, req.user?.id);
-  }
-
-  @Post('bulk-export')
-  @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Export selected cases as CSV (masked by default)' })
-  async bulkExport(
-    @Body(new ZodPipe(BulkExportSchema)) body: BulkExportInput,
-    @Request() req: AuthenticatedRequest,
-    @Res() res: Response,
-  ) {
-    const buf = await this.casesExportService.buildBulkCsv(
-      body.ids,
-      body.masked,
-      body.unmaskReason,
-      req.user?.id || '',
-      req.user?.role || '',
-    );
-    res.set({
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': 'attachment; filename="cases-bulk-export.csv"',
-      'Content-Length': buf.length,
-    });
-    res.send(buf);
   }
 
   @Patch(':id/status')

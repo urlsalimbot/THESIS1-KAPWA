@@ -115,13 +115,6 @@ export class DashboardController {
     return this.dashService.getDailyCounts(parseInt(year), parseInt(month));
   }
 
-  @Get('daily-tracker')
-  @Roles('admin', 'social_worker', 'coordinator')
-  @ApiOperation({ summary: 'Get daily case tracker' })
-  async getDailyTracker(@Query('date') date: string) {
-    return this.dashService.getDailyTracker(new Date(date));
-  }
-
   @Get('sla')
   @Roles('admin')
   @ApiOperation({ summary: 'Get SLA compliance status' })

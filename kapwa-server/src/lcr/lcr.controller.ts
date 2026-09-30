@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
-import { ImportLcrRecordSchema, ImportLcrBatchSchema } from './dto/lcr.zod';
+import { ImportLcrRecordSchema } from './dto/lcr.zod';
 import { LcrService } from './lcr.service';
 
 @ApiTags('LCR')
@@ -21,10 +21,4 @@ export class LcrController {
     return this.lcrService.importRecord(body as any);
   }
 
-  @Post('import-batch')
-  @Roles('admin')
-  @ApiOperation({ summary: 'Batch import LCR records' })
-  async importBatch(@Body(new ZodPipe(ImportLcrBatchSchema)) body: { records: Record<string, unknown>[] }) {
-    return this.lcrService.importBatch(body.records);
-  }
 }

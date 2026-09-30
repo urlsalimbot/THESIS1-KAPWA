@@ -25,9 +25,13 @@ describe('CsrController', () => {
     await expect(controller.findAll()).resolves.toEqual([{ id: 'csr-1' }]);
   });
 
-  it('fetches a single CSR record by id', async () => {
-    (svc.findById as jest.Mock).mockResolvedValue({ id: 'csr-1' });
-    await expect(controller.findOne('csr-1')).resolves.toEqual({ id: 'csr-1' });
-    expect(svc.findById).toHaveBeenCalledWith('csr-1');
+  // A CSR is a document, not a system object: the per-record read, update and
+  // delete routes are retired, and the record is served as a PDF through
+  // GET /cases/csr/:controlNo/pdf. No single-record endpoint exists to break.
+  it('exposes no per-record route', () => {
+    const surface = Object.getOwnPropertyNames(CsrController.prototype).filter(
+      (n) => n !== 'constructor',
+    );
+    expect(surface.sort()).toEqual(['create', 'findAll']);
   });
 });

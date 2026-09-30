@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, UseInterceptors, SerializeOptions } from '@nestjs/common';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ZodPipe } from '../common/pipes/zod.pipe';
@@ -22,15 +22,6 @@ export class AgenciesController {
   @ApiOperation({ summary: 'List active agencies' })
   async findAll() {
     return this.svc.findAll();
-  }
-
-  @Get(':id')
-  @Roles('admin', 'social_worker', 'coordinator')
-  @ApiOperation({ summary: 'Get an agency by id' })
-  async findById(@Param('id', new ParseUUIDPipe()) id: string) {
-    const agency = await this.svc.findById(id);
-    if (!agency) throw new NotFoundException('Agency not found');
-    return agency;
   }
 
   @Post()

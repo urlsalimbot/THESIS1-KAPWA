@@ -57,14 +57,6 @@ export class ReferralsController {
     return this.svc.countMine(req.user!.id);
   }
 
-  @Get('pending-count')
-  @Roles('admin', 'social_worker')
-  @ApiOperation({ summary: 'Get pending referral count for MSWDO dashboard' })
-  async pendingCount(@Query('barangay') barangay?: string) {
-    const count = await this.svc.countPending(barangay);
-    return { count };
-  }
-
   @Get(':id')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get referral details' })
