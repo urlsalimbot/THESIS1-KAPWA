@@ -151,6 +151,18 @@ export class AuthController {
     return this.authService.updatePhone(req.user.id, body.phone);
   }
 
+  // Claimant self-service account linking. A person who already exists in the
+  // beneficiary records but has never signed in claims an account by proving
+  // ownership of a registered phone number and date of birth, then confirming a
+  // one-time code. On success this sets user.personId and points the
+  // beneficiaries row at the new user, which is what makes a claimant a
+  // claimant — without it every beneficiary would need staff to create the
+  // account for them.
+  //
+  // Deliberately kept despite having no client caller today: a static sweep
+  // reports these as unreferenced, and they are load-bearing for account
+  // creation, not vestigial. The client screen that calls them is still to be
+  // built; retiring these would discard the whole flow.
   @Post('request-person-link')
   @HttpCode(HttpStatus.OK)
   async requestPersonLink(@Body(new ZodPipe(PersonLinkRequestSchema)) body: { phone: string; dob: string; email: string }) {

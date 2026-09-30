@@ -670,7 +670,7 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   const famTop = y;
   {
     let x = LEFT;
-    famCols.forEach((s, i) => {
+    famCols.forEach((s) => {
       const w = s.frac * WIDTH;
       const lines = s.label.split("\n");
       const used = Math.min(
@@ -873,7 +873,6 @@ export async function buildGisPdf(data: GisPdfData): Promise<Buffer> {
   const rw = WIDTH / 2; // right half (social worker + approving authority)
   const xL = midX + 4;
   const wL = rw / 2 - 8; // left stack of the right half (Social Worker)
-  const cxL = midX + rw / 4;
   const xR = midX + rw / 2 + 4;
   const wR = rw / 2 - 8; // right stack (Approving Authority)
   const cxR = midX + (3 * rw) / 4;

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, HttpException, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, HttpException, NotFoundException, ForbiddenException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, MoreThan, Repository } from 'typeorm';
 import { Person } from '../beneficiaries/person.entity';

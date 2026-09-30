@@ -23,7 +23,7 @@ export class ZBackfillInterventionPrograms0000000000063 implements MigrationInte
     `);
   }
 
-  async down(queryRunner: QueryRunner): Promise<void> {
+  async down(_queryRunner: QueryRunner): Promise<void> {
     // Backfill is metadata linkage only; no column is removed by reversion.
     // Left empty so down() never destroys program_id values set later.
   }

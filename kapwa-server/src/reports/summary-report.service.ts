@@ -6,7 +6,7 @@ import { OrgService } from '../common/org.service';
 import { REPORT_FALLBACK_SIGNATORIES } from '../common/constants';
 import {
   CaseClassificationInput, CaseListRow, ReportColumn, SummaryCounts, SummaryReportData,
-  SummaryTable, buildColumns, selectCaseColumn,
+  buildColumns, selectCaseColumn,
 } from './summary-report.types';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
