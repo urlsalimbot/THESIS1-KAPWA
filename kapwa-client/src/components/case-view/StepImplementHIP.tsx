@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 import { api, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+import { interventionRequirementsMet } from '@/lib/case-progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -45,19 +46,11 @@ interface StepImplementHIPProps {
   caseData: any;
   userRole?: string;
   readOnly?: boolean;
-  /**
-   * Whether every required document of the linked programs is satisfied, as the
-   * case view weighs it. Threaded rather than recomputed here: the same
-   * `interventionRequirementsMet` result drives the stepper, the checklist and
-   * the server's seal gate, and a local copy of the rule is exactly how those
-   * drift apart.
-   */
-  requirementsMet?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
 }
 
-export function StepImplementHIP({ caseId, caseData, userRole, readOnly, requirementsMet, stepLock }: StepImplementHIPProps) {
+export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLock }: StepImplementHIPProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
@@ -91,6 +84,17 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, require
     caseId ? queryKeys.filing.byCase(caseId) : null,
   );
   const caseDocs = docs.filter((d: any) => !d.requirementKey);
+
+  // Whether every required document of the linked programs is satisfied — this
+  // step's own call into `interventionRequirementsMet`, over the two lists and
+  // the checklist it already has, rather than a second copy of the rule. The
+  // case view derives the same answer from the same shared function for the
+  // stepper, so the three surfaces agree because they call one function, not
+  // because one of them threads a value the others might not.
+  const requirementsMet = useMemo(
+    () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
+    [interventions, programs, caseData?.requirementsChecklist],
+  );
 
   // Document uploads stay available for eligible roles regardless of step
   // completion or closure — recording an intervention (readOnly) or closing the
@@ -460,7 +464,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, require
         // The count comes from the list this step already renders, which is the
         // same row set the server counts.
         interventionCount={interventions.length}
-        opts={requirementsMet === undefined ? undefined : { requirementsMet }}
+        opts={{ requirementsMet }}
         locked={stepLock}
         readOnly={readOnly}
         onChanged={() => globalMutate(queryKeys.cases.detail(caseId))}

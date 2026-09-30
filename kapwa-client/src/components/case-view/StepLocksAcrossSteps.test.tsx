@@ -48,6 +48,10 @@ function completeCaseData(over: Record<string, unknown> = {}) {
     sustainabilityPlan: 'sari-sari store',
     clientSignature: SIGNATURE,
     closureOutcome: 'graduated',
+    // Step 2's bar weighs this checklist against the program its delivery names
+    // (the bar derives it in-step), so a satisfied one is what makes that step
+    // sealable here.
+    requirementsChecklist: { 'Valid ID': true },
     ...over,
   };
 }
@@ -63,12 +67,10 @@ function Steps({
   caseId,
   caseData,
   stepLocks = [],
-  requirementsMet = true,
 }: {
   caseId: string;
   caseData: any;
   stepLocks?: StepLock[];
-  requirementsMet?: boolean;
 }) {
   const lockFor = (i: number) => stepLocks.find((l) => l.stepIndex === i) ?? null;
   return (
@@ -90,7 +92,6 @@ function Steps({
         caseId={caseId}
         caseData={caseData}
         userRole="social_worker"
-        requirementsMet={requirementsMet}
         stepLock={lockFor(1)}
       />
       <StepIntegratedDelivery
@@ -135,7 +136,8 @@ describe('the five step seals', () => {
     render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={stepLocks} />);
 
     // All five strips, and one strip per locker: the shape that catches a bar
-    // handed a sibling's row, or two bars sharing one instance.
+    // handed a sibling's row. (It does not distinguish the key's step half from a
+    // bare step index — see `stepLockKey`, which says which half is load-bearing.)
     LOCKERS.forEach((name) => {
       expect(screen.getByText(`Locked by ${name} · ${formatDate(AT)}`)).toBeTruthy();
     });
@@ -150,6 +152,8 @@ describe('the five step seals', () => {
     expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
 
     // Five bars, each enabled because its step is done — and each reachable.
+    // These five paths are what make each bar its own step's bar; they say
+    // nothing about the key, which no assertion here exercises.
     const locks = screen.getAllByRole('button', { name: /^lock$/i });
     expect(locks).toHaveLength(5);
     for (const lock of locks) expect(lock).toBeEnabled();

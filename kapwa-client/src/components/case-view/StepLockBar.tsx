@@ -31,12 +31,23 @@ export interface StepLockBarProps {
  *
  * This bar records the outcome of its own write in local state that carries
  * neither a step index nor a case id, so a reused instance would render
- * whichever step or case it last sealed. The step number alone does not
- * cover it: the case view mounts these five steps under keys that outlive a
- * case-to-case navigation, and a `StepLockBar` that survived from the previous
- * case would show a seal that case never had. Both halves of the key are
- * load-bearing, which is why the case view and the tests build it here rather
- * than spelling it twice.
+ * whichever step or case it last sealed. One definition, because the case view
+ * and the specs have to build the same key and a copy on either side is how they
+ * would disagree about which mounts may share an instance.
+ *
+ * The two halves are not equally load-bearing today, and the difference is worth
+ * knowing before anyone "simplifies" this:
+ *
+ *  - **The case half is tested.** The case view's five mounts outlive a
+ *    case-to-case navigation — the route swaps, the array does not — so a bar can
+ *    genuinely be reused across two cases and show a seal the new case never
+ *    had. `StepLocksAcrossSteps.test.tsx` fails if the case drops out.
+ *  - **The step half is future-proofing.** The view renders one step at a time
+ *    out of `stepComponents`, and each entry is a different component type, so
+ *    switching steps unmounts whatever stood there whether or not the key varies.
+ *    No test distinguishes the key from a bare step index today; it is kept so
+ *    that mounting more than one step at a time — the shape `StepLockBar` was
+ *    reviewed for — stays correct without revisiting this file.
  */
 export function stepLockKey(caseId: string, stepIndex: number): string {
   return `${caseId}:${stepIndex}`;

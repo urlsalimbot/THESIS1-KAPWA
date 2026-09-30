@@ -16,12 +16,16 @@ type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | nul
 
 const SIGNATURE = 'data:image/png;base64,iVBORw0KGgo=';
 
-function renderStep(caseData: any, opts: { readOnly?: boolean; stepLock?: Seal } = {}) {
+function renderStep(
+  caseData: any,
+  opts: { readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal } = {},
+) {
   return render(
     <StepClosure
       caseId="c1"
       caseData={{ id: 'c1', ...caseData }}
       readOnly={opts.readOnly}
+      {...(opts.lockReadOnly === undefined ? {} : { lockReadOnly: opts.lockReadOnly })}
       stepLock={opts.stepLock}
     />,
   );
@@ -58,6 +62,30 @@ describe('StepClosure — sealing step 5', () => {
 
     expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
     expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
+  });
+
+  it('still offers the seal when the body is readOnly but lockReadOnly is not', () => {
+    // The trap this step has to survive: its `readOnly` flips true exactly when
+    // the closure is complete, which is exactly when the step becomes sealable.
+    // Routed to the bar, that signal renders `null` and step 5 can never be
+    // sealed at all — so the bar reads `lockReadOnly` instead.
+    renderStep(
+      { status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE },
+      { readOnly: true, lockReadOnly: false },
+    );
+
+    // The body really is read-only — the form is locked down, as it should be
+    // once the data is complete.
+    expect(screen.queryByRole('button', { name: /Save Progress/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Close Case/i })).toBeNull();
+    // And the one control that step still owes is on screen.
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
+  it('defaults lockReadOnly to readOnly, so a caller that knows only the body is unchanged', () => {
+    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { readOnly: true });
+
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {

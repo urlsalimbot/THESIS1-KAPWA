@@ -477,6 +477,101 @@ describe('CaseViewPage — stepper gating', () => {
     expect(screen.getByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
   });
 });
+// Step 5's seal is the one control whose readOnly signal cannot come from the
+// step's own body: `CaseViewPage` passes `readOnly={stepDone[4] || caseClosed}` to
+// StepClosure, and `stepDone[4]` flips true exactly when the closure is complete
+// — which is exactly when the step becomes sealable. Routing that signal to the
+// bar rendered `null` on the only step it was written for, so the case could
+// never be closed with a seal. Nothing below the page can see that wiring.
+describe('CaseViewPage — step 5 is sealable once its closure is complete', () => {
+  const SIGNATURE = 'data:image/png;base64,iVBORw0KGgo=';
+  /** Every step done, so the initial navigation lands on step 5 (Case Study & Closure). */
+  const closureComplete = {
+    ...mockCase,
+    status: 'transitioning',
+    problemsPresented: 'Financial difficulty',
+    socialWorkerAssessment: 'Needs financial assistance',
+    clientCategory: 'Indigent',
+    frvaScore: 65,
+    referrals: [{ agencyName: 'RHU', status: 'referred' }],
+    selfRelianceLevel: 3,
+    sustainabilityPlan: 'sari-sari store',
+    clientSignature: SIGNATURE,
+    closureOutcome: 'graduated',
+  };
+
+  beforeEach(async () => {
+    mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
+    mockUseAuth.mockReset();
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) {
+        return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
+      }
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve(closureComplete);
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
+  it('offers the Lock on a done-but-unsealed step 5, while the closure form is locked down', async () => {
+    renderWithSWR(<CaseViewPage />);
+
+    // Step 5 has to be the one on screen: the nav lands on the first pending
+    // step, and a case with all five done lands on the last.
+    await screen.findByRole('heading', { name: 'Case Closure' });
+    expect(screen.getByRole('button', { name: '5. Case Study & Closure' })).toHaveAttribute('aria-current', 'step');
+
+    // The step really is read-only — its own Save is gone, because the closure
+    // is complete. This is the state that used to swallow the Lock button too.
+    expect(screen.queryByRole('button', { name: /Save Progress/i })).toBeNull();
+
+    // And the seal is still offered, which is the whole point of the split.
+    const lock = await screen.findByRole('button', { name: /^lock$/i });
+    expect(lock).toBeEnabled();
+  });
+
+  it('withholds the Lock on a step 5 that is not done yet', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) {
+        return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
+      }
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      // No signature or outcome: step 5 is not done, so `readOnly` is false and
+      // the bar is rendered — but disabled, with the reason.
+      if (k.includes('cases')) {
+        return Promise.resolve({
+          ...closureComplete,
+          clientSignature: null,
+          closureOutcome: null,
+          selfRelianceLevel: null,
+          sustainabilityPlan: null,
+        });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+
+    const lock = await screen.findByRole('button', { name: /^lock$/i });
+    expect(lock).toBeDisabled();
+  });
+});
+
 describe('CaseViewPage — who acted on this case', () => {
   beforeAll(() => {
     if (typeof URL.createObjectURL !== 'function') {

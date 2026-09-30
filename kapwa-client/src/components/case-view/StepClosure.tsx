@@ -20,11 +20,20 @@ interface StepClosureProps {
   caseId: string;
   caseData: any;
   readOnly?: boolean;
+  /**
+   * Whether the seal control is withheld. Separate from `readOnly` because this
+   * step's two answers disagree: `readOnly` flips true exactly when the closure
+   * is complete (`stepDone[4]`), which is exactly when the step becomes sealable
+   * — so routing the body signal to the bar hid the Lock button on the one step
+   * it was written for, and the bar rendered `null`. Defaults to `readOnly`, so
+   * a caller that knows only about the body is unchanged.
+   */
+  lockReadOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
 }
 
-export function StepClosure({ caseId, caseData, readOnly, stepLock }: StepClosureProps) {
+export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = readOnly, stepLock }: StepClosureProps) {
   const { t } = useTranslation();
   const CLOSURE_OUTCOMES = [
     { value: 'graduated', label: t('caseView.closure.outcomeGraduated', 'Graduated'), description: t('caseView.closure.outcomeGraduatedDesc', 'Achieved Level 3 self-sufficiency') },
@@ -311,14 +320,17 @@ export function StepClosure({ caseId, caseData, readOnly, stepLock }: StepClosur
         </Button>
       </div>
 
-      {/* Step 5's seal. */}
+      {/* Step 5's seal. `lockReadOnly`, not `readOnly`: the closure form locks
+          down once its data is complete, which is the moment this step becomes
+          sealable, so the body's signal would withhold the control on precisely
+          the case it exists for. */}
       <StepLockBar
         caseId={caseId}
         stepIndex={4}
         caseData={caseData}
         interventionCount={0}
         locked={stepLock}
-        readOnly={readOnly}
+        readOnly={lockReadOnly}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}
       />
     </div>

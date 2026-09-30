@@ -290,14 +290,14 @@ describe('StepImplementHIP — sealing step 2', () => {
   function renderSeal(opts: {
     caseData?: Record<string, unknown>;
     interventions?: unknown[];
-    requirementsMet?: boolean;
+    programs?: unknown[];
     readOnly?: boolean;
     stepLock?: Seal;
   } = {}) {
     mockApiGet.mockImplementation(async (key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('interventions')) return opts.interventions ?? [];
-      if (k.includes('programs')) return [];
+      if (k.includes('programs')) return opts.programs ?? [];
       return [];
     });
     return render(
@@ -307,14 +307,17 @@ describe('StepImplementHIP — sealing step 2', () => {
           caseData={opts.caseData ?? caseData}
           userRole="social_worker"
           readOnly={opts.readOnly}
-          requirementsMet={opts.requirementsMet}
           stepLock={opts.stepLock}
         />
       </SWRConfig>,
     );
   }
 
-  const delivered = [{ id: 'iv-1', caseId: 'case-1', serviceName: 'Medical Assistance', amount: 5000 }];
+  const delivered = [{ id: 'iv-1', caseId: 'case-1', programId: 'p1', serviceName: 'Medical Assistance', amount: 5000 }];
+  // A program behind the delivery, requiring one document. `requirementsMet` is
+  // now derived *in* this step from these two lists plus the checklist, so the
+  // only way to make it answer either way is through its own inputs.
+  const programNeedingId = [{ id: 'p1', name: 'Medical Assistance', requiredDocumentDetails: [{ key: 'Valid ID' }] }];
 
   it('disables Lock while no intervention is recorded', async () => {
     renderSeal();
@@ -334,14 +337,29 @@ describe('StepImplementHIP — sealing step 2', () => {
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
-  it('weighs the threaded requirementsMet against a delivery, so a missing document holds the seal', async () => {
-    // The same delivery, the same case, one prop apart: without threading
-    // `requirementsMet` the bar would ignore an unmet program document and
-    // offer a seal the server rejects.
-    renderSeal({ interventions: delivered, requirementsMet: false });
+  // The two below are one rule read in both directions, so they are stated as a
+  // pair: the step derives `requirementsMet` from the two lists it already
+  // fetches and the case checklist, by calling the shared
+  // `interventionRequirementsMet`. Same delivery, same program, and only the
+  // checklist differs. A bar that stopped weighing this — no `opts`, or the wrong
+  // helper, or a constant — answers the same way on both and fails one of them.
+  it('holds the seal while a linked program document is unmet', async () => {
+    renderSeal({ interventions: delivered, programs: programNeedingId });
 
     expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
+    expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
+  });
+
+  it('offers the seal once that same document is confirmed', async () => {
+    renderSeal({
+      interventions: delivered,
+      programs: programNeedingId,
+      caseData: { ...caseData, requirementsChecklist: { 'Valid ID': true } },
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
   it('shows who sealed this step and offers the release', () => {

@@ -423,16 +423,19 @@ export function CaseViewPage() {
   const lockFor = (i: number): StepLock | null =>
     ((caseData?.stepLocks ?? []) as StepLock[]).find((l) => l.stepIndex === i) ?? null;
 
-  // The key names the case as well as the step: `StepLockBar` remembers the
-  // outcome of its own write without either, so an instance reused across two
-  // mounts renders the seal of whichever step (or case) it last wrote.
+  // The key names the case as well as the step, because `StepLockBar` remembers
+  // the outcome of its own write in state carrying neither: an instance reused
+  // across two mounts renders the seal of whichever case it last wrote. Today the
+  // step half is insurance (only one step renders at a time, under keys that
+  // already differ) while the case half is the one a mount can actually outlive —
+  // see `stepLockKey`.
   const stepComponents = [
     <StepAssessment key={stepLockKey(id!, 0)} caseId={id!} caseData={caseData} assessment={assessment}
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
       userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
       stepLock={lockFor(0)} />,
     <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
-      requirementsMet={requirementsMet} stepLock={lockFor(1)} />,
+      stepLock={lockFor(1)} />,
     <StepIntegratedDelivery key={stepLockKey(id!, 2)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
       stepLock={lockFor(2)} />,
     // Transition plan + follow-up visits stay savable for the whole active
@@ -441,8 +444,13 @@ export function CaseViewPage() {
     // hidden. Only closure locks the step.
     <StepTransition key={stepLockKey(id!, 3)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
       stepLock={lockFor(3)} />,
+    // `readOnly` here is `stepDone[4]`, which flips true exactly when this step
+    // becomes sealable — so the seal gets its own signal. Passing `readOnly` to
+    // the bar instead hid the Lock button on the only step it was written for,
+    // the same trap step 3's comment above avoids by keeping `stepDone[3]` out of
+    // its `readOnly`.
     <StepClosure key={stepLockKey(id!, 4)} caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed}
-      stepLock={lockFor(4)} />,
+      lockReadOnly={caseClosed} stepLock={lockFor(4)} />,
   ];
 
   const renewCase = () => navigate('/intake', {
