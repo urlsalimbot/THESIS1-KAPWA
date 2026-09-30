@@ -1,0 +1,114 @@
+[
+  {
+    "name": "step0 done: problems + category present",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "a", "clientCategory": "b" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step0 not done: category missing",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "a" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step1 done: intervention with all requirements met",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "expected": true
+  },
+  {
+    "name": "step1 not done: intervention but requirements outstanding",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "expected": false
+  },
+  {
+    "name": "step1 done: recorded no-intervention decision",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 0,
+    "opts": { "interventionNotNeeded": true },
+    "expected": true
+  },
+  {
+    "name": "step0 done: status-independent, done on a closed case",
+    "step": 0,
+    "caseData": { "status": "closed", "problemsPresented": "a", "clientCategory": "b" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step1 done: status-independent, submit-for-review still done on an assessed case",
+    "step": 1,
+    "caseData": { "status": "assessed" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "expected": true
+  },
+  {
+    "name": "step1 not done: zero interventions and no decision",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step2 done: a referral exists",
+    "step": 2,
+    "caseData": { "status": "active", "referrals": [{ "id": "r1" }] },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step2 not done: no referral and no decision",
+    "step": 2,
+    "caseData": { "status": "active", "referrals": [] },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 needs active status: self-reliance on an enrolled case",
+    "step": 3,
+    "caseData": { "status": "enrolled", "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 done: on an active case",
+    "step": 3,
+    "caseData": { "status": "active", "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step4 not done: signature and outcome on an active case",
+    "step": 4,
+    "caseData": { "status": "active", "clientSignature": "sig", "closureOutcome": "done" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step4 done: on a transitioning case",
+    "step": 4,
+    "caseData": { "status": "transitioning", "clientSignature": "sig", "closureOutcome": "done" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  }
+]
