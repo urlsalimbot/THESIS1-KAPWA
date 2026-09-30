@@ -58,9 +58,22 @@ export class InterAgencyReferralsService {
     private notifService: NotificationsService,
   ) {}
 
+  // MSWDO staff are not linked to an agency on production accounts; create()
+  // substitutes the MSWDO agency as fromAgencyId for them. The scope checks must
+  // recognise the same set or the referral can be created and then become
+  // unreadable by the person who just made it.
+  //
+  // The `!agencyId` half is load-bearing, not decoration: a social worker who
+  // *is* linked to a partner agency (RHU, LTO, …) is agency staff, and must stay
+  // scoped to their own referrals. Only the unlinked MSWDO roles are exempt.
+  private isMswdoStaff(caller: User): boolean {
+    if (caller.agencyId) return false;
+    return caller.role === UserRole.ADMIN || caller.role === UserRole.SW;
+  }
+
   async create(dto: CreateInterAgencyReferralInput, caller: User) {
     let fromAgencyId = caller.agencyId as string | undefined;
-    if (!fromAgencyId && (caller.role === UserRole.ADMIN || caller.role === UserRole.SW)) {
+    if (this.isMswdoStaff(caller)) {
       // MSWDO staff are not linked to an agency on production accounts;
       // fall back to the designated MSWDO agency so case-flow referrals work.
       const mswdo = await this.agencyRepo.findOne({ where: { code: 'MSWDO', isActive: true } });
@@ -487,7 +500,7 @@ export class InterAgencyReferralsService {
     });
     if (!ref) throw new NotFoundException('Referral not found');
     if (
-      caller.role !== 'admin' &&
+      !this.isMswdoStaff(caller) &&
       caller.agencyId !== ref.fromAgencyId &&
       caller.agencyId !== ref.toAgencyId
     ) {

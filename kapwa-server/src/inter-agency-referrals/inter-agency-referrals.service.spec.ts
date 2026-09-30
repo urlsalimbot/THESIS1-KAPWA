@@ -6,7 +6,7 @@ import { Agency } from '../agencies/agency.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { Case } from '../cases/case.entity';
 import { CasesService } from '../cases/cases.service';
-import { User } from '../auth/user.entity';
+import { User, UserRole } from '../auth/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 
 function agencyUser(id: string, agencyId: string) {
@@ -436,6 +436,24 @@ describe('InterAgencyReferralsService', () => {
       await expect(
         service.endorsementLetterPdf('r1', { id: 'x', role: 'social_worker', agencyId: 'ag-rhu' } as any),
       ).rejects.toThrow('not associated with your agency');
+    });
+
+    it('renders the endorsement letter for a social worker with no agencyId', async () => {
+      // MSWDO staff carry no agency on production accounts, so create()
+      // substitutes the MSWDO agency as fromAgencyId. The scope check must
+      // recognise the same caller, or the worker who just issued the letter
+      // is refused it with 403 — the bug this test pins.
+      repoMock.findOne.mockResolvedValue(fullReferral);
+      agencyRepoMock.findOne.mockResolvedValue({ id: 'ag-mswdo', name: 'MSWDO Norzagaray' });
+
+      const pdf = await service.endorsementLetterPdf('r1', {
+        id: 'u-sw',
+        role: UserRole.SW,
+        agencyId: null,
+        fullName: 'Ana Reyes',
+      } as any);
+
+      expect(pdf.subarray(0, 4).toString('latin1')).toBe('%PDF');
     });
 
     it('re-downloads the letter for an existing referral', async () => {
