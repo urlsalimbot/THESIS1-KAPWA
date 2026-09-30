@@ -8,6 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { CaseAssistance } from './case-assistance.entity';
+import { CaseStepLock } from './case-step-lock.entity';
 
 describe('CasesService', () => {
   let service: CasesService;
@@ -15,6 +16,7 @@ describe('CasesService', () => {
   let historyRepoMock: any;
   let familyRepoMock: any;
   let bcRepoMock: any;
+  let stepLocksRepoMock: any;
   let notifMock: any;
 
   beforeEach(async () => {
@@ -80,6 +82,11 @@ describe('CasesService', () => {
       save: jest.fn(),
     };
 
+    // findById attaches the sealed steps, so a case with no seals is the default.
+    stepLocksRepoMock = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CasesService,
@@ -87,6 +94,7 @@ describe('CasesService', () => {
         { provide: getRepositoryToken(CaseHistory), useValue: historyRepoMock },
         { provide: getRepositoryToken(HouseholdMembership), useValue: familyRepoMock },
         { provide: getRepositoryToken(BeneficiaryClaimant), useValue: bcRepoMock },
+        { provide: getRepositoryToken(CaseStepLock), useValue: stepLocksRepoMock },
         { provide: NotificationsService, useValue: notifMock },
         { provide: CasesExportService, useValue: { missingRequiredDocuments: jest.fn().mockResolvedValue([]), issueCoe: jest.fn(), issuePcv: jest.fn() } },
       ],

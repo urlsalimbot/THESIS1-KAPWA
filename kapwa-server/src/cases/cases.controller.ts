@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, HttpCode, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
+import { CaseStepLocksService } from './case-step-locks.service';
 import { GisExportService } from '../gis/gis-export.service';
 import { CaseStatus } from './case.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -42,6 +43,7 @@ export class CasesController {
   constructor(
     private casesService: CasesService,
     private casesExportService: CasesExportService,
+    private stepLocks: CaseStepLocksService,
     private gisExportService: GisExportService,
   ) {}
 
@@ -221,6 +223,33 @@ export class CasesController {
     @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
   ) {
     return this.casesService.updateInterventionDecision(id, body.notNeeded);
+  }
+
+  // Sealing a step is reversible by the same two roles, so both verbs sit
+  // together. The service re-derives whether the step is done; the client is
+  // never asked to vouch for it.
+  @Post(':id/steps/:stepIndex/lock')
+  @Roles('admin', 'social_worker')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Seal a completed case step' })
+  async lockStep(
+    @Param('id') id: string,
+    @Param('stepIndex') stepIndex: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.stepLocks.lock(id, parseInt(stepIndex, 10), req.user);
+  }
+
+  @Delete(':id/steps/:stepIndex/lock')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Release a sealed case step' })
+  async unlockStep(
+    @Param('id') id: string,
+    @Param('stepIndex') stepIndex: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    await this.stepLocks.unlock(id, parseInt(stepIndex, 10), req.user);
+    return { ok: true };
   }
 
   @Get('csr/:controlNo/pdf')

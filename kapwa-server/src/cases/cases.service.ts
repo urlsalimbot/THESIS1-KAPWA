@@ -6,6 +6,7 @@ import { CaseRequirement } from './case-requirement.entity';
 import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
 import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
+import { CaseStepLock } from './case-step-lock.entity';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -33,6 +34,8 @@ export class CasesService {
     private familyRepo: Repository<HouseholdMembership>,
     @InjectRepository(BeneficiaryClaimant)
     private bcRepo: Repository<BeneficiaryClaimant>,
+    @InjectRepository(CaseStepLock)
+    private stepLocksRepo: Repository<CaseStepLock>,
     private notifService: NotificationsService,
     private casesExport: CasesExportService,
     @Optional() private auditLog?: AuditLogService,
@@ -247,6 +250,13 @@ export class CasesService {
         isPrimary: r.is_primary,
       }));
     }
+
+    // Sealed steps travel with the detail payload so the case view's seal strip
+    // does not need a second round-trip. `case_step_locks.case_id` is TEXT and
+    // `cases.id` is UUID, but this is a TypeORM `where` on a bound string, so
+    // there is no text = uuid comparison to trip over.
+    (c as any).stepLocks = (await this.stepLocksRepo.find({ where: { caseId: id }, order: { stepIndex: 'ASC' } }))
+      .map((l) => ({ stepIndex: l.stepIndex, lockedByName: l.lockedByName, lockedAt: l.lockedAt }));
 
     // Load claimant (if different from beneficiary)
     if (c.beneficiary?.personId) {
@@ -645,7 +655,12 @@ export class CasesService {
     return this.caseRepo.save(caseEntity);
   }
 
-  private async getInterventionCount(caseId: string): Promise<number> {
+  /**
+   * Public because the step-done predicate reuses it: a second count query
+   * against `case_interventions` could disagree with this one and let a step be
+   * sealed on a count the activation gate does not see.
+   */
+  async getInterventionCount(caseId: string): Promise<number> {
     const result = await this.caseRepo.query(
       'SELECT COUNT(*) as count FROM case_interventions WHERE case_id = $1',
       [caseId]

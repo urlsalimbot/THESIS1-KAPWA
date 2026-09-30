@@ -112,6 +112,38 @@
     "expected": true
   },
   {
+    "name": "step3 not done: sustainability plan without a self-reliance level",
+    "step": 3,
+    "caseData": { "status": "active", "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 not done: self-reliance level without a sustainability plan",
+    "step": 3,
+    "caseData": { "status": "active", "selfRelianceLevel": 2 },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 done: a partial payload with no status does not cap the step",
+    "step": 3,
+    "caseData": { "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step3 done: an unknown status does not cap the step either",
+    "step": 3,
+    "caseData": { "status": "some_future_status", "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
     "name": "step4 not done: signature and outcome on an active case",
     "step": 4,
     "caseData": { "status": "active", "clientSignature": "sig", "closureOutcome": "done" },
@@ -126,5 +158,37 @@
     "interventionCount": 0,
     "opts": {},
     "expected": true
+  },
+  {
+    "name": "step4 not done: closure outcome without a client signature",
+    "step": 4,
+    "caseData": { "status": "transitioning", "closureOutcome": "done" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step4 not done: client signature without a closure outcome",
+    "step": 4,
+    "caseData": { "status": "transitioning", "clientSignature": "sig" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step0 done: an empty-string problem note is not a problem note",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "", "clientCategory": "b" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step0 not done: an empty client category does not count",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "a", "clientCategory": "" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
   }
 ]
