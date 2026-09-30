@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
 import { Case, CaseStatus } from './case.entity';
@@ -451,35 +452,77 @@ describe('CasesService', () => {
       repoMock.save.mockImplementation(async (c: any) => c);
     });
 
-    it('refuses the hand-off while a step is still open, naming it the way the stepper does', async () => {
+    // At `assessed` (status index 1) the due steps are 0, 1 and 2 — assessment,
+    // intervention, referrals. Steps 4 and 5 are Phase-Out work floored at
+    // `active` and `transitioning`: their Lock buttons are disabled in the UI and
+    // the seal endpoint rejects them, so demanding them here made the gate
+    // unsatisfiable for the only role it applies to.
+    it('allows the hand-off once the steps due at assessed are sealed, without the phase-out steps', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3));
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2));
 
-      await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
-        .rejects.toThrow(/Still open: Case Study & Closure/);
+      const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
+
+      expect(result.status).toBe(CaseStatus.IN_REVIEW);
+      expect(repoMock.save).toHaveBeenCalled();
     });
 
-    // One seal, four gaps: the message is the worker's work list, so it has to
-    // name every open step, by the UI's name, in step order.
-    it('names every open step, in step order', async () => {
+    // Steps 3 and 4 unsealed as well, so this also proves the gate ignores them
+    // rather than passing on some accident of ordering.
+    it('ignores steps that cannot be sealed yet at this status', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2));
+
+      const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
+
+      expect(result.status).toBe(CaseStatus.IN_REVIEW);
+    });
+
+    it('refuses the hand-off while a due step is still open, naming it the way the stepper does', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 2));
+
+      await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
+        .rejects.toThrow(/Still open: Intervention & Requirements/);
+    });
+
+    // One seal, two gaps: the message is the worker's work list, so it has to
+    // name every open *due* step, by the UI's name, in step order — and nothing
+    // else, or a worker at `assessed` is told to seal a step whose Lock button is
+    // disabled.
+    it('names every open due step, in step order, and no step that is not yet due', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
       stepLocksRepoMock.find.mockResolvedValue(sealed(1));
 
       await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
         .rejects.toThrow(
           'Lock every step before flagging this case for admin review. Still open: ' +
-          'Assess & Interview, Inter-agency Referrals, Evaluate Help Given, Case Study & Closure',
+          'Assess & Interview, Inter-agency Referrals',
         );
     });
 
-    it('allows the hand-off once all five steps are sealed', async () => {
+    it('never names a phase-out step in the message at assessed', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      const error = await service
+        .transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' })
+        .then(() => null, (e: Error) => e);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect(error!.message).not.toContain('Evaluate Help Given');
+      expect(error!.message).not.toContain('Case Study & Closure');
+    });
+
+    // Sealing more than is due stays harmless: the worker who got to `in_review`
+    // and kept working should not be blocked from handing on.
+    it('allows the hand-off when all five steps are sealed', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
       stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3, 4));
 
       const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
 
       expect(result.status).toBe(CaseStatus.IN_REVIEW);
-      expect(repoMock.save).toHaveBeenCalled();
     });
 
     // canTransition short-circuits admin, so applying the rule to admin would

@@ -13,18 +13,19 @@ import { User } from '../auth/user.entity';
  * its review gate, and importing the const from this file would make the two
  * services require each other. See `case-step-labels.ts`.
  */
-export { CASE_STEP_LABELS } from './case-step-labels';
-import { CASE_STEP_LABELS } from './case-step-labels';
+export { CASE_STEP_LABELS, stepsDueAt, CASE_STEP_MIN_STATUS } from './case-step-labels';
+import {
+  CASE_STEP_LABELS, CASE_STEP_MIN_STATUS, CASE_STATUS_INDEX,
+} from './case-step-labels';
 
 const LAST_STEP_INDEX = 4;
 
-// Minimum lifecycle position at which a step may be "done". Steps 3 (Evaluate
-// Help Given) and 4 (Case Study & Closure) are Phase-Out work: prefilled data on
-// an earlier-status case must not make them look complete.
-const STATUS_INDEX: Record<string, number> = {
-  enrolled: 0, assessed: 1, in_review: 2, active: 3, transitioning: 4, closed: 5,
-};
-const STEP_MIN_STATUS = [0, 0, 0, 3, 4];
+// Minimum lifecycle position at which a step may be "done" — `CASE_STEP_MIN_STATUS`
+// in `case-step-labels.ts`, which is where it now lives. It moved out of this file
+// so the review gate in `CasesService` can derive "which steps are due here" from
+// the same array rather than keep its own idea of what may be sealed; see
+// `stepsDueAt`. `STEP_STATUS_INDEPENDENT` is why steps 0 and 1 ignore the floor
+// entirely, which is also why the floors for those two are both 0.
 
 // Step 1 (Intervention & Requirements) is the step that *submits* an assessed
 // case for review, so its completion must not itself require a later status —
@@ -175,7 +176,7 @@ export class CaseStepLocksService {
     interventionCount: number,
     opts: StepDoneOpts = {},
   ): boolean {
-    if (!STEP_STATUS_INDEPENDENT.has(i) && !this.statusAtLeast(caseData.status, STEP_MIN_STATUS[i] ?? 0)) {
+    if (!STEP_STATUS_INDEPENDENT.has(i) && !this.statusAtLeast(caseData.status, CASE_STEP_MIN_STATUS[i] ?? 0)) {
       return false;
     }
     switch (i) {
@@ -196,7 +197,7 @@ export class CaseStepLocksService {
 
   /** An unknown or missing status (a partial payload) does not cap the step. */
   private statusAtLeast(status: string | null | undefined, min: number): boolean {
-    const index = status == null ? undefined : STATUS_INDEX[status];
+    const index = status == null ? undefined : CASE_STATUS_INDEX[status];
     if (index === undefined) return true;
     return index >= min;
   }
