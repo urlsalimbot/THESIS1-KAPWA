@@ -7,6 +7,13 @@ import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
 import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
 import { CaseStepLock } from './case-step-lock.entity';
+// A plain const from a leaf module, not `CaseStepLocksService`: that service
+// injects `CasesService`, so depending on it here would be a require cycle — and
+// with `emitDecoratorMetadata` that costs the locks service a Nest DI failure at
+// boot, which no unit test can see. The labels are all this file needs, and an
+// error that spells a step differently from the stepper costs the worker a trip
+// to the UI to find out what is open.
+import { CASE_STEP_LABELS } from './case-step-labels';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -22,6 +29,9 @@ import {
 
 const MAX_RETRY_ATTEMPTS = 3;
 const CONTROL_NO_PAD_WIDTH = 5;
+// Every step there is, ascending. Derived from the label map so a step added to
+// `CASE_STEP_LABELS` joins the review gate instead of silently staying optional.
+const ALL_CASE_STEPS = Object.keys(CASE_STEP_LABELS).map(Number).sort((a, b) => a - b);
 @Injectable()
 export class CasesService {
   private readonly logger = new Logger(CasesService.name);
@@ -359,7 +369,7 @@ export class CasesService {
     return this.transition(id, newStatus, { userRole, actorId });
   }
 
-  private async validateTransition(c: Case, newStatus: CaseStatus) {
+  private async validateTransition(c: Case, newStatus: CaseStatus, userRole?: string) {
     if (!isValidTransition(c.status, newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
     }
@@ -378,6 +388,32 @@ export class CasesService {
     }
     if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && (!c.frvaScore && !c.swdiScore)) {
       throw new BadRequestException('FRVA or SWDI score must be provided before review');
+    }
+    // A case cannot be flagged for admin review until the worker has sealed
+    // every step. This edge is the hand-off — CASE_FSM_ROLES gives it to the
+    // social worker — and it was gated only on an FRVA/SWDI score, so a worker
+    // could flag a case with no intervention recorded at all.
+    //
+    // Sits after the FRVA/SWDI check so the cheaper, more specific complaint
+    // still wins, and reads `stepLocksRepo` directly rather than
+    // `CaseStepLocksService`, which injects this service and would be a cycle.
+    //
+    // The guard keys on the role being *admin*, never on a role being present:
+    // `canTransition` short-circuits admin to true, and an admin that could not
+    // move a case at all would be worse than the gap this closes. A caller that
+    // omits `userRole` is therefore gated, not waved through — fail closed, so
+    // forgetting the argument cannot become the bypass.
+    if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && userRole !== 'admin') {
+      const sealed = await this.stepLocksRepo.find({ where: { caseId: c.id } });
+      const open = ALL_CASE_STEPS.filter((i) => !sealed.some((l) => l.stepIndex === i));
+      if (open.length > 0) {
+        // Name the steps as the stepper does. "step 4" in an error while the UI
+        // says "Case Study & Closure" sends the worker looking for a number.
+        throw new BadRequestException(
+          `Lock every step before flagging this case for admin review. ` +
+          `Still open: ${open.map((i) => CASE_STEP_LABELS[i]).join(', ')}`,
+        );
+      }
     }
     if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
       const interventionCount = await this.getInterventionCount(c.id);
@@ -424,7 +460,7 @@ export class CasesService {
       throw new ForbiddenException(`Role ${opts.userRole} cannot transition from ${c.status} to ${newStatus}`);
     }
 
-    await this.validateTransition(c, newStatus);
+    await this.validateTransition(c, newStatus, opts?.userRole);
 
     c.status = newStatus;
     if (opts?.signature) c.approvedBySignature = opts.signature;

@@ -239,6 +239,30 @@ describe('CaseStepLocksService', () => {
     expect(auditLog.log).toHaveBeenCalledWith('case.step_unlock', 'c1', 'u1', { stepIndex: 0 });
   });
 
+  // `CasesService` needs the step labels for its review gate, and it reads this
+  // service's repository rather than injecting it — see the note on
+  // `case-step-labels.ts`. If the labels ever move back into this file, the two
+  // modules require each other, and under `emitDecoratorMetadata` the
+  // `CasesService` parameter below comes out of the cycle as `undefined`: Nest
+  // then refuses to resolve the constructor and the app dies at boot. Every
+  // other test in the file still passes, because the tests build both services
+  // by hand and never touch the decorator's metadata — so this one loads the
+  // real module graph to check it.
+  it('keeps its CasesService parameter resolvable when loaded after cases.service', () => {
+    let paramtypes: unknown[] = [];
+    jest.isolateModules(() => {
+      // cases.service first: that is the order AppModule -> CasesModule gives,
+      // and it is the order that hands the locks service a half-loaded
+      // `cases.service` back.
+      require('./cases.service');
+      const locks = require('./case-step-locks.service');
+      paramtypes = Reflect.getMetadata('design:paramtypes', locks.CaseStepLocksService);
+    });
+    expect(paramtypes).toHaveLength(3);
+    expect(paramtypes.filter((t) => t === undefined)).toEqual([]);
+    expect((paramtypes[1] as { name: string }).name).toBe('CasesService');
+  });
+
   it('lists the sealed steps of a case in step order', async () => {
     const rows = [
       { stepIndex: 3, lockedBy: 'u2', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },

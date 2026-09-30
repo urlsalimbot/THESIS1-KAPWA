@@ -7,18 +7,12 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { User } from '../auth/user.entity';
 
 /**
- * The one home for step names. The case-view stepper, this service's own
- * rejection message, and the "every step must be sealed" gate in
- * `CasesService` all read these, so a single error message can never spell one
- * step two different ways. Keys are the `step_index` values in the URL.
+ * Re-exported, not declared here: `CasesService` has to name the open steps in
+ * its review gate, and importing the const from this file would make the two
+ * services require each other. See `case-step-labels.ts`.
  */
-export const CASE_STEP_LABELS: Record<number, string> = {
-  0: 'Assess & Interview',
-  1: 'Intervention & Requirements',
-  2: 'Inter-agency Referrals',
-  3: 'Evaluate Help Given',
-  4: 'Case Study & Closure',
-};
+export { CASE_STEP_LABELS } from './case-step-labels';
+import { CASE_STEP_LABELS } from './case-step-labels';
 
 const LAST_STEP_INDEX = 4;
 

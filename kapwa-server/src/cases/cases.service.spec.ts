@@ -428,6 +428,92 @@ describe('CasesService', () => {
     });
   });
 
+  // A case cannot be flagged for admin review until every step is sealed.
+  // assessed -> in_review is the hand-off, and CASE_FSM_ROLES hands that edge to
+  // the social worker, so the gate belongs on the service, not behind a button:
+  // the same worker can PATCH /cases/:id/status and would walk past a client-only
+  // check.
+  describe('all-locked gate on assessed -> in_review', () => {
+    // Assessed, with the score the *previous* check asks for, so these tests
+    // isolate the step-lock rule and nothing else.
+    const assessed = (extra: Record<string, unknown> = {}) => ({
+      id: '1', status: CaseStatus.ASSESSED, controlNo: 'KAPWA-2026-00001',
+      frvaScore: 62, beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
+      ...extra,
+    } as unknown as Case);
+
+    const sealed = (...stepIndexes: number[]) => stepIndexes.map((stepIndex) => ({
+      id: `lock-${stepIndex}`, caseId: '1', stepIndex, lockedBy: 'u1',
+      lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+    }));
+
+    beforeEach(() => {
+      repoMock.save.mockImplementation(async (c: any) => c);
+    });
+
+    it('refuses the hand-off while a step is still open, naming it the way the stepper does', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3));
+
+      await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
+        .rejects.toThrow(/Still open: Case Study & Closure/);
+    });
+
+    // One seal, four gaps: the message is the worker's work list, so it has to
+    // name every open step, by the UI's name, in step order.
+    it('names every open step, in step order', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(1));
+
+      await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
+        .rejects.toThrow(
+          'Lock every step before flagging this case for admin review. Still open: ' +
+          'Assess & Interview, Inter-agency Referrals, Evaluate Help Given, Case Study & Closure',
+        );
+    });
+
+    it('allows the hand-off once all five steps are sealed', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3, 4));
+
+      const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
+
+      expect(result.status).toBe(CaseStatus.IN_REVIEW);
+      expect(repoMock.save).toHaveBeenCalled();
+    });
+
+    // canTransition short-circuits admin, so applying the rule to admin would
+    // leave the office head unable to move a case at all.
+    it('does not apply the all-locked rule to admin', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'admin' });
+
+      expect(result.status).toBe(CaseStatus.IN_REVIEW);
+    });
+
+    // The guard keys on "is not admin", never on "a role was supplied" — a
+    // caller that omits userRole is treated as the worker, not as the office
+    // head, so it cannot walk past the gate by forgetting an argument.
+    it('still gates a caller that passes no role at all', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      await expect(service.transition('1', CaseStatus.IN_REVIEW)).rejects.toThrow(/Lock every step/);
+    });
+
+    // The FRVA/SWDI complaint is cheaper and more specific, so it must still be
+    // the one a worker with a half-filled form sees.
+    it('leaves the FRVA/SWDI complaint in front of the lock complaint', async () => {
+      repoMock.findOne.mockResolvedValue(assessed({ frvaScore: null, swdiScore: null }));
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
+        .rejects.toThrow('FRVA or SWDI score must be provided before review');
+    });
+  });
+
   describe('updateReferralDecision', () => {
     it('should persist the not-needed decision and return the updated case', async () => {
       const existing = { id: '1', status: CaseStatus.ACTIVE, referralNotNeeded: false, updatedAt: new Date() } as Case;
