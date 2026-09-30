@@ -7,6 +7,9 @@ type PsgcRegion = { code: string; name: string; provinces: PsgcProvince[] };
 
 const psgc = psgcRaw as PsgcRegion[];
 
+/** Norzagaray, Bulacan — the municipality this deployment covers. */
+export const NORZAGARAY_MUNCITY_CODE = '0301413000';
+
 const nameByCode = new Map<string, string>();
 
 for (const region of psgc) {
@@ -37,4 +40,24 @@ export function addressNames(
     .map(part => psgcNameFor(part))
     .filter(Boolean)
     .join(', ');
+}
+
+/**
+ * The barangay names of one municipality, in PSGC order.
+ *
+ * Forms that must produce a barangay value the intake address block can resolve
+ * should offer these rather than free text: `IntakeAddressBlock` matches its
+ * options by name, so a misspelt or invented barangay prefills as an empty
+ * select and the mismatch is invisible until the worker opens the case.
+ * Returns names, not codes, because that is what the address records store.
+ */
+export function barangayNamesForMuncity(muncityCode: string): string[] {
+  for (const region of psgc) {
+    for (const province of region.provinces) {
+      for (const muncity of province.muncities) {
+        if (muncity.code === muncityCode) return muncity.barangays.map(b => b.name);
+      }
+    }
+  }
+  return [];
 }

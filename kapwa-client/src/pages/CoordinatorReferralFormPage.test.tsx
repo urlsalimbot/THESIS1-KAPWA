@@ -3,16 +3,23 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CoordinatorReferralFormPage } from './CoordinatorReferralFormPage';
 
-const { mockApiPost, mockNavigate, mockToast } = vi.hoisted(() => ({
+const { mockApiPost, mockNavigate, mockToast, mockUseAuth } = vi.hoisted(() => ({
   mockApiPost: vi.fn(),
   mockNavigate: vi.fn(),
   mockToast: vi.fn(),
+  mockUseAuth: vi.fn(),
 }));
 
 vi.mock('@/lib/api', () => ({
   api: {
     post: (...args: unknown[]) => mockApiPost(...args),
   },
+}));
+
+vi.mock('@/lib/auth-context', () => ({
+  // Defaults to a signed-out user so tests that do not care about the
+  // coordinator's assignment still render; individual cases override it.
+  useAuth: () => mockUseAuth() ?? { user: null },
 }));
 
 vi.mock('react-router-dom', async (importOriginal) => ({
@@ -183,5 +190,98 @@ describe('CoordinatorReferralFormPage extension options', () => {
     await waitFor(() => expect(mockApiPost).toHaveBeenCalled());
     const body = mockApiPost.mock.calls[0][1] as Record<string, unknown>;
     expect(body.extension).toBe('II');
+  });
+});
+
+/**
+ * The barangay field used to be free text. Its value becomes the intake's
+ * `currentAddress.barangay`, and `IntakeAddressBlock` matches its options by
+ * name — so a misspelt or invented barangay prefills as a silently empty
+ * select, invisible until a worker opens the case. The options are now the same
+ * 13 Norzagaray barangays the intake block offers.
+ */
+describe('CoordinatorReferralFormPage barangay options', () => {
+  const NORZAGARAY_BARANGAYS = [
+    'Bangkal', 'Baraka', 'Bigte', 'Bitungol', 'Friendship Village Resources',
+    'Matictic', 'Minuyan', 'Partida', 'Pinagtulayan', 'Poblacion',
+    'San Lorenzo', 'San Mateo', 'Tigbe',
+  ];
+
+  beforeEach(() => {
+    mockApiPost.mockReset();
+    mockNavigate.mockReset();
+    mockToast.mockReset();
+    mockUseAuth.mockReset();
+    mockUseAuth.mockReturnValue({ user: null });
+  });
+
+  it('offers exactly the barangays the intake address block lists for Norzagaray', () => {
+    renderPage();
+
+    const options = [...(screen.getByLabelText('Barangay') as HTMLSelectElement).options]
+      .map(o => o.value)
+      .filter(Boolean);
+    expect(options).toEqual(NORZAGARAY_BARANGAYS);
+  });
+
+  it('starts on the coordinator’s own barangay but still allows any of the 13', () => {
+    // referrals.barangay is derived server-side from assignedBarangay, so this
+    // field records the resident's address, not the routing key. A coordinator
+    // does get walk-ins from a neighbouring barangay.
+    mockUseAuth.mockReturnValue({ user: { id: '1', role: 'coordinator', assignedBarangay: 'Bigte' } });
+    renderPage();
+
+    const select = screen.getByLabelText('Barangay') as HTMLSelectElement;
+    expect(select.value).toBe('Bigte');
+
+    fireEvent.change(select, { target: { value: 'Tigbe' } });
+    expect((screen.getByLabelText('Barangay') as HTMLSelectElement).value).toBe('Tigbe');
+  });
+
+  it('falls back to an unselected state when the assignment is not a Norzagaray barangay', () => {
+    // Seeding the select with a value it has no option for renders a blank
+    // control — legal markup, invisible mistake. Better to start unselected.
+    mockUseAuth.mockReturnValue({ user: { id: '1', role: 'coordinator', assignedBarangay: 'San Jose' } });
+    renderPage();
+
+    expect((screen.getByLabelText('Barangay') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('submits the chosen barangay as a name, matching what the address records store', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', role: 'coordinator', assignedBarangay: 'Bigte' } });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText('Surname *'), { target: { value: 'Dela Cruz' } });
+    fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getByLabelText('Female'));
+    fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: '2015-03-30' } });
+    fireEvent.change(screen.getByLabelText('Barangay'), { target: { value: 'Minuyan' } });
+    fireEvent.change(screen.getByLabelText('Reason for Referral *'), { target: { value: 'Medical' } });
+
+    fireEvent.submit(screen.getByRole('button', { name: /Submit Referral/i }).closest('form') as HTMLFormElement);
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalled());
+    const [path, body] = mockApiPost.mock.calls[0];
+    expect(path).toBe('/referrals');
+    expect(body.address.barangay).toBe('Minuyan');
+  });
+
+  it('stays optional, so a referral without a barangay still submits', async () => {
+    // Behaviour preserved: barangay is not in the required set, and the
+    // prefilled intake can still be completed there.
+    mockUseAuth.mockReturnValue({ user: { id: '1', role: 'coordinator', assignedBarangay: 'Not A Barangay' } });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText('Surname *'), { target: { value: 'Dela Cruz' } });
+    fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getByLabelText('Female'));
+    fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: '2015-03-30' } });
+    fireEvent.change(screen.getByLabelText('Reason for Referral *'), { target: { value: 'Medical' } });
+
+    fireEvent.submit(screen.getByRole('button', { name: /Submit Referral/i }).closest('form') as HTMLFormElement);
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalled());
+    const [, body] = mockApiPost.mock.calls[0];
+    expect(body.address.barangay).toBe('');
   });
 });

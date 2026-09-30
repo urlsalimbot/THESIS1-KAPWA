@@ -11,14 +11,28 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
 import { NAME_EXTENSIONS } from '../lib/constants';
+import { useAuth } from '@/lib/auth-context';
+import { barangayNamesForMuncity, NORZAGARAY_MUNCITY_CODE } from '@/lib/psgc';
 import { User, MapPin, FileText, Phone, Send } from 'lucide-react';
 
 export function CoordinatorReferralFormPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  // The same 13 barangays the intake address block offers for Norzagaray, so a
+  // referral's address prefills the intake as a value that block recognises.
+  const barangays = barangayNamesForMuncity(NORZAGARAY_MUNCITY_CODE);
+  // Seed from the coordinator's own barangay, but only when it is one of the
+  // options. An assignment that is not a Norzagaray barangay would otherwise
+  // leave the select rendering blank — valid state, no visible choice made.
+  const assignedBarangay =
+    user?.assignedBarangay && barangays.includes(user.assignedBarangay)
+      ? user.assignedBarangay
+      : '';
   const [form, setForm] = useState({
     surname: '', firstName: '', middleName: '', extension: '',
-    gender: '', dob: '', phone: '', street: '', barangay: '',
+    gender: '', dob: '', phone: '', street: '',
+    barangay: assignedBarangay,
     reason: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -150,7 +164,17 @@ export function CoordinatorReferralFormPage() {
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="crf-barangay" className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</label>
-                <Input id="crf-barangay" className="h-9" value={form.barangay} onChange={e => update('barangay', e.target.value)} />
+                <select
+                  id="crf-barangay"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  value={form.barangay}
+                  onChange={e => update('barangay', e.target.value)}
+                >
+                  <option value="">{t('coordinator.selectBarangay', 'Select...')}</option>
+                  {barangays.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
