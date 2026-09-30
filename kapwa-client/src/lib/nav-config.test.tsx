@@ -1,10 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { NAV_GROUPS } from './nav-config';
 
 describe('feature toggles', () => {
-  it('hides Analytics from the nav by default (toggle off)', () => {
-    const labels = NAV_GROUPS.map((g) => g.label);
-    expect(labels).not.toContain('Insights');
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('shows Analytics in the nav by default', () => {
+    expect(NAV_GROUPS.map((g) => g.label)).toContain('Insights');
+  });
+
+  it('offers Analytics to staff roles only (not coordinators)', () => {
+    const insights = NAV_GROUPS.find((g) => g.label === 'Insights');
+    const analytics = insights?.items.find((i) => i.path === '/analytics');
+    expect(analytics?.roles).toEqual(['admin', 'social_worker']);
+  });
+
+  it('hides Analytics when the build opts out', async () => {
+    vi.stubEnv('VITE_ENABLE_ANALYTICS', 'false');
+    vi.resetModules();
+    const { NAV_GROUPS: toggledOff } = await import('./nav-config');
+    expect(toggledOff.map((g) => g.label)).not.toContain('Insights');
   });
 });
 
@@ -54,5 +71,18 @@ describe('Team Workspace route', () => {
     })?.element;
     expect(element?.props?.roles).toEqual(['admin', 'social_worker', 'coordinator']);
     expect(router.state.location.pathname).toBe('/team');
+  });
+});
+
+describe('Analytics route', () => {
+  it('registers /analytics for staff (admin + social_worker) by default', async () => {
+    const { router } = await import('@/routes');
+    await router.navigate('/analytics');
+    const match = router.state.matches.find((m) => m.route.path === '/analytics');
+    expect(match).toBeDefined();
+    const element = (match?.route as unknown as {
+      element?: { props?: { roles?: string[] } };
+    })?.element;
+    expect(element?.props?.roles).toEqual(['admin', 'social_worker']);
   });
 });

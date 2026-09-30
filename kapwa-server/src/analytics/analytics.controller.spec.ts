@@ -70,4 +70,22 @@ describe('AnalyticsController', () => {
     await controller.associations({ minSupport: 0.1, minConfidence: 0.6 });
     expect(analytics.getAssociations).toHaveBeenCalledWith({ minSupport: 0.1, minConfidence: 0.6 });
   });
+
+  // Analytics is a staff feature: every endpoint must admit social workers,
+  // not just admins. Guards the client nav/route that now offers it to both.
+  const ENDPOINTS = [
+    'demographics', 'concentration', 'equity', 'inequality', 'forecast',
+    'associations', 'createRun', 'listRuns', 'getRun', 'runMembers', 'exportCsv',
+  ] as const;
+
+  it.each(ENDPOINTS)('%s is available to social workers and admins', (method) => {
+    const roles = Reflect.getMetadata('roles', AnalyticsController.prototype[method]) as string[] | undefined;
+    expect(roles).toEqual(expect.arrayContaining(['admin', 'social_worker']));
+  });
+
+  it.each(ENDPOINTS)('%s stays closed to coordinators and claimants', (method) => {
+    const roles = Reflect.getMetadata('roles', AnalyticsController.prototype[method]) as string[] | undefined;
+    expect(roles).not.toContain('coordinator');
+    expect(roles).not.toContain('claimant');
+  });
 });
