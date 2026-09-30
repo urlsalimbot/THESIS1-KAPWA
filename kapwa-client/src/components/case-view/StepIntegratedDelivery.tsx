@@ -5,9 +5,10 @@ import useSWR, { useSWRConfig } from 'swr';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Lock, FileText } from 'lucide-react';
-import { downloadEndorsementLetter, downloadEndorsementLetterById } from '@/lib/api';
+import { Lock, FileText, Plus, Ban, CheckCircle2 } from 'lucide-react';
+import { api, downloadEndorsementLetter, downloadEndorsementLetterById } from '@/lib/api';
 import { Agency, LEGAL_BASIS_OPTIONS } from '@/components/referrals/referral-utils';
 import { useTranslation } from 'react-i18next';
 
@@ -18,11 +19,14 @@ interface StepIntegratedDeliveryProps {
   readOnly?: boolean;
 }
 
-// The referral step has exactly one confirmation: issue the endorsement letter.
-// That action records the inter-agency referral server-side and downloads the
-// generated letter, so the letter *is* the referral. Once a referral exists the
-// same single button re-downloads it.
-export function StepIntegratedDelivery({ caseId, readOnly }: StepIntegratedDeliveryProps) {
+// Step 3 offers the same two mutually exclusive completions as step 2: refer
+// the client to an agency, or record that no referral is needed. Issuing the
+// endorsement letter is the referral — that one action records it server-side
+// and downloads the generated letter — so "Add Referral" opens that dialog.
+// Until a client UI existed for `PATCH /cases/:id/referral-decision`, the
+// server's `in_review -> active` gate could reject a case for a missing
+// referral decision that no one had any way of recording.
+export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }: StepIntegratedDeliveryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
@@ -32,6 +36,7 @@ export function StepIntegratedDelivery({ caseId, readOnly }: StepIntegratedDeliv
   const [legalBasisCode, setLegalBasisCode] = useState(LEGAL_BASIS_OPTIONS[0]);
   const [notes, setNotes] = useState('');
   const [issuing, setIssuing] = useState(false);
+  const [savingDecision, setSavingDecision] = useState(false);
 
   const { data: referrals, mutate: revalidate } = useSWR<{ id: string; toAgencyId: string }[]>(
     queryKeys.interAgencyReferrals.byCase(caseId),
@@ -40,6 +45,21 @@ export function StepIntegratedDelivery({ caseId, readOnly }: StepIntegratedDeliv
 
   const hasReferrals = (referrals || []).length > 0;
   const latestReferralId = referrals?.[0]?.id;
+  const referralNotNeeded = Boolean(caseData?.referralNotNeeded);
+  const canDecide = userRole === 'admin' || userRole === 'social_worker';
+
+  async function saveDecision(notNeeded: boolean) {
+    setSavingDecision(true);
+    try {
+      await api.patch(`/cases/${caseId}/referral-decision`, { notNeeded });
+      await mutate(queryKeys.cases.detail(caseId));
+      await mutate(queryKeys.cases.list());
+    } catch (err: any) {
+      toast.error(t('caseView.integrated.decisionFailed', 'Could not save the referral decision'), { description: humanizeError(err) });
+    } finally {
+      setSavingDecision(false);
+    }
+  }
 
   async function issue(e: React.FormEvent) {
     e.preventDefault();
@@ -77,34 +97,67 @@ export function StepIntegratedDelivery({ caseId, readOnly }: StepIntegratedDeliv
   return (
     <div className="space-y-4">
       <div className="rounded-lg border bg-card">
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-primary" />
             <h3 className="text-sm font-semibold">{t('caseView.integrated.interAgencyReferrals', 'Inter-Agency Referrals')}</h3>
+            {referralNotNeeded && (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <CheckCircle2 size={10} /> {t('caseView.integrated.referralNotNeededBadge', 'No referral needed')}
+              </Badge>
+            )}
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
+          {/* Once a referral is on record the only remaining action is
+              re-downloading the letter, which the body below owns — a second
+              "Add Referral" would silently orphan the first referral. */}
+          {!readOnly && !(hasReferrals && !referralNotNeeded) && (
+            <div className="flex flex-wrap gap-2">
+              {referralNotNeeded ? (
+                <Button variant="outline" size="sm" disabled={savingDecision} onClick={() => saveDecision(false)}>
+                  {t('caseView.integrated.undoReferralNotNeeded', 'Undo decision')}
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" onClick={() => setIssueOpen(true)}>
+                    <Plus size={14} className="mr-1" /> {t('caseView.integrated.addReferral', 'Add Referral')}
+                  </Button>
+                  {/* Mutually exclusive with a live referral: the activation gate
+                      rejects a case that is flagged referral-only *and* already
+                      carries one. */}
+                  {canDecide && (
+                    <Button variant="secondary" size="sm" disabled={savingDecision} onClick={() => saveDecision(true)}>
+                      <Ban size={14} className="mr-1" /> {t('caseView.integrated.markReferralNotNeeded', 'No Referrals issued')}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="border-t px-4 py-4 flex items-center justify-center">
-          {readOnly ? (
-            <p className="text-xs text-muted-foreground">
-              {hasReferrals
-                ? t('caseView.integrated.issuedHint', 'Endorsement letter issued for this case.')
-                : t('caseView.integrated.noReferralsHint', 'No endorsement letter issued.')}
-            </p>
+          {hasReferrals ? (
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">
+                {t('caseView.integrated.issuedHint', 'Endorsement letter issued for this case.')}
+              </p>
+              {!readOnly && (
+                <Button className="mt-2" size="sm" onClick={redownload} disabled={issuing}>
+                  <FileText size={14} className="mr-1" />
+                  {issuing
+                    ? t('caseView.integrated.issuing', 'Issuing...')
+                    : t('caseView.integrated.endorsementLetter', 'Endorsement Letter')}
+                </Button>
+              )}
+            </div>
           ) : (
-            <Button
-              size="sm"
-              onClick={hasReferrals ? redownload : () => setIssueOpen(true)}
-              disabled={issuing}
-              aria-label={hasReferrals ? t('caseView.integrated.endorsementLetter', 'Endorsement Letter') : undefined}
-            >
-              <FileText size={14} className="mr-1" />
-              {issuing
-                ? t('caseView.integrated.issuing', 'Issuing...')
-                : hasReferrals
-                ? t('caseView.integrated.endorsementLetter', 'Endorsement Letter')
-                : t('caseView.integrated.issueEndorsementLetter', 'Issue Endorsement Letter')}
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              {referralNotNeeded
+                ? t('caseView.integrated.referralNotNeededActive', 'No referral will be issued for this case; the intervention covers the service.')
+                : readOnly
+                ? t('caseView.integrated.noReferralsHint', 'No endorsement letter issued.')
+                : t('caseView.integrated.addReferralHint', 'Refer the client to another agency, or record that no referral is needed.')}
+            </p>
           )}
         </div>
       </div>

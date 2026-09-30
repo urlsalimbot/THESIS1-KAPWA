@@ -477,3 +477,79 @@ describe('CaseViewPage — stepper gating', () => {
     expect(screen.getByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
   });
 });
+describe('CaseViewPage — who acted on this case', () => {
+  beforeAll(() => {
+    if (typeof URL.createObjectURL !== 'function') {
+      URL.createObjectURL = vi.fn(() => 'blob:mock') as unknown as typeof URL.createObjectURL;
+    }
+    if (typeof URL.revokeObjectURL !== 'function') {
+      URL.revokeObjectURL = vi.fn() as unknown as typeof URL.revokeObjectURL;
+    }
+  });
+
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockUseAuth.mockReset();
+    mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
+  function stub(opts: { history?: unknown[]; caseData?: Record<string, unknown> } = {}) {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve(opts.history ?? []);
+      if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, ...(opts.caseData ?? {}) });
+      return Promise.resolve(null);
+    });
+  }
+
+  it('names the actor and their role in the case history', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    stub({
+      history: [
+        {
+          id: 'h1', fromStatus: 'assessed', toStatus: 'in_review', transitionType: 'standard',
+          createdAt: '2026-06-02T00:00:00Z',
+          changedById: 'u9', changedByRole: 'social_worker', changedByName: 'Lorna Santos',
+        },
+      ],
+    });
+
+    renderWithSWR(<CaseViewPage />);
+
+    // A bare role slug is unactionable for a supervisor reading the trail.
+    expect(await screen.findByText(/Lorna Santos — MSWDO Social Worker/)).toBeTruthy();
+  });
+
+  it('falls back to the role alone when the entry has no resolvable actor', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    stub({
+      history: [
+        {
+          id: 'h2', fromStatus: null, toStatus: 'enrolled', transitionType: 'standard',
+          createdAt: '2026-06-01T00:00:00Z',
+          changedById: null, changedByRole: 'admin', changedByName: null,
+        },
+      ],
+    });
+
+    renderWithSWR(<CaseViewPage />);
+
+    expect(await screen.findByText(/by MSWDO Admin/)).toBeTruthy();
+  });
+
+  it('shows Approved By as the same name — role pair', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    stub({ caseData: { approvedByName: 'Lorna Santos', approvedByRole: 'social_worker' } });
+
+    renderWithSWR(<CaseViewPage />);
+
+    const approved = await screen.findByText('Lorna Santos — MSWDO Social Worker');
+    expect(approved.textContent).toBe('Lorna Santos — MSWDO Social Worker');
+  });
+});

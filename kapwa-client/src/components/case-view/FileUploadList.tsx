@@ -32,15 +32,42 @@ export interface FileUploadListProps {
   maxBytes?: number;
   compact?: boolean;
   /**
-   * Extra controls rendered inside the single file row (on-site status, verify
-   * toggle). Injected by callers that own per-document workflow state, so a
-   * document is never listed twice just to carry that state.
+   * Extra controls rendered inside the single file row (on-site status). Injected
+   * by callers that own per-document workflow state, so a document is never
+   * listed twice just to carry that state.
    */
   renderDocExtras?: (doc: FilingDoc) => ReactNode;
+  /**
+   * Controls rendered in the preview dialog's footer. Actions that mean "I have
+   * read this document" belong here, not on the row: a confirm button sitting
+   * one row above its own file can be fired without ever opening the file.
+   */
+  renderPreviewFooter?: (doc: FilingDoc) => ReactNode;
 }
 
 const DEFAULT_ACCEPT = '.pdf,.jpg,.jpeg,.png,.gif,.doc,.docx';
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
+
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'avif']);
+
+function extOf(name: string) {
+  return name.split('.').pop()?.toLowerCase() ?? '';
+}
+
+/**
+ * Classify a document by mime type *or* extension. An upload that lost its
+ * recorded mimeType is still a PDF on disk, and treating it as unviewable would
+ * silently downgrade a readable document to a download button.
+ */
+function docKind(doc: FilingDoc): 'image' | 'pdf' | 'other' {
+  if (doc.mimeType?.startsWith('image/') || (!doc.mimeType && IMAGE_EXTS.has(extOf(doc.originalName || '')))) {
+    return 'image';
+  }
+  if (doc.mimeType === 'application/pdf' || extOf(doc.originalName || '') === 'pdf') {
+    return 'pdf';
+  }
+  return 'other';
+}
 
 interface InFlight {
   name: string;
@@ -56,12 +83,16 @@ export function FileUploadList({
   maxBytes = DEFAULT_MAX_BYTES,
   compact = false,
   renderDocExtras,
+  renderPreviewFooter,
 }: FileUploadListProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [inFlight, setInFlight] = useState<InFlight | null>(null);
   const [preview, setPreview] = useState<FilingDoc | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -71,11 +102,16 @@ export function FileUploadList({
   const accepted = new Set(
     accept.split(',').map((e) => e.trim().replace(/^\./, '').toLowerCase()).filter(Boolean),
   );
+  const previewKind = preview ? docKind(preview) : 'other';
+  // "No bytes yet and no failure yet" is still loading — the effect that sets
+  // previewLoading runs after the dialog's first paint, and without this an
+  // image would flash a broken src in that gap.
+  const previewBusy = previewLoading || (!!preview && !previewUrl && !previewFailed);
 
   useEffect(() => {
     const urls: Record<string, string> = {};
     let cancelled = false;
-    const imageDocs = docs.filter((d) => d.mimeType?.startsWith('image/'));
+    const imageDocs = docs.filter((d) => docKind(d) === 'image');
     (async () => {
       for (const d of imageDocs) {
         try {
@@ -92,7 +128,46 @@ export function FileUploadList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docs]);
 
-  const extOf = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
+  // The preview blob is tracked apart from the row thumbnails on purpose: the
+  // thumbnail effect above re-runs on every list revalidation and revokes what
+  // it created, which would blank an open preview mid-read.
+  useEffect(() => {
+    if (!preview) return;
+    let revoked = false;
+    let url: string | null = null;
+    setPreviewUrl(null);
+    setPreviewFailed(false);
+    setPreviewLoading(true);
+    (async () => {
+      try {
+        const fetched = await getFilingObjectUrl(preview.id);
+        if (revoked) {
+          URL.revokeObjectURL(fetched);
+          return;
+        }
+        url = fetched;
+        setPreviewUrl(fetched);
+      } catch (e) {
+        if (!revoked) {
+          setPreviewFailed(true);
+          toast.error(t('caseView.documents.previewFailed', 'Could not open the document'), {
+            description: humanizeError(e),
+          });
+        }
+      } finally {
+        if (!revoked) setPreviewLoading(false);
+      }
+    })();
+    return () => {
+      revoked = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [preview, t]);
+
+  function closePreview() {
+    setPreview(null);
+    setPreviewUrl(null);
+  }
 
   function validate(file: File): string | null {
     if (!accepted.has(extOf(file.name))) {
@@ -158,7 +233,8 @@ export function FileUploadList({
       {docs.length > 0 && (
         <div className="space-y-1">
           {docs.map(doc => {
-            const isImage = doc.mimeType?.startsWith('image/');
+            const isImage = docKind(doc) === 'image';
+            const name = doc.originalName || doc.id;
             return (
               <div key={doc.id} className={`flex items-center gap-1.5 text-xs ${indent}`}>
                 {isImage ? (
@@ -169,11 +245,13 @@ export function FileUploadList({
                 {/* The row itself is the preview target — no link styling, so it
                     cannot be mistaken for one of several similar-looking links. */}
                 <button
+                  type="button"
                   onClick={() => setPreview(doc)}
-                  className="min-w-0 flex-1 cursor-pointer rounded px-1 py-0.5 text-left transition-colors hover:bg-muted/50"
+                  aria-label={t('caseView.documents.previewNamed', 'Preview {{name}}', { name })}
+                  className="min-w-0 flex-1 cursor-pointer rounded px-1 py-0.5 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                   title={t('caseView.documents.preview', 'Preview')}
                 >
-                  <span className="block truncate font-medium text-foreground">{doc.originalName || doc.id}</span>
+                  <span className="block truncate font-medium text-foreground">{name}</span>
                   <span className="block text-[10px] text-muted-foreground">{(doc.fileSize / 1024).toFixed(0)} KB</span>
                 </button>
                 {renderDocExtras?.(doc)}
@@ -256,27 +334,79 @@ export function FileUploadList({
         </div>
       )}
 
-      <Dialog open={!!preview} onOpenChange={(open) => { if (!open) setPreview(null); }}>
-        <DialogContent>
+      <Dialog
+        open={!!preview}
+        onOpenChange={(open) => { if (!open) closePreview(); }}
+      >
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="truncate">{preview?.originalName || preview?.id}</DialogTitle>
-            <DialogDescription>{preview ? `${(preview.fileSize / 1024).toFixed(0)} KB` : ''}</DialogDescription>
+            <DialogDescription>
+              {preview
+                ? `${(preview.fileSize / 1024).toFixed(0)} KB${preview.mimeType ? ` · ${preview.mimeType}` : ''}`
+                : ''}
+            </DialogDescription>
           </DialogHeader>
-          {preview?.mimeType?.startsWith('image/') ? (
-            <img src={thumbs[preview.id]} alt={preview?.originalName} className="max-h-[60vh] w-full rounded border object-contain" />
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <FileText size={40} className="text-muted-foreground" />
-              <Button variant="outline" size="sm" onClick={async () => {
-                if (!preview) return;
-                try {
-                  window.open(await getFilingObjectUrl(preview.id), '_blank');
-                } catch {
-                  toast.error(t('caseView.documents.downloadFailed', 'Download failed'));
-                }
-              }}>
-                {t('caseView.documents.openFile', 'Open file')}
+
+          {previewBusy && (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground" aria-busy="true">
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+              {t('caseView.documents.previewLoading', 'Loading document…')}
+            </div>
+          )}
+
+          {!previewBusy && previewFailed && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <FileText size={40} className="text-muted-foreground" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground">
+                {t('caseView.documents.previewUnavailable', 'This document could not be loaded.')}
+              </p>
+            </div>
+          )}
+
+          {!previewBusy && !previewFailed && preview && previewKind === 'image' && (
+            <img
+              src={previewUrl ?? undefined}
+              alt={preview.originalName || preview.id}
+              className="max-h-[70vh] w-full rounded border object-contain"
+            />
+          )}
+
+          {/* A PDF blob URL renders in the browser's own viewer, so paging and
+              zoom come for free and need no PDF dependency. */}
+          {!previewBusy && !previewFailed && preview && previewKind === 'pdf' && previewUrl && (
+            <iframe
+              src={previewUrl}
+              title={t('caseView.documents.previewNamed', 'Preview {{name}}', { name: preview.originalName || preview.id })}
+              className="h-[70vh] w-full rounded border"
+            />
+          )}
+
+          {!previewBusy && !previewFailed && preview && previewKind === 'other' && (
+            /* No browser renders .doc/.docx, and handing the blob to
+               window.open is not a preview: pop-up blockers eat it silently and
+               it navigates the worker off the case. Say so and offer the file. */
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <FileText size={40} className="text-muted-foreground" aria-hidden="true" />
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {t('caseView.documents.notViewable', 'This file type cannot be shown in the browser. Download it to view.')}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { downloadFilingDoc(preview.id, preview.originalName || 'document').catch(() =>
+                  toast.error(t('caseView.documents.downloadFailed', 'Download failed')),
+                ); }}
+              >
+                <Download size={14} className="mr-1.5" aria-hidden="true" />
+                {t('caseView.documents.download', 'Download')}
               </Button>
+            </div>
+          )}
+
+          {renderPreviewFooter && preview && (
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3">
+              {renderPreviewFooter(preview)}
             </div>
           )}
         </DialogContent>

@@ -752,6 +752,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           'id', hm.id, 'fullName', TRIM(CONCAT(p3.first_name, ' ', p3.surname)),
           'surname', p3.surname, 'firstName', p3.first_name, 'middleName', p3.middle_name,
           'gender', p3.gender, 'dob', to_char(p3.dob, 'YYYY-MM-DD'),
+          'civilStatus', p3.civil_status,
           'relationship', hm.relationship,
           'age', EXTRACT(YEAR FROM AGE(NOW(), p3.dob))::integer, 'occupation', p3.occupation,
           'income', p3.estimated_monthly_income, 'status', hm.status

@@ -9,8 +9,10 @@ interface RequirementFileUploadProps {
   canUpload?: boolean;
   docs: FilingDoc[];
   onChanged: () => void;
-  /** Per-file controls (on-site status, verify toggle) rendered in the file row. */
+  /** Per-file status rendered in the file row. */
   renderDocExtras?: (doc: FilingDoc) => ReactNode;
+  /** Per-file actions rendered in the preview dialog footer. */
+  renderPreviewFooter?: (doc: FilingDoc) => ReactNode;
 }
 
 export function RequirementFileUpload(props: RequirementFileUploadProps) {
@@ -21,6 +23,7 @@ export function RequirementFileUpload(props: RequirementFileUploadProps) {
       canUpload={props.canUpload}
       onChanged={props.onChanged}
       renderDocExtras={props.renderDocExtras}
+      renderPreviewFooter={props.renderPreviewFooter}
       formExtras={{ caseId: props.caseId, requirementKey: props.requirementKey, category: 'requirement' }}
     />
   );

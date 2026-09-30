@@ -34,7 +34,8 @@ export interface MatchCandidate {
   allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;
   familyMembers: Array<{
     id: string; fullName: string; surname: string; firstName: string;
-    middleName?: string; gender: string; dob?: string; relationship: string;
+    middleName?: string; gender: string; dob?: string; civilStatus?: string;
+    relationship: string;
     age: number; occupation: string; income: number; status: string;
   }>;
   pastCases: Array<{ controlNo: string; beneficiaryName: string; status: string; createdAt: string }>;
@@ -244,11 +245,23 @@ function HouseholdMembers({ candidate, t }: { candidate: MatchCandidate; t: TFun
           // Highlight the person who actually matched — for a member match that
           // is one of the rows below, and losing them in a long roster is easy.
           const isMatched = m.id === candidate.matchedPerson?.id;
+          // The roster exists to let a worker probe "is this the same family?"
+          // without opening a record, so each row carries the attributes that
+          // actually distinguish a relative: age, sex, civil status, work and
+          // household status. Empty values are dropped rather than rendered as
+          // a row of em dashes.
+          const details = [
+            m.age ? `${m.age} ${t('intake.matchProbeYears', 'y/o')}` : null,
+            m.gender || null,
+            m.civilStatus || null,
+            m.occupation || null,
+            m.status || null,
+          ].filter(Boolean);
           return (
             <li
               key={m.id}
               className={cn(
-                'flex items-baseline justify-between gap-3 px-3 py-1.5 text-sm',
+                'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-1.5 text-sm',
                 isMatched && 'bg-primary/5 font-semibold text-primary',
               )}
             >
@@ -260,9 +273,11 @@ function HouseholdMembers({ candidate, t }: { candidate: MatchCandidate; t: TFun
                   </span>
                 )}
               </span>
-              <span className="shrink-0 text-xs font-normal text-muted-foreground">
-                {m.age ? `${m.age} ${t('intake.matchProbeYears', 'y/o')}` : ''}
-              </span>
+              {details.length > 0 && (
+                <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
+                  {details.join(' · ')}
+                </span>
+              )}
             </li>
           );
         })}

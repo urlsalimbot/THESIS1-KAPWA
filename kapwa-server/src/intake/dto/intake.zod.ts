@@ -145,7 +145,8 @@ export interface MatchCandidate {
   allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;
   familyMembers: Array<{
     id: string; fullName: string; surname: string; firstName: string;
-    middleName?: string; gender: string; dob?: string; relationship: string;
+    middleName?: string; gender: string; dob?: string; civilStatus?: string;
+    relationship: string;
     age: number; occupation: string; income: number; status: string;
   }>;
   /** Cases for the household (any beneficiary) plus the matched person's own, newest first. */

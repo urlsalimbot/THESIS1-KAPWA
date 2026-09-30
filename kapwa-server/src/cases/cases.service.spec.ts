@@ -71,6 +71,7 @@ describe('CasesService', () => {
     historyRepoMock = {
       save: jest.fn().mockResolvedValue({}),
       find: jest.fn().mockResolvedValue([]),
+      query: jest.fn().mockResolvedValue([]),
     };
 
     bcRepoMock = {
@@ -402,6 +403,69 @@ describe('CasesService', () => {
     it('should throw if the case is not found', async () => {
       repoMock.findOne.mockResolvedValue(null);
       await expect(service.updateReferralDecision('nonexistent', true)).rejects.toThrow('Case not found');
+    });
+  });
+
+  describe('getHistory', () => {
+    // The timeline must name the actor, not just the role slug: a history row
+    // that reads "by social worker" is unactionable for a supervisor.
+    it('resolves the actor display name alongside the role', async () => {
+      historyRepoMock.query.mockResolvedValue([
+        {
+          id: 'h1', case_id: 'c1', from_status: 'assessed', to_status: 'in_review',
+          changed_by_role: 'social_worker', changed_by_id: 'u1', remarks: null,
+          transition_type: 'standard', override_reason: null, created_at: new Date('2026-01-02'),
+          changed_by_name: 'Lorna Santos',
+        },
+      ]);
+
+      const rows = await service.getHistory('c1');
+
+      expect(rows[0].changedByName).toBe('Lorna Santos');
+      expect(rows[0].changedByRole).toBe('social_worker');
+      expect(rows[0].toStatus).toBe('in_review');
+    });
+
+    it('leaves changedByName null for system-driven entries with no actor', async () => {
+      // Postgres returns '' (not NULL) for CONCAT_WS over all-NULL name parts,
+      // so the mapping has to fold empty strings back to null or every consumer
+      // ends up distinguishing '' from "absent".
+      historyRepoMock.query.mockResolvedValue([
+        {
+          id: 'h2', case_id: 'c1', from_status: '', to_status: 'enrolled',
+          changed_by_role: '', changed_by_id: null, remarks: 'Imported',
+          transition_type: 'standard', override_reason: '', created_at: new Date('2026-01-01'),
+          changed_by_name: '',
+        },
+      ]);
+
+      const rows = await service.getHistory('c1');
+
+      expect(rows[0].changedByName).toBeNull();
+      expect(rows[0].changedByRole).toBeUndefined();
+      expect(rows[0].fromStatus).toBeUndefined();
+      expect(rows[0].overrideReason).toBeUndefined();
+      expect(rows[0].remarks).toBe('Imported');
+    });
+
+    it('keeps a full actor name including middle name and suffix', async () => {
+      historyRepoMock.query.mockResolvedValue([
+        {
+          id: 'h3', case_id: 'c1', from_status: 'in_review', to_status: 'active',
+          changed_by_role: 'admin', changed_by_id: 'u2', remarks: null,
+          transition_type: 'standard', override_reason: null, created_at: new Date('2026-01-03'),
+          changed_by_name: 'Ana Santos Dela Cruz Jr.',
+        },
+      ]);
+
+      const rows = await service.getHistory('c1');
+
+      expect(rows[0].changedByName).toBe('Ana Santos Dela Cruz Jr.');
+    });
+
+    it('scopes the join to the requested case', async () => {
+      await service.getHistory('case-42');
+      expect(historyRepoMock.query).toHaveBeenCalledWith(expect.stringContaining('FROM case_history'), ['case-42']);
     });
   });
 

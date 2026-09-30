@@ -175,3 +175,100 @@ describe('StepImplementHIP adhoc intervention', () => {
     });
   });
 });
+
+describe('StepImplementHIP — completing step 2', () => {
+  beforeEach(() => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPatch.mockReset();
+    mockUpload.mockReset();
+    mockApiGet.mockResolvedValue([]);
+    mockApiPost.mockResolvedValue({});
+    mockApiPatch.mockResolvedValue({});
+    mockUpload.mockResolvedValue({});
+  });
+
+  function renderWith(caseDataOverride: Record<string, unknown>, interventions: unknown[] = []) {
+    mockApiGet.mockImplementation(async (key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('interventions')) return interventions;
+      if (k.includes('programs')) return [];
+      return [];
+    });
+    return render(
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+        <StepImplementHIP caseId="case-1" caseData={caseDataOverride} userRole="social_worker" />
+      </SWRConfig>,
+    );
+  }
+
+  it('confirms an intervention in a modal rather than an inline form', async () => {
+    renderWith(caseData);
+
+    expect(screen.queryByText(/New Intervention/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+
+    // The form lives in a dialog with a real title, the way the referral step
+    // already confirms an endorsement.
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /New Intervention/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Save Intervention/ })).toBeTruthy();
+  });
+
+  it('discards a half-typed intervention when the modal is cancelled', async () => {
+    renderWith(caseData);
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'adhoc:other' } });
+    const nameInput = screen.getByPlaceholderText(/Counseling Session/);
+    fireEvent.change(nameInput, { target: { value: 'Half typed' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+
+    // Reopening must not resurrect the abandoned draft.
+    expect(await screen.findByLabelText(/Program \/ Service/)).toHaveValue('');
+  });
+
+  it('records "no interventions issued" through the decision endpoint', async () => {
+    renderWith(caseData);
+
+    fireEvent.click(screen.getByRole('button', { name: /No interventions issued/ }));
+
+    await waitFor(() =>
+      expect(mockApiPatch).toHaveBeenCalledWith('/cases/case-1/intervention-decision', { notNeeded: true }),
+    );
+  });
+
+  it('hides Add Intervention once "no interventions issued" is decided', async () => {
+    // Both channels open at once is what the activation gate rejects, so the
+    // add affordance has to disappear with the decision, not sit beside it.
+    renderWith({ ...caseData, interventionNotNeeded: true });
+
+    expect(await screen.findByText(/Intervention not needed/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Add Intervention/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /No interventions issued/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Undo decision/ })).toBeTruthy();
+  });
+
+  it('withdraws the no-intervention option once a delivery is logged', async () => {
+    renderWith(caseData, [{ id: 'iv-1', caseId: 'case-1', serviceName: 'Medical Assistance', amount: 500 }]);
+
+    expect(await screen.findByRole('button', { name: /Add Intervention/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /No interventions issued/ })).toBeNull();
+  });
+
+  it('gives the issued intervention a heading and a prominent amount', async () => {
+    // The delivered service is the substantive fact of the step; it must not
+    // read as one more muted metadata row.
+    renderWith(caseData, [{ id: 'iv-1', caseId: 'case-1', serviceName: 'Medical Assistance', amount: 5000, deliveryDate: '2026-01-15' }]);
+
+    const heading = await screen.findByRole('heading', { name: 'Medical Assistance' });
+    expect(heading.className).toContain('text-lg');
+    expect(heading.className).toContain('font-semibold');
+
+    const amount = screen.getByText('₱5,000');
+    expect(amount.className).toContain('font-semibold');
+    expect(amount.className).toContain('tabular-nums');
+  });
+});

@@ -82,6 +82,25 @@ const ROLE_LABELS: Record<string, string> = {
   agency_staff: 'Agency Staff',
 };
 
+function roleLabel(role?: string | null): string | null {
+  if (!role) return null;
+  return ROLE_LABELS[role] || String(role).replace(/_/g, ' ');
+}
+
+/**
+ * Attribution for anything a person did on this case: "Lorna Santos — MSWDO
+ * Social Worker". A bare role is unactionable for a supervisor reading the
+ * trail, so the name leads whenever the server could resolve one. Entries with
+ * no actor (system transitions, bulk export) degrade to the role alone rather
+ * than rendering an empty attribution.
+ */
+function actorLabel(name?: string | null, role?: string | null): string | null {
+  const n = name?.trim() || null;
+  const r = roleLabel(role);
+  if (n && r) return `${n} — ${r}`;
+  return n || r;
+}
+
 export function CaseViewPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -468,12 +487,7 @@ export function CaseViewPage() {
                 {(caseData.approvedByName || caseData.approvedByRole) && (
                   <Meta
                     label={t('cases.approvedBy', 'Approved By')}
-                    value={[
-                      caseData.approvedByName,
-                      caseData.approvedByRole
-                        ? (ROLE_LABELS[caseData.approvedByRole] || String(caseData.approvedByRole).replace(/_/g, ' '))
-                        : null,
-                    ].filter(Boolean).join(' — ')}
+                    value={actorLabel(caseData.approvedByName, caseData.approvedByRole) || '—'}
                   />
                 )}
                 <Meta
@@ -841,7 +855,10 @@ export function CaseViewPage() {
                         </div>
                         <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                           {formatDateTime(entry.createdAt)}
-                          {entry.changedByRole && t('cases.byRole', ' · by {{role}}', { role: entry.changedByRole.replace(/_/g, ' ') })}
+                          {actorLabel(entry.changedByName, entry.changedByRole) &&
+                            t('cases.byActor', ' · by {{actor}}', {
+                              actor: actorLabel(entry.changedByName, entry.changedByRole),
+                            })}
                         </p>
                         {entry.remarks && (
                           <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{entry.remarks}</p>

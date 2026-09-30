@@ -113,31 +113,44 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
           return (
             <div key={req} className="border rounded-md overflow-hidden">
               <div className="flex items-center gap-3 px-3 py-2">
-                <button
-                  type="button"
-                  onClick={() => canVerify && setRequirementMet(req, !done)}
-                  disabled={saving || !canVerify}
-                  title={canVerify
-                    ? t('caseView.implement.onSiteDirectHint', 'Mark that the client passed this requirement on-site directly')
-                    : undefined}
-                  className="flex items-center gap-3 flex-1 text-left disabled:cursor-default"
-                >
+                {/* The label is not a control. It used to be a full-row button
+                    that flipped the requirement, which made satisfying a
+                    documentary need invisible: a worker clicking a heading had
+                    no way to know they were recording a decision. */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   {done
                     ? <CheckCircle2 size={18} className="text-primary shrink-0" />
                     : <Circle size={18} className="text-muted-foreground shrink-0" />
                   }
                   <span className={`text-sm ${done ? 'text-muted-foreground' : ''}`}>{req}</span>
-                </button>
+                </div>
                 {uploadedDocs.length > 0 && (
                   <Badge variant="outline" className="text-[10px] gap-1">
                     <FileText size={10} /> {uploadedDocs.length}
                   </Badge>
                 )}
+                {/* The one case no document can cover: the client handed the
+                    original over on-site and nothing was scanned. Kept as an
+                    explicit control so it stops hiding behind a heading click. */}
+                {canVerify && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 shrink-0 text-xs"
+                    disabled={saving}
+                    title={t('caseView.implement.onSiteDirectHint', 'Record that the client passed this on-site with no copy uploaded')}
+                    onClick={() => setRequirementMet(req, !done)}
+                  >
+                    {done
+                      ? t('caseView.implement.undoOnSiteDirect', 'Undo')
+                      : t('caseView.implement.passedOnSiteNoCopy', 'Passed on-site, no copy')}
+                  </Button>
+                )}
               </div>
 
               {/* The file list is the single place an uploaded document appears.
-                  Its status and on-site verification ride along in the file row
-                  (renderDocExtras) instead of a second, near-identical listing. */}
+                  Its review status rides along in the file row (renderDocExtras)
+                  instead of a second, near-identical listing. */}
               <RequirementFileUpload
                 caseId={caseId}
                 requirementKey={req}
@@ -147,8 +160,8 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                 renderDocExtras={(doc) => {
                   const verifiedAt = (doc as { verifiedAt?: string | null }).verifiedAt;
                   const statusLabel = verifiedAt
-                    ? t('caseView.implement.verifiedOnSite', 'Verified on-site')
-                    : t('caseView.implement.pendingOnSite', 'Pending on-site');
+                    ? t('caseView.implement.reviewedOnSite', 'Reviewed on-site')
+                    : t('caseView.implement.pendingOnSite', 'Pending review');
                   return (
                     <div className="flex shrink-0 items-center gap-1.5" title={statusLabel}>
                       {verifiedAt ? (
@@ -160,20 +173,29 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                           <Clock size={10} /> <span className="hidden sm:inline">{statusLabel}</span>
                         </Badge>
                       )}
-                      {canVerify && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-1.5"
-                          disabled={saving}
-                          onClick={() => setVerified(doc.id, !verifiedAt)}
-                        >
-                          {verifiedAt
-                            ? t('caseView.implement.unverify', 'Undo')
-                            : t('caseView.implement.verify', 'Verify on-site')}
-                        </Button>
-                      )}
                     </div>
+                  );
+                }}
+                /* "Review" is the worker's act of reading the single document
+                   against the requirement, so the control that records it lives
+                   in the preview dialog — the only place the document is
+                   actually on screen. It is the same server flag as on-site
+                   verification, so the checklist, the stepper and the activation
+                   gate cannot disagree about what is satisfied. */
+                renderPreviewFooter={(doc) => {
+                  if (!canVerify) return null;
+                  const verifiedAt = (doc as { verifiedAt?: string | null }).verifiedAt;
+                  return (
+                    <Button
+                      variant={verifiedAt ? 'outline' : 'default'}
+                      size="sm"
+                      disabled={saving}
+                      onClick={() => setVerified(doc.id, !verifiedAt)}
+                    >
+                      {verifiedAt
+                        ? t('caseView.implement.unverify', 'Undo')
+                        : t('caseView.implement.confirmReview', 'Confirm review')}
+                    </Button>
                   );
                 }}
               />

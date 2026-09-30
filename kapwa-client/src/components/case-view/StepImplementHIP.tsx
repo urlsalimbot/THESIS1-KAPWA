@@ -6,12 +6,17 @@ import { queryKeys } from '@/lib/query-keys';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Calendar, DollarSign, FileText, Lock, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Plus, Trash2, Calendar, FileText, Lock, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
 import { CaseRequirements } from './CaseRequirements';
 import { FileUploadList } from './FileUploadList';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../lib/format';
+import { humanizeError } from '@/lib/errors';
 
 interface Intervention {
   id: string;
@@ -49,8 +54,8 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
   );
   const { data: programs = [] } = useSWR<Program[]>(queryKeys.programs.list());
 
-  const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({
+  const [addOpen, setAddOpen] = useState(false);
+  const EMPTY_FORM = {
     programId: '',
     serviceName: '',
     category: '',
@@ -59,7 +64,14 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
     modeOfDelivery: '',
     fundSource: '',
     notes: '',
-  });
+  };
+  const [form, setForm] = useState(EMPTY_FORM);
+  /** Cancel discards a half-typed intervention, so the reset has to happen on
+   *  the way out too — otherwise reopening the dialog shows stale values. */
+  function closeAdd() {
+    setAddOpen(false);
+    setForm(EMPTY_FORM);
+  }
   const [saving, setSaving] = useState(false);
   const [savingDecision, setSavingDecision] = useState(false);
   const interventionNotNeeded = Boolean(caseData?.interventionNotNeeded);
@@ -91,8 +103,11 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
         notes: form.notes || null,
       });
       await mutate();
-      setAdding(false);
-      setForm({ programId: '', serviceName: '', category: '', deliveryDate: '', amount: '', modeOfDelivery: '', fundSource: '', notes: '' });
+      closeAdd();
+      // The requirements checklist is derived from the interventions of this
+      // case, so a newly logged delivery changes which documents step 2 asks
+      // for — revalidate the detail or the checklist stays one step behind.
+      await globalMutate(queryKeys.cases.detail(caseId));
     } catch (e) {
       console.error('Failed to add intervention:', e);
     } finally {
@@ -113,10 +128,12 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
     setSavingDecision(true);
     try {
       await api.patch(`/cases/${caseId}/intervention-decision`, { notNeeded });
-      globalMutate(queryKeys.cases.detail(caseId));
-      globalMutate(queryKeys.cases.list());
+      await globalMutate(queryKeys.cases.detail(caseId));
+      await globalMutate(queryKeys.cases.list());
     } catch (e) {
-      console.error('Failed to save intervention decision:', e);
+      toast.error(t('caseView.implement.interventionDecisionFailed', 'Could not save the intervention decision'), {
+        description: humanizeError(e),
+      });
     } finally {
       setSavingDecision(false);
     }
@@ -168,154 +185,212 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
         </div>
       )}
 
-      {/* Summary */}
+      {/* Record header — the two mutually exclusive ways to complete step 2 sit
+          together: log a delivery, or record that none is issued. Recorded in
+          the header (not a separate card further down) so the worker never has
+          to hunt for the other option. */}
       <div className="rounded-lg border bg-card px-4 py-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold">{t('caseView.implement.interventionRecord', 'Intervention Record')}</h3>
+            {interventionNotNeeded && (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <CheckCircle2 size={10} /> {t('caseView.implement.interventionNotNeededBadge', 'Intervention not needed')}
+              </Badge>
+            )}
             {readOnly && <Lock size={14} className="text-muted-foreground" />}
           </div>
           {!readOnly && (
-            <Button size="sm" onClick={() => setAdding(!adding)}>
-              <Plus size={14} className="mr-1" /> {t('caseView.implement.addIntervention', 'Add Intervention')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {interventionNotNeeded ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={savingDecision}
+                  onClick={() => saveDecision(false)}
+                >
+                  {t('caseView.implement.undoInterventionNotNeeded', 'Undo decision')}
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" onClick={() => setAddOpen(true)}>
+                    <Plus size={14} className="mr-1" /> {t('caseView.implement.addIntervention', 'Add Intervention')}
+                  </Button>
+                  {/* "No intervention" and a logged delivery are mutually
+                      exclusive — the server's activation gate rejects a case
+                      that is both — so the second option disappears once a
+                      delivery exists. */}
+                  {interventions.length === 0 && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={savingDecision}
+                      onClick={() => saveDecision(true)}
+                    >
+                      <Ban size={14} className="mr-1" /> {t('caseView.implement.markInterventionNotNeeded', 'No interventions issued')}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {interventions.length} {t('caseView.implement.interventionUnit', { count: interventions.length, defaultValue: interventions.length !== 1 ? 'interventions' : 'intervention' })} {t('caseView.implement.delivered', 'delivered')}
-          {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} ${t('caseView.implement.total', 'total')}`}
+        <p className="mt-1 text-xs text-muted-foreground">
+          {interventionNotNeeded
+            ? t('caseView.implement.interventionNotNeededActive', 'No intervention is issued for this case; referrals cover the service.')
+            : (
+              <>
+                {interventions.length} {t('caseView.implement.interventionUnit', { count: interventions.length, defaultValue: interventions.length !== 1 ? 'interventions' : 'intervention' })} {t('caseView.implement.delivered', 'delivered')}
+                {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} ${t('caseView.implement.total', 'total')}`}
+              </>
+            )}
         </p>
       </div>
 
-      {/* Add Form */}
-      {adding && (
-        <div className="rounded-lg border bg-card px-4 py-3 space-y-3">
-          <h4 className="text-sm font-medium">{t('caseView.implement.newIntervention', 'New Intervention')}</h4>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">{t('caseView.implement.programService', 'Program / Service *')}</label>
-            <select
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={form.programId}
-              onChange={e => setForm(f => ({ ...f, programId: e.target.value }))}
-            >
-              <option value="">{t('caseView.implement.selectProgram', '— Select a program —')}</option>
-              {programs.map(p => (
-                <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} ${t('caseView.implement.req', 'req.')})` : ''}</option>
-              ))}
-              <option value="adhoc:other">
-                {t('caseView.implement.otherService', 'Other service (specify)…')}
-              </option>
-            </select>
-          </div>
-
-          {form.programId.startsWith('adhoc:') && (
+      {/* Add-intervention modal — a delivery is a record with eight fields, so
+          it is confirmed in a dialog the way the referral step already does,
+          rather than expanded inline above the list it would push down. */}
+      <Dialog open={addOpen} onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('caseView.implement.newIntervention', 'New Intervention')}</DialogTitle>
+            <DialogDescription>
+              {t('caseView.implement.newInterventionDesc', 'Record a service delivered to this client. The linked program decides which documents step 2 then requires.')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.implement.serviceName', 'Service Name *')}</label>
-              <Input
-                value={form.serviceName}
-                onChange={e => setForm(f => ({ ...f, serviceName: e.target.value }))}
-                placeholder={t('caseView.implement.serviceNamePlaceholder', 'e.g., Counseling Session, Home Visit')}
+              <Label htmlFor="intv-program">{t('caseView.implement.programService', 'Program / Service *')}</Label>
+              <select
+                id="intv-program"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.programId}
+                onChange={e => setForm(f => ({ ...f, programId: e.target.value }))}
+              >
+                <option value="">{t('caseView.implement.selectProgram', '— Select a program —')}</option>
+                {programs.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} ${t('caseView.implement.req', 'req.')})` : ''}</option>
+                ))}
+                <option value="adhoc:other">
+                  {t('caseView.implement.otherService', 'Other service (specify)…')}
+                </option>
+              </select>
+            </div>
+
+            {form.programId.startsWith('adhoc:') && (
+              <div className="space-y-1.5">
+                <Label htmlFor="intv-service-name">{t('caseView.implement.serviceName', 'Service Name *')}</Label>
+                <Input
+                  id="intv-service-name"
+                  value={form.serviceName}
+                  onChange={e => setForm(f => ({ ...f, serviceName: e.target.value }))}
+                  placeholder={t('caseView.implement.serviceNamePlaceholder', 'e.g., Counseling Session, Home Visit')}
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="intv-delivery-date">{t('caseView.implement.deliveryDate', 'Delivery Date')}</Label>
+                <Input id="intv-delivery-date" type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="intv-amount">{t('caseView.implement.amount', 'Amount (₱)')}</Label>
+                <Input id="intv-amount" type="text" inputMode="numeric" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value.replace(/,/g, '') }))} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="intv-mode">{t('caseView.implement.modeOfDeliveryLabel', 'Mode of Delivery')}</Label>
+                <select id="intv-mode" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.modeOfDelivery} onChange={e => setForm(f => ({ ...f, modeOfDelivery: e.target.value }))}>
+                  <option value="">—</option>
+                  {[
+                    { value: 'Cash', label: t('caseView.implement.modeOfDelivery.cash', 'Cash') },
+                    { value: 'Cheque', label: t('caseView.implement.modeOfDelivery.cheque', 'Cheque') },
+                    { value: 'Guarantee Letter', label: t('caseView.implement.modeOfDelivery.guaranteeLetter', 'Guarantee Letter') },
+                    { value: 'In-kind', label: t('caseView.implement.modeOfDelivery.inKind', 'In-kind') },
+                    { value: 'Service', label: t('caseView.implement.modeOfDelivery.service', 'Service') },
+                  ].map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="intv-fund">{t('caseView.implement.fundSourceLabel', 'Fund Source')}</Label>
+                <select id="intv-fund" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.fundSource} onChange={e => setForm(f => ({ ...f, fundSource: e.target.value }))}>
+                  <option value="">—</option>
+                  {[
+                    { value: 'DSWD', label: t('caseView.implement.fundSource.dswd', 'DSWD') },
+                    { value: 'LGU', label: t('caseView.implement.fundSource.lgu', 'LGU') },
+                    { value: 'PDAF', label: t('caseView.implement.fundSource.pdaf', 'PDAF') },
+                    { value: 'Donation', label: t('caseView.implement.fundSource.donation', 'Donation') },
+                    { value: 'Other', label: t('caseView.implement.fundSource.other', 'Other') },
+                  ].map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="intv-notes">{t('caseView.implement.notes', 'Notes')}</Label>
+              <textarea
+                id="intv-notes"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
+                value={form.notes}
+                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder={t('caseView.implement.notesPlaceholder', 'Additional details about this intervention...')}
               />
             </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.implement.deliveryDate', 'Delivery Date')}</label>
-              <Input type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.implement.amount', 'Amount (₱)')}</label>
-              <Input type="text" inputMode="numeric" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value.replace(/,/g, '') }))} />
-            </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.implement.modeOfDeliveryLabel', 'Mode of Delivery')}</label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.modeOfDelivery} onChange={e => setForm(f => ({ ...f, modeOfDelivery: e.target.value }))}>
-                <option value="">—</option>
-                {[
-                  { value: 'Cash', label: t('caseView.implement.modeOfDelivery.cash', 'Cash') },
-                  { value: 'Cheque', label: t('caseView.implement.modeOfDelivery.cheque', 'Cheque') },
-                  { value: 'Guarantee Letter', label: t('caseView.implement.modeOfDelivery.guaranteeLetter', 'Guarantee Letter') },
-                  { value: 'In-kind', label: t('caseView.implement.modeOfDelivery.inKind', 'In-kind') },
-                  { value: 'Service', label: t('caseView.implement.modeOfDelivery.service', 'Service') },
-                ].map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('caseView.implement.fundSourceLabel', 'Fund Source')}</label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.fundSource} onChange={e => setForm(f => ({ ...f, fundSource: e.target.value }))}>
-                <option value="">—</option>
-                {[
-                  { value: 'DSWD', label: t('caseView.implement.fundSource.dswd', 'DSWD') },
-                  { value: 'LGU', label: t('caseView.implement.fundSource.lgu', 'LGU') },
-                  { value: 'PDAF', label: t('caseView.implement.fundSource.pdaf', 'PDAF') },
-                  { value: 'Donation', label: t('caseView.implement.fundSource.donation', 'Donation') },
-                  { value: 'Other', label: t('caseView.implement.fundSource.other', 'Other') },
-                ].map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">{t('caseView.implement.notes', 'Notes')}</label>
-            <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
-              value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder={t('caseView.implement.notesPlaceholder', 'Additional details about this intervention...')}
-            />
-          </div>
-
-          <div className="flex gap-2">
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAdd}>{t('caseView.cancel', 'Cancel')}</Button>
             <Button onClick={handleAdd} disabled={saving || (!form.programId && !form.serviceName)}>
               {saving ? t('caseView.saving', 'Saving...') : t('caseView.implement.saveIntervention', 'Save Intervention')}
             </Button>
-            <Button variant="outline" onClick={() => setAdding(false)}>{t('caseView.cancel', 'Cancel')}</Button>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Intervention List */}
       {interventions.length === 0 ? (
         <div className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-          {t('caseView.implement.noInterventions', 'No interventions recorded yet. Click "Add Intervention" to document delivered services.')}
+          {interventionNotNeeded
+            ? t('caseView.implement.noInterventionsDecided', 'No intervention will be issued for this case. The service is covered by an inter-agency referral.')
+            : t('caseView.implement.noInterventions', 'No interventions recorded yet. Click "Add Intervention" to document delivered services.')}
         </div>
       ) : (
         <div className="space-y-2">
           {interventions.map(intv => (
-            <div key={intv.id} className="rounded-lg border bg-card px-4 py-3">
-              <div className="flex items-start justify-between">
+            /* A delivered service is the substantive fact of this step, so it
+               carries the accent border and the larger type — the supporting
+               metadata stays quiet beneath it. */
+            <div key={intv.id} className="rounded-lg border border-primary/30 border-l-4 border-l-primary bg-primary/5 px-4 py-3">
+              <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{intv.serviceName}</span>
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h4 className="text-lg font-semibold leading-tight tracking-tight">{intv.serviceName}</h4>
                     {intv.category && <Badge variant="secondary" className="text-[10px]">{intv.category}</Badge>}
+                    {intv.amount != null && intv.amount !== ('' as unknown) && (
+                      <span className="text-base font-semibold tabular-nums text-primary">
+                        ₱{Number(intv.amount).toLocaleString()}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     {intv.deliveryDate && (
                       <span className="flex items-center gap-1">
                         <Calendar size={12} /> {formatDate(intv.deliveryDate)}
                       </span>
                     )}
-                    {intv.amount && (
-                      <span className="flex items-center gap-1">
-                        <DollarSign size={12} /> ₱{Number(intv.amount).toLocaleString()}
-                      </span>
-                    )}
                     {intv.modeOfDelivery && <span>{intv.modeOfDelivery}</span>}
                     {intv.fundSource && <span>{intv.fundSource}</span>}
                   </div>
-                  {intv.notes && <p className="text-xs text-muted-foreground/70 mt-1">{intv.notes}</p>}
+                  {intv.notes && <p className="text-sm text-muted-foreground/80 mt-1">{intv.notes}</p>}
                 </div>
                 {!readOnly && (
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)}>
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)} aria-label={t('caseView.implement.deleteIntervention', 'Delete intervention')}>
                     <Trash2 size={14} />
                   </Button>
                 )}
@@ -349,49 +424,6 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly }: StepI
 
       {/* Requirements Checklist */}
       <CaseRequirements caseId={caseId} caseData={caseData} userRole={userRole} />
-
-      {/* Intervention decision — only when no intervention has been issued.
-          Recording "no intervention" is required before an assessed case may
-          proceed on referrals only (mirrors the referral decision below). */}
-      {interventions.length === 0 && (userRole === 'admin' || userRole === 'social_worker') && (
-        <div className="rounded-lg border bg-card">
-          <div className="px-4 py-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {interventionNotNeeded
-                ? <CheckCircle2 size={16} className="text-primary" />
-                : <Ban size={16} className="text-muted-foreground" />}
-              <h3 className="text-sm font-semibold">{t('caseView.implement.interventionDecision', 'Intervention Decision')}</h3>
-            </div>
-            {interventionNotNeeded && (
-              <Badge variant="outline" className="text-[10px]">{t('caseView.implement.interventionNotNeededBadge', 'Intervention not needed')}</Badge>
-            )}
-          </div>
-          <Separator />
-          <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">
-              {interventionNotNeeded
-                ? t('caseView.implement.interventionNotNeededActive', 'No intervention is issued for this case; referrals cover the service.')
-                : t('caseView.implement.interventionNotNeededHint', 'If the case is served through referrals only, record the decision to skip intervention delivery.')}
-            </p>
-            {(!readOnly || interventionNotNeeded) && (
-              <Button
-                variant={interventionNotNeeded ? 'outline' : 'secondary'}
-                size="sm"
-                disabled={savingDecision}
-                onClick={() => saveDecision(!interventionNotNeeded)}
-              >
-                {interventionNotNeeded
-                  ? t('caseView.implement.undoInterventionNotNeeded', 'Undo decision')
-                  : (
-                    <>
-                      <Ban size={14} className="mr-1" /> {t('caseView.implement.markInterventionNotNeeded', 'Mark intervention not needed')}
-                    </>
-                  )}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Status transition — visible even when readOnly so a worker who has already
           logged interventions (or recorded that none are needed) can still submit

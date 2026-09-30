@@ -42,7 +42,7 @@ const DOCS = [
   },
 ];
 
-function renderRequirements(docs: unknown[] = DOCS) {
+function renderRequirements(docs: unknown[] = DOCS, checklist: Record<string, boolean> = {}) {
   mockSWR.mockImplementation((key: unknown) => {
     const root = Array.isArray(key) ? key[0] : key;
     if (root === 'cases') return { data: INTERVENTIONS };
@@ -51,7 +51,7 @@ function renderRequirements(docs: unknown[] = DOCS) {
     return { data: undefined };
   });
   return render(
-    <CaseRequirements caseId="c1" caseData={{ requirementsChecklist: {} }} userRole="social_worker" />,
+    <CaseRequirements caseId="c1" caseData={{ requirementsChecklist: checklist }} userRole="social_worker" />,
   );
 }
 
@@ -62,11 +62,11 @@ describe('CaseRequirements — one row per uploaded document', () => {
     mockMutate.mockReset().mockResolvedValue(undefined);
   });
 
-  it('shows each uploaded file once, with its size and its on-site status', () => {
+  it('shows each uploaded file once, with its size and its review status', () => {
     renderRequirements();
     expect(screen.getAllByText('valid-id.pdf')).toHaveLength(1);
     expect(screen.getByText('12 KB')).toBeTruthy();
-    expect(screen.getByText('Pending on-site')).toBeTruthy();
+    expect(screen.getByText('Pending review')).toBeTruthy();
   });
 
   it('keeps per-file actions behind a single menu instead of bare icon buttons', async () => {
@@ -80,17 +80,58 @@ describe('CaseRequirements — one row per uploaded document', () => {
     expect(screen.getByText('Remove')).toBeTruthy();
   });
 
-  it('verifies an upload on-site straight from the file row', async () => {
+  it('confirms the review of a single document from inside its preview', async () => {
+    // The control that records "I have read this" belongs in the preview, the
+    // only place the document is on screen. On the row it sat one click away
+    // from being fired without ever opening the file.
     const user = userEvent.setup();
     renderRequirements();
-    await user.click(screen.getByText('Verify on-site'));
+
+    expect(screen.queryByRole('button', { name: /Confirm review/ })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Preview valid-id\.pdf/ }));
+    await user.click(await screen.findByRole('button', { name: 'Confirm review' }));
+
     await waitFor(() => expect(mockPatch).toHaveBeenCalledWith('/filing/d1/verify', { verified: true }));
   });
 
-  it('shows a verified badge instead of pending once the worker confirms it', () => {
+  it('shows a reviewed badge instead of pending once the worker confirms it', async () => {
+    const user = userEvent.setup();
     renderRequirements([{ ...DOCS[0], verifiedAt: '2026-09-28T08:00:00.000Z' }]);
-    expect(screen.getByText('Verified on-site')).toBeTruthy();
-    expect(screen.queryByText('Pending on-site')).toBeNull();
-    expect(screen.getByText('Undo')).toBeTruthy();
+    expect(screen.getByText('Reviewed on-site')).toBeTruthy();
+    expect(screen.queryByText('Pending review')).toBeNull();
+
+    // The reversal lives in the same place as the confirmation.
+    await user.click(screen.getByRole('button', { name: /Preview valid-id\.pdf/ }));
+    expect(await screen.findByRole('button', { name: 'Undo' })).toBeTruthy();
+  });
+
+  it('does not turn the requirement heading into a click target', async () => {
+    // The row used to be a button that flipped the requirement, so satisfying a
+    // documentary need was a side effect of clicking a label. The only way to
+    // record the decision now is the explicit control.
+    const user = userEvent.setup();
+    renderRequirements();
+
+    await user.click(screen.getByText('Valid ID'));
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('records a client who passed on-site with no copy through a named button', async () => {
+    const user = userEvent.setup();
+    renderRequirements();
+
+    await user.click(screen.getByRole('button', { name: /Passed on-site, no copy/ }));
+    await waitFor(() =>
+      expect(mockPatch).toHaveBeenCalledWith('/cases/c1/requirements', {
+        requirementsChecklist: { 'Valid ID': true },
+      }),
+    );
+  });
+
+  it('offers Undo instead of the on-site button once the requirement is met', async () => {
+    renderRequirements(DOCS, { 'Valid ID': true });
+    expect(screen.queryByRole('button', { name: /Passed on-site, no copy/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy();
   });
 });

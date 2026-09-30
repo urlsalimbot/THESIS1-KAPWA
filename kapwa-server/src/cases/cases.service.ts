@@ -306,11 +306,44 @@ export class CasesService {
     });
   }
 
+  /**
+   * The case's transition trail, each entry attributed to a named actor. The
+   * `case_history` row only stores `changed_by_id` (plus the role slug), so the
+   * display name is joined here — without it the timeline can only ever read
+   * "by social worker" and never "Lorna Santos — MSWDO Social Worker".
+   *
+   * The LEFT JOIN keeps system-driven entries (no actor id) and deleted accounts
+   * in the trail; those fall back to the role label on the client.
+   */
   async getHistory(caseId: string) {
-    return this.historyRepo.find({
-      where: { caseId },
-      order: { createdAt: 'ASC' },
-    });
+    const rows: any[] = await this.historyRepo.query(
+      `SELECT ch.id, ch.case_id, ch.from_status, ch.to_status, ch.changed_by_role,
+              ch.changed_by_id, ch.remarks, ch.transition_type, ch.override_reason,
+              ch.created_at,
+              TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name, u.name_extension)) AS changed_by_name
+       FROM case_history ch
+       LEFT JOIN users u ON u.id = ch.changed_by_id
+       WHERE ch.case_id = $1
+       ORDER BY ch.created_at ASC`,
+      [caseId],
+    );
+    // CONCAT_WS over all-NULL name parts yields '' rather than NULL, so empty
+    // strings are normalized back to null here — consumers must not have to
+    // treat '' and "absent" as different things.
+    const nullable = (v: unknown) => (v === null || v === undefined || v === '' ? null : v);
+    return rows.map(r => ({
+      id: r.id,
+      caseId: r.case_id,
+      fromStatus: nullable(r.from_status) ?? undefined,
+      toStatus: r.to_status,
+      changedByRole: nullable(r.changed_by_role) ?? undefined,
+      changedById: nullable(r.changed_by_id) ?? undefined,
+      changedByName: nullable(r.changed_by_name),
+      remarks: nullable(r.remarks) ?? undefined,
+      transitionType: r.transition_type,
+      overrideReason: nullable(r.override_reason) ?? undefined,
+      createdAt: r.created_at,
+    }));
   }
 
   async updateStatus(id: string, newStatus: CaseStatus, userRole?: string, actorId?: string) {

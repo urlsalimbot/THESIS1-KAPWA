@@ -64,9 +64,9 @@ const candidate: MatchCandidate = {
   },
   allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
   familyMembers: [
-    { id: 'person-maria', fullName: 'Maria Dela Cruz', surname: 'Dela Cruz', firstName: 'Maria', middleName: 'Santos', gender: 'Female', dob: '1980-05-06', relationship: 'Spouse', age: 46, occupation: 'Vendor', income: 4000, status: 'active' },
-    { id: 'person-ana', fullName: 'Ana Dela Cruz', surname: 'Dela Cruz', firstName: 'Ana', gender: 'Female', dob: '2015-03-30', relationship: 'Child', age: 11, occupation: 'Student', income: 0, status: 'active' },
-    { id: 'person-tom', fullName: 'Tom Dela Cruz', surname: 'Dela Cruz', firstName: 'Tom', gender: 'Male', dob: '2018-09-09', relationship: 'Child', age: 8, occupation: 'Student', income: 0, status: 'active' },
+    { id: 'person-maria', fullName: 'Maria Dela Cruz', surname: 'Dela Cruz', firstName: 'Maria', middleName: 'Santos', gender: 'Female', dob: '1980-05-06', civilStatus: 'Married', relationship: 'Spouse', age: 46, occupation: 'Vendor', income: 4000, status: 'active' },
+    { id: 'person-ana', fullName: 'Ana Dela Cruz', surname: 'Dela Cruz', firstName: 'Ana', gender: 'Female', dob: '2015-03-30', civilStatus: 'Single', relationship: 'Child', age: 11, occupation: 'Student', income: 0, status: 'active' },
+    { id: 'person-tom', fullName: 'Tom Dela Cruz', surname: 'Dela Cruz', firstName: 'Tom', gender: 'Male', dob: '2018-09-09', civilStatus: 'Single', relationship: 'Child', age: 8, occupation: 'Student', income: 0, status: 'active' },
   ],
   pastCases: [{ controlNo: 'KAPWA-2026-00021', beneficiaryName: 'Juan Dela Cruz', status: 'active', createdAt: '2026-09-20T00:00:00Z' }],
   lastApprovedCaseDate: '2026-09-20T00:00:00.000Z',
@@ -109,6 +109,12 @@ const FACTS: Array<[string, RegExp]> = [
   ['members section', /Household members \(3\)/i],
   ['spouse in roster', /Maria Santos Dela Cruz/],
   ['member age', /46 y\/o/],
+  // Probing "is this the same family?" needs the attributes that distinguish a
+  // relative, not just a name and a relationship.
+  ['member sex', /Female/],
+  ['member civil status', /Married/],
+  ['member occupation', /Vendor/],
+  ['member household status', /active/],
   ['past cases', /Past cases/i],
   ['control number', /KAPWA-2026-00021/],
 ];
@@ -157,6 +163,38 @@ describe('match card parity: pop-up vs review page', () => {
     const otherRow = within(roster).getByText('Tom Dela Cruz').closest('li');
     expect(matchedRow?.className).toContain('text-primary');
     expect(otherRow?.className).not.toContain('text-primary');
+  });
+
+  it('carries the probing detail on one roster row instead of scattered columns', () => {
+    render(
+      <MemoryRouter>
+        <MatchCandidateCard candidate={candidate} />
+      </MemoryRouter>
+    );
+    const roster = screen.getByRole('list', { name: /Household members/i });
+    const spouseRow = within(roster).getByText('Maria Santos Dela Cruz').closest('li');
+    // One meta line, so a long roster stays scannable and the attributes stay
+    // attached to the person they describe.
+    expect(within(spouseRow as HTMLElement).getByText('46 y/o · Female · Married · Vendor · active')).toBeTruthy();
+  });
+
+  it('drops unknown member attributes instead of rendering a row of separators', () => {
+    const sparse = {
+      ...candidate,
+      familyMembers: [
+        { id: 'p1', fullName: 'Ana Dela Cruz', surname: 'Dela Cruz', firstName: 'Ana', gender: '', civilStatus: undefined, relationship: 'Child', age: 0, occupation: '', income: 0, status: '' },
+      ],
+    };
+    render(
+      <MemoryRouter>
+        <MatchCandidateCard candidate={sparse} />
+      </MemoryRouter>
+    );
+    const roster = screen.getByRole('list', { name: /Household members/i });
+    const row = within(roster).getByText(/Ana Dela Cruz/).closest('li');
+    // Only the relationship separator survives; no empty fields and no
+    // dangling "· ·" where the dropped attributes used to sit.
+    expect(row?.textContent).toBe('Ana Dela Cruz· Child');
   });
 
   it('lists a case once even when it arrives as both the household case and the person’s own', () => {
