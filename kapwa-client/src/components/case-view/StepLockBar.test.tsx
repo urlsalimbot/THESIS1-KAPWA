@@ -188,6 +188,42 @@ describe('StepLockBar', () => {
     expect(screen.getByText(/Juan Dela Cruz/)).toBeTruthy();
   });
 
+  it('offers no control at all in readOnly on an unsealed step', () => {
+    // The live Lock here would be a seal a viewer with no write role could take.
+    // A read-only viewer also gets no hint: "complete this step before sealing
+    // it" asks for an action they cannot perform.
+    renderBar({ readOnly: true });
+
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByText(NOT_DONE_HINT)).toBeNull();
+  });
+
+  it('offers no control at all in readOnly on a step that is ready to seal', () => {
+    // The same hole on the *enabled* button, which is the one a user would
+    // actually click: a done step renders a live Lock without the readOnly gate.
+    renderBar({ readOnly: true, caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' }, stepIndex: 4 });
+
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  // --- the predicate also owns the not-needed fallback -------------------
+
+  it('reads a recorded no-referral decision off the case row, not just off opts', () => {
+    // `CaseStepper` falls back to the case row for these two decisions and the
+    // server does too; a bar that passed `opts` raw would leave a step the
+    // stepper calls done with no way to seal it, and the server's 400 is the
+    // only thing the user would ever see about it.
+    renderBar({ stepIndex: 2, caseData: { status: 'active', referrals: [], referralNotNeeded: true } });
+
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
+  it('reads a recorded no-intervention decision off the case row too', () => {
+    renderBar({ stepIndex: 1, caseData: { status: 'enrolled', interventionNotNeeded: true }, interventionCount: 0 });
+
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
   // --- the two requests --------------------------------------------------
 
   it('POSTs the lock and refreshes onChanged', async () => {
@@ -227,7 +263,7 @@ describe('StepLockBar', () => {
   it('does not re-send a seal while the first request is in flight', async () => {
     const user = userEvent.setup();
     let release = () => {};
-    mockApiPost.mockImplementationOnce(() => new Promise<void>((resolve) => { release = () => resolve(); }));
+    mockApiPost.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' }); }));
     renderBar();
 
     const lock = screen.getByRole('button', { name: /^lock$/i });
@@ -237,13 +273,15 @@ describe('StepLockBar', () => {
 
     expect(mockApiPost).toHaveBeenCalledTimes(1);
     release();
-    await waitFor(() => expect(lock).toBeEnabled());
+    // The seal landed, so the bar shows it — and the release it now offers is
+    // live, which is also what says `busy` came back down.
+    await waitFor(() => expect(screen.getByRole('button', { name: /unlock/i })).toBeEnabled());
   });
 
   it('does not re-send a release while the first request is in flight', async () => {
     const user = userEvent.setup();
     let release = () => {};
-    mockApiDel.mockImplementationOnce(() => new Promise<void>((resolve) => { release = () => resolve(); }));
+    mockApiDel.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({}); }));
     renderBar({ locked: lockedRow });
 
     const unlock = screen.getByRole('button', { name: /unlock/i });
@@ -253,12 +291,19 @@ describe('StepLockBar', () => {
 
     expect(mockApiDel).toHaveBeenCalledTimes(1);
     release();
-    await waitFor(() => expect(unlock).toBeEnabled());
+    // The release landed, so the bar is back to offering the seal, and that
+    // button is live — which is also what says `busy` came back down.
+    await waitFor(() => expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled());
   });
 
   // --- failures ----------------------------------------------------------
+  //
+  // Each of these pins the *identity* of the message it is about — its title and
+  // its description — because the two verbs raise their own copy. Asserting only
+  // one half of the pair would let the two messages be swapped in the component
+  // and leave every test green.
 
-  it('surfaces a refused seal with the server’s own reason and does not claim success', async () => {
+  it('names the seal failure with the server’s own reason', async () => {
     // The server answers 400 when the step is not done — the one error a user
     // can provoke from the UI, and the reason the disabled state exists.
     mockApiPost.mockRejectedValueOnce(new Error('"Assess & Interview" is not complete yet — finish it before sealing it.'));
@@ -268,11 +313,13 @@ describe('StepLockBar', () => {
 
     await user.click(screen.getByRole('button', { name: /^lock$/i }));
 
-    expect(await screen.findByText(/is not complete yet/)).toBeTruthy();
+    expect(await screen.findByText('Could not seal this step')).toBeTruthy();
+    expect(screen.getByText(/is not complete yet/)).toBeTruthy();
+    expect(screen.queryByText('Could not release the lock')).toBeNull();
     expect(onChanged).not.toHaveBeenCalled();
   });
 
-  it('surfaces a failed release', async () => {
+  it('names the release failure with its own reason', async () => {
     mockApiDel.mockRejectedValueOnce(new Error('That record could not be found.'));
     const user = userEvent.setup();
     const onChanged = vi.fn();
@@ -280,7 +327,121 @@ describe('StepLockBar', () => {
 
     await user.click(screen.getByRole('button', { name: /unlock/i }));
 
-    expect(await screen.findByText(/Could not release the lock/i)).toBeTruthy();
+    expect(await screen.findByText('Could not release the lock')).toBeTruthy();
+    expect(screen.getByText(/could not be found/)).toBeTruthy();
+    expect(screen.queryByText('Could not seal this step')).toBeNull();
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  // --- a failed write leaves the control usable --------------------------
+
+  it('re-enables the Lock button after a failed seal', async () => {
+    // `busy` is cleared on the failure path too. A control that failed once and
+    // stayed disabled would be a silent lockout: the reason would be on a toast
+    // that has since gone, and nothing would say why it could not be pressed.
+    mockApiPost.mockRejectedValueOnce(new Error('boom'));
+    const user = userEvent.setup();
+    renderBar();
+
+    const lock = screen.getByRole('button', { name: /^lock$/i });
+    await user.click(lock);
+    await screen.findByText('Could not seal this step');
+
+    // The button the user pressed is the one that comes back — the failed write
+    // must not have left a seal record behind either.
+    await waitFor(() => expect(lock).toBeEnabled());
+    expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();
+    expect(mockApiPost).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-enables the Unlock button after a failed release, strip intact', async () => {
+    mockApiDel.mockRejectedValueOnce(new Error('boom'));
+    const user = userEvent.setup();
+    renderBar({ locked: lockedRow });
+
+    const unlock = screen.getByRole('button', { name: /unlock/i });
+    await user.click(unlock);
+    await screen.findByText('Could not release the lock');
+
+    await waitFor(() => expect(unlock).toBeEnabled());
+    expect(screen.getByText(/Juan Dela Cruz/)).toBeTruthy();
+  });
+
+  // --- a failed refresh is not a failed write ----------------------------
+
+  it('reports a failed refresh as its own thing, never as a failed write', async () => {
+    // The write committed and the seal exists. Reporting it as "Could not seal
+    // this step" would be a lie the user acts on: the bar would still show Lock,
+    // and the retry would write a second audit row for a step already sealed.
+    mockApiPost.mockResolvedValue({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
+    const onChanged = vi.fn().mockRejectedValue(new Error('Network request failed'));
+    const user = userEvent.setup();
+    renderBar({ onChanged });
+
+    await user.click(screen.getByRole('button', { name: /^lock$/i }));
+
+    expect(await screen.findByText('Saved, but the case did not refresh')).toBeTruthy();
+    expect(screen.queryByText('Could not seal this step')).toBeNull();
+  });
+
+  it('stops offering a seal the server has already accepted', async () => {
+    // The deliberate half of the previous test: the seal exists, so the bar
+    // must say so from the POST's own answer rather than keep the button that
+    // invites a duplicate.
+    mockApiPost.mockResolvedValue({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
+    const onChanged = vi.fn().mockRejectedValue(new Error('Network request failed'));
+    const user = userEvent.setup();
+    renderBar({ onChanged });
+
+    await user.click(screen.getByRole('button', { name: /^lock$/i }));
+
+    await screen.findByText(/Ana Reyes/);
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+    expect(mockApiPost).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failed refresh after a release the same way', async () => {
+    mockApiDel.mockResolvedValue({});
+    const onChanged = vi.fn().mockRejectedValue(new Error('Network request failed'));
+    const user = userEvent.setup();
+    renderBar({ locked: lockedRow, onChanged });
+
+    await user.click(screen.getByRole('button', { name: /unlock/i }));
+
+    expect(await screen.findByText('Saved, but the case did not refresh')).toBeTruthy();
+    expect(screen.queryByText('Could not release the lock')).toBeNull();
+    expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();
+  });
+
+  it('defers to the parent once its data says what this bar last wrote', async () => {
+    // The override only stands while the parent still reports the pre-write
+    // state. Once the parent moves — a refresh that lands later, or another
+    // worker — its answer wins, so the bar cannot go on disagreeing with the
+    // record it is meant to be showing.
+    mockApiPost.mockResolvedValue({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
+    const onChanged = vi.fn().mockRejectedValue(new Error('Network request failed'));
+    const user = userEvent.setup();
+    const { rerender } = renderBar({ onChanged });
+
+    await user.click(screen.getByRole('button', { name: /^lock$/i }));
+    await screen.findByText(/Ana Reyes/);
+
+    // The parent catches up and reports a different locker: a fresh read, not
+    // the stale snapshot this bar was holding.
+    rerender(
+      <>
+        <Toaster />
+        <StepLockBar
+          caseId="c1"
+          stepIndex={0}
+          caseData={doneCaseData}
+          interventionCount={0}
+          onChanged={onChanged}
+          locked={{ ...lockedRow, lockedByName: 'Bela Santos' }}
+        />
+      </>,
+    );
+
+    expect(await screen.findByText(/Bela Santos/)).toBeTruthy();
   });
 });

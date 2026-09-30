@@ -33,8 +33,15 @@ function statusAtLeast(caseData: any, min: number): boolean {
   return index >= min;
 }
 
-// Shared done-status per stepper step — reused by the case view stepper and
-// the approval pipeline cards so both surfaces show identical progress.
+// Shared done-status per stepper step — reused by the case view stepper, the
+// approval pipeline cards and the step-lock bar so all three agree.
+//
+// The two "not needed" decisions are held on the case row as well as in `opts`,
+// and the fallback lives *here* rather than at each call site: a surface that
+// has only the case — the approval pipeline cards, the seal button — must not
+// answer a different question than the stepper does. `opts.x ?? caseData.x`
+// keeps an explicit `false` winning over the row, so a caller that knows better
+// than the row still does.
 export function stepperStepDone(i: number, caseData: any, interventionCount: number, opts: StepperProgressOpts = {}): boolean {
   if (!STEP_STATUS_INDEPENDENT.has(i) && !statusAtLeast(caseData, STEP_MIN_STATUS[i] ?? 0)) return false;
   switch (i) {
@@ -42,11 +49,12 @@ export function stepperStepDone(i: number, caseData: any, interventionCount: num
     // Implement HIP: an intervention (or the recorded "no intervention"
     // decision) is required; when interventions exist, every required document
     // of the linked program must be uploaded to the case filing.
-    case 1: return (interventionCount > 0 || Boolean(opts.interventionNotNeeded))
+    case 1: return (interventionCount > 0 || Boolean(opts.interventionNotNeeded ?? caseData?.interventionNotNeeded))
       && (interventionCount === 0 || (opts.requirementsMet ?? true));
     // Service Delivery: a referral is issued, or the social worker recorded
     // that no referral is needed.
-    case 2: return (caseData?.referrals?.length || 0) > 0 || Boolean(opts.referralNotNeeded);
+    case 2: return (caseData?.referrals?.length || 0) > 0
+      || Boolean(opts.referralNotNeeded ?? caseData?.referralNotNeeded);
     case 3: return !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan;
     case 4: return !!caseData?.clientSignature && !!caseData?.closureOutcome;
     default: return false;
@@ -67,12 +75,11 @@ interface CaseStepperProps {
   interventionNotNeeded?: boolean;
 }
 
-export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, requirementsMet, referralNotNeeded: referralNotNeededProp, interventionNotNeeded: interventionNotNeededProp }: CaseStepperProps) {
+export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, requirementsMet, referralNotNeeded, interventionNotNeeded }: CaseStepperProps) {
   const { t } = useTranslation();
-  // Fall back to the case row so surfaces that only pass caseData (e.g. the
-  // approval pipeline cards) still reflect a recorded not-needed decision.
-  const referralNotNeeded = referralNotNeededProp ?? Boolean(caseData?.referralNotNeeded);
-  const interventionNotNeeded = interventionNotNeededProp ?? Boolean(caseData?.interventionNotNeeded);
+  // Handed straight through: `stepperStepDone` applies the case-row fallback for
+  // the two decisions itself, so doing it here as well would be a second place
+  // holding the same rule.
   const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded };
   const STEPS = [
     { label: t('caseView.stepper.assessment', 'Assess & Interview'), description: t('caseView.stepper.assessmentDesc', 'Interview and FRVA/SWDI analysis'), phase: t('caseView.stepper.phaseIn', 'Phase-In') },

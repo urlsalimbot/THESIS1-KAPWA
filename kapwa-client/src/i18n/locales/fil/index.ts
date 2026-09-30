@@ -1754,6 +1754,7 @@ const fil: EnLocale = {
       "lockedBy": "Naka-seal ni {{name}} · {{when}}",
       "lockedByUnknown": "Hindi nakalagay",
       "notDoneHint": "Kumpletuhin muna ang hakbang na ito bago i-seal.",
+      "refreshFailed": "Naisave ang pagbabago, ngunit hindi na-update ang kaso",
       "unlock": "Alisin ang seal",
       "unlockFailed": "Hindi maaalis ang seal",
     },

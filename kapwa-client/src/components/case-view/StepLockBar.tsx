@@ -52,37 +52,89 @@ export function StepLockBar({
 }: StepLockBarProps) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
+  // What this bar last wrote, for the window in which the parent has not
+  // re-read it yet. `present` is the parent's answer at the time of the write;
+  // while the parent still reports that same answer this bar knows better, and
+  // the moment the parent's answer moves — a refresh that lands later, or
+  // another worker — the parent wins. Comparing presence rather than identity
+  // keeps an unrelated parent re-render (a new object literal for the same row)
+  // from wiping the override.
+  const [mine, setMine] = useState<{ present: boolean; row: StepLock | null } | null>(null);
 
   const done = stepperStepDone(stepIndex, caseData, interventionCount, opts ?? {});
   const path = `/cases/${caseId}/steps/${stepIndex}/lock`;
   const notDoneHint = t('caseView.lock.notDoneHint', 'Complete this step before sealing it.');
+  const parentSealed = Boolean(locked);
+  const lock = mine && mine.present === parentSealed ? mine.row : locked;
 
+  /**
+   * Run one write, then report the refresh separately.
+   *
+   * The two failures are different problems and used to share one `try`, which
+   * told the user their seal had failed when in fact it had committed — and a
+   * user told that, still looking at an enabled Lock, presses it again, and the
+   * second seal writes a second audit row for a step already sealed. `busy`
+   * stops a double-click; nothing else stops that retry, so the write's outcome
+   * is recorded here as soon as it is known.
+   */
   async function run(
     request: () => Promise<unknown>,
     failureKey: string,
     failureCopy: string,
+    written: (result: unknown) => void,
   ): Promise<void> {
     // `busy` disables the one control that reaches `run`, so a second click
-    // cannot get here; that guard is what keeps one click to one audit row.
+    // cannot get here; it is also what keeps a failed control from staying
+    // dead, since the `finally` below releases it on both paths.
     setBusy(true);
     try {
-      await request();
-      await onChanged();
-    } catch (err) {
-      toast.error(t(failureKey, failureCopy), { description: humanizeError(err) });
+      let result: unknown;
+      try {
+        result = await request();
+      } catch (err) {
+        // Nothing was committed, so the user's next press is a first attempt,
+        // not a duplicate. Say what the server said about this attempt.
+        toast.error(t(failureKey, failureCopy), { description: humanizeError(err) });
+        return;
+      }
+      written(result);
+      try {
+        await onChanged();
+      } catch (err) {
+        // The write is committed and the record on screen is behind it. Not the
+        // write's failure, so not the write's copy.
+        toast.error(t('caseView.lock.refreshFailed', 'Saved, but the case did not refresh'), {
+          description: humanizeError(err),
+        });
+      }
     } finally {
       setBusy(false);
     }
   }
 
-  if (locked) {
+  const sealWritten = (result: unknown) => {
+    // The POST answers with the row it wrote, so who sealed it and when are
+    // known even if the reload behind it never lands. A response missing them
+    // renders the format helper's own "—" rather than an invented value.
+    const row = (result ?? {}) as Partial<StepLock>;
+    setMine({
+      present: parentSealed,
+      row: { stepIndex, lockedByName: row.lockedByName, lockedAt: row.lockedAt ?? '' },
+    });
+  };
+
+  const releaseWritten = () => {
+    setMine({ present: parentSealed, row: null });
+  };
+
+  if (lock) {
     return (
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <Lock size={14} aria-hidden="true" className="shrink-0" />
           {t('caseView.lock.lockedBy', 'Locked by {{name}} · {{when}}', {
-            name: locked.lockedByName || t('caseView.lock.lockedByUnknown', 'Unknown'),
-            when: formatDate(locked.lockedAt),
+            name: lock.lockedByName || t('caseView.lock.lockedByUnknown', 'Unknown'),
+            when: formatDate(lock.lockedAt),
           })}
         </span>
         {/* The record stays readable in readOnly: only the release is withheld. */}
@@ -91,7 +143,7 @@ export function StepLockBar({
             size="sm"
             variant="outline"
             disabled={busy}
-            onClick={() => run(() => api.del(path), 'caseView.lock.unlockFailed', 'Could not release the lock')}
+            onClick={() => run(() => api.del(path), 'caseView.lock.unlockFailed', 'Could not release the lock', releaseWritten)}
           >
             <LockOpen aria-hidden="true" />
             {t('caseView.lock.unlock', 'Unlock')}
@@ -100,6 +152,11 @@ export function StepLockBar({
       </div>
     );
   }
+
+  // A viewer with no write role gets neither control, so there is nothing left
+  // to render: no button to seal with, and no "complete this step before
+  // sealing it" either, which would ask them for an action they cannot take.
+  if (readOnly) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -112,7 +169,7 @@ export function StepLockBar({
         // text is the half the tooltip cannot, since this button is
         // `pointer-events-none` while disabled and so can never be hovered.
         title={done ? undefined : notDoneHint}
-        onClick={() => run(() => api.post(path), 'caseView.lock.lockFailed', 'Could not seal this step')}
+        onClick={() => run(() => api.post(path), 'caseView.lock.lockFailed', 'Could not seal this step', sealWritten)}
       >
         <Lock aria-hidden="true" />
         {t('caseView.lock.lock', 'Lock')}

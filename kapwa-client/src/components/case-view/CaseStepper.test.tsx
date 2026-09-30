@@ -54,6 +54,20 @@ describe('stepperStepDone — Service Delivery gating', () => {
     const caseData = { status: 'active', referrals: undefined };
     expect(stepperStepDone(2, caseData, 3, { referralNotNeeded: false })).toBe(false);
   });
+
+  // The not-needed decisions live on the case row as well as in opts, and a
+  // surface that only has the case (the approval pipeline cards, the step-lock
+  // bar) must read them the same way the stepper does. The fallback is inside
+  // the predicate rather than at each call site for that reason.
+  it('falls back to the case row when opts carries no decision', () => {
+    expect(stepperStepDone(2, { referrals: [], referralNotNeeded: true }, 0, {})).toBe(true);
+    expect(stepperStepDone(1, { interventionNotNeeded: true }, 0, {})).toBe(true);
+  });
+
+  it('lets an explicit false in opts override a true on the case row', () => {
+    expect(stepperStepDone(2, { referrals: [], referralNotNeeded: true }, 0, { referralNotNeeded: false })).toBe(false);
+    expect(stepperStepDone(1, { interventionNotNeeded: true }, 0, { interventionNotNeeded: false })).toBe(false);
+  });
 });
 
 describe('CaseStepper rendering', () => {
