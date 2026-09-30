@@ -9,6 +9,7 @@ import { CaseRequirement } from './case-requirement.entity';
 import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
 import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
+import { CaseStepLock } from './case-step-lock.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -22,7 +23,7 @@ import { FilingModule } from '../filing/filing.module';
 import { IrfModule } from '../irf/irf.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
+  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
   controllers: [CasesController],
   providers: [CasesService, CasesExportService],
   exports: [CasesService]
