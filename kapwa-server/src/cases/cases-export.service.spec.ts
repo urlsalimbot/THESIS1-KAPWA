@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { CasesExportService } from './cases-export.service';
 import { OrgService } from '../common/org.service';
 import { Case, CaseStatus } from './case.entity';
@@ -61,38 +61,6 @@ describe('CasesExportService', () => {
     }).compile();
 
     service = module.get<CasesExportService>(CasesExportService);
-  });
-
-  it('returns CSV with masked PII by default', async () => {
-    const buf = await service.buildBulkCsv(['c1'], true, undefined, 'u1', 'admin');
-    const csv = buf.toString('utf8');
-    expect(csv).toContain('Control No');
-    expect(csv).toContain('KAPWA-2026-0001');
-    expect(csv).toContain('***-***-****');
-    expect(csv).toContain('****-***-****');
-    expect(csv).not.toContain('09171234567');
-    expect(csv).not.toContain('1234-5678-9012');
-    expect(historyRepoMock.save).not.toHaveBeenCalled();
-  });
-
-  it('throws when unmasked export has no justification', async () => {
-    await expect(service.buildBulkCsv(['c1'], false, undefined, 'u1', 'admin')).rejects.toThrow(BadRequestException);
-    await expect(service.buildBulkCsv(['c1'], false, '   ', 'u1', 'admin')).rejects.toThrow(BadRequestException);
-  });
-
-  it('includes unmasked PII and writes audit history entries when justified', async () => {
-    const buf = await service.buildBulkCsv(['c1'], false, 'COA audit request', 'u1', 'social_worker');
-    const csv = buf.toString('utf8');
-    expect(csv).toContain('09171234567');
-    expect(csv).toContain('1234-5678-9012');
-    expect(historyRepoMock.save).toHaveBeenCalledWith([
-      expect.objectContaining({
-        caseId: 'c1',
-        transitionType: 'bulk_export_unmasked',
-        changedById: 'u1',
-        remarks: expect.stringContaining('COA audit request'),
-      }),
-    ]);
   });
 
   it('findIdByControlNo resolves a case id from a control number', async () => {

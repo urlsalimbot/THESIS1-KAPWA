@@ -1,4 +1,3 @@
-import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -644,10 +643,6 @@ export class CasesService {
     if (!caseEntity) throw new NotFoundException('Case not found');
     caseEntity.interventionNotNeeded = notNeeded;
     return this.caseRepo.save(caseEntity);
-  }
-
-  async getPendingDisbursed() {
-    return this.caseRepo.find({ where: { status: CaseStatus.ACTIVE }, take: DEFAULT_LIST_LIMIT });
   }
 
   private async getInterventionCount(caseId: string): Promise<number> {

@@ -143,13 +143,6 @@ describe('DashboardService', () => {
     expect(result).toEqual({ overdueCount: 2, slaStatus: 'violated' });
   });
 
-
-
-  it('returns daily tracker', async () => {
-    const result = await service.getDailyTracker(new Date());
-    expect(result).toEqual([]);
-  });
-
   it('returns recent cases', async () => {
     caseRepoMock.createQueryBuilder = jest.fn(() => ({
       leftJoinAndSelect: jest.fn().mockReturnThis(),

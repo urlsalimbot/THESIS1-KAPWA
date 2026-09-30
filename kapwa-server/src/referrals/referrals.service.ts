@@ -147,12 +147,6 @@ export class ReferralsService {
     return this.repo.save(referral);
   }
 
-  async countPending(barangay?: string): Promise<number> {
-    const where: any = { status: ReferralStatus.PENDING };
-    if (barangay) where.barangay = barangay;
-    return this.repo.count({ where });
-  }
-
   async countMine(userId: string): Promise<{ total: number; pending: number }> {
     const [total, pending] = await Promise.all([
       this.repo.count({ where: { coordinatorId: userId } }),

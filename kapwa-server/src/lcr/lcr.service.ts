@@ -94,14 +94,4 @@ export class LcrService {
     return { matched: false, beneficiaryId: savedBen.id, action: 'created' };
   }
 
-  async importBatch(records: Record<string, unknown>[]): Promise<{ total: number; created: number; updated: number; skipped: number }> {
-    let created = 0, updated = 0, skipped = 0;
-    for (const record of records) {
-      const result = await this.importRecord(record as any);
-      if (result.action === 'created') created++;
-      else if (result.action === 'updated') updated++;
-      else skipped++;
-    }
-    return { total: records.length, created, updated, skipped };
-  }
 }

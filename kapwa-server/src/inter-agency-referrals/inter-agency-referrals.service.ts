@@ -90,24 +90,6 @@ export class InterAgencyReferralsService {
     return saved;
   }
 
-  async findInbox(caller: User) {
-    if (caller.role === 'admin') {
-      return this.repo.find({
-        order: { createdAt: 'DESC' },
-        relations: ['fromAgency', 'toAgency', 'person', 'case'],
-      });
-    }
-    if (!caller.agencyId) return [];
-    return this.repo.find({
-      where: [
-        { fromAgencyId: caller.agencyId },
-        { toAgencyId: caller.agencyId },
-      ],
-      order: { createdAt: 'DESC' },
-      relations: ['fromAgency', 'toAgency', 'person', 'case'],
-    });
-  }
-
   async findOne(id: string, caller: User): Promise<InterAgencyReferral> {
     const ref = await this.repo.findOne({
       where: { id },
@@ -118,11 +100,6 @@ export class InterAgencyReferralsService {
     if (caller.agencyId && (ref.fromAgencyId === caller.agencyId || ref.toAgencyId === caller.agencyId)) return ref;
     if (caller.role === UserRole.SW && ref.createdBy === caller.id) return ref;
     throw new NotFoundException('Inter-agency referral not found');
-  }
-
-  async findByPerson(personId: string, caller: User) {
-    const scoped = await this.findInbox(caller);
-    return scoped.filter(r => r.personId === personId);
   }
 
   /**

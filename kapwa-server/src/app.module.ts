@@ -31,7 +31,6 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AgenciesModule } from './agencies/agencies.module';
 import { InterAgencyReferralsModule } from './inter-agency-referrals/inter-agency-referrals.module';
-import { AgencyPortalModule } from './agency-portal/agency-portal.module';
 import { ContactMessagesModule } from './contact-messages/contact-messages.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { FourPsModule } from './fourps/fourps.module';
@@ -105,7 +104,6 @@ import { AppController } from './app.controller';
     AnnouncementsModule,
     AgenciesModule,
     InterAgencyReferralsModule,
-    AgencyPortalModule,
     ContactMessagesModule,
     AnalyticsModule,
     FourPsModule,

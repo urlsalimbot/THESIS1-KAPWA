@@ -136,27 +136,6 @@ describe('InterAgencyReferralsService', () => {
     });
   });
 
-  describe('inbox scoping', () => {
-    it('admin sees all', async () => {
-      repoMock.find.mockResolvedValue([]);
-      await service.findInbox({ id: 'u-admin', role: 'admin' } as any);
-      expect(repoMock.find).toHaveBeenCalledWith(expect.objectContaining({ order: { createdAt: 'DESC' } }));
-    });
-
-    it('agency caller sees from and to rows only', async () => {
-      repoMock.find.mockResolvedValue([]);
-      await service.findInbox(agencyUser('u1', 'ag-1'));
-      expect(repoMock.find).toHaveBeenCalledWith(
-        expect.objectContaining({ where: [{ fromAgencyId: 'ag-1' }, { toAgencyId: 'ag-1' }] }),
-      );
-    });
-
-    it('caller with no agency sees nothing', async () => {
-      const result = await service.findInbox(agencyUser('u1', ''));
-      expect(result).toEqual([]);
-    });
-  });
-
   describe('findOne', () => {
     const baseRef = { id: 'r1', fromAgencyId: 'ag-1', toAgencyId: 'ag-2', status: 'referred', personId: 'p1', createdBy: 'u1' };
 

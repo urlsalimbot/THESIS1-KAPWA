@@ -141,10 +141,6 @@ export class DashboardService {
   }
 
 
-  async getDailyTracker(_date: Date) {
-    return [];
-  }
-
   async getRecentCases(barangay?: string, page = 1, limit = RECENT_CASES_LIMIT) {
     const qb = this.caseRepo
       .createQueryBuilder('c')

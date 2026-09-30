@@ -16,10 +16,6 @@ export class AgenciesService {
     return this.repo.find({ where: { isActive: true }, order: { code: 'ASC' } });
   }
 
-  findById(id: string): Promise<Agency | null> {
-    return this.repo.findOne({ where: { id } });
-  }
-
   findByCode(code: string): Promise<Agency | null> {
     return this.repo.findOne({ where: { code } });
   }
