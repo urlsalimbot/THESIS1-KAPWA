@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
-import { api, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
+import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { interventionRequirementsMet, requiredDocumentKeys } from '@/lib/case-progress';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Calendar, FileText, Lock, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Calendar, Lock, FolderOpen, Ban, CheckCircle2, HandCoins } from 'lucide-react';
 import { CaseRequirements } from './CaseRequirements';
 import { FileUploadList } from './FileUploadList';
 import { StepLockBar, type StepLock } from './StepLockBar';
@@ -111,12 +111,13 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
      program and so has no documents to preview. */
   const selectedProgram = programs.find(p => p.id === form.programId);
   const selectedDocKeys = selectedProgram ? requiredDocumentKeys(selectedProgram) : [];
-  /* What the merged card's checklist must also account for. Nothing selected
-     means nothing to preview — the form is reset whenever the dialog closes,
-     so this is empty for the whole of the dialog's closed life and the saved
-     interventions are the only source of requirements then. Memoised because it
-     reaches `CaseRequirements` as a prop: rebuilt on every render it would hand
-     a fresh array each time and silently defeat a future `React.memo`. */
+  /* The scope the header's checklist is given: nothing selected means nothing
+     to preview — the form is reset whenever the dialog closes, so this is empty
+     for the whole of the dialog's closed life and the saved interventions are
+     the only source of requirements then, each rendered inside its own card.
+     Memoised because it reaches `CaseRequirements` as a prop: rebuilt on every
+     render it would hand a fresh array each time and silently defeat a future
+     `React.memo`. */
   const pendingProgramIds = useMemo(
     () => (form.programId && !form.programId.startsWith('adhoc:') ? [form.programId] : []),
     [form.programId],
@@ -181,66 +182,27 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
 
   const totalAmount = interventions.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
 
-  // Generated documents sit behind the Bearer token; opening the raw API URL in
-  // a new tab cannot attach it (401). Download through the authenticated helper.
-  async function viewGeneratedDoc(url: string, fallbackName: string) {
-    const docId = filingDocIdFromUrl(url);
-    if (!docId) {
-      toast.error(t('cases.downloadFailed', 'Download failed'));
-      return;
-    }
-    try {
-      await downloadFilingDoc(docId, fallbackName);
-    } catch {
-      toast.error(t('cases.downloadFailed', 'Download failed'));
-    }
-  }
-
   return (
     <div className="space-y-4">
-      {/* Generated approval documents — COE + PCV are produced at approval */}
-      {(caseData?.certificateUrl || caseData?.pettyCashVoucherUrl) && (
-        <div className="rounded-lg border bg-card px-4 py-3">
-          <h3 className="text-sm font-semibold mb-2">{t('caseView.implement.generatedDocs', 'Generated Documents')}</h3>
-          <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-            {caseData.certificateUrl && (
-              <button
-                type="button"
-                onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
-                className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-              >
-                <FileText size={14} /> {t('caseView.implement.viewCertificate', 'View Certificate of Eligibility')}
-              </button>
-            )}
-            {caseData.pettyCashVoucherUrl && (
-              <button
-                type="button"
-                onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
-                className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-              >
-                <FileText size={14} /> {t('caseView.implement.viewVoucher', 'View Petty Cash Voucher')}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Record header, required-documents checklist and the step's seal — one
-          card. The checklist used to sit in a card of its own below the
-          intervention list, so a worker picked a program in one place and only
-          learned what it demanded in another; the program and its documents are
-          now one thing to read. The two mutually exclusive ways to complete step
-          2 sit in this header too: log a delivery, or record that none is
-          issued. */}
+      {/* One card, titled inside it the way every other card on this page is:
+          icon, name and the step's seal state on one row, with the actions that
+          complete this step beside the title they belong to. The title used to
+          sit above the box, naming a card it was not in. Below a rule come the
+          deliveries themselves, each carrying the documents its program demands
+          — the checklist is no longer a block of its own — and the seal, being a
+          statement about the whole step rather than a field of this record,
+          stands below the card. The two mutually exclusive ways to complete step
+          2 are in the title row: log a delivery, or record that none is issued. */}
       <section className="space-y-2">
-        {/* `h3`, like every card heading in all five steps: one heading level
-            for cards throughout the case view, so heading-by-heading
-            navigation does not jump a level here for no reason. */}
-        <h3 className="text-sm font-semibold">{t('caseView.implement.toBeIssued', 'Intervention to be issued')}</h3>
         <div className="rounded-lg border bg-card">
           <div className="px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
+                <HandCoins size={16} className="text-primary" />
+                {/* `h3`, like every card heading in all five steps: one heading
+                    level for cards throughout the case view, so heading-by-heading
+                    navigation does not jump a level here for no reason. */}
+                <h3 className="text-sm font-semibold">{t('caseView.implement.toBeIssued', 'Intervention to be issued')}</h3>
                 {interventionNotNeeded && (
                   <Badge variant="outline" className="gap-1 text-[10px]">
                     <CheckCircle2 size={10} /> {t('caseView.implement.interventionNotNeededBadge', 'Intervention not needed')}
@@ -294,39 +256,115 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                 )}
             </p>
           </div>
-          {/* Renders nothing at all until some program in scope asks for
-              something — which is why the rule below belongs to the footer
-              rather than to the checklist's top edge: it is the one boundary
-              that exists in every state. */}
+          <Separator />
+          {/* Renders nothing at all until a program is picked in the dialog
+              above — scoped to the pending selection, so a saved program's
+              documents show with their own entry below and are never repeated
+              here. */}
           <CaseRequirements
             caseId={caseId}
             caseData={caseData}
             userRole={userRole}
-            extraProgramIds={pendingProgramIds}
+            programIds={pendingProgramIds}
             readOnly={readOnly}
             embedded
           />
-          {/* Step 2's seal, at the foot of the card it attests to. Its own
-              predicate reads exactly what this card shows — the recorded
-              interventions and their documents — so sealing here puts the
-              button beside the evidence for enabling it instead of leaving it
-              adrift at the bottom of the step. */}
-          <Separator />
-          <div className="px-4 py-3">
-            <StepLockBar
-              caseId={caseId}
-              stepIndex={1}
-              caseData={caseData}
-              // The count comes from the list this step already renders, which is the
-              // same row set the server counts.
-              interventionCount={interventions.length}
-              opts={{ requirementsMet }}
-              locked={stepLock}
-              readOnly={lockReadOnly}
-              onChanged={() => globalMutate(queryKeys.cases.detail(caseId))}
-            />
-          </div>
+          {/* The record itself: every delivery this step has logged, each with
+              the documents its own program demands. */}
+          {interventions.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {interventionNotNeeded
+                ? t('caseView.implement.noInterventionsDecided', 'No intervention will be issued for this case. The service is covered by an inter-agency referral.')
+                : t('caseView.implement.noInterventions', 'No interventions recorded yet. Click "Add Intervention" to document delivered services.')}
+            </div>
+          ) : (
+            <div className="px-4 py-3 space-y-2">
+              {interventions.map(intv => {
+                /* The program this card is about, and the documents it demands —
+                   the same helper the checklist itself uses, so the guard below
+                   cannot disagree with what would have rendered. An ad-hoc service
+                   names no program, so there is nothing to list and no separator
+                   to draw above it. */
+                const reqKeys = intv.programId
+                  ? requiredDocumentKeys(programs.find(p => p.id === intv.programId))
+                  : [];
+                return (
+                  /* A delivered service is the substantive fact of this step, so it
+                     carries the accent border and the larger type — the supporting
+                     metadata stays quiet beneath it. The program's requirements are
+                     part of that fact, so they are sections of this card rather than
+                     a checklist somewhere else. */
+                  <div key={intv.id} className="rounded-lg border border-primary/30 border-l-4 border-l-primary bg-primary/5">
+                    <div className="px-4 py-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <h4 className="text-lg font-semibold leading-tight tracking-tight">{intv.serviceName}</h4>
+                            {intv.category && <Badge variant="secondary" className="text-[10px]">{intv.category}</Badge>}
+                            {intv.amount != null && intv.amount !== ('' as unknown) && (
+                              <span className="text-base font-semibold tabular-nums text-primary">
+                                ₱{Number(intv.amount).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            {intv.deliveryDate && (
+                              <span className="flex items-center gap-1">
+                                <Calendar size={12} /> {formatDate(intv.deliveryDate)}
+                              </span>
+                            )}
+                            {intv.modeOfDelivery && <span>{intv.modeOfDelivery}</span>}
+                            {intv.fundSource && <span>{intv.fundSource}</span>}
+                          </div>
+                          {intv.notes && <p className="text-sm text-muted-foreground/80 mt-1">{intv.notes}</p>}
+                        </div>
+                        {!readOnly && (
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)} aria-label={t('caseView.implement.deleteIntervention', 'Delete intervention')}>
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {reqKeys.length > 0 && (
+                      <>
+                        <Separator />
+                        {/* Scoped to this card's program: two interventions from two
+                            programs each list their own documents, and a document
+                            both ask for stays one row in each because the checklist
+                            is keyed on the requirement, not on the card. */}
+                        <CaseRequirements
+                          caseId={caseId}
+                          caseData={caseData}
+                          userRole={userRole}
+                          programIds={[intv.programId as string]}
+                          readOnly={readOnly}
+                          embedded
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+        {/* The seal, below the card: a statement about the whole step rather
+            than a field of the record above it. Its own predicate reads exactly
+            what that card shows — the recorded interventions and their
+            documents — so it sits against the evidence for enabling it instead
+            of adrift at the bottom of the step. */}
+        <StepLockBar
+          caseId={caseId}
+          stepIndex={1}
+          caseData={caseData}
+          // The count comes from the list this card already renders, which is the
+          // same row set the server counts.
+          interventionCount={interventions.length}
+          opts={{ requirementsMet }}
+          locked={stepLock}
+          readOnly={lockReadOnly}
+          onChanged={() => globalMutate(queryKeys.cases.detail(caseId))}
+        />
       </section>
 
       {/* Add-intervention modal — a delivery is a record with eight fields, so
@@ -443,53 +481,6 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Intervention List */}
-      {interventions.length === 0 ? (
-        <div className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-          {interventionNotNeeded
-            ? t('caseView.implement.noInterventionsDecided', 'No intervention will be issued for this case. The service is covered by an inter-agency referral.')
-            : t('caseView.implement.noInterventions', 'No interventions recorded yet. Click "Add Intervention" to document delivered services.')}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {interventions.map(intv => (
-            /* A delivered service is the substantive fact of this step, so it
-               carries the accent border and the larger type — the supporting
-               metadata stays quiet beneath it. */
-            <div key={intv.id} className="rounded-lg border border-primary/30 border-l-4 border-l-primary bg-primary/5 px-4 py-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h4 className="text-lg font-semibold leading-tight tracking-tight">{intv.serviceName}</h4>
-                    {intv.category && <Badge variant="secondary" className="text-[10px]">{intv.category}</Badge>}
-                    {intv.amount != null && intv.amount !== ('' as unknown) && (
-                      <span className="text-base font-semibold tabular-nums text-primary">
-                        ₱{Number(intv.amount).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    {intv.deliveryDate && (
-                      <span className="flex items-center gap-1">
-                        <Calendar size={12} /> {formatDate(intv.deliveryDate)}
-                      </span>
-                    )}
-                    {intv.modeOfDelivery && <span>{intv.modeOfDelivery}</span>}
-                    {intv.fundSource && <span>{intv.fundSource}</span>}
-                  </div>
-                  {intv.notes && <p className="text-sm text-muted-foreground/80 mt-1">{intv.notes}</p>}
-                </div>
-                {!readOnly && (
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(intv.id)} aria-label={t('caseView.implement.deleteIntervention', 'Delete intervention')}>
-                    <Trash2 size={14} />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Case Documents — uploads always available regardless of program config */}
       {canUpload && (

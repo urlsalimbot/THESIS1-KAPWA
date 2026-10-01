@@ -29,6 +29,13 @@ interface CaseRequirementsProps {
    *  and the checklist lists their documents: a worker learns what a program
    *  will demand while choosing it, not after committing to it. */
   extraProgramIds?: string[];
+  /** Replaces the "every program behind a saved intervention" half of the
+   *  scope; `extraProgramIds` is appended either way. The step passes the one
+   *  intervention it is embedding the checklist into, so a card lists its own
+   *  program's documents and no other's, and the header passes its unsaved
+   *  selection alone — the saved ones have moved into those cards. Omit it and
+   *  the scope is the whole case, which is what every existing caller wants. */
+  programIds?: string[];
   /** Render as a section of a card that already exists. The merged
    *  intervention card brings its own border and separator, so a second pair
    *  inside it would draw a box within a box. */
@@ -46,7 +53,7 @@ interface CaseRequirementsProps {
 // the worker confirms an uploaded document on-site, uploads it at the office, or
 // records that the client passed it on-site directly. Claimant (remote) uploads
 // stay pending until confirmed.
-export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, embedded, readOnly }: CaseRequirementsProps) {
+export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, programIds: scopeProgramIds, embedded, readOnly }: CaseRequirementsProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [] } = useSWR<any[]>(queryKeys.cases.interventions(caseId));
@@ -58,17 +65,19 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
 
   const checklist = (caseData?.requirementsChecklist || {}) as Record<string, boolean>;
 
-  // The programs behind saved interventions plus the ones the step currently has
-  // selected, filtered because an ad-hoc service names no program — its
-  // documents are nobody's to preview. This list may repeat an id (one program
-  // can back several interventions), which is harmless: the `filter` below walks
-  // `programs` once, so a program still contributes a single entry. The
-  // de-duplication that matters is on the requirement *keys*, because two
-  // programs can demand the same document.
+  // The programs in scope: the caller's override (one intervention card's own
+  // program, or the header's unsaved selection) standing in for the saved ones,
+  // plus the ids the step currently has selected. Falsy ids are dropped because
+  // an ad-hoc service names no program — its documents are nobody's to preview.
+  // This list may repeat an id (one program can back several interventions, and
+  // the override can name one that is also selected), which is harmless: the
+  // `filter` below walks `programs` once, so a program still contributes a single
+  // entry. The de-duplication that matters is on the requirement *keys*, because
+  // two programs can demand the same document.
   const programIds = [
-    ...interventions.map((i: any) => i.programId).filter(Boolean),
-    ...(extraProgramIds ?? []).filter(Boolean),
-  ];
+    ...(scopeProgramIds ?? interventions.map((i: any) => i.programId)),
+    ...(extraProgramIds ?? []),
+  ].filter((id): id is string => Boolean(id));
   const relevantPrograms = programs.filter((p) => programIds.includes(p.id));
   const allRequirements = [
     ...new Set(relevantPrograms.flatMap((p) => requiredDocumentKeys(p))),
@@ -127,10 +136,11 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
   const savedProgramIds = new Set(interventions.map((i: any) => i.programId).filter(Boolean));
   const knownProgramIds = new Set(programs.map((p) => p.id));
   // Only a selection that resolves to a listed program can add a requirement, so
-  // an id no program matches must not make the count claim it includes one.
-  const previewing = (extraProgramIds ?? []).some(
-    (id) => id && knownProgramIds.has(id) && !savedProgramIds.has(id),
-  );
+  // an id no program matches must not make the count claim it includes one. Read
+  // over the whole scope rather than `extraProgramIds` alone, because a caller
+  // that overrides the scope hands its unsaved selection in the same prop — and
+  // an id already on the record is not a preview of anything.
+  const previewing = programIds.some((id) => knownProgramIds.has(id) && !savedProgramIds.has(id));
 
   return (
     <div className={embedded ? undefined : 'rounded-lg border bg-card'}>

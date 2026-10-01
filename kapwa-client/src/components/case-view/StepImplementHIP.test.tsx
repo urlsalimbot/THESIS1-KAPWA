@@ -365,11 +365,11 @@ describe('StepImplementHIP — sealing step 2', () => {
 });
 
 /**
- * A worker reads a program's name and the documents it demands as one fact, so
- * the intervention card carries the checklist inside it and the seal at its
- * foot. These assert the shape structurally — one ancestor holds both — rather
- * than by class name, because the point is which elements share a card, not
- * what the card is painted with.
+ * The step's record is one card: it titles itself inside the box, each delivery
+ * carries the documents its program demands, and the seal stands below it. These
+ * assert the shape structurally — which elements share a box, and where the box
+ * begins — rather than by class name, because the point is the nesting, not what
+ * the card is painted with.
  */
 describe('StepImplementHIP — the merged intervention card', () => {
   const MEDICAL = {
@@ -404,20 +404,35 @@ describe('StepImplementHIP — the merged intervention card', () => {
   }
 
   /**
-   * Whether `inner` sits in the same card as `sibling`.
+   * The card that holds this step's record: the direct child of its section
+   * that contains `heading`.
    *
-   * The walk stops at the step root, which is what makes this say "same card"
-   * rather than "somewhere on the step": two cards that merely share a parent
-   * come back false, so a checklist that drifted back out to a sibling of the
-   * intervention card fails here.
+   * A heading sitting loose *above* the card resolves to the section itself,
+   * because the section contains it too — so comparing this against the section
+   * is what distinguishes a card that titles itself from one that is labelled
+   * from outside.
    */
-  function inOneCard(inner: HTMLElement, sibling: HTMLElement, root: Element | null) {
-    let node = inner.parentElement;
-    while (node && node !== root) {
-      if (node.contains(sibling)) return true;
-      node = node.parentElement;
+  function theCard(heading: HTMLElement) {
+    const section = heading.closest('section');
+    if (!section) return null;
+    return [...section.children].find((el) => el.contains(heading)) ?? null;
+  }
+
+  /**
+   * The deepest element that holds both, or null if they share none.
+   *
+   * Two elements that meet *at* the card share only the card — "both somewhere
+   * in this box". Two that meet deeper share a box inside it, which is the
+   * difference between a checklist in the card's header and a checklist in the
+   * entry that names the program demanding it.
+   */
+  function commonAncestor(a: HTMLElement, b: HTMLElement) {
+    const ancestors = new Set<Element>();
+    for (let node: Element | null = a; node; node = node.parentElement) ancestors.add(node);
+    for (let node: Element | null = b; node; node = node.parentElement) {
+      if (ancestors.has(node)) return node;
     }
-    return false;
+    return null;
   }
 
   it('heads the add-intervention card "Intervention to be issued" at the level its sibling cards use', async () => {
@@ -432,15 +447,21 @@ describe('StepImplementHIP — the merged intervention card', () => {
     expect(heading.tagName).toBe(caseDocs.tagName);
     expect(heading.tagName).toBe('H3');
 
-    // The card has no title of its own any more, so the heading above it is
-    // what names it — and it must come first, not trail the card it labels.
+    // The card titles itself: the heading sits inside the box it names, ahead
+    // of the actions that row carries — not loose above the card, labelling a
+    // box it was not in.
     const add = screen.getByRole('button', { name: /Add Intervention/ });
     expect(heading.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.firstElementChild).toContainElement(heading);
+
+    const card = theCard(heading);
+    expect(card).not.toBeNull();
+    expect(card).not.toBe(heading.closest('section'));
+    expect(card?.contains(add)).toBe(true);
   });
 
-  it('lists a saved program\'s required documents inside the add-intervention card', async () => {
-    const { container } = renderCard({
+  it('lists a saved program\'s required documents inside that program\'s intervention card', async () => {
+    renderCard({
       interventions: [{ id: 'iv-1', caseId: 'case-1', programId: 'med-1', serviceName: 'Medical Assistance' }],
       programs: [MEDICAL],
     });
@@ -451,8 +472,22 @@ describe('StepImplementHIP — the merged intervention card', () => {
     expect(screen.getByText('Medical abstract')).toBeTruthy();
 
     const checklist = screen.getByRole('heading', { name: 'Requirements' });
-    const add = screen.getByRole('button', { name: /Add Intervention/ });
-    expect(inOneCard(checklist, add, container.firstElementChild)).toBe(true);
+    const intervention = screen.getByRole('heading', { name: 'Medical Assistance' });
+    const card = theCard(intervention);
+    expect(card).not.toBeNull();
+
+    // The checklist meets its program's name in a box of their own — the entry
+    // — rather than at the card itself, which is where a checklist sitting in
+    // the card's header would put them: both are then merely "somewhere in the
+    // same box", meeting at the card instead of inside it.
+    expect(commonAncestor(intervention, checklist)).toBeTruthy();
+    expect(commonAncestor(intervention, checklist)).not.toBe(card);
+
+    // Once, and beside the entry: a saved program's documents belong to the
+    // card that records the delivery. The card's own header holds only a
+    // selection still being made, which is the next assertion's case.
+    expect(screen.getAllByRole('heading', { name: 'Requirements' })).toHaveLength(1);
+    expect(intervention.compareDocumentPosition(checklist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('names the documents the selected program will require, before it is saved', async () => {
@@ -472,18 +507,47 @@ describe('StepImplementHIP — the merged intervention card', () => {
     expect(mockApiPost).not.toHaveBeenCalled();
   });
 
-  it('keeps the seal inside that card, reachable and disabled, with no checklist', async () => {
-    const { container } = renderCard({ programs: [MEDICAL] });
+  it('keeps the seal below that card, reachable and disabled, with no checklist', async () => {
+    renderCard({ programs: [MEDICAL] });
 
     // The empty state is real, not hypothetical: with nothing saved and nothing
-    // selected the checklist renders nothing at all, so a seal nested inside it
-    // would have vanished exactly here.
+    // selected the checklist renders nothing at all, so the card above the seal
+    // is what the step shows when no delivery has been logged.
     expect(await screen.findByText(/No interventions recorded yet/i)).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Requirements' })).toBeNull();
 
+    const heading = screen.getByRole('heading', { name: 'Intervention to be issued' });
+    const card = theCard(heading);
     const lock = screen.getByRole('button', { name: /^lock$/i });
+    expect(card).not.toBeNull();
+
+    // The seal is a statement about the whole step, so it stands below the card
+    // rather than as a row of it — still on this step, still beside the record
+    // it attests to, and still rendered when the checklist above renders nothing.
+    expect(card?.contains(lock)).toBe(false);
+    expect(heading.closest('section')?.contains(lock)).toBe(true);
+    expect(card?.contains(screen.getByText(/No interventions recorded yet/i))).toBe(true);
+
     expect(lock).toBeDisabled();
     expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
-    expect(inOneCard(lock, screen.getByRole('button', { name: /Add Intervention/ }), container.firstElementChild)).toBe(true);
+  });
+
+  // Generated documents have one home — the case view's sidebar. This step used
+  // to open with its own copy, so a worker on step 2 saw the same two links above
+  // the card and again down the right-hand column.
+  it('opens with no generated-documents card of its own', () => {
+    render(
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+        <StepImplementHIP
+          caseId="case-1"
+          caseData={{ ...caseData, certificateUrl: '/filing/FILE-COE-1/download', pettyCashVoucherUrl: '/filing/FILE-PCV-2/download' }}
+          userRole="social_worker"
+        />
+      </SWRConfig>,
+    );
+
+    expect(screen.queryByRole('heading', { name: 'Generated Documents' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /View Certificate of Eligibility/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /View Petty Cash Voucher/i })).toBeNull();
   });
 });
