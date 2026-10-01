@@ -20,7 +20,7 @@ type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | nul
 function renderAssessment(
   caseData: Record<string, unknown>,
   assessment: Record<string, unknown> = {},
-  opts: { readOnly?: boolean; stepLock?: Seal; userRole?: string } = {},
+  opts: { readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal; userRole?: string } = {},
 ) {
   return render(
     <StepAssessment
@@ -32,6 +32,7 @@ function renderAssessment(
       saving={false}
       userRole={opts.userRole ?? 'social_worker'}
       readOnly={opts.readOnly}
+      lockReadOnly={opts.lockReadOnly}
       stepLock={opts.stepLock}
     />,
   );
@@ -135,7 +136,7 @@ describe('StepAssessment — sealing step 1', () => {
   });
 
   it('offers a viewer neither the seal nor the hint it cannot act on', () => {
-    renderAssessment({ problemsPresented: 'Poverty' }, {}, { readOnly: true });
+    renderAssessment({ problemsPresented: 'Poverty' }, {}, { readOnly: true, lockReadOnly: true });
 
     // A disabled Lock would still be a control this role was decided not to
     // have, and the hint asks for the action.
@@ -145,7 +146,7 @@ describe('StepAssessment — sealing step 1', () => {
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
     const stepLock = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
-    renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' }, {}, { readOnly: true, stepLock });
+    renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' }, {}, { readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Juan Dela Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();

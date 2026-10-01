@@ -27,17 +27,15 @@ interface StepAssessmentProps {
    * Whether this step may still be sealed/released. Split from `readOnly`
    * because the seal strip's Unlock has to survive a sealed step: a step whose
    * fields are read-only *because* it is sealed must keep its one way out, or
-   * the worker who sealed it is stuck. Same split `StepClosure` already has, and
-   * the same `= readOnly` default the other three now use — an earlier
-   * `?? readOnly` here meant `false` fell through to `readOnly` while an explicit
-   * `false` did not, so the two halves of one rule had two idioms and the page
-   * had to know which.
+   * the worker who sealed it is stuck. Defaults to `false`, not `readOnly`, so
+   * that omitting it can never accidentally reproduce that lockout — a caller
+   * that wants the seal control withheld passes `true`.
    */
   lockReadOnly?: boolean;
 }
 
 export function StepAssessment({
-  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, lockReadOnly = readOnly, stepLock,
+  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, lockReadOnly = false, stepLock,
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();

@@ -25,15 +25,16 @@ interface StepClosureProps {
    * step's two answers disagree: `readOnly` flips true exactly when the closure
    * is complete (`stepDone[4]`), which is exactly when the step becomes sealable
    * — so routing the body signal to the bar hid the Lock button on the one step
-   * it was written for, and the bar rendered `null`. Defaults to `readOnly`, so
-   * a caller that knows only about the body is unchanged.
+   * it was written for, and the bar rendered `null`. Defaults to `false`, so
+   * omitting it can never hide a sealed step's Unlock; a caller that wants the
+   * seal control withheld passes `true`.
    */
   lockReadOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
 }
 
-export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = readOnly, stepLock }: StepClosureProps) {
+export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, stepLock }: StepClosureProps) {
   const { t } = useTranslation();
   const CLOSURE_OUTCOMES = [
     { value: 'graduated', label: t('caseView.closure.outcomeGraduated', 'Graduated'), description: t('caseView.closure.outcomeGraduatedDesc', 'Achieved Level 3 self-sufficiency') },

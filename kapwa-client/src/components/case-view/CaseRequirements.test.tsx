@@ -215,6 +215,21 @@ describe('CaseRequirements — previewing a program that is not yet an intervent
     expect(screen.queryByText('Barangay Certificate of Indigency')).toBeNull();
   });
 
+  it('does not claim to include a selection that names no known program', () => {
+    // `previewing` used to test the selection's *presence* alone, so an id no
+    // program resolves to still added "includes the program you selected" to a
+    // count that included nothing from it. The saved program keeps the checklist
+    // on screen, which is what makes the false clause observable.
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [{ id: 'iv-1', programId: 'med-1' }],
+      extraProgramIds: ['ghost-id'],
+    });
+
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
+    expect(screen.queryByText(/includes the program you selected/)).toBeNull();
+  });
+
   // The two below are one property read from both sides: a program that is
   // *both* recorded and still selected contributes its documents once. A worker
   // re-picking the program already on the record is ordinary — the select does

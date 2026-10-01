@@ -55,15 +55,16 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
 
   const checklist = (caseData?.requirementsChecklist || {}) as Record<string, boolean>;
 
-  // The union of the programs behind saved interventions and the ones the step
-  // currently has selected. De-duplicated because one program can back several
-  // interventions, and filtered because an ad-hoc service names no program —
-  // its documents are nobody's to preview.
+  // The programs behind saved interventions plus the ones the step currently has
+  // selected, filtered because an ad-hoc service names no program — its
+  // documents are nobody's to preview. This list may repeat an id (one program
+  // can back several interventions), which is harmless: the `filter` below walks
+  // `programs` once, so a program still contributes a single entry. The
+  // de-duplication that matters is on the requirement *keys*, because two
+  // programs can demand the same document.
   const programIds = [
-    ...new Set([
-      ...interventions.map((i: any) => i.programId).filter(Boolean),
-      ...(extraProgramIds ?? []).filter(Boolean),
-    ]),
+    ...interventions.map((i: any) => i.programId).filter(Boolean),
+    ...(extraProgramIds ?? []).filter(Boolean),
   ];
   const relevantPrograms = programs.filter((p) => programIds.includes(p.id));
   const allRequirements = [
@@ -121,7 +122,12 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
      qualifying the number, which keeps the arithmetic — the thing the seal
      weighs — exactly as it was. */
   const savedProgramIds = new Set(interventions.map((i: any) => i.programId).filter(Boolean));
-  const previewing = (extraProgramIds ?? []).some((id) => id && !savedProgramIds.has(id));
+  const knownProgramIds = new Set(programs.map((p) => p.id));
+  // Only a selection that resolves to a listed program can add a requirement, so
+  // an id no program matches must not make the count claim it includes one.
+  const previewing = (extraProgramIds ?? []).some(
+    (id) => id && knownProgramIds.has(id) && !savedProgramIds.has(id),
+  );
 
   return (
     <div className={embedded ? undefined : 'rounded-lg border bg-card'}>

@@ -29,13 +29,14 @@ interface StepTransitionProps {
    * Whether this step may still be sealed/released, kept apart from the actions'
    * `readOnly`: a sealed step's plan and follow-up visits are read-only
    * *because* of the seal, so folding that into the same flag would hide the one
-   * control that lifts it. Defaults to `readOnly`, so callers unaware of seals
-   * are unaffected.
+   * control that lifts it. Defaults to `false`, so omitting it can never hide a
+   * sealed step's Unlock; a caller that wants the seal control withheld passes
+   * `true`.
    */
   lockReadOnly?: boolean;
 }
 
-export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadOnly = readOnly, stepLock }: StepTransitionProps) {
+export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadOnly = false, stepLock }: StepTransitionProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);

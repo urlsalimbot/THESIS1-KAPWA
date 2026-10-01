@@ -612,7 +612,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
    * body goes read-only on the seal, the Unlock must not.
    */
   describe('step 5 sealed', () => {
-    async function renderStepFive(seals: unknown[]) {
+    async function renderStepFive(seals: unknown[], over: Record<string, unknown> = {}) {
       mockApiGet.mockImplementation((key: unknown) => {
         const k = JSON.stringify(key);
         if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
@@ -626,7 +626,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
         }
         if (k.includes('programs')) return Promise.resolve([]);
         if (k.includes('caseId')) return Promise.resolve([]);
-        if (k.includes('cases')) return Promise.resolve({ ...closureComplete, stepLocks: seals });
+        if (k.includes('cases')) return Promise.resolve({ ...closureComplete, ...over, stepLocks: seals });
         return Promise.resolve(null);
       });
       await mutate(() => true, undefined, { revalidate: false });
@@ -647,11 +647,24 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     });
 
     it('reads the step body as read-only while offering the release', async () => {
-      await renderStepFive([{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }]);
+      // The closure is deliberately *not* complete, so `stepDone[4]` cannot be
+      // what read-onlys the body — only the seal can. With a complete closure
+      // the body would be read-only seal or not, and this would stay green if
+      // the page stopped folding the seal in at all.
+      await renderStepFive(
+        [{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }],
+        { clientSignature: null, closureOutcome: null },
+      );
 
-      // Both halves, in one case: the seal withholds the body and withholds
-      // nothing else. Either alone would pass a weaker test.
-      expect(await screen.findByRole('button', { name: /^unlock$/i })).toBeTruthy();
+      // Step 5 is the step on screen, and the body it owns is frozen. The
+      // CaseActionBar below also offers a "Close Case" hop, so the body
+      // assertions are the closure form's own controls, not that button.
+      await screen.findByRole('heading', { name: 'Case Closure' });
+      expect(screen.queryByRole('button', { name: /Save Progress/i })).toBeNull();
+      expect(screen.getByRole('radio', { name: /Graduated/i })).toBeDisabled();
+      expect(screen.getByPlaceholderText(/Final notes before case closure/)).toBeDisabled();
+      // The seal withholds the body and nothing else: the release survives.
+      expect(screen.getByRole('button', { name: /^unlock$/i })).toBeTruthy();
       expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
     });
   });
@@ -665,18 +678,20 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
         return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
       }
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
-      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('inter-agency-referrals')) {
+        return Promise.resolve([{ id: 'iar-1', toAgencyId: 'ag-rhu', reason: 'Medical coordination', status: 'referred' }]);
+      }
       if (k.includes('programs')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
       // No signature or outcome: step 5 is not done, so `readOnly` is false and
-      // the bar is rendered — but disabled, with the reason.
+      // the bar is rendered — but disabled, with the reason. Steps 1-3 stay
+      // complete (interventions, a referral, and the self-reliance plan), so the
+      // nav lands on step 5 rather than stopping at an earlier step.
       if (k.includes('cases')) {
         return Promise.resolve({
           ...closureComplete,
           clientSignature: null,
           closureOutcome: null,
-          selfRelianceLevel: null,
-          sustainabilityPlan: null,
         });
       }
       return Promise.resolve(null);
@@ -684,6 +699,12 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     await mutate(() => true, undefined, { revalidate: false });
 
     renderWithSWR(<CaseViewPage />);
+
+    // The nav lands on the first pending step. Step 5 has to be the one on
+    // screen for this to be about step 5 at all: steps 1-3 are done, step 5 is
+    // not (no signature or outcome). Nulling step 4's data as well would stop
+    // the nav at step 4 and this would assert a different step's bar.
+    await screen.findByRole('heading', { name: 'Case Closure' });
 
     const lock = await screen.findByRole('button', { name: /^lock$/i });
     expect(lock).toBeDisabled();
@@ -780,6 +801,7 @@ describe('CaseViewPage — inter-agency referral rows', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();
     mockUseAuth.mockReset();
+    mockDownloadFilingDoc.mockReset();
     mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
     mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' }, loading: false });
     mockApiGet.mockImplementation((key: unknown) => {

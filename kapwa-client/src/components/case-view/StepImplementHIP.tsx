@@ -52,12 +52,13 @@ interface StepImplementHIPProps {
    * Whether this step may still be sealed/released, kept apart from the actions'
    * `readOnly`: a sealed step's controls are read-only *because* of the seal, so
    * folding that into the same flag would hide the one control that lifts it.
-   * Defaults to `readOnly`, so callers unaware of seals are unaffected.
+   * Defaults to `false`, so omitting it can never hide a sealed step's Unlock;
+   * a caller that wants the seal control withheld passes `true`.
    */
   lockReadOnly?: boolean;
 }
 
-export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockReadOnly = readOnly, stepLock }: StepImplementHIPProps) {
+export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockReadOnly = false, stepLock }: StepImplementHIPProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(

@@ -58,7 +58,7 @@ describe('StepClosure — sealing step 5', () => {
   });
 
   it('offers a viewer neither the seal nor the hint it cannot act on', () => {
-    renderStep({ status: 'transitioning' }, { readOnly: true });
+    renderStep({ status: 'transitioning' }, { readOnly: true, lockReadOnly: true });
 
     expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
     expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
@@ -82,15 +82,20 @@ describe('StepClosure — sealing step 5', () => {
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
-  it('defaults lockReadOnly to readOnly, so a caller that knows only the body is unchanged', () => {
-    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { readOnly: true });
+  it('defaults lockReadOnly to false, so a sealed step always offers its release', () => {
+    // The fail-safe half: a caller that omits `lockReadOnly` on a sealed step
+    // must still get the Unlock. Defaulting it to `readOnly` reproduced the
+    // Critical lockout — the step body is read-only *because* it is sealed, so
+    // the release is the one control that has to survive.
+    const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { readOnly: true, stepLock });
 
-    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /unlock/i })).toBeTruthy();
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
     const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
-    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { readOnly: true, stepLock });
+    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();

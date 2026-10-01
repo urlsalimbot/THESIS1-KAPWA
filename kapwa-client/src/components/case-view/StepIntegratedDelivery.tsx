@@ -24,8 +24,8 @@ interface StepIntegratedDeliveryProps {
    * Whether this step may still be sealed/released, kept apart from the
    * actions' `readOnly`: a sealed step's fields are read-only *because* of the
    * seal, so folding that into the same flag would hide the one control that
-   * lifts it. Defaults to `readOnly`, so a caller that does not care about seals
-   * (every spec, and the approval pipeline) keeps the behaviour it had.
+   * lifts it. Defaults to `false`, so omitting it can never hide a sealed step's
+   * Unlock; a caller that wants the seal control withheld passes `true`.
    */
   lockReadOnly?: boolean;
 }
@@ -37,7 +37,7 @@ interface StepIntegratedDeliveryProps {
 // Until a client UI existed for `PATCH /cases/:id/referral-decision`, the
 // server's `in_review -> active` gate could reject a case for a missing
 // referral decision that no one had any way of recording.
-export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, lockReadOnly = readOnly, stepLock }: StepIntegratedDeliveryProps) {
+export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, lockReadOnly = false, stepLock }: StepIntegratedDeliveryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();

@@ -34,6 +34,7 @@ function renderStep(
   referrals: unknown[] = [],
   opts: {
     readOnly?: boolean;
+    lockReadOnly?: boolean;
     role?: string;
     referralNotNeeded?: boolean;
     stepLock?: { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
@@ -53,6 +54,7 @@ function renderStep(
         }}
         userRole={opts.role ?? 'social_worker'}
         readOnly={opts.readOnly}
+        lockReadOnly={opts.lockReadOnly}
         stepLock={opts.stepLock}
       />
     </SWRConfig>,
@@ -279,7 +281,7 @@ describe('StepIntegratedDelivery — sealing step 3', () => {
   });
 
   it('offers a viewer neither the seal nor the hint it cannot act on', async () => {
-    renderStep([], { readOnly: true });
+    renderStep([], { readOnly: true, lockReadOnly: true });
 
     expect(await screen.findByText(/Inter-Agency Referrals/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
@@ -288,7 +290,7 @@ describe('StepIntegratedDelivery — sealing step 3', () => {
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
     const stepLock = { stepIndex: 2, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
-    renderStep([], { referralNotNeeded: true, readOnly: true, stepLock });
+    renderStep([], { referralNotNeeded: true, readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();

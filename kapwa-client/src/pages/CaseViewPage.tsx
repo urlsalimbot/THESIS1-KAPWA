@@ -6,7 +6,7 @@ import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import {
   User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning,
-  Plus, Lock, Send, ExternalLink, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
+  Plus, Lock, Send, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -884,7 +884,7 @@ export function CaseViewPage() {
                   // pretends to open anywhere.
                   <div
                     key={r.id}
-                    className="w-full text-left rounded-md border border-border/60 px-3 py-2"
+                    className="w-full rounded-md border border-border/60 px-3 py-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
@@ -897,7 +897,6 @@ export function CaseViewPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge variant={r.status === 'declined' ? 'destructive' : 'default'}>{referralStatusLabel(t, r.status)}</Badge>
-                        <ExternalLink size={14} className="text-muted-foreground" aria-hidden="true" />
                       </div>
                     </div>
                   </div>

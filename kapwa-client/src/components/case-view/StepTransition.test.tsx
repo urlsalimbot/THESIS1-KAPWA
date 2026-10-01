@@ -20,7 +20,7 @@ beforeEach(() => {
 
 type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
 
-function renderStep(caseData: any, opts: { readOnly?: boolean; stepLock?: Seal } = {}) {
+function renderStep(caseData: any, opts: { readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal } = {}) {
   return render(
     <SWRConfig value={{ provider: () => new Map(), fetcher: vi.fn() }}>
       <StepTransition
@@ -28,6 +28,7 @@ function renderStep(caseData: any, opts: { readOnly?: boolean; stepLock?: Seal }
         caseData={caseData}
         userRole="admin"
         readOnly={opts.readOnly}
+        lockReadOnly={opts.lockReadOnly}
         stepLock={opts.stepLock}
       />
     </SWRConfig>,
@@ -115,7 +116,7 @@ describe('StepTransition — sealing step 4', () => {
   });
 
   it('offers a viewer neither the seal nor the hint it cannot act on', () => {
-    renderStep({ status: 'active', selfRelianceLevel: 3 }, { readOnly: true });
+    renderStep({ status: 'active', selfRelianceLevel: 3 }, { readOnly: true, lockReadOnly: true });
 
     expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
     expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
@@ -123,7 +124,7 @@ describe('StepTransition — sealing step 4', () => {
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
     const stepLock = { stepIndex: 3, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
-    renderStep({ status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' }, { readOnly: true, stepLock });
+    renderStep({ status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' }, { readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();

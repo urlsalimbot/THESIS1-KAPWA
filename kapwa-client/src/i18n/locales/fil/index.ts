@@ -1935,8 +1935,7 @@ const fil: EnLocale = {
     "searchBeneficiary": "Maghanap ng benepisyaryo ayon sa pangalan...",
     "searching": "Nagha-hanap...",
     "selectAgency": "Pumili ng ahensya...",
-    "toAgency": "Papunta sa Ahensya",
-    "viewDetailsAria": "Tingnan ang mga detalye para kay {{name}}"
+    "toAgency": "Papunta sa Ahensya"
   },
   "bulkActions": {
     "allFailed_one": "Nabigo ang lahat ng {{count}} kaso.",

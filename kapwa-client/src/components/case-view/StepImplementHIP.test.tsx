@@ -266,6 +266,7 @@ describe('StepImplementHIP — sealing step 2', () => {
     interventions?: unknown[];
     programs?: unknown[];
     readOnly?: boolean;
+    lockReadOnly?: boolean;
     stepLock?: Seal;
   } = {}) {
     mockApiGet.mockImplementation(async (key: unknown) => {
@@ -281,6 +282,7 @@ describe('StepImplementHIP — sealing step 2', () => {
           caseData={opts.caseData ?? caseData}
           userRole="social_worker"
           readOnly={opts.readOnly}
+          lockReadOnly={opts.lockReadOnly}
           stepLock={opts.stepLock}
         />
       </SWRConfig>,
@@ -346,7 +348,7 @@ describe('StepImplementHIP — sealing step 2', () => {
   });
 
   it('offers a viewer neither the seal nor the hint it cannot act on', async () => {
-    renderSeal({ readOnly: true });
+    renderSeal({ readOnly: true, lockReadOnly: true });
 
     expect(await screen.findByText(/No interventions recorded yet/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
@@ -355,7 +357,7 @@ describe('StepImplementHIP — sealing step 2', () => {
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
     const stepLock = { stepIndex: 1, lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' };
-    renderSeal({ interventions: delivered, readOnly: true, stepLock });
+    renderSeal({ interventions: delivered, readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Lorna Santos · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();

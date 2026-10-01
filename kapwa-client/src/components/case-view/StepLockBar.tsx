@@ -86,6 +86,12 @@ export function StepLockBar({
   // another worker — the parent wins. Comparing presence rather than identity
   // keeps an unrelated parent re-render (a new object literal for the same row)
   // from wiping the override.
+  //
+  // Presence-only has one blind spot: a second writer that swaps one sealed row
+  // for a different sealed row keeps `present` true, so the override survives
+  // and the bar shows the old locker until the override is cleared. Seeing that
+  // needs row identity (e.g. `lockedAt`), which this bar does not track. It is
+  // unreachable with a single writer and is documented rather than fixed.
   const [mine, setMine] = useState<{ present: boolean; row: StepLock | null } | null>(null);
 
   const done = stepperStepDone(stepIndex, caseData, interventionCount, opts ?? {});
