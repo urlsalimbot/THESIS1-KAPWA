@@ -4,8 +4,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { CaseViewPage } from './CaseViewPage';
 
-const { mockApiGet, mockGetFilingObjectUrl, mockUseAuth, mockDownloadGisPdf, mockDownloadFilingDoc } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPatch, mockGetFilingObjectUrl, mockUseAuth, mockDownloadGisPdf, mockDownloadFilingDoc } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
+  mockApiPatch: vi.fn(),
   mockGetFilingObjectUrl: vi.fn(),
   mockUseAuth: vi.fn(),
   mockDownloadGisPdf: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock('../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
     post: vi.fn(),
-    patch: vi.fn(),
+    patch: (...args: unknown[]) => mockApiPatch(...args),
     put: vi.fn(),
     del: vi.fn(),
   },
@@ -71,6 +72,11 @@ function renderWithSWR(ui: React.ReactNode) {
       </MemoryRouter>
     </SWRConfig>,
   );
+}
+
+/** Fetches made against the case-detail key specifically, in order. */
+function detailFetches(): unknown[][] {
+  return mockApiGet.mock.calls.filter((c) => JSON.stringify(c[0]) === JSON.stringify(['cases', 'C-001']));
 }
 
 describe('CaseViewPage — government ID photo', () => {
@@ -159,6 +165,51 @@ describe('CaseViewPage — government ID photo', () => {
     await screen.findByText('Juan Dela Cruz');
     expect(screen.queryByText('Request Review')).toBeNull();
     expect(screen.queryByText('Submit for Review →')).toBeNull();
+  });
+
+  it('mutates the case-detail key when the action bar reports a transition', async () => {
+    // The regression the old "revalidates the case detail" test caught, carried
+    // over to the component that now owns the transition. Passing the key in
+    // SWR's *data* position makes `mutate` write a value instead of revalidating,
+    // so the header status badge keeps saying "Assessed" until a full reload —
+    // and the page then offers the same transition again.
+    mockUseAuth.mockReturnValue({ user: { id: '3', fullName: 'SW', role: 'social_worker' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([{ id: 'i1', programId: 'p1', serviceName: 'Burial Assistance' }]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      // Every step *due* at `assessed` sealed, or the bar's own gate (correctly)
+      // keeps the button disabled and there is nothing to click.
+      if (k.includes('cases')) {
+        return Promise.resolve({
+          ...mockCase,
+          status: 'assessed',
+          interventionNotNeeded: false,
+          frvaScore: 30,
+          stepLocks: [0, 1, 2].map((stepIndex) => ({ stepIndex, lockedAt: '2026-10-01T09:00:00Z' })),
+        });
+      }
+      return Promise.resolve(null);
+    });
+
+    renderWithSWR(<CaseViewPage />);
+
+    const flag = await screen.findByRole('button', { name: /flag for admin review/i });
+    expect(flag).toBeEnabled();
+    const before = detailFetches().length;
+    fireEvent.click(flag);
+    fireEvent.click(await screen.findByRole('button', { name: /^confirm$/i }));
+
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith('/cases/C-001/status', { status: 'in_review' }));
+    // The detail key is re-fetched, so the header status badge follows the
+    // transition instead of waiting for a reload. Nothing else here re-fetches
+    // that key — `mutate(['cases'], …)` matches `['cases']` exactly rather than
+    // by prefix, which is what makes this count the assertion and not a
+    // coincidence (verified by deleting the detail mutate: the count stays at 1).
+    await waitFor(() => expect(detailFetches().length).toBeGreaterThan(before));
   });
 
   it('labels an in-case renewal with the linked case control number, not a UUID fragment', async () => {

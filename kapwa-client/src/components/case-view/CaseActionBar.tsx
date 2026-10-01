@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Lock } from 'lucide-react';
+import { ArrowRight, Check, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -22,20 +22,44 @@ export interface CaseActionBarProps {
 
 /**
  * The lifecycle, in the order the FSM moves through it. Mirrors `CaseStatus` in
- * `kapwa-server/src/cases/case.entity.ts`; the union is what makes
- * `FORWARD_HOPS` exhaustive below — a status added to the union without a hop
- * named for it is a compile error — and `CaseActionBar.test.tsx` walks all six
- * statuses, so a hop that stops rendering is caught as behaviour rather than as
- * a type.
+ * `kapwa-server/src/cases/case.entity.ts` and is checked against it by
+ * `src/lib/case-fsm-parity.test.ts`, so the two cannot drift silently.
  */
 type CaseStatus =
   | 'enrolled' | 'assessed' | 'in_review' | 'active' | 'transitioning' | 'closed';
 
-interface CaseHop {
-  /** The status this control moves the case to. */
+/** An i18n key with the English text to fall back on. */
+type Copy = { key: string; fallback: string };
+
+/**
+ * An edge a step card already offers, gated on data only that card can see —
+ * `StepAssessment` on the FRVA/SWDI score, `StepTransition` on the saved
+ * transition plan. Recorded so the map says "this edge exists, and not here";
+ * carries no copy, because nothing renders it.
+ *
+ * It is not "because two buttons are untidy". Offering them here would mean
+ * either shipping a control whose precondition the client cannot check (the
+ * server rejects `active -> transitioning` without a self-reliance level, a
+ * sustainability plan and a referral decision — three rules this component would
+ * have to copy, with nothing keeping the copies honest, which is the drift this
+ * whole feature exists to prevent), or deleting a contextual control from the
+ * card the user is filling in and making them scroll to a bar underneath it. The
+ * bar owns the edges whose precondition the client already holds: the step seals
+ * and the approval signature.
+ */
+interface SuppressedEdge {
+  /** The status this edge moves the case to. */
   to: CaseStatus;
-  /** The endpoint that performs it, and whether it carries a body. */
+  /** The endpoint that performs it, for the record. */
   path: string;
+  ownedByStepCard: true;
+}
+
+/** An edge the bar performs itself, behind a confirm dialog. */
+interface RenderedHop {
+  to: CaseStatus;
+  path: string;
+  ownedByStepCard?: false;
   /**
    * `in_review -> active` is the one hop that records *who* approved, so it goes
    * through `/approve` (which `@Roles('admin')`) rather than `/status`. The rest
@@ -43,50 +67,35 @@ interface CaseHop {
    * own.
    */
   needsSignature: boolean;
-  label: { key: string; fallback: string };
-  title: { key: string; fallback: string };
-  body: { key: string; fallback: string };
+  label: Copy;
+  title: Copy;
+  body: Copy;
   /**
    * A worker-facing label, where the same transition reads differently to the
    * two roles. `assessed -> in_review` is a hand-*off* to an administrator and a
    * *send* by one, and telling the worker it is a hand-off is the whole reason
    * the confirm dialog exists.
    */
-  workerLabel?: { key: string; fallback: string };
+  workerLabel?: Copy;
   /**
    * Every step *due at this status* must be sealed first. Only enforced for
    * non-admin roles: the server exempts `admin` from this one gate (an admin
    * that could not move a case at all would be worse than the gap it closes).
    */
   gateOnDueStepLocks?: boolean;
-  /**
-   * The step card that owns this edge already offers it, gated on data only that
-   * card can see — `StepAssessment` on the FRVA/SWDI score, `StepTransition` on
-   * the saved transition plan. The bar renders nothing for these.
-   *
-   * It is not "because two buttons are untidy". Offering them here would mean
-   * either shipping a control whose precondition the client cannot check (the
-   * server rejects `active -> transitioning` without a self-reliance level, a
-   * sustainability plan and a referral decision — three rules this component
-   * would have to copy, with nothing keeping the copies honest, which is the
-   * drift this whole feature exists to prevent), or deleting a contextual
-   * control from the card the user is filling in and making them scroll to a bar
-   * underneath it. The bar owns the edges whose precondition the client already
-   * holds: the step seals and the approval signature.
-   */
-  ownedByStepCard?: boolean;
 }
+
+type CaseHop = SuppressedEdge | RenderedHop;
 
 /**
  * The forward hops, keyed by the status they leave from — an entry per lifecycle
- * position, so a status whose edge belongs to a step card is marked as such
- * rather than missing, and a status with no legal successor (`closed`) is absent
- * from the record's key type entirely.
+ * position that has a successor, so an edge belonging to a step card is recorded
+ * as `ownedByStepCard` rather than missing, and a status with no successor
+ * (`closed`) is simply absent.
  *
- * Three edges live here and two do not; `ownedByStepCard` is what says so. The
- * bar is deliberately *not* the one place every forward transition happens from:
- * it is the one place the transitions whose preconditions the client can see
- * happen from.
+ * Three edges live here and two do not. The bar is deliberately *not* the one
+ * place every forward transition happens from: it is the one place the
+ * transitions whose preconditions the client can see happen from.
  *
  * Named hops rather than one generic "Advance": a control whose effect depends on
  * state the user cannot see is exactly the accident this bar replaces, and the
@@ -94,26 +103,16 @@ interface CaseHop {
  * activation documents, self-reliance plan) make those effects materially
  * different.
  *
- * Typed as a full `Record` over the five, so a lifecycle status with no hop
- * named for it is a compile error rather than a silently dead control.
+ * `Partial`, not a `Record` over the five non-terminal statuses: two of them
+ * carry no copy at all, so there is nothing for the compiler to require. What
+ * keeps the map honest instead is `CaseActionBar.test.tsx`, which walks all six
+ * statuses and asserts what renders at each — so a status that silently loses its
+ * hop is caught as behaviour, which is the failure that actually matters.
  */
-const FORWARD_HOPS: Record<Exclude<CaseStatus, 'closed'>, CaseHop> = {
-  enrolled: {
-    to: 'assessed',
-    path: '/cases/%s/status',
-    needsSignature: false,
-    label: { key: 'caseView.action.markAssessed', fallback: 'Mark assessed' },
-    title: { key: 'caseView.action.markAssessedTitle', fallback: 'Mark this case assessed?' },
-    body: {
-      key: 'caseView.action.markAssessedBody',
-      fallback: 'The case moves from Enrolled to Assessed and the assessment step becomes the worker\'s to complete.',
-    },
-    // `StepAssessment`'s "Complete Assessment" owns this one: it is the card
-    // holding the fields, and it already withholds the control until the
-    // FRVA/SWDI score exists — one of the server's own preconditions. The label
-    // and confirm copy below are kept as this edge's record, not rendered.
-    ownedByStepCard: true,
-  },
+const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
+  // `StepAssessment`'s "Complete Assessment": the card holding the fields, and
+  // it already withholds the control until an FRVA/SWDI score exists.
+  enrolled: { to: 'assessed', path: '/cases/%s/status', ownedByStepCard: true },
   assessed: {
     to: 'in_review',
     path: '/cases/%s/status',
@@ -138,21 +137,8 @@ const FORWARD_HOPS: Record<Exclude<CaseStatus, 'closed'>, CaseHop> = {
       fallback: 'The case moves from In Review to Active. Your signature is recorded as the approver.',
     },
   },
-  active: {
-    to: 'transitioning',
-    path: '/cases/%s/status',
-    needsSignature: false,
-    label: { key: 'caseView.action.beginTransition', fallback: 'Begin transition' },
-    title: { key: 'caseView.action.beginTransitionTitle', fallback: 'Begin the transition phase?' },
-    body: {
-      key: 'caseView.action.beginTransitionBody',
-      fallback: 'The case moves from Active to Transitioning, opening the self-reliance evaluation and the case study.',
-    },
-    // `StepTransition`'s "Mark Ready for Graduation" owns this one, next to the
-    // transition plan it depends on. Copy kept as this edge's record, not
-    // rendered.
-    ownedByStepCard: true,
-  },
+  // `StepTransition`'s "Mark Ready for Graduation", beside the plan it needs.
+  active: { to: 'transitioning', path: '/cases/%s/status', ownedByStepCard: true },
   transitioning: {
     to: 'closed',
     path: '/cases/%s/close',
@@ -164,13 +150,7 @@ const FORWARD_HOPS: Record<Exclude<CaseStatus, 'closed'>, CaseHop> = {
       fallback: 'The case moves from Transitioning to Closed. Closure requires the client signature and the closure outcome already recorded.',
     },
   },
-  // Terminal: no forward hop exists, and `closed` is excluded from the record's
-  // key type above. `CaseActionBar.test.tsx` asserts the keys are exactly the
-  // lifecycle minus `closed`, so a status added to the union without a hop here
-  // fails there as well as at compile time.
-} as Record<Exclude<CaseStatus, 'closed'>, CaseHop>;
-
-const HOPS: Partial<Record<CaseStatus, CaseHop>> = FORWARD_HOPS;
+};
 
 /** Replaces the `%s` placeholder in a hop's endpoint with the case id. */
 function endpoint(caseId: string, path: string): string {
@@ -194,7 +174,7 @@ function endpoint(caseId: string, path: string): string {
 export function CaseActionBar({ caseId, caseData, userRole, onChanged }: CaseActionBarProps) {
   const status = (caseData?.status ?? null) as CaseStatus | null;
   if (status == null) return null;
-  const hop = HOPS[status];
+  const hop = FORWARD_HOPS[status];
   if (!hop || hop.ownedByStepCard || !canTransitionCase(status, userRole)) return null;
   return (
     <CaseHopControl
@@ -221,12 +201,28 @@ export function CaseActionBar({ caseId, caseData, userRole, onChanged }: CaseAct
  */
 function CaseHopControl({
   caseId, caseData, userRole, status, hop, onChanged,
-}: CaseActionBarProps & { status: CaseStatus; hop: CaseHop }) {
+}: CaseActionBarProps & { status: CaseStatus; hop: RenderedHop }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [signature, setSignature] = useState('');
   const [failure, setFailure] = useState<string | null>(null);
+
+  /**
+   * What this bar last committed, for the window in which the parent has not
+   * re-read it yet — which, when the reload fails, is forever.
+   *
+   * `from` is the status the case was in when the write landed. While the parent
+   * still reports that same status this bar knows better than it does; the moment
+   * it moves — a revalidation, another tab, a plain reload — the parent wins and
+   * this record is ignored. Same shape as `StepLockBar`'s `mine`, and for the same
+   * reason: without it, a committed transition the page never learns about leaves
+   * an *enabled* control for a transition that has already happened, and the
+   * second press comes back "could not be moved" — a change that succeeded
+   * reported as a failure, which is what makes people perform it a third time.
+   */
+  const [mine, setMine] = useState<{ from: CaseStatus; to: CaseStatus } | null>(null);
+  const committed = mine && mine.from === status ? mine : null;
 
   const isAdmin = userRole === CASE_ADMIN_ROLE;
   const label = hop.workerLabel && !isAdmin ? hop.workerLabel : hop.label;
@@ -249,6 +245,23 @@ function CaseHopControl({
     const entry = STEP_LABEL_KEYS[i];
     return entry ? t(entry.key, entry.fallback) : `#${i + 1}`;
   };
+
+  /**
+   * The committed case, stated and not offered again. No button at all rather
+   * than a disabled one: a control for a transition that has already happened is
+   * a question the page cannot answer, and a worker pressing it is told the case
+   * could not be moved — the worst possible answer about a move that worked.
+   */
+  if (committed) {
+    return (
+      <div className="rounded-lg border bg-card px-4 py-3">
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Check aria-hidden="true" />
+          {t('caseView.action.movedTo', 'Moved to {{status}}.', { status: statusLabel(t, committed.to) })}
+        </p>
+      </div>
+    );
+  }
 
   async function submit() {
     if (busy || signatureMissing || gated) return;
@@ -277,9 +290,11 @@ function CaseHopControl({
         });
         return;
       }
-      // Committed. Close before the refresh so the record of the transition is not
-      // shown next to a "could not refresh" complaint — and so the button the
-      // worker would press again is gone.
+      // Committed. Recorded *before* the refresh, not after it: `onChanged` is
+      // the step most likely to fail, and the whole point of this record is the
+      // case where it does. Close the dialog and stop offering the hop at the same
+      // moment, so a committed transition cannot be performed twice from this bar.
+      setMine({ from: status, to: hop.to });
       setOpen(false);
       setSignature('');
       try {

@@ -20,7 +20,7 @@ type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | nul
 function renderAssessment(
   caseData: Record<string, unknown>,
   assessment: Record<string, unknown> = {},
-  opts: { readOnly?: boolean; stepLock?: Seal } = {},
+  opts: { readOnly?: boolean; stepLock?: Seal; userRole?: string } = {},
 ) {
   return render(
     <StepAssessment
@@ -30,7 +30,7 @@ function renderAssessment(
       onAssessmentChange={() => {}}
       onSave={() => {}}
       saving={false}
-      userRole="social_worker"
+      userRole={opts.userRole ?? 'social_worker'}
       readOnly={opts.readOnly}
       stepLock={opts.stepLock}
     />,
@@ -79,6 +79,25 @@ describe('StepAssessment — step completion gate and save flow', () => {
     expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeTruthy();
     expect(screen.queryByText(/Add an FRVA or SWDI score/)).toBeNull();
   });
+
+  // The positive half of `CaseActionBar`'s `ownedByStepCard` suppression, and it
+  // has to live *here*. The bar renders nothing for `enrolled`, so this card is
+  // the only control for `enrolled -> assessed`; if it stopped rendering, the
+  // bar's own "renders nothing at enrolled" assertion would keep passing — a bar
+  // that renders nothing at all satisfies it — and the worker would be left with
+  // no control and no explanation. Asserted for every role `CASE_FSM_ROLES`
+  // admits from `enrolled`, which is the whole set the bar suppresses for.
+  it.each(['social_worker', 'admin'])(
+    'is the only control for enrolled -> assessed, and offers it to a %s who can take it',
+    (userRole) => {
+      renderAssessment(
+        filledCaseData({ frvaScore: 45 }),
+        { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45 },
+        { userRole },
+      );
+      expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeEnabled();
+    },
+  );
 });
 
 describe('StepAssessment — sealing step 1', () => {

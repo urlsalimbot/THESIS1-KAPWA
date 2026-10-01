@@ -100,7 +100,7 @@ describe('CaseActionBar', () => {
 
   it('derives the open set by calling stepsDueAt with the case status', () => {
     mockStepsDueAt.mockReturnValue([1, 2]);
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0]) } });
+    const { unmount } = renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0]) } });
 
     expect(mockStepsDueAt).toHaveBeenCalledWith('assessed');
     // Follows the derivation on both branches, so it cannot pass by rendering a
@@ -108,9 +108,14 @@ describe('CaseActionBar', () => {
     expect(screen.getByText('Intervention & Requirements')).toBeTruthy();
     expect(screen.getByText('Inter-agency Referrals')).toBeTruthy();
 
+    // Unmounted rather than rendered alongside: two bars in one document make
+    // every later `getBy*` ambiguous, and `[1]` on a role query is a way of
+    // saying "which one did I mean" that nothing documents.
+    unmount();
+
     mockStepsDueAt.mockReturnValue([]);
     renderBar({ caseData: { status: 'assessed', stepLocks: [] } });
-    expect(screen.getAllByRole('button', { name: /flag for admin review/i })[1]).toBeEnabled();
+    expect(flagButton()).toBeEnabled();
   });
 
   it('disables Flag with a reason when nothing is sealed, and opens no dialog', async () => {
@@ -200,6 +205,49 @@ describe('CaseActionBar', () => {
     expect(await screen.findByText(/did not refresh/i)).toBeTruthy();
     expect(screen.queryByText(/could not be moved/i)).toBeNull();
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    // The control's ABSENCE is the half that stops the second press. A toast
+    // saying "refresh failed" while the bar still offers the same transition is
+    // the bug: the case has already moved, so pressing again is a duplicate
+    // transition that ends in "could not be moved" — a committed change read as
+    // a failure. Asserted as "no button at all", not "a disabled one", because a
+    // disabled button still invites the question of why.
+    expect(screen.queryByRole('button', { name: /flag for admin review/i })).toBeNull();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // And the record of what happened, in the case's own vocabulary.
+    expect(screen.getByText(/moved to in review/i)).toBeTruthy();
+    expect(mockApiPatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands the control back once the reload lands, rather than holding the record forever', async () => {
+    const user = userEvent.setup();
+    const onChanged = vi.fn().mockRejectedValue(new Error('offline'));
+    const { rerender } = renderBar({
+      caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) }, onChanged,
+    });
+
+    await user.click(flagButton());
+    await user.click(confirmButton());
+    expect(await screen.findByText(/moved to in review/i)).toBeTruthy();
+
+    // The parent eventually catches up — a revalidation, another tab, anything.
+    // This bar's own record must yield to it, and the *next* hop appear: a
+    // permanent "moved to In Review" line would strand the case on a page that
+    // cannot advance it.
+    rerender(
+      <>
+        <Toaster />
+        <CaseActionBar
+          caseId="c1"
+          caseData={{ status: 'in_review' }}
+          userRole="admin"
+          onChanged={noop}
+        />
+      </>,
+    );
+
+    expect(screen.queryByText(/moved to in review/i)).toBeNull();
+    expect(screen.getByRole('button', { name: /approve & activate/i })).toBeEnabled();
   });
 
   // --- admin: one named button per legal forward hop -----------------------

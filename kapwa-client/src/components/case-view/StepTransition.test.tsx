@@ -54,6 +54,31 @@ describe('StepTransition — savable until closure', () => {
   });
 });
 
+describe('StepTransition — owns the active -> transitioning edge', () => {
+  // The positive half of `CaseActionBar`'s `ownedByStepCard` suppression, and it
+  // has to live *here*. The bar renders nothing for `active`, so this card is the
+  // only control for `active -> transitioning`; if it stopped rendering, the
+  // bar's own "renders nothing at active" assertion would keep passing — a bar
+  // that renders nothing at all satisfies it — and nobody could move the case on.
+  // `renderStep` mounts as `admin`, which is the only role `CASE_FSM_ROLES`
+  // admits from `active` once the admin short-circuit is accounted for, so this
+  // is the whole set the bar suppresses for.
+  it('is the only control for active -> transitioning, and offers it to an admin', () => {
+    renderStep({ status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' });
+
+    const control = screen.getByRole('button', { name: /Mark Ready for Graduation/i });
+    expect(control).toBeEnabled();
+    // And the copy that says what it does, which is the only thing standing in
+    // for the confirm dialog this edge does not get.
+    expect(screen.getByText(/Mark case as transitioning/i)).toBeTruthy();
+  });
+
+  it('offers it on an active case only — an admin looking at a different status gets nothing', () => {
+    renderStep({ status: 'transitioning', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' });
+    expect(screen.queryByRole('button', { name: /Mark Ready for Graduation/i })).toBeNull();
+  });
+});
+
 describe('StepTransition — sealing step 4', () => {
   // `stepperStepDone(3, …)` wants a self-reliance level AND a sustainability
   // plan, and `active` is the earliest status that clears the step's floor.
