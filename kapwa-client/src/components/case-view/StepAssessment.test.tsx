@@ -99,6 +99,80 @@ describe('StepAssessment — step completion gate and save flow', () => {
       expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeEnabled();
     },
   );
+
+  /**
+   * The deepest element holding both, or null if they share none above the
+   * component root.
+   */
+  function commonAncestor(a: Element, b: Element) {
+    const ancestors = new Set<Element>();
+    for (let node: Element | null = a; node; node = node.parentElement) ancestors.add(node);
+    for (let node: Element | null = b; node; node = node.parentElement) {
+      if (ancestors.has(node)) return node;
+    }
+    return null;
+  }
+
+  /** The ancestor of `el` whose parent is `root` — `el`'s own box inside it. */
+  function childOf(root: Element, el: Element) {
+    let node: Element | null = el;
+    while (node && node.parentElement !== root) node = node.parentElement;
+    return node;
+  }
+
+  // Step 1's record is one card: the DSWD tools are a named section inside it,
+  // not a second card beside it. Asserted structurally — which box holds which
+  // title — because the point is the nesting, not what the card is painted with.
+  it('keeps the DSWD tools inside the assessment card rather than a card of their own', () => {
+    renderAssessment(filledCaseData(), { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z' });
+
+    const cardTitle = screen.getByRole('heading', { name: 'Assessment & Diagnosis' });
+    const toolsTitle = screen.getByRole('heading', { name: 'DSWD Assessment Tools' });
+    const lock = screen.getByRole('button', { name: /^lock$/i });
+
+    // The step's root is what the card and its seal strip share, so the box
+    // between that root and the card's own title is the card itself. Both
+    // titles and the Save button landing in it is what "one card" means: a
+    // second card would leave the tools title outside the box the card's title
+    // names, which is exactly the shape this replaced.
+    const root = commonAncestor(cardTitle, lock);
+    expect(root).not.toBeNull();
+    const card = childOf(root as Element, cardTitle);
+    expect(card).not.toBeNull();
+    expect(card?.contains(toolsTitle)).toBe(true);
+    expect(card?.contains(screen.getByRole('button', { name: 'Save Assessment' }))).toBe(true);
+    // One title for the card, not one per group.
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1);
+
+    // Subordinate, not a peer: `h4` beneath the card's `h3`, so heading levels
+    // still descend through the merged card.
+    expect(cardTitle.tagName).toBe('H3');
+    expect(toolsTitle.tagName).toBe('H4');
+
+    // The category stands beside the narratives it files, ahead of them in the
+    // document — the two-column form as it reads left to right.
+    const category = screen.getByText('Client Category *');
+    const problems = screen.getByText('Problem/s Presented *');
+    expect(card?.contains(category)).toBe(true);
+    expect(card?.contains(problems)).toBe(true);
+    expect(category.compareDocumentPosition(problems) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // The Save row is the only thing that carries the rule above it, so a viewer —
+  // who gets no Save row — is the case where a separator left standing would
+  // rule off nothing at the foot of the card.
+  it('does not end the card on a rule when a viewer has no Save row', () => {
+    renderAssessment(filledCaseData(), {}, { readOnly: true, lockReadOnly: true });
+
+    const heading = screen.getByRole('heading', { name: 'Assessment & Diagnosis' });
+    // h3 -> header row -> the card, whose last box is the content column.
+    const content = heading.parentElement?.parentElement?.lastElementChild;
+
+    // A separator renders no text; the form's own content does. This passes on
+    // the form and fails on a bare rule, whichever rule it happens to be.
+    expect(content?.lastElementChild?.textContent?.trim().length ?? 0).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Save Assessment' })).toBeNull();
+  });
 });
 
 describe('StepAssessment — sealing step 1', () => {
