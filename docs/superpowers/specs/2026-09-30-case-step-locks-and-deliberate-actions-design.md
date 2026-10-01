@@ -144,8 +144,16 @@ Each step file keeps its own concerns; the lock affordance is one shared unit.
 The checklist currently derives its requirements from programs already linked to saved
 interventions (`CaseRequirements.tsx:49-53`). To make the merged card useful, the checklist
 must preview the **selected but unsaved** program's requirements. That needs an
-`extraProgramIds` prop on `CaseRequirements`; the lock predicate then covers the union of
-saved-intervention programs and the selected one.
+`extraProgramIds` prop on `CaseRequirements`.
+
+> **AMENDED (Task 9, commit 8054ba7):** the union covers the **checklist only**, not the
+> lock predicate. The checklist previews saved ∪ selected so the worker can see what a
+> program demands *before* committing to it; the lock predicate covers **saved
+> interventions only**. An unsaved selection is not part of the case record, so sealing is
+> not about it — and the server cannot know about it, so extending the client alone would
+> make the two implementations of one rule disagree, which is the exact failure the shared
+> `case-step-done-fixture.json` exists to prevent. Where no intervention is saved at all the
+> predicate is already false via `interventionCount > 0`.
 
 Lock for this step is enabled when the step is done: at least one intervention exists (or
 the recorded "no intervention" decision) and every requirement in scope reads complete.

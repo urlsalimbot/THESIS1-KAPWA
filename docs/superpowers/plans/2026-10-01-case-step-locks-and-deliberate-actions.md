@@ -882,10 +882,13 @@ components never see the stepLocks array."
 
 ---
 
+> **CORRECTION (found in Task 8, commit 1f55d64):** the references to `StepInterventions.tsx` in Tasks 8 and 9 name DEAD CODE. Nothing imports it. Phase 18 renamed the live step-1 component to `StepImplementHIP.tsx`, which is what `CaseViewPage.tsx:37` imports (498 lines vs the dead file's 259). Task 8 mounted the lock on the live component and left the dead file untouched, which is the only reason the all-locked gate is satisfiable. Task 9's own references below are re-pointed to `StepImplementHIP.tsx`.
+> The task-8 text keeps the old name as written history.
+
 ### Task 9: The merged intervention card
 
 **Files:**
-- Modify: `kapwa-client/src/components/case-view/StepInterventions.tsx`
+- Modify: `kapwa-client/src/components/case-view/StepImplementHIP.tsx`
 - Modify: `kapwa-client/src/components/case-view/CaseRequirements.tsx` (add `extraProgramIds`)
 - Test: `kapwa-client/src/components/case-view/CaseRequirements.test.tsx`
 
@@ -945,7 +948,7 @@ const programIds = [
 
 Run the spec → passes.
 
-Now in `StepInterventions.tsx`:
+Now in `StepImplementHIP.tsx`:
 1. Add an `h2` reading "Intervention to be issued" **above** the add-intervention card, not inside the list card.
 2. Move `<CaseRequirements … />` from the bottom of the component into the add-intervention card, below a `<Separator />`, so the program select and its document list are one card.
 3. Pass `extraProgramIds={form.programId && !form.programId.startsWith('adhoc:') ? [form.programId] : []}` so the checklist tracks the selection live.
@@ -959,7 +962,7 @@ Run: `cd kapwa-client && npm run typecheck && npx vitest run`
 Expected: green.
 
 ```bash
-git add kapwa-client/src/components/case-view/StepInterventions.tsx \
+git add kapwa-client/src/components/case-view/StepImplementHIP.tsx \
         kapwa-client/src/components/case-view/CaseRequirements.tsx \
         kapwa-client/src/components/case-view/CaseRequirements.test.tsx
 git commit -m "feat(case-view): fold required documents into the intervention card
