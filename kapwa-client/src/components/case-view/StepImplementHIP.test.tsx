@@ -444,12 +444,20 @@ describe('StepImplementHIP — the merged intervention card', () => {
     return false;
   }
 
-  it('heads the add-intervention card "Intervention to be issued"', () => {
+  it('heads the add-intervention card "Intervention to be issued" at the level its sibling cards use', async () => {
     const { container } = renderCard();
+
+    // Every step titles its cards at one level, so heading-by-heading
+    // navigation does not jump. Compared against this step's own second card
+    // rather than pinned to a literal, because the bug is one card differing
+    // from the others — a sibling drifting is the same defect either way.
+    const heading = screen.getByRole('heading', { name: 'Intervention to be issued' });
+    const caseDocs = await screen.findByRole('heading', { name: 'Case Documents' });
+    expect(heading.tagName).toBe(caseDocs.tagName);
+    expect(heading.tagName).toBe('H3');
 
     // The card has no title of its own any more, so the heading above it is
     // what names it — and it must come first, not trail the card it labels.
-    const heading = screen.getByRole('heading', { level: 2, name: 'Intervention to be issued' });
     const add = screen.getByRole('button', { name: /Add Intervention/ });
     expect(heading.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.firstElementChild).toContainElement(heading);
@@ -483,7 +491,7 @@ describe('StepImplementHIP — the merged intervention card', () => {
     // The card's checklist is handed the same selection, so the two readings
     // of "what this program needs" come from one id rather than two rules.
     expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
-    expect(screen.getByText('0/2 complete')).toBeTruthy();
+    expect(screen.getByText('0/2 complete (includes the program you selected)')).toBeTruthy();
     // A preview is not a record: nothing has been asked of the server.
     expect(mockApiPost).not.toHaveBeenCalled();
   });

@@ -1678,6 +1678,7 @@ const fil: EnLocale = {
       "interventionRecord": "Rekord ng Interbensyon",
       "toBeIssued": "Interbensyong ibibigay",
       "programDocsRequired": "Kailangan: {{docs}}",
+      "completePreviewing": "kumpleto (kasama ang piniling programa)",
       "interventionUnit_one": "interbensyon",
       "interventionUnit_other": "interbensyon",
       "modeOfDelivery": {

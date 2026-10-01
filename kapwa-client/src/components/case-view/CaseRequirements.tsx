@@ -114,13 +114,25 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
 
   const completedCount = allRequirements.filter((r) => checklist[r]).length;
 
+  /* Whether this list is counting something the record does not hold yet.
+     A selection is not an intervention, so "2/2 complete" beside a program the
+     worker has not saved would read as though that program had been issued and
+     its paperwork closed out. The clause names the extra source instead of
+     qualifying the number, which keeps the arithmetic — the thing the seal
+     weighs — exactly as it was. */
+  const savedProgramIds = new Set(interventions.map((i: any) => i.programId).filter(Boolean));
+  const previewing = (extraProgramIds ?? []).some((id) => id && !savedProgramIds.has(id));
+
   return (
     <div className={embedded ? undefined : 'rounded-lg border bg-card'}>
       <div className="px-4 py-3 flex items-center gap-2">
         <FileCheck size={16} className="text-primary" />
         <h3 className="text-sm font-semibold">{t('caseView.implement.requirements', 'Requirements')}</h3>
         <span className="text-xs text-muted-foreground ml-auto">
-          {completedCount}/{allRequirements.length} {t('caseView.implement.complete', 'complete')}
+          {completedCount}/{allRequirements.length}{' '}
+          {previewing
+            ? t('caseView.implement.completePreviewing', 'complete (includes the program you selected)')
+            : t('caseView.implement.complete', 'complete')}
         </span>
       </div>
       {!embedded && <Separator />}

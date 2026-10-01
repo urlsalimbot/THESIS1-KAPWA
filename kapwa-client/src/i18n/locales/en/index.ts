@@ -69,6 +69,7 @@ const en = {
       "interventionRecord": "Intervention Record",
       "toBeIssued": "Intervention to be issued",
       "programDocsRequired": "Requires: {{docs}}",
+      "completePreviewing": "complete (includes the program you selected)",
       "modeOfDelivery": {
         "cash": "Cash",
         "cheque": "Cheque",

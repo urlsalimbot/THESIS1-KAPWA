@@ -175,7 +175,7 @@ describe('CaseRequirements — previewing a program that is not yet an intervent
     expect(screen.getByText('Medical abstract')).toBeTruthy();
     // The count is the checklist's own arithmetic over the keys it rendered, so
     // it proves the list is the two documents above and nothing else.
-    expect(screen.getByText('0/2 complete')).toBeTruthy();
+    expect(screen.getByText('0/2 complete (includes the program you selected)')).toBeTruthy();
   });
 
   it('renders nothing for a selection that is still only in the form', () => {
@@ -199,7 +199,7 @@ describe('CaseRequirements — previewing a program that is not yet an intervent
     expect(screen.getByText('Valid ID')).toBeTruthy();
     expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
     expect(screen.getByText('Medical abstract')).toBeTruthy();
-    expect(screen.getByText('0/3 complete')).toBeTruthy();
+    expect(screen.getByText('0/3 complete (includes the program you selected)')).toBeTruthy();
   });
 
   it('ignores an ad-hoc sentinel, which names no program', () => {
@@ -213,5 +213,60 @@ describe('CaseRequirements — previewing a program that is not yet an intervent
     });
 
     expect(screen.queryByText('Barangay Certificate of Indigency')).toBeNull();
+  });
+
+  // The two below are one property read from both sides: a program that is
+  // *both* recorded and still selected contributes its documents once. A worker
+  // re-picking the program already on the record is ordinary — the select does
+  // not know what is saved — and a union that concatenated would show them a
+  // doubled count (0/4) and two rows per document.
+  it('counts a program once when it is both already recorded and just selected', () => {
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [{ id: 'iv-1', programId: 'med-1' }],
+      extraProgramIds: ['med-1'],
+    });
+
+    // getAllBy, not getBy: a duplicate row makes the query throw, which is the
+    // failure this is looking for, so the count of matches is the assertion.
+    expect(screen.getAllByText('Barangay Certificate of Indigency')).toHaveLength(1);
+    expect(screen.getAllByText('Medical abstract')).toHaveLength(1);
+    // The count is over the keys it rendered, so the doubled figure cannot hide
+    // behind matching one of two nodes.
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
+  });
+
+  it('shares one row between two programs that ask for the same document', () => {
+    // The other half of the union's job: a saved program and the selected one
+    // can both demand "Valid ID", and the checklist is one list of needs rather
+    // than one entry per program that happens to want it. Without the set over
+    // the keys this reads 0/2 and renders the row twice.
+    const ALSO_IDS = { id: 'p2', name: 'Cash Assistance', requiredDocuments: ['Valid ID'] };
+    renderRequirements([], { 'Valid ID': true }, {
+      programs: [PROGRAMS[0], ALSO_IDS],
+      interventions: [saved],
+      extraProgramIds: ['p2'],
+    });
+
+    expect(screen.getAllByText('Valid ID')).toHaveLength(1);
+    // One key, and it is met, so the count is 1/1. Had the same document
+    // arrived twice the keys would read [Valid ID, Valid ID] and this would be
+    // 1/2 — the count is over the rendered list, so it cannot pass by matching
+    // one node of two.
+    expect(screen.getByText('1/1 complete (includes the program you selected)')).toBeTruthy();
+  });
+
+  it('leaves the count alone when the selected program is already recorded', () => {
+    // The honesty wording is for a selection that is *not* on the record. Once
+    // it is, "0/2 complete" is exactly right and the extra clause would be a
+    // lie about a selection that no longer exists.
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [{ id: 'iv-1', programId: 'med-1' }],
+      extraProgramIds: ['med-1'],
+    });
+
+    expect(screen.queryByText(/includes the program you selected/)).toBeNull();
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
   });
 });

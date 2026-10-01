@@ -106,8 +106,13 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
   /* What the merged card's checklist must also account for. Nothing selected
      means nothing to preview — the form is reset whenever the dialog closes,
      so this is empty for the whole of the dialog's closed life and the saved
-     interventions are the only source of requirements then. */
-  const pendingProgramIds = form.programId && !form.programId.startsWith('adhoc:') ? [form.programId] : [];
+     interventions are the only source of requirements then. Memoised because it
+     reaches `CaseRequirements` as a prop: rebuilt on every render it would hand
+     a fresh array each time and silently defeat a future `React.memo`. */
+  const pendingProgramIds = useMemo(
+    () => (form.programId && !form.programId.startsWith('adhoc:') ? [form.programId] : []),
+    [form.programId],
+  );
 
   // Document uploads stay available for eligible roles regardless of step
   // completion or closure — recording an intervention (readOnly) or closing the
@@ -220,7 +225,10 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
           2 sit in this header too: log a delivery, or record that none is
           issued. */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">{t('caseView.implement.toBeIssued', 'Intervention to be issued')}</h2>
+        {/* `h3`, like every card heading in all five steps: one heading level
+            for cards throughout the case view, so heading-by-heading
+            navigation does not jump a level here for no reason. */}
+        <h3 className="text-sm font-semibold">{t('caseView.implement.toBeIssued', 'Intervention to be issued')}</h3>
         <div className="rounded-lg border bg-card">
           <div className="px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
