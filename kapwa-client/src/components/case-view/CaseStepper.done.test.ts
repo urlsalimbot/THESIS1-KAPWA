@@ -1,7 +1,42 @@
 import { describe, it, expect } from 'vitest';
-import fixture from '../../../../docs/superpowers/specs/case-step-done-fixture.json';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { stepperStepDone } from './CaseStepper';
 import { interventionRequirementsMet } from '@/lib/case-progress';
+
+/**
+ * Read, not imported.
+ *
+ * The client's Docker build context is `kapwa-client/`, so the fixture at the
+ * repo root is not in the image — while this package's `build` script runs
+ * `tsc --noEmit` over `src`, test files included. A static JSON import therefore
+ * makes the typecheck resolve a file that is not there and the image build dies
+ * with TS2307. Reading it keeps the fixture in the typecheck's blind spot, which
+ * is what the server spec already does for the same reason.
+ *
+ * The path is still the repo-root fixture: this file lives four levels below it,
+ * and both suites must read one file or the shared-fixture guarantee is void.
+ */
+interface DoneFixtureCase {
+  name: string;
+  step: number;
+  caseData: any;
+  interventionCount: number;
+  opts: any;
+  expected: boolean;
+  requirements?: {
+    interventionProgramIds: (string | null)[];
+    programs: Array<{ id: string; documentKeys: string[] }>;
+    checklist: Record<string, boolean>;
+  };
+}
+
+const FIXTURE_PATH = join(
+  import.meta.dirname,
+  '..', '..', '..', '..',
+  'docs', 'superpowers', 'specs', 'case-step-done-fixture.json',
+);
+const fixture: DoneFixtureCase[] = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8'));
 
 // The server must answer "is this step done" independently (case step locks), so
 // the predicate is no longer a client-only detail. The fixture at the repo-root
