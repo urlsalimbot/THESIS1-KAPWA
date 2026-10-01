@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { PublicHeader } from './PublicHeader';
@@ -61,11 +61,38 @@ describe('PublicHeader', () => {
     expect(screen.getByText('Contact')).toBeTruthy();
   });
 
+  // The drawer trigger is `md:hidden`, so at md and up the only controls that
+  // can be reached are the ones rendered outside the drawer. These two assert
+  // exactly that, without opening the menu first — the drawer's contents are
+  // portaled and unmounted while it is closed, so a control that only exists
+  // inside it is unreachable on a desktop viewport.
+  it('offers the appearance control without opening the mobile drawer', async () => {
+    const user = userEvent.setup();
+    renderHeader();
+    await user.click(screen.getByRole('button', { name: 'Theme' }));
+    expect(screen.getByText('Light')).toBeTruthy();
+    expect(screen.getByText('Dark')).toBeTruthy();
+    expect(screen.getByText('System')).toBeTruthy();
+    await user.click(screen.getByText('Dark'));
+    expect(mockSetTheme).toHaveBeenCalledWith('dark');
+  });
+
+  it('offers the language control without opening the mobile drawer', async () => {
+    const user = userEvent.setup();
+    renderHeader();
+    await user.click(screen.getByRole('button', { name: 'Language' }));
+    expect(screen.getByText('English')).toBeTruthy();
+    expect(screen.getByText('Filipino')).toBeTruthy();
+    await user.click(screen.getByText('Filipino'));
+    expect(mockSetLang).toHaveBeenCalledWith('fil');
+  });
+
   it('opens the appearance switcher with Light / Dark / System', async () => {
     const user = userEvent.setup();
     renderHeader();
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
-    await user.click(screen.getByRole('button', { name: 'Theme' }));
+    const drawer = within(screen.getByRole('dialog'));
+    await user.click(drawer.getByRole('button', { name: 'Theme' }));
     expect(screen.getByText('Light')).toBeTruthy();
     expect(screen.getByText('Dark')).toBeTruthy();
     expect(screen.getByText('System')).toBeTruthy();
@@ -77,7 +104,8 @@ describe('PublicHeader', () => {
     const user = userEvent.setup();
     renderHeader();
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
-    await user.click(screen.getByRole('button', { name: 'Language' }));
+    const drawer = within(screen.getByRole('dialog'));
+    await user.click(drawer.getByRole('button', { name: 'Language' }));
     expect(screen.getByText('English')).toBeTruthy();
     expect(screen.getByText('Filipino')).toBeTruthy();
     await user.click(screen.getByText('Filipino'));

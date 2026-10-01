@@ -1,18 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { HandHeart, Menu, X, Sun, Moon, Monitor, Languages, Check } from 'lucide-react';
+import { HandHeart, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from './public/PageContainer';
-import { useTheme } from '@/lib/theme-context';
-import { useLanguage } from '@/i18n/useLanguage';
+import { AppearanceLanguageControls } from './public/PublicHeaderControls';
 
 interface User {
   id: string;
@@ -31,12 +27,6 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
   const location = useLocation();
   const currentPath = location.pathname;
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const { lang, setLang } = useLanguage();
-  // Hydration guard: resolvedTheme is unknown until the browser mounts; the
-  // trigger icon falls back to Sun (light) for the first render.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
 
   const navLinks = [
     { to: '/', label: t('public.home', 'Home') },
@@ -109,63 +99,7 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
             </nav>
             <Separator />
             <div className="flex items-center gap-2 px-4 pb-4 pt-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="touch-sm flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-border text-sm text-muted-foreground transition-colors hover:bg-muted"
-                    aria-label={t('topbar.theme', 'Theme')}
-                  >
-                    {mounted && resolvedTheme === 'dark' ? (
-                      <Moon size={16} aria-hidden="true" />
-                    ) : (
-                      <Sun size={16} aria-hidden="true" />
-                    )}
-                    {t('topbar.theme', 'Theme')}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={8} className="w-44">
-                  <DropdownMenuLabel className="font-semibold">{t('topbar.theme', 'Theme')}</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setTheme('light')}>
-                    <Sun size={16} className="mr-2" />
-                    {t('topbar.themeLight', 'Light')}
-                    {theme === 'light' && <Check size={14} className="ml-auto text-primary" />}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTheme('dark')}>
-                    <Moon size={16} className="mr-2" />
-                    {t('topbar.themeDark', 'Dark')}
-                    {theme === 'dark' && <Check size={14} className="ml-auto text-primary" />}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTheme('system')}>
-                    <Monitor size={16} className="mr-2" />
-                    {t('topbar.themeSystem', 'System')}
-                    {theme === 'system' && <Check size={14} className="ml-auto text-primary" />}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="touch-sm flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-border text-sm text-muted-foreground transition-colors hover:bg-muted"
-                    aria-label={t('topbar.language', 'Language')}
-                  >
-                    <Languages size={16} aria-hidden="true" />
-                    {t('topbar.language', 'Language')}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={8} className="w-44">
-                  <DropdownMenuLabel className="font-semibold">{t('topbar.language', 'Language')}</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setLang('en')}>
-                    <Languages size={16} className="mr-2" />
-                    {t('nav.english', 'English')}
-                    {lang === 'en' && <Check size={14} className="ml-auto text-primary" />}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLang('fil')}>
-                    <Languages size={16} className="mr-2" />
-                    {t('nav.filipino', 'Filipino')}
-                    {lang === 'fil' && <Check size={14} className="ml-auto text-primary" />}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <AppearanceLanguageControls />
             </div>
           </SheetContent>
         </Sheet>
@@ -208,6 +142,12 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
 
         {/* Right side — CTA pinned to the right edge */}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {/* The drawer's trigger is `md:hidden`, so a switcher that lives only
+              inside the drawer cannot be reached at md and up. This is the
+              desktop placement of the same component. */}
+          <div className="hidden items-center gap-1.5 md:flex">
+            <AppearanceLanguageControls showLabel={false} />
+          </div>
           {!loading &&
             (user ? (
               <Button variant="outline" size="sm" className="touch-sm" asChild>
