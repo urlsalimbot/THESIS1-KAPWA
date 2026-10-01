@@ -61,6 +61,34 @@ export const CASE_STEP_MIN_STATUS: number[] = [0, 0, 0, 3, 4];
  * sealed. An unknown or missing status is treated as position 0 — before the
  * first step — so it asks for the Phase-In work rather than waving a case through.
  */
+/**
+ * Payload keys a seal does **not** guard, per step.
+ *
+ * A seal claims the *step's own data* is finished, so it refuses writes to that
+ * data. It does not claim the rest of the case file is frozen, and one route
+ * carries both. `PATCH /cases/:id/transition-plan` writes step 4's self-reliance
+ * assessment — which is what the seal means — and also the case's follow-up /
+ * home visits, which are ongoing progress monitoring that keeps accruing *after*
+ * the assessment is done and are in no step's done-predicate at all. Refusing
+ * them would mean a worker who sealed the assessment could never record another
+ * home visit, which is the `StepTransition` comment's warning taken as fact:
+ * "the worker is left adding follow-up visits with the only Save Transition Plan
+ * button hidden".
+ *
+ * So the rule is *which fields*, not *which route*: a body touching only these
+ * keys is not changing the sealed step and is allowed through; anything else is
+ * refused. Empty for every other step, which keeps the blanket refusal — the
+ * routes for steps 1, 2 and 5 each write that step's own data and nothing else.
+ *
+ * Declared here, beside the floors, because it is a statement about what a step
+ * *is* — the same kind of fact as `CASE_STEP_LABELS` — and because the guard in
+ * `CaseStepLocksService` and the comment in `CaseViewPage` must not be allowed to
+ * disagree about it.
+ */
+export const CASE_STEP_UNGUARDED_FIELDS: Record<number, string[]> = {
+  3: ['followUpVisits', 'followUpDate'],
+};
+
 export function stepsDueAt(status: string | null | undefined): number[] {
   // An unknown or missing status is treated as position 0 — before the first
   // step — which asks for the Phase-In work rather than claiming everything is

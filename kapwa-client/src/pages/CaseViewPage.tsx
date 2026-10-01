@@ -431,20 +431,26 @@ export function CaseViewPage() {
   const lockFor = (i: number): StepLock | null =>
     ((caseData?.stepLocks ?? []) as StepLock[]).find((l) => l.stepIndex === i) ?? null;
 
-  // A sealed step's fields are read-only, so its own editing affordances go
-  // away with them. The server refuses those writes with a 409 either way, so
-  // this is about the user not being offered a control that cannot work — but
-  // it is deliberately NOT the only enforcement: the routes refuse on their own,
-  // because a control hidden in the client is bypassable by calling the PATCH
-  // directly. Folding the seal into `readOnly` here rather than editing each step
-  // is one place, and each step's strip already renders above the disabled
-  // fields explaining why they are disabled and how to release the seal.
+  // A sealed step's fields are read-only, so its own editing affordances go away
+  // with them. The server refuses those writes with a 409 either way, so this is
+  // about the user not being offered a control that cannot work — but it is
+  // deliberately NOT the only enforcement: the routes refuse on their own, because
+  // a control hidden in the client is bypassable by calling the PATCH directly.
+  // One place rather than an edit per step, and each step's strip renders above
+  // the disabled fields explaining why they are disabled and how to release the
+  // seal.
   //
-  // The exemption is `StepLockBar`'s own `readOnly`, which is passed through
-  // separately below — a sealed step must keep its Unlock, or the worker who
-  // sealed it would be stuck.
+  // **`bodyReadOnly` only. Never pass this to `lockReadOnly`.** The seal control's
+  // own flag is the exemption that makes a seal reversible: a sealed step's strip
+  // says "unlock it to make changes, then seal it again", so withholding the
+  // Unlock behind the same flag that read-onlys the body tells the worker to do
+  // something the screen offers no way to do — a lockout whose only exit is a raw
+  // `DELETE /cases/:id/steps/N/lock`. Every `lockReadOnly` below is therefore the
+  // plain lifecycle signal (`caseClosed`), never this helper. `CaseViewPage —
+  // step 5 sealed` is the test that pins it; an earlier version of this file
+  // folded the seal into step 5's `lockReadOnly` and shipped that lockout.
   const sealed = (i: number): boolean => lockFor(i) != null;
-  const readOnlyUnlessSealed = (base: boolean, step: number): boolean => base || sealed(step);
+  const bodyReadOnly = (base: boolean, step: number): boolean => base || sealed(step);
 
   // The key names the case as well as the step, because `StepLockBar` remembers
   // the outcome of its own write in state carrying neither: an instance reused
@@ -456,23 +462,31 @@ export function CaseViewPage() {
     <StepAssessment key={stepLockKey(id!, 0)} caseId={id!} caseData={caseData} assessment={assessment}
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
       userRole={user?.role}
-      readOnly={readOnlyUnlessSealed(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), 0)}
+      readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), 0)}
       lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
       stepLock={lockFor(0)} />,
     <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role}
-      readOnly={readOnlyUnlessSealed(caseClosed, 1)} lockReadOnly={caseClosed}
+      readOnly={bodyReadOnly(caseClosed, 1)} lockReadOnly={caseClosed}
       stepLock={lockFor(1)} />,
     <StepIntegratedDelivery key={stepLockKey(id!, 2)} caseId={id!} caseData={caseData} userRole={user?.role}
-      readOnly={readOnlyUnlessSealed(caseClosed, 2)} lockReadOnly={caseClosed}
+      readOnly={bodyReadOnly(caseClosed, 2)} lockReadOnly={caseClosed}
       stepLock={lockFor(2)} />,
-    // Transition plan + follow-up visits stay savable for the whole active
-    // phase: stepDone[3] (plan saved) must NOT flip readOnly or the worker is
-    // left adding follow-up visits with the only "Save Transition Plan" button
-    // hidden. Only closure locks the step — and, now, a seal of this step does,
-    // which is a different signal: `stepDone` is a completeness fact, a seal is
-    // a decision, and the server refuses the write on the seal alone.
+    // Transition plan + follow-up visits stay savable for the whole active phase:
+    // stepDone[3] (plan saved) must NOT flip readOnly or the worker is left adding
+    // follow-up visits with the only "Save Transition Plan" button hidden. Only
+    // closure locks the step.
+    //
+    // A *seal* of this step is deliberately not folded in here. The seal claims the
+    // self-reliance assessment is finished, and the visits are ongoing progress
+    // monitoring that is in no step's done-predicate — the server's
+    // `CASE_STEP_UNGUARDED_FIELDS` lets a visits-only body past a sealed step 4
+    // precisely so sealing the assessment cannot stop a home visit being recorded.
+    // `StepTransition` therefore derives its own two signals from `stepLock` (see
+    // `assessmentReadOnly` there): the assessment freezes, the visits and the Save
+    // button do not. Folding the seal into this `readOnly` is what put the client
+    // and the server at odds.
     <StepTransition key={stepLockKey(id!, 3)} caseId={id!} caseData={caseData} userRole={user?.role}
-      readOnly={readOnlyUnlessSealed(caseClosed, 3)} lockReadOnly={caseClosed}
+      readOnly={caseClosed} lockReadOnly={caseClosed}
       stepLock={lockFor(3)} />,
     // `readOnly` here is `stepDone[4]`, which flips true exactly when this step
     // becomes sealable — so the seal gets its own signal. Passing `readOnly` to
@@ -480,8 +494,8 @@ export function CaseViewPage() {
     // the same trap step 3's comment above avoids by keeping `stepDone[3]` out of
     // its `readOnly`.
     <StepClosure key={stepLockKey(id!, 4)} caseId={id!} caseData={caseData}
-      readOnly={readOnlyUnlessSealed(stepDone[4] || caseClosed, 4)}
-      lockReadOnly={readOnlyUnlessSealed(caseClosed, 4)} stepLock={lockFor(4)} />,
+      readOnly={bodyReadOnly(stepDone[4] || caseClosed, 4)}
+      lockReadOnly={caseClosed} stepLock={lockFor(4)} />,
   ];
 
   const renewCase = () => navigate('/intake', {

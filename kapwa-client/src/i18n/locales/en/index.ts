@@ -343,6 +343,7 @@ const en = {
       "planReady": "Transition plan ready",
       "planReadyHint": "Mark case as transitioning to begin graduation process.",
       "saveTransitionPlan": "Save Transition Plan",
+      "saveVisits": "Save Follow-up Visits",
       "selfRelianceAssessment": "Self-Reliance Assessment",
       "selfSufficient": "Self-sufficient — proceed to Closure.",
       "notSelfSufficient": "Not self-sufficient — subject to case renewal.",

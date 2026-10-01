@@ -129,10 +129,50 @@ describe('CasesController step-lock routes', () => {
       ['closure', 4, () => ctrl.updateClosure('c1', {} as any, req)],
     ];
 
-    it.each(CASES)('checks the seal of step for %s', async (_route, stepIndex, call) => {
+    it.each(CASES)('checks the seal of step for %s', async (route, stepIndex, call) => {
       await call();
 
-      expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', stepIndex);
+      // `transition-plan` is the one route that hands the guard its body, so that
+      // the guard can tell a visits-only write from one that moves the assessment.
+      // Asserting the whole call for that route is what pins it; the rest pass no
+      // body and are asserted on `(caseId, stepIndex)` alone.
+      const expectedArgs = route === 'transition-plan' ? ['c1', 3, {}] : ['c1', stepIndex];
+      expect(stepLocks.assertUnsealed.mock.calls.at(-1)?.slice(0, expectedArgs.length)).toEqual(expectedArgs);
+    });
+
+    /**
+     * The body has to reach the guard on the one route that carries two kinds of
+     * data. `PATCH /cases/:id/transition-plan` writes step 4's self-reliance
+     * assessment — which is what step 4's seal claims — and the case's follow-up
+     * visits, which are in no step's done-predicate and keep accruing after the
+     * assessment is done. `CASE_STEP_UNGUARDED_FIELDS` lets a visits-only body past
+     * a sealed step; without the body the guard cannot tell the two apart, so the
+     * visits become unsaveable the moment the assessment is sealed.
+     */
+    it('hands the transition-plan guard the body it must judge', async () => {
+      const body = { followUpVisits: [{ date: '2026-10-01', type: 'Home Visit' }] };
+
+      await ctrl.updateTransitionPlan('c1', body as any, req);
+
+      expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 3, body);
+      // …and the write still happened, so the guard let it through rather than the
+      // route skipping the save.
+      expect(cases.updateTransitionPlan).toHaveBeenCalledWith('c1', body, req.user?.id);
+    });
+
+    // The other step-field routes must NOT start forwarding bodies: they carry
+    // nothing but their own step's data, and a guard that took a body there would
+    // be a guard whose rule nobody could state.
+    it.each([
+      ['assessment', () => ctrl.updateAssessment('c1', { problemsPresented: 'p' } as any, req)],
+      ['requirements', () => ctrl.updateRequirements('c1', {} as any)],
+      ['intervention-decision', () => ctrl.updateInterventionDecision('c1', { notNeeded: true })],
+      ['referral-decision', () => ctrl.updateReferralDecision('c1', { notNeeded: true })],
+      ['closure', () => ctrl.updateClosure('c1', {} as any, req)],
+    ] as const)('%s passes the guard no body', async (_route, call) => {
+      await call();
+
+      expect(stepLocks.assertUnsealed.mock.calls.at(-1)).toHaveLength(2);
     });
 
     // The order is the fix: the assertion runs *before* the write, so a refusal

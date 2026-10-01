@@ -67,19 +67,30 @@ function Steps({
   caseId,
   caseData,
   stepLocks = [],
+  opts = {},
 }: {
   caseId: string;
   caseData: any;
   stepLocks?: StepLock[];
+  /** Per-step `lockReadOnly`, as the case view computes it. */
+  opts?: { lockReadOnly?: (step: number) => boolean };
 }) {
   const lockFor = (i: number) => stepLocks.find((l) => l.stepIndex === i) ?? null;
   // The case view's two-flag wiring, reproduced here: a sealed step's own fields
   // go read-only, while `lockReadOnly` — which decides whether the seal is
-  // offered at all — does not follow the seal. Without this the components
-  // would each default both flags to their own `readOnly` (false), and a sealed
-  // step would render its full editing UI, which is the defect under test rather
-  // than the thing this file is about.
-  const readOnlyUnlessSealed = (i: number) => lockFor(i) != null;
+  // offered at all — does not follow the seal. Without this the components would
+  // each default both flags to their own `readOnly` (false), and a sealed step
+  // would render its full editing UI, which is the defect under test rather than
+  // the thing this file is about.
+  //
+  // `lockReadOnly` is a **parameter**, not the `false` this harness used to
+  // hardcode. A constant cannot express "the page also withholds the Unlock here",
+  // which is exactly the wiring that shipped a lockout on step 5 — the page-level
+  // test in `CaseViewPage.test.tsx` catches it at the source, and the invariant
+  // test below catches it in these components for *every* step, so neither file
+  // has to know which step it was.
+  const bodyReadOnly = (i: number) => lockFor(i) != null;
+  const lockReadOnly = (i: number) => opts.lockReadOnly?.(i) ?? false;
   return (
     <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
       <Toaster />
@@ -92,8 +103,8 @@ function Steps({
         onSave={() => {}}
         saving={false}
         userRole="social_worker"
-        readOnly={readOnlyUnlessSealed(0)}
-        lockReadOnly={false}
+        readOnly={bodyReadOnly(0)}
+        lockReadOnly={lockReadOnly(0)}
         stepLock={lockFor(0)}
       />
       <StepImplementHIP
@@ -101,8 +112,8 @@ function Steps({
         caseId={caseId}
         caseData={caseData}
         userRole="social_worker"
-        readOnly={readOnlyUnlessSealed(1)}
-        lockReadOnly={false}
+        readOnly={bodyReadOnly(1)}
+        lockReadOnly={lockReadOnly(1)}
         stepLock={lockFor(1)}
       />
       <StepIntegratedDelivery
@@ -110,12 +121,12 @@ function Steps({
         caseId={caseId}
         caseData={caseData}
         userRole="social_worker"
-        readOnly={readOnlyUnlessSealed(2)}
-        lockReadOnly={false}
+        readOnly={bodyReadOnly(2)}
+        lockReadOnly={lockReadOnly(2)}
         stepLock={lockFor(2)}
       />
-      <StepTransition key={stepLockKey(caseId, 3)} caseId={caseId} caseData={caseData} userRole="admin" readOnly={readOnlyUnlessSealed(3)} lockReadOnly={false} stepLock={lockFor(3)} />
-      <StepClosure key={stepLockKey(caseId, 4)} caseId={caseId} caseData={caseData} readOnly={readOnlyUnlessSealed(4)} lockReadOnly={false} stepLock={lockFor(4)} />
+      <StepTransition key={stepLockKey(caseId, 3)} caseId={caseId} caseData={caseData} userRole="admin" readOnly={bodyReadOnly(3)} lockReadOnly={lockReadOnly(3)} stepLock={lockFor(3)} />
+      <StepClosure key={stepLockKey(caseId, 4)} caseId={caseId} caseData={caseData} readOnly={bodyReadOnly(4)} lockReadOnly={lockReadOnly(4)} stepLock={lockFor(4)} />
     </SWRConfig>
   );
 }
@@ -289,6 +300,47 @@ describe('a sealed step is not editable', () => {
 
     expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Add Intervention/i })).toBeTruthy();
+  });
+
+  /**
+   * The invariant, for all five steps, as an invariant.
+   *
+   * The lockout this pins was a page-wiring bug on step 5 alone, which no
+   * per-step assertion elsewhere would have generalised. Stated once over every
+   * step so a repeat lands here whatever step it lands on: **a sealed step whose
+   * `lockReadOnly` is false must offer its Unlock**, however read-only its body
+   * is. The strip's own copy depends on it ("Unlock it to make changes"), so a
+   * strip that withholds the button is a lockout whose only exit is a raw
+   * `DELETE /cases/:id/steps/N/lock`.
+   */
+  it.each([0, 1, 2, 3, 4])('step %i keeps its Unlock while its body is sealed', async (step) => {
+    render(
+      <Steps
+        caseId="c1"
+        caseData={completeCaseData()}
+        stepLocks={[{ stepIndex: step, lockedByName: 'Ana Cruz', lockedAt: AT }]}
+      />,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
+    expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^unlock$/i })).toBeTruthy();
+  });
+
+  // And the converse, so the parameter is doing work: the caller decides, and a
+  // `lockReadOnly` that is true withholds the release.
+  it('withholds the Unlock when the caller withholds the seal control', async () => {
+    render(
+      <Steps
+        caseId="c1"
+        caseData={completeCaseData()}
+        stepLocks={[{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: AT }]}
+        opts={{ lockReadOnly: () => true }}
+      />,
+    );
+
+    expect(await screen.findByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^unlock$/i })).toBeNull();
   });
 });
 

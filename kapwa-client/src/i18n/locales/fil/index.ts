@@ -1846,6 +1846,7 @@ const fil: EnLocale = {
       "planReady": "Handa na ang transition plan",
       "planReadyHint": "Markahan ang kaso bilang naglilipat upang simulan ang proseso ng graduation.",
       "saveTransitionPlan": "I-save ang Transition Plan",
+      "saveVisits": "I-save ang mga Follow-up Visit",
       "selfRelianceAssessment": "Pagsusuri ng Pagsasarili",
       "selfSufficient": "Nakakapag-isa — magpatuloy sa Pagsasara.",
       "notSelfSufficient": "Hindi pa nakakapag-isa — maaaring isailalim sa renewal ng kaso.",

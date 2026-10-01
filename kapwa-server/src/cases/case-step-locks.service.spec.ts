@@ -3,7 +3,7 @@ import { join } from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { CaseStepLocksService, CASE_STEP_LABELS } from './case-step-locks.service';
+import { CaseStepLocksService, CASE_STEP_LABELS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-locks.service';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
@@ -380,6 +380,98 @@ describe('CaseStepLocksService', () => {
       await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(ConflictException);
 
       expect(lockRepo.findOne).toHaveBeenCalledTimes(2);
+    });
+
+    /**
+     * The unguarded-fields exemption.
+     *
+     * A seal claims the *step's own data* is finished. One route carries that plus
+     * data the seal never claimed — `PATCH /cases/:id/transition-plan` writes step
+     * 4's self-reliance assessment and the case's follow-up / home visits, which
+     * are ongoing monitoring in no step's done-predicate. Guarding the route would
+     * mean a worker who sealed the assessment could never record another home
+     * visit, which is the `StepTransition` mount comment's warning taken as fact.
+     *
+     * So the guard judges *the keys the body carries*, and this is where that rule
+     * is pinned. The step index and the exemption live in one file
+     * (`case-step-labels.ts`) precisely so the guard here and the comment at the
+     * mount cannot disagree about which step owns what.
+     */
+    describe('bodies that change nothing the seal guards', () => {
+      const VISITS = [{ date: '2026-10-01', type: 'Home Visit', notes: '', outcome: '' }];
+      const sealedStep4 = () =>
+        lockRepo.findOne.mockResolvedValue({
+          caseId: 'c1', stepIndex: 3, lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+        });
+
+      it('lets a visits-only body past a sealed step 4', async () => {
+        sealedStep4();
+
+        await expect(service.assertUnsealed('c1', 3, { followUpVisits: VISITS })).resolves.toBeUndefined();
+        // It never even asks: a body that cannot change the sealed step does not
+        // need to know whether it is sealed.
+        expect(lockRepo.findOne).not.toHaveBeenCalled();
+      });
+
+      it('still refuses a body that also moves the assessment', async () => {
+        sealedStep4();
+
+        await expect(
+          service.assertUnsealed('c1', 3, { followUpVisits: VISITS, sustainabilityPlan: 'new plan' }),
+        ).rejects.toThrow(ConflictException);
+      });
+
+      it('refuses an assessment-only body', async () => {
+        sealedStep4();
+
+        await expect(
+          service.assertUnsealed('c1', 3, { selfRelianceLevel: 3 }),
+        ).rejects.toThrow(ConflictException);
+      });
+
+      // An unsealed step takes anything, exemption or not.
+      it('is not consulted when the step carries no seal', async () => {
+        lockRepo.findOne.mockResolvedValue(null);
+
+        await expect(
+          service.assertUnsealed('c1', 3, { selfRelianceLevel: 3, followUpVisits: VISITS }),
+        ).resolves.toBeUndefined();
+        expect(lockRepo.findOne).toHaveBeenCalled();
+      });
+
+      // Every other step guards its whole route: their bodies carry nothing but
+      // their own data, so an exemption there would be an unexplained hole.
+      it.each([0, 1, 2, 4])('guards step %i even for a visits-only body', async (step) => {
+        lockRepo.findOne.mockResolvedValue({
+          caseId: 'c1', stepIndex: step, lockedByName: 'Ana', lockedAt: new Date(),
+        });
+
+        await expect(service.assertUnsealed('c1', step, { followUpVisits: VISITS })).rejects.toThrow(ConflictException);
+      });
+
+      // Three shapes that fail closed rather than open. Each is a shape Zod has
+      // already rejected by the time the guard runs, so none is reachable in
+      // production — and a guard is exactly the place where "shouldn't happen"
+      // must resolve to the safe answer.
+      it.each([
+        ['an absent body', undefined],
+        ['an empty body', {}],
+        ['a null body', null],
+        ['an array body', VISITS],
+        ['a string body', 'followUpVisits=[]'],
+      ])('refuses %s', async (_name, body) => {
+        lockRepo.findOne.mockResolvedValue({
+          caseId: 'c1', stepIndex: 3, lockedByName: 'Ana', lockedAt: new Date(),
+        });
+
+        await expect(service.assertUnsealed('c1', 3, body)).rejects.toThrow(ConflictException);
+      });
+
+      // The declaration itself, so the two files cannot drift.
+      it('declares the exemption for step 3 only, and names the visit fields', () => {
+        expect(Object.keys(CASE_STEP_UNGUARDED_FIELDS)).toEqual(['3']);
+        expect(CASE_STEP_UNGUARDED_FIELDS[3]).toEqual(['followUpVisits', 'followUpDate']);
+      });
     });
 
     // An unknown index is the same 400 the seal endpoint raises, so a route

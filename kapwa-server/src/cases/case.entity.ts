@@ -144,6 +144,22 @@ export class Case extends BaseEntity {
   @Column({ name: 'intervention_not_needed', type: 'boolean', default: false })
   interventionNotNeeded?: boolean;
 
+  /**
+   * How many `inter_agency_referrals` rows this case has.
+   *
+   * Not a column: `attachInterventionCounts` stamps it per case for the list
+   * endpoint, so the approval pipeline's cards and the case view's stepper can be
+   * drawn from one `stepperStepDone` and answer the same question about step 2.
+   * Declared here rather than assigned through `as any` at the call site, because
+   * a field that crosses the wire needs a name both apps can be checked against —
+   * the client's `ApprovalCase` declares its side, and `case-fsm-parity.test.ts`
+   * reads this declaration to keep the two spellings equal.
+   *
+   * `inter_agency_referrals`, never the `referrals` getter above: that is the
+   * transition plan's agency list over `case_referrals`, which no referral writes.
+   */
+  interAgencyReferralCount?: number;
+
   @Column({ name: 'assigned_worker_id', nullable: true })
   assignedWorkerId?: string;
 

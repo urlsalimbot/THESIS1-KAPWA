@@ -74,13 +74,21 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
   async function handleSave() {
     setSaving(true);
     try {
-      await api.patch(`/cases/${caseId}/transition-plan`, {
-        selfRelianceLevel: plan.selfRelianceLevel,
-        sustainabilityPlan: plan.sustainabilityPlan || null,
-        transitionDate: plan.transitionDate || null,
-        selfReliancePlan: plan.selfReliancePlan || null,
-        followUpVisits: followUps.length > 0 ? followUps : null,
-      });
+      // A sealed step 4 sends only the follow-up visits. Sending the assessment
+      // alongside them would make the server's guard refuse the whole body — the
+      // guard judges the keys the body carries, not which card they came from — so
+      // the visits would be unsaveable too. The assessment is on screen unchanged
+      // and is simply not part of this write.
+      const body = stepLock != null
+        ? { followUpVisits: followUps.length > 0 ? followUps : null }
+        : {
+            selfRelianceLevel: plan.selfRelianceLevel,
+            sustainabilityPlan: plan.sustainabilityPlan || null,
+            transitionDate: plan.transitionDate || null,
+            selfReliancePlan: plan.selfReliancePlan || null,
+            followUpVisits: followUps.length > 0 ? followUps : null,
+          };
+      await api.patch(`/cases/${caseId}/transition-plan`, body);
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
       console.error('Failed to save transition plan:', e);
@@ -88,6 +96,21 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
       setSaving(false);
     }
   }
+
+  // The self-reliance assessment is what step 4's seal claims, so a seal freezes
+  // it. The follow-up visits below are not: they are ongoing progress monitoring
+  // that keeps accruing after the assessment is done, they are in no step's
+  // done-predicate, and the server's `CASE_STEP_UNGUARDED_FIELDS` deliberately
+  // lets a body carrying only them past a sealed step 4. The two are therefore
+  // separate read-only signals — folding the seal into the visits would put the
+  // client and the server at odds and would contradict the comment at the mount.
+  //
+  // The seal is read from `stepLock` here rather than arriving folded into
+  // `readOnly`, which is what makes the two separable at all: by the time this
+  // component runs, a sealed step's `readOnly` is true and indistinguishable from
+  // a closed case's.
+  const assessmentReadOnly = Boolean(readOnly) || stepLock != null;
+  const visitsReadOnly = Boolean(readOnly);
 
   const selfSufficient = isSelfSufficient(plan.selfRelianceLevel);
 
@@ -125,6 +148,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
                     checked={plan.selfRelianceLevel === option.value}
                     onChange={() => setPlan(p => ({ ...p, selfRelianceLevel: option.value }))}
                     className="mt-0.5"
+                    disabled={assessmentReadOnly}
                   />
                   <div>
                     <p className="text-sm font-medium">{option.label}</p>
@@ -153,6 +177,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
               value={plan.sustainabilityPlan}
               onChange={e => setPlan(p => ({ ...p, sustainabilityPlan: e.target.value }))}
+              disabled={assessmentReadOnly}
               placeholder={t('caseView.transition.sustainabilityPlaceholder', "Describe the client's plan for sustaining improvements independently...")}
             />
           </div>
@@ -163,6 +188,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
                 value={plan.selfReliancePlan}
                 onChange={e => setPlan(p => ({ ...p, selfReliancePlan: e.target.value }))}
+                disabled={assessmentReadOnly}
                 placeholder={t('caseView.transition.selfRelianceStepsPlaceholder', 'Recommendations for skills training, livelihood programs...')}
               />
             </div>
@@ -172,6 +198,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
                 type="date"
                 value={plan.transitionDate}
                 onChange={e => setPlan(p => ({ ...p, transitionDate: e.target.value }))}
+                disabled={assessmentReadOnly}
               />
             </div>
           </div>
@@ -182,9 +209,11 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
       <div className="rounded-lg border bg-card">
         <div className="px-4 py-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold">{t('caseView.transition.followUpVisits', 'Follow-up Visits')}</h3>
-          <Button variant="outline" size="sm" onClick={() => setAddingFollowUp(!addingFollowUp)}>
-            <Plus size={14} className="mr-1" /> {t('caseView.transition.addVisit', 'Add Visit')}
-          </Button>
+          {!visitsReadOnly && (
+            <Button variant="outline" size="sm" onClick={() => setAddingFollowUp(!addingFollowUp)}>
+              <Plus size={14} className="mr-1" /> {t('caseView.transition.addVisit', 'Add Visit')}
+            </Button>
+          )}
         </div>
         <Separator />
         <div className="px-4 py-3 space-y-3">
@@ -269,25 +298,33 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
                     <p className="text-xs text-primary">{t('caseView.transition.outcomeLabel', 'Outcome: {{outcome}}', { outcome: visit.outcome })}</p>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive"
-                  onClick={() => removeFollowUp(i)}
-                >
-                  <Trash2 size={12} />
-                </Button>
+                {!visitsReadOnly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={() => removeFollowUp(i)}
+                  >
+                    <Trash2 size={12} />
+                  </Button>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* Save Button */}
-      {!readOnly && (
+      {/* Save Button. Gated on the *visits*, not the assessment: a sealed step 4
+          still saves its follow-up visits, which is the whole reason
+          `assessmentReadOnly` and `visitsReadOnly` are separate. */}
+      {!visitsReadOnly && (
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? t('caseView.saving', 'Saving...') : t('caseView.transition.saveTransitionPlan', 'Save Transition Plan')}
+            {saving
+              ? t('caseView.saving', 'Saving...')
+              : stepLock != null
+              ? t('caseView.transition.saveVisits', 'Save Follow-up Visits')
+              : t('caseView.transition.saveTransitionPlan', 'Save Transition Plan')}
           </Button>
         </div>
       )}

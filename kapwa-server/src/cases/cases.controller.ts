@@ -200,7 +200,11 @@ export class CasesController {
     @Body(new ZodPipe(TransitionPlanSchema)) body: TransitionPlanInput,
     @Request() req: AuthenticatedRequest,
   ) {
-    await this.stepLocks.assertUnsealed(id, 3);
+    // The body is passed so the guard judges *which fields it carries*: this route
+    // writes step 4's self-reliance assessment and also the case's follow-up
+    // visits, and only the former is what step 4's seal claims. See
+    // `CASE_STEP_UNGUARDED_FIELDS`.
+    await this.stepLocks.assertUnsealed(id, 3, body);
     return this.casesService.updateTransitionPlan(id, body, req.user?.id);
   }
 

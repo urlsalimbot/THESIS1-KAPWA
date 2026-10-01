@@ -10,6 +10,18 @@ import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 
+/**
+ * One row of `GET /cases`, as this page reads it.
+ *
+ * The two count fields are not columns on `cases`: `interventionCount` and
+ * `interAgencyReferralCount` are stamped per case by
+ * `CasesService.attachInterventionCounts`, which is why the approval pipeline can
+ * draw its chips from the same `stepperStepDone` as the case view's stepper and
+ * still answer correctly about step 2. Both names are declared on the server's
+ * `Case` entity and compared there-and-here by `case-fsm-parity.test.ts`, so a
+ * rename on either side is a failing test rather than a page quietly reading
+ * `undefined`.
+ */
 interface ApprovalCase {
   id: string;
   controlNo: string;

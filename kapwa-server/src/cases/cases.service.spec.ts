@@ -152,6 +152,66 @@ describe('CasesService', () => {
 
       await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1')).resolves.toBeTruthy();
     });
+
+    /**
+     * The `interventionNotNeeded` arm of the same gate.
+     *
+     * "No intervention is issued — record at least one referral" was checked
+     * against `c.referrals`, the transition plan's agency list. A case that
+     * referred its client by endorsement letter holds no row there, so this arm
+     * refused exactly the cases it exists to admit, and — once step 3's predicate
+     * was corrected — left one rule with two surfaces reading two different
+     * tables. Stubbed through the query for the same reason as the transition gate
+     * below: the case object carries no trace of a real referral.
+     */
+    describe('the interventionNotNeeded arm', () => {
+      const referralOnlyCase = (over: Record<string, unknown> = {}) => ({
+        id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-2026-00001',
+        interventionNotNeeded: true, referralNotNeeded: false,
+        // Empty, and empty on purpose.
+        referrals: [],
+        beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
+        ...over,
+      } as unknown as Case);
+
+      const withReferral = (n = 1) =>
+        repoMock.query.mockImplementation(async (sql: string) => {
+          if (sql.includes('inter_agency_referrals')) return [{ count: n }];
+          if (sql.includes('case_interventions')) return [{ count: 0 }];
+          return [];
+        });
+
+      beforeEach(() => {
+        repoMock.save.mockImplementation(async (x: any) => x);
+        (service as any).casesExport = { missingRequiredDocuments: jest.fn().mockResolvedValue([]) };
+        (service as any).getInterventionCount = jest.fn().mockResolvedValue(0);
+      });
+
+      it('activates a referral-only case whose endorsement letter is on record', async () => {
+        repoMock.findOne.mockResolvedValue(referralOnlyCase());
+        withReferral();
+
+        await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1')).resolves.toBeTruthy();
+      });
+
+      it('still refuses a referral-only case with no referral on record', async () => {
+        repoMock.findOne.mockResolvedValue(referralOnlyCase());
+        withReferral(0);
+
+        await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1'))
+          .rejects.toThrow(/at least one referral/i);
+      });
+
+      it('does not accept a case_referrals row as the referral', async () => {
+        repoMock.findOne.mockResolvedValue(
+          referralOnlyCase({ referrals: [{ agencyName: 'RHU', status: 'referred' }] }),
+        );
+        withReferral(0);
+
+        await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1'))
+          .rejects.toThrow(/at least one referral/i);
+      });
+    });
   });
 
   describe('issueDocument', () => {
@@ -168,6 +228,25 @@ describe('CasesService', () => {
   });
 
   describe('referral decision gate', () => {
+    /**
+     * A referral the count sees, stubbed through the *query* rather than on the
+     * case object.
+     *
+     * That is the point of these tests. The gate used to read `c.referrals`, the
+     * @Expose() getter over `case_referrals` — the transition plan's agency list,
+     * written only by `updateTransitionPlan` and read by no step, which is why it
+     * holds 0 rows in every database this project has run. A referral the product
+     * means is the row the endorsement letter writes, so the case object carries
+     * no trace of it and a gate reading the getter refuses a case that has one.
+     * Stubbing the object property would reproduce that bug rather than catch it.
+     */
+    const withInterAgencyReferral = (n = 1) =>
+      repoMock.query.mockImplementation(async (sql: string) => {
+        if (sql.includes('inter_agency_referrals')) return [{ count: n }];
+        if (sql.includes('case_interventions')) return [{ count: 1 }];
+        return [];
+      });
+
     it('blocks active -> transitioning until a referral decision is recorded', async () => {
       const c = {
         id: '1', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001', referrals: [],
@@ -188,6 +267,71 @@ describe('CasesService', () => {
       repoMock.findOne.mockResolvedValue(c);
       repoMock.save.mockImplementation(async (x: any) => x);
       await expect(service.updateStatus('1', CaseStatus.TRANSITIONING, 'admin', 'u1')).resolves.toBeTruthy();
+    });
+
+    // The gate the bug produced: a real endorsement letter on file, the case row
+    // carrying nothing, and the transition refused for a referral that exists.
+    it('accepts active -> transitioning when an inter-agency referral is on record', async () => {
+      const c = {
+        id: '1', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001',
+        // Empty on purpose: this is what the database actually holds, since the
+        // letter writes `inter_agency_referrals` and nothing writes this list.
+        referrals: [],
+        referralNotNeeded: false, selfRelianceLevel: 3, sustainabilityPlan: 'plan',
+        beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
+      } as unknown as Case;
+      repoMock.findOne.mockResolvedValue(c);
+      repoMock.save.mockImplementation(async (x: any) => x);
+      withInterAgencyReferral();
+
+      await expect(service.updateStatus('1', CaseStatus.TRANSITIONING, 'admin', 'u1')).resolves.toBeTruthy();
+    });
+
+    // …and the negative, so the pass above cannot be the gate simply not running.
+    it('still refuses when the referrals table holds nothing for the case', async () => {
+      const c = {
+        id: '1', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001', referrals: [],
+        referralNotNeeded: false, selfRelianceLevel: 3, sustainabilityPlan: 'plan',
+        updatedAt: new Date(),
+      } as unknown as Case;
+      repoMock.findOne.mockResolvedValue(c);
+      withInterAgencyReferral(0);
+
+      await expect(service.updateStatus('1', CaseStatus.TRANSITIONING, 'admin', 'u1'))
+        .rejects.toThrow(/referral/i);
+    });
+
+    // A `case_referrals` row must not stand in for one: that is the whole point
+    // of the split, and it is the direction that would let a case through.
+    it('does not accept a case_referrals row as an inter-agency referral', async () => {
+      const c = {
+        id: '1', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001',
+        referrals: [{ agencyName: 'RHU', status: 'referred' }],
+        referralNotNeeded: false, selfRelianceLevel: 3, sustainabilityPlan: 'plan',
+        updatedAt: new Date(),
+      } as unknown as Case;
+      repoMock.findOne.mockResolvedValue(c);
+      withInterAgencyReferral(0);
+
+      await expect(service.updateStatus('1', CaseStatus.TRANSITIONING, 'admin', 'u1'))
+        .rejects.toThrow(/referral/i);
+    });
+
+    it('counts referrals off inter_agency_referrals, scoped to this case', async () => {
+      const c = {
+        id: '1', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001', referrals: [],
+        referralNotNeeded: true, selfRelianceLevel: 3, sustainabilityPlan: 'plan',
+        beneficiaryId: null, assignedWorkerId: null, updatedAt: new Date(),
+      } as unknown as Case;
+      repoMock.findOne.mockResolvedValue(c);
+      repoMock.save.mockImplementation(async (x: any) => x);
+      repoMock.query.mockResolvedValue([]);
+
+      await service.updateStatus('1', CaseStatus.TRANSITIONING, 'admin', 'u1');
+
+      const [sql, params] = repoMock.query.mock.calls.find(([q]: [string]) => q.includes('inter_agency_referrals'));
+      expect(sql).toContain('inter_agency_referrals');
+      expect(params).toEqual(['1']);
     });
   });
 

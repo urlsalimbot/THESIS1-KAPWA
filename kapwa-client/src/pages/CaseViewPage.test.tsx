@@ -600,6 +600,62 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     expect(lock).toBeEnabled();
   });
 
+  /**
+ * A sealed step 5 keeps its Unlock.
+   *
+   * This is the lockout this describe exists to prevent. A sealed step's strip
+   * says "unlock it to make changes, then seal it again" — so withholding the
+   * Unlock behind the same flag that read-onlys the step body tells the worker to
+   * do something the screen offers no way to do, and recovery needs a raw
+   * `DELETE /cases/:id/steps/4/lock`. The seal's `readOnly` is a *different*
+   * signal from the step body's, and step 5 is where the two were conflated: the
+   * body goes read-only on the seal, the Unlock must not.
+   */
+  describe('step 5 sealed', () => {
+    async function renderStepFive(seals: unknown[]) {
+      mockApiGet.mockImplementation((key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
+        if (k.includes('history')) return Promise.resolve([]);
+        if (k.includes('interventions')) {
+          return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
+        }
+        if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+        if (k.includes('inter-agency-referrals')) {
+          return Promise.resolve([{ id: 'iar-1', toAgencyId: 'ag-rhu', reason: 'Medical coordination', status: 'referred' }]);
+        }
+        if (k.includes('programs')) return Promise.resolve([]);
+        if (k.includes('caseId')) return Promise.resolve([]);
+        if (k.includes('cases')) return Promise.resolve({ ...closureComplete, stepLocks: seals });
+        return Promise.resolve(null);
+      });
+      await mutate(() => true, undefined, { revalidate: false });
+      return renderWithSWR(<CaseViewPage />);
+    }
+
+    it('shows the seal and offers the release', async () => {
+      await renderStepFive([{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }]);
+
+      // The strip names who sealed it…
+      expect(await screen.findByText(/Locked by Ana Cruz/)).toBeTruthy();
+      // …and it tells the worker that unlocking is how to change the step, so the
+      // button that does it has to be there.
+      expect(
+        screen.getByText(/This step is sealed\. Unlock it to make changes, then seal it again\./),
+      ).toBeTruthy();
+      expect(screen.getByRole('button', { name: /^unlock$/i })).toBeTruthy();
+    });
+
+    it('reads the step body as read-only while offering the release', async () => {
+      await renderStepFive([{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }]);
+
+      // Both halves, in one case: the seal withholds the body and withholds
+      // nothing else. Either alone would pass a weaker test.
+      expect(await screen.findByRole('button', { name: /^unlock$/i })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+    });
+  });
+
   it('withholds the Lock on a step 5 that is not done yet', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);

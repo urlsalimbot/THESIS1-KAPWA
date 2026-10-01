@@ -141,7 +141,7 @@ export class CasesService {
     const referralCounts = new Map((referralRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
     for (const c of cases) {
       (c as any).interventionCount = counts.get(c.id) ?? 0;
-      (c as any).interAgencyReferralCount = referralCounts.get(c.id) ?? 0;
+      c.interAgencyReferralCount = referralCounts.get(c.id) ?? 0;
     }
     return cases;
   }
@@ -442,7 +442,7 @@ export class CasesService {
     }
     if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
       const interventionCount = await this.getInterventionCount(c.id);
-      const hasReferral = (c.referrals?.length || 0) > 0;
+      const hasReferral = (await this.getInterAgencyReferralCount(c.id)) > 0;
       // At least one of the two service channels must be real: either an
       // intervention was issued, or — when no intervention is issued — a
       // referral exists. Recording "no referral needed" still demands an
@@ -469,7 +469,7 @@ export class CasesService {
       if (!c.selfRelianceLevel || !c.sustainabilityPlan) {
         throw new BadRequestException('Self-reliance level and sustainability plan are required for transition');
       }
-      if (!(c.referrals?.length) && !c.referralNotNeeded) {
+      if (!(await this.getInterAgencyReferralCount(c.id)) && !c.referralNotNeeded) {
         throw new BadRequestException('Record the inter-agency referral decision before transitioning');
       }
     }
@@ -724,6 +724,34 @@ export class CasesService {
   async getInterventionCount(caseId: string): Promise<number> {
     const result = await this.caseRepo.query(
       'SELECT COUNT(*) as count FROM case_interventions WHERE case_id = $1',
+      [caseId]
+    );
+    return parseInt(result[0]?.count || '0', 10);
+  }
+
+  /**
+   * The case's inter-agency referrals, counted off `inter_agency_referrals`.
+   *
+   * Public, and for the same reason as `getInterventionCount`: two count queries
+   * against one table can disagree, and the step-done predicate, the list
+   * endpoint and these FSM preconditions all have to see the same number.
+   *
+   * **`inter_agency_referrals`, not `Case.referrals`.** That getter is over
+   * `case_referrals`, which is the transition plan's agency list — written only by
+   * `updateTransitionPlan` and read by no step, which is why it has 0 rows in
+   * every database this project has run. A referral, as the product means it, is
+   * the row the endorsement letter writes (`InterAgencyRefervalsService.create`).
+   * The gates below used the getter, so a case that issued a real referral was
+   * refused for "no referral" — and once the step-done predicate was corrected
+   * to count the right table, the same rule had two surfaces reading two
+   * different tables, which is the drift the shared fixture exists to prevent.
+   *
+   * These are FSM preconditions, not step-done predicates, so the shared fixture
+   * does not reach them; `cases.service.spec.ts` pins each gate instead.
+   */
+  async getInterAgencyReferralCount(caseId: string): Promise<number> {
+    const result = await this.caseRepo.query(
+      'SELECT COUNT(*) as count FROM inter_agency_referrals WHERE case_id = $1',
       [caseId]
     );
     return parseInt(result[0]?.count || '0', 10);

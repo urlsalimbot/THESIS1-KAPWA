@@ -160,6 +160,40 @@ describe('the client mirrors of the server case FSM', () => {
     expect(STEP_MIN_STATUS.length).toBe(floors.length);
   });
 
+  /**
+   * `interAgencyReferralCount`, the same field name on both sides of the wire.
+   *
+   * Not a constant the two apps share, but a name: the server stamps it on each
+   * list row and the client reads it. Neither app can import the other's type, and
+   * the client's `ApprovalCase` is a hand-written mirror of the fields it uses, so
+   * a rename on either side would leave the pipeline reading `undefined` — and
+   * `stepperStepDone`'s `?? 0` would swallow it, reporting "no referral" for every
+   * case in the queue with nothing failing. Exactly the silent-drift shape this
+   * file exists for.
+   *
+   * Read out of the server's `Case` entity declaration, which is where the field
+   * is declared rather than assigned through `as any` — that move is what makes
+   * this checkable at all.
+   */
+  it('the client and the server agree on interAgencyReferralCount', () => {
+    const entity = serverSource('case.entity.ts');
+    // Present as a declared member of `Case`, not merely mentioned in a comment.
+    const declared = new RegExp(
+      String.raw`^\s{2}interAgencyReferralCount\?\s*:\s*number\s*;`,
+      'm',
+    ).test(entity);
+    expect(declared).toBe(true);
+
+    // And present on the client side. `ApprovalCase` is not exported, so its source
+    // is read the same way the server's is — the two are separate packages and
+    // cannot import each other, which is the premise of this whole file.
+    const page = readFileSync(
+      path.resolve(import.meta.dirname, '../pages/ApprovalPipelinePage.tsx'),
+      'utf8',
+    );
+    expect(new RegExp(String.raw`^\s{2}interAgencyReferralCount\?:\s*number\s*;`, 'm').test(page)).toBe(true);
+  });
+
   it('STATUS_INDEX equals the server CASE_STATUS_INDEX', () => {
     const body = objectLiteral(serverSource('case-step-labels.ts'), 'CASE_STATUS_INDEX');
     const index: Record<string, number> = {};

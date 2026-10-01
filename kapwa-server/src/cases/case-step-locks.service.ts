@@ -14,9 +14,9 @@ import { User } from '../auth/user.entity';
  * its review gate, and importing the const from this file would make the two
  * services require each other. See `case-step-labels.ts`.
  */
-export { CASE_STEP_LABELS, stepsDueAt, CASE_STEP_MIN_STATUS } from './case-step-labels';
+export { CASE_STEP_LABELS, stepsDueAt, CASE_STEP_MIN_STATUS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-labels';
 import {
-  CASE_STEP_LABELS, CASE_STEP_MIN_STATUS, CASE_STATUS_INDEX,
+  CASE_STEP_LABELS, CASE_STEP_MIN_STATUS, CASE_STATUS_INDEX, CASE_STEP_UNGUARDED_FIELDS,
 } from './case-step-labels';
 
 const LAST_STEP_INDEX = 4;
@@ -297,8 +297,9 @@ export class CaseStepLocksService {
    * client cannot be the thing that refuses: the PATCH endpoints it would be
    * hiding are callable directly.
    */
-  async assertUnsealed(caseId: string, stepIndex: number): Promise<void> {
+  async assertUnsealed(caseId: string, stepIndex: number, body?: unknown): Promise<void> {
     this.assertKnownStep(stepIndex);
+    if (this.touchesOnlyUnguardedFields(stepIndex, body)) return;
     const sealed = await this.repo.findOne({ where: { caseId, stepIndex } });
     if (!sealed) return;
     const by = sealed.lockedByName
@@ -307,6 +308,43 @@ export class CaseStepLocksService {
     throw new ConflictException(
       `"${CASE_STEP_LABELS[stepIndex]}" is sealed${by} — release the seal before changing this step, then seal it again.`,
     );
+  }
+
+  /**
+   * Whether this body touches nothing the seal guards.
+   *
+   * `assertUnsealed` is about *the step's own data*, not about the route that
+   * happens to carry it. One route carries both: `PATCH /cases/:id/transition-plan`
+   * writes step 4's self-reliance assessment (which is what the seal claims) and
+   * the case's follow-up / home visits (ongoing monitoring, in no step's
+   * done-predicate). Guarding the route would mean a worker who sealed the
+   * assessment could never record another home visit — the `StepTransition`
+   * comment's warning taken as fact, and the comment two lines above the mount
+   * would then be asserting two contradictory things.
+   *
+   * So the decision is made on *which keys the body carries* against
+   * `CASE_STEP_UNGUARDED_FIELDS`, and it is made before the seal lookup: a body
+   * that cannot change the sealed step does not need to ask whether it is sealed.
+   *
+   * Three ways this answers false, each deliberate:
+   *  - No body at all (`body === undefined`) — the step-field routes that carry
+   *    nothing but their own step's data. Blanket refusal, as before.
+   *  - A body that is not a plain object (a string, an array, null). Zod has
+   *    already run by the time this is called, so this cannot happen in
+   *    production; treating it as "guarded" means a surprise shape fails closed.
+   *  - A body with **no** keys of its own. `Object.keys` on `{}` is empty, and an
+   *    empty body does change nothing — but there is nothing to distinguish an
+   *    emptied object from a field the schema added later, so an empty body is
+   *    guarded. Refusing a no-op write is a cost paid only on a request that
+   *    carries nothing.
+   */
+  private touchesOnlyUnguardedFields(stepIndex: number, body: unknown): boolean {
+    const unguarded = CASE_STEP_UNGUARDED_FIELDS[stepIndex];
+    if (!unguarded || body === undefined) return false;
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) return false;
+    const keys = Object.keys(body as Record<string, unknown>);
+    if (keys.length === 0) return false;
+    return keys.every((key) => unguarded.includes(key));
   }
 
   /**
