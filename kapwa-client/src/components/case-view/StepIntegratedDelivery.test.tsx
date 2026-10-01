@@ -225,19 +225,28 @@ describe('StepIntegratedDelivery — sealing step 3', () => {
   // 0 rows, while this step lists its referrals from its own SWR. A `case_referrals`
   // row is deliberately asserted to *not* count on the other side of this test, in
   // `CaseStepper.done.test.ts` and the shared fixture.
-  it('enables Lock once this step\'s own referral list has a row', async () => {
-    mockApiGet.mockImplementation((key: unknown) => {
-      const k = JSON.stringify(key);
-      if (k.includes('inter-agency-referrals')) {
-        return Promise.resolve([{ id: 'r1', toAgencyId: 'ag-rhu', reason: 'Medical coordination', status: 'referred' }]);
-      }
-      if (k.includes('agencies') || k.includes('agencies')) return Promise.resolve(AGENCIES);
-      return Promise.resolve(null);
-    });
-    renderStep();
+  it('enables Lock once the case carries an inter-agency referral', async () => {
+    renderStep([], { caseDataOverrides: { interAgencyReferralCount: 1 } });
 
-    // Wait for the list to land: the button is disabled on first paint and
+    // Wait for the step to render: the button is disabled on first paint and
     // enabled after, so asserting synchronously would pass on the wrong value.
+    await waitFor(() => expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled());
+  });
+
+  /**
+   * The seal and the server must count the same rows.
+   *
+   * The seal endpoint counts every `inter_agency_referrals` row for the case,
+   * while this step's list is caller-scoped by agency. A second unlinked worker
+   * therefore saw an empty list, could never seal step 2, and the workflow
+   * stalled — even though the server would have accepted the seal. The count the
+   * seal weighs is a case-level fact and travels on the case row, so the scoped
+   * list can stay scoped for display.
+   */
+  it('enables Lock on the case-level count even when the scoped list is empty', async () => {
+    renderStep([], { caseDataOverrides: { interAgencyReferralCount: 1 } });
+
+    expect(await screen.findByText(/Inter-Agency Referrals/i)).toBeTruthy();
     await waitFor(() => expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled());
   });
 

@@ -48,7 +48,11 @@ function completeCaseData(over: Record<string, unknown> = {}) {
     sustainabilityPlan: 'sari-sari store',
     clientSignature: SIGNATURE,
     closureOutcome: 'graduated',
-    // Step 2's bar weighs this checklist against the program its delivery names
+    // The referrals step's bar weighs the case-level referral count, which the
+    // detail endpoint stamps — not the caller-scoped list it displays, so this
+    // field is what makes that step sealable here.
+    interAgencyReferralCount: 1,
+    // Step 1's bar weighs this checklist against the program its delivery names
     // (the bar derives it in-step), so a satisfied one is what makes that step
     // sealable here.
     requirementsChecklist: { 'Valid ID': true },
@@ -249,6 +253,28 @@ describe('a sealed step is not editable', () => {
     expect(screen.queryByRole('button', { name: control })).toBeNull();
     // The seal's own strip is still there: a sealed step stays readable, and the
     // strip is what names who sealed it and offers the release.
+    expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();
+  });
+
+  // Step 1's checklist is the other half of "a sealed step is not editable":
+  // `CaseRequirements` writes `case_requirements`, which is exactly what step 1's
+  // seal reads, so its controls have to be withheld with the rest of the body.
+  // Asserted through `StepImplementHIP` because the wiring — the `readOnly` prop
+  // reaching the checklist — is the thing that shipped broken.
+  it('withholds step 1\'s requirement controls while it is sealed', async () => {
+    const { rerender } = render(<Steps caseId="c1" caseData={completeCaseData()} />);
+    // Positive control: the checklist is on screen and offers its decision.
+    expect(await screen.findByText('Valid ID')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy();
+
+    rerender(
+      <Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepIndex: 1, lockedByName: 'Ana Cruz', lockedAt: AT }]} />,
+    );
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull());
+    // The checklist stays readable and the seal strip stays, so the absence is
+    // the seal's doing rather than the step failing to render.
+    expect(screen.getByText('Valid ID')).toBeTruthy();
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();
   });
 

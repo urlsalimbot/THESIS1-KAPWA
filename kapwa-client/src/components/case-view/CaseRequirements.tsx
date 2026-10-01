@@ -33,6 +33,9 @@ interface CaseRequirementsProps {
    *  intervention card brings its own border and separator, so a second pair
    *  inside it would draw a box within a box. */
   embedded?: boolean;
+  /** A sealed step's checklist is read-only: the server refuses every write it
+   *  guards, so the controls go with them. Reading a document stays allowed. */
+  readOnly?: boolean;
 }
 
 // Documentary-needs checklist shared by the Implement HIP step (step 2) and the
@@ -43,7 +46,7 @@ interface CaseRequirementsProps {
 // the worker confirms an uploaded document on-site, uploads it at the office, or
 // records that the client passed it on-site directly. Claimant (remote) uploads
 // stay pending until confirmed.
-export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, embedded }: CaseRequirementsProps) {
+export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, embedded, readOnly }: CaseRequirementsProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [] } = useSWR<any[]>(queryKeys.cases.interventions(caseId));
@@ -168,7 +171,7 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
                 {/* The one case no document can cover: the client handed the
                     original over on-site and nothing was scanned. Kept as an
                     explicit control so it stops hiding behind a heading click. */}
-                {canVerify && (
+                {canVerify && !readOnly && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -191,6 +194,7 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
                 caseId={caseId}
                 requirementKey={req}
                 canUpload={canUpload}
+                readOnly={readOnly}
                 docs={uploadedDocs}
                 onChanged={refresh}
                 renderDocExtras={(doc) => {
@@ -219,7 +223,7 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
                    verification, so the checklist, the stepper and the activation
                    gate cannot disagree about what is satisfied. */
                 renderPreviewFooter={(doc) => {
-                  if (!canVerify) return null;
+                  if (!canVerify || readOnly) return null;
                   const verifiedAt = (doc as { verifiedAt?: string | null }).verifiedAt;
                   return (
                     <Button

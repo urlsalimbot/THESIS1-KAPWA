@@ -45,7 +45,7 @@ const DOCS = [
 function renderRequirements(
   docs: unknown[] = DOCS,
   checklist: Record<string, boolean> = {},
-  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[] } = {},
+  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[]; readOnly?: boolean } = {},
 ) {
   mockSWR.mockImplementation((key: unknown) => {
     const root = Array.isArray(key) ? key[0] : key;
@@ -60,6 +60,7 @@ function renderRequirements(
       caseData={{ requirementsChecklist: checklist }}
       userRole="social_worker"
       extraProgramIds={overrides.extraProgramIds}
+      readOnly={overrides.readOnly}
     />,
   );
 }
@@ -142,6 +143,46 @@ describe('CaseRequirements — one row per uploaded document', () => {
     renderRequirements(DOCS, { 'Valid ID': true });
     expect(screen.queryByRole('button', { name: /Passed on-site, no copy/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy();
+  });
+});
+
+/**
+ * A sealed step 1 must withhold every control the server will refuse. The seal
+ * guards `case_requirements` and the requirement's documents, so the on-site
+ * decision, the review confirmation and the upload all 409 once it is up. On a
+ * sealed step the controls have to go with the writes — an offered control that
+ * cannot work is worse than no control.
+ */
+describe('CaseRequirements — a sealed step withholds every control it will refuse', () => {
+  beforeEach(() => {
+    mockPatch.mockReset().mockResolvedValue({});
+    mockDel.mockReset().mockResolvedValue({});
+    mockMutate.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('withholds the on-site decision, the review control and the upload', async () => {
+    const user = userEvent.setup();
+    renderRequirements(DOCS, {}, { readOnly: true });
+
+    // The on-site decision button, in both of its labels.
+    expect(screen.queryByRole('button', { name: /Passed on-site, no copy/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
+    // The upload dropzone.
+    expect(screen.queryByText(/Click to browse or drop files/)).toBeNull();
+
+    // Reading the document is still allowed; recording the review is not.
+    await user.click(screen.getByRole('button', { name: /Preview valid-id\.pdf/ }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Confirm review' })).toBeNull();
+  });
+
+  // The positive control: the same data, unsealed, still offers the controls, so
+  // the absences above are the seal's doing and not the fixture's.
+  it('offers them again when the step is not sealed', () => {
+    renderRequirements(DOCS, {}, { readOnly: false });
+
+    expect(screen.getByRole('button', { name: /Passed on-site, no copy/ })).toBeTruthy();
+    expect(screen.getByText(/Click to browse or drop files/)).toBeTruthy();
   });
 });
 

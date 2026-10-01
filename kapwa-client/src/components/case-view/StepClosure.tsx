@@ -6,10 +6,6 @@ import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
-  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
-} from '@/components/ui/alert-dialog';
 import { FileText, CheckCircle, Clock, Download, Lock } from 'lucide-react';
 import { downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
@@ -53,7 +49,6 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
   });
 
   const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
 
   async function handleSave() {
     setSaving(true);
@@ -66,31 +61,6 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
       console.error('Failed to save closure:', e);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleFinalClosure() {
-    if (!closure.closureOutcome) {
-      toast.error(t('caseView.closure.selectOutcome', 'Please select a closure outcome'));
-      return;
-    }
-    if (!closure.clientSignature) {
-      toast.error(t('caseView.closure.captureSignature', 'Please capture client signature'));
-      return;
-    }
-    setSaving(true);
-    try {
-      // Save closure data first
-      await api.patch(`/cases/${caseId}/closure`, {
-        closureOutcome: closure.closureOutcome,
-        exitNotes: closure.exitNotes || null,
-        clientSignature: closure.clientSignature,
-      });
-      await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to close case:', e);
     } finally {
       setSaving(false);
     }
@@ -270,43 +240,15 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
         </div>
       </div>
 
-      {/* Action Buttons */}
-      {!isClosed && (
+      {/* Action Buttons. Only the exit record is saved here; closing the case is
+          a forward hop that ends this step's work, so it runs the step-5 seal
+          gate and lives on `CaseActionBar`'s "Close case" control. This card used
+          to offer a second "Close Case" that closed directly, around that gate. */}
+      {!isClosed && !readOnly && (
         <div className="flex gap-2">
-          {!readOnly && (
-            <Button onClick={handleSave} disabled={saving} variant="outline">
-              {saving ? t('caseView.saving', 'Saving...') : t('caseView.closure.saveProgress', 'Save Progress')}
-            </Button>
-          )}
-          {!readOnly && (
-            <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button
-                  disabled={saving || !closure.closureOutcome || !closure.clientSignature}
-                  variant="default"
-                >
-                  {saving ? t('caseView.closing', 'Closing...') : t('caseView.closure.closeCase', 'Close Case')}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t('caseView.closure.closeCaseTitle', 'Close Case?')}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t('caseView.closure.closeCaseDesc', 'This will permanently close this case. This action cannot be undone.')}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t('caseView.cancel', 'Cancel')}</AlertDialogCancel>
-                  <AlertDialogAction onClick={async () => {
-                    await handleFinalClosure();
-                    setCloseDialogOpen(false);
-                  }}>
-                    {t('caseView.closure.closeCase', 'Close Case')}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+          <Button onClick={handleSave} disabled={saving} variant="outline">
+            {saving ? t('caseView.saving', 'Saving...') : t('caseView.closure.saveProgress', 'Save Progress')}
+          </Button>
         </div>
       )}
 

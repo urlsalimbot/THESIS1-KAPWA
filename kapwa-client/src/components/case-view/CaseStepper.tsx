@@ -10,13 +10,16 @@ export interface StepperProgressOpts {
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
   /**
-   * How many inter-agency referrals the case has, from the case view's own SWR
-   * over `GET /inter-agency-referrals/case/:caseId` — the same list step 3 lists
-   * on screen. Not on the case row: `case.referrals` is the transition plan's
-   * agency list over `case_referrals`, which the referral letter never writes,
-   * so the case view must supply the count its own step already has rather than
-   * the predicate reaching for a field that cannot describe it. Absent means
-   * zero, which is the honest answer for a surface with no referrals to offer.
+   * How many `inter_agency_referrals` rows the case has, as the case detail
+   * endpoint stamps it — the same unscoped count the server's seal weighs.
+   *
+   * Not the length of the caller-scoped `GET /inter-agency-referrals/case/:caseId`
+   * list: that list is scoped by agency for display, and a worker whose agency is
+   * not on a referral would see 0 and could never seal step 2 while the server
+   * would have accepted the seal. Not `case.referrals` either — that is the
+   * transition plan's agency list over `case_referrals`, which the referral
+   * letter never writes. Absent means zero, the honest answer for a surface with
+   * no count to offer.
    */
   interAgencyReferralCount?: number;
 }

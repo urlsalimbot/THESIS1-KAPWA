@@ -236,19 +236,23 @@ export function CaseViewPage() {
     () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
     [interventions, programs, caseData],
   );
-  // The inter-agency referrals this case already carries, from the SWR above —
-  // the same list step 3 lists on screen, so the stepper's step-2 answer and the
-  // step's own contents cannot disagree. `caseData.referrals` is not that list:
-  // it is the transition plan's agency list over `case_referrals`, which no
-  // referral letter writes.
-  const interAgencyReferralCount = (iarReferrals ?? []).length;
+  // The case-level referral count, stamped by the detail endpoint. Deliberately
+  // NOT `(iarReferrals ?? []).length`: that list is caller-scoped by agency, so a
+  // worker whose agency is not on a referral saw 0 and could not seal step 2,
+  // while the server's seal counts every row for the case. "Does this case have a
+  // referral" is a fact about the case, so both surfaces read the case's own
+  // number. `caseData.referrals` is not that list either: it is the transition
+  // plan's agency list over `case_referrals`, which no referral letter writes.
+  const interAgencyReferralCount = caseData?.interAgencyReferralCount ?? 0;
   const progressOpts: StepperProgressOpts = useMemo(
-    // `requirementsMet` and `interAgencyReferralCount` are threaded because
-    // neither is on the case row. The two "not needed" decisions are held on the
-    // row and `stepperStepDone` already falls back to it, so restating them here
-    // would be a second copy of one rule — and an explicit `false` would
-    // outvote the row, which the server (coercing to `Boolean(c.x)`) could never
-    // honour.
+    // `requirementsMet` is threaded because it is not on the case row.
+    // `interAgencyReferralCount` is on the row, but it is restated here from the
+    // row's value rather than left to a fallback: `stepperStepDone` has no
+    // fallback for it, because a surface with no count must read 0 rather than
+    // an absent field. The two "not needed" decisions *are* held on the row and
+    // `stepperStepDone` falls back to it, so restating them here would be a
+    // second copy of one rule — and an explicit `false` would outvote the row,
+    // which the server (coercing to `Boolean(c.x)`) could never honour.
     () => ({ requirementsMet, interAgencyReferralCount }),
     [requirementsMet, interAgencyReferralCount],
   );

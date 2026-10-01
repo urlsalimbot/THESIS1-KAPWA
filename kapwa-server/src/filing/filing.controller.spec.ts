@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
-import { StreamableFile } from '@nestjs/common';
+import { ConflictException, StreamableFile } from '@nestjs/common';
 import * as fs from 'fs';
 import { FilingController } from './filing.controller';
 import { FilingService } from './filing.service';
+import { CaseStepLocksService } from '../cases/case-step-locks.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 
@@ -27,7 +28,10 @@ describe('FilingController — case ID photo endpoint', () => {
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilingController],
-      providers: [{ provide: FilingService, useValue: service }],
+      providers: [
+        { provide: FilingService, useValue: service },
+        { provide: CaseStepLocksService, useValue: { assertUnsealed: jest.fn().mockResolvedValue(undefined) } },
+      ],
     }).compile();
     controller = module.get<FilingController>(FilingController);
   });
@@ -90,7 +94,10 @@ describe('FilingController — download self-healing', () => {
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilingController],
-      providers: [{ provide: FilingService, useValue: service }],
+      providers: [
+        { provide: FilingService, useValue: service },
+        { provide: CaseStepLocksService, useValue: { assertUnsealed: jest.fn().mockResolvedValue(undefined) } },
+      ],
     }).compile();
     controller = module.get<FilingController>(FilingController);
     readStreamSpy = jest
@@ -133,5 +140,88 @@ describe('FilingController — download self-healing', () => {
       controller.download('d1', { user: { role: 'coordinator' } }, { set: jest.fn() } as any),
     ).rejects.toThrow('do not have access');
     expect(service.ensureFileOnDisk).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Step 1's seal reads `case_requirements`. Three filing routes write that table
+ * — a staff requirement upload, a verification, and a delete that re-derives the
+ * requirement from the remaining verified documents — and none of them asked
+ * whether the step was sealed, so a seal could stand on data that changed under
+ * it. The guard is the same `CaseStepLocksService.assertUnsealed` the cases
+ * routes use, with the same step-1 mapping; a filing write that is not a
+ * requirement (an IRF photo, an announcement photo) changes no sealed data and
+ * is left alone.
+ */
+describe('FilingController — step-1 seal on requirement writes', () => {
+  let controller: FilingController;
+  let service: any;
+  let stepLocks: { assertUnsealed: jest.Mock };
+
+  const file = { originalname: 'id.pdf', mimetype: 'application/pdf', size: 10, buffer: Buffer.from('x') };
+  const sw = { user: { id: 'u1', role: 'social_worker' } };
+
+  beforeEach(async () => {
+    service = {
+      upload: jest.fn().mockResolvedValue({ id: 'd1' }),
+      setVerified: jest.fn().mockResolvedValue({ id: 'd1' }),
+      delete: jest.fn().mockResolvedValue({}),
+      findOne: jest.fn(),
+      isPhotoAccessAllowed: jest.fn().mockReturnValue(true),
+    };
+    stepLocks = { assertUnsealed: jest.fn().mockResolvedValue(undefined) };
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [FilingController],
+      providers: [
+        { provide: FilingService, useValue: service },
+        { provide: CaseStepLocksService, useValue: stepLocks },
+      ],
+    }).compile();
+    controller = module.get<FilingController>(FilingController);
+  });
+
+  it('checks step 1 before a requirement upload writes case_requirements', async () => {
+    await controller.upload(file, { caseId: 'c1', requirementKey: 'Valid ID' }, sw);
+
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+  });
+
+  it('does not guard an upload that carries no requirement key', async () => {
+    await controller.upload(file, { caseId: 'c1', category: 'irf_photo' }, sw);
+
+    expect(stepLocks.assertUnsealed).not.toHaveBeenCalled();
+  });
+
+  it('checks step 1 before verifying a requirement document', async () => {
+    service.findOne.mockResolvedValue({ id: 'd1', caseId: 'c1', requirementKey: 'Valid ID' });
+
+    await controller.verify('d1', { verified: true }, sw);
+
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+  });
+
+  it('does not guard verifying a document tied to no requirement', async () => {
+    service.findOne.mockResolvedValue({ id: 'd1', caseId: 'c1' });
+
+    await controller.verify('d1', { verified: true }, sw);
+
+    expect(stepLocks.assertUnsealed).not.toHaveBeenCalled();
+  });
+
+  it('checks step 1 before deleting a requirement document', async () => {
+    service.findOne.mockResolvedValue({ id: 'd1', caseId: 'c1', requirementKey: 'Valid ID' });
+
+    await controller.delete('d1', sw);
+
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+  });
+
+  it('does not write when the seal is up', async () => {
+    service.findOne.mockResolvedValue({ id: 'd1', caseId: 'c1', requirementKey: 'Valid ID' });
+    stepLocks.assertUnsealed.mockRejectedValue(new ConflictException('sealed'));
+
+    await expect(controller.verify('d1', { verified: true }, sw)).rejects.toBeInstanceOf(ConflictException);
+
+    expect(service.setVerified).not.toHaveBeenCalled();
   });
 });

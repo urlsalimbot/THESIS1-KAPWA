@@ -7,6 +7,7 @@ import { Response } from 'express';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { FilingService } from './filing.service';
+import { CaseStepLocksService } from '../cases/case-step-locks.service';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { UploadMetadataSchema, VerifyDocumentSchema, VerifyDocumentInput } from './dto/filing.zod';
 import * as fs from 'fs';
@@ -16,7 +17,15 @@ import * as fs from 'fs';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class FilingController {
-  constructor(private filingService: FilingService) {}
+  constructor(
+    private filingService: FilingService,
+    // Step 1's seal reads `case_requirements`. The three routes below are the
+    // only filing writes that touch it, and they are the paths nobody guarded:
+    // `PATCH /cases/:id/requirements` was guarded, but a staff upload writes the
+    // same table through `/filing/upload`. Guarded on the route, with the same
+    // `assertUnsealed(caseId, 1)` the cases routes use, so there is one rule.
+    private stepLocks: CaseStepLocksService,
+  ) {}
 
   @Post('upload')
   @Roles('admin', 'social_worker', 'claimant')
@@ -28,6 +37,11 @@ export class FilingController {
     @Body(new ZodPipe(UploadMetadataSchema)) metadata: { caseId?: string; beneficiaryId?: string; irfId?: string; announcementId?: string; category?: string; notes?: string; requirementKey?: string },
     @Request() req: any,
   ) {
+    // Only a requirement upload writes `case_requirements`; a photo or an
+    // approval document changes no sealed data, so it is not refused.
+    if (metadata.caseId && metadata.requirementKey) {
+      await this.stepLocks.assertUnsealed(metadata.caseId, 1);
+    }
     return this.filingService.upload(file, {
       ...metadata,
       uploadedBy: req.user?.id || req.user?.sub,
@@ -79,6 +93,13 @@ export class FilingController {
     @Body(new ZodPipe(VerifyDocumentSchema)) body: VerifyDocumentInput,
     @Request() req: any,
   ) {
+    // Verifying a requirement document re-derives that `case_requirements` row,
+    // so a sealed step 1 refuses it. A document tied to no requirement changes
+    // nothing step 1's seal reads.
+    const doc = await this.filingService.findOne(id);
+    if (doc.caseId && doc.requirementKey) {
+      await this.stepLocks.assertUnsealed(doc.caseId, 1);
+    }
     return this.filingService.setVerified(id, body.verified, req.user?.id || req.user?.sub);
   }
 
@@ -118,8 +139,14 @@ export class FilingController {
   @ApiOperation({ summary: 'Delete document' })
   async delete(@Param('id') id: string, @Request() req: any) {
     const doc = await this.filingService.findOne(id);
+    // Access first, so an unauthorized caller cannot probe the seal state; then
+    // the seal, because deleting a verified requirement document re-derives its
+    // `case_requirements` row.
     if (!this.filingService.isPhotoAccessAllowed(req.user?.role, doc.category, 'delete')) {
       throw new ForbiddenException('You are not allowed to remove this document');
+    }
+    if (doc.caseId && doc.requirementKey) {
+      await this.stepLocks.assertUnsealed(doc.caseId, 1);
     }
     return this.filingService.delete(id);
   }

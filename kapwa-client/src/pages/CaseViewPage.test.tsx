@@ -492,6 +492,34 @@ describe('CaseViewPage — stepper gating', () => {
     expect(step3.querySelector('svg')).not.toBeNull();
   });
 
+  /**
+   * The stepper and the server count the same rows.
+   *
+   * The scoped referral list is empty for a worker whose agency is not on a
+   * referral, but the case carries one. Reading the scoped list here made the
+   * stepper report step 2 incomplete — the same mismatch that stopped that
+   * worker sealing the step. The case-level count is what both sides weigh.
+   */
+  it('checks Inter-agency Referrals on the case-level count even when the scoped list is empty', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve(interventionMock);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve(programsMock);
+      if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf' }]);
+      if (k.includes('cases')) return Promise.resolve({ ...assumptionCase, interAgencyReferralCount: 1 });
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<CaseViewPage />);
+    const step3 = await waitFor(deliveryStepButton);
+    await waitFor(() => expect(step3.querySelector('svg')).not.toBeNull());
+    expect(step3.textContent).not.toContain('3');
+  });
+
   it('keeps the transition plan savable after the plan is saved while the case is active', async () => {
     // Regression: once the plan is saved (stepDone[3] flips true) the old
     // readOnly={stepDone[3] || caseClosed} hid the only "Save Transition Plan"
@@ -553,6 +581,10 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     sustainabilityPlan: 'sari-sari store',
     clientSignature: SIGNATURE,
     closureOutcome: 'graduated',
+    // Step 2's completion is the case-level referral count, which the detail
+    // endpoint stamps. The scoped list below is for display; without this field
+    // the nav stops at step 2 and never reaches the closure this describe tests.
+    interAgencyReferralCount: 1,
   };
 
   beforeEach(async () => {

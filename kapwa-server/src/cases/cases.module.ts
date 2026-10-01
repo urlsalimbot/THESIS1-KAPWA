@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
@@ -35,7 +35,10 @@ import { IrfModule } from '../irf/irf.module';
   // `CaseIntervention` and `Program`: step 2's done-predicate counts the
   // referrals the endorsement letter wrote, and forFeature keeps that a
   // repository registration rather than a require edge to the referrals module.
-  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, Program, InterAgencyReferral, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
+  // `forwardRef(() => FilingModule)`: the filing module now imports this one for
+  // the step-1 seal assertion, and this one imports it for `CasesExportService`'s
+  // `FilingService`. Both sides forward-ref the other so Nest resolves the cycle.
+  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, Program, InterAgencyReferral, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, forwardRef(() => FilingModule), IrfModule],
   controllers: [CasesController],
   providers: [CasesService, CasesExportService, CaseStepLocksService],
   // `CaseStepLocksService` is exported for one caller: the interventions module

@@ -57,6 +57,16 @@ describe('StepClosure — sealing step 5', () => {
     expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
   });
 
+  // Closing is a forward hop that ends step 5's work, so it runs the seal gate.
+  // `CaseActionBar` is the control that carries that gate; this card used to
+  // offer a second "Close Case" that PATCHed `/closure` and closed the case
+  // directly, around the gate. One control per edge.
+  it('offers no second close control — CaseActionBar owns the gated close', () => {
+    renderStep({ status: 'transitioning' });
+
+    expect(screen.queryByRole('button', { name: /Close Case/i })).toBeNull();
+  });
+
   it('offers a viewer neither the seal nor the hint it cannot act on', () => {
     renderStep({ status: 'transitioning' }, { readOnly: true, lockReadOnly: true });
 

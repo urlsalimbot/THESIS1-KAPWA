@@ -241,6 +241,13 @@ export class CasesService {
   async getCaseWithSla(id: string) {
     const c = await this.findById(id);
     (c as any).slaOverdue = this.computeSlaOverdue(c);
+    // The case-level referral count, unscoped. The case view's step-2 predicate
+    // must not read the caller-scoped referral list: "does this case have a
+    // referral" is a fact about the case, and the scoped list answers a different
+    // question (which rows this caller may read). Both surfaces now read this one
+    // number, which is the same one `attachInterventionCounts` stamps on list
+    // rows for the approval pipeline.
+    c.interAgencyReferralCount = await this.getInterAgencyReferralCount(id);
     return c;
   }
 
@@ -858,19 +865,32 @@ export class CasesService {
     return saved;
   }
 
+  /**
+   * Record the exit record — outcome, notes, signature — without closing.
+   *
+   * This route used to set `status: CLOSED` itself, which skipped the
+   * `transitioning -> closed` seal gate: closing is a forward hop, and every
+   * forward hop that ends a step's work runs `assertStepsSealed`. Two jobs in
+   * one route meant one of them (the close) was ungated. Split: this method
+   * saves the step-5 data and nothing else, and the close goes through
+   * `PATCH /cases/:id/close` -> `transition()`, where the gate lives.
+   *
+   * The route still opens with `assertUnsealed(id, 4)`: the exit record *is*
+   * step 5's own data, so it refuses to move a sealed step. Sealing is a
+   * precondition for closing, not a bar to it — the previous code had the two
+   * rules inverted, refusing to close a sealed step and closing an unsealed one.
+   */
   async updateClosure(id: string, data: ClosureInput, userRole?: string) {
     const c = await this.findById(id);
     // Authorize first so an unauthorized role cannot probe the case's state.
     const allowedRoles = ['admin', 'social_worker', 'coordinator'];
     if (!userRole || !allowedRoles.includes(userRole)) {
-      throw new ForbiddenException(`Role ${userRole} cannot close case`);
+      throw new ForbiddenException(`Role ${userRole} cannot record closure data`);
     }
     if (c.status !== CaseStatus.TRANSITIONING) {
-      throw new BadRequestException('Case must be in transitioning status to close');
+      throw new BadRequestException('Case must be in transitioning status to record closure data');
     }
-    const oldStatus = c.status;
     Object.assign(c, {
-      status: CaseStatus.CLOSED,
       closureOutcome: data.closureOutcome,
       exitNotes: data.exitNotes,
       clientSignature: data.clientSignature || c.clientSignature,
@@ -878,7 +898,7 @@ export class CasesService {
       updatedAt: new Date(),
     });
     await this.caseRepo.save(c);
-    await this.logHistory(id, oldStatus, CaseStatus.CLOSED, userRole, undefined, `Closed with outcome: ${data.closureOutcome}`);
+    await this.auditLog?.log('case.closure_record', id, undefined, { controlNo: c.controlNo, outcome: data.closureOutcome });
     return c;
   }
 

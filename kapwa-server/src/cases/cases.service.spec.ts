@@ -492,6 +492,28 @@ describe('CasesService', () => {
       expect(referralParams).toEqual([['1', '2']]);
     });
 
+    /**
+     * The detail payload carries the same case-level count.
+     *
+     * The case view's stepper and step-2 seal bar used to read the length of the
+     * caller-scoped `GET /inter-agency-referrals/case/:caseId` list, so a worker
+     * whose agency was not on a referral saw 0 and could not seal step 2 — while
+     * the server's own seal counts every row for the case. The count that decides
+     * "does this case have a referral" is a case fact, so it travels on the case
+     * and both surfaces read the same number.
+     */
+    it('stamps the case-level referral count on the detail payload', async () => {
+      repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.TRANSITIONING } as Case);
+      repoMock.query.mockResolvedValue([{ count: '2' }]);
+
+      const result = await service.getCaseWithSla('1');
+
+      expect((result as any).interAgencyReferralCount).toBe(2);
+      const [sql, params] = repoMock.query.mock.calls.at(-1);
+      expect(sql).toContain('inter_agency_referrals');
+      expect(params).toEqual(['1']);
+    });
+
     it('counts interventions and referrals in one batch, not one query per case', async () => {
       const cases = [
         { id: '1', status: CaseStatus.ACTIVE, beneficiary: { age: 25 } },
@@ -1109,6 +1131,34 @@ describe('FSM — close', () => {
     const existing = { id: '1', status: CaseStatus.ACTIVE, clientSignature: 'sig', closureOutcome: 'graduated', updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
     await expect(service.updateStatus('1', CaseStatus.CLOSED, 'admin')).rejects.toThrow(/Invalid transition/);
+  });
+});
+
+/**
+ * Recording the exit record is not closing the case.
+ *
+ * `PATCH /cases/:id/closure` used to set `status: CLOSED` itself, which skipped
+ * the `transitioning -> closed` seal gate in `validateTransition` — a second
+ * control for one edge, ungated. The route now records the exit record only; the
+ * gated `PATCH /cases/:id/close` hop is the one close. This test is what fails if
+ * the direct close is ever re-added.
+ */
+describe('recording closure data does not close the case', () => {
+  it('leaves the status at transitioning', async () => {
+    const existing = { id: '1', status: CaseStatus.TRANSITIONING, updatedAt: new Date() } as Case;
+    repoMock.findOne.mockResolvedValue(existing);
+    repoMock.save.mockImplementation(async (c: any) => c);
+
+    const result = await service.updateClosure(
+      '1',
+      { closureOutcome: 'graduated', clientSignature: 'sig' } as any,
+      'social_worker',
+    );
+
+    expect(result.status).toBe(CaseStatus.TRANSITIONING);
+    expect(repoMock.save).toHaveBeenCalled();
+    // No history row claiming a transition that did not happen.
+    expect(historyRepoMock.save).not.toHaveBeenCalled();
   });
 });
 

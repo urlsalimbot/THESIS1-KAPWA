@@ -7,6 +7,8 @@ interface RequirementFileUploadProps {
   caseId: string;
   requirementKey: string;
   canUpload?: boolean;
+  /** A sealed step refuses the upload and the removal, so both controls go. */
+  readOnly?: boolean;
   docs: FilingDoc[];
   onChanged: () => void;
   /** Per-file status rendered in the file row. */
@@ -20,7 +22,7 @@ export function RequirementFileUpload(props: RequirementFileUploadProps) {
     <FileUploadList
       compact
       docs={props.docs}
-      canUpload={props.canUpload}
+      canUpload={props.canUpload && !props.readOnly}
       onChanged={props.onChanged}
       renderDocExtras={props.renderDocExtras}
       renderPreviewFooter={props.renderPreviewFooter}

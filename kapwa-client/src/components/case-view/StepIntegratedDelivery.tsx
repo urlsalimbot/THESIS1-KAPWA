@@ -252,20 +252,22 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
         </DialogContent>
       </Dialog>
 
-      {/* Step 3's seal. Only the referral count is passed, and it comes from this
-          step's own SWR — so the seal answers exactly the question the list
-          above answers, and the case view's stepper (which reads the same SWR)
-          cannot disagree with what is on screen. The referral *decision* is on
-          the case row and `stepperStepDone` falls back to it, so passing it
-          here would restate the rule this step already reads for its own badge
-          — and an explicit `false`, which the server coerces and could never
-          honour, would outvote the row. */}
+      {/* Step 3's seal. The count is the case-level one the server's seal also
+          counts, not the length of this step's caller-scoped list: a worker whose
+          agency is not on a referral sees an empty list, and reading that here
+          stalled the workflow — the server would have accepted the seal. The
+          list above stays scoped for display, which is an authorization decision
+          about which rows a caller may read, not about whether the case has any.
+          The referral *decision* is on the case row and `stepperStepDone` falls
+          back to it, so passing it here would restate the rule this step already
+          reads for its own badge — and an explicit `false`, which the server
+          coerces and could never honour, would outvote the row. */}
       <StepLockBar
         caseId={caseId}
         stepIndex={2}
         caseData={caseData}
         interventionCount={0}
-        opts={{ interAgencyReferralCount: hasReferrals ? 1 : 0 }}
+        opts={{ interAgencyReferralCount: caseData?.interAgencyReferralCount ?? 0 }}
         locked={stepLock}
         readOnly={lockReadOnly}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}

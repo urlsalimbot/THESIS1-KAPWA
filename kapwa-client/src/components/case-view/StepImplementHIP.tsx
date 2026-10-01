@@ -303,6 +303,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
             caseData={caseData}
             userRole={userRole}
             extraProgramIds={pendingProgramIds}
+            readOnly={readOnly}
             embedded
           />
           {/* Step 2's seal, at the foot of the card it attests to. Its own
