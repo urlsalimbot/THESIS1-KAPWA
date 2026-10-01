@@ -311,6 +311,21 @@ export class CaseStepLocksService {
   }
 
   /**
+   * Whether a step currently carries a seal, without deciding anything.
+   *
+   * The read half of `assertUnsealed`, for a caller that must branch instead of
+   * refuse: `GET /filing/:id/download` self-heals a stale document by deleting
+   * the row and re-deriving its `case_requirements` entry, and that write is
+   * what a sealed step 1 must not suffer. The download itself is a read a worker
+   * may legitimately need, so the route skips the heal while sealed rather than
+   * refusing the request; this answers the question that decides which.
+   */
+  async isSealed(caseId: string, stepIndex: number): Promise<boolean> {
+    this.assertKnownStep(stepIndex);
+    return (await this.repo.findOne({ where: { caseId, stepIndex } })) !== null;
+  }
+
+  /**
    * Whether this body touches nothing the seal guards.
    *
    * `assertUnsealed` is about *the step's own data*, not about the route that

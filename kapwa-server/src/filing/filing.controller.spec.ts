@@ -83,6 +83,7 @@ describe('FilingController — download self-healing', () => {
     ensureFileOnDisk: jest.Mock;
     diskPath: jest.Mock;
   };
+  let stepLocks: { assertUnsealed: jest.Mock; isSealed: jest.Mock };
   let readStreamSpy: jest.SpyInstance;
 
   beforeEach(async () => {
@@ -92,11 +93,12 @@ describe('FilingController — download self-healing', () => {
       ensureFileOnDisk: jest.fn(),
       diskPath: jest.fn(),
     };
+    stepLocks = { assertUnsealed: jest.fn().mockResolvedValue(undefined), isSealed: jest.fn().mockResolvedValue(false) };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilingController],
       providers: [
         { provide: FilingService, useValue: service },
-        { provide: CaseStepLocksService, useValue: { assertUnsealed: jest.fn().mockResolvedValue(undefined) } },
+        { provide: CaseStepLocksService, useValue: stepLocks },
       ],
     }).compile();
     controller = module.get<FilingController>(FilingController);
@@ -118,7 +120,10 @@ describe('FilingController — download self-healing', () => {
     service.diskPath.mockReturnValue('/uploads/coe.pdf');
     const res = { set: jest.fn() };
     const out = await controller.download('d1', adminReq, res as any);
-    expect(service.ensureFileOnDisk).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1', fileName: 'coe.pdf' }));
+    expect(service.ensureFileOnDisk).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'd1', fileName: 'coe.pdf' }),
+      { heal: true },
+    );
     expect(service.diskPath).toHaveBeenCalledWith('coe.pdf');
     expect(res.set).toHaveBeenCalledWith(expect.objectContaining({ 'Content-Type': 'application/pdf' }));
     expect(out).toBeInstanceOf(StreamableFile);
@@ -131,6 +136,40 @@ describe('FilingController — download self-healing', () => {
     await expect(controller.download('d1', adminReq, { set: jest.fn() } as any))
       .rejects.toThrow('File not found on disk');
     expect(fs.createReadStream).not.toHaveBeenCalled();
+  });
+
+  it('still serves a live requirement file when step 1 is sealed', async () => {
+    service.findOne.mockResolvedValue({
+      id: 'd1', fileName: 'birth_cert.pdf', category: 'requirement', caseId: 'c1', requirementKey: 'birth_cert',
+      mimeType: 'application/pdf', originalName: 'birth_cert.pdf',
+    });
+    service.isPhotoAccessAllowed.mockReturnValue(true);
+    stepLocks.isSealed.mockResolvedValue(true);
+    service.ensureFileOnDisk.mockResolvedValue(true);
+    service.diskPath.mockReturnValue('/uploads/birth_cert.pdf');
+    const out = await controller.download('d1', adminReq, { set: jest.fn() } as any);
+    // The read is served; only the write is withheld.
+    expect(out).toBeInstanceOf(StreamableFile);
+    expect(stepLocks.isSealed).toHaveBeenCalledWith('c1', 1);
+    expect(service.ensureFileOnDisk).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'd1', requirementKey: 'birth_cert' }),
+      { heal: false },
+    );
+  });
+
+  it('does not self-heal a sealed requirement document through a GET', async () => {
+    service.findOne.mockResolvedValue({
+      id: 'd1', fileName: 'birth_cert.pdf', category: 'requirement', caseId: 'c1', requirementKey: 'birth_cert',
+    });
+    service.isPhotoAccessAllowed.mockReturnValue(true);
+    stepLocks.isSealed.mockResolvedValue(true);
+    service.ensureFileOnDisk.mockResolvedValue(false);
+    await expect(controller.download('d1', adminReq, { set: jest.fn() } as any))
+      .rejects.toThrow('File not found on disk');
+    expect(service.ensureFileOnDisk).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'd1', requirementKey: 'birth_cert' }),
+      { heal: false },
+    );
   });
 
   it('blocks forbidden roles before touching the disk', async () => {

@@ -125,7 +125,14 @@ export class FilingController {
     // Missing on disk = stale record (uploads volume cleaned/rotated). The row
     // is deleted and, for approval documents, the case's certificate/PCV URL
     // cleared so the UI can re-issue — the client distinguishes this message.
-    if (!(await this.filingService.ensureFileOnDisk(doc))) {
+    // A requirement document's re-derivation writes `case_requirements`, the
+    // table step 1's seal reads, so a sealed step 1 gets the read without the
+    // heal: the file is served when it is on disk, and a genuinely missing file
+    // still 404s, but nothing under the seal moves through a GET.
+    const sealed = doc.caseId && doc.requirementKey
+      ? await this.stepLocks.isSealed(doc.caseId, 1)
+      : false;
+    if (!(await this.filingService.ensureFileOnDisk(doc, { heal: !sealed }))) {
       throw new NotFoundException('File not found on disk: the stored document was removed and its record cleaned up. Re-upload or re-issue the document.');
     }
     const filePath = this.filingService.diskPath(doc.fileName);

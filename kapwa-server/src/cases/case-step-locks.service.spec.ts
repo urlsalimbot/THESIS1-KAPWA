@@ -501,6 +501,33 @@ describe('CaseStepLocksService', () => {
     });
   });
 
+  describe('isSealed', () => {
+    it('answers false when the step carries no seal', async () => {
+      lockRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.isSealed('c1', 1)).resolves.toBe(false);
+    });
+
+    it('answers true when the step is sealed', async () => {
+      lockRepo.findOne.mockResolvedValue({ caseId: 'c1', stepIndex: 1, lockedByName: 'Ana', lockedAt: new Date() });
+
+      await expect(service.isSealed('c1', 1)).resolves.toBe(true);
+    });
+
+    it('asks about the named case and step only', async () => {
+      lockRepo.findOne.mockResolvedValue(null);
+
+      await service.isSealed('c9', 1);
+
+      expect(lockRepo.findOne).toHaveBeenCalledWith({ where: { caseId: 'c9', stepIndex: 1 } });
+    });
+
+    it('rejects an unknown step rather than reporting unsealed', async () => {
+      await expect(service.isSealed('c1', 5)).rejects.toThrow(BadRequestException);
+      expect(lockRepo.findOne).not.toHaveBeenCalled();
+    });
+  });
+
   it('lists the sealed steps of a case in step order', async () => {
     const rows = [
       { stepIndex: 3, lockedBy: 'u2', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },

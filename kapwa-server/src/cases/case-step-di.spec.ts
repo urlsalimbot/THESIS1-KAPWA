@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants';
+import { SELF_DECLARED_DEPS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 /**
@@ -165,5 +165,89 @@ describe('cases step-locks require graph', () => {
       expect(deps).toEqual(expect.arrayContaining([expected]));
     }
     expect(deps.some((d) => d === undefined || d.param === undefined)).toBe(false);
+  });
+});
+
+/**
+ * The *module* edge the require-graph probes above cannot see.
+ *
+ * `FilingModule` now imports `CasesModule` for `CaseStepLocksService`, and
+ * `CasesModule` imports `FilingModule` for `CasesExportService`'s
+ * `FilingService`, so the two modules require each other. That is a Nest module
+ * cycle, a different failure from the constructor-metadata cycle the probes
+ * above pin: the emitted parameter types stay intact, and the damage lands in
+ * Nest's module scanner, where a JavaScript require that resolves one side to
+ * `undefined` is the `CircularDependencyException` /
+ * `UndefinedModuleException` that kills the app at boot — again invisible to
+ * every unit test that builds services by hand.
+ *
+ * The require-graph technique cannot express it, so this uses two pieces of
+ * evidence that can:
+ *  - the module metadata, asserting each side reaches the other through
+ *    `forwardRef`. A plain import is not a `forwardRef`, so dropping either
+ *    side's wrapper fails here even when the graph still scans.
+ *  - a real `DependenciesScanner.scan` over the freshly loaded `FilingModule`,
+ *    which is the exact stage that raises the boot error. It needs no database:
+ *    it registers modules and reflects their dependencies, and never
+ *    instantiates a provider.
+ */
+describe('cases ↔ filing module edge', () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  /**
+   * The module a `forwardRef(() => X)` entry resolves to, or `undefined`.
+   * `forwardRef` returns `{ forwardRef: fn }`; a plain module import is a
+   * function and resolves to `undefined` here, which is the distinction that
+   * makes dropping either side's wrapper fail the assertions below.
+   */
+  const forwardRefTarget = (entry: unknown): object | undefined => {
+    const wrapper = entry as { forwardRef?: () => object } | undefined;
+    return wrapper && typeof wrapper.forwardRef === 'function' ? wrapper.forwardRef() : undefined;
+  };
+
+  it('filing.module reaches CasesModule through forwardRef', () => {
+    const { FilingModule } = require('../filing/filing.module');
+    const { CasesModule } = require('./cases.module');
+
+    const imports = (Reflect.getMetadata(MODULE_METADATA.IMPORTS, FilingModule) ?? []) as unknown[];
+
+    expect(imports.some((entry) => forwardRefTarget(entry) === CasesModule)).toBe(true);
+  });
+
+  it('cases.module reaches FilingModule through forwardRef', () => {
+    const { FilingModule } = require('../filing/filing.module');
+    const { CasesModule } = require('./cases.module');
+
+    const imports = (Reflect.getMetadata(MODULE_METADATA.IMPORTS, CasesModule) ?? []) as unknown[];
+
+    expect(imports.some((entry) => forwardRefTarget(entry) === FilingModule)).toBe(true);
+  });
+
+  it('scans the real module graph without an undefined or circular module reference', async () => {
+    const { NestContainer } = require('@nestjs/core/injector/container');
+    const { DependenciesScanner } = require('@nestjs/core/scanner');
+    const { MetadataScanner } = require('@nestjs/core/metadata-scanner');
+    const { GraphInspector } = require('@nestjs/core/inspector/graph-inspector');
+    const { FilingModule } = require('../filing/filing.module');
+
+    const container = new NestContainer();
+    const scanner = new DependenciesScanner(
+      container,
+      new MetadataScanner(),
+      new GraphInspector(container),
+    );
+
+    // The scan is what the app runs at boot; a `forwardRef` removed from either
+    // side leaves the cycle resolving to `undefined` and throws here.
+    await expect(scanner.scan(FilingModule)).resolves.toBeUndefined();
+
+    const moduleNames = [...container.getModules().values()].map(
+      (m: { metatype?: { name?: string } }) => m.metatype?.name,
+    );
+    // Both sides of the edge are in the graph, not just the root.
+    expect(moduleNames).toContain('FilingModule');
+    expect(moduleNames).toContain('CasesModule');
   });
 });

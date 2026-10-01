@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { ConflictException } from '@nestjs/common';
 import { IntakeService } from "../intake/intake.service";
 import { SyncService } from './sync.service';
 import { ConflictResolver } from './conflict-resolver';
 import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
+import { CaseStepLocksService } from '../cases/case-step-locks.service';
 
 const crypto = require('crypto');
 const keyPair = crypto.generateKeyPairSync('ed25519');
@@ -22,6 +24,7 @@ describe('SyncService', () => {
   let versionRepoMock: any;
   let conflictResolverMock: any;
   let dataSourceMock: any;
+  let stepLocksMock: any;
 
   beforeEach(async () => {
     queueRepoMock = {
@@ -45,6 +48,8 @@ describe('SyncService', () => {
       resortToQueue: jest.fn(),
     };
 
+    stepLocksMock = { assertUnsealed: jest.fn().mockResolvedValue(undefined) };
+
     dataSourceMock = {
       createQueryRunner: jest.fn().mockReturnValue({
         connect: jest.fn(),
@@ -65,6 +70,7 @@ describe('SyncService', () => {
         { provide: ConflictResolver, useValue: conflictResolverMock },
         { provide: DataSource, useValue: dataSourceMock },
         { provide: IntakeService, useValue: { submitIntake: jest.fn().mockResolvedValue({}) } },
+        { provide: CaseStepLocksService, useValue: stepLocksMock },
       ],
     }).compile();
 
@@ -116,6 +122,62 @@ describe('SyncService', () => {
     };
     const result: any = await service.processDelta(batch);
     expect(result.results[0].status).toBe('applied');
+  });
+
+  it('applies a case_requirements replay when step 1 is unsealed', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+    const changes = [{
+      id: 'ch-req-open',
+      tableName: 'case_requirements',
+      recordId: 'req-2',
+      operation: 'INSERT' as const,
+      payload: { case_id: 'case-2', requirement_key: 'valid_id', met: true },
+      clientUpdatedAt: '2026-06-15T10:00:00Z',
+    }];
+    const result: any = await service.processDelta({
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-req-open',
+      signature: signMsg(pubKeyRaw, changes),
+    });
+    expect(result.results[0].status).toBe('applied');
+    expect(stepLocksMock.assertUnsealed).toHaveBeenCalledWith(
+      'case-2',
+      1,
+      expect.objectContaining({ requirement_key: 'valid_id', met: true }),
+    );
+  });
+
+  it('refuses a case_requirements replay that would change a sealed step 1', async () => {
+    queueRepoMock.findOne.mockResolvedValue(null);
+    stepLocksMock.assertUnsealed.mockRejectedValue(
+      new ConflictException('"Intervention & Requirements" is sealed — release the seal before changing this step, then seal it again.'),
+    );
+    const changes = [{
+      id: 'ch-req-sealed',
+      tableName: 'case_requirements',
+      recordId: 'req-1',
+      operation: 'INSERT' as const,
+      payload: { case_id: 'case-1', requirement_key: 'birth_cert', met: true },
+      clientUpdatedAt: '2026-06-15T10:00:00Z',
+    }];
+    const result: any = await service.processDelta({
+      deviceId: pubKeyRaw,
+      changes,
+      versionVectors: [],
+      idempotencyKey: 'ik-req-sealed',
+      signature: signMsg(pubKeyRaw, changes),
+    });
+    expect(result.results[0].status).toBe('failed');
+    expect(result.results[0].reason).toMatch(/sealed/);
+    expect(stepLocksMock.assertUnsealed).toHaveBeenCalledWith(
+      'case-1',
+      1,
+      expect.objectContaining({ met: true }),
+    );
+    // A refused replay must never reach the write.
+    expect(dataSourceMock.createQueryRunner).not.toHaveBeenCalled();
   });
 
   it('detects conflict when server record exists and client newer', async () => {

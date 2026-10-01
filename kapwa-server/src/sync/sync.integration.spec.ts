@@ -7,6 +7,7 @@ import { SyncQueue } from './sync-queue.entity';
 import { VersionVector } from './version-vector.entity';
 import { SyncRequestInput } from './dto/sync.zod';
 import { IntakeService } from "../intake/intake.service";
+import { CaseStepLocksService } from '../cases/case-step-locks.service';
 
 const crypto = require('crypto');
 const keyPair = crypto.generateKeyPairSync('ed25519');
@@ -83,6 +84,7 @@ describe('Sync Integration: conflict scenarios', () => {
         { provide: ConflictResolver, useValue: conflictResolver },
         { provide: DataSource, useValue: dataSourceMock },
         { provide: IntakeService, useValue: { submitIntake: jest.fn().mockResolvedValue({}) } },
+        { provide: CaseStepLocksService, useValue: { assertUnsealed: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 
@@ -164,6 +166,7 @@ describe('Sync Integration: conflict scenarios', () => {
         { provide: ConflictResolver, useValue: conflictResolver },
         { provide: DataSource, useValue: dataSourceMock },
         { provide: IntakeService, useValue: { submitIntake: jest.fn().mockResolvedValue({}) } },
+        { provide: CaseStepLocksService, useValue: { assertUnsealed: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
     const svc2 = mod.get<SyncService>(SyncService);

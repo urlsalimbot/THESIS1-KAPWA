@@ -6,6 +6,7 @@ import { ConflictResolver } from '../src/sync/conflict-resolver';
 import { SyncQueue } from '../src/sync/sync-queue.entity';
 import { VersionVector } from '../src/sync/version-vector.entity';
 import { IntakeService } from '../src/intake/intake.service';
+import { CaseStepLocksService } from '../src/cases/case-step-locks.service';
 
 const nodeCrypto = require('crypto');
 const keyPair = nodeCrypto.generateKeyPairSync('ed25519');
@@ -104,6 +105,7 @@ describe('SyncService — Offline Intake Sync', () => {
         { provide: ConflictResolver, useValue: conflictResolverMock },
         { provide: DataSource, useValue: dataSourceMock },
         { provide: IntakeService, useValue: intakeServiceMock },
+        { provide: CaseStepLocksService, useValue: { assertUnsealed: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

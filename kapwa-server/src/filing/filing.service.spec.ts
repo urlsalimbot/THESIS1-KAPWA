@@ -189,6 +189,24 @@ describe('FilingService', () => {
       expect(caseRepoMock.query).not.toHaveBeenCalled();
     });
 
+    it('skips the heal entirely when asked, so a sealed step-1 read moves nothing', async () => {
+      existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      const doc = { id: 'd3', fileName: 'birth_cert.pdf', category: 'requirement', caseId: 'c1', requirementKey: 'birth_cert' };
+      await expect(service.ensureFileOnDisk(doc as DocumentVault, { heal: false })).resolves.toBe(false);
+      // The whole point: the row survives, so `case_requirements` is never
+      // re-derived and no case URL is cleared through the read.
+      expect(docRepoMock.delete).not.toHaveBeenCalled();
+      expect(docRepoMock.query).not.toHaveBeenCalled();
+      expect(caseRepoMock.query).not.toHaveBeenCalled();
+    });
+
+    it('still serves a live file when the heal is blocked', async () => {
+      existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      const doc = { id: 'd4', fileName: 'birth_cert.pdf', category: 'requirement', caseId: 'c1', requirementKey: 'birth_cert' };
+      await expect(service.ensureFileOnDisk(doc as DocumentVault, { heal: false })).resolves.toBe(true);
+      expect(docRepoMock.delete).not.toHaveBeenCalled();
+    });
+
     it('urlFileLive only trusts a stored /filing/:id/download URL whose file is on disk', async () => {
       existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
       docRepoMock.findOne.mockResolvedValue({ id: 'doc-x', fileName: 'a.pdf', category: 'approval_document', caseId: 'c1' });

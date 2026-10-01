@@ -6,6 +6,7 @@ import { ConflictResolver } from '../src/sync/conflict-resolver';
 import { SyncQueue } from '../src/sync/sync-queue.entity';
 import { VersionVector } from '../src/sync/version-vector.entity';
 import { IntakeService } from "../src/intake/intake.service";
+import { CaseStepLocksService } from '../src/cases/case-step-locks.service';
 
 const crypto = require('crypto');
 const keyPair = crypto.generateKeyPairSync('ed25519');
@@ -64,6 +65,7 @@ describe('SyncService — Idempotency', () => {
         { provide: ConflictResolver, useValue: conflictResolverMock },
         { provide: DataSource, useValue: dataSourceMock },
         { provide: IntakeService, useValue: { submitIntake: jest.fn().mockResolvedValue({}) } },
+        { provide: CaseStepLocksService, useValue: { assertUnsealed: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

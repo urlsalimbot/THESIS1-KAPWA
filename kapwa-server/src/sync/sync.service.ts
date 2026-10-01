@@ -8,6 +8,7 @@ import { SyncRequestInput } from './dto/sync.zod';
 import { IntakeService } from '../intake/intake.service';
 import { isValidTransition } from '../cases/case-fsm';
 import { CaseStatus } from '../cases/case.entity';
+import { CaseStepLocksService } from '../cases/case-step-locks.service';
 
 const IDEMPOTENCY_TTL_MS = 86_400_000; // 24h
 const MAX_CACHE_SIZE = 10_000;
@@ -102,6 +103,11 @@ export class SyncService implements OnApplicationShutdown {
     private readonly conflictResolver: ConflictResolver,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly intakeService: IntakeService,
+    // `case_requirements` is step 1's data, and a seal is a rule about the
+    // table, not about the route that happens to write it. The offline-sync
+    // replay is a second write path to that table, so it asks the same guard
+    // the HTTP routes do rather than keeping its own copy of the rule.
+    private readonly stepLocks: CaseStepLocksService,
   ) {}
 
   async onApplicationShutdown(signal?: string): Promise<void> {
@@ -472,6 +478,7 @@ export class SyncService implements OnApplicationShutdown {
     operation: string,
     payload: Record<string, any>,
   ) {
+    await this.assertReplayAllowed(tableName, recordId, operation, payload);
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -518,6 +525,49 @@ export class SyncService implements OnApplicationShutdown {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  /**
+   * Refuse an offline replay that would change a sealed step's data.
+   *
+   * `case_requirements` is the one synced table a seal reads, and the replay is
+   * the path that quietly reopens rules the UI already enforces: the client
+   * applied the change offline, so by the time it arrives the seal may have
+   * been taken on the server. The choice is between dropping the replay with a
+   * log and refusing it; this refuses, loudly.
+   *
+   * Dropping is the worse of the two. The client already believes the change
+   * happened, so a silent drop leaves the two sides disagreeing about the
+   * checklist with no signal that they do — the exact drift a seal exists to
+   * prevent, now hidden. Refusing surfaces the conflict: `processDelta` records
+   * the change as `failed` with the seal's own message and the rest of the batch
+   * still applies, so the device re-syncs and the worker sees the sealed step
+   * and releases it deliberately if that is what they meant.
+   */
+  private async assertReplayAllowed(
+    tableName: string,
+    recordId: string,
+    operation: string,
+    payload: Record<string, any>,
+  ): Promise<void> {
+    if (this.resolveTableName(tableName) !== 'case_requirements') return;
+    // An insert names its case; an update or delete does not, so the seal is
+    // asked about the case the row already belongs to. A replay that carries no
+    // case id (or a row that no longer exists) changes nothing a seal can read,
+    // so it falls through to the write.
+    const caseId = operation === 'INSERT'
+      ? (payload?.case_id ?? payload?.caseId)
+      : await this.requirementCaseId(recordId);
+    if (!caseId) return;
+    await this.stepLocks.assertUnsealed(caseId, 1, payload);
+  }
+
+  private async requirementCaseId(recordId: string): Promise<string | undefined> {
+    const rows = await this.dataSource.query(
+      `SELECT case_id FROM case_requirements WHERE id = $1 LIMIT 1`,
+      [recordId],
+    );
+    return (rows as Array<{ case_id?: string }>)?.[0]?.case_id ?? undefined;
   }
 
   private async fetchServerRecord(
