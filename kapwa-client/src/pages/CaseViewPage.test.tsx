@@ -377,12 +377,17 @@ describe('CaseViewPage — stepper gating', () => {
     await mutate(() => true, undefined, { revalidate: false });
   });
 
+  // Queried by role and accessible name rather than by text: `CaseActionBar`
+  // names the same five steps in prose when one is still open, so
+  // `getByText` now matches twice and would throw instead of testing the
+  // stepper. The stepper labels its own buttons "<n>. <label>", which is
+  // unique to it.
   function hipStepButton() {
-    return screen.getByText("Intervention & Requirements").closest('button')!;
+    return screen.getByRole('button', { name: '2. Intervention & Requirements' });
   }
 
   function deliveryStepButton() {
-    return screen.getByText("Inter-agency Referrals").closest('button')!;
+    return screen.getByRole('button', { name: '3. Inter-agency Referrals' });
   }
 
   it('keeps Intervention & Requirements unchecked when an intervention exists but required documents are missing', async () => {

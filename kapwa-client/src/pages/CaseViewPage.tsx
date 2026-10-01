@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
+import { CaseActionBar } from '@/components/case-view/CaseActionBar';
 import { stepLockKey, type StepLock } from '@/components/case-view/StepLockBar';
 import { isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
 import { computeAge } from '@/lib/age';
@@ -631,6 +632,27 @@ export function CaseViewPage() {
           <div>
             {stepComponents[currentStep]}
           </div>
+
+          {/* The one deliberate control for moving the case along its lifecycle.
+              Mounted below the active step rather than in the header because its
+              effect depends on state spread across every step: it is the bar that
+              has to say which steps are still open. */}
+          <CaseActionBar
+            caseId={id!}
+            caseData={caseData}
+            userRole={user?.role ?? ''}
+            onChanged={async () => {
+              // All three, and all three for a reason the bar cannot see: the
+              // detail key is this page's own subscription (the status badge),
+              // the list key is every other mounted case table's (whose badge
+              // would otherwise stay stale until a reload — the problem the old
+              // `ReviewButton` documented), and history lives under its own key,
+              // which an exact-key mutation never touches.
+              await mutate(queryKeys.cases.detail(id!));
+              await mutate(queryKeys.cases.all, undefined, { revalidate: true });
+              await mutateHistory();
+            }}
+          />
         </div>
 
         {/* === RIGHT COLUMN (1/3) — Beneficiary + Household Sidebar === */}

@@ -113,10 +113,17 @@ describe('StepImplementHIP adhoc intervention', () => {
     expect(screen.getByRole('button', { name: /Click to browse or drop files/ })).toBeTruthy();
   });
 
-  it('keeps the Submit-for-Review affordance visible even when the step is readOnly (interventions already logged)', async () => {
-    // F10: once an intervention is logged, stepDone[1] flips true => StepImplementHIP
-    // becomes readOnly. The assessed->in_review submit affordance must still render,
-    // otherwise the worker is locked out of FSM progression after logging a delivery.
+  it('keeps the progress note visible even when the step is readOnly, and offers no second way to flag the case', async () => {
+    // F10, preserved: once an intervention is logged, stepDone[1] flips true =>
+    // StepImplementHIP becomes readOnly, and the worker must still be able to see
+    // that this step is what the review gate asks for.
+    //
+    // The control that used to sit here ("Submit for Review →") is gone, and this
+    // assertion is why: `CaseActionBar` is the one control for `assessed ->
+    // in_review`, because it carries the all-locked gate and the confirm dialog.
+    // A second button here would PATCH the same transition with none of that — an
+    // ungated bypass around the rule, and the exact failure the feature exists to
+    // remove.
     mockApiGet.mockImplementation(async (key: string) => {
       if (Array.isArray(key) && key.includes('interventions')) {
         return [
@@ -133,47 +140,14 @@ describe('StepImplementHIP adhoc intervention', () => {
     expect(await screen.findByText('Medical Assistance')).toBeTruthy();
 
     expect(screen.getByText(/Interventions recorded/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Submit for Review/i })).toBeTruthy();
-  });
-
-  it('revalidates the case detail (and not just interventions) after submit-for-review', async () => {
-    // Regression: the panel's bound mutate only targets its own interventions
-    // key — the old code passed the detail key to it, which SWR treats as the
-    // *data* argument, so the page's header status badge stayed "Assessed"
-    // until a full reload. The probe below stands in for CaseViewPage's detail
-    // subscription (revalidation only fires when a hook listens on the key).
-    mockApiGet.mockImplementation(async (key: unknown) => {
-      const k = JSON.stringify(key);
-      if (k.includes('interventions')) {
-        return [{ id: 'iv-1', caseId: 'case-1', serviceName: 'Medical Assistance', amount: 500 }];
-      }
-      if (k.includes('programs')) return [];
-      return [];
-    });
-
-    function DetailProbe() {
-      useSWR(['cases', 'case-1']);
-      return null;
-    }
-
-    render(
-      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
-        <StepImplementHIP caseId="case-1" caseData={caseData} userRole="social_worker" readOnly />
-        <DetailProbe />
-      </SWRConfig>,
-    );
-    expect(await screen.findByText(/Interventions recorded/i)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: /Submit for Review/i }));
-
-    await waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith('/cases/case-1/status', { status: 'in_review' }));
-    // The case detail key — the one the CaseViewPage header badge reads —
-    // must be re-fetched after the transition (initial probe fetch + the
-    // post-submit revalidation).
-    await waitFor(() => {
-      const detailFetches = mockApiGet.mock.calls.filter((c) => JSON.stringify(c[0]) === JSON.stringify(['cases', 'case-1']));
-      expect(detailFetches.length).toBeGreaterThanOrEqual(2);
-    });
+    // The copy still points at the hand-off...
+    expect(screen.getByText(/Submit for admin review/i)).toBeTruthy();
+    // ...and nothing here can perform it.
+    expect(screen.queryByRole('button', { name: /submit for review/i })).toBeNull();
+    expect(
+      screen.queryAllByRole('button').some((b) => /review/i.test(b.textContent ?? '')),
+    ).toBe(false);
+    expect(mockApiPatch).not.toHaveBeenCalled();
   });
 });
 

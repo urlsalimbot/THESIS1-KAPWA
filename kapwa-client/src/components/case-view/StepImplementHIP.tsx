@@ -504,47 +504,22 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
         </div>
       )}
 
-      {/* Status transition — visible even when readOnly so a worker who has already
-          logged interventions (or recorded that none are needed) can still submit
-          the assessed case for admin review. */}
+      {/* Progress note, visible even when readOnly so a worker who has already
+          logged interventions (or recorded that none are needed) can see that
+          this step is what the review gate asks for.
+
+          It carries no control. This used to render a `ReviewButton` here, and
+          two controls for one transition means one of them is a way around the
+          rule: the server refuses `assessed -> in_review` until every step *due*
+          at this position is sealed, and `CaseActionBar` is the control that
+          carries that gate and its confirm dialog. A button here would be an
+          ungated bypass around the whole feature. */}
       {(interventions.length > 0 || interventionNotNeeded) && caseData?.status === 'assessed' && userRole === 'social_worker' && (
         <div className="rounded-lg border bg-primary/5 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-primary">{interventions.length > 0 ? t('caseView.implement.recorded', 'Interventions recorded') : t('caseView.implement.noInterventionRecorded', 'No intervention needed — referral-only case')}</p>
-              <p className="text-xs text-muted-foreground">{t('caseView.implement.submitForReviewHint', 'Submit for admin review to activate the case.')}</p>
-            </div>
-            <ReviewButton caseId={caseId} />
-          </div>
+          <p className="text-sm font-medium text-primary">{interventions.length > 0 ? t('caseView.implement.recorded', 'Interventions recorded') : t('caseView.implement.noInterventionRecorded', 'No intervention needed — referral-only case')}</p>
+          <p className="text-xs text-muted-foreground">{t('caseView.implement.submitForReviewHint', 'Submit for admin review to activate the case.')}</p>
         </div>
       )}
     </div>
-  );
-}
-
-function ReviewButton({ caseId }: { caseId: string }) {
-  const { t } = useTranslation();
-  const { mutate } = useSWRConfig();
-  const [loading, setLoading] = useState(false);
-  async function handleReview() {
-    setLoading(true);
-    try {
-      await api.patch(`/cases/${caseId}/status`, { status: 'in_review' });
-      // The panel's own bound mutate targets only the interventions key — using
-      // it here never touched the case detail, so the header status badge stayed
-      // stale until reload. Revalidate the detail key and the cases list through
-      // the global mutate (same pattern as useCaseActions.handleAction).
-      await mutate(queryKeys.cases.detail(caseId), undefined, { revalidate: true });
-      await mutate(queryKeys.cases.all, undefined, { revalidate: true });
-    } catch (e) {
-      console.error('Failed to submit for review:', e);
-    } finally {
-      setLoading(false);
-    }
-  }
-  return (
-    <Button onClick={handleReview} disabled={loading} size="sm">
-      {loading ? t('caseView.submitting', 'Submitting...') : t('caseView.implement.submitForReview', 'Submit for Review →')}
-    </Button>
   );
 }

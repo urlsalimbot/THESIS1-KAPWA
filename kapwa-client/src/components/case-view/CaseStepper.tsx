@@ -11,13 +11,69 @@ export interface StepperProgressOpts {
   interventionNotNeeded?: boolean;
 }
 
-// Minimum lifecycle position at which a step may be considered "done". Steps 3
-// (Evaluate Help Given) and 4 (Case Study & Closure) are Phase-Out work: prefilled
-// data on an earlier-status case must not make them look complete.
-const STATUS_INDEX: Record<string, number> = {
+// Lifecycle position of each status, ascending — the order the FSM moves in.
+export const STATUS_INDEX: Record<string, number> = {
   enrolled: 0, assessed: 1, in_review: 2, active: 3, transitioning: 4, closed: 5,
 };
-const STEP_MIN_STATUS = [0, 0, 0, 3, 4];
+
+/**
+ * Minimum lifecycle position at which a step may be considered "done". Steps 3
+ * (Evaluate Help Given) and 4 (Case Study & Closure) are Phase-Out work: prefilled
+ * data on an earlier-status case must not make them look complete.
+ *
+ * Exported because `stepsDueAt` below is read by `CaseActionBar`, which has to
+ * ask the same question the server's `assessed -> in_review` gate asks. The
+ * server derives it from its own copy in `case-step-labels.ts`; this is the
+ * client half of that pair, and both read a floor array rather than a hand-typed
+ * list of step numbers — `case-step-done-fixture.json` is what keeps the floor
+ * honest for the done-predicate, and `CaseActionBar.test.tsx` for this.
+ */
+export const STEP_MIN_STATUS = [0, 0, 0, 3, 4];
+
+/**
+ * The steps that are *due* at a lifecycle position: the Phase-In and
+ * Implementation work that exists once a case has reached that far.
+ *
+ * The `assessed -> in_review` gate asks for these, not for all five. Requiring
+ * all five meant the gate could never be satisfied by the role it exists for: it
+ * fires at status index 1, while steps 3 and 4 are floored at `active`(3) and
+ * `transitioning`(4) — so their Lock buttons are disabled in the UI and the seal
+ * endpoint rejects them with a 400. A social worker could never flag a case for
+ * admin review, which is the one thing the button is for. (The server had
+ * exactly this bug and fixed it in `5964197`; this is the client half.)
+ *
+ * Derived from `STEP_MIN_STATUS` rather than listed separately, which is the
+ * point: the set a gate demands is by construction the set the seal endpoint will
+ * accept, so "you have not sealed enough" cannot name a step that cannot be
+ * sealed. An unknown or missing status is treated as position 0 — before the
+ * first step — so it asks for the Phase-In work rather than waving a case
+ * through, matching the server's `stepsDueAt`.
+ */
+export function stepsDueAt(status: string | null | undefined): number[] {
+  const index = (status == null ? undefined : STATUS_INDEX[status]) ?? 0;
+  return STEP_MIN_STATUS
+    .map((min, stepIndex) => ({ min, stepIndex }))
+    .filter(({ min }) => min <= index)
+    .map(({ stepIndex }) => stepIndex);
+}
+
+/**
+ * The five step labels, in step order, as i18n keys with their English fallbacks.
+ *
+ * The stepper renders these through `t`, and `CaseActionBar` needs the same
+ * names to tell a worker *which* steps are still open. A literal list of five
+ * strings in each file would be two copies of one vocabulary — and the server's
+ * own rejection message spells them a third way (`CASE_STEP_LABELS`). Keys are
+ * the shared part: every caller goes through `t`, so both surfaces say the same
+ * word in both languages.
+ */
+export const STEP_LABEL_KEYS = [
+  { key: 'caseView.stepper.assessment', fallback: 'Assess & Interview' },
+  { key: 'caseView.stepper.implementHip', fallback: 'Intervention & Requirements' },
+  { key: 'caseView.stepper.serviceDelivery', fallback: 'Inter-agency Referrals' },
+  { key: 'caseView.stepper.transition', fallback: 'Evaluate Help Given' },
+  { key: 'caseView.stepper.closure', fallback: 'Case Study & Closure' },
+] as const;
 
 // Step 1 (Intervention & Requirements) is the step that *submits* an assessed
 // case for review, so its completion must not itself require a later status —
@@ -81,13 +137,15 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
   // the two decisions itself, so doing it here as well would be a second place
   // holding the same rule.
   const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded };
+  // Labels come from STEP_LABEL_KEYS so this stepper and `CaseActionBar` cannot
+  // drift on a step's name; only the description and phase are stated here.
   const STEPS = [
-    { label: t('caseView.stepper.assessment', 'Assess & Interview'), description: t('caseView.stepper.assessmentDesc', 'Interview and FRVA/SWDI analysis'), phase: t('caseView.stepper.phaseIn', 'Phase-In') },
-    { label: t('caseView.stepper.implementHip', 'Intervention & Requirements'), description: t('caseView.stepper.implementHipDesc', 'Select intervention; client documents; COE/PCV release'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
-    { label: t('caseView.stepper.serviceDelivery', 'Inter-agency Referrals'), description: t('caseView.stepper.serviceDeliveryDesc', 'Referral needed: yes or no'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
-    { label: t('caseView.stepper.transition', 'Evaluate Help Given'), description: t('caseView.stepper.transitionDesc', 'Self-reliance assessment'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
-    { label: t('caseView.stepper.closure', 'Case Study & Closure'), description: t('caseView.stepper.closureDesc', 'Evaluate case study; formal exit'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
-  ];
+    { labelKey: STEP_LABEL_KEYS[0], description: t('caseView.stepper.assessmentDesc', 'Interview and FRVA/SWDI analysis'), phase: t('caseView.stepper.phaseIn', 'Phase-In') },
+    { labelKey: STEP_LABEL_KEYS[1], description: t('caseView.stepper.implementHipDesc', 'Select intervention; client documents; COE/PCV release'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
+    { labelKey: STEP_LABEL_KEYS[2], description: t('caseView.stepper.serviceDeliveryDesc', 'Referral needed: yes or no'), phase: t('caseView.stepper.phaseImplementation', 'Implementation') },
+    { labelKey: STEP_LABEL_KEYS[3], description: t('caseView.stepper.transitionDesc', 'Self-reliance assessment'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
+    { labelKey: STEP_LABEL_KEYS[4], description: t('caseView.stepper.closureDesc', 'Evaluate case study; formal exit'), phase: t('caseView.stepper.phaseOut', 'Phase-Out') },
+  ].map((step) => ({ ...step, label: t(step.labelKey.key, step.labelKey.fallback) }));
   const highestReachable = (() => {
     for (let i = STEPS.length - 1; i >= 0; i--) {
       if (stepperStepDone(i, caseData, interventionCount, progress)) return i;
