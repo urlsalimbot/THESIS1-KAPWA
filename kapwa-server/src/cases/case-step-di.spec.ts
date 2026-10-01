@@ -64,17 +64,32 @@ describe('cases step-locks require graph', () => {
       param: unknown;
     }>;
 
-  /** The three `{ index, token }` pairs the locks service's repositories must carry. */
+  /** The four `{ index, token }` pairs the locks service's repositories must carry. */
   const expectedRepoDeps = () => {
     const { CaseStepLock } = require('./case-step-lock.entity');
     const { CaseIntervention } = require('../case-interventions/case-intervention.entity');
     const { Program } = require('../programs/program.entity');
+    // Step 2's referral count. `InterAgencyReferral` is registered in
+    // `cases.module.ts` forFeature like the other two, so it must be named here
+    // too: an unregistered repository parameter is invisible in
+    // `design:paramtypes` and only fails at bootstrap.
+    const { InterAgencyReferral } = require('../inter-agency-referrals/inter-agency-referral.entity');
     return [
       { index: 0, param: getRepositoryToken(CaseStepLock) },
       { index: 2, param: getRepositoryToken(CaseIntervention) },
       { index: 3, param: getRepositoryToken(Program) },
+      { index: 4, param: getRepositoryToken(InterAgencyReferral) },
     ];
   };
+
+  /**
+   * Constructor order, stated once. (lockRepo, cases, interventions, programs,
+   * interAgencyReferrals, auditLog) — the repository indexes and the audit-log
+   * index, which the audit log must stay last at because it is `@Optional()`.
+   */
+  const REPO_INDEXES = [0, 2, 3, 4];
+  const PARAM_COUNT = 6;
+  const AUDIT_INDEX = 5;
 
   /**
    * The order `AppModule` gives: the cases module pulls in `cases.service`
@@ -88,7 +103,7 @@ describe('cases step-locks require graph', () => {
 
     const paramtypes = Reflect.getMetadata('design:paramtypes', locks.CaseStepLocksService) as unknown[];
 
-    expect(paramtypes).toHaveLength(5);
+    expect(paramtypes).toHaveLength(PARAM_COUNT);
     // Ask the question directly rather than with `toEqual([])`: `toEqual`
     // ignores `undefined` members, so a `[Repository, undefined, X]` array
     // compares equal to `[]` and the whole probe would pass on a broken graph.
@@ -96,16 +111,15 @@ describe('cases step-locks require graph', () => {
     // Optional chaining for the same reason — a bare `.name` here throws a
     // TypeError instead of reporting the missing parameter.
     expect((paramtypes[1] as { name?: string } | undefined)?.name).toBe('CasesService');
-    // The three repositories are TypeScript-only types, so `design:paramtypes`
-    // reports the same `Repository` for all three — with or without their
+    // The repositories are TypeScript-only types, so `design:paramtypes`
+    // reports the same `Repository` for all of them — with or without their
     // decorators. Kept because it says the constructor still has its shape, but
     // it proves nothing about injection on its own, which is why the decorator
-    // layer is asserted separately below. Order is
-    // (lockRepo, cases, interventions, programs, auditLog).
-    for (const index of [0, 2, 3]) {
+    // layer is asserted separately below.
+    for (const index of REPO_INDEXES) {
       expect((paramtypes[index] as { name?: string } | undefined)?.name).toBe('Repository');
     }
-    expect((paramtypes[4] as { name?: string } | undefined)?.name).toBe('AuditLogService');
+    expect((paramtypes[AUDIT_INDEX] as { name?: string } | undefined)?.name).toBe('AuditLogService');
 
     // The layer with teeth. Asserted pair by pair rather than as one
     // `expect(deps).toEqual([...])` so a failure says *which* repository lost its
@@ -114,9 +128,9 @@ describe('cases step-locks require graph', () => {
     for (const expected of expectedRepoDeps()) {
       expect(deps).toEqual(expect.arrayContaining([expected]));
     }
-    // And nothing beyond those three: a stray `@Inject` at another index would be
+    // And nothing beyond those four: a stray `@Inject` at another index would be
     // a parameter Nest resolves that the constructor does not describe.
-    expect(deps.map((d) => d?.index).sort((a, b) => a - b)).toEqual([0, 2, 3]);
+    expect(deps.map((d) => d?.index).sort((a, b) => a - b)).toEqual(REPO_INDEXES);
     // `some`, never filter-and-compare: an entry whose token came back undefined
     // would be filtered away by a truthiness test and the set would still read
     // clean. `toEqual` also ignores undefined members, so it cannot close this.
@@ -135,10 +149,10 @@ describe('cases step-locks require graph', () => {
 
     const paramtypes = Reflect.getMetadata('design:paramtypes', locks.CaseStepLocksService) as unknown[];
 
-    expect(paramtypes).toHaveLength(5);
+    expect(paramtypes).toHaveLength(PARAM_COUNT);
     expect(paramtypes.some((t) => t === undefined)).toBe(false);
     expect((paramtypes[1] as { name?: string } | undefined)?.name).toBe('CasesService');
-    for (const index of [0, 2, 3]) {
+    for (const index of REPO_INDEXES) {
       expect((paramtypes[index] as { name?: string } | undefined)?.name).toBe('Repository');
     }
 

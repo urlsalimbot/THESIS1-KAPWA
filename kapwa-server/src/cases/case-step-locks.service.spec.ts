@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { CaseStepLocksService, CASE_STEP_LABELS } from './case-step-locks.service';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
@@ -10,6 +10,7 @@ import { CasesExportService } from './cases-export.service';
 import { Case } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { Program } from '../programs/program.entity';
 import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -27,6 +28,15 @@ interface DoneFixtureCase {
     requirementsMet?: boolean;
     referralNotNeeded?: boolean;
     interventionNotNeeded?: boolean;
+    /**
+     * How many `inter_agency_referrals` rows the case has — what step 2 counts
+     * as "a referral is issued". Declared here rather than inferred from
+     * `caseData.referrals` because `Case.referrals` is the *transition plan's*
+     * agency list over `case_referrals`, a different table the referral letter
+     * never writes; an entry that put them in `caseData` would be asserting a
+     * rule the predicate no longer has.
+     */
+    interAgencyReferralCount?: number;
   };
   /**
    * The server-facing inputs for step 1's requirements branch: which programs
@@ -129,6 +139,10 @@ describe('CaseStepLocksService', () => {
 
   const findById = jest.fn();
   const interventionCount = jest.fn().mockResolvedValue(0);
+  // The `inter_agency_referrals` count step 2 reads. Stubbed on the repository
+  // rather than the case, because the rows live in their own table — a stub that
+  // answered off `findById` would let a predicate reading `case.referrals` pass.
+  const referralCount = jest.fn().mockResolvedValue(0);
   // The step-1 requirement inputs: which programs the case's interventions
   // name, and what those programs require. Both default to "no program imposes
   // anything", which is what an intervention with a null `program_id` looks
@@ -150,6 +164,15 @@ describe('CaseStepLocksService', () => {
     programFind.mockResolvedValue((req?.programs ?? []).map((p) => programRow(p.id, p.documentKeys)));
   };
 
+  /**
+   * Step 2's inputs. An absent `interAgencyReferralCount` means zero referrals,
+   * which is also what the stub's own default says — so an entry that forgets to
+   * declare a referral is asserting "none issued", which is what it means.
+   */
+  const stubReferralInputs = (fx: DoneFixtureCase) => {
+    referralCount.mockResolvedValue(fx.opts.interAgencyReferralCount ?? 0);
+  };
+
   /** Step 1 on an enrolled case: status-independent, so the checklist decides. */
   const step1Case = (checklist: Record<string, boolean> | undefined) =>
     ({ id: 'c1', status: 'enrolled', requirementsChecklist: checklist } as unknown as Case);
@@ -158,6 +181,7 @@ describe('CaseStepLocksService', () => {
     jest.clearAllMocks();
     findById.mockResolvedValue(notDoneCase);
     interventionCount.mockResolvedValue(0);
+    referralCount.mockResolvedValue(0);
     interventionQuery.mockResolvedValue([]);
     programFind.mockResolvedValue([]);
     interventionRepo = { query: interventionQuery };
@@ -198,6 +222,7 @@ describe('CaseStepLocksService', () => {
       insertQb,
     };
     auditLog = { log: jest.fn().mockResolvedValue(undefined) };
+    const referralRepo = { count: referralCount };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -213,6 +238,7 @@ describe('CaseStepLocksService', () => {
         { provide: getRepositoryToken(CaseStepLock), useValue: lockRepo },
         { provide: getRepositoryToken(Program), useValue: programRepo },
         { provide: getRepositoryToken(CaseIntervention), useValue: interventionRepo },
+        { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepo },
       ],
     }).compile();
 
@@ -259,10 +285,10 @@ describe('CaseStepLocksService', () => {
   // keeps the moment of the *first* seal.
   it('seals with a single atomic upsert rather than a read-then-write', async () => {
     findById.mockResolvedValue(doneCase);
-    // Step 2 (Inter-agency Referrals) needs a referral to be done at all.
-    findById.mockResolvedValue({
-      id: 'c1', status: 'active', referrals: [{ agencyName: 'MSWDO' }],
-    } as unknown as Case);
+    // Step 2 (Inter-agency Referrals) needs a referral to be done at all, and a
+    // referral is an `inter_agency_referrals` row.
+    findById.mockResolvedValue({ id: 'c1', status: 'active' } as unknown as Case);
+    referralCount.mockResolvedValue(1);
     await service.lock('c1', 2, swUser);
     expect(lockRepo.findOne).not.toHaveBeenCalled();
     expect(lockRepo.insertQb.insert).toHaveBeenCalled();
@@ -311,6 +337,59 @@ describe('CaseStepLocksService', () => {
     expect(auditLog.log).toHaveBeenCalledWith('case.step_lock', 'c1', 'u1', { stepIndex: 0 });
     await service.unlock('c1', 0, swUser);
     expect(auditLog.log).toHaveBeenCalledWith('case.step_unlock', 'c1', 'u1', { stepIndex: 0 });
+  });
+
+  describe('assertUnsealed', () => {
+    it('passes when the step carries no seal', async () => {
+      lockRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.assertUnsealed('c1', 0)).resolves.toBeUndefined();
+    });
+
+    it('refuses when the step is sealed, naming the step and who sealed it', async () => {
+      lockRepo.findOne.mockResolvedValue({
+        caseId: 'c1', stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+      });
+
+      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(ConflictException);
+      // The message has to name the step *and* say how to proceed, or a worker
+      // who needs to correct a sealed step is simply stuck.
+      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(/Assess & Interview/);
+      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(/Juan Dela Cruz/);
+      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(/release the seal/i);
+    });
+
+    // The refusal must be about *this* step. A `findOne` that ignored its where
+    // clause would pass the test above and refuse an edit to a step that was
+    // never sealed.
+    it('asks about the named step only', async () => {
+      lockRepo.findOne.mockResolvedValue(null);
+
+      await service.assertUnsealed('c1', 4);
+
+      expect(lockRepo.findOne).toHaveBeenCalledWith({ where: { caseId: 'c1', stepIndex: 4 } });
+    });
+
+    // Not a fast path: the whole point is that the client cannot be trusted to
+    // have asked, and a cache would answer "unsealed" for a step sealed since.
+    it('re-reads the seal on every call rather than caching', async () => {
+      lockRepo.findOne.mockResolvedValue(null);
+      await service.assertUnsealed('c1', 0);
+
+      lockRepo.findOne.mockResolvedValue({ caseId: 'c1', stepIndex: 0, lockedByName: 'Lorna', lockedAt: new Date() });
+      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(ConflictException);
+
+      expect(lockRepo.findOne).toHaveBeenCalledTimes(2);
+    });
+
+    // An unknown index is the same 400 the seal endpoint raises, so a route
+    // wired to the wrong step index is a loud failure rather than a silent
+    // "nothing to check".
+    it('rejects an out-of-range step before it looks anything up', async () => {
+      await expect(service.assertUnsealed('c1', 5)).rejects.toThrow(BadRequestException);
+      await expect(service.assertUnsealed('c1', -1)).rejects.toThrow(BadRequestException);
+      expect(lockRepo.findOne).not.toHaveBeenCalled();
+    });
   });
 
   it('lists the sealed steps of a case in step order', async () => {
@@ -491,6 +570,7 @@ describe('CaseStepLocksService', () => {
       findById.mockResolvedValue(caseFor(fx));
       interventionCount.mockResolvedValue(fx.interventionCount);
       stubRequirementInputs(fx);
+      stubReferralInputs(fx);
       lockRepo.create.mockImplementation((data: Partial<CaseStepLock>) => ({ ...data }));
       lockRepo.save.mockImplementation(async (row: any) => row);
 

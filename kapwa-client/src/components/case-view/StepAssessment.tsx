@@ -23,10 +23,17 @@ interface StepAssessmentProps {
   readOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
+  /**
+   * Whether this step may still be sealed/released. Split from `readOnly`
+   * because the seal strip's Unlock has to survive a sealed step: a step whose
+   * fields are read-only *because* it is sealed must keep its one way out, or
+   * the worker who sealed it is stuck. Same split `StepClosure` already has.
+   */
+  lockReadOnly?: boolean;
 }
 
 export function StepAssessment({
-  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, stepLock,
+  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, lockReadOnly, stepLock,
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
@@ -159,16 +166,17 @@ export function StepAssessment({
       </div>
 
       {/* Step 1's seal. Mounted here, not in the page, so the control that
-          offers it lives with the step it seals. `readOnly` is this step's own
-          signal, so a viewer is offered no seal and a sealed step stays
-          readable without an Unlock. */}
+          offers it lives with the step it seals. `lockReadOnly` is the sealing
+          signal, kept apart from the fields' `readOnly` so a sealed step still
+          offers its Unlock — the strip above the disabled fields is what tells
+          the worker that releasing the seal is how to change them. */}
       <StepLockBar
         caseId={caseId}
         stepIndex={0}
         caseData={caseData}
         interventionCount={0}
         locked={stepLock}
-        readOnly={readOnly}
+        readOnly={lockReadOnly ?? readOnly}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}
       />
     </div>

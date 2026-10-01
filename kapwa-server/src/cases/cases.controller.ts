@@ -189,6 +189,7 @@ export class CasesController {
     @Body(new ZodPipe(AssessmentV2Schema)) body: AssessmentV2Input,
     @Request() req: AuthenticatedRequest,
   ) {
+    await this.stepLocks.assertUnsealed(id, 0);
     return this.casesService.updateAssessmentV2(id, body, req.user?.id);
   }
 
@@ -199,6 +200,7 @@ export class CasesController {
     @Body(new ZodPipe(TransitionPlanSchema)) body: TransitionPlanInput,
     @Request() req: AuthenticatedRequest,
   ) {
+    await this.stepLocks.assertUnsealed(id, 3);
     return this.casesService.updateTransitionPlan(id, body, req.user?.id);
   }
 
@@ -208,6 +210,7 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(RequirementsSchema)) body: RequirementsInput,
   ) {
+    await this.stepLocks.assertUnsealed(id, 1);
     return this.casesService.updateRequirements(id, body);
   }
 
@@ -218,6 +221,7 @@ export class CasesController {
     @Body(new ZodPipe(ClosureSchema)) body: ClosureInput,
     @Request() req: AuthenticatedRequest,
   ) {
+    await this.stepLocks.assertUnsealed(id, 4);
     return this.casesService.updateClosure(id, body, req.user?.role);
   }
 
@@ -227,6 +231,7 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
   ) {
+    await this.stepLocks.assertUnsealed(id, 2);
     return this.casesService.updateReferralDecision(id, body.notNeeded);
   }
 
@@ -236,8 +241,20 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
   ) {
+    await this.stepLocks.assertUnsealed(id, 1);
     return this.casesService.updateInterventionDecision(id, body.notNeeded);
   }
+
+  // Each step-field write above opens with `assertUnsealed(id, step)`, naming the
+  // step whose own data the write changes. The refusal lives here — on the route,
+  // the single funnel every write of that field passes through — rather than in
+  // each writing service, because only the route knows which step a body belongs
+  // to, and because a client-side-only check is bypassable by calling the PATCH
+  // directly, which is exactly what the `assessed -> in_review` gate was built to
+  // stop relying on. Step 1's two decision routes are named separately from
+  // `requirements` because the three are three different bodies that all belong
+  // to step 2's data; the mapping is stated once per route so a new step-field
+  // write has to state its step rather than inherit a guess.
 
   // Sealing a step is reversible by the same two roles, so both verbs sit
   // together. The service re-derives whether the step is done; the client is

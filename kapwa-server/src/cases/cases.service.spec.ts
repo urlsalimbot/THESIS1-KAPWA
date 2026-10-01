@@ -310,6 +310,60 @@ describe('CasesService', () => {
       expect(searchCall?.[0]).toContain('person.middle_name ILIKE :search');
     });
 
+    /**
+     * The list's referral count.
+     *
+     * The approval pipeline's chips come from the same `stepperStepDone` as the
+     * case view's stepper, and step 2 asks for the inter-agency referral count.
+     * Without this on the row, that page reports "no referral" for a case that
+     * has one — two surfaces of one predicate disagreeing, which is the failure
+     * mode the shared fixture exists to prevent.
+     *
+     * Asserted per-case rather than "the field exists": a mutation that stamped
+     * the same number on every row would still set the field, and a mutation that
+     * dropped the assignment leaves it `undefined`, which `toEqual` against an
+     * expected object would forgive. Hence `Object.keys` spelled explicitly.
+     */
+    it('attaches each case\'s own inter-agency referral count', async () => {
+      const cases = [
+        { id: '1', status: CaseStatus.ACTIVE, beneficiary: { age: 25 } },
+        { id: '2', status: CaseStatus.ACTIVE, beneficiary: { age: 30 } },
+      ] as Case[];
+      const qbMock = repoMock.createQueryBuilder();
+      qbMock.getManyAndCount.mockResolvedValue([cases, 2]);
+      // Two grouped queries in one batch: interventions first, referrals second.
+      (repoMock.manager as any).query = jest.fn()
+        .mockResolvedValueOnce([{ case_id: '1', count: 3 }])
+        .mockResolvedValueOnce([{ case_id: '2', count: 1 }]);
+
+      const result = await service.findAll(1, 10);
+
+      expect(Object.keys(result.data[0] as object).sort()).toContain('interAgencyReferralCount');
+      expect((result.data[0] as any).interAgencyReferralCount).toBe(0);
+      expect((result.data[1] as any).interAgencyReferralCount).toBe(1);
+      // The count is read from the referrals table, scoped to this page's ids.
+      const [referralSql, referralParams] = (repoMock.manager.query as jest.Mock).mock.calls[1];
+      expect(referralSql).toContain('inter_agency_referrals');
+      expect(referralParams).toEqual([['1', '2']]);
+    });
+
+    it('counts interventions and referrals in one batch, not one query per case', async () => {
+      const cases = [
+        { id: '1', status: CaseStatus.ACTIVE, beneficiary: { age: 25 } },
+        { id: '2', status: CaseStatus.ACTIVE, beneficiary: { age: 30 } },
+        { id: '3', status: CaseStatus.ACTIVE, beneficiary: { age: 31 } },
+      ] as Case[];
+      const qbMock = repoMock.createQueryBuilder();
+      qbMock.getManyAndCount.mockResolvedValue([cases, 3]);
+      (repoMock.manager as any).query = jest.fn().mockResolvedValue([]);
+
+      await service.findAll(1, 10);
+
+      // Two calls total for three cases: a per-case count would be an N+1, and
+      // the `?? 0` below would never fire.
+      expect(repoMock.manager.query).toHaveBeenCalledTimes(2);
+    });
+
     it('computes sla filter over a candidate set and paginates in memory', async () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date('2026-09-04T00:00:00Z'));

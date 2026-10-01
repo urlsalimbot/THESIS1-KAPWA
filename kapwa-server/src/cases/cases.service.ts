@@ -114,16 +114,34 @@ export class CasesService {
   // Attach per-case intervention counts (one grouped query) so the approval
   // pipeline can show the case stepper's Implement HIP / Service Delivery
   // progress without N+1 fetches.
+  //
+  // The inter-agency referral count rides along for the same reason and in the
+  // same shape: the pipeline's chips are drawn from the *same* `stepperStepDone`
+  // as the case view's stepper, and step 2 now asks for the referral count
+  // rather than reading `case.referrals`. A list row that omits it would answer
+  // "no referral" for a case that has one — the two surfaces of one predicate
+  // disagreeing, which is precisely what the shared fixture exists to prevent.
+  // The same two queries, so the cost is unchanged per page.
   private async attachInterventionCounts(cases: Case[]): Promise<Case[]> {
     if (cases.length === 0) return cases;
-    const rows = await this.caseRepo.manager.query(
-      `SELECT case_id, COUNT(*)::int AS count FROM case_interventions
-       WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
-      [cases.map((c) => c.id)],
-    );
-    const counts = new Map(rows.map((r: any) => [r.case_id, Number(r.count)]));
+    const ids = cases.map((c) => c.id);
+    const [interventionRows, referralRows] = await Promise.all([
+      this.caseRepo.manager.query(
+        `SELECT case_id, COUNT(*)::int AS count FROM case_interventions
+         WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
+        [ids],
+      ),
+      this.caseRepo.manager.query(
+        `SELECT case_id, COUNT(*)::int AS count FROM inter_agency_referrals
+         WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
+        [ids],
+      ),
+    ]);
+    const counts = new Map((interventionRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
+    const referralCounts = new Map((referralRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
     for (const c of cases) {
       (c as any).interventionCount = counts.get(c.id) ?? 0;
+      (c as any).interAgencyReferralCount = referralCounts.get(c.id) ?? 0;
     }
     return cases;
   }

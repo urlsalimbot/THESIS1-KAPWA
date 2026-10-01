@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial, In } from 'typeorm';
 import { CaseStepLock } from './case-step-lock.entity';
@@ -6,6 +6,7 @@ import { CasesService } from './cases.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { Program } from '../programs/program.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { User } from '../auth/user.entity';
 
 /**
@@ -43,6 +44,21 @@ interface StepDoneOpts {
   requirementsMet?: boolean;
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
+  /**
+   * How many inter-agency referrals the case has, read off
+   * `inter_agency_referrals` — the table the endorsement letter writes.
+   *
+   * Deliberately *not* `case.referrals`. That getter is over `case_referrals`,
+   * which is the **transition plan's** agency list: written by
+   * `updateTransitionPlan` from the exit-plan payload, owned by Phase-Out, and
+   * 0 rows in every database this project has run. It is a different thing from
+   * an inter-agency referral, and a seal taken against it would let a worker
+   * close step 2 with referral rows the referral module never wrote. So the
+   * count is passed in instead of read off the case, which also keeps the field
+   * out of `StepDoneCase` below — the shape itself now says the step does not
+   * read it.
+   */
+  interAgencyReferralCount?: number;
 }
 
 /** The case fields the done-predicate reads, so it takes a plain object. */
@@ -50,7 +66,6 @@ interface StepDoneCase {
   status?: string | null;
   problemsPresented?: string | null;
   clientCategory?: string | null;
-  referrals?: unknown[] | null;
   selfRelianceLevel?: number | null;
   sustainabilityPlan?: string | null;
   clientSignature?: string | null;
@@ -63,17 +78,24 @@ export class CaseStepLocksService {
     @InjectRepository(CaseStepLock)
     private readonly repo: Repository<CaseStepLock>,
     private readonly cases: CasesService,
-    // The two repositories the requirements predicate reads. `CasesService`
+    // The repositories the requirements predicate reads. `CasesService`
     // could own them instead, but the predicate is what needs the programs, and
     // routing it through the cases service would widen that service's
-    // constructor for the benefit of a single caller. Neither entity is
-    // declared in this module: `CaseIntervention` and `Program` are added to
-    // `TypeOrmModule.forFeature` in `cases.module.ts`, which is a registration,
-    // not an import edge, so no new require cycle can form through here.
+    // constructor for the benefit of a single caller. None of these entities is
+    // declared in this module: `CaseIntervention`, `Program` and
+    // `InterAgencyReferral` are added to `TypeOrmModule.forFeature` in
+    // `cases.module.ts`, which is a registration, not an import edge, so no new
+    // require cycle can form through here.
     @InjectRepository(CaseIntervention)
     private readonly interventions: Repository<CaseIntervention>,
     @InjectRepository(Program)
     private readonly programs: Repository<Program>,
+    // `inter_agency_referrals` for step 2's "a referral is issued" clause.
+    // Registered in `cases.module.ts` beside `CaseIntervention` and `Program`,
+    // for the same reason: a repository registration adds no import edge, so
+    // this module does not have to require the referrals module.
+    @InjectRepository(InterAgencyReferral)
+    private readonly interAgencyReferrals: Repository<InterAgencyReferral>,
     @Optional() private readonly auditLog?: AuditLogService,
   ) {}
 
@@ -187,8 +209,10 @@ export class CaseStepLocksService {
       case 1: return (interventionCount > 0 || Boolean(opts.interventionNotNeeded))
         && (interventionCount === 0 || (opts.requirementsMet ?? true));
       // Service Delivery: a referral is issued, or the social worker recorded
-      // that no referral is needed.
-      case 2: return (caseData.referrals?.length || 0) > 0 || Boolean(opts.referralNotNeeded);
+      // that no referral is needed. The referral is an
+      // `inter_agency_referrals` row — what the endorsement letter writes —
+      // never `case_referrals`, which is the transition plan's agency list.
+      case 2: return (opts.interAgencyReferralCount ?? 0) > 0 || Boolean(opts.referralNotNeeded);
       case 3: return !!caseData.selfRelianceLevel && !!caseData.sustainabilityPlan;
       case 4: return !!caseData.clientSignature && !!caseData.closureOutcome;
       default: return false;
@@ -215,14 +239,17 @@ export class CaseStepLocksService {
       stepIndex === 1 && interventionCount > 0
         ? await this.requirementsMet(caseId, c.requirementsChecklist)
         : true;
+    // The one extra query step 2 needs, and only step 2 needs it — the same
+    // shape as the program queries above, for the same reason: a referral count
+    // read on every seal would be a query the other four steps cannot use.
+    const interAgencyReferralCount =
+      stepIndex === 2 ? await this.countInterAgencyReferrals(caseId) : 0;
     return this.stepDone(
       stepIndex,
       {
         status: c.status,
         problemsPresented: c.problemsPresented,
         clientCategory: c.clientCategory,
-        // `referrals` is the @Expose() getter over case_referrals rows.
-        referrals: c.referrals,
         selfRelianceLevel: c.selfRelianceLevel,
         sustainabilityPlan: c.sustainabilityPlan,
         clientSignature: c.clientSignature,
@@ -231,9 +258,54 @@ export class CaseStepLocksService {
       interventionCount,
       {
         requirementsMet,
+        interAgencyReferralCount,
         referralNotNeeded: Boolean(c.referralNotNeeded),
         interventionNotNeeded: Boolean(c.interventionNotNeeded),
       },
+    );
+  }
+
+  /**
+   * The case's referrals as the referrals module wrote them.
+   *
+   * A `count`, not a load of the rows: step 2 asks whether *any* referral was
+   * issued, and the rows themselves are the endorsement letter's business — the
+   * same reason the client's step reads the length of the list its own step
+   * already fetched and not one row more than that.
+   */
+  private async countInterAgencyReferrals(caseId: string): Promise<number> {
+    return this.interAgencyReferrals.count({ where: { caseId } });
+  }
+
+  /**
+   * Refuse a write that would change a step whose data has already been sealed.
+   *
+   * A seal is a claim that the step is finished, so letting the step's own
+   * fields move afterwards leaves the claim standing on data nobody agreed to —
+   * the all-locked gate would then be satisfiable by a case whose work has
+   * drifted, which is the one thing the seal exists to prevent. The alternative
+   * (drop the seal on every edit) was rejected: a seal would evaporate as a side
+   * effect of an ordinary save, which is a claim disappearing without anyone
+   * deciding to release it, and it leaves an audit trail claiming a step was
+   * sealed when no act of sealing was ever undone deliberately.
+   *
+   * Refusing keeps the whole feature's model intact — option (a), soft and
+   * reversible: releasing the seal is the same two roles and one click, and the
+   * message names it, so a worker who needs to correct a sealed step is never
+   * stuck. It is thrown here rather than in each writing service because this is
+   * the only place that knows which step a write belongs to, and because the
+   * client cannot be the thing that refuses: the PATCH endpoints it would be
+   * hiding are callable directly.
+   */
+  async assertUnsealed(caseId: string, stepIndex: number): Promise<void> {
+    this.assertKnownStep(stepIndex);
+    const sealed = await this.repo.findOne({ where: { caseId, stepIndex } });
+    if (!sealed) return;
+    const by = sealed.lockedByName
+      ? ` (sealed by ${sealed.lockedByName})`
+      : '';
+    throw new ConflictException(
+      `"${CASE_STEP_LABELS[stepIndex]}" is sealed${by} — release the seal before changing this step, then seal it again.`,
     );
   }
 

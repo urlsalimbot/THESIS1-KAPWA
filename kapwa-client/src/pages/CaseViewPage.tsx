@@ -236,14 +236,21 @@ export function CaseViewPage() {
     () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
     [interventions, programs, caseData],
   );
+  // The inter-agency referrals this case already carries, from the SWR above —
+  // the same list step 3 lists on screen, so the stepper's step-2 answer and the
+  // step's own contents cannot disagree. `caseData.referrals` is not that list:
+  // it is the transition plan's agency list over `case_referrals`, which no
+  // referral letter writes.
+  const interAgencyReferralCount = (iarReferrals ?? []).length;
   const progressOpts: StepperProgressOpts = useMemo(
-    // Only `requirementsMet` is threaded. The two "not needed" decisions are
-    // held on the case row and `stepperStepDone` already falls back to it, so
-    // restating them here would be a second copy of one rule — and an explicit
-    // `false` would outvote the row, which the server (coercing to
-    // `Boolean(c.x)`) could never honour.
-    () => ({ requirementsMet }),
-    [requirementsMet],
+    // `requirementsMet` and `interAgencyReferralCount` are threaded because
+    // neither is on the case row. The two "not needed" decisions are held on the
+    // row and `stepperStepDone` already falls back to it, so restating them here
+    // would be a second copy of one rule — and an explicit `false` would
+    // outvote the row, which the server (coercing to `Boolean(c.x)`) could never
+    // honour.
+    () => ({ requirementsMet, interAgencyReferralCount }),
+    [requirementsMet, interAgencyReferralCount],
   );
 
   useEffect(() => {
@@ -424,6 +431,21 @@ export function CaseViewPage() {
   const lockFor = (i: number): StepLock | null =>
     ((caseData?.stepLocks ?? []) as StepLock[]).find((l) => l.stepIndex === i) ?? null;
 
+  // A sealed step's fields are read-only, so its own editing affordances go
+  // away with them. The server refuses those writes with a 409 either way, so
+  // this is about the user not being offered a control that cannot work — but
+  // it is deliberately NOT the only enforcement: the routes refuse on their own,
+  // because a control hidden in the client is bypassable by calling the PATCH
+  // directly. Folding the seal into `readOnly` here rather than editing each step
+  // is one place, and each step's strip already renders above the disabled
+  // fields explaining why they are disabled and how to release the seal.
+  //
+  // The exemption is `StepLockBar`'s own `readOnly`, which is passed through
+  // separately below — a sealed step must keep its Unlock, or the worker who
+  // sealed it would be stuck.
+  const sealed = (i: number): boolean => lockFor(i) != null;
+  const readOnlyUnlessSealed = (base: boolean, step: number): boolean => base || sealed(step);
+
   // The key names the case as well as the step, because `StepLockBar` remembers
   // the outcome of its own write in state carrying neither: an instance reused
   // across two mounts renders the seal of whichever case it last wrote. Today the
@@ -433,25 +455,33 @@ export function CaseViewPage() {
   const stepComponents = [
     <StepAssessment key={stepLockKey(id!, 0)} caseId={id!} caseData={caseData} assessment={assessment}
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
-      userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
+      userRole={user?.role}
+      readOnly={readOnlyUnlessSealed(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), 0)}
+      lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
       stepLock={lockFor(0)} />,
-    <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
+    <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role}
+      readOnly={readOnlyUnlessSealed(caseClosed, 1)} lockReadOnly={caseClosed}
       stepLock={lockFor(1)} />,
-    <StepIntegratedDelivery key={stepLockKey(id!, 2)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
+    <StepIntegratedDelivery key={stepLockKey(id!, 2)} caseId={id!} caseData={caseData} userRole={user?.role}
+      readOnly={readOnlyUnlessSealed(caseClosed, 2)} lockReadOnly={caseClosed}
       stepLock={lockFor(2)} />,
     // Transition plan + follow-up visits stay savable for the whole active
     // phase: stepDone[3] (plan saved) must NOT flip readOnly or the worker is
     // left adding follow-up visits with the only "Save Transition Plan" button
-    // hidden. Only closure locks the step.
-    <StepTransition key={stepLockKey(id!, 3)} caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed}
+    // hidden. Only closure locks the step — and, now, a seal of this step does,
+    // which is a different signal: `stepDone` is a completeness fact, a seal is
+    // a decision, and the server refuses the write on the seal alone.
+    <StepTransition key={stepLockKey(id!, 3)} caseId={id!} caseData={caseData} userRole={user?.role}
+      readOnly={readOnlyUnlessSealed(caseClosed, 3)} lockReadOnly={caseClosed}
       stepLock={lockFor(3)} />,
     // `readOnly` here is `stepDone[4]`, which flips true exactly when this step
     // becomes sealable — so the seal gets its own signal. Passing `readOnly` to
     // the bar instead hid the Lock button on the only step it was written for,
     // the same trap step 3's comment above avoids by keeping `stepDone[3]` out of
     // its `readOnly`.
-    <StepClosure key={stepLockKey(id!, 4)} caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed}
-      lockReadOnly={caseClosed} stepLock={lockFor(4)} />,
+    <StepClosure key={stepLockKey(id!, 4)} caseId={id!} caseData={caseData}
+      readOnly={readOnlyUnlessSealed(stepDone[4] || caseClosed, 4)}
+      lockReadOnly={readOnlyUnlessSealed(caseClosed, 4)} stepLock={lockFor(4)} />,
   ];
 
   const renewCase = () => navigate('/intake', {
@@ -599,7 +629,7 @@ export function CaseViewPage() {
             {/* `requirementsMet` only: the stepper applies the case-row fallback
                 for the two "not needed" decisions itself, so naming them here
                 would restate a rule that lives in one place. */}
-            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} />
+            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} />
           </div>
 
           {/* Generated approval documents — COE + PCV produced at approval,

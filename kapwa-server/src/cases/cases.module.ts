@@ -13,6 +13,7 @@ import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { Program } from '../programs/program.entity';
+import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
@@ -30,12 +31,21 @@ import { IrfModule } from '../irf/irf.module';
   // other domains: forFeature is a repository registration and adds no import
   // edge, so the step-done predicate can read a case's programs without this
   // module and ProgramsModule requiring each other.
-  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, Program, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
+  // `InterAgencyReferral` is registered here for the same reason as
+  // `CaseIntervention` and `Program`: step 2's done-predicate counts the
+  // referrals the endorsement letter wrote, and forFeature keeps that a
+  // repository registration rather than a require edge to the referrals module.
+  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, Program, InterAgencyReferral, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, FilingModule, IrfModule],
   controllers: [CasesController],
-  // CaseStepLocksService reads through CasesService, so it is deliberately not
-  // exported: nothing outside this module seals a step, and an export would let
-  // another module take a dependency on the done-predicate.
   providers: [CasesService, CasesExportService, CaseStepLocksService],
-  exports: [CasesService]
+  // `CaseStepLocksService` is exported for one caller: the interventions module
+  // asserts the step-1 seal on its own routes, because the interventions are
+  // step 1's data and a sealed step must not be edited through a second route
+  // that happens to live elsewhere. What is exported is the service, so that
+  // module can *ask* whether a step is sealed — not the done-predicate, which
+  // stays private here, as it must: it is re-derived per surface and the shared
+  // fixture is what holds the copies equal, so a second consumer outside the two
+  // audited ones would be a copy nothing tests.
+  exports: [CasesService, CaseStepLocksService]
 })
 export class CasesModule {}

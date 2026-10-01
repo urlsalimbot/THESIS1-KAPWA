@@ -48,9 +48,16 @@ interface StepImplementHIPProps {
   readOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
+  /**
+   * Whether this step may still be sealed/released, kept apart from the actions'
+   * `readOnly`: a sealed step's controls are read-only *because* of the seal, so
+   * folding that into the same flag would hide the one control that lifts it.
+   * Defaults to `readOnly`, so callers unaware of seals are unaffected.
+   */
+  lockReadOnly?: boolean;
 }
 
-export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLock }: StepImplementHIPProps) {
+export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockReadOnly = readOnly, stepLock }: StepImplementHIPProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [], mutate } = useSWR<Intervention[]>(
@@ -313,7 +320,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
               interventionCount={interventions.length}
               opts={{ requirementsMet }}
               locked={stepLock}
-              readOnly={readOnly}
+              readOnly={lockReadOnly}
               onChanged={() => globalMutate(queryKeys.cases.detail(caseId))}
             />
           </div>

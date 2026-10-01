@@ -217,12 +217,49 @@ describe('StepIntegratedDelivery — sealing step 3', () => {
     expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
   });
 
-  it('enables Lock once a referral is on record', () => {
-    // `stepperStepDone(2, …)` reads the case row's referral getter, which is
-    // where `CaseViewPage` gets its referrals from too.
+  // The defect this pins: a worker issued the endorsement letter, the row landed
+  // in `inter_agency_referrals`, and step 3 still reported not-done forever —
+  // because the predicate read `case.referrals` (`case_referrals`), a table with
+  // 0 rows, while this step lists its referrals from its own SWR. A `case_referrals`
+  // row is deliberately asserted to *not* count on the other side of this test, in
+  // `CaseStepper.done.test.ts` and the shared fixture.
+  it('enables Lock once this step\'s own referral list has a row', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('inter-agency-referrals')) {
+        return Promise.resolve([{ id: 'r1', toAgencyId: 'ag-rhu', reason: 'Medical coordination', status: 'referred' }]);
+      }
+      if (k.includes('agencies') || k.includes('agencies')) return Promise.resolve(AGENCIES);
+      return Promise.resolve(null);
+    });
+    renderStep();
+
+    // Wait for the list to land: the button is disabled on first paint and
+    // enabled after, so asserting synchronously would pass on the wrong value.
+    await waitFor(() => expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled());
+  });
+
+  it('leaves Lock disabled when only a case_referrals row exists', async () => {
+    // `caseData.referrals` is the transition plan's agency list. It is not an
+    // inter-agency referral and must not satisfy the step that issues one.
     renderStep([], { caseDataOverrides: { referrals: [{ agencyName: 'RHU', status: 'referred' }] } });
 
-    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+    expect(await screen.findByText(/Inter-Agency Referrals/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
+  });
+
+  // The other half of the live defect: a referral on record also hid this step's
+  // own "no referrals issued" action, so a worker whose referral had not landed
+  // in the table the predicate read had no route out at all. With the predicate
+  // reading the same list the action's visibility is keyed on, the two cannot
+  // disagree.
+  it('leaves the no-referral escape hatch reachable when no referral exists', async () => {
+    renderStep();
+
+    expect(await screen.findByRole('button', { name: /Add Referral/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /No Referrals issued/i })).toBeTruthy();
+    // …and the step it unlocks is the same one the seal is now offered on.
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
   });
 
   it('enables Lock on the case row\'s own no-referral decision, without the page restating it', async () => {

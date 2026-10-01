@@ -25,9 +25,17 @@ interface StepTransitionProps {
   readOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
+  /**
+   * Whether this step may still be sealed/released, kept apart from the actions'
+   * `readOnly`: a sealed step's plan and follow-up visits are read-only
+   * *because* of the seal, so folding that into the same flag would hide the one
+   * control that lifts it. Defaults to `readOnly`, so callers unaware of seals
+   * are unaffected.
+   */
+  lockReadOnly?: boolean;
 }
 
-export function StepTransition({ caseId, caseData, userRole, readOnly, stepLock }: StepTransitionProps) {
+export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadOnly = readOnly, stepLock }: StepTransitionProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
   const [saving, setSaving] = useState(false);
@@ -297,14 +305,15 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, stepLock 
         </div>
       )}
 
-      {/* Step 4's seal. */}
+      {/* Step 4's seal. `lockReadOnly`, so a sealed step keeps its Unlock even
+          though its plan is read-only. */}
       <StepLockBar
         caseId={caseId}
         stepIndex={3}
         caseData={caseData}
         interventionCount={0}
         locked={stepLock}
-        readOnly={readOnly}
+        readOnly={lockReadOnly}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}
       />
     </div>

@@ -159,10 +159,25 @@ export function StepLockBar({
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <Lock size={14} aria-hidden="true" className="shrink-0" />
-          {t('caseView.lock.lockedBy', 'Locked by {{name}} · {{when}}', {
-            name: lock.lockedByName || t('caseView.lock.lockedByUnknown', 'Unknown'),
-            when: formatDate(lock.lockedAt),
-          })}
+          <span className="flex flex-col gap-0.5">
+            <span>
+              {t('caseView.lock.lockedBy', 'Locked by {{name}} · {{when}}', {
+                name: lock.lockedByName || t('caseView.lock.lockedByUnknown', 'Unknown'),
+                when: formatDate(lock.lockedAt),
+              })}
+            </span>
+            {/* Why the step's fields are now read-only. The server refuses a
+                write to a sealed step (a 409 naming the seal), so a worker who
+                finds a disabled field would otherwise have no account of why —
+                and the deliberate-action model is "seal is a claim, release is a
+                decision", which is only true if releasing is visibly the way out.
+                Said in both languages, and on the strip itself rather than only in
+                a toast, because the fields are disabled before anyone presses
+                anything. */}
+            <span className="text-xs text-muted-foreground/80">
+              {t('caseView.lock.sealedNotice', 'This step is sealed. Unlock it to make changes, then seal it again.')}
+            </span>
+          </span>
         </span>
         {/* The record stays readable in readOnly: only the release is withheld. */}
         {!readOnly && (

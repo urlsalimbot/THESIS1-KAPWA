@@ -92,25 +92,49 @@
     "expected": true
   },
   {
-    "name": "step2 done: a referral exists",
+    "name": "step2 done: an inter-agency referral is on record",
     "step": 2,
-    "caseData": { "status": "active", "referrals": [{ "id": "r1" }] },
+    "caseData": { "status": "active" },
     "interventionCount": 0,
-    "opts": {},
+    "opts": { "interAgencyReferralCount": 1 },
     "expected": true
   },
   {
-    "name": "step2 not done: no referral and no decision",
+    "name": "step2 not done: a case_referrals row is not an inter-agency referral",
     "step": 2,
-    "caseData": { "status": "active", "referrals": [] },
+    "caseData": { "status": "active", "referrals": [{ "id": "r1" }] },
     "interventionCount": 0,
     "opts": {},
     "expected": false
   },
   {
+    "name": "step2 not done: no referral and no decision",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step2 done: two inter-agency referrals, still one answer",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": { "interAgencyReferralCount": 2 },
+    "expected": true
+  },
+  {
+    "name": "step2 done: an inter-agency referral beats a case_referrals row either way",
+    "step": 2,
+    "caseData": { "status": "active", "referrals": [{ "id": "r1" }] },
+    "interventionCount": 0,
+    "opts": { "interAgencyReferralCount": 1, "referralNotNeeded": false },
+    "expected": true
+  },
+  {
     "name": "step2 done: recorded no-referral decision",
     "step": 2,
-    "caseData": { "status": "active", "referrals": [] },
+    "caseData": { "status": "active" },
     "interventionCount": 0,
     "opts": { "referralNotNeeded": true },
     "expected": true

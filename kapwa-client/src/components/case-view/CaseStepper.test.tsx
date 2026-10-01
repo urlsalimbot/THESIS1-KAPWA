@@ -12,6 +12,43 @@ describe('CaseStepper — lifecycle labels', () => {
   });
 });
 
+describe('CaseStepper — the referral count reaches the rendered step', () => {
+  // The count is threaded through a prop, and the component has to hand it to
+  // `stepperStepDone`. Nothing else covers that hop: `stepperStepDone`'s own
+  // tests call the function directly, so a `CaseStepper` that dropped the prop
+  // would render a step 2 that never completes while every predicate test passed.
+  const base = {
+    problemsPresented: 'a',
+    clientCategory: 'b',
+    status: 'enrolled',
+  };
+
+  it('marks step 3 done when the count says a referral was issued', () => {
+    render(
+      <CaseStepper
+        currentStep={0}
+        onStepClick={() => {}}
+        caseData={base}
+        interventionCount={0}
+        interAgencyReferralCount={1}
+      />,
+    );
+
+    // The stepper marks a done step with a check and an accessible label that no
+    // longer says the step is merely "not available" — asserted through the
+    // check's own presence rather than a class, which Tailwind reorders.
+    expect(screen.getByRole('button', { name: '3. Inter-agency Referrals' }).querySelector('svg')).toBeTruthy();
+  });
+
+  it('leaves step 3 pending without one', () => {
+    render(
+      <CaseStepper currentStep={0} onStepClick={() => {}} caseData={base} interventionCount={0} />,
+    );
+
+    expect(screen.getByRole('button', { name: '3. Inter-agency Referrals' }).querySelector('svg')).toBeNull();
+  });
+});
+
 describe('stepperStepDone — Implement HIP gating', () => {
   it('requires an intervention before step 2 completes', () => {
     expect(stepperStepDone(1, {}, 0, {})).toBe(false);
@@ -36,22 +73,31 @@ describe('stepperStepDone — Implement HIP gating', () => {
 
 describe('stepperStepDone — Service Delivery gating', () => {
   it('is NOT done on interventions alone anymore', () => {
-    const caseData = { referrals: undefined };
-    expect(stepperStepDone(2, caseData, 2, {})).toBe(false);
+    expect(stepperStepDone(2, {}, 2, {})).toBe(false);
   });
 
-  it('is done when a referral is issued', () => {
+  it('is done when an inter-agency referral is issued', () => {
+    // `interAgencyReferralCount` is the count of `inter_agency_referrals` rows,
+    // supplied by whichever surface fetched them. The case view and step 3 both
+    // read their own list of exactly those rows.
+    expect(stepperStepDone(2, {}, 0, { interAgencyReferralCount: 1 })).toBe(true);
+  });
+
+  it('is NOT done on a case_referrals row alone', () => {
+    // The shape this predicate used to read. `case.referrals` is the transition
+    // plan's agency list over `case_referrals`, not the referral the endorsement
+    // letter issues, and it has 0 rows in every database this project has run —
+    // so reading it left step 2 unsealable with no route out.
     const caseData = { referrals: [{ agencyName: 'DSWD', status: 'pending', reason: 'x' }] };
-    expect(stepperStepDone(2, caseData, 0, {})).toBe(true);
+    expect(stepperStepDone(2, caseData, 0, {})).toBe(false);
   });
 
   it('is done when the social worker decides a referral is not needed', () => {
-    const caseData = { referrals: undefined };
-    expect(stepperStepDone(2, caseData, 0, { referralNotNeeded: true })).toBe(true);
+    expect(stepperStepDone(2, {}, 0, { referralNotNeeded: true })).toBe(true);
   });
 
   it('is NOT done when no referral exists and no decision was recorded', () => {
-    const caseData = { status: 'active', referrals: undefined };
+    const caseData = { status: 'active' };
     expect(stepperStepDone(2, caseData, 3, { referralNotNeeded: false })).toBe(false);
   });
 

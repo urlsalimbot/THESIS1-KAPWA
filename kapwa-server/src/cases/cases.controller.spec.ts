@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { CasesController } from './cases.controller';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
@@ -12,8 +12,21 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 describe('CasesController step-lock routes', () => {
   let ctrl: CasesController;
-  const cases = { getCaseWithSla: jest.fn() };
-  const stepLocks = { lock: jest.fn(), unlock: jest.fn(), listForCase: jest.fn() };
+  const cases = {
+    getCaseWithSla: jest.fn(),
+    updateAssessmentV2: jest.fn(),
+    updateTransitionPlan: jest.fn(),
+    updateRequirements: jest.fn(),
+    updateClosure: jest.fn(),
+    updateReferralDecision: jest.fn(),
+    updateInterventionDecision: jest.fn(),
+  };
+  const stepLocks = {
+    lock: jest.fn(),
+    unlock: jest.fn(),
+    listForCase: jest.fn(),
+    assertUnsealed: jest.fn(),
+  };
   const req = { user: { id: 'u1' } } as unknown as AuthenticatedRequest;
 
   beforeEach(async () => {
@@ -89,6 +102,70 @@ describe('CasesController step-lock routes', () => {
       stepLocks.unlock.mockResolvedValue(undefined);
       await expect(ctrl.unlockStep('c1', '2', req)).resolves.toEqual({ ok: true });
       expect(stepLocks.unlock).toHaveBeenCalledWith('c1', 2, req.user);
+    });
+  });
+
+  /**
+   * Which step each step-field write belongs to.
+   *
+   * The rule under test is that no route can change a sealed step's own data.
+   * What is asserted here is the *mapping* — route to step index — because the
+   * index is the whole content of the guard: wired to the wrong step, the route
+   * refuses edits to a step nobody sealed and permits them to one that was.
+   * That is invisible from the service, which is handed an index and never
+   * learns which route asked.
+   */
+  describe('sealed-step refusals on the step-field writes', () => {
+    beforeEach(() => {
+      stepLocks.assertUnsealed.mockResolvedValue(undefined);
+    });
+
+    const CASES: Array<[string, number, () => Promise<unknown>]> = [
+      ['assessment', 0, () => ctrl.updateAssessment('c1', {} as any, req)],
+      ['requirements', 1, () => ctrl.updateRequirements('c1', {} as any)],
+      ['intervention-decision', 1, () => ctrl.updateInterventionDecision('c1', { notNeeded: true })],
+      ['referral-decision', 2, () => ctrl.updateReferralDecision('c1', { notNeeded: true })],
+      ['transition-plan', 3, () => ctrl.updateTransitionPlan('c1', {} as any, req)],
+      ['closure', 4, () => ctrl.updateClosure('c1', {} as any, req)],
+    ];
+
+    it.each(CASES)('checks the seal of step for %s', async (_route, stepIndex, call) => {
+      await call();
+
+      expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', stepIndex);
+    });
+
+    // The order is the fix: the assertion runs *before* the write, so a refusal
+    // leaves nothing behind. Asserted after the call as well as before it,
+    // because a guard that ran after the write would pass every other test here
+    // while persisting exactly the edit the feature exists to prevent.
+    it.each(CASES)('asks about the seal before %s writes anything', async (_route, _stepIndex, call) => {
+      const order: string[] = [];
+      stepLocks.assertUnsealed.mockImplementation(async () => { order.push('assert'); });
+      cases.updateAssessmentV2.mockImplementation(async () => { order.push('write'); return {}; });
+      cases.updateTransitionPlan.mockImplementation(async () => { order.push('write'); return {}; });
+      cases.updateRequirements.mockImplementation(async () => { order.push('write'); return {}; });
+      cases.updateClosure.mockImplementation(async () => { order.push('write'); return {}; });
+      cases.updateReferralDecision.mockImplementation(async () => { order.push('write'); return {}; });
+      cases.updateInterventionDecision.mockImplementation(async () => { order.push('write'); return {}; });
+
+      await call();
+
+      expect(order[0]).toBe('assert');
+    });
+
+    it.each(CASES)('does not write when %s is refused', async (_route, _stepIndex, call) => {
+      stepLocks.assertUnsealed.mockRejectedValue(new ConflictException('sealed'));
+
+      await expect(call()).rejects.toBeInstanceOf(ConflictException);
+
+      // Nothing reached the service: the case file is unchanged.
+      for (const write of [
+        cases.updateAssessmentV2, cases.updateTransitionPlan, cases.updateRequirements,
+        cases.updateClosure, cases.updateReferralDecision, cases.updateInterventionDecision,
+      ]) {
+        expect(write).not.toHaveBeenCalled();
+      }
     });
   });
 });

@@ -276,6 +276,7 @@ const en = {
       "lockedBy": "Locked by {{name}} · {{when}}",
       "lockedByUnknown": "Unknown",
       "notDoneHint": "Complete this step before sealing it.",
+      "sealedNotice": "This step is sealed. Unlock it to make changes, then seal it again.",
       "refreshFailed": "Saved, but the case did not refresh",
       "unlock": "Unlock",
       "unlockFailed": "Could not release the lock",

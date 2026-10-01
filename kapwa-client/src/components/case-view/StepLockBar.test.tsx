@@ -128,8 +128,12 @@ describe('StepLockBar', () => {
     { stepIndex: 0, caseData: { status: 'enrolled', problemsPresented: 'a' }, interventionCount: 0, opts: {} },
     { stepIndex: 1, caseData: { status: 'enrolled' }, interventionCount: 1, opts: {} },
     { stepIndex: 1, caseData: { status: 'enrolled' }, interventionCount: 0, opts: {} },
+    { stepIndex: 2, caseData: {}, interventionCount: 0, opts: { interAgencyReferralCount: 1 } },
+    { stepIndex: 2, caseData: {}, interventionCount: 0, opts: {} },
+    // The shape this predicate used to read. Present so the bar's coverage keeps
+    // proving it asks `stepperStepDone` rather than holding its own idea — and,
+    // incidentally, that the shape does not now complete the step.
     { stepIndex: 2, caseData: { referrals: [{ id: 'r1' }] }, interventionCount: 0, opts: {} },
-    { stepIndex: 2, caseData: { referrals: [] }, interventionCount: 0, opts: {} },
     { stepIndex: 3, caseData: { status: 'active', selfRelianceLevel: 2, sustainabilityPlan: 'p' }, interventionCount: 0, opts: {} },
     { stepIndex: 3, caseData: { status: 'active', selfRelianceLevel: 2 }, interventionCount: 0, opts: {} },
     { stepIndex: 4, caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' }, interventionCount: 0, opts: {} },

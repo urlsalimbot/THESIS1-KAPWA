@@ -549,7 +549,6 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     socialWorkerAssessment: 'Needs financial assistance',
     clientCategory: 'Indigent',
     frvaScore: 65,
-    referrals: [{ agencyName: 'RHU', status: 'referred' }],
     selfRelianceLevel: 3,
     sustainabilityPlan: 'sari-sari store',
     clientSignature: SIGNATURE,
@@ -568,7 +567,14 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
         return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
       }
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
-      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      // A referral, from the same list step 3 issues into. Step 3 is "done" for
+      // this case only because of it — `caseData.referrals` (the transition
+      // plan's agency list) no longer completes the step, and with no referral and
+      // no decision the initial navigation would stop at step 3 rather than
+      // reaching the closure this describe is about.
+      if (k.includes('inter-agency-referrals')) {
+        return Promise.resolve([{ id: 'iar-1', toAgencyId: 'ag-rhu', reason: 'Medical coordination', status: 'referred' }]);
+      }
       if (k.includes('programs')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
       if (k.includes('cases')) return Promise.resolve(closureComplete);
@@ -756,5 +762,122 @@ describe('CaseViewPage — inter-agency referral rows', () => {
     expect(await screen.findByText('Maria Reyes')).toBeTruthy();
     expect(screen.getByText('MSWDO Norzagaray → PESO Norzagaray')).toBeTruthy();
     expect(screen.getByText('Referred')).toBeTruthy();
+  });
+});
+
+/**
+ * The page's own wiring for a sealed step.
+ *
+ * `StepLocksAcrossSteps.test.tsx` covers the five mounts with its own harness, so
+ * it cannot catch a regression in *this* file's `readOnlyUnlessSealed` — a bar
+ * whose default hid the seal's Unlock, or a mount wired to the wrong step index,
+ * both render plausibly. These drive `CaseViewPage` itself.
+ *
+ * The second defect was exactly this: after sealing step 0, the worker could
+ * still edit it and the seal stood on changed data. The server now refuses the
+ * write (a 409 on `PATCH /cases/:id/assessment`), and the page stops offering a
+ * control that cannot succeed. The strip stays, because it carries the Unlock:
+ * a seal that could only be lifted by an API call would strand the worker who
+ * set it.
+ */
+describe('CaseViewPage — a sealed step', () => {
+  const STEP_ONE_SEALED = [
+    { stepIndex: 0, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' },
+  ];
+
+  /**
+   * Render the page and land on step 1's panel.
+   *
+   * Step 0 has to be *done* for this fixture to be about the seal at all — the
+   * defect was a worker sealing a finished step and then editing it — and the
+   * page navigates to the first *pending* step, so a done step 0 means it opens
+   * on step 2 instead. Hence the deliberate click on the stepper: that is how a
+   * worker reaches a sealed step's panel, and driving it through the real control
+   * is what makes this a page-level test rather than a props test.
+   */
+  async function renderStepZero(seals: unknown[]) {
+    mockUseAuth.mockReturnValue({ user: { id: '3', fullName: 'SW', role: 'social_worker' }, loading: false });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) {
+        return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
+      }
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseIdPhoto')) return Promise.resolve(null);
+      if (k.includes('programs')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) {
+        return Promise.resolve({
+          ...mockCase,
+          // `enrolled` keeps step 0 editable on its own, so the seal is the only
+          // thing that can turn it read-only — which is what makes these
+          // assertions about the seal and not about the lifecycle.
+          status: 'enrolled',
+          problemsPresented: 'Poverty',
+          socialWorkerAssessment: 'Needs aid',
+          clientCategory: 'Indigent',
+          frvaScore: 65,
+          stepLocks: seals,
+        });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+    const view = renderWithSWR(<CaseViewPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Assess & Interview/i }));
+    return view;
+  }
+
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockUseAuth.mockReset();
+    mockGetFilingObjectUrl.mockReset();
+    mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
+  });
+
+  it('offers Save Assessment on a done, unsealed step 0', async () => {
+    await renderStepZero([]);
+
+    // The positive control. Without it, the assertion below could pass for the
+    // wrong reason — a step-0 panel that never rendered a Save button at all
+    // would satisfy "no Save button while sealed" just as well.
+    expect(await screen.findByRole('button', { name: /Save Assessment/i })).toBeTruthy();
+  });
+
+  it('withholds Save Assessment once step 0 is sealed', async () => {
+    await renderStepZero(STEP_ONE_SEALED);
+
+    // The strip has to be on screen first, or the absence below would be the
+    // panel still loading.
+    expect(await screen.findByText(/Locked by Ana Cruz/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Save Assessment/i })).toBeNull();
+  });
+
+  it('keeps the release reachable on a sealed step — the strip is the only way out', async () => {
+    await renderStepZero(STEP_ONE_SEALED);
+
+    expect(await screen.findByRole('button', { name: /^unlock$/i })).toBeTruthy();
+  });
+
+  it('says on the strip that unlocking is how to change the step', async () => {
+    await renderStepZero(STEP_ONE_SEALED);
+
+    // Disabled fields with no account of why is the trust problem in miniature:
+    // the user cannot tell a seal from a permission or from a bug.
+    expect(
+      await screen.findByText(/This step is sealed\. Unlock it to make changes, then seal it again\./),
+    ).toBeTruthy();
+  });
+
+  it('leaves the other steps editable — a seal is per step', async () => {
+    await renderStepZero(STEP_ONE_SEALED);
+
+    // Sealing step 0 must not quietly read-only the whole case. That would be a
+    // bigger version of the defect being fixed.
+    fireEvent.click(await screen.findByRole('button', { name: /Intervention & Requirements/i }));
+    expect(await screen.findByRole('button', { name: /Add Intervention/i })).toBeTruthy();
   });
 });

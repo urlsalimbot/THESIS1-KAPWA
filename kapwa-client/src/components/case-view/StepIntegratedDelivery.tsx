@@ -20,6 +20,14 @@ interface StepIntegratedDeliveryProps {
   readOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
+  /**
+   * Whether this step may still be sealed/released, kept apart from the
+   * actions' `readOnly`: a sealed step's fields are read-only *because* of the
+   * seal, so folding that into the same flag would hide the one control that
+   * lifts it. Defaults to `readOnly`, so a caller that does not care about seals
+   * (every spec, and the approval pipeline) keeps the behaviour it had.
+   */
+  lockReadOnly?: boolean;
 }
 
 // Step 3 offers the same two mutually exclusive completions as step 2: refer
@@ -29,7 +37,7 @@ interface StepIntegratedDeliveryProps {
 // Until a client UI existed for `PATCH /cases/:id/referral-decision`, the
 // server's `in_review -> active` gate could reject a case for a missing
 // referral decision that no one had any way of recording.
-export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, stepLock }: StepIntegratedDeliveryProps) {
+export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, lockReadOnly = readOnly, stepLock }: StepIntegratedDeliveryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
@@ -244,18 +252,22 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, s
         </DialogContent>
       </Dialog>
 
-      {/* Step 3's seal. No `opts`: the referral decision is on the case row and
-          `stepperStepDone` falls back to it, so passing it here would restate
-          the rule this step already reads for its own badge — and an explicit
-          `false`, which the server coerces and could never honour, would
-          outvote the row. */}
+      {/* Step 3's seal. Only the referral count is passed, and it comes from this
+          step's own SWR — so the seal answers exactly the question the list
+          above answers, and the case view's stepper (which reads the same SWR)
+          cannot disagree with what is on screen. The referral *decision* is on
+          the case row and `stepperStepDone` falls back to it, so passing it
+          here would restate the rule this step already reads for its own badge
+          — and an explicit `false`, which the server coerces and could never
+          honour, would outvote the row. */}
       <StepLockBar
         caseId={caseId}
         stepIndex={2}
         caseData={caseData}
         interventionCount={0}
+        opts={{ interAgencyReferralCount: hasReferrals ? 1 : 0 }}
         locked={stepLock}
-        readOnly={readOnly}
+        readOnly={lockReadOnly}
         onChanged={() => mutate(queryKeys.cases.detail(caseId))}
       />
     </div>

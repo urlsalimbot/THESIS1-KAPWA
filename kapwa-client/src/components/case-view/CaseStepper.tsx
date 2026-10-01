@@ -9,6 +9,16 @@ export interface StepperProgressOpts {
   requirementsMet?: boolean;
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
+  /**
+   * How many inter-agency referrals the case has, from the case view's own SWR
+   * over `GET /inter-agency-referrals/case/:caseId` — the same list step 3 lists
+   * on screen. Not on the case row: `case.referrals` is the transition plan's
+   * agency list over `case_referrals`, which the referral letter never writes,
+   * so the case view must supply the count its own step already has rather than
+   * the predicate reaching for a field that cannot describe it. Absent means
+   * zero, which is the honest answer for a surface with no referrals to offer.
+   */
+  interAgencyReferralCount?: number;
 }
 
 // Lifecycle position of each status, ascending — the order the FSM moves in.
@@ -108,8 +118,14 @@ export function stepperStepDone(i: number, caseData: any, interventionCount: num
     case 1: return (interventionCount > 0 || Boolean(opts.interventionNotNeeded ?? caseData?.interventionNotNeeded))
       && (interventionCount === 0 || (opts.requirementsMet ?? true));
     // Service Delivery: a referral is issued, or the social worker recorded
-    // that no referral is needed.
-    case 2: return (caseData?.referrals?.length || 0) > 0
+    // that no referral is needed. The referral is an `inter_agency_referrals`
+    // row — what the endorsement letter writes — never `case.referrals`, which
+    // is the transition plan's agency list over `case_referrals` and has 0 rows
+    // in every database this project has run. Reading that instead made step 2
+    // permanently unsealable, since the seal endpoint refused what no
+    // inter-agency referral could satisfy and the step's own escape hatch was
+    // hidden by the same condition.
+    case 2: return (opts.interAgencyReferralCount ?? 0) > 0
       || Boolean(opts.referralNotNeeded ?? caseData?.referralNotNeeded);
     case 3: return !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan;
     case 4: return !!caseData?.clientSignature && !!caseData?.closureOutcome;
@@ -129,14 +145,16 @@ interface CaseStepperProps {
   requirementsMet?: boolean;
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
+  /** `opts.interAgencyReferralCount` — see `StepperProgressOpts`. */
+  interAgencyReferralCount?: number;
 }
 
-export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, requirementsMet, referralNotNeeded, interventionNotNeeded }: CaseStepperProps) {
+export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount }: CaseStepperProps) {
   const { t } = useTranslation();
   // Handed straight through: `stepperStepDone` applies the case-row fallback for
   // the two decisions itself, so doing it here as well would be a second place
   // holding the same rule.
-  const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded };
+  const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount };
   // Labels come from STEP_LABEL_KEYS so this stepper and `CaseActionBar` cannot
   // drift on a step's name; only the description and phase are stated here.
   const STEPS = [
