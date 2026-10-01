@@ -42,16 +42,26 @@ const DOCS = [
   },
 ];
 
-function renderRequirements(docs: unknown[] = DOCS, checklist: Record<string, boolean> = {}) {
+function renderRequirements(
+  docs: unknown[] = DOCS,
+  checklist: Record<string, boolean> = {},
+  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[]; readOnly?: boolean } = {},
+) {
   mockSWR.mockImplementation((key: unknown) => {
     const root = Array.isArray(key) ? key[0] : key;
-    if (root === 'cases') return { data: INTERVENTIONS };
-    if (root === 'programs') return { data: PROGRAMS };
+    if (root === 'cases') return { data: overrides.interventions ?? INTERVENTIONS };
+    if (root === 'programs') return { data: overrides.programs ?? PROGRAMS };
     if (root === 'filing') return { data: docs };
     return { data: undefined };
   });
   return render(
-    <CaseRequirements caseId="c1" caseData={{ requirementsChecklist: checklist }} userRole="social_worker" />,
+    <CaseRequirements
+      caseId="c1"
+      caseData={{ requirementsChecklist: checklist }}
+      userRole="social_worker"
+      extraProgramIds={overrides.extraProgramIds}
+      readOnly={overrides.readOnly}
+    />,
   );
 }
 
@@ -133,5 +143,186 @@ describe('CaseRequirements — one row per uploaded document', () => {
     renderRequirements(DOCS, { 'Valid ID': true });
     expect(screen.queryByRole('button', { name: /Passed on-site, no copy/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy();
+  });
+});
+
+/**
+ * A sealed step 1 must withhold every control the server will refuse. The seal
+ * guards `case_requirements` and the requirement's documents, so the on-site
+ * decision, the review confirmation and the upload all 409 once it is up. On a
+ * sealed step the controls have to go with the writes — an offered control that
+ * cannot work is worse than no control.
+ */
+describe('CaseRequirements — a sealed step withholds every control it will refuse', () => {
+  beforeEach(() => {
+    mockPatch.mockReset().mockResolvedValue({});
+    mockDel.mockReset().mockResolvedValue({});
+    mockMutate.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('withholds the on-site decision, the review control and the upload', async () => {
+    const user = userEvent.setup();
+    renderRequirements(DOCS, {}, { readOnly: true });
+
+    // The on-site decision button, in both of its labels.
+    expect(screen.queryByRole('button', { name: /Passed on-site, no copy/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
+    // The upload dropzone.
+    expect(screen.queryByText(/Click to browse or drop files/)).toBeNull();
+
+    // Reading the document is still allowed; recording the review is not.
+    await user.click(screen.getByRole('button', { name: /Preview valid-id\.pdf/ }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Confirm review' })).toBeNull();
+  });
+
+  // The positive control: the same data, unsealed, still offers the controls, so
+  // the absences above are the seal's doing and not the fixture's.
+  it('offers them again when the step is not sealed', () => {
+    renderRequirements(DOCS, {}, { readOnly: false });
+
+    expect(screen.getByRole('button', { name: /Passed on-site, no copy/ })).toBeTruthy();
+    expect(screen.getByText(/Click to browse or drop files/)).toBeTruthy();
+  });
+});
+
+/**
+ * The checklist is rendered inside the add-intervention card, so a worker who
+ * has *picked* a program but not yet saved it still sees what that program will
+ * demand of them. Nothing about an unsaved selection is persisted, so the step
+ * has to hand the selection in — and these three cases are the three shapes
+ * that can produce the list: nothing, the saved programs alone, the saved
+ * programs plus the one in hand.
+ */
+describe('CaseRequirements — previewing a program that is not yet an intervention', () => {
+  const MEDICAL = {
+    id: 'med-1',
+    name: 'Medical Assistance',
+    requiredDocuments: ['Barangay Certificate of Indigency', 'Medical abstract'],
+  };
+  const saved = { id: 'i1', programId: 'p1' };
+
+  beforeEach(() => {
+    mockPatch.mockReset().mockResolvedValue({});
+    mockDel.mockReset().mockResolvedValue({});
+    mockMutate.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('shows the selected program documents before the intervention is saved', () => {
+    // Nothing saved, and the program list is the only place this program exists.
+    renderRequirements([], {}, { programs: [MEDICAL], interventions: [], extraProgramIds: ['med-1'] });
+
+    expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('Medical abstract')).toBeTruthy();
+    // The count is the checklist's own arithmetic over the keys it rendered, so
+    // it proves the list is the two documents above and nothing else.
+    expect(screen.getByText('0/2 complete (includes the program you selected)')).toBeTruthy();
+  });
+
+  it('renders nothing for a selection that is still only in the form', () => {
+    // The counterpart to the test above: without the selection there is no
+    // requirement at all, so the row above is the selection's doing and not a
+    // checklist that always renders these two names.
+    renderRequirements([], {}, { programs: [MEDICAL], interventions: [] });
+
+    expect(screen.queryByText('Barangay Certificate of Indigency')).toBeNull();
+    expect(screen.queryByText('Medical abstract')).toBeNull();
+    expect(screen.queryByText(/complete/)).toBeNull();
+  });
+
+  it('adds the selected program to the saved ones rather than replacing them', () => {
+    renderRequirements([], {}, {
+      programs: [PROGRAMS[0], MEDICAL],
+      interventions: [saved],
+      extraProgramIds: ['med-1'],
+    });
+
+    expect(screen.getByText('Valid ID')).toBeTruthy();
+    expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('Medical abstract')).toBeTruthy();
+    expect(screen.getByText('0/3 complete (includes the program you selected)')).toBeTruthy();
+  });
+
+  it('ignores an ad-hoc sentinel, which names no program', () => {
+    // The step's form uses "adhoc:other" for a service that has no program
+    // behind it, so there is nothing to preview and the checklist must not
+    // invent a requirement for it.
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [],
+      extraProgramIds: ['adhoc:other'],
+    });
+
+    expect(screen.queryByText('Barangay Certificate of Indigency')).toBeNull();
+  });
+
+  it('does not claim to include a selection that names no known program', () => {
+    // `previewing` used to test the selection's *presence* alone, so an id no
+    // program resolves to still added "includes the program you selected" to a
+    // count that included nothing from it. The saved program keeps the checklist
+    // on screen, which is what makes the false clause observable.
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [{ id: 'iv-1', programId: 'med-1' }],
+      extraProgramIds: ['ghost-id'],
+    });
+
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
+    expect(screen.queryByText(/includes the program you selected/)).toBeNull();
+  });
+
+  // The two below are one property read from both sides: a program that is
+  // *both* recorded and still selected contributes its documents once. A worker
+  // re-picking the program already on the record is ordinary — the select does
+  // not know what is saved — and a union that concatenated would show them a
+  // doubled count (0/4) and two rows per document.
+  it('counts a program once when it is both already recorded and just selected', () => {
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [{ id: 'iv-1', programId: 'med-1' }],
+      extraProgramIds: ['med-1'],
+    });
+
+    // getAllBy, not getBy: a duplicate row makes the query throw, which is the
+    // failure this is looking for, so the count of matches is the assertion.
+    expect(screen.getAllByText('Barangay Certificate of Indigency')).toHaveLength(1);
+    expect(screen.getAllByText('Medical abstract')).toHaveLength(1);
+    // The count is over the keys it rendered, so the doubled figure cannot hide
+    // behind matching one of two nodes.
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
+  });
+
+  it('shares one row between two programs that ask for the same document', () => {
+    // The other half of the union's job: a saved program and the selected one
+    // can both demand "Valid ID", and the checklist is one list of needs rather
+    // than one entry per program that happens to want it. Without the set over
+    // the keys this reads 0/2 and renders the row twice.
+    const ALSO_IDS = { id: 'p2', name: 'Cash Assistance', requiredDocuments: ['Valid ID'] };
+    renderRequirements([], { 'Valid ID': true }, {
+      programs: [PROGRAMS[0], ALSO_IDS],
+      interventions: [saved],
+      extraProgramIds: ['p2'],
+    });
+
+    expect(screen.getAllByText('Valid ID')).toHaveLength(1);
+    // One key, and it is met, so the count is 1/1. Had the same document
+    // arrived twice the keys would read [Valid ID, Valid ID] and this would be
+    // 1/2 — the count is over the rendered list, so it cannot pass by matching
+    // one node of two.
+    expect(screen.getByText('1/1 complete (includes the program you selected)')).toBeTruthy();
+  });
+
+  it('leaves the count alone when the selected program is already recorded', () => {
+    // The honesty wording is for a selection that is *not* on the record. Once
+    // it is, "0/2 complete" is exactly right and the extra clause would be a
+    // lie about a selection that no longer exists.
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [{ id: 'iv-1', programId: 'med-1' }],
+      extraProgramIds: ['med-1'],
+    });
+
+    expect(screen.queryByText(/includes the program you selected/)).toBeNull();
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
   });
 });

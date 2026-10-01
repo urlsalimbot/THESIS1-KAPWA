@@ -173,6 +173,19 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_case ON case_interventions(case_id)`);
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
 
+  // Mirrors CreateCaseStepLocks0000000000074. case_id is TEXT to match the
+  // case-scoped children above.
+  await q.query(`CREATE TABLE IF NOT EXISTS case_step_locks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id TEXT NOT NULL,
+    step_index SMALLINT NOT NULL,
+    locked_by UUID,
+    locked_by_name TEXT,
+    locked_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT uq_case_step_locks_case_step UNIQUE (case_id, step_index)
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_step_locks_case ON case_step_locks(case_id)`);
+
   await q.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 
   await q.query(`CREATE INDEX IF NOT EXISTS idx_beneficiary_person ON beneficiaries(person_id)`);

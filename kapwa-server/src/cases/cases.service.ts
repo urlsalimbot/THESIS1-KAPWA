@@ -6,6 +6,14 @@ import { CaseRequirement } from './case-requirement.entity';
 import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
 import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
+import { CaseStepLock } from './case-step-lock.entity';
+// A plain const from a leaf module, not `CaseStepLocksService`: that service
+// injects `CasesService`, so depending on it here would be a require cycle — and
+// with `emitDecoratorMetadata` that costs the locks service a Nest DI failure at
+// boot, which no unit test can see. The labels are all this file needs, and an
+// error that spells a step differently from the stepper costs the worker a trip
+// to the UI to find out what is open.
+import { CASE_STEP_LABELS, stepsDueAt, stepsBecomingDueAt } from './case-step-labels';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -33,6 +41,8 @@ export class CasesService {
     private familyRepo: Repository<HouseholdMembership>,
     @InjectRepository(BeneficiaryClaimant)
     private bcRepo: Repository<BeneficiaryClaimant>,
+    @InjectRepository(CaseStepLock)
+    private stepLocksRepo: Repository<CaseStepLock>,
     private notifService: NotificationsService,
     private casesExport: CasesExportService,
     @Optional() private auditLog?: AuditLogService,
@@ -104,16 +114,34 @@ export class CasesService {
   // Attach per-case intervention counts (one grouped query) so the approval
   // pipeline can show the case stepper's Implement HIP / Service Delivery
   // progress without N+1 fetches.
+  //
+  // The inter-agency referral count rides along for the same reason and in the
+  // same shape: the pipeline's chips are drawn from the *same* `stepperStepDone`
+  // as the case view's stepper, and step 2 now asks for the referral count
+  // rather than reading `case.referrals`. A list row that omits it would answer
+  // "no referral" for a case that has one — the two surfaces of one predicate
+  // disagreeing, which is precisely what the shared fixture exists to prevent.
+  // The same two queries, so the cost is unchanged per page.
   private async attachInterventionCounts(cases: Case[]): Promise<Case[]> {
     if (cases.length === 0) return cases;
-    const rows = await this.caseRepo.manager.query(
-      `SELECT case_id, COUNT(*)::int AS count FROM case_interventions
-       WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
-      [cases.map((c) => c.id)],
-    );
-    const counts = new Map(rows.map((r: any) => [r.case_id, Number(r.count)]));
+    const ids = cases.map((c) => c.id);
+    const [interventionRows, referralRows] = await Promise.all([
+      this.caseRepo.manager.query(
+        `SELECT case_id, COUNT(*)::int AS count FROM case_interventions
+         WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
+        [ids],
+      ),
+      this.caseRepo.manager.query(
+        `SELECT case_id, COUNT(*)::int AS count FROM inter_agency_referrals
+         WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
+        [ids],
+      ),
+    ]);
+    const counts = new Map((interventionRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
+    const referralCounts = new Map((referralRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
     for (const c of cases) {
       (c as any).interventionCount = counts.get(c.id) ?? 0;
+      c.interAgencyReferralCount = referralCounts.get(c.id) ?? 0;
     }
     return cases;
   }
@@ -213,6 +241,13 @@ export class CasesService {
   async getCaseWithSla(id: string) {
     const c = await this.findById(id);
     (c as any).slaOverdue = this.computeSlaOverdue(c);
+    // The case-level referral count, unscoped. The case view's step-2 predicate
+    // must not read the caller-scoped referral list: "does this case have a
+    // referral" is a fact about the case, and the scoped list answers a different
+    // question (which rows this caller may read). Both surfaces now read this one
+    // number, which is the same one `attachInterventionCounts` stamps on list
+    // rows for the approval pipeline.
+    c.interAgencyReferralCount = await this.getInterAgencyReferralCount(id);
     return c;
   }
 
@@ -247,6 +282,13 @@ export class CasesService {
         isPrimary: r.is_primary,
       }));
     }
+
+    // Sealed steps travel with the detail payload so the case view's seal strip
+    // does not need a second round-trip. `case_step_locks.case_id` is TEXT and
+    // `cases.id` is UUID, but this is a TypeORM `where` on a bound string, so
+    // there is no text = uuid comparison to trip over.
+    (c as any).stepLocks = (await this.stepLocksRepo.find({ where: { caseId: id }, order: { stepIndex: 'ASC' } }))
+      .map((l) => ({ stepIndex: l.stepIndex, lockedByName: l.lockedByName, lockedAt: l.lockedAt }));
 
     // Load claimant (if different from beneficiary)
     if (c.beneficiary?.personId) {
@@ -349,7 +391,31 @@ export class CasesService {
     return this.transition(id, newStatus, { userRole, actorId });
   }
 
-  private async validateTransition(c: Case, newStatus: CaseStatus) {
+  /**
+   * Refuse a transition while any of `requiredSteps` is unsealed.
+   *
+   * Reads the seals off the case rather than asking the repository: `findById`
+   * already loaded them onto the payload for the seal strip, so a query here is a
+   * second round-trip for an answer in hand. A case that somehow carries no
+   * `stepLocks` is read as carrying no seals, so this fails closed.
+   *
+   * `requiredSteps` comes from `case-step-labels.ts` — never an index written out
+   * here — so the set a gate demands is by construction a set the seal endpoint
+   * will accept at this status.
+   */
+  private assertStepsSealed(c: Case, requiredSteps: number[], doing: string): void {
+    const sealed = ((c as any).stepLocks ?? []) as Array<{ stepIndex: number }>;
+    const open = requiredSteps.filter((i) => !sealed.some((l) => l.stepIndex === i));
+    if (open.length === 0) return;
+    // Name the steps as the stepper does. "step 4" in an error while the UI says
+    // "Case Study & Closure" sends the worker looking for a number.
+    throw new BadRequestException(
+      `Lock every step before ${doing}. ` +
+      `Still open: ${open.map((i) => CASE_STEP_LABELS[i]).join(', ')}`,
+    );
+  }
+
+  private async validateTransition(c: Case, newStatus: CaseStatus, userRole?: string) {
     if (!isValidTransition(c.status, newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
     }
@@ -369,9 +435,57 @@ export class CasesService {
     if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && (!c.frvaScore && !c.swdiScore)) {
       throw new BadRequestException('FRVA or SWDI score must be provided before review');
     }
+    // A case cannot be flagged for admin review until the worker has sealed
+    // every step *that is due at this lifecycle position*. This edge is the
+    // hand-off — CASE_FSM_ROLES gives it to the social worker — and it was gated
+    // only on an FRVA/SWDI score, so a worker could flag a case with no
+    // intervention recorded at all.
+    //
+    // "Due", not all five: at `assessed` the Phase-Out steps are floored at
+    // `active` and `transitioning`, so their Lock buttons are disabled and the
+    // seal endpoint rejects them with a 400. Requiring them made the gate
+    // unsatisfiable for the only role it applies to — a social worker could
+    // never hand a case up, and only `admin` (who bypasses) could move it.
+    // `stepsDueAt` derives the set from the same `CASE_STEP_MIN_STATUS` the
+    // seal service's done-predicate floors each step with, so the steps this
+    // gate names are exactly the steps that can be sealed here.
+    //
+    // Sits after the FRVA/SWDI check so the cheaper, more specific complaint
+    // still wins, and reads `stepLocksRepo` directly rather than
+    // `CaseStepLocksService`, which injects this service and would be a cycle.
+    //
+    // The guard keys on the role being *admin*, never on a role being present:
+    // `canTransition` short-circuits admin to true, and an admin that could not
+    // move a case at all would be worse than the gap this closes. A caller that
+    // omits `userRole` is therefore gated, not waved through — fail closed, so
+    // forgetting the argument cannot become the bypass.
+    if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && userRole !== 'admin') {
+      this.assertStepsSealed(c, stepsDueAt(c.status),
+        'flagging this case for admin review');
+    }
+    // Phase-Out. Step 4 (Evaluate Help Given) and step 5 (Case Study & Closure)
+    // had no seal gate anywhere: the gate above asks for the steps *due* at a
+    // status, and these two only become due at `active` and `transitioning` — so
+    // nothing asked whether anyone deliberately sealed them, and a case could
+    // reach `closed` with its closure step never sealed by anyone.
+    //
+    // `stepsBecomingDueAt`, not `stepsDueAt`, and not a listed index: each of
+    // these gates is about the step whose work *completes* on this edge, and that
+    // is the step floored at exactly the status being left. Naming an index here
+    // is how the hand-off gate came to demand steps that could not be sealed.
+    //
+    // `active -> transitioning` is deliberately *not* gated, and the gap is real:
+    // `CASE_FSM_ROLES[ACTIVE]` is empty, so `canTransition` admits `admin` and
+    // nothing else, and `admin` is the caller this rule exempts. A gate there
+    // would bind nobody. `cases.service.spec.ts` pins that as a fact about the
+    // FSM, so it becomes a gap to close if a role is ever added there — not a
+    // silent assumption.
+    if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && userRole !== 'admin') {
+      this.assertStepsSealed(c, stepsBecomingDueAt(c.status), 'closing this case');
+    }
     if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
       const interventionCount = await this.getInterventionCount(c.id);
-      const hasReferral = (c.referrals?.length || 0) > 0;
+      const hasReferral = (await this.getInterAgencyReferralCount(c.id)) > 0;
       // At least one of the two service channels must be real: either an
       // intervention was issued, or — when no intervention is issued — a
       // referral exists. Recording "no referral needed" still demands an
@@ -398,7 +512,7 @@ export class CasesService {
       if (!c.selfRelianceLevel || !c.sustainabilityPlan) {
         throw new BadRequestException('Self-reliance level and sustainability plan are required for transition');
       }
-      if (!(c.referrals?.length) && !c.referralNotNeeded) {
+      if (!(await this.getInterAgencyReferralCount(c.id)) && !c.referralNotNeeded) {
         throw new BadRequestException('Record the inter-agency referral decision before transitioning');
       }
     }
@@ -414,9 +528,13 @@ export class CasesService {
       throw new ForbiddenException(`Role ${opts.userRole} cannot transition from ${c.status} to ${newStatus}`);
     }
 
-    await this.validateTransition(c, newStatus);
+    await this.validateTransition(c, newStatus, opts?.userRole);
 
     c.status = newStatus;
+    // Truthy, not `!== undefined`: the status-changing routes carry no signature
+    // at all, and writing `undefined` over a previously approved case would erase
+    // the approver off a case that already had one. The route that *does* require
+    // a signature — `/approve` — has already refused a blank one in `approve()`.
     if (opts?.signature) c.approvedBySignature = opts.signature;
     if (opts?.userRole) c.approvedByRole = opts.userRole;
     // Resolve the actor's display name so the case view can show
@@ -465,6 +583,14 @@ export class CasesService {
   }
 
   async approve(id: string, newStatus: CaseStatus, signature: string, userRole: string, actorId?: string) {
+    // An approval is a record that someone approved, so the approver's signature
+    // is part of it, not an optional annotation. `ApproveCaseSchema` already
+    // refuses a blank one at the API boundary; stating it here too means the rule
+    // holds for anything that is not an HTTP request, and it refuses *before*
+    // reading the case rather than after transitioning it.
+    if (!signature || !signature.trim()) {
+      throw new BadRequestException('Approver signature is required to approve a case');
+    }
     return this.transition(id, newStatus, { signature, userRole, actorId, reason: `Approved by ${userRole}` });
   }
 
@@ -645,9 +771,42 @@ export class CasesService {
     return this.caseRepo.save(caseEntity);
   }
 
-  private async getInterventionCount(caseId: string): Promise<number> {
+  /**
+   * Public because the step-done predicate reuses it: a second count query
+   * against `case_interventions` could disagree with this one and let a step be
+   * sealed on a count the activation gate does not see.
+   */
+  async getInterventionCount(caseId: string): Promise<number> {
     const result = await this.caseRepo.query(
       'SELECT COUNT(*) as count FROM case_interventions WHERE case_id = $1',
+      [caseId]
+    );
+    return parseInt(result[0]?.count || '0', 10);
+  }
+
+  /**
+   * The case's inter-agency referrals, counted off `inter_agency_referrals`.
+   *
+   * Public, and for the same reason as `getInterventionCount`: two count queries
+   * against one table can disagree, and the step-done predicate, the list
+   * endpoint and these FSM preconditions all have to see the same number.
+   *
+   * **`inter_agency_referrals`, not `Case.referrals`.** That getter is over
+   * `case_referrals`, which is the transition plan's agency list — written only by
+   * `updateTransitionPlan` and read by no step, which is why it has 0 rows in
+   * every database this project has run. A referral, as the product means it, is
+   * the row the endorsement letter writes (`InterAgencyRefervalsService.create`).
+   * The gates below used the getter, so a case that issued a real referral was
+   * refused for "no referral" — and once the step-done predicate was corrected
+   * to count the right table, the same rule had two surfaces reading two
+   * different tables, which is the drift the shared fixture exists to prevent.
+   *
+   * These are FSM preconditions, not step-done predicates, so the shared fixture
+   * does not reach them; `cases.service.spec.ts` pins each gate instead.
+   */
+  async getInterAgencyReferralCount(caseId: string): Promise<number> {
+    const result = await this.caseRepo.query(
+      'SELECT COUNT(*) as count FROM inter_agency_referrals WHERE case_id = $1',
       [caseId]
     );
     return parseInt(result[0]?.count || '0', 10);
@@ -706,19 +865,32 @@ export class CasesService {
     return saved;
   }
 
+  /**
+   * Record the exit record — outcome, notes, signature — without closing.
+   *
+   * This route used to set `status: CLOSED` itself, which skipped the
+   * `transitioning -> closed` seal gate: closing is a forward hop, and every
+   * forward hop that ends a step's work runs `assertStepsSealed`. Two jobs in
+   * one route meant one of them (the close) was ungated. Split: this method
+   * saves the step-5 data and nothing else, and the close goes through
+   * `PATCH /cases/:id/close` -> `transition()`, where the gate lives.
+   *
+   * The route still opens with `assertUnsealed(id, 4)`: the exit record *is*
+   * step 5's own data, so it refuses to move a sealed step. Sealing is a
+   * precondition for closing, not a bar to it — the previous code had the two
+   * rules inverted, refusing to close a sealed step and closing an unsealed one.
+   */
   async updateClosure(id: string, data: ClosureInput, userRole?: string) {
     const c = await this.findById(id);
     // Authorize first so an unauthorized role cannot probe the case's state.
     const allowedRoles = ['admin', 'social_worker', 'coordinator'];
     if (!userRole || !allowedRoles.includes(userRole)) {
-      throw new ForbiddenException(`Role ${userRole} cannot close case`);
+      throw new ForbiddenException(`Role ${userRole} cannot record closure data`);
     }
     if (c.status !== CaseStatus.TRANSITIONING) {
-      throw new BadRequestException('Case must be in transitioning status to close');
+      throw new BadRequestException('Case must be in transitioning status to record closure data');
     }
-    const oldStatus = c.status;
     Object.assign(c, {
-      status: CaseStatus.CLOSED,
       closureOutcome: data.closureOutcome,
       exitNotes: data.exitNotes,
       clientSignature: data.clientSignature || c.clientSignature,
@@ -726,7 +898,7 @@ export class CasesService {
       updatedAt: new Date(),
     });
     await this.caseRepo.save(c);
-    await this.logHistory(id, oldStatus, CaseStatus.CLOSED, userRole, undefined, `Closed with outcome: ${data.closureOutcome}`);
+    await this.auditLog?.log('case.closure_record', id, undefined, { controlNo: c.controlNo, outcome: data.closureOutcome });
     return c;
   }
 

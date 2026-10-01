@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StepAssessment } from './StepAssessment';
+import { formatDate } from '@/lib/format';
 
 const { mockPatch, mockIsOnline, mockMutate } = vi.hoisted(() => ({
   mockPatch: vi.fn(),
@@ -14,7 +15,13 @@ vi.mock('@/lib/offline-queue', () => ({ queueFsmTransition: vi.fn() }));
 vi.mock('swr', () => ({ useSWRConfig: () => ({ mutate: mockMutate }) }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-function renderAssessment(caseData: Record<string, unknown>, assessment: Record<string, unknown> = {}) {
+type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+
+function renderAssessment(
+  caseData: Record<string, unknown>,
+  assessment: Record<string, unknown> = {},
+  opts: { readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal; userRole?: string } = {},
+) {
   return render(
     <StepAssessment
       caseId="c1"
@@ -23,7 +30,10 @@ function renderAssessment(caseData: Record<string, unknown>, assessment: Record<
       onAssessmentChange={() => {}}
       onSave={() => {}}
       saving={false}
-      userRole="social_worker"
+      userRole={opts.userRole ?? 'social_worker'}
+      readOnly={opts.readOnly}
+      lockReadOnly={opts.lockReadOnly}
+      stepLock={opts.stepLock}
     />,
   );
 }
@@ -69,5 +79,76 @@ describe('StepAssessment — step completion gate and save flow', () => {
     });
     expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeTruthy();
     expect(screen.queryByText(/Add an FRVA or SWDI score/)).toBeNull();
+  });
+
+  // The positive half of `CaseActionBar`'s `ownedByStepCard` suppression, and it
+  // has to live *here*. The bar renders nothing for `enrolled`, so this card is
+  // the only control for `enrolled -> assessed`; if it stopped rendering, the
+  // bar's own "renders nothing at enrolled" assertion would keep passing — a bar
+  // that renders nothing at all satisfies it — and the worker would be left with
+  // no control and no explanation. Asserted for every role `CASE_FSM_ROLES`
+  // admits from `enrolled`, which is the whole set the bar suppresses for.
+  it.each(['social_worker', 'admin'])(
+    'is the only control for enrolled -> assessed, and offers it to a %s who can take it',
+    (userRole) => {
+      renderAssessment(
+        filledCaseData({ frvaScore: 45 }),
+        { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45 },
+        { userRole },
+      );
+      expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeEnabled();
+    },
+  );
+});
+
+describe('StepAssessment — sealing step 1', () => {
+  beforeEach(() => {
+    mockIsOnline.mockReturnValue(true);
+    mockPatch.mockResolvedValue({});
+  });
+
+  // Step 1's seal, all four states. `stepperStepDone(0, …)` reads
+  // problemsPresented + clientCategory, so this case is done at step 1 and
+  // nowhere else.
+  it('disables Lock while the assessment is not done', () => {
+    renderAssessment({ problemsPresented: 'Poverty' });
+
+    const lock = screen.getByRole('button', { name: /^lock$/i });
+    expect(lock).toBeDisabled();
+    // The reason, not just the disabled state.
+    expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
+  });
+
+  it('enables Lock once the assessment is done', () => {
+    renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' });
+
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+    expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
+  });
+
+  it('shows who sealed this step and offers the release', () => {
+    const stepLock = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' }, {}, { stepLock });
+
+    expect(screen.getByText(`Locked by Juan Dela Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /unlock/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+  });
+
+  it('offers a viewer neither the seal nor the hint it cannot act on', () => {
+    renderAssessment({ problemsPresented: 'Poverty' }, {}, { readOnly: true, lockReadOnly: true });
+
+    // A disabled Lock would still be a control this role was decided not to
+    // have, and the hint asks for the action.
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+    expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
+  });
+
+  it('leaves a sealed step readable for a viewer, with the release withheld', () => {
+    const stepLock = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' }, {}, { readOnly: true, lockReadOnly: true, stepLock });
+
+    expect(screen.getByText(`Locked by Juan Dela Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();
   });
 });

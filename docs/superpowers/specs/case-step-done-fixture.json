@@ -1,0 +1,364 @@
+[
+  {
+    "name": "step0 done: problems + category present",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "a", "clientCategory": "b" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step0 not done: category missing",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "a" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step1 done: intervention with all requirements met",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 not done: intervention but requirements outstanding",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": false }
+    },
+    "expected": false
+  },
+  {
+    "name": "step1 done: recorded no-intervention decision",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 0,
+    "opts": { "interventionNotNeeded": true },
+    "expected": true
+  },
+  {
+    "name": "step0 done: status-independent, done on a closed case",
+    "step": 0,
+    "caseData": { "status": "closed", "problemsPresented": "a", "clientCategory": "b" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step1 done: status-independent, submit-for-review still done on an assessed case",
+    "step": 1,
+    "caseData": { "status": "assessed" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 not done: zero interventions and no decision",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step1 done: an intervention with no outstanding requirement recorded",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": {},
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": true
+  },
+  {
+    "name": "step2 done: an inter-agency referral is on record",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": { "interAgencyReferralCount": 1 },
+    "expected": true
+  },
+  {
+    "name": "step2 not done: a case_referrals row is not an inter-agency referral",
+    "step": 2,
+    "caseData": { "status": "active", "referrals": [{ "id": "r1" }] },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step2 not done: no referral and no decision",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step2 done: two inter-agency referrals, still one answer",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": { "interAgencyReferralCount": 2 },
+    "expected": true
+  },
+  {
+    "name": "step2 done: an inter-agency referral beats a case_referrals row either way",
+    "step": 2,
+    "caseData": { "status": "active", "referrals": [{ "id": "r1" }] },
+    "interventionCount": 0,
+    "opts": { "interAgencyReferralCount": 1, "referralNotNeeded": false },
+    "expected": true
+  },
+  {
+    "name": "step2 done: recorded no-referral decision",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": { "referralNotNeeded": true },
+    "expected": true
+  },
+  {
+    "name": "step2 not done: no referral key at all and no decision",
+    "step": 2,
+    "caseData": { "status": "active" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 needs active status: self-reliance on an enrolled case",
+    "step": 3,
+    "caseData": { "status": "enrolled", "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 done: on an active case",
+    "step": 3,
+    "caseData": { "status": "active", "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step3 not done: sustainability plan without a self-reliance level",
+    "step": 3,
+    "caseData": { "status": "active", "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 not done: self-reliance level without a sustainability plan",
+    "step": 3,
+    "caseData": { "status": "active", "selfRelianceLevel": 2 },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step3 done: a partial payload with no status does not cap the step",
+    "step": 3,
+    "caseData": { "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step3 done: an unknown status does not cap the step either",
+    "step": 3,
+    "caseData": { "status": "some_future_status", "selfRelianceLevel": 2, "sustainabilityPlan": "p" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step4 not done: signature and outcome on an active case",
+    "step": 4,
+    "caseData": { "status": "active", "clientSignature": "sig", "closureOutcome": "done" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step4 done: on a transitioning case",
+    "step": 4,
+    "caseData": { "status": "transitioning", "clientSignature": "sig", "closureOutcome": "done" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true
+  },
+  {
+    "name": "step4 not done: closure outcome without a client signature",
+    "step": 4,
+    "caseData": { "status": "transitioning", "closureOutcome": "done" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step4 not done: client signature without a closure outcome",
+    "step": 4,
+    "caseData": { "status": "transitioning", "clientSignature": "sig" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step0 done: an empty-string problem note is not a problem note",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "", "clientCategory": "b" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step0 not done: an empty client category does not count",
+    "step": 0,
+    "caseData": { "status": "enrolled", "problemsPresented": "a", "clientCategory": "" },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": false
+  },
+  {
+    "name": "step1 not done: a program document never reached the checklist",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            { "key": "Valid ID", "mandatory": true },
+            { "key": "Barangay Certificate", "mandatory": true }
+          ]
+        }
+      ],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": false
+  },
+  {
+    "name": "step1 done: every document the program requires is on the checklist",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            { "key": "Valid ID", "mandatory": true },
+            { "key": "Barangay Certificate", "mandatory": true }
+          ]
+        }
+      ],
+      "checklist": { "Valid ID": true, "Barangay Certificate": true }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 done: an unmet checklist entry belonging to no program is ignored",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] }],
+      "checklist": { "Valid ID": true, "Medical Abstract": false }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 not done: an unmet document of a second linked program still blocks the seal",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1", "p2"],
+      "programs": [
+        { "id": "p1", "documentKeys": [{ "key": "Valid ID", "mandatory": true }] },
+        { "id": "p2", "documentKeys": [{ "key": "Medical Abstract", "mandatory": true }] }
+      ],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": false
+  },
+  {
+    "name": "step1 not done: a document the program flags non-mandatory is still required",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": false },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [
+        {
+          "id": "p1",
+          "documentKeys": [
+            { "key": "Valid ID", "mandatory": true },
+            { "key": "Death certificate (if applicable)", "mandatory": false }
+          ]
+        }
+      ],
+      "checklist": { "Valid ID": true }
+    },
+    "expected": false
+  },
+  {
+    "name": "step1 done: interventions that name no program impose nothing",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": [null],
+      "programs": [],
+      "checklist": { "Valid ID": false }
+    },
+    "expected": true
+  },
+  {
+    "name": "step1 done: a linked program that requires no documents imposes nothing",
+    "step": 1,
+    "caseData": { "status": "enrolled" },
+    "interventionCount": 1,
+    "opts": { "requirementsMet": true },
+    "requirements": {
+      "interventionProgramIds": ["p1"],
+      "programs": [{ "id": "p1", "documentKeys": [] }],
+      "checklist": { "Valid ID": false }
+    },
+    "expected": true
+  }
+]

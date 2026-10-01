@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Lock, FileText, Plus, Ban, CheckCircle2 } from 'lucide-react';
 import { api, downloadEndorsementLetter, downloadEndorsementLetterById } from '@/lib/api';
 import { Agency, LEGAL_BASIS_OPTIONS } from '@/components/referrals/referral-utils';
+import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 
 interface StepIntegratedDeliveryProps {
@@ -17,6 +18,16 @@ interface StepIntegratedDeliveryProps {
   caseData: any;
   userRole?: string;
   readOnly?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
+  /**
+   * Whether this step may still be sealed/released, kept apart from the
+   * actions' `readOnly`: a sealed step's fields are read-only *because* of the
+   * seal, so folding that into the same flag would hide the one control that
+   * lifts it. Defaults to `false`, so omitting it can never hide a sealed step's
+   * Unlock; a caller that wants the seal control withheld passes `true`.
+   */
+  lockReadOnly?: boolean;
 }
 
 // Step 3 offers the same two mutually exclusive completions as step 2: refer
@@ -26,7 +37,7 @@ interface StepIntegratedDeliveryProps {
 // Until a client UI existed for `PATCH /cases/:id/referral-decision`, the
 // server's `in_review -> active` gate could reject a case for a missing
 // referral decision that no one had any way of recording.
-export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }: StepIntegratedDeliveryProps) {
+export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, lockReadOnly = false, stepLock }: StepIntegratedDeliveryProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { mutate } = useSWRConfig();
@@ -240,6 +251,27 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly }:
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Step 3's seal. The count is the case-level one the server's seal also
+          counts, not the length of this step's caller-scoped list: a worker whose
+          agency is not on a referral sees an empty list, and reading that here
+          stalled the workflow — the server would have accepted the seal. The
+          list above stays scoped for display, which is an authorization decision
+          about which rows a caller may read, not about whether the case has any.
+          The referral *decision* is on the case row and `stepperStepDone` falls
+          back to it, so passing it here would restate the rule this step already
+          reads for its own badge — and an explicit `false`, which the server
+          coerces and could never honour, would outvote the row. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={2}
+        caseData={caseData}
+        interventionCount={0}
+        opts={{ interAgencyReferralCount: caseData?.interAgencyReferralCount ?? 0 }}
+        locked={stepLock}
+        readOnly={lockReadOnly}
+        onChanged={() => mutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import {
   User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning,
-  Plus, Lock, Send, ExternalLink, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
+  Plus, Lock, Send, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -30,6 +30,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { FamilyGraph } from '../components/family/FamilyGraph';
 import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
+import { CaseActionBar } from '@/components/case-view/CaseActionBar';
+import { stepLockKey, type StepLock } from '@/components/case-view/StepLockBar';
 import { isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
 import { computeAge } from '@/lib/age';
 import { StepAssessment } from '@/components/case-view/StepAssessment';
@@ -234,9 +236,25 @@ export function CaseViewPage() {
     () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
     [interventions, programs, caseData],
   );
+  // The case-level referral count, stamped by the detail endpoint. Deliberately
+  // NOT `(iarReferrals ?? []).length`: that list is caller-scoped by agency, so a
+  // worker whose agency is not on a referral saw 0 and could not seal step 2,
+  // while the server's seal counts every row for the case. "Does this case have a
+  // referral" is a fact about the case, so both surfaces read the case's own
+  // number. `caseData.referrals` is not that list either: it is the transition
+  // plan's agency list over `case_referrals`, which no referral letter writes.
+  const interAgencyReferralCount = caseData?.interAgencyReferralCount ?? 0;
   const progressOpts: StepperProgressOpts = useMemo(
-    () => ({ requirementsMet, referralNotNeeded: !!caseData?.referralNotNeeded, interventionNotNeeded: !!caseData?.interventionNotNeeded }),
-    [requirementsMet, caseData],
+    // `requirementsMet` is threaded because it is not on the case row.
+    // `interAgencyReferralCount` is on the row, but it is restated here from the
+    // row's value rather than left to a fallback: `stepperStepDone` has no
+    // fallback for it, because a surface with no count must read 0 rather than
+    // an absent field. The two "not needed" decisions *are* held on the row and
+    // `stepperStepDone` falls back to it, so restating them here would be a
+    // second copy of one rule — and an explicit `false` would outvote the row,
+    // which the server (coercing to `Boolean(c.x)`) could never honour.
+    () => ({ requirementsMet, interAgencyReferralCount }),
+    [requirementsMet, interAgencyReferralCount],
   );
 
   useEffect(() => {
@@ -410,18 +428,78 @@ export function CaseViewPage() {
     );
   }
 
+  // One step's seal row, or null. Resolved here so a step component is handed
+  // its own row and never sees the `stepLocks` array — five steps reading the
+  // same array to find their own index is five chances to answer for the wrong
+  // step.
+  const lockFor = (i: number): StepLock | null =>
+    ((caseData?.stepLocks ?? []) as StepLock[]).find((l) => l.stepIndex === i) ?? null;
+
+  // A sealed step's fields are read-only, so its own editing affordances go away
+  // with them. The server refuses those writes with a 409 either way, so this is
+  // about the user not being offered a control that cannot work — but it is
+  // deliberately NOT the only enforcement: the routes refuse on their own, because
+  // a control hidden in the client is bypassable by calling the PATCH directly.
+  // One place rather than an edit per step, and each step's strip renders above
+  // the disabled fields explaining why they are disabled and how to release the
+  // seal.
+  //
+  // **`bodyReadOnly` only. Never pass this to `lockReadOnly`.** The seal control's
+  // own flag is the exemption that makes a seal reversible: a sealed step's strip
+  // says "unlock it to make changes, then seal it again", so withholding the
+  // Unlock behind the same flag that read-onlys the body tells the worker to do
+  // something the screen offers no way to do — a lockout whose only exit is a raw
+  // `DELETE /cases/:id/steps/N/lock`. Every `lockReadOnly` below is therefore the
+  // plain lifecycle signal (`caseClosed`), never this helper. `CaseViewPage —
+  // step 5 sealed` is the test that pins it; an earlier version of this file
+  // folded the seal into step 5's `lockReadOnly` and shipped that lockout.
+  const sealed = (i: number): boolean => lockFor(i) != null;
+  const bodyReadOnly = (base: boolean, step: number): boolean => base || sealed(step);
+
+  // The key names the case as well as the step, because `StepLockBar` remembers
+  // the outcome of its own write in state carrying neither: an instance reused
+  // across two mounts renders the seal of whichever case it last wrote. Today the
+  // step half is insurance (only one step renders at a time, under keys that
+  // already differ) while the case half is the one a mount can actually outlive —
+  // see `stepLockKey`.
   const stepComponents = [
-    <StepAssessment key="assessment" caseId={id!} caseData={caseData} assessment={assessment}
+    <StepAssessment key={stepLockKey(id!, 0)} caseId={id!} caseData={caseData} assessment={assessment}
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
-      userRole={user?.role} readOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />,
-    <StepImplementHIP key="hip" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
-    <StepIntegratedDelivery key="delivery" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
-    // Transition plan + follow-up visits stay savable for the whole active
-    // phase: stepDone[3] (plan saved) must NOT flip readOnly or the worker is
-    // left adding follow-up visits with the only "Save Transition Plan" button
-    // hidden. Only closure locks the step.
-    <StepTransition key="transition" caseId={id!} caseData={caseData} userRole={user?.role} readOnly={caseClosed} />,
-    <StepClosure key="closure" caseId={id!} caseData={caseData} readOnly={stepDone[4] || caseClosed} />,
+      userRole={user?.role}
+      readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), 0)}
+      lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
+      stepLock={lockFor(0)} />,
+    <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role}
+      readOnly={bodyReadOnly(caseClosed, 1)} lockReadOnly={caseClosed}
+      stepLock={lockFor(1)} />,
+    <StepIntegratedDelivery key={stepLockKey(id!, 2)} caseId={id!} caseData={caseData} userRole={user?.role}
+      readOnly={bodyReadOnly(caseClosed, 2)} lockReadOnly={caseClosed}
+      stepLock={lockFor(2)} />,
+    // Transition plan + follow-up visits stay savable for the whole active phase:
+    // stepDone[3] (plan saved) must NOT flip readOnly or the worker is left adding
+    // follow-up visits with the only "Save Transition Plan" button hidden. Only
+    // closure locks the step.
+    //
+    // A *seal* of this step is deliberately not folded in here. The seal claims the
+    // self-reliance assessment is finished, and the visits are ongoing progress
+    // monitoring that is in no step's done-predicate — the server's
+    // `CASE_STEP_UNGUARDED_FIELDS` lets a visits-only body past a sealed step 4
+    // precisely so sealing the assessment cannot stop a home visit being recorded.
+    // `StepTransition` therefore derives its own two signals from `stepLock` (see
+    // `assessmentReadOnly` there): the assessment freezes, the visits and the Save
+    // button do not. Folding the seal into this `readOnly` is what put the client
+    // and the server at odds.
+    <StepTransition key={stepLockKey(id!, 3)} caseId={id!} caseData={caseData} userRole={user?.role}
+      readOnly={caseClosed} lockReadOnly={caseClosed}
+      stepLock={lockFor(3)} />,
+    // `readOnly` here is `stepDone[4]`, which flips true exactly when this step
+    // becomes sealable — so the seal gets its own signal. Passing `readOnly` to
+    // the bar instead hid the Lock button on the only step it was written for,
+    // the same trap step 3's comment above avoids by keeping `stepDone[3]` out of
+    // its `readOnly`.
+    <StepClosure key={stepLockKey(id!, 4)} caseId={id!} caseData={caseData}
+      readOnly={bodyReadOnly(stepDone[4] || caseClosed, 4)}
+      lockReadOnly={caseClosed} stepLock={lockFor(4)} />,
   ];
 
   const renewCase = () => navigate('/intake', {
@@ -566,7 +644,10 @@ export function CaseViewPage() {
 
           {/* Stepper — sticky so step switching stays reachable on long cases */}
           <div className="sticky top-2 z-10 rounded-lg border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
-            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} referralNotNeeded={!!caseData?.referralNotNeeded} interventionNotNeeded={!!caseData?.interventionNotNeeded} />
+            {/* `requirementsMet` only: the stepper applies the case-row fallback
+                for the two "not needed" decisions itself, so naming them here
+                would restate a rule that lives in one place. */}
+            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} />
           </div>
 
           {/* Generated approval documents — COE + PCV produced at approval,
@@ -599,6 +680,27 @@ export function CaseViewPage() {
           <div>
             {stepComponents[currentStep]}
           </div>
+
+          {/* The one deliberate control for moving the case along its lifecycle.
+              Mounted below the active step rather than in the header because its
+              effect depends on state spread across every step: it is the bar that
+              has to say which steps are still open. */}
+          <CaseActionBar
+            caseId={id!}
+            caseData={caseData}
+            userRole={user?.role ?? ''}
+            onChanged={async () => {
+              // All three, and all three for a reason the bar cannot see: the
+              // detail key is this page's own subscription (the status badge),
+              // the list key is every other mounted case table's (whose badge
+              // would otherwise stay stale until a reload — the problem the old
+              // `ReviewButton` documented), and history lives under its own key,
+              // which an exact-key mutation never touches.
+              await mutate(queryKeys.cases.detail(id!));
+              await mutate(queryKeys.cases.all, undefined, { revalidate: true });
+              await mutateHistory();
+            }}
+          />
         </div>
 
         {/* === RIGHT COLUMN (1/3) — Beneficiary + Household Sidebar === */}
@@ -781,12 +883,12 @@ export function CaseViewPage() {
                 <p className="text-xs text-muted-foreground">{t('cases.noInterAgencyReferrals', 'No inter-agency referrals for this case')}</p>
               ) : (
                 (iarReferrals || []).map(r => (
-                  <button
+                  // A static record, not a link: /agency/referrals/:id was removed
+                  // with the referral lifecycle (9fa73f5), so the row no longer
+                  // pretends to open anywhere.
+                  <div
                     key={r.id}
-                    type="button"
-                    onClick={() => navigate(`/agency/referrals/${r.id}`, { state: { from: `/cases/${id}` } })}
-                    className="w-full text-left rounded-md border border-border/60 px-3 py-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                    aria-label={t('referrals.viewDetailsAria', 'View details for {{name}}', { name: r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id })}
+                    className="w-full rounded-md border border-border/60 px-3 py-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
@@ -799,10 +901,9 @@ export function CaseViewPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge variant={r.status === 'declined' ? 'destructive' : 'default'}>{referralStatusLabel(t, r.status)}</Badge>
-                        <ExternalLink size={14} className="text-muted-foreground" aria-hidden="true" />
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))
               )}
             </div>

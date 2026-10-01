@@ -464,6 +464,12 @@ export async function downloadEndorsementLetter(
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      // The double-submit guard rejects every unsafe request that omits the
+      // token, and this helper is a bare `fetch` rather than `rawRequest`, so it
+      // has to echo the cookie itself. Without it the server answers 403 "Missing
+      // CSRF token" before the handler runs, and the referral step's only action
+      // was unusable by the very role it is for.
+      ...csrfHeaders(),
     },
     body: JSON.stringify(body),
   });

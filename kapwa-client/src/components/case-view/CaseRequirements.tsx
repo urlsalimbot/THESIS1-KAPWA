@@ -24,6 +24,18 @@ interface CaseRequirementsProps {
   caseId: string;
   caseData: any;
   userRole?: string;
+  /** Programs chosen in the step's form but not yet saved as interventions.
+   *  Nothing about such a selection is persisted, so the step hands its ids in
+   *  and the checklist lists their documents: a worker learns what a program
+   *  will demand while choosing it, not after committing to it. */
+  extraProgramIds?: string[];
+  /** Render as a section of a card that already exists. The merged
+   *  intervention card brings its own border and separator, so a second pair
+   *  inside it would draw a box within a box. */
+  embedded?: boolean;
+  /** A sealed step's checklist is read-only: the server refuses every write it
+   *  guards, so the controls go with them. Reading a document stays allowed. */
+  readOnly?: boolean;
 }
 
 // Documentary-needs checklist shared by the Implement HIP step (step 2) and the
@@ -34,7 +46,7 @@ interface CaseRequirementsProps {
 // the worker confirms an uploaded document on-site, uploads it at the office, or
 // records that the client passed it on-site directly. Claimant (remote) uploads
 // stay pending until confirmed.
-export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirementsProps) {
+export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, embedded, readOnly }: CaseRequirementsProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [] } = useSWR<any[]>(queryKeys.cases.interventions(caseId));
@@ -46,7 +58,17 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
 
   const checklist = (caseData?.requirementsChecklist || {}) as Record<string, boolean>;
 
-  const programIds = [...new Set(interventions.map((i: any) => i.programId).filter(Boolean))];
+  // The programs behind saved interventions plus the ones the step currently has
+  // selected, filtered because an ad-hoc service names no program — its
+  // documents are nobody's to preview. This list may repeat an id (one program
+  // can back several interventions), which is harmless: the `filter` below walks
+  // `programs` once, so a program still contributes a single entry. The
+  // de-duplication that matters is on the requirement *keys*, because two
+  // programs can demand the same document.
+  const programIds = [
+    ...interventions.map((i: any) => i.programId).filter(Boolean),
+    ...(extraProgramIds ?? []).filter(Boolean),
+  ];
   const relevantPrograms = programs.filter((p) => programIds.includes(p.id));
   const allRequirements = [
     ...new Set(relevantPrograms.flatMap((p) => requiredDocumentKeys(p))),
@@ -96,16 +118,33 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
 
   const completedCount = allRequirements.filter((r) => checklist[r]).length;
 
+  /* Whether this list is counting something the record does not hold yet.
+     A selection is not an intervention, so "2/2 complete" beside a program the
+     worker has not saved would read as though that program had been issued and
+     its paperwork closed out. The clause names the extra source instead of
+     qualifying the number, which keeps the arithmetic — the thing the seal
+     weighs — exactly as it was. */
+  const savedProgramIds = new Set(interventions.map((i: any) => i.programId).filter(Boolean));
+  const knownProgramIds = new Set(programs.map((p) => p.id));
+  // Only a selection that resolves to a listed program can add a requirement, so
+  // an id no program matches must not make the count claim it includes one.
+  const previewing = (extraProgramIds ?? []).some(
+    (id) => id && knownProgramIds.has(id) && !savedProgramIds.has(id),
+  );
+
   return (
-    <div className="rounded-lg border bg-card">
+    <div className={embedded ? undefined : 'rounded-lg border bg-card'}>
       <div className="px-4 py-3 flex items-center gap-2">
         <FileCheck size={16} className="text-primary" />
         <h3 className="text-sm font-semibold">{t('caseView.implement.requirements', 'Requirements')}</h3>
         <span className="text-xs text-muted-foreground ml-auto">
-          {completedCount}/{allRequirements.length} {t('caseView.implement.complete', 'complete')}
+          {completedCount}/{allRequirements.length}{' '}
+          {previewing
+            ? t('caseView.implement.completePreviewing', 'complete (includes the program you selected)')
+            : t('caseView.implement.complete', 'complete')}
         </span>
       </div>
-      <Separator />
+      {!embedded && <Separator />}
       <div className="px-4 py-3 space-y-2">
         {allRequirements.map((req) => {
           const done = checklist[req] === true;
@@ -132,7 +171,7 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                 {/* The one case no document can cover: the client handed the
                     original over on-site and nothing was scanned. Kept as an
                     explicit control so it stops hiding behind a heading click. */}
-                {canVerify && (
+                {canVerify && !readOnly && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -155,6 +194,7 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                 caseId={caseId}
                 requirementKey={req}
                 canUpload={canUpload}
+                readOnly={readOnly}
                 docs={uploadedDocs}
                 onChanged={refresh}
                 renderDocExtras={(doc) => {
@@ -183,7 +223,7 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
                    verification, so the checklist, the stepper and the activation
                    gate cannot disagree about what is satisfied. */
                 renderPreviewFooter={(doc) => {
-                  if (!canVerify) return null;
+                  if (!canVerify || readOnly) return null;
                   const verifiedAt = (doc as { verifiedAt?: string | null }).verifiedAt;
                   return (
                     <Button

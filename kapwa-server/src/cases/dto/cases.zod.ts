@@ -12,9 +12,23 @@ export const UpdateStatusSchema = z.object({
   status: z.nativeEnum(CaseStatus),
 });
 
+/**
+ * The approving path, and the only consumer of this schema
+ * (`PATCH /cases/:id/approve`). A signature is **required** here: `transition()`
+ * writes `approvedBySignature` only when the value is truthy, so a blank one was
+ * accepted and then silently dropped, leaving an approval record with no approver
+ * attached to it. The client's action bar refuses to submit a blank one, but the
+ * API is a surface in its own right.
+ *
+ * Required here rather than across every status change because the other
+ * transitions carry no signature and legitimately have none — a status change is
+ * not an approval. `.trim()` before `.min(1)` because a name field left blank and
+ * a canvas that recorded only a stray stroke both arrive as whitespace, which a
+ * bare `.min(1)` would wave through.
+ */
 export const ApproveCaseSchema = z.object({
   status: z.nativeEnum(CaseStatus),
-  signature: z.string().optional(),
+  signature: z.string().trim().min(1, 'Approver signature is required'),
 });
 
 export const UpdateDocumentsSchema = z.object({

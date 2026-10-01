@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { CLIENT_CATEGORIES_V2 } from '@/lib/constants';
 import { Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { StepLockBar, type StepLock } from './StepLockBar';
 
 interface StepAssessmentProps {
   caseId: string;
@@ -20,10 +21,21 @@ interface StepAssessmentProps {
   saving: boolean;
   userRole?: string;
   readOnly?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
+  /**
+   * Whether this step may still be sealed/released. Split from `readOnly`
+   * because the seal strip's Unlock has to survive a sealed step: a step whose
+   * fields are read-only *because* it is sealed must keep its one way out, or
+   * the worker who sealed it is stuck. Defaults to `false`, not `readOnly`, so
+   * that omitting it can never accidentally reproduce that lockout — a caller
+   * that wants the seal control withheld passes `true`.
+   */
+  lockReadOnly?: boolean;
 }
 
 export function StepAssessment({
-  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly,
+  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, lockReadOnly = false, stepLock,
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
@@ -154,6 +166,21 @@ export function StepAssessment({
               too (the whole assessment object is saved together). */}
         </div>
       </div>
+
+      {/* Step 1's seal. Mounted here, not in the page, so the control that
+          offers it lives with the step it seals. `lockReadOnly` is the sealing
+          signal, kept apart from the fields' `readOnly` so a sealed step still
+          offers its Unlock — the strip above the disabled fields is what tells
+          the worker that releasing the seal is how to change them. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={0}
+        caseData={caseData}
+        interventionCount={0}
+        locked={stepLock}
+        readOnly={lockReadOnly}
+        onChanged={() => mutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }

@@ -10,6 +10,18 @@ import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 
+/**
+ * One row of `GET /cases`, as this page reads it.
+ *
+ * The two count fields are not columns on `cases`: `interventionCount` and
+ * `interAgencyReferralCount` are stamped per case by
+ * `CasesService.attachInterventionCounts`, which is why the approval pipeline can
+ * draw its chips from the same `stepperStepDone` as the case view's stepper and
+ * still answer correctly about step 2. Both names are declared on the server's
+ * `Case` entity and compared there-and-here by `case-fsm-parity.test.ts`, so a
+ * rename on either side is a failing test rather than a page quietly reading
+ * `undefined`.
+ */
 interface ApprovalCase {
   id: string;
   controlNo: string;
@@ -24,7 +36,11 @@ interface ApprovalCase {
   problemsPresented?: string;
   clientCategory?: string;
   interventionCount?: number;
-  referrals?: unknown[];
+  // Present because `stepperStepDone`'s step 2 asks for it. `referrals` is the
+  // transition plan's agency list and no longer feeds that step; the count comes
+  // from the same grouped query as `interventionCount`
+  // (`CasesService.attachInterventionCounts`).
+  interAgencyReferralCount?: number;
   selfRelianceLevel?: number;
   sustainabilityPlan?: string;
   clientSignature?: string;
@@ -117,7 +133,14 @@ export function ApprovalPipelinePage() {
 
                     {/* Case stepper progress — mirrors the case view stepper */}
                     <div className="flex items-center gap-1 mb-2 flex-wrap">
-                      {stepperStatus(c, c.interventionCount ?? 0).map((done, si) => (
+                      {/* `interAgencyReferralCount` comes from the same grouped query as
+                        `interventionCount` (see `attachInterventionCounts`), because step 2
+                        asks for the referral count rather than reading `case.referrals` —
+                        passing nothing here would report "no referral" for a case that has
+                        one, on a card drawn from the same predicate as the case view. */}
+                      {stepperStatus(c, c.interventionCount ?? 0, {
+                        interAgencyReferralCount: c.interAgencyReferralCount ?? 0,
+                      }).map((done, si) => (
                         <span
                           key={si}
                           title={done ? t('approvals.stepDone', 'Step done') : t('approvals.stepPending', 'Step pending')}

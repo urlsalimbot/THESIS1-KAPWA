@@ -58,9 +58,51 @@ export class InterAgencyReferralsService {
     private notifService: NotificationsService,
   ) {}
 
+  // MSWDO staff are not linked to an agency on production accounts; create()
+  // substitutes the MSWDO agency as fromAgencyId for them. `isMswdoStaff` names
+  // that caller so create() can place the referral, and it is the *only* place
+  // "unlinked MSWDO" is decided.
+  //
+  // The `!agencyId` half is load-bearing, not decoration: a social worker who
+  // *is* linked to a partner agency (RHU, LTO, …) is agency staff, and must stay
+  // scoped to their own referrals. Only the unlinked MSWDO roles are exempt.
+  private isMswdoStaff(caller: User): boolean {
+    if (caller.agencyId) return false;
+    return caller.role === UserRole.ADMIN || caller.role === UserRole.SW;
+  }
+
+  /**
+   * The one rule for "may this caller see this referral", stated once.
+   *
+   * Every read of a referral row goes through it: the point read (`findOne`), the
+   * endorsement letter, and — as a `WHERE` union rather than a per-row test —
+   * `findForCase`. It had three near-copies, and the drift is what produced the
+   * letter's authorization bug: the letter asked `isMswdoStaff`, which exempts an
+   * unlinked MSWDO worker from agency scoping *entirely*, so it handed out the
+   * letter for referrals the worker had no link to at all — a read of the
+   * referral row that `findOne` refused. A fourth copy is how that happened.
+   *
+   * The three answers, in order, and none of them is a role shortcut:
+   *  - an admin sees every referral, agency-linked or not. Deliberate, and the
+   *    same answer `findOne` has always given, so the letter matching it is the
+   *    fix rather than a widening.
+   *  - otherwise a participating agency — sender or receiver — sees it. This is
+   *    how an agency learns it has been referred something.
+   *  - otherwise the social worker who created it sees it, which is what makes
+   *    `create()`'s MSWDO substitution legible to the person who just did it.
+   */
+  private referralVisibleTo(
+    ref: Pick<InterAgencyReferral, 'fromAgencyId' | 'toAgencyId' | 'createdBy'>,
+    caller: User,
+  ): boolean {
+    if (caller.role === UserRole.ADMIN) return true;
+    if (caller.agencyId && (ref.fromAgencyId === caller.agencyId || ref.toAgencyId === caller.agencyId)) return true;
+    return caller.role === UserRole.SW && ref.createdBy === caller.id;
+  }
+
   async create(dto: CreateInterAgencyReferralInput, caller: User) {
     let fromAgencyId = caller.agencyId as string | undefined;
-    if (!fromAgencyId && (caller.role === UserRole.ADMIN || caller.role === UserRole.SW)) {
+    if (this.isMswdoStaff(caller)) {
       // MSWDO staff are not linked to an agency on production accounts;
       // fall back to the designated MSWDO agency so case-flow referrals work.
       const mswdo = await this.agencyRepo.findOne({ where: { code: 'MSWDO', isActive: true } });
@@ -96,9 +138,9 @@ export class InterAgencyReferralsService {
       relations: ['fromAgency', 'toAgency', 'person', 'case'],
     });
     if (!ref) throw new NotFoundException('Inter-agency referral not found');
-    if (caller.role === 'admin') return ref;
-    if (caller.agencyId && (ref.fromAgencyId === caller.agencyId || ref.toAgencyId === caller.agencyId)) return ref;
-    if (caller.role === UserRole.SW && ref.createdBy === caller.id) return ref;
+    // 404, not 403: a referral this caller may not see should be indistinguishable
+    // from one that does not exist.
+    if (this.referralVisibleTo(ref, caller)) return ref;
     throw new NotFoundException('Inter-agency referral not found');
   }
 
@@ -258,7 +300,12 @@ export class InterAgencyReferralsService {
   }
 
   async findForCase(caseId: string, caller: User) {
-    if (caller.role === 'admin') {
+    // The row-set form of `referralVisibleTo`, because TypeORM ORs an array of
+    // `where` objects rather than testing them per row. `[]` means unscoped, which
+    // is only correct for the admin case `referralVisibleTo` also waves through.
+    // `inter-agency-referrals.service.spec.ts` compares this list against the
+    // point read for every caller shape, so the two cannot drift.
+    if (caller.role === UserRole.ADMIN) {
       return this.repo.find({
         where: { caseId },
         order: { createdAt: 'DESC' },
@@ -486,11 +533,12 @@ export class InterAgencyReferralsService {
       relations: ['toAgency', 'fromAgency', 'case', 'person'],
     });
     if (!ref) throw new NotFoundException('Referral not found');
-    if (
-      caller.role !== 'admin' &&
-      caller.agencyId !== ref.fromAgencyId &&
-      caller.agencyId !== ref.toAgencyId
-    ) {
+    // The letter is a read of this row, so it is scoped by `referralVisibleTo` —
+    // the same linkage `findOne` demands. It used to ask `isMswdoStaff` instead,
+    // which exempted an unlinked MSWDO worker from agency scoping altogether and
+    // so let that worker download the letter of a referral they were not party to,
+    // something `findOne` refused. See `referralVisibleTo`.
+    if (!this.referralVisibleTo(ref, caller)) {
       throw new ForbiddenException('Referral is not associated with your agency');
     }
 

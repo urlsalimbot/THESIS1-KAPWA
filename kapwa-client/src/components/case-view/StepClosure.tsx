@@ -6,22 +6,31 @@ import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
-  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
-} from '@/components/ui/alert-dialog';
 import { FileText, CheckCircle, Clock, Download, Lock } from 'lucide-react';
 import { downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
+import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 
 interface StepClosureProps {
   caseId: string;
   caseData: any;
   readOnly?: boolean;
+  /**
+   * Whether the seal control is withheld. Separate from `readOnly` because this
+   * step's two answers disagree: `readOnly` flips true exactly when the closure
+   * is complete (`stepDone[4]`), which is exactly when the step becomes sealable
+   * — so routing the body signal to the bar hid the Lock button on the one step
+   * it was written for, and the bar rendered `null`. Defaults to `false`, so
+   * omitting it can never hide a sealed step's Unlock; a caller that wants the
+   * seal control withheld passes `true`.
+   */
+  lockReadOnly?: boolean;
+  /** This step's own seal row, or null — the case view resolves it. */
+  stepLock?: StepLock | null;
 }
 
-export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
+export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, stepLock }: StepClosureProps) {
   const { t } = useTranslation();
   const CLOSURE_OUTCOMES = [
     { value: 'graduated', label: t('caseView.closure.outcomeGraduated', 'Graduated'), description: t('caseView.closure.outcomeGraduatedDesc', 'Achieved Level 3 self-sufficiency') },
@@ -40,7 +49,6 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
   });
 
   const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
 
   async function handleSave() {
     setSaving(true);
@@ -53,31 +61,6 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
       console.error('Failed to save closure:', e);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleFinalClosure() {
-    if (!closure.closureOutcome) {
-      toast.error(t('caseView.closure.selectOutcome', 'Please select a closure outcome'));
-      return;
-    }
-    if (!closure.clientSignature) {
-      toast.error(t('caseView.closure.captureSignature', 'Please capture client signature'));
-      return;
-    }
-    setSaving(true);
-    try {
-      // Save closure data first
-      await api.patch(`/cases/${caseId}/closure`, {
-        closureOutcome: closure.closureOutcome,
-        exitNotes: closure.exitNotes || null,
-        clientSignature: closure.clientSignature,
-      });
-      await mutate(queryKeys.cases.detail(caseId));
-    } catch (e) {
-      console.error('Failed to close case:', e);
     } finally {
       setSaving(false);
     }
@@ -257,43 +240,15 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      {!isClosed && (
+      {/* Action Buttons. Only the exit record is saved here; closing the case is
+          a forward hop that ends this step's work, so it runs the step-5 seal
+          gate and lives on `CaseActionBar`'s "Close case" control. This card used
+          to offer a second "Close Case" that closed directly, around that gate. */}
+      {!isClosed && !readOnly && (
         <div className="flex gap-2">
-          {!readOnly && (
-            <Button onClick={handleSave} disabled={saving} variant="outline">
-              {saving ? t('caseView.saving', 'Saving...') : t('caseView.closure.saveProgress', 'Save Progress')}
-            </Button>
-          )}
-          {!readOnly && (
-            <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button
-                  disabled={saving || !closure.closureOutcome || !closure.clientSignature}
-                  variant="default"
-                >
-                  {saving ? t('caseView.closing', 'Closing...') : t('caseView.closure.closeCase', 'Close Case')}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t('caseView.closure.closeCaseTitle', 'Close Case?')}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t('caseView.closure.closeCaseDesc', 'This will permanently close this case. This action cannot be undone.')}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t('caseView.cancel', 'Cancel')}</AlertDialogCancel>
-                  <AlertDialogAction onClick={async () => {
-                    await handleFinalClosure();
-                    setCloseDialogOpen(false);
-                  }}>
-                    {t('caseView.closure.closeCase', 'Close Case')}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+          <Button onClick={handleSave} disabled={saving} variant="outline">
+            {saving ? t('caseView.saving', 'Saving...') : t('caseView.closure.saveProgress', 'Save Progress')}
+          </Button>
         </div>
       )}
 
@@ -307,6 +262,20 @@ export function StepClosure({ caseId, caseData, readOnly }: StepClosureProps) {
           <Download size={14} /> {t('caseView.closure.downloadCsr', 'Download Case Study Report (CSR)')}
         </Button>
       </div>
+
+      {/* Step 5's seal. `lockReadOnly`, not `readOnly`: the closure form locks
+          down once its data is complete, which is the moment this step becomes
+          sealable, so the body's signal would withhold the control on precisely
+          the case it exists for. */}
+      <StepLockBar
+        caseId={caseId}
+        stepIndex={4}
+        caseData={caseData}
+        interventionCount={0}
+        locked={stepLock}
+        readOnly={lockReadOnly}
+        onChanged={() => mutate(queryKeys.cases.detail(caseId))}
+      />
     </div>
   );
 }

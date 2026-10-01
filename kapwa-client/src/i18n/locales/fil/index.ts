@@ -1556,6 +1556,29 @@ const fil: EnLocale = {
     "verifyAndEnable": "I-verify at Paganahin"
   },
   "caseView": {
+    "action": {
+      "approveActivate": "Aprubahan at i-activate",
+      "approveBody": "Lilipat ang kaso mula In Review patungong Active. Itatala ang iyong para bilang tagapag-apruba.",
+      "approveTitle": "Aprubahan at i-activate ang kaso na ito?",
+      "cancel": "Kanselahin",
+      "closeBody": "Lilipat ang kaso mula Transitioning patungong Closed. Kailangan ng closure ang pirma ng kliyente at ang naitalang resulta ng closure.",
+      "closeCase": "Isara ang kaso",
+      "closeTitle": "Isara ang kaso na ito?",
+      "confirm": "Kumpirmahin",
+      "flagConfirmBody": "Ihatid ito sa administrator para sa pag-apruba. Lilipat ito sa In Review, at ang administrator ang humahatol kung aktibado ito.",
+      "flagConfirmTitle": "I-flag para sa pagsusuri ng admin?",
+      "flagForReview": "I-flag para sa pagsusuri ng admin",
+      "lockedStepsHeading": "I-seal ang mga hakbang na ito bago mag-flag para sa pagsusuri:",
+      "lockedStepsHint": "I-seal ang mga hakbang sa ibaba, pagkatapos ay i-flag ang kaso para sa pagsusuri.",
+      "lockedStepsTitle": "Mga hakbang na bukas pa: {{names}}",
+      "movedTo": "Nilipat sa {{status}}.",
+      "nextStatusHint": "Lilipat ang kaso na ito sa {{status}}.",
+      "refreshFailed": "Nailipat na ang kaso, ngunit hindi na-refresh ang pahina",
+      "sendToReview": "Ipadala sa pagsusuri",
+      "signatureLabel": "Pirma ng tagapag-apruba",
+      "signatureRequired": "Ilagay ang iyong para upang aprubahan.",
+      "transitionFailed": "Hindi mailipat ang kaso",
+    },
     "cardCompliance": "Pagsunod: {{count}}",
     "cardComplianceTitle": "I-log ang Item ng Pagsunod",
     "cardCostLabel": "Halaga (₱)",
@@ -1676,6 +1699,9 @@ const fil: EnLocale = {
         "pdaf": "PDAF"
       },
       "interventionRecord": "Rekord ng Interbensyon",
+      "toBeIssued": "Interbensyong ibibigay",
+      "programDocsRequired": "Kailangan: {{docs}}",
+      "completePreviewing": "kumpleto (kasama ang piniling programa)",
       "interventionUnit_one": "interbensyon",
       "interventionUnit_other": "interbensyon",
       "modeOfDelivery": {
@@ -1698,7 +1724,6 @@ const fil: EnLocale = {
       "selectProgram": "— Pumili ng programa —",
       "serviceName": "Pangalan ng Serbisyo *",
       "serviceNamePlaceholder": "hal., Counseling Session, Home Visit",
-      "submitForReview": "Isumite para sa Review →",
       "submitForReviewHint": "Isumite para sa review ng admin upang ma-activate ang kaso.",
       "interventionNotNeededBadge": "Hindi kailangan ang interbensyon",
       "interventionNotNeededActive": "Walang interbensyon na ibibigay para sa kasong ito; ang referral ang sumasaklaw sa serbisyo.",
@@ -1748,6 +1773,17 @@ const fil: EnLocale = {
                                                 "servicesDelivered": "Naihatid na serbisyo",
       "servicesDeliveredHint": "Markahan ang kaso bilang naglilipat upang simulan ang proseso ng graduation.",
           },
+    "lock": {
+      "lock": "I-seal",
+      "lockFailed": "Hindi maiseal ang hakbang na ito",
+      "lockedBy": "Naka-seal ni {{name}} · {{when}}",
+      "lockedByUnknown": "Hindi nakalagay",
+      "notDoneHint": "Kumpletuhin muna ang hakbang na ito bago i-seal.",
+      "sealedNotice": "Naka-seal na ang hakbang na ito. Alisin ang seal upang makapagbago, pagkatapos ay i-seal itong muli.",
+      "refreshFailed": "Naisave ang pagbabago, ngunit hindi na-update ang kaso",
+      "unlock": "Alisin ang seal",
+      "unlockFailed": "Hindi maaalis ang seal",
+    },
     "processing": "Pinoproseso...",
     "saving": "Nagsi-save...",
     "signatures": {
@@ -1788,7 +1824,6 @@ const fil: EnLocale = {
       "transition": "Suriin ang Tulong na Naibigay",
       "transitionDesc": "Pagsusuri ng self-reliance"
     },
-    "submitting": "Isinusumite...",
     "transition": {
       "add": "Magdagdag",
       "addVisit": "Magdagdag ng Pagbisita",
@@ -1811,6 +1846,7 @@ const fil: EnLocale = {
       "planReady": "Handa na ang transition plan",
       "planReadyHint": "Markahan ang kaso bilang naglilipat upang simulan ang proseso ng graduation.",
       "saveTransitionPlan": "I-save ang Transition Plan",
+      "saveVisits": "I-save ang mga Follow-up Visit",
       "selfRelianceAssessment": "Pagsusuri ng Pagsasarili",
       "selfSufficient": "Nakakapag-isa — magpatuloy sa Pagsasara.",
       "notSelfSufficient": "Hindi pa nakakapag-isa — maaaring isailalim sa renewal ng kaso.",
@@ -1899,8 +1935,7 @@ const fil: EnLocale = {
     "searchBeneficiary": "Maghanap ng benepisyaryo ayon sa pangalan...",
     "searching": "Nagha-hanap...",
     "selectAgency": "Pumili ng ahensya...",
-    "toAgency": "Papunta sa Ahensya",
-    "viewDetailsAria": "Tingnan ang mga detalye para kay {{name}}"
+    "toAgency": "Papunta sa Ahensya"
   },
   "bulkActions": {
     "allFailed_one": "Nabigo ang lahat ng {{count}} kaso.",

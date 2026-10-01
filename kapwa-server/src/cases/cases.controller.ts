@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, HttpCode, BadRequestException, Param, Body, Query, UseGuards, Request, UseInterceptors, SerializeOptions, DefaultValuePipe, ParseIntPipe, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
+import { CaseStepLocksService } from './case-step-locks.service';
 import { GisExportService } from '../gis/gis-export.service';
 import { CaseStatus } from './case.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,12 +24,26 @@ function mapStatus(s: string): CaseStatus {
   return STATUS_ALIASES[s] || (s as CaseStatus);
 }
 
+// Strict step-index parse for the step-lock routes. `parseInt` is the obvious
+// choice and is wrong here: it turns "1.5" into 1, so a request for a step that
+// does not exist would seal step 1 instead and return 201. `ParseIntPipe` does
+// not help either — it parseInts first and only then checks `isInteger`, by
+// which point the truncation has already happened. Only bare decimal digits are
+// accepted; the 0..4 range stays with the service, which owns the message.
+const STEP_INDEX_PATTERN = /^\d+$/;
+function parseStepIndex(raw: string): number {
+  if (!STEP_INDEX_PATTERN.test(raw)) {
+    throw new BadRequestException(`Step index must be a whole number, got "${raw}"`);
+  }
+  return Number(raw);
+}
+
 import {
   CreateCaseSchema, UpdateStatusSchema, ApproveCaseSchema,
   UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema, RejectCaseSchema,
   AssessmentV2Schema, TransitionPlanSchema, RequirementsSchema, ClosureSchema,
   ReferralDecisionSchema,
-  CreateCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
+  CreateCaseInput, ApproveCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
   TransitionPlanInput, RequirementsInput, ClosureInput, ReferralDecisionInput,
 } from './dto/cases.zod';
 
@@ -42,6 +57,7 @@ export class CasesController {
   constructor(
     private casesService: CasesService,
     private casesExportService: CasesExportService,
+    private stepLocks: CaseStepLocksService,
     private gisExportService: GisExportService,
   ) {}
 
@@ -111,8 +127,10 @@ export class CasesController {
 
   @Patch(':id/approve')
   @Roles('admin')
-  async approve(@Param('id') id: string, @Body(new ZodPipe(ApproveCaseSchema)) body: { status: CaseStatus; signature?: string }, @Request() req: AuthenticatedRequest) {
-    return this.casesService.approve(id, mapStatus(body.status as string), body.signature || '', req.user?.role || '', req.user?.id);
+  async approve(@Param('id') id: string, @Body(new ZodPipe(ApproveCaseSchema)) body: ApproveCaseInput, @Request() req: AuthenticatedRequest) {
+    // No `|| ''` fallback: the schema requires a non-empty signature, so the only
+    // value that could reach here is a real one. `ApproveCaseInput` says so too.
+    return this.casesService.approve(id, mapStatus(body.status as string), body.signature, req.user?.role || '', req.user?.id);
   }
 
   @Post(':id/issue-coe')
@@ -173,6 +191,7 @@ export class CasesController {
     @Body(new ZodPipe(AssessmentV2Schema)) body: AssessmentV2Input,
     @Request() req: AuthenticatedRequest,
   ) {
+    await this.stepLocks.assertUnsealed(id, 0);
     return this.casesService.updateAssessmentV2(id, body, req.user?.id);
   }
 
@@ -183,6 +202,11 @@ export class CasesController {
     @Body(new ZodPipe(TransitionPlanSchema)) body: TransitionPlanInput,
     @Request() req: AuthenticatedRequest,
   ) {
+    // The body is passed so the guard judges *which fields it carries*: this route
+    // writes step 4's self-reliance assessment and also the case's follow-up
+    // visits, and only the former is what step 4's seal claims. See
+    // `CASE_STEP_UNGUARDED_FIELDS`.
+    await this.stepLocks.assertUnsealed(id, 3, body);
     return this.casesService.updateTransitionPlan(id, body, req.user?.id);
   }
 
@@ -192,6 +216,7 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(RequirementsSchema)) body: RequirementsInput,
   ) {
+    await this.stepLocks.assertUnsealed(id, 1);
     return this.casesService.updateRequirements(id, body);
   }
 
@@ -202,6 +227,7 @@ export class CasesController {
     @Body(new ZodPipe(ClosureSchema)) body: ClosureInput,
     @Request() req: AuthenticatedRequest,
   ) {
+    await this.stepLocks.assertUnsealed(id, 4);
     return this.casesService.updateClosure(id, body, req.user?.role);
   }
 
@@ -211,6 +237,7 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
   ) {
+    await this.stepLocks.assertUnsealed(id, 2);
     return this.casesService.updateReferralDecision(id, body.notNeeded);
   }
 
@@ -220,7 +247,46 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
   ) {
+    await this.stepLocks.assertUnsealed(id, 1);
     return this.casesService.updateInterventionDecision(id, body.notNeeded);
+  }
+
+  // Each step-field write above opens with `assertUnsealed(id, step)`, naming the
+  // step whose own data the write changes. The refusal lives here — on the route,
+  // the single funnel every write of that field passes through — rather than in
+  // each writing service, because only the route knows which step a body belongs
+  // to, and because a client-side-only check is bypassable by calling the PATCH
+  // directly, which is exactly what the `assessed -> in_review` gate was built to
+  // stop relying on. Step 1's two decision routes are named separately from
+  // `requirements` because the three are three different bodies that all belong
+  // to step 2's data; the mapping is stated once per route so a new step-field
+  // write has to state its step rather than inherit a guess.
+
+  // Sealing a step is reversible by the same two roles, so both verbs sit
+  // together. The service re-derives whether the step is done; the client is
+  // never asked to vouch for it.
+  @Post(':id/steps/:stepIndex/lock')
+  @Roles('admin', 'social_worker')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Seal a completed case step' })
+  async lockStep(
+    @Param('id') id: string,
+    @Param('stepIndex') stepIndex: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.stepLocks.lock(id, parseStepIndex(stepIndex), req.user);
+  }
+
+  @Delete(':id/steps/:stepIndex/lock')
+  @Roles('admin', 'social_worker')
+  @ApiOperation({ summary: 'Release a sealed case step' })
+  async unlockStep(
+    @Param('id') id: string,
+    @Param('stepIndex') stepIndex: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    await this.stepLocks.unlock(id, parseStepIndex(stepIndex), req.user);
+    return { ok: true };
   }
 
   @Get('csr/:controlNo/pdf')

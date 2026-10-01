@@ -241,8 +241,16 @@ export class FilingService {
   // fetched. This self-healing check deletes the stale row and clears any case
   // URL (certificateUrl / pettyCashVoucherUrl) that referenced it, so the UI
   // can re-issue instead of failing silently.
-  async ensureFileOnDisk(doc: DocumentVault): Promise<boolean> {
+  //
+  // `opts.heal === false` is the sealed-step branch: the file is still gone, so
+  // the caller gets the same `false` (and its 404), but the row, the
+  // `case_requirements` re-derivation and the cleared case URL are all skipped.
+  // A GET must not move sealed data, and a worker may still need the read; the
+  // seal is released through its own endpoint, not as a side effect of a
+  // download that happened to find a rotated file.
+  async ensureFileOnDisk(doc: DocumentVault, opts?: { heal?: boolean }): Promise<boolean> {
     if (fs.existsSync(this.diskPath(doc.fileName))) return true;
+    if (opts?.heal === false) return false;
     await this.docRepo.delete(doc.id);
     if (doc.caseId && doc.requirementKey) {
       await this.recomputeRequirementMet(doc.caseId, doc.requirementKey);
