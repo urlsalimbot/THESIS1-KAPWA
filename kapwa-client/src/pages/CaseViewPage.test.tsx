@@ -321,6 +321,44 @@ describe('CaseViewPage — government ID photo', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View Petty Cash Voucher' }));
     expect(mockDownloadFilingDoc).toHaveBeenCalledWith('FILE-PCV-2', 'petty-cash-voucher.pdf');
   });
+
+  // The sidebar is the one home for generated documents. The page column used
+  // to render its own copy above the step, so the same two links sat in two
+  // places on every case screen.
+  it('renders generated documents in the sidebar alone, beside the uploaded record', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('cases')) {
+        return Promise.resolve({
+          ...mockCase,
+          certificateUrl: '/filing/FILE-COE-1/download',
+          pettyCashVoucherUrl: '/filing/FILE-PCV-2/download',
+        });
+      }
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<CaseViewPage />);
+
+    const cert = await screen.findByRole('button', { name: 'View Certificate of Eligibility' });
+    const pcv = screen.getByRole('button', { name: 'View Petty Cash Voucher' });
+    const aside = screen.getByRole('complementary');
+    expect(aside.contains(cert)).toBe(true);
+    expect(aside.contains(pcv)).toBe(true);
+    // One of each — no copy left in the main column, and one card naming them.
+    expect(screen.getAllByRole('button', { name: 'View Certificate of Eligibility' })).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: 'Generated Documents' })).toHaveLength(1);
+
+    // The two kinds are named apart rather than implied: the office's own files
+    // keep their card, and it now says what it holds.
+    const uploaded = screen.getByRole('heading', { name: 'Uploaded Documents' });
+    expect(aside.contains(uploaded)).toBe(true);
+  });
 });
 
 describe('CaseViewPage — GIS PDF', () => {

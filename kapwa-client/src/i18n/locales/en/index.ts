@@ -72,6 +72,7 @@ const en = {
     "cardWorkerLabel": "Worker Name / Sign",
     "implement": {
     "generatedDocs": "Generated Documents",
+    "generatedDocsHint": "Issued by the system at approval, not uploaded.",
     "viewCertificate": "View Certificate of Eligibility",
     "viewVoucher": "View Petty Cash Voucher",
       "interventionUnit_one": "intervention",
@@ -1123,7 +1124,7 @@ const en = {
     "dateOfBirth": "Date of Birth",
     "dateTo": "Date To",
     "description": "Real-time view of processed interventions and logs.",
-    "documents": "Documents",
+    "documents": "Uploaded Documents",
     "download": "Download",
     "downloadFailed": "Download failed",
     "estimatedIncome": "Estimated Income",

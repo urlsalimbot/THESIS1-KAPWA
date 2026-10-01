@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { referralStatusLabel, statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import {
-  User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, Download, FileWarning,
+  User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, FileSignature, Download, FileWarning,
   Plus, Lock, Send, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
 } from 'lucide-react';
 import {
@@ -650,32 +650,6 @@ export function CaseViewPage() {
             <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} />
           </div>
 
-          {/* Generated approval documents — COE + PCV produced at approval,
-              always available once the case is approved */}
-          {(caseData?.certificateUrl || caseData?.pettyCashVoucherUrl) && (
-            <div className="rounded-lg border bg-card px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
-              <span className="text-sm font-semibold">{t('caseView.generatedDocs', 'Generated Documents')}</span>
-              {caseData.certificateUrl && (
-                <button
-                  type="button"
-                  onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
-                  className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                >
-                  <FileText size={14} /> {t('caseView.viewCertificate', 'View Certificate of Eligibility')}
-                </button>
-              )}
-              {caseData.pettyCashVoucherUrl && (
-                <button
-                  type="button"
-                  onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
-                  className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                >
-                  <FileText size={14} /> {t('caseView.viewVoucher', 'View Petty Cash Voucher')}
-                </button>
-              )}
-            </div>
-          )}
-
           {/* Active Step Content */}
           <div>
             {stepComponents[currentStep]}
@@ -836,7 +810,7 @@ export function CaseViewPage() {
 
           {/* Documents card */}
           {ben && (
-            <SectionCard icon={FileText} title={t('cases.documents', 'Documents')}>
+            <SectionCard icon={FileText} title={t('cases.documents', 'Uploaded Documents')}>
               <div className="px-4 py-3 space-y-1">
                 {documents.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t('cases.noDocuments', 'No documents attached to this case.')}</p>
@@ -871,6 +845,40 @@ export function CaseViewPage() {
                   />
                 </div>
               )}
+            </SectionCard>
+          )}
+
+          {/* Generated documents: produced by the system at approval, in a card
+              of their own beside the uploaded record rather than mixed into it —
+              the reader should not have to work out which files the office
+              attached and which the system issued. */}
+          {(caseData?.certificateUrl || caseData?.pettyCashVoucherUrl) && (
+            <SectionCard icon={FileSignature} title={t('caseView.generatedDocs', 'Generated Documents')}>
+              <div className="px-4 py-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {t('caseView.generatedDocsHint', 'Issued by the system at approval, not uploaded.')}
+                </p>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                  {caseData.certificateUrl && (
+                    <button
+                      type="button"
+                      onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
+                      className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                    >
+                      <FileText size={14} /> {t('caseView.viewCertificate', 'View Certificate of Eligibility')}
+                    </button>
+                  )}
+                  {caseData.pettyCashVoucherUrl && (
+                    <button
+                      type="button"
+                      onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
+                      className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                    >
+                      <FileText size={14} /> {t('caseView.viewVoucher', 'View Petty Cash Voucher')}
+                    </button>
+                  )}
+                </div>
+              </div>
             </SectionCard>
           )}
 

@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { FileText, CheckCircle, Clock, Download, Lock } from 'lucide-react';
-import { downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
+import { CheckCircle, Clock, Download, Lock } from 'lucide-react';
+import { downloadCsrPdf } from '@/lib/api';
 import SignaturePad from '../forms/SignaturePad';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
@@ -67,21 +66,6 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
   }
 
   const isClosed = caseData?.status === 'closed';
-
-  // Generated documents sit behind the Bearer token; opening the raw API URL in
-  // a new tab cannot attach it (401). Download through the authenticated helper.
-  async function viewGeneratedDoc(url: string, fallbackName: string) {
-    const docId = filingDocIdFromUrl(url);
-    if (!docId) {
-      toast.error(t('cases.downloadFailed', 'Download failed'));
-      return;
-    }
-    try {
-      await downloadFilingDoc(docId, fallbackName);
-    } catch {
-      toast.error(t('cases.downloadFailed', 'Download failed'));
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -199,44 +183,6 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
               />
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Documents */}
-      <div className="rounded-lg border bg-card">
-        <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">{t('caseView.closure.documents', 'Documents')}</h3>
-        </div>
-        <Separator />
-        <div className="px-4 py-3 space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">{t('caseView.closure.certificate', 'Certificate')}</span>
-            {caseData?.certificateUrl ? (
-              <button
-                type="button"
-                onClick={() => viewGeneratedDoc(caseData.certificateUrl, 'certificate-of-eligibility.pdf')}
-                className="flex items-center gap-1 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-              >
-                <FileText size={14} /> {t('caseView.closure.view', 'View')}
-              </button>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">{t('caseView.closure.pettyCashVoucher', 'Petty Cash Voucher')}</span>
-            {caseData?.pettyCashVoucherUrl ? (
-              <button
-                type="button"
-                onClick={() => viewGeneratedDoc(caseData.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
-                className="flex items-center gap-1 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-              >
-                <FileText size={14} /> {t('caseView.closure.view', 'View')}
-              </button>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
         </div>
       </div>
 

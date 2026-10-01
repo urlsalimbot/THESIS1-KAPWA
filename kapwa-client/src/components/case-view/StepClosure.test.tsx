@@ -3,8 +3,9 @@ import { render, screen } from '@testing-library/react';
 import { StepClosure } from './StepClosure';
 import { formatDate } from '@/lib/format';
 
-// The generated-document helpers are imported at module scope by StepClosure, so
-// the mock has to name them even though this spec never presses a download.
+// `downloadCsrPdf` is the module-scope helper StepClosure imports; the rest of
+// this module's exports are named so any component transitively pulled in still
+// resolves them, even though this spec never presses a download.
 vi.mock('@/lib/api', () => ({
   api: { post: vi.fn(), patch: vi.fn(), del: vi.fn(), get: vi.fn() },
   downloadCsrPdf: vi.fn(),
@@ -65,6 +66,21 @@ describe('StepClosure — sealing step 5', () => {
     renderStep({ status: 'transitioning' });
 
     expect(screen.queryByRole('button', { name: /Close Case/i })).toBeNull();
+  });
+
+  // Generated documents have one home — the case view's sidebar. This step used
+  // to print the certificate and the voucher itself, which put the same two
+  // links twice on the screen once the sidebar carried them.
+  it('lists no generated documents of its own', () => {
+    renderStep({
+      status: 'transitioning',
+      certificateUrl: '/filing/FILE-COE-1/download',
+      pettyCashVoucherUrl: '/filing/FILE-PCV-2/download',
+    });
+
+    expect(screen.queryByRole('heading', { name: 'Documents' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /View Certificate/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Petty Cash Voucher/i })).toBeNull();
   });
 
   it('offers a viewer neither the seal nor the hint it cannot act on', () => {

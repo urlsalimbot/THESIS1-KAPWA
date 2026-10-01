@@ -741,7 +741,7 @@ const fil: EnLocale = {
     "transition": "Transisyon",
     "view": "Tingnan",
     "viewProfile": "Tingnan ang Profile",
-    "documents": "Mga Dokumento",
+    "documents": "Mga Na-upload na Dokumento",
     "download": "I-download",
     "downloadFailed": "Nabigo ang pag-download",
     "noDocuments": "Walang kalakip na dokumento sa kasong ito.",
@@ -1684,6 +1684,7 @@ const fil: EnLocale = {
     },
     "implement": {
     "generatedDocs": "Mga Binuong Dokumento",
+    "generatedDocsHint": "Inisyu ng sistema sa pag-apruba, hindi ito na-upload.",
     "viewCertificate": "View Certificate of Eligibility",
     "viewVoucher": "View Petty Cash Voucher",
       "addIntervention": "Magdagdag ng Interbensyon",
