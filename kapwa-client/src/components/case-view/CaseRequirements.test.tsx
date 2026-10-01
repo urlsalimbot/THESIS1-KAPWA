@@ -42,16 +42,25 @@ const DOCS = [
   },
 ];
 
-function renderRequirements(docs: unknown[] = DOCS, checklist: Record<string, boolean> = {}) {
+function renderRequirements(
+  docs: unknown[] = DOCS,
+  checklist: Record<string, boolean> = {},
+  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[] } = {},
+) {
   mockSWR.mockImplementation((key: unknown) => {
     const root = Array.isArray(key) ? key[0] : key;
-    if (root === 'cases') return { data: INTERVENTIONS };
-    if (root === 'programs') return { data: PROGRAMS };
+    if (root === 'cases') return { data: overrides.interventions ?? INTERVENTIONS };
+    if (root === 'programs') return { data: overrides.programs ?? PROGRAMS };
     if (root === 'filing') return { data: docs };
     return { data: undefined };
   });
   return render(
-    <CaseRequirements caseId="c1" caseData={{ requirementsChecklist: checklist }} userRole="social_worker" />,
+    <CaseRequirements
+      caseId="c1"
+      caseData={{ requirementsChecklist: checklist }}
+      userRole="social_worker"
+      extraProgramIds={overrides.extraProgramIds}
+    />,
   );
 }
 
@@ -133,5 +142,76 @@ describe('CaseRequirements — one row per uploaded document', () => {
     renderRequirements(DOCS, { 'Valid ID': true });
     expect(screen.queryByRole('button', { name: /Passed on-site, no copy/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy();
+  });
+});
+
+/**
+ * The checklist is rendered inside the add-intervention card, so a worker who
+ * has *picked* a program but not yet saved it still sees what that program will
+ * demand of them. Nothing about an unsaved selection is persisted, so the step
+ * has to hand the selection in — and these three cases are the three shapes
+ * that can produce the list: nothing, the saved programs alone, the saved
+ * programs plus the one in hand.
+ */
+describe('CaseRequirements — previewing a program that is not yet an intervention', () => {
+  const MEDICAL = {
+    id: 'med-1',
+    name: 'Medical Assistance',
+    requiredDocuments: ['Barangay Certificate of Indigency', 'Medical abstract'],
+  };
+  const saved = { id: 'i1', programId: 'p1' };
+
+  beforeEach(() => {
+    mockPatch.mockReset().mockResolvedValue({});
+    mockDel.mockReset().mockResolvedValue({});
+    mockMutate.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('shows the selected program documents before the intervention is saved', () => {
+    // Nothing saved, and the program list is the only place this program exists.
+    renderRequirements([], {}, { programs: [MEDICAL], interventions: [], extraProgramIds: ['med-1'] });
+
+    expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('Medical abstract')).toBeTruthy();
+    // The count is the checklist's own arithmetic over the keys it rendered, so
+    // it proves the list is the two documents above and nothing else.
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
+  });
+
+  it('renders nothing for a selection that is still only in the form', () => {
+    // The counterpart to the test above: without the selection there is no
+    // requirement at all, so the row above is the selection's doing and not a
+    // checklist that always renders these two names.
+    renderRequirements([], {}, { programs: [MEDICAL], interventions: [] });
+
+    expect(screen.queryByText('Barangay Certificate of Indigency')).toBeNull();
+    expect(screen.queryByText('Medical abstract')).toBeNull();
+    expect(screen.queryByText(/complete/)).toBeNull();
+  });
+
+  it('adds the selected program to the saved ones rather than replacing them', () => {
+    renderRequirements([], {}, {
+      programs: [PROGRAMS[0], MEDICAL],
+      interventions: [saved],
+      extraProgramIds: ['med-1'],
+    });
+
+    expect(screen.getByText('Valid ID')).toBeTruthy();
+    expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('Medical abstract')).toBeTruthy();
+    expect(screen.getByText('0/3 complete')).toBeTruthy();
+  });
+
+  it('ignores an ad-hoc sentinel, which names no program', () => {
+    // The step's form uses "adhoc:other" for a service that has no program
+    // behind it, so there is nothing to preview and the checklist must not
+    // invent a requirement for it.
+    renderRequirements([], {}, {
+      programs: [MEDICAL],
+      interventions: [],
+      extraProgramIds: ['adhoc:other'],
+    });
+
+    expect(screen.queryByText('Barangay Certificate of Indigency')).toBeNull();
   });
 });

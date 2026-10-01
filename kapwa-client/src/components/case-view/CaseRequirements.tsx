@@ -24,6 +24,15 @@ interface CaseRequirementsProps {
   caseId: string;
   caseData: any;
   userRole?: string;
+  /** Programs chosen in the step's form but not yet saved as interventions.
+   *  Nothing about such a selection is persisted, so the step hands its ids in
+   *  and the checklist lists their documents: a worker learns what a program
+   *  will demand while choosing it, not after committing to it. */
+  extraProgramIds?: string[];
+  /** Render as a section of a card that already exists. The merged
+   *  intervention card brings its own border and separator, so a second pair
+   *  inside it would draw a box within a box. */
+  embedded?: boolean;
 }
 
 // Documentary-needs checklist shared by the Implement HIP step (step 2) and the
@@ -34,7 +43,7 @@ interface CaseRequirementsProps {
 // the worker confirms an uploaded document on-site, uploads it at the office, or
 // records that the client passed it on-site directly. Claimant (remote) uploads
 // stay pending until confirmed.
-export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirementsProps) {
+export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, embedded }: CaseRequirementsProps) {
   const { t } = useTranslation();
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [] } = useSWR<any[]>(queryKeys.cases.interventions(caseId));
@@ -46,7 +55,16 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
 
   const checklist = (caseData?.requirementsChecklist || {}) as Record<string, boolean>;
 
-  const programIds = [...new Set(interventions.map((i: any) => i.programId).filter(Boolean))];
+  // The union of the programs behind saved interventions and the ones the step
+  // currently has selected. De-duplicated because one program can back several
+  // interventions, and filtered because an ad-hoc service names no program —
+  // its documents are nobody's to preview.
+  const programIds = [
+    ...new Set([
+      ...interventions.map((i: any) => i.programId).filter(Boolean),
+      ...(extraProgramIds ?? []).filter(Boolean),
+    ]),
+  ];
   const relevantPrograms = programs.filter((p) => programIds.includes(p.id));
   const allRequirements = [
     ...new Set(relevantPrograms.flatMap((p) => requiredDocumentKeys(p))),
@@ -97,7 +115,7 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
   const completedCount = allRequirements.filter((r) => checklist[r]).length;
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className={embedded ? undefined : 'rounded-lg border bg-card'}>
       <div className="px-4 py-3 flex items-center gap-2">
         <FileCheck size={16} className="text-primary" />
         <h3 className="text-sm font-semibold">{t('caseView.implement.requirements', 'Requirements')}</h3>
@@ -105,7 +123,7 @@ export function CaseRequirements({ caseId, caseData, userRole }: CaseRequirement
           {completedCount}/{allRequirements.length} {t('caseView.implement.complete', 'complete')}
         </span>
       </div>
-      <Separator />
+      {!embedded && <Separator />}
       <div className="px-4 py-3 space-y-2">
         {allRequirements.map((req) => {
           const done = checklist[req] === true;

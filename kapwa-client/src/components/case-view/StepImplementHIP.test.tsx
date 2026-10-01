@@ -387,3 +387,119 @@ describe('StepImplementHIP — sealing step 2', () => {
     expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();
   });
 });
+
+/**
+ * A worker reads a program's name and the documents it demands as one fact, so
+ * the intervention card carries the checklist inside it and the seal at its
+ * foot. These assert the shape structurally — one ancestor holds both — rather
+ * than by class name, because the point is which elements share a card, not
+ * what the card is painted with.
+ */
+describe('StepImplementHIP — the merged intervention card', () => {
+  const MEDICAL = {
+    id: 'med-1',
+    name: 'Medical Assistance',
+    requiredDocuments: ['Barangay Certificate of Indigency', 'Medical abstract'],
+  };
+
+  beforeEach(() => {
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPatch.mockReset();
+    mockUpload.mockReset();
+    mockApiGet.mockResolvedValue([]);
+    mockApiPost.mockResolvedValue({});
+    mockApiPatch.mockResolvedValue({});
+    mockUpload.mockResolvedValue({});
+  });
+
+  function renderCard(opts: { interventions?: unknown[]; programs?: unknown[] } = {}) {
+    mockApiGet.mockImplementation(async (key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('interventions')) return opts.interventions ?? [];
+      if (k.includes('programs')) return opts.programs ?? [];
+      return [];
+    });
+    return render(
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+        <StepImplementHIP caseId="case-1" caseData={caseData} userRole="social_worker" />
+      </SWRConfig>,
+    );
+  }
+
+  /**
+   * Whether `inner` sits in the same card as `sibling`.
+   *
+   * The walk stops at the step root, which is what makes this say "same card"
+   * rather than "somewhere on the step": two cards that merely share a parent
+   * come back false, so a checklist that drifted back out to a sibling of the
+   * intervention card fails here.
+   */
+  function inOneCard(inner: HTMLElement, sibling: HTMLElement, root: Element | null) {
+    let node = inner.parentElement;
+    while (node && node !== root) {
+      if (node.contains(sibling)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  it('heads the add-intervention card "Intervention to be issued"', () => {
+    const { container } = renderCard();
+
+    // The card has no title of its own any more, so the heading above it is
+    // what names it — and it must come first, not trail the card it labels.
+    const heading = screen.getByRole('heading', { level: 2, name: 'Intervention to be issued' });
+    const add = screen.getByRole('button', { name: /Add Intervention/ });
+    expect(heading.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.firstElementChild).toContainElement(heading);
+  });
+
+  it('lists a saved program\'s required documents inside the add-intervention card', async () => {
+    const { container } = renderCard({
+      interventions: [{ id: 'iv-1', caseId: 'case-1', programId: 'med-1', serviceName: 'Medical Assistance' }],
+      programs: [MEDICAL],
+    });
+
+    // The checklist has to have arrived before the walk below means anything,
+    // or it would pass with nothing to find.
+    expect(await screen.findByText('Barangay Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('Medical abstract')).toBeTruthy();
+
+    const checklist = screen.getByRole('heading', { name: 'Requirements' });
+    const add = screen.getByRole('button', { name: /Add Intervention/ });
+    expect(inOneCard(checklist, add, container.firstElementChild)).toBe(true);
+  });
+
+  it('names the documents the selected program will require, before it is saved', async () => {
+    renderCard({ programs: [MEDICAL] });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+    fireEvent.change(await screen.findByLabelText(/Program \/ Service/), { target: { value: 'med-1' } });
+
+    // The dialog's overlay hides the card behind it, so the select says what
+    // the choice obliges the worker to — while it can still change their mind.
+    expect(screen.getByText('Requires: Barangay Certificate of Indigency, Medical abstract')).toBeTruthy();
+    // The card's checklist is handed the same selection, so the two readings
+    // of "what this program needs" come from one id rather than two rules.
+    expect(screen.getByText('Barangay Certificate of Indigency')).toBeTruthy();
+    expect(screen.getByText('0/2 complete')).toBeTruthy();
+    // A preview is not a record: nothing has been asked of the server.
+    expect(mockApiPost).not.toHaveBeenCalled();
+  });
+
+  it('keeps the seal inside that card, reachable and disabled, with no checklist', async () => {
+    const { container } = renderCard({ programs: [MEDICAL] });
+
+    // The empty state is real, not hypothetical: with nothing saved and nothing
+    // selected the checklist renders nothing at all, so a seal nested inside it
+    // would have vanished exactly here.
+    expect(await screen.findByText(/No interventions recorded yet/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Requirements' })).toBeNull();
+
+    const lock = screen.getByRole('button', { name: /^lock$/i });
+    expect(lock).toBeDisabled();
+    expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
+    expect(inOneCard(lock, screen.getByRole('button', { name: /Add Intervention/ }), container.firstElementChild)).toBe(true);
+  });
+});

@@ -67,6 +67,8 @@ const en = {
       },
       "fundSourceLabel": "Fund Source",
       "interventionRecord": "Intervention Record",
+      "toBeIssued": "Intervention to be issued",
+      "programDocsRequired": "Requires: {{docs}}",
       "modeOfDelivery": {
         "cash": "Cash",
         "cheque": "Cheque",

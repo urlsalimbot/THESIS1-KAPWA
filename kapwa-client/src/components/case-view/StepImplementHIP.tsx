@@ -3,7 +3,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 import { api, downloadFilingDoc, filingDocIdFromUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { interventionRequirementsMet } from '@/lib/case-progress';
+import { interventionRequirementsMet, requiredDocumentKeys } from '@/lib/case-progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -96,6 +96,19 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
     [interventions, programs, caseData?.requirementsChecklist],
   );
 
+  /* The program the open dialog has selected, and the documents it will demand
+     once saved. Hoisted out of `handleAdd` because the preview below and the
+     write both need it, and two lookups that could disagree would show the
+     worker one program while recording another. An ad-hoc service matches no
+     program and so has no documents to preview. */
+  const selectedProgram = programs.find(p => p.id === form.programId);
+  const selectedDocKeys = selectedProgram ? requiredDocumentKeys(selectedProgram) : [];
+  /* What the merged card's checklist must also account for. Nothing selected
+     means nothing to preview — the form is reset whenever the dialog closes,
+     so this is empty for the whole of the dialog's closed life and the saved
+     interventions are the only source of requirements then. */
+  const pendingProgramIds = form.programId && !form.programId.startsWith('adhoc:') ? [form.programId] : [];
+
   // Document uploads stay available for eligible roles regardless of step
   // completion or closure — recording an intervention (readOnly) or closing the
   // case must not remove the ability to attach supporting evidence.
@@ -104,7 +117,6 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
   async function handleAdd() {
     setSaving(true);
     try {
-      const selectedProgram = programs.find(p => p.id === form.programId);
       const serviceName = selectedProgram?.name || form.serviceName;
       const category = selectedProgram?.category || form.category || undefined;
       await api.post(`/cases/${caseId}/interventions`, {
@@ -200,67 +212,105 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
         </div>
       )}
 
-      {/* Record header — the two mutually exclusive ways to complete step 2 sit
-          together: log a delivery, or record that none is issued. Recorded in
-          the header (not a separate card further down) so the worker never has
-          to hunt for the other option. */}
-      <div className="rounded-lg border bg-card px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">{t('caseView.implement.interventionRecord', 'Intervention Record')}</h3>
-            {interventionNotNeeded && (
-              <Badge variant="outline" className="gap-1 text-[10px]">
-                <CheckCircle2 size={10} /> {t('caseView.implement.interventionNotNeededBadge', 'Intervention not needed')}
-              </Badge>
-            )}
-            {readOnly && <Lock size={14} className="text-muted-foreground" />}
-          </div>
-          {!readOnly && (
-            <div className="flex flex-wrap gap-2">
-              {interventionNotNeeded ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={savingDecision}
-                  onClick={() => saveDecision(false)}
-                >
-                  {t('caseView.implement.undoInterventionNotNeeded', 'Undo decision')}
-                </Button>
-              ) : (
-                <>
-                  <Button size="sm" onClick={() => setAddOpen(true)}>
-                    <Plus size={14} className="mr-1" /> {t('caseView.implement.addIntervention', 'Add Intervention')}
-                  </Button>
-                  {/* "No intervention" and a logged delivery are mutually
-                      exclusive — the server's activation gate rejects a case
-                      that is both — so the second option disappears once a
-                      delivery exists. */}
-                  {interventions.length === 0 && (
+      {/* Record header, required-documents checklist and the step's seal — one
+          card. The checklist used to sit in a card of its own below the
+          intervention list, so a worker picked a program in one place and only
+          learned what it demanded in another; the program and its documents are
+          now one thing to read. The two mutually exclusive ways to complete step
+          2 sit in this header too: log a delivery, or record that none is
+          issued. */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">{t('caseView.implement.toBeIssued', 'Intervention to be issued')}</h2>
+        <div className="rounded-lg border bg-card">
+          <div className="px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {interventionNotNeeded && (
+                  <Badge variant="outline" className="gap-1 text-[10px]">
+                    <CheckCircle2 size={10} /> {t('caseView.implement.interventionNotNeededBadge', 'Intervention not needed')}
+                  </Badge>
+                )}
+                {readOnly && <Lock size={14} className="text-muted-foreground" />}
+              </div>
+              {!readOnly && (
+                <div className="flex flex-wrap gap-2">
+                  {interventionNotNeeded ? (
                     <Button
-                      variant="secondary"
+                      variant="outline"
                       size="sm"
                       disabled={savingDecision}
-                      onClick={() => saveDecision(true)}
+                      onClick={() => saveDecision(false)}
                     >
-                      <Ban size={14} className="mr-1" /> {t('caseView.implement.markInterventionNotNeeded', 'No interventions issued')}
+                      {t('caseView.implement.undoInterventionNotNeeded', 'Undo decision')}
                     </Button>
+                  ) : (
+                    <>
+                      <Button size="sm" onClick={() => setAddOpen(true)}>
+                        <Plus size={14} className="mr-1" /> {t('caseView.implement.addIntervention', 'Add Intervention')}
+                      </Button>
+                      {/* "No intervention" and a logged delivery are mutually
+                          exclusive — the server's activation gate rejects a case
+                          that is both — so the second option disappears once a
+                          delivery exists. */}
+                      {interventions.length === 0 && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={savingDecision}
+                          onClick={() => saveDecision(true)}
+                        >
+                          <Ban size={14} className="mr-1" /> {t('caseView.implement.markInterventionNotNeeded', 'No interventions issued')}
+                        </Button>
+                      )}
+                    </>
                   )}
-                </>
+                </div>
               )}
             </div>
-          )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {interventionNotNeeded
+                ? t('caseView.implement.interventionNotNeededActive', 'No intervention is issued for this case; referrals cover the service.')
+                : (
+                  <>
+                    {interventions.length} {t('caseView.implement.interventionUnit', { count: interventions.length, defaultValue: interventions.length !== 1 ? 'interventions' : 'intervention' })} {t('caseView.implement.delivered', 'delivered')}
+                    {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} ${t('caseView.implement.total', 'total')}`}
+                  </>
+                )}
+            </p>
+          </div>
+          {/* Renders nothing at all until some program in scope asks for
+              something — which is why the rule below belongs to the footer
+              rather than to the checklist's top edge: it is the one boundary
+              that exists in every state. */}
+          <CaseRequirements
+            caseId={caseId}
+            caseData={caseData}
+            userRole={userRole}
+            extraProgramIds={pendingProgramIds}
+            embedded
+          />
+          {/* Step 2's seal, at the foot of the card it attests to. Its own
+              predicate reads exactly what this card shows — the recorded
+              interventions and their documents — so sealing here puts the
+              button beside the evidence for enabling it instead of leaving it
+              adrift at the bottom of the step. */}
+          <Separator />
+          <div className="px-4 py-3">
+            <StepLockBar
+              caseId={caseId}
+              stepIndex={1}
+              caseData={caseData}
+              // The count comes from the list this step already renders, which is the
+              // same row set the server counts.
+              interventionCount={interventions.length}
+              opts={{ requirementsMet }}
+              locked={stepLock}
+              readOnly={readOnly}
+              onChanged={() => globalMutate(queryKeys.cases.detail(caseId))}
+            />
+          </div>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {interventionNotNeeded
-            ? t('caseView.implement.interventionNotNeededActive', 'No intervention is issued for this case; referrals cover the service.')
-            : (
-              <>
-                {interventions.length} {t('caseView.implement.interventionUnit', { count: interventions.length, defaultValue: interventions.length !== 1 ? 'interventions' : 'intervention' })} {t('caseView.implement.delivered', 'delivered')}
-                {totalAmount > 0 && ` · ₱${totalAmount.toLocaleString()} ${t('caseView.implement.total', 'total')}`}
-              </>
-            )}
-        </p>
-      </div>
+      </section>
 
       {/* Add-intervention modal — a delivery is a record with eight fields, so
           it is confirmed in a dialog the way the referral step already does,
@@ -290,6 +340,15 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
                   {t('caseView.implement.otherService', 'Other service (specify)…')}
                 </option>
               </select>
+              {/* The checklist in the card behind this dialog lists the same
+                  documents, but the modal's overlay hides it — so the select
+                  says here what the choice will oblige the worker to, which is
+                  the only moment at which it can still change their mind. */}
+              {selectedDocKeys.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('caseView.implement.programDocsRequired', 'Requires: {{docs}}', { docs: selectedDocKeys.join(', ') })}
+                </p>
+              )}
             </div>
 
             {form.programId.startsWith('adhoc:') && (
@@ -437,9 +496,6 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
         </div>
       )}
 
-      {/* Requirements Checklist */}
-      <CaseRequirements caseId={caseId} caseData={caseData} userRole={userRole} />
-
       {/* Status transition — visible even when readOnly so a worker who has already
           logged interventions (or recorded that none are needed) can still submit
           the assessed case for admin review. */}
@@ -454,21 +510,6 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, stepLoc
           </div>
         </div>
       )}
-
-      {/* Step 2's seal. The mount only — its placement is a layout question, and
-          this step's layout is settled in its own change. */}
-      <StepLockBar
-        caseId={caseId}
-        stepIndex={1}
-        caseData={caseData}
-        // The count comes from the list this step already renders, which is the
-        // same row set the server counts.
-        interventionCount={interventions.length}
-        opts={{ requirementsMet }}
-        locked={stepLock}
-        readOnly={readOnly}
-        onChanged={() => globalMutate(queryKeys.cases.detail(caseId))}
-      />
     </div>
   );
 }

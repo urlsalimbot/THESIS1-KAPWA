@@ -1676,6 +1676,8 @@ const fil: EnLocale = {
         "pdaf": "PDAF"
       },
       "interventionRecord": "Rekord ng Interbensyon",
+      "toBeIssued": "Interbensyong ibibigay",
+      "programDocsRequired": "Kailangan: {{docs}}",
       "interventionUnit_one": "interbensyon",
       "interventionUnit_other": "interbensyon",
       "modeOfDelivery": {
