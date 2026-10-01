@@ -13,6 +13,9 @@ function agencyUser(id: string, agencyId: string) {
   return { id, role: 'social_worker', agencyId } as any;
 }
 
+/** Granted = resolved; refused = rejected. Error messages are asserted separately. */
+const granted = (p: Promise<unknown>) => p.then(() => true, () => false);
+
 describe('InterAgencyReferralsService', () => {
   let service: InterAgencyReferralsService;
   let repoMock: any;
@@ -443,7 +446,13 @@ describe('InterAgencyReferralsService', () => {
       // substitutes the MSWDO agency as fromAgencyId. The scope check must
       // recognise the same caller, or the worker who just issued the letter
       // is refused it with 403 — the bug this test pins.
-      repoMock.findOne.mockResolvedValue(fullReferral);
+      //
+      // `createdBy` is the caller, because that is what `create()` writes for
+      // this scenario: the unlinked-worker exemption is "the worker who created
+      // it", not "any unlinked MSWDO worker". A referral this worker had no part
+      // in is a different case, and `the letter is scoped by the same rule as
+      // findOne` below refuses it.
+      repoMock.findOne.mockResolvedValue({ ...fullReferral, createdBy: 'u-sw' });
       agencyRepoMock.findOne.mockResolvedValue({ id: 'ag-mswdo', name: 'MSWDO Norzagaray' });
 
       const pdf = await service.endorsementLetterPdf('r1', {
@@ -467,5 +476,125 @@ describe('InterAgencyReferralsService', () => {
         expect.objectContaining({ where: { id: 'r1' } }),
       );
     });
+  });
+
+  /**
+   * The endorsement letter is a read of the referral row, so the linkage it
+   * demands has to be the linkage `findOne` demands. It did not: `findOne` wants
+   * admin, a participating agency, or the social worker who created the referral,
+   * while the letter wanted admin *or an unlinked MSWDO staff member* — so an
+   * MSWDO worker who had nothing to do with a referral could download that
+   * referral's letter, a PII-bearing document, for any referral id in the table.
+   *
+   * Every caller below is asserted against BOTH entry points, and against a
+   * spelled-out expected answer, so the two cannot drift apart again and neither
+   * can be wrong in the same direction.
+   */
+  describe('the letter is scoped by the same rule as findOne', () => {
+    const referral = (over: Record<string, unknown> = {}) => ({
+      id: 'r1',
+      caseId: 'c1',
+      fromAgencyId: 'ag-mswdo',
+      toAgencyId: 'ag-rhu',
+      reason: 'Medical coordination',
+      legalBasisCode: 'public_authority_sec13',
+      person: { firstName: 'Juan', surname: 'Dela Cruz' },
+      toAgency: { name: 'Rural Health Unit - Norzagaray' },
+      fromAgency: { name: 'MSWDO Norzagaray' },
+      case: { controlNo: 'CASE-2026-0009', clientCategory: 'Indigent' },
+      status: 'referred',
+      createdBy: 'u-creator',
+      createdAt: new Date(),
+      ...over,
+    } as any);
+
+    /** Granted = resolved; refused = rejected. The message is asserted separately. */
+    const CASES: Array<[string, any, boolean]> = [
+      // An MSWDO worker is not linked to an agency at all, so nothing in the row
+      // points at them — unless they are the one who created it.
+      ['an unlinked MSWDO worker who did not create it', { id: 'u-other', role: UserRole.SW, agencyId: null }, false],
+      ['an unlinked MSWDO worker who created it', { id: 'u-creator', role: UserRole.SW, agencyId: null }, true],
+      ['an unlinked admin', { id: 'u-admin', role: UserRole.ADMIN }, true],
+      // Deliberate: an admin carrying an agencyId is NOT narrowed to it. That is
+      // `findOne`'s answer too, and the letter matching it is the point of this
+      // test — see the A3 note in the consolidation report.
+      ['an admin carrying an unrelated agencyId', { id: 'u-admin-ag', role: UserRole.ADMIN, agencyId: 'ag-lto' }, true],
+      ['a worker at the sending agency', { id: 'u-mswdo', role: UserRole.SW, agencyId: 'ag-mswdo' }, true],
+      ['a worker at the receiving agency', { id: 'u-rhu', role: UserRole.SW, agencyId: 'ag-rhu' }, true],
+      ['a worker at an unrelated agency', { id: 'u-lto', role: UserRole.SW, agencyId: 'ag-lto' }, false],
+      // Not reachable through the route (`@Roles('admin','social_worker')`), but the
+      // service must not hand out the letter to it either.
+      ['a coordinator at an unrelated agency', { id: 'u-coord', role: UserRole.COORDINATOR, agencyId: 'ag-lto' }, false],
+    ];
+
+    for (const [label, caller, expected] of CASES) {
+      it(`refuses the letter to ${label} and grants it to everyone else in the table`, async () => {
+        repoMock.findOne.mockResolvedValue(referral());
+        agencyRepoMock.findOne.mockResolvedValue({ id: 'ag-mswdo', name: 'MSWDO Norzagaray' });
+
+        expect(await granted(service.endorsementLetterPdf('r1', caller))).toBe(expected);
+        expect(await granted(service.findOne('r1', caller))).toBe(expected);
+      });
+    }
+
+    it('refuses the letter to the widened case without naming the referral', async () => {
+      repoMock.findOne.mockResolvedValue(referral({ createdBy: 'someone-else' }));
+
+      await expect(
+        service.endorsementLetterPdf('r1', { id: 'u-other', role: UserRole.SW, agencyId: null } as any),
+      ).rejects.toThrow('Referral is not associated with your agency');
+    });
+  });
+
+  /**
+   * `findForCase` cannot call the point-read predicate — it is a `WHERE` array,
+   * which is a set union rather than a per-row test — so it restates the same rule
+   * in query shape. This is what stops the restatement from drifting: the list
+   * and the point read are compared row-for-row, per caller, over a fixture that
+   * covers each linkage (sender, receiver, creator, unrelated).
+   */
+  describe('findForCase returns the rows the single rule accepts', () => {
+    const fixture = [
+      { id: 'r-partner', fromAgencyId: 'ag-mswdo', toAgencyId: 'ag-rhu', createdBy: 'u-creator' },
+      { id: 'r-unrelated', fromAgencyId: 'ag-lto', toAgencyId: 'ag-lto', createdBy: 'u-lto' },
+      { id: 'r-mine', fromAgencyId: 'ag-lto', toAgencyId: 'ag-lto', createdBy: 'u-creator' },
+      { id: 'r-incoming', fromAgencyId: 'ag-lto', toAgencyId: 'ag-rhu', createdBy: 'u-lto' },
+    ].map((r) => ({ ...r, caseId: 'c1', status: 'referred', reason: 'x', createdAt: new Date() } as any));
+
+    const CALLERS: Array<[string, any]> = [
+      ['an unlinked MSWDO worker who created two of them', { id: 'u-creator', role: UserRole.SW, agencyId: null }],
+      ['an unlinked MSWDO worker who created none', { id: 'u-other', role: UserRole.SW, agencyId: null }],
+      ['an unlinked admin', { id: 'u-admin', role: UserRole.ADMIN }],
+      ['an admin carrying an unrelated agencyId', { id: 'u-admin-ag', role: UserRole.ADMIN, agencyId: 'ag-lto' }],
+      ['a worker at the sending agency', { id: 'u-mswdo', role: UserRole.SW, agencyId: 'ag-mswdo' }],
+      ['a worker at the receiving agency', { id: 'u-rhu', role: UserRole.SW, agencyId: 'ag-rhu' }],
+      ['a worker at an unrelated agency', { id: 'u-lto', role: UserRole.SW, agencyId: 'ag-lto' }],
+    ];
+
+    beforeEach(() => {
+      // `findForCase` hands TypeORM an array of `where` objects, which it ORs.
+      repoMock.find.mockImplementation(async ({ where }: any) => {
+        const clauses = Array.isArray(where) ? where : [where];
+        return fixture.filter((r) =>
+          clauses.some((clause: Record<string, unknown>) =>
+            Object.entries(clause).every(([k, v]) => (r as any)[k] === v),
+          ),
+        );
+      });
+    });
+
+    for (const [label, caller] of CALLERS) {
+      it(`agrees with the point read for ${label}`, async () => {
+        const listed = (await service.findForCase('c1', caller)).map((r: any) => r.id).sort();
+
+        const readable: string[] = [];
+        for (const r of fixture) {
+          repoMock.findOne.mockResolvedValue(r);
+          if (await granted(service.findOne(r.id, caller))) readable.push(r.id);
+        }
+
+        expect(listed).toEqual(readable.sort());
+      });
+    }
   });
 });

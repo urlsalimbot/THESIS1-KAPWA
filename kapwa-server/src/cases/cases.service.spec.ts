@@ -10,6 +10,7 @@ import { HouseholdMembership } from '../beneficiaries/household-membership.entit
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { CaseAssistance } from './case-assistance.entity';
 import { CaseStepLock } from './case-step-lock.entity';
+import { canTransition } from './case-fsm';
 
 describe('CasesService', () => {
   let service: CasesService;
@@ -753,6 +754,185 @@ describe('CasesService', () => {
       await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
         .rejects.toThrow('FRVA or SWDI score must be provided before review');
     });
+
+    /**
+     * A15: `findById` already loads this case's seals onto the payload for the
+     * seal strip, so the gate's own `stepLocksRepo.find` is a second round-trip
+     * for an answer already in hand. Only the call count can see it — the answer
+     * is identical either way.
+     */
+    it('reads the seals findById already loaded, with no second query', async () => {
+      repoMock.findOne.mockResolvedValue(assessed());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2));
+
+      await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
+
+      expect(stepLocksRepoMock.find).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /**
+   * Step 5 ("Case Study & Closure") had no seal gate anywhere. The all-locked
+   * gate asks for the steps due at a status, and step 5 only becomes due at
+   * `transitioning` — the very status it gates the *exit* from — so nothing ever
+   * asked whether anyone deliberately sealed it. A case could reach `closed` with
+   * its closure step never sealed by anyone.
+   *
+   * The existing `clientSignature`/`closureOutcome` check is step 5's
+   * done-predicate, not a seal: it asks whether the *data* is there, which a
+   * form can satisfy on its own. What was missing is the deliberate act.
+   */
+  describe('step-5 seal gate on transitioning -> closed', () => {
+    // Everything `validateTransition` asks for at `closed`, so these tests
+    // isolate the seal rule: step 5's own done-predicate is already satisfied.
+    const transitioning = (extra: Record<string, unknown> = {}) => ({
+      id: '1',
+      status: CaseStatus.TRANSITIONING,
+      clientSignature: 'sig',
+      closureOutcome: 'graduated',
+      controlNo: 'KAPWA-2026-00001',
+      beneficiaryId: null,
+      assignedWorkerId: null,
+      updatedAt: new Date(),
+      ...extra,
+    } as unknown as Case);
+
+    const sealed = (...stepIndexes: number[]) => stepIndexes.map((stepIndex) => ({
+      id: `lock-${stepIndex}`, caseId: '1', stepIndex, lockedBy: 'u1',
+      lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+    }));
+
+    beforeEach(() => {
+      repoMock.save.mockImplementation(async (c: any) => c);
+    });
+
+    it('closes once every due step, closure included, is sealed', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3, 4));
+
+      const result = await service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' });
+
+      expect(result.status).toBe(CaseStatus.CLOSED);
+    });
+
+    // Step 4's data is present and step 4 is sealed, so the only thing missing is
+    // the closure step's own seal — which is the hole.
+    it('refuses to close while the closure step is unsealed, naming it as the stepper does', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3));
+
+      await expect(service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' }))
+        .rejects.toThrow('Still open: Case Study & Closure');
+    });
+
+    // The gate asks for the step whose work *completes* on this edge, not for
+    // every step due — at `transitioning` all five are due, and naming four of
+    // them would send the worker to re-seal finished work.
+    it('names only the closure step, by the label the stepper uses', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning());
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      await expect(service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' }))
+        .rejects.toThrow('Lock every step before closing this case. Still open: Case Study & Closure');
+    });
+
+    // Same carve-out as the hand-off gate, for the same stated reason: an admin
+    // who could not close a case at all would be worse than the gap.
+    it('does not apply the seal gate to admin', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning());
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      const result = await service.transition('1', CaseStatus.CLOSED, { userRole: 'admin' });
+
+      expect(result.status).toBe(CaseStatus.CLOSED);
+    });
+
+    it('still gates a caller that passes no role at all', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning());
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      await expect(service.transition('1', CaseStatus.CLOSED)).rejects.toThrow(/Still open/);
+    });
+
+    // The missing-data complaint is cheaper and more specific, so it must still be
+    // the one a worker sees before being told to go and seal a step.
+    it('leaves the missing-signature complaint in front of the seal complaint', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning({ clientSignature: null, closureOutcome: null }));
+      stepLocksRepoMock.find.mockResolvedValue([]);
+
+      await expect(service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' }))
+        .rejects.toThrow('Client signature and closure outcome are required for closure');
+    });
+
+    /**
+     * A15: `findById` already loads the case's seals onto the payload, so the
+     * gates must read them off the case rather than issue a second indexed
+     * query. Asserted by call count, which is the only way to see it — the
+     * answer is identical either way.
+     */
+    it('reads the seals findById already loaded, with no second query', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning());
+      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3, 4));
+
+      await service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' });
+
+      expect(stepLocksRepoMock.find).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /**
+   * Step 4 ("Evaluate Help Given") has no seal gate either — but its only edge
+   * out of `active` is one no non-admin role may take (`CASE_FSM_ROLES[ACTIVE]` is
+   * empty, so `canTransition` admits `admin` and nothing else), and `admin` is the
+   * one caller the gates carve out. So a seal gate there would bind nobody.
+   *
+   * Pinned as a fact about the FSM rather than left as a reading of it, because
+   * the gap only closes for real if `CASE_FSM_ROLES[ACTIVE]` ever gains a role —
+   * and then this test is what says the gate is still missing.
+   */
+  describe('active -> transitioning has no reachable non-admin actor', () => {
+    it('admits no role but admin, who is the one the gates exempt', async () => {
+      expect(canTransition(CaseStatus.ACTIVE, 'social_worker')).toBe(false);
+      expect(canTransition(CaseStatus.ACTIVE, 'coordinator')).toBe(false);
+      expect(canTransition(CaseStatus.ACTIVE, 'admin')).toBe(true);
+    });
+  });
+
+  /**
+   * An approval records an approver. `transition()` only writes
+   * `approvedBySignature` when the value is truthy, so a blank signature was
+   * accepted and the field silently dropped — leaving an approval record with no
+   * approver on it, which is the thing the deliberate-actions feature exists to
+   * prevent.
+   *
+   * `PATCH /cases/:id/approve` is the only path that carries a signature, and
+   * `ApproveCaseSchema` now refuses a blank one. This is the same rule stated at
+   * the service, so it also holds for anything that is not an HTTP request.
+   */
+  describe('approve refuses an approval with no signature', () => {
+    it('refuses an empty signature', async () => {
+      await expect(service.approve('1', CaseStatus.ACTIVE, '', 'admin', 'u1'))
+        .rejects.toThrow('Approver signature is required to approve a case');
+    });
+
+    it('refuses a whitespace-only signature', async () => {
+      await expect(service.approve('1', CaseStatus.ACTIVE, '   ', 'admin', 'u1'))
+        .rejects.toThrow('Approver signature is required to approve a case');
+    });
+
+    it('never reaches the case at all', async () => {
+      await expect(service.approve('1', CaseStatus.ACTIVE, '', 'admin', 'u1')).rejects.toThrow();
+      expect(repoMock.save).not.toHaveBeenCalled();
+    });
+
+    it('accepts a real signature', async () => {
+      const existing = { id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-1', updatedAt: new Date() } as Case;
+      repoMock.findOne.mockResolvedValue(existing);
+      repoMock.save.mockImplementation(async (c: any) => c);
+      (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
+
+      await expect(service.approve('1', CaseStatus.ACTIVE, 'Lorna Santos', 'admin', 'u1')).resolves.toBeTruthy();
+    });
   });
 
   describe('updateReferralDecision', () => {
@@ -901,8 +1081,14 @@ describe('FSM — close', () => {
   });
 
   it('should close case when role is social_worker', async () => {
+    // Step 5's seal is now required to leave `transitioning` (see the step-5 seal
+    // gate in this suite). A social worker closing a case is the case the gate
+    // exists for, so it has to arrive with the seal taken.
     const existing = { id: '1', status: CaseStatus.TRANSITIONING, clientSignature: 'sig', closureOutcome: 'graduated', updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
+    stepLocksRepoMock.find.mockResolvedValue([
+      { id: 'lock-4', caseId: '1', stepIndex: 4, lockedBy: 'u1', lockedByName: 'Juan', lockedAt: new Date() },
+    ]);
     repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.CLOSED });
     const result = await service.close('1', CaseStatus.CLOSED, 'social_worker');
     expect(result.status).toBe(CaseStatus.CLOSED);

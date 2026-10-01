@@ -43,7 +43,7 @@ import {
   UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema, RejectCaseSchema,
   AssessmentV2Schema, TransitionPlanSchema, RequirementsSchema, ClosureSchema,
   ReferralDecisionSchema,
-  CreateCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
+  CreateCaseInput, ApproveCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
   TransitionPlanInput, RequirementsInput, ClosureInput, ReferralDecisionInput,
 } from './dto/cases.zod';
 
@@ -127,8 +127,10 @@ export class CasesController {
 
   @Patch(':id/approve')
   @Roles('admin')
-  async approve(@Param('id') id: string, @Body(new ZodPipe(ApproveCaseSchema)) body: { status: CaseStatus; signature?: string }, @Request() req: AuthenticatedRequest) {
-    return this.casesService.approve(id, mapStatus(body.status as string), body.signature || '', req.user?.role || '', req.user?.id);
+  async approve(@Param('id') id: string, @Body(new ZodPipe(ApproveCaseSchema)) body: ApproveCaseInput, @Request() req: AuthenticatedRequest) {
+    // No `|| ''` fallback: the schema requires a non-empty signature, so the only
+    // value that could reach here is a real one. `ApproveCaseInput` says so too.
+    return this.casesService.approve(id, mapStatus(body.status as string), body.signature, req.user?.role || '', req.user?.id);
   }
 
   @Post(':id/issue-coe')

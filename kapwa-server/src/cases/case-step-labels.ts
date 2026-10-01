@@ -101,3 +101,34 @@ export function stepsDueAt(status: string | null | undefined): number[] {
     .filter(({ min }) => min <= index)
     .map(({ stepIndex }) => stepIndex);
 }
+
+/**
+ * The steps that *begin* at this lifecycle position — the subset of `stepsDueAt`
+ * whose floor is exactly this status, rather than at or before it.
+ *
+ * The Phase-Out gates ask for one of these, and the difference from `stepsDueAt`
+ * is the whole point. A case study begins when a case goes `active` and the
+ * closure begins when it goes `transitioning`, so those are the two steps whose
+ * work is *completed* by leaving the status the gate fires on. `stepsDueAt` at
+ * `transitioning` already returns all five, which is why gating `closed` on
+ * "every step due" would have named a step that had nothing to do with closing —
+ * and why asking for all five at `assessed` was unsatisfiable. Neither problem is
+ * about the *set*; it is about naming a step that belongs to a different status.
+ *
+ * Derived from the same `CASE_STEP_MIN_STATUS` as everything else, so it cannot
+ * disagree with the floor the seal endpoint enforces. Being "due at exactly this
+ * position" is also what makes it sealable *here*: the effective floor equals the
+ * current index, so `stepDone`'s `statusAtLeast` accepts it — the property
+ * `case-step-labels.spec.ts` asserts across the whole lifecycle.
+ *
+ * An unknown or missing status is position 0, matching `stepsDueAt`, so a payload
+ * the gate cannot read asks for the Phase-In work rather than waving a case
+ * through.
+ */
+export function stepsBecomingDueAt(status: string | null | undefined): number[] {
+  const index = (status == null ? undefined : CASE_STATUS_INDEX[status]) ?? 0;
+  return CASE_STEP_MIN_STATUS
+    .map((min, stepIndex) => ({ min, stepIndex }))
+    .filter(({ min }) => min === index)
+    .map(({ stepIndex }) => stepIndex);
+}

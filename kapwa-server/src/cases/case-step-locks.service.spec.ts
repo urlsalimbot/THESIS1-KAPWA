@@ -312,6 +312,23 @@ describe('CaseStepLocksService', () => {
     expect(lockRepo.delete).toHaveBeenCalledWith({ caseId: 'c1', stepIndex: 0 });
   });
 
+  /**
+   * A release is one `DELETE ... WHERE case_id = ? AND step_index = ?`, so a
+   * concurrent seal cannot be undone by a read that saw the old state — and a
+   * concurrent release cannot be lost by two callers both deciding to proceed.
+   * A read-then-delete would reintroduce both. This is the same reasoning as
+   * `lock`'s upsert, and it is why neither method reads the row it writes.
+   */
+  it('releases in one statement, never reading the row it deletes', async () => {
+    findById.mockResolvedValue(doneCase);
+    await service.unlock('c1', 2, swUser);
+
+    expect(lockRepo.delete).toHaveBeenCalledTimes(1);
+    expect(lockRepo.delete).toHaveBeenCalledWith({ caseId: 'c1', stepIndex: 2 });
+    expect(lockRepo.findOne).not.toHaveBeenCalled();
+    expect(lockRepo.find).not.toHaveBeenCalled();
+  });
+
   it('rejects a step index outside 0..4', async () => {
     await expect(service.lock('c1', 7, swUser)).rejects.toThrow(BadRequestException);
     await expect(service.lock('c1', -1, swUser)).rejects.toThrow(BadRequestException);

@@ -13,7 +13,7 @@ import { CaseStepLock } from './case-step-lock.entity';
 // boot, which no unit test can see. The labels are all this file needs, and an
 // error that spells a step differently from the stepper costs the worker a trip
 // to the UI to find out what is open.
-import { CASE_STEP_LABELS, stepsDueAt } from './case-step-labels';
+import { CASE_STEP_LABELS, stepsDueAt, stepsBecomingDueAt } from './case-step-labels';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -384,6 +384,30 @@ export class CasesService {
     return this.transition(id, newStatus, { userRole, actorId });
   }
 
+  /**
+   * Refuse a transition while any of `requiredSteps` is unsealed.
+   *
+   * Reads the seals off the case rather than asking the repository: `findById`
+   * already loaded them onto the payload for the seal strip, so a query here is a
+   * second round-trip for an answer in hand. A case that somehow carries no
+   * `stepLocks` is read as carrying no seals, so this fails closed.
+   *
+   * `requiredSteps` comes from `case-step-labels.ts` — never an index written out
+   * here — so the set a gate demands is by construction a set the seal endpoint
+   * will accept at this status.
+   */
+  private assertStepsSealed(c: Case, requiredSteps: number[], doing: string): void {
+    const sealed = ((c as any).stepLocks ?? []) as Array<{ stepIndex: number }>;
+    const open = requiredSteps.filter((i) => !sealed.some((l) => l.stepIndex === i));
+    if (open.length === 0) return;
+    // Name the steps as the stepper does. "step 4" in an error while the UI says
+    // "Case Study & Closure" sends the worker looking for a number.
+    throw new BadRequestException(
+      `Lock every step before ${doing}. ` +
+      `Still open: ${open.map((i) => CASE_STEP_LABELS[i]).join(', ')}`,
+    );
+  }
+
   private async validateTransition(c: Case, newStatus: CaseStatus, userRole?: string) {
     if (!isValidTransition(c.status, newStatus)) {
       throw new BadRequestException(`Invalid transition from ${c.status} to ${newStatus}`);
@@ -429,16 +453,28 @@ export class CasesService {
     // omits `userRole` is therefore gated, not waved through — fail closed, so
     // forgetting the argument cannot become the bypass.
     if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && userRole !== 'admin') {
-      const sealed = await this.stepLocksRepo.find({ where: { caseId: c.id } });
-      const open = stepsDueAt(c.status).filter((i) => !sealed.some((l) => l.stepIndex === i));
-      if (open.length > 0) {
-        // Name the steps as the stepper does. "step 4" in an error while the UI
-        // says "Case Study & Closure" sends the worker looking for a number.
-        throw new BadRequestException(
-          `Lock every step before flagging this case for admin review. ` +
-          `Still open: ${open.map((i) => CASE_STEP_LABELS[i]).join(', ')}`,
-        );
-      }
+      this.assertStepsSealed(c, stepsDueAt(c.status),
+        'flagging this case for admin review');
+    }
+    // Phase-Out. Step 4 (Evaluate Help Given) and step 5 (Case Study & Closure)
+    // had no seal gate anywhere: the gate above asks for the steps *due* at a
+    // status, and these two only become due at `active` and `transitioning` — so
+    // nothing asked whether anyone deliberately sealed them, and a case could
+    // reach `closed` with its closure step never sealed by anyone.
+    //
+    // `stepsBecomingDueAt`, not `stepsDueAt`, and not a listed index: each of
+    // these gates is about the step whose work *completes* on this edge, and that
+    // is the step floored at exactly the status being left. Naming an index here
+    // is how the hand-off gate came to demand steps that could not be sealed.
+    //
+    // `active -> transitioning` is deliberately *not* gated, and the gap is real:
+    // `CASE_FSM_ROLES[ACTIVE]` is empty, so `canTransition` admits `admin` and
+    // nothing else, and `admin` is the caller this rule exempts. A gate there
+    // would bind nobody. `cases.service.spec.ts` pins that as a fact about the
+    // FSM, so it becomes a gap to close if a role is ever added there — not a
+    // silent assumption.
+    if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && userRole !== 'admin') {
+      this.assertStepsSealed(c, stepsBecomingDueAt(c.status), 'closing this case');
     }
     if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
       const interventionCount = await this.getInterventionCount(c.id);
@@ -488,6 +524,10 @@ export class CasesService {
     await this.validateTransition(c, newStatus, opts?.userRole);
 
     c.status = newStatus;
+    // Truthy, not `!== undefined`: the status-changing routes carry no signature
+    // at all, and writing `undefined` over a previously approved case would erase
+    // the approver off a case that already had one. The route that *does* require
+    // a signature — `/approve` — has already refused a blank one in `approve()`.
     if (opts?.signature) c.approvedBySignature = opts.signature;
     if (opts?.userRole) c.approvedByRole = opts.userRole;
     // Resolve the actor's display name so the case view can show
@@ -536,6 +576,14 @@ export class CasesService {
   }
 
   async approve(id: string, newStatus: CaseStatus, signature: string, userRole: string, actorId?: string) {
+    // An approval is a record that someone approved, so the approver's signature
+    // is part of it, not an optional annotation. `ApproveCaseSchema` already
+    // refuses a blank one at the API boundary; stating it here too means the rule
+    // holds for anything that is not an HTTP request, and it refuses *before*
+    // reading the case rather than after transitioning it.
+    if (!signature || !signature.trim()) {
+      throw new BadRequestException('Approver signature is required to approve a case');
+    }
     return this.transition(id, newStatus, { signature, userRole, actorId, reason: `Approved by ${userRole}` });
   }
 
