@@ -291,12 +291,12 @@ export function AdminPage() {
                           <p className="text-sm font-semibold truncate">
                             {m.name} <span className="font-normal text-muted-foreground">&lt;{m.email}&gt;</span>
                           </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <div className="text-xs text-muted-foreground mt-0.5">
                             {formatDateTime(m.createdAt)}
                             {m.status === 'new' && (
                               <Badge variant="secondary" className="ml-2 text-[10px]">{t('admin.contactNew', 'New')}</Badge>
                             )}
-                          </p>
+                          </div>
                         </div>
                         {m.status === 'new' && (
                           <Button
