@@ -966,6 +966,31 @@ describe('IntakeService', () => {
       expect(caseRepo.create).not.toHaveBeenCalled();
       expect(result).toMatchObject({ caseCreated: false, caseId: null });
     });
+
+    it('does not crash when a listed family member already exists in the household', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+      caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+
+      // A real `Person` instance: `age` is a getter on the prototype, so the
+      // dedup merge must not try to write it. Before the fix this threw
+      // "Cannot set property age which has only a getter", the transaction rolled
+      // back, and the whole confirm answered 500 — so a household whose intake
+      // listed a member it already had could never be updated.
+      const existingMember = Object.assign(new Person(), {
+        id: 'existing-member', surname: 'Dela Cruz', firstName: 'Jose', dob: new Date('2015-06-15'),
+      });
+      queryRunnerMock.manager.findOne = jest.fn().mockImplementation((entity: unknown, opts: any) =>
+        Promise.resolve(entity === Person && opts?.where?.firstName === 'Jose' ? existingMember : null),
+      );
+
+      await expect(
+        service.confirmMatch('existing-hh', validIntakeInput, ['Bigte'], { id: 'caller-1', role: UserRole.SW }),
+      ).resolves.toBeTruthy();
+    });
   });
 
   describe('family member person build', () => {

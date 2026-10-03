@@ -212,9 +212,18 @@ export class IntakeService {
         }
       }
       if (existing) {
-        const updatable = { ...data } as Partial<Person>;
-        for (const [k, v] of Object.entries(updatable)) {
-          if (v === undefined || v === null || v === '') delete (updatable as Record<string, unknown>)[k];
+        // Copy only properties that can actually be written. `data` may carry a
+        // derived field — a family member's `age`, which `Person` exposes as a
+        // getter computed from `dob` — and assigning that throws ("Cannot set
+        // property age which has only a getter"), so a member who already
+        // exists in the household crashed the confirm. Derived values are never
+        // stored; they are recomputed from the columns.
+        const updatable: Partial<Person> = {};
+        for (const [k, v] of Object.entries(data)) {
+          if (v === undefined || v === null || v === '') continue;
+          const desc = Object.getOwnPropertyDescriptor(Person.prototype, k);
+          if (desc && typeof desc.get === 'function' && typeof desc.set !== 'function') continue;
+          (updatable as Record<string, unknown>)[k] = v;
         }
         saved = await save(Object.assign(existing, updatable));
       } else {
