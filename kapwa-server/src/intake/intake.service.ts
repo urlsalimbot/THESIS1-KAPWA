@@ -676,6 +676,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         FROM households h
         JOIN household_memberships hm ON hm.household_id = h.id
         JOIN persons p ON p.id = hm.person_id
+        WHERE hm.status IS NULL OR lower(trim(hm.status)) <> 'inactive'
       ),
       ranked AS (
         SELECT r.*,
@@ -700,6 +701,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
               JOIN persons p2 ON p2.id = hm2.person_id
               CROSS JOIN unnest($3::text[]) AS u(name)
               WHERE hm2.household_id = hs.household_id
+                AND (hm2.status IS NULL OR lower(trim(hm2.status)) <> 'inactive')
               GROUP BY u.name
             ) sub
           ) ELSE 0 END AS family_score,
@@ -767,7 +769,8 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           'income', p3.estimated_monthly_income, 'status', hm.status
          )) FROM household_memberships hm
            JOIN persons p3 ON p3.id = hm.person_id
-           WHERE hm.household_id = h.id) AS family_members,
+           WHERE hm.household_id = h.id
+             AND (hm.status IS NULL OR lower(trim(hm.status)) <> 'inactive')) AS family_members,
         (SELECT EXISTS(
           SELECT 1 FROM cases c
           JOIN beneficiaries b3 ON b3.id = c.beneficiary_id

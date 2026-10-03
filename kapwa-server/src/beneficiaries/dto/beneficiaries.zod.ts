@@ -43,6 +43,15 @@ export const NhtsPrSchema = z.object({
   nhtsPrId: z.string().max(50).nullable().optional(),
 });
 
+// Mark a household member inactive (with a reason) or active again. An inactive
+// member is kept for history but is excluded from the household count and the
+// intake match roster.
+export const SetFamilyMemberStatusSchema = z.object({
+  active: z.boolean(),
+  reason: z.string().max(200).optional(),
+});
+
 export type CreateBeneficiaryInput = z.infer<typeof CreateBeneficiarySchema>;
 export type UpdateBeneficiaryInput = z.infer<typeof UpdateBeneficiarySchema>;
 export type NhtsPrInput = z.infer<typeof NhtsPrSchema>;
+export type SetFamilyMemberStatusInput = z.infer<typeof SetFamilyMemberStatusSchema>;

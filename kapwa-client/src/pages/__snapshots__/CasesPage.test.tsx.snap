@@ -393,6 +393,11 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                 <th
                   class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                 >
+                  Case Category
+                </th>
+                <th
+                  class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                >
                   Barangay
                 </th>
                 <th
@@ -449,6 +454,15 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                   <div
                     class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   />
+                </td>
+                <td
+                  class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                >
+                  <div
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground"
+                  >
+                    Senior
+                  </div>
                 </td>
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"

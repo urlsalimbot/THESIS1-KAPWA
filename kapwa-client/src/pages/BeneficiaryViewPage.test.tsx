@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
@@ -262,6 +262,76 @@ describe('BeneficiaryViewPage', () => {
         nhtsPrId: 'NHTS-2024-999999',
       }),
     );
+  });
+
+  it('renders the family composition card with a labeled detail grid', async () => {
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('Maria Dela Cruz', {}, { timeout: 5000 })).toBeTruthy();
+    // The card now exposes details the compact row hid.
+    expect(screen.getByText('Date of Birth')).toBeTruthy();
+    expect(screen.getByText('Relationship')).toBeTruthy();
+    expect(screen.getByText('Monthly Income')).toBeTruthy();
+  });
+
+  it('deactivates a family member with a reason via the dialog', async () => {
+    mockApiPatch.mockResolvedValue({ id: 'FM-1', status: 'Inactive', statusReason: 'Moved out' });
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-001']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText('Maria Dela Cruz', {}, { timeout: 5000 })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Maria Dela Cruz stays on record/i)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+
+    await waitFor(() =>
+      expect(mockApiPatch).toHaveBeenCalledWith('/beneficiaries/BEN-001/family/FM-1', {
+        active: false,
+        reason: 'Moved out',
+      }),
+    );
+  });
+
+  it('shows an inactive member as Inactive with a Reactivate action', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('beneficiaries') && !k.includes('family')) return Promise.resolve(mockBeneficiary);
+      if (k.includes('cases') && k.includes('beneficiaryId')) return Promise.resolve({ data: mockCases, total: mockCases.length });
+      if (k.includes('family-graph')) {
+        return Promise.resolve({
+          totalCount: 2,
+          members: [
+            { id: 'FM-1', fullName: 'Maria Dela Cruz', relationship: 'Spouse', age: 45, occupation: 'Housewife', income: 0, status: 'Inactive', statusReason: 'Moved out', isPrimary: false, depth: 1 },
+          ],
+          primary: { id: 'BEN-001', fullName: 'Juan Dela Cruz', relationship: 'Self', age: 34, isPrimary: true, depth: 0 },
+        });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(
+      <MemoryRouter initialEntries={['/beneficiaries/BEN-INACTIVE']}>
+        <Routes>
+          <Route path="/beneficiaries/:id" element={<BeneficiaryViewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    // "Inactive" shows twice — the badge and the Status field.
+    expect((await screen.findAllByText('Inactive', {}, { timeout: 5000 })).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Moved out')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Reactivate' })).toBeTruthy();
   });
 
   it('has no a11y violations', async () => {

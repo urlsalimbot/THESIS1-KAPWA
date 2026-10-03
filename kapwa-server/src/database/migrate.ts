@@ -228,6 +228,7 @@ export async function migrate() {
   await q.query(`CREATE TABLE IF NOT EXISTS household_memberships ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), person_id UUID NOT NULL REFERENCES persons(id), household_id UUID REFERENCES households(id), relationship TEXT NOT NULL, is_primary BOOLEAN DEFAULT FALSE, status TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_hm_person ON household_memberships(person_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_hm_household ON household_memberships(household_id)`);
+  await q.query(`ALTER TABLE household_memberships ADD COLUMN IF NOT EXISTS status_reason TEXT`);
   await q.query(`CREATE TABLE IF NOT EXISTS beneficiary_claimants ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), beneficiary_id UUID NOT NULL REFERENCES persons(id), claimant_id UUID NOT NULL REFERENCES persons(id), relationship TEXT NOT NULL, authorization_url TEXT, calendar_year INTEGER, is_primary BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_bc_beneficiary ON beneficiary_claimants(beneficiary_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_bc_claimant ON beneficiary_claimants(claimant_id)`);

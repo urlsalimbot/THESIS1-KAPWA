@@ -21,6 +21,12 @@ export class HouseholdMembership extends BaseEntity {
   @Column({ nullable: true })
   status?: string;
 
+  // Why a member was marked inactive (moved out, deceased, …). Null while the
+  // member is active. An inactive member is kept for history but drops out of
+  // the household count and the intake match roster.
+  @Column({ name: 'status_reason', type: 'text', nullable: true })
+  statusReason?: string | null;
+
   @ManyToOne(() => Person, { nullable: false })
   @JoinColumn({ name: 'person_id' })
   person?: Person;

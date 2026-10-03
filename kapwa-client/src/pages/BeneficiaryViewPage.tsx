@@ -33,6 +33,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addressNames } from "@/lib/psgc";
 import { formatDate } from '../lib/format';
 
@@ -74,6 +75,7 @@ interface FamilyMember {
   occupation?: string;
   income?: number;
   status?: string;
+  statusReason?: string | null;
   isPrimary: boolean;
   // Detailed person fields returned by the family-graph endpoint — used to
   // prefill the intake form's family composition when adding a case.
@@ -85,7 +87,28 @@ interface FamilyMember {
   dob?: string;
 }
 
+/** Reasons offered when a household member is marked inactive. */
+const INACTIVE_REASONS: { value: string; key: string; fallback: string }[] = [
+  { value: 'Moved out', key: 'beneficiaries.reasonMovedOut', fallback: 'Moved out' },
+  { value: 'Deceased', key: 'beneficiaries.reasonDeceased', fallback: 'Deceased' },
+  { value: 'Transferred to another household', key: 'beneficiaries.reasonTransferred', fallback: 'Transferred to another household' },
+  { value: 'Other', key: 'beneficiaries.reasonOther', fallback: 'Other' },
+];
 
+/** A member is inactive only when the status says so (null/'' means active). */
+function isInactiveMember(m: FamilyMember): boolean {
+  return (m.status ?? '').trim().toLowerCase() === 'inactive';
+}
+
+/** One labeled field in a family member's detail grid. */
+function FamilyField({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className={`min-w-0 ${className || ''}`}>
+      <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="text-xs text-foreground truncate">{value}</dd>
+    </div>
+  );
+}
 
 const statusBadgeVariant: Record<
   string,
@@ -200,6 +223,47 @@ export function BeneficiaryViewPage() {
   const [nhtsDraft, setNhtsDraft] = useState('');
   const [nhtsSaving, setNhtsSaving] = useState(false);
   const [nhtsMsg, setNhtsMsg] = useState('');
+
+  // --- Family composition: deactivate / reactivate a member ----------------
+  const [deactivateTarget, setDeactivateTarget] = useState<FamilyMember | null>(null);
+  const [deactivateReason, setDeactivateReason] = useState(INACTIVE_REASONS[0].value);
+  const [deactivateNote, setDeactivateNote] = useState('');
+  const [deactivateBusy, setDeactivateBusy] = useState(false);
+  const [deactivateError, setDeactivateError] = useState('');
+
+  async function setMemberActive(m: FamilyMember, active: boolean, reason?: string) {
+    if (!id) return;
+    await api.patch(
+      `/beneficiaries/${id}/family/${m.id}`,
+      active ? { active: true } : { active: false, reason },
+    );
+    await globalMutate(queryKeys.beneficiaries.familyGraph(id));
+  }
+
+  async function confirmDeactivate() {
+    if (!deactivateTarget) return;
+    setDeactivateBusy(true);
+    setDeactivateError('');
+    try {
+      const note = deactivateNote.trim();
+      const reason = note ? `${deactivateReason} — ${note}` : deactivateReason;
+      await setMemberActive(deactivateTarget, false, reason);
+      setDeactivateTarget(null);
+      setDeactivateNote('');
+    } catch (e) {
+      setDeactivateError(e instanceof Error ? e.message : t('beneficiaries.deactivateFailed', 'Could not update the family member'));
+    } finally {
+      setDeactivateBusy(false);
+    }
+  }
+
+  async function reactivateMember(m: FamilyMember) {
+    try {
+      await setMemberActive(m, true);
+    } catch {
+      // The roster simply does not change; the worker can retry.
+    }
+  }
 
   const { data: cardSummary } = useSWR<{ cardCode: string; total: number; byCategory: Record<string, number> }>(
     id && beneficiary?.accessCardCode ? queryKeys.accessCards.summary(id) : null,
@@ -438,34 +502,59 @@ export function BeneficiaryViewPage() {
               </h3>
             </div>
             {family.length > 0 && (
-              <div className="space-y-1.5 mb-4 max-h-64 overflow-y-auto">
-                {family.map((m, i) => {
-                  const bgColors = ["bg-muted/40", "bg-muted/20", "bg-muted/30"];
-                  const dotColors = ["bg-primary", "bg-accent", "bg-secondary"];
+              <div className="space-y-2 mb-4">
+                {family.map((m) => {
+                  const inactive = isInactiveMember(m);
                   return (
-                    <div key={m.id} className={`rounded-lg ${bgColors[i % 3]} px-3 py-2 transition-colors hover:bg-muted/50`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${m.isPrimary ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"} text-[10px] font-semibold shadow-sm`}>
+                    <div
+                      key={m.id}
+                      className={`rounded-lg border p-3 transition-colors ${inactive ? "border-dashed border-border bg-muted/10" : "border-border bg-muted/30 hover:bg-muted/50"}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold shadow-sm ${m.isPrimary ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}>
                             {m.fullName.charAt(0)}
-                            <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ${dotColors[i % 3]} ring-1 ring-card`} />
                           </div>
                           <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-xs font-semibold text-foreground truncate">{m.fullName}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className={`text-sm font-semibold truncate ${inactive ? "text-muted-foreground line-through" : "text-foreground"}`}>{m.fullName}</p>
                               {m.isPrimary && <span className="rounded bg-primary/20 px-1 py-0.5 text-[9px] font-medium text-primary leading-none">{t("beneficiaries.primary", "Primary")}</span>}
+                              {inactive && <Badge variant="outline" className="px-1 py-0 text-[9px] leading-none text-muted-foreground">{t("beneficiaries.inactive", "Inactive")}</Badge>}
                             </div>
-                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                              <span>{m.relationship}</span><span>&middot;</span><span>{m.age} {t("beneficiaries.yearsShort", "yrs")}</span>
-                              {m.occupation && <><span>&middot;</span><span className="truncate">{m.occupation}</span></>}
-                            </div>
+                            <p className="text-[11px] text-muted-foreground truncate">{m.relationship} &middot; {m.age} {t("beneficiaries.yearsShort", "yrs")}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {m.status && <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground leading-none">{m.status}</span>}
-                          {m.income != null && <span className="text-[10px] font-semibold text-foreground">₱{Number(m.income).toLocaleString()}</span>}
-                        </div>
+                        {!m.isPrimary && (
+                          inactive ? (
+                            <Button type="button" variant="ghost" size="sm" className="h-7 shrink-0 text-xs" onClick={() => reactivateMember(m)}>
+                              {t("beneficiaries.reactivate", "Reactivate")}
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 shrink-0 text-xs text-destructive hover:text-destructive"
+                              onClick={() => { setDeactivateTarget(m); setDeactivateReason(INACTIVE_REASONS[0].value); setDeactivateNote(""); setDeactivateError(""); }}
+                            >
+                              {t("beneficiaries.deactivate", "Deactivate")}
+                            </Button>
+                          )
+                        )}
                       </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+                        <FamilyField label={t("beneficiaries.sex", "Sex")} value={m.gender || "—"} />
+                        <FamilyField label={t("beneficiaries.dob", "Date of Birth")} value={m.dob ? formatDate(m.dob) : "—"} />
+                        <FamilyField label={t("beneficiaries.middleNameLabel", "Middle Name")} value={m.middleName || "—"} />
+                        <FamilyField label={t("beneficiaries.extensionLabel", "Extension")} value={m.extension || "—"} />
+                        <FamilyField label={t("beneficiaries.relationshipLabel", "Relationship")} value={m.relationship || "—"} />
+                        <FamilyField label={t("beneficiaries.occupation", "Occupation")} value={m.occupation || "—"} />
+                        <FamilyField label={t("beneficiaries.monthlyIncome", "Monthly Income")} value={m.income != null ? `₱${Number(m.income).toLocaleString()}` : "—"} />
+                        <FamilyField label={t("beneficiaries.status", "Status")} value={m.status || t("beneficiaries.active", "Active")} />
+                        {inactive && m.statusReason && (
+                          <FamilyField label={t("beneficiaries.reason", "Reason")} value={m.statusReason} className="col-span-2 sm:col-span-3" />
+                        )}
+                      </dl>
                     </div>
                   );
                 })}
@@ -478,6 +567,45 @@ export function BeneficiaryViewPage() {
               primary={(famGraph?.primary || null) as any}
             />
           </div>
+
+          {/* Deactivate a family member — kept on record, out of the household
+              count and the intake match check until reactivated. */}
+          <Dialog open={!!deactivateTarget} onOpenChange={(open) => { if (!open) { setDeactivateTarget(null); setDeactivateError(""); } }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{t("beneficiaries.deactivateTitle", "Mark family member inactive")}</DialogTitle>
+                <DialogDescription>
+                  {t("beneficiaries.deactivateDesc", "{{name}} stays on record but is removed from the household count and the intake match check. You can reactivate them later.", { name: deactivateTarget?.fullName || "" })}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label htmlFor="deactivate-reason" className="text-xs font-medium text-muted-foreground">{t("beneficiaries.reason", "Reason")}</label>
+                  <select
+                    id="deactivate-reason"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={deactivateReason}
+                    onChange={(e) => setDeactivateReason(e.target.value)}
+                  >
+                    {INACTIVE_REASONS.map((r) => <option key={r.value} value={r.value}>{t(r.key, r.fallback)}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="deactivate-note" className="text-xs font-medium text-muted-foreground">{t("beneficiaries.reasonDetails", "Additional details (optional)")}</label>
+                  <Input id="deactivate-note" value={deactivateNote} onChange={(e) => setDeactivateNote(e.target.value)} maxLength={160} />
+                </div>
+                {deactivateError && <p role="alert" className="text-xs text-destructive">{deactivateError}</p>}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" disabled={deactivateBusy} onClick={() => { setDeactivateTarget(null); setDeactivateError(""); }}>
+                  {t("beneficiaries.cancel", "Cancel")}
+                </Button>
+                <Button variant="destructive" disabled={deactivateBusy} onClick={confirmDeactivate}>
+                  {deactivateBusy ? t("beneficiaries.saving", "Saving…") : t("beneficiaries.deactivate", "Deactivate")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Cases + Interventions — 2-column sub-grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

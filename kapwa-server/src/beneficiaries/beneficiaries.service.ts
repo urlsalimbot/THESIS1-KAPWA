@@ -1,5 +1,5 @@
 import { DEFAULT_LIST_LIMIT, paginate } from '../common/constants';
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -184,6 +184,7 @@ export class BeneficiariesService {
         `SELECT hm.household_id, COUNT(*)::text AS cnt
          FROM household_memberships hm
          WHERE hm.household_id = ANY($1)
+           AND (hm.status IS NULL OR lower(trim(hm.status)) <> 'inactive')
          GROUP BY hm.household_id`,
         [householdIds],
       );
@@ -259,6 +260,30 @@ export class BeneficiariesService {
     return { householdId: ben.household.id, nhtsPrId: value };
   }
 
+  /**
+   * Mark a household member inactive (with a reason) or active again. The
+   * membership is kept either way — history and any case links survive — but an
+   * inactive member is excluded from the household count and the intake match
+   * roster.
+   */
+  async setFamilyMemberStatus(
+    beneficiaryId: string,
+    membershipId: string,
+    body: { active: boolean; reason?: string },
+  ): Promise<{ id: string; status: string; statusReason: string | null }> {
+    const ben = await this.benRepo.findOne({ where: { id: beneficiaryId }, select: ['id', 'householdId'] });
+    if (!ben) throw new NotFoundException('Beneficiary not found');
+    if (!ben.householdId) throw new BadRequestException('Beneficiary has no household');
+
+    const membership = await this.hmRepo.findOne({ where: { id: membershipId, householdId: ben.householdId } });
+    if (!membership) throw new NotFoundException('Family member not found');
+
+    membership.status = body.active ? 'Active' : 'Inactive';
+    membership.statusReason = body.active ? null : (body.reason?.trim() || null);
+    await this.hmRepo.save(membership);
+    return { id: membership.id, status: membership.status, statusReason: membership.statusReason ?? null };
+  }
+
   async getFamilyGraph(beneficiaryId: string) {
     const ben = await this.benRepo.findOne({
       where: { id: beneficiaryId },
@@ -269,7 +294,7 @@ export class BeneficiariesService {
 
     const person = await this.personRepo.findOne({
       where: { id: ben.personId },
-      select: ['id', 'surname', 'firstName', 'middleName', 'dob', 'occupation', 'estimatedMonthlyIncome'],
+      select: ['id', 'surname', 'firstName', 'middleName', 'extension', 'gender', 'dob', 'occupation', 'estimatedMonthlyIncome'],
     });
 
     const primaryMember = person ? {
@@ -280,7 +305,9 @@ export class BeneficiariesService {
       middleName: person.middleName ?? null,
       extension: person.extension ?? null,
       gender: person.gender ?? null,
-      dob: person.dob instanceof Date ? person.dob.toISOString().slice(0, 10) : null,
+      dob: person.dob
+        ? (person.dob instanceof Date ? person.dob.toISOString().slice(0, 10) : String(person.dob).slice(0, 10))
+        : null,
       relationship: 'Self',
       age: person.age ?? 0,
       occupation: person.occupation ?? null,
@@ -294,9 +321,9 @@ export class BeneficiariesService {
       `SELECT hm.id,
               TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
               p.surname, p.first_name, p.middle_name, p.extension, p.gender,
-              p.dob::date AS dob,
+              to_char(p.dob, 'YYYY-MM-DD') AS dob,
               hm.relationship, EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age, p.occupation, p.estimated_monthly_income AS income,
-              hm.status, hm.is_primary
+              hm.status, hm.status_reason, hm.is_primary
        FROM household_memberships hm
        JOIN persons p ON p.id = hm.person_id
        WHERE hm.household_id = $1
@@ -319,6 +346,7 @@ export class BeneficiariesService {
       occupation: m.occupation,
       income: m.income != null ? Number(m.income) : null,
       status: m.status || null,
+      statusReason: m.status_reason ?? null,
       isPrimary: m.is_primary,
       depth: 0,
     });
@@ -326,7 +354,11 @@ export class BeneficiariesService {
 
     const allMembers = primaryMember ? [primaryMember, ...mapped] : mapped;
     const primary = primaryMember || allMembers[0] || null;
-    return { primary, members: allMembers, totalCount: allMembers.length };
+    // Household size counts the primary plus members who are not inactive; the
+    // roster above still lists inactive members so they can be reactivated.
+    const isInactive = (s?: string | null) => (s ?? '').trim().toLowerCase() === 'inactive';
+    const totalCount = (primaryMember ? 1 : 0) + mapped.filter((m: { status?: string | null }) => !isInactive(m.status)).length;
+    return { primary, members: allMembers, totalCount };
   }
 
   async revokeConsent(beneficiaryId: string, body: { reason?: string }) {

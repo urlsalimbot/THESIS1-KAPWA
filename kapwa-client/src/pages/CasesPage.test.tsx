@@ -164,12 +164,24 @@ describe('CasesPage', () => {
     mockApiGet.mockRejectedValue(new Error('network down'));
     renderWithSWR(<CasesPage />);
     await screen.findByRole('alert');
-    mockApiGet.mockResolvedValue(mockCases);
+    mockApiGet.mockResolvedValue({ data: mockCases, total: 1 });
     const callsBefore = mockApiGet.mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     await vi.waitFor(() => {
       expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore);
     });
   });
-});
 
+  it('shows the case category (service requested) as its own column', async () => {
+    mockApiGet.mockResolvedValue({ data: mockCases, total: 1 });
+    render(
+      <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
+        <MemoryRouter initialEntries={['/cases?search=__case_category_test__']}>
+          <CasesPage />
+        </MemoryRouter>
+      </SWRConfig>,
+    );
+    expect(await screen.findByText('Case Category')).toBeTruthy();
+    expect(await screen.findByText('Senior')).toBeTruthy();
+  });
+});

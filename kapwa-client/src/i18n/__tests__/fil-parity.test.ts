@@ -62,6 +62,8 @@ const ALLOWED_IDENTICAL = new Set([
   'beneficiaries.accessCard',
   'beneficiaries.barangay',
   'beneficiaries.cardCode',
+  // Name extension is a loanword on PH forms (see auth.nameExtensionPlaceholder).
+  'beneficiaries.extensionLabel',
   'beneficiaries.fundLegislative',
   'beneficiaries.fundRegular',
   'beneficiaries.intReferral',

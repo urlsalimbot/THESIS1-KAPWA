@@ -10,7 +10,7 @@ import { Sensitivity } from '../auth/decorators/resource-sensitivity.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { DEFAULT_LIST_LIMIT } from '../common/constants';
 import { AuthenticatedRequest } from '../auth/types';
-import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema, GrantConsentSchema, NhtsPrSchema, NhtsPrInput } from './dto/beneficiaries.zod';
+import { CreateBeneficiarySchema, CreateBeneficiaryInput, RevokeConsentSchema, GrantConsentSchema, NhtsPrSchema, NhtsPrInput, SetFamilyMemberStatusSchema, SetFamilyMemberStatusInput } from './dto/beneficiaries.zod';
 
 @Controller('beneficiaries')
 @UseGuards(JwtAuthGuard, RolesGuard, AbacGuard)
@@ -129,6 +129,17 @@ export class BeneficiariesController {
     @Body(new ZodPipe(NhtsPrSchema)) body: NhtsPrInput,
   ) {
     return this.benService.setHouseholdNhtsPr(id, body.nhtsPrId);
+  }
+
+  @Patch(':id/family/:membershipId')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @Sensitivity('internal')
+  async setFamilyMemberStatus(
+    @Param('id') id: string,
+    @Param('membershipId') membershipId: string,
+    @Body(new ZodPipe(SetFamilyMemberStatusSchema)) body: SetFamilyMemberStatusInput,
+  ) {
+    return this.benService.setFamilyMemberStatus(id, membershipId, body);
   }
 
   @Post()

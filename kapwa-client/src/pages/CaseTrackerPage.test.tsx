@@ -21,6 +21,7 @@ const mockEntries = [
     gender: 'M',
     ageRange: '60-70',
     clientCategory: 'Senior',
+    caseCategory: ['Medical Assistance'],
     barangay: 'Barangay 1',
     interventionRemarks: 'FA',
   },
@@ -76,6 +77,12 @@ describe('CaseTrackerPage', () => {
     renderWithSWR(<CaseTrackerPage />);
     expect(await screen.findByLabelText('Date from')).toBeTruthy();
     expect(await screen.findByLabelText('Date to')).toBeTruthy();
+  });
+
+  it('shows the case category column', async () => {
+    renderWithSWR(<CaseTrackerPage />);
+    expect(await screen.findByText('Case Category')).toBeTruthy();
+    expect(await screen.findByText('Medical Assistance')).toBeTruthy();
   });
 
   it('api.get is called with tracker.daily or tracker.range and tracker.stats on mount', async () => {

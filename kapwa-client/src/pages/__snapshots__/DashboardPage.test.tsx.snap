@@ -1024,6 +1024,11 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                   <th
                     class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                   >
+                    Case Category
+                  </th>
+                  <th
+                    class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                  >
                     Barangay
                   </th>
                   <th
@@ -1074,6 +1079,15 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
                     >
                       Senior
                     </div>
+                  </td>
+                  <td
+                    class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
+                  >
+                    <span
+                      class="text-muted-foreground"
+                    >
+                      —
+                    </span>
                   </td>
                   <td
                     class="p-4 align-middle [&:has([role=checkbox])]:pr-0"

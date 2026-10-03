@@ -934,6 +934,7 @@ export class CasesService {
           ELSE '18-59'
         END AS "ageRange",
         c.client_category AS "clientCategory",
+        c.service_requested AS "caseCategory",
         COALESCE((SELECT pa2.barangay FROM person_addresses pa2 WHERE pa2.person_id = p.id AND pa2.address_type = 'current' LIMIT 1), (SELECT pa3.raw FROM person_addresses pa3 WHERE pa3.person_id = p.id LIMIT 1)) AS barangay,
         COALESCE(c.problems_presented, c.social_worker_assessment, '') AS "interventionRemarks",
         ROW_NUMBER() OVER (PARTITION BY DATE(c.created_at) ORDER BY c.created_at) AS "dailySeqNum"
@@ -957,6 +958,7 @@ export class CasesService {
       gender: r.gender || '',
       ageRange: r.ageRange,
       clientCategory: r.clientCategory || '',
+      caseCategory: Array.isArray(r.caseCategory) ? r.caseCategory : [],
       barangay: r.barangay || '',
       interventionRemarks: r.interventionRemarks || '',
       dailySeqNum: Number(r.dailySeqNum),

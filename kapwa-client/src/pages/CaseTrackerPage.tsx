@@ -19,6 +19,7 @@ import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { DataTable } from '@/components/data-table';
+import { CaseCategoryCell } from '@/components/case-category-cell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { queryKeys } from '../lib/query-keys';
@@ -36,6 +37,7 @@ interface TrackerEntry {
   middleName: string;
   gender: string;
   clientCategory: string;
+  caseCategory: string[];
   barangay: string;
 }
 
@@ -101,6 +103,7 @@ export function CaseTrackerPage() {
     { accessorKey: 'middleName', header: t('tracker.middleName', 'M.I.'), cell: ({ row }) => <span className="text-xs">{row.original.middleName ? `${row.original.middleName[0]}.` : ''}</span> },
     { accessorKey: 'gender', header: t('tracker.gender', 'Gender') },
     { accessorKey: 'clientCategory', header: t('tracker.category', 'Category') },
+    { accessorKey: 'caseCategory', header: t('tracker.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell services={row.original.caseCategory} /> },
     { accessorKey: 'barangay', header: t('tracker.barangay', 'Barangay') },
     { accessorKey: 'status', header: t('tracker.status', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
     {

@@ -679,6 +679,19 @@ describe('IntakeService', () => {
       expect(sql).not.toMatch(/\$[1-8](?!::)/);
     });
 
+    it('excludes inactive members from the roster, family score, and candidate family', async () => {
+      dataSourceMock.query = jest.fn().mockResolvedValue([]);
+
+      await service.matchCheck({ surname: 'Dela Cruz', firstName: 'Juan' }, []);
+
+      const sql = (dataSourceMock.query as jest.Mock).mock.calls[0][0] as string;
+      // Three roster readers filter on status: the `roster` CTE, the family-score
+      // subquery, and the candidate's `family_members` JSON. A member marked
+      // inactive must drop out of all three.
+      const filters = sql.match(/lower\(trim\(hm2?\.status\)\) <> 'inactive'/g) || [];
+      expect(filters).toHaveLength(3);
+    });
+
     it('keeps only households that pass the two-part name rule, ranked by score', async () => {
       dataSourceMock.query = jest.fn().mockResolvedValue([
         {
