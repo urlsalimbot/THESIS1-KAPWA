@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { IntakePage } from './IntakePage';
@@ -1022,5 +1022,49 @@ describe('IntakePage — submit review safety net', () => {
       ).toBe(true);
     });
     expect(screen.queryByTestId('review-page')).toBeNull();
+  });
+
+  it('re-runs the check at submit after a confirmed match is removed', async () => {
+    (api.post as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+      if (path === '/intake/match-check') {
+        return Promise.resolve({ candidates: [candidateFixture()] });
+      }
+      if (path.startsWith('/intake/confirm/')) {
+        return Promise.resolve({ caseCreated: true, caseId: 'case-9', message: 'Attached to household' });
+      }
+      return Promise.resolve({ caseId: 'case-id-1', controlNo: 'NORZ-2026-0001' });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/intake']}>
+        <Routes>
+          <Route path="/intake" element={<IntakePage />} />
+          <Route path="/intake/review" element={<div data-testid="review-page">REVIEW</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beneficiary is claimant/i }));
+    await fillBeneficiary();
+    fireEvent.click(screen.getByRole('button', { name: /Check records/i }));
+    expect(await screen.findByText(/Possible existing household/i)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: /This is the client/i }));
+    const attachNotice = await screen.findByText(/Will attach to Juan Dela Cruz/i);
+
+    // Removing the attach is not a decision to proceed without a household, so
+    // the submit safety net must run again: the worker sees the candidates on
+    // the review page rather than landing in a brand-new case.
+    fireEvent.click(within(attachNotice.parentElement as HTMLElement).getByRole('button', { name: 'Remove' }));
+    expect(screen.queryByText(/Will attach to Juan Dela Cruz/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consent/i }));
+    submitForm();
+
+    expect(await screen.findByTestId('review-page')).toBeDefined();
+    expect(
+      (api.post as ReturnType<typeof vi.fn>).mock.calls.some(
+        (call: unknown[]) => call[0] === '/intake' || String(call[0]).startsWith('/intake/confirm/'),
+      ),
+    ).toBe(false);
   });
 });

@@ -469,6 +469,18 @@ export function IntakePage() {
     }
   }
 
+  /**
+   * Undo a confirmed attach. The submit safety net keys off `probeShown`, which
+   * means "the worker already saw the candidates" and normally skips the review
+   * page. Removing the attach is not that decision — the worker may want a
+   * different household or none at all — so the flag is cleared and submit runs
+   * the check again, landing on the review page when candidates exist.
+   */
+  function removeConfirmedHousehold() {
+    setConfirmedHousehold(null);
+    setProbeShown(false);
+  }
+
   function handleProbeConfirm(c: MatchCandidate) {
     setProbeCandidates(null);
     setConfirmedHousehold(c);
@@ -815,7 +827,7 @@ export function IntakePage() {
                   ? t('intake.matchProbeAttachedMember', 'Will attach to {{name}}\u2019s household and open a new case for this client — family composition loaded below. Review and edit as needed.', { name: `${confirmedHousehold.primaryBeneficiary.firstName} ${confirmedHousehold.primaryBeneficiary.surname}` })
                   : t('intake.matchProbeAttached', 'Will attach to {{name}}\u2019s household — family composition loaded below. Review and edit as needed.', { name: `${confirmedHousehold.primaryBeneficiary.firstName} ${confirmedHousehold.primaryBeneficiary.surname}` })}
               </p>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmedHousehold(null)}>
+              <Button type="button" variant="ghost" size="sm" onClick={removeConfirmedHousehold}>
                 {t('intake.matchProbeUndo', 'Remove')}
               </Button>
             </div>
