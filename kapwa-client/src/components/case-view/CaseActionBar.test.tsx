@@ -152,21 +152,20 @@ describe('CaseActionBar', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('sends the signature as `signature`, the field ApproveCaseSchema names', async () => {
-    // The schema is `z.object({ status, signature: z.string().optional() })`. A
-    // field spelled anything else is stripped or 400s, and the failure reads as
-    // a server bug rather than a typo.
+  it('sends the approval with no signature, the field ApproveCaseSchema dropped', async () => {
+    // The schema is `z.object({ status })`. A signature field the server no
+    // longer reads would be a dead input: the worker types a name, the request
+    // omits it, and nothing anywhere records that the name was ever entered.
     const user = userEvent.setup();
     renderBar({ caseId: 'c1', caseData: { status: 'in_review' }, userRole: 'admin' });
 
     await user.click(screen.getByRole('button', { name: /approve & activate/i }));
-    await user.type(screen.getByLabelText(/approver signature/i), 'Lorna Santos');
+    expect(screen.queryByLabelText(/approver signature/i)).toBeNull();
     await user.click(confirmButton());
 
     await waitFor(() =>
       expect(mockApiPatch).toHaveBeenCalledWith('/cases/c1/approve', {
         status: 'active',
-        signature: 'Lorna Santos',
       }),
     );
   });
@@ -310,31 +309,9 @@ describe('CaseActionBar', () => {
     renderBar({ caseData: { status }, userRole: 'admin' });
 
     await user.click(screen.getByRole('button', { name }));
-    if (status === 'in_review') await user.type(screen.getByLabelText(/approver signature/i), 'Lorna');
     await user.click(confirmButton());
 
     await waitFor(() => expect(mockApiPatch.mock.calls[0][0]).toBe(path));
-  });
-
-  // --- the signature gate --------------------------------------------------
-
-  it('will not approve on an empty signature', async () => {
-    const user = userEvent.setup();
-    renderBar({ caseData: { status: 'in_review' }, userRole: 'admin' });
-
-    await user.click(screen.getByRole('button', { name: /approve & activate/i }));
-
-    // Nothing is sent while the field is empty, and the requirement is stated
-    // rather than left as a mysteriously dead button.
-    expect(confirmButton()).toBeDisabled();
-    expect(screen.getByText(/signature to approve/i)).toBeTruthy();
-    expect(mockApiPatch).not.toHaveBeenCalled();
-
-    await user.type(screen.getByLabelText(/approver signature/i), ' ');
-    expect(confirmButton()).toBeDisabled();
-
-    await user.type(screen.getByLabelText(/approver signature/i), 'Lorna');
-    expect(confirmButton()).toBeEnabled();
   });
 
   // --- Override 2: this bar is the only worker control for the hand-off ----

@@ -49,8 +49,6 @@ const en = {
       "nextStatusHint": "Moves this case to {{status}}.",
       "refreshFailed": "The case moved, but the page did not refresh",
       "sendToReview": "Send to review",
-      "signatureLabel": "Approver signature",
-      "signatureRequired": "Enter your signature to approve.",
       "transitionFailed": "The case could not be moved",
     },
     "cardCompliance": "Compliance: {{count}}",

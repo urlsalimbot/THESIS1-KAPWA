@@ -128,9 +128,9 @@ export class CasesController {
   @Patch(':id/approve')
   @Roles('admin')
   async approve(@Param('id') id: string, @Body(new ZodPipe(ApproveCaseSchema)) body: ApproveCaseInput, @Request() req: AuthenticatedRequest) {
-    // No `|| ''` fallback: the schema requires a non-empty signature, so the only
-    // value that could reach here is a real one. `ApproveCaseInput` says so too.
-    return this.casesService.approve(id, mapStatus(body.status as string), body.signature, req.user?.role || '', req.user?.id);
+    // The approver is the authenticated caller — `transition()` records them as
+    // the actor. There is no signature to carry; see `ApproveCaseSchema`.
+    return this.casesService.approve(id, mapStatus(body.status as string), req.user?.role || '', req.user?.id);
   }
 
   @Post(':id/issue-coe')

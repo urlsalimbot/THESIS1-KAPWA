@@ -44,8 +44,7 @@ type Copy = { key: string; fallback: string };
  * have to copy, with nothing keeping the copies honest, which is the drift this
  * whole feature exists to prevent), or deleting a contextual control from the
  * card the user is filling in and making them scroll to a bar underneath it. The
- * bar owns the edges whose precondition the client already holds: the step seals
- * and the approval signature.
+ * bar owns the edges whose precondition the client already holds: the step seals.
  */
 interface SuppressedEdge {
   /** The status this edge moves the case to. */
@@ -60,13 +59,6 @@ interface RenderedHop {
   to: CaseStatus;
   path: string;
   ownedByStepCard?: false;
-  /**
-   * `in_review -> active` is the one hop that records *who* approved, so it goes
-   * through `/approve` (which `@Roles('admin')`) rather than `/status`. The rest
-   * are status changes and use the generic endpoint, except closure which has its
-   * own.
-   */
-  needsSignature: boolean;
   label: Copy;
   title: Copy;
   body: Copy;
@@ -116,7 +108,6 @@ const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
   assessed: {
     to: 'in_review',
     path: '/cases/%s/status',
-    needsSignature: false,
     label: { key: 'caseView.action.sendToReview', fallback: 'Send to review' },
     workerLabel: { key: 'caseView.action.flagForReview', fallback: 'Flag for admin review' },
     title: { key: 'caseView.action.flagConfirmTitle', fallback: 'Flag for admin review?' },
@@ -129,12 +120,11 @@ const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
   in_review: {
     to: 'active',
     path: '/cases/%s/approve',
-    needsSignature: true,
     label: { key: 'caseView.action.approveActivate', fallback: 'Approve & activate' },
     title: { key: 'caseView.action.approveTitle', fallback: 'Approve and activate this case?' },
     body: {
       key: 'caseView.action.approveBody',
-      fallback: 'The case moves from In Review to Active. Your signature is recorded as the approver.',
+      fallback: 'The case moves from In Review to Active. You are recorded as the approver.',
     },
   },
   // `StepTransition`'s "Mark Ready for Graduation", beside the plan it needs.
@@ -142,12 +132,11 @@ const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
   transitioning: {
     to: 'closed',
     path: '/cases/%s/close',
-    needsSignature: false,
     label: { key: 'caseView.action.closeCase', fallback: 'Close case' },
     title: { key: 'caseView.action.closeTitle', fallback: 'Close this case?' },
     body: {
       key: 'caseView.action.closeBody',
-      fallback: 'The case moves from Transitioning to Closed. Closure requires the client signature and the closure outcome already recorded.',
+      fallback: 'The case moves from Transitioning to Closed. Closure requires the closure outcome and every step sealed.',
     },
   },
 };
@@ -159,7 +148,7 @@ function endpoint(caseId: string, path: string): string {
 
 /**
  * The deliberate controls for the case transitions whose preconditions the
- * client already holds: the step seals, and the approval signature.
+ * client already holds: the step seals.
  *
  * One control per case view, mounted once. It is the only place a worker can
  * flag a case for review: `StepImplementHIP`'s `ReviewButton` used to be a second
@@ -205,7 +194,6 @@ function CaseHopControl({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [signature, setSignature] = useState('');
   const [failure, setFailure] = useState<string | null>(null);
 
   /**
@@ -239,8 +227,6 @@ function CaseHopControl({
     : [];
   const gated = openSteps.length > 0;
 
-  const signatureMissing = hop.needsSignature && signature.trim().length === 0;
-
   const stepName = (i: number): string => {
     const entry = STEP_LABEL_KEYS[i];
     return entry ? t(entry.key, entry.fallback) : `#${i + 1}`;
@@ -264,18 +250,15 @@ function CaseHopControl({
   }
 
   async function submit() {
-    if (busy || signatureMissing || gated) return;
+    if (busy || gated) return;
     setBusy(true);
     // Cleared on the way in, so a stale refusal cannot outlive the retry that is
     // meant to replace it.
     setFailure(null);
     try {
       try {
-        if (hop.needsSignature) {
-          // `signature` is the field `ApproveCaseSchema` names; anything else is
-          // dropped by the schema and the approval lands with no approver on it.
-          await api.patch(endpoint(caseId, hop.path), { status: hop.to, signature: signature.trim() });
-        } else if (hop.to === 'closed') {
+        if (hop.to === 'closed') {
+          // The close endpoint takes no body; the exit record is already saved.
           await api.patch(endpoint(caseId, hop.path));
         } else {
           await api.patch(endpoint(caseId, hop.path), { status: hop.to });
@@ -296,7 +279,6 @@ function CaseHopControl({
       // moment, so a committed transition cannot be performed twice from this bar.
       setMine({ from: status, to: hop.to });
       setOpen(false);
-      setSignature('');
       try {
         await onChanged();
       } catch (err) {
@@ -365,26 +347,6 @@ function CaseHopControl({
             <DialogTitle>{t(hop.title.key, hop.title.fallback)}</DialogTitle>
             <DialogDescription>{t(hop.body.key, hop.body.fallback)}</DialogDescription>
           </DialogHeader>
-          {hop.needsSignature && (
-            <div className="space-y-1.5">
-              <label htmlFor="case-action-signature" className="text-sm font-medium">
-                {t('caseView.action.signatureLabel', 'Approver signature')}
-              </label>
-              <input
-                id="case-action-signature"
-                type="text"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
-                aria-describedby={signatureMissing ? 'case-action-signature-hint' : undefined}
-              />
-              {signatureMissing && (
-                <p id="case-action-signature-hint" className="text-xs text-muted-foreground">
-                  {t('caseView.action.signatureRequired', 'Enter your signature to approve.')}
-                </p>
-              )}
-            </div>
-          )}
           {/* `role="alert"` so the refusal is announced, and verbatim: for the
               all-locked gate this string names the open steps the bar itself
               computed, which is the one answer a stuck worker actually needs. */}
@@ -397,7 +359,7 @@ function CaseHopControl({
             <Button variant="outline" disabled={busy} onClick={() => { setOpen(false); setFailure(null); }}>
               {t('caseView.action.cancel', 'Cancel')}
             </Button>
-            <Button disabled={busy || signatureMissing || gated} onClick={submit}>
+            <Button disabled={busy || gated} onClick={submit}>
               {t('caseView.action.confirm', 'Confirm')}
             </Button>
           </DialogFooter>

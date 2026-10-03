@@ -522,7 +522,7 @@ export class CasesService {
     }
   }
 
-  async transition(id: string, newStatus: CaseStatus, opts?: { signature?: string; userRole?: string; reason?: string; historyType?: 'standard' | 'override'; actorId?: string }) {
+  async transition(id: string, newStatus: CaseStatus, opts?: { userRole?: string; reason?: string; historyType?: 'standard' | 'override'; actorId?: string }) {
     const c = await this.findById(id);
     const oldStatus = c.status;
 
@@ -535,11 +535,6 @@ export class CasesService {
     await this.validateTransition(c, newStatus, opts?.userRole);
 
     c.status = newStatus;
-    // Truthy, not `!== undefined`: the status-changing routes carry no signature
-    // at all, and writing `undefined` over a previously approved case would erase
-    // the approver off a case that already had one. The route that *does* require
-    // a signature — `/approve` — has already refused a blank one in `approve()`.
-    if (opts?.signature) c.approvedBySignature = opts.signature;
     if (opts?.userRole) c.approvedByRole = opts.userRole;
     // Resolve the actor's display name so the case view can show
     // "Approved by {name — role}" rather than a bare role slug.
@@ -586,16 +581,11 @@ export class CasesService {
     return c;
   }
 
-  async approve(id: string, newStatus: CaseStatus, signature: string, userRole: string, actorId?: string) {
-    // An approval is a record that someone approved, so the approver's signature
-    // is part of it, not an optional annotation. `ApproveCaseSchema` already
-    // refuses a blank one at the API boundary; stating it here too means the rule
-    // holds for anything that is not an HTTP request, and it refuses *before*
-    // reading the case rather than after transitioning it.
-    if (!signature || !signature.trim()) {
-      throw new BadRequestException('Approver signature is required to approve a case');
-    }
-    return this.transition(id, newStatus, { signature, userRole, actorId, reason: `Approved by ${userRole}` });
+  async approve(id: string, newStatus: CaseStatus, userRole: string, actorId?: string) {
+    // The approver is the caller: `transition()` records them as the actor, so
+    // the approval is attributed without a separate typed signature. The signed
+    // paperwork is the exported document, not a field here.
+    return this.transition(id, newStatus, { userRole, actorId, reason: `Approved by ${userRole}` });
   }
 
   async issueDocument(id: string, type: 'coe' | 'pcv', actorId?: string) {

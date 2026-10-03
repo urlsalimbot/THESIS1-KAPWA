@@ -1587,8 +1587,6 @@ const fil: EnLocale = {
       "nextStatusHint": "Lilipat ang kaso na ito sa {{status}}.",
       "refreshFailed": "Nailipat na ang kaso, ngunit hindi na-refresh ang pahina",
       "sendToReview": "Ipadala sa pagsusuri",
-      "signatureLabel": "Pirma ng tagapag-apruba",
-      "signatureRequired": "Ilagay ang iyong para upang aprubahan.",
       "transitionFailed": "Hindi mailipat ang kaso",
     },
     "cardCompliance": "Pagsunod: {{count}}",

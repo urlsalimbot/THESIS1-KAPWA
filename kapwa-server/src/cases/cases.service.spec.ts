@@ -137,7 +137,7 @@ describe('CasesService', () => {
       (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
       (service as any).casesExport = { missingRequiredDocuments: jest.fn().mockResolvedValue(['Valid ID']) };
 
-      await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1'))
+      await expect(service.approve('1', CaseStatus.ACTIVE, 'admin', 'u1'))
         .rejects.toThrow(/missing required document/i);
     });
 
@@ -151,7 +151,7 @@ describe('CasesService', () => {
       (service as any).casesExport = { missingRequiredDocuments: jest.fn().mockResolvedValue([]) };
       (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
 
-      await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1')).resolves.toBeTruthy();
+      await expect(service.approve('1', CaseStatus.ACTIVE, 'admin', 'u1')).resolves.toBeTruthy();
     });
 
     /**
@@ -192,14 +192,14 @@ describe('CasesService', () => {
         repoMock.findOne.mockResolvedValue(referralOnlyCase());
         withReferral();
 
-        await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1')).resolves.toBeTruthy();
+        await expect(service.approve('1', CaseStatus.ACTIVE, 'admin', 'u1')).resolves.toBeTruthy();
       });
 
       it('still refuses a referral-only case with no referral on record', async () => {
         repoMock.findOne.mockResolvedValue(referralOnlyCase());
         withReferral(0);
 
-        await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1'))
+        await expect(service.approve('1', CaseStatus.ACTIVE, 'admin', 'u1'))
           .rejects.toThrow(/at least one referral/i);
       });
 
@@ -209,7 +209,7 @@ describe('CasesService', () => {
         );
         withReferral(0);
 
-        await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'admin', 'u1'))
+        await expect(service.approve('1', CaseStatus.ACTIVE, 'admin', 'u1'))
           .rejects.toThrow(/at least one referral/i);
       });
     });
@@ -923,39 +923,20 @@ describe('CasesService', () => {
   });
 
   /**
-   * An approval records an approver. `transition()` only writes
-   * `approvedBySignature` when the value is truthy, so a blank signature was
-   * accepted and the field silently dropped — leaving an approval record with no
-   * approver on it, which is the thing the deliberate-actions feature exists to
-   * prevent.
-   *
-   * `PATCH /cases/:id/approve` is the only path that carries a signature, and
-   * `ApproveCaseSchema` now refuses a blank one. This is the same rule stated at
-   * the service, so it also holds for anything that is not an HTTP request.
+   * An approval records its approver. The approver is the authenticated caller —
+   * `transition()` records them as the actor and the case view reads that name —
+   * so the approval no longer carries a typed signature. The signed paperwork is
+   * the exported document, and the field that used to demand a signature here is
+   * gone from the schema, the service, and the action bar together.
    */
-  describe('approve refuses an approval with no signature', () => {
-    it('refuses an empty signature', async () => {
-      await expect(service.approve('1', CaseStatus.ACTIVE, '', 'admin', 'u1'))
-        .rejects.toThrow('Approver signature is required to approve a case');
-    });
-
-    it('refuses a whitespace-only signature', async () => {
-      await expect(service.approve('1', CaseStatus.ACTIVE, '   ', 'admin', 'u1'))
-        .rejects.toThrow('Approver signature is required to approve a case');
-    });
-
-    it('never reaches the case at all', async () => {
-      await expect(service.approve('1', CaseStatus.ACTIVE, '', 'admin', 'u1')).rejects.toThrow();
-      expect(repoMock.save).not.toHaveBeenCalled();
-    });
-
-    it('accepts a real signature', async () => {
+  describe('approve records the approver without a signature', () => {
+    it('approves and attributes the actor', async () => {
       const existing = { id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-1', updatedAt: new Date() } as Case;
       repoMock.findOne.mockResolvedValue(existing);
       repoMock.save.mockImplementation(async (c: any) => c);
       (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
 
-      await expect(service.approve('1', CaseStatus.ACTIVE, 'Lorna Santos', 'admin', 'u1')).resolves.toBeTruthy();
+      await expect(service.approve('1', CaseStatus.ACTIVE, 'admin', 'u1')).resolves.toBeTruthy();
     });
   });
 
@@ -1171,7 +1152,7 @@ describe('FSM — authorization precedes prerequisite validation', () => {
     repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.IN_REVIEW, controlNo: 'KAPWA-1', updatedAt: new Date() } as Case);
     (service as any).casesExport = { missingRequiredDocuments: jest.fn().mockResolvedValue(['Valid ID']) };
     (service as any).getInterventionCount = jest.fn().mockResolvedValue(1);
-    await expect(service.approve('1', CaseStatus.ACTIVE, 'sig', 'social_worker', 'u1'))
+    await expect(service.approve('1', CaseStatus.ACTIVE, 'social_worker', 'u1'))
       .rejects.toThrow(/cannot transition/);
     expect((service as any).casesExport.missingRequiredDocuments).not.toHaveBeenCalled();
   });
