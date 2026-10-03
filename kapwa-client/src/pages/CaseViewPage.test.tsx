@@ -596,7 +596,9 @@ describe('CaseViewPage — stepper gating', () => {
     // The refetched case now has the plan saved (stepDone[3] = true) — the
     // Save button must NOT disappear while the case is still active.
     await waitFor(() => expect(detailFetches).toBe(2));
-    expect(screen.getByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
+    // While the save is in flight the button reads "Saving…"; wait for it to
+    // return rather than asserting synchronously, which races the busy state.
+    expect(await screen.findByRole('button', { name: /Save Transition Plan/i })).toBeTruthy();
   });
 });
 // Step 5's seal is the one control whose readOnly signal cannot come from the
