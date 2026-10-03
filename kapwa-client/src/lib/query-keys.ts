@@ -37,6 +37,8 @@ export const queryKeys = {
     myRequirements: () => memo('beneficiaries.myRequirements', () => ['beneficiaries', 'me', 'requirements'] as const),
   },
   fourps: {
+    context: (caseId: string) =>
+      memo(`fourps.context.${caseId}`, () => ['fourps', caseId, 'context'] as const),
     compliance: (caseId: string) =>
       memo(`fourps.compliance.${caseId}`, () => ['fourps', caseId, 'compliance'] as const),
     payouts: (caseId: string) =>

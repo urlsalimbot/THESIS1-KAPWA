@@ -23,6 +23,13 @@ interface HouseholdMember {
   isPrimary: boolean;
 }
 
+interface FourPsContext {
+  controlNo: string | null;
+  beneficiaryId: string | null;
+  accessCardCode: string | null;
+  members: HouseholdMember[];
+}
+
 // Everything needed to operate and monitor a Pantawid Pamilyang Pilipino Program
 // household in one place:
 //   Compliance — the 12-month conditionality set (health check-ups, school
@@ -34,17 +41,19 @@ interface HouseholdMember {
 export function FourPsCompliancePage() {
   const { caseId } = useParams<{ caseId: string }>();
   const { t } = useTranslation();
-  const { data: caseData } = useSWR<any>(caseId ? queryKeys.cases.detail(caseId) : null);
+  // The household context comes from the 4Ps module, not the case-detail
+  // endpoint: coordinators may use the 4Ps endpoints but are not allowed to read
+  // case details, and this page must work for them too.
+  const { data: context } = useSWR<FourPsContext>(caseId ? queryKeys.fourps.context(caseId) : null);
 
   // Deep links to this route are not covered by the case view's registration.
   useEffect(() => {
-    if (caseId && caseData?.controlNo) setBreadcrumbLabel(caseId, caseData.controlNo);
-  }, [caseId, caseData]);
+    if (caseId && context?.controlNo) setBreadcrumbLabel(caseId, context.controlNo);
+  }, [caseId, context]);
 
-  const household = caseData?.beneficiary?.household;
-  const members: HouseholdMember[] = household?.familyMembers ?? [];
-  const cardCode: string | undefined = caseData?.beneficiary?.accessCardCode;
-  const beneficiaryId: string | undefined = caseData?.beneficiary?.id;
+  const members: HouseholdMember[] = context?.members ?? [];
+  const cardCode: string | null | undefined = context?.accessCardCode;
+  const beneficiaryId: string | null | undefined = context?.beneficiaryId;
 
   return (
     <PageShell

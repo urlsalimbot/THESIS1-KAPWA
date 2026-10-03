@@ -383,3 +383,52 @@ describe('FourPsService access-card logging', () => {
     }
   });
 });
+
+describe('FourPsService.getCaseContext', () => {
+  let service: FourPsService;
+  let repoMock: any;
+
+  beforeEach(async () => {
+    repoMock = { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FourPsService,
+        { provide: getRepositoryToken(CaseComplianceItem), useValue: repoMock },
+        { provide: getRepositoryToken(CasePayout), useValue: { query: jest.fn(), find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn((d: any) => d) } },
+        ...extraProviders(),
+      ],
+    }).compile();
+    service = module.get(FourPsService);
+  });
+
+  it('returns the control no., access card, and household members', async () => {
+    repoMock.query
+      .mockResolvedValueOnce([{ control_no: 'KAPWA-2026-00012', beneficiary_id: 'ben-1', household_id: 'hh-1' }])
+      .mockResolvedValueOnce([{ access_card_code: 'NORZ-AC-2026-0001' }])
+      .mockResolvedValueOnce([
+        { id: 'hm-1', full_name: 'Juan Dela Cruz', relationship: 'Self', age: 46, occupation: 'Retired', income: 0, status: null, is_primary: true },
+      ]);
+
+    const ctx = await service.getCaseContext('case-1');
+
+    expect(ctx).toMatchObject({
+      controlNo: 'KAPWA-2026-00012',
+      beneficiaryId: 'ben-1',
+      accessCardCode: 'NORZ-AC-2026-0001',
+    });
+    expect(ctx.members).toEqual([
+      { id: 'hm-1', fullName: 'Juan Dela Cruz', relationship: 'Self', age: 46, occupation: 'Retired', income: 0, status: null, isPrimary: true },
+    ]);
+  });
+
+  it('throws when the case does not exist', async () => {
+    repoMock.query.mockResolvedValueOnce([]);
+    await expect(service.getCaseContext('missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it('returns no card or members when the case has no household', async () => {
+    repoMock.query.mockResolvedValueOnce([{ control_no: 'KAPWA-1', beneficiary_id: 'ben-1', household_id: null }]);
+    const ctx = await service.getCaseContext('case-1');
+    expect(ctx).toMatchObject({ controlNo: 'KAPWA-1', accessCardCode: null, members: [] });
+  });
+});

@@ -41,6 +41,14 @@ export class FourPsController {
     return this.svc.getComplianceStatus(caseId, req.user);
   }
 
+  @Get(':caseId/context')
+  @Roles('admin', 'social_worker', 'coordinator')
+  @Sensitivity('internal')
+  @ApiOperation({ summary: 'Household context for the 4Ps page (control no., access card, members)' })
+  async getContext(@Param('caseId', new ParseUUIDPipe()) caseId: string) {
+    return this.svc.getCaseContext(caseId);
+  }
+
   @Patch('compliance/:id/meet')
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Mark a compliance item as complied' })

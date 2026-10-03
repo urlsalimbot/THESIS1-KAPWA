@@ -135,6 +135,80 @@ export class FourPsService {
     return count;
   }
 
+  /**
+   * Household context for the 4Ps page: the control number for the breadcrumb,
+   * the access-card link, and the members the conditions apply to. Served from
+   * the 4Ps module so a coordinator — who may use the 4Ps endpoints but not the
+   * case-detail endpoint — still gets the whole page.
+   */
+  async getCaseContext(caseId: string): Promise<{
+    controlNo: string | null;
+    beneficiaryId: string | null;
+    accessCardCode: string | null;
+    members: Array<{
+      id: string; fullName: string; relationship: string; age: number | null;
+      occupation: string | null; income: number | null; status: string | null; isPrimary: boolean;
+    }>;
+  }> {
+    const rows = await this.complianceRepo.query(
+      `SELECT c.control_no, b.id AS beneficiary_id, b.household_id
+       FROM cases c
+       JOIN beneficiaries b ON b.id = c.beneficiary_id
+       WHERE c.id = $1
+       LIMIT 1`,
+      [caseId],
+    );
+    const row = rows?.[0];
+    if (!row) throw new NotFoundException('Case not found');
+
+    let accessCardCode: string | null = null;
+    let members: Array<{
+      id: string; fullName: string; relationship: string; age: number | null;
+      occupation: string | null; income: number | null; status: string | null; isPrimary: boolean;
+    }> = [];
+
+    if (row.household_id) {
+      const cardRows = await this.complianceRepo.query(
+        `SELECT access_card_code FROM households WHERE id = $1`,
+        [row.household_id],
+      );
+      accessCardCode = cardRows?.[0]?.access_card_code ?? null;
+
+      const memberRows = await this.complianceRepo.query(
+        `SELECT hm.id,
+                TRIM(CONCAT(p.first_name, ' ', COALESCE(p.middle_name || ' ', ''), p.surname)) AS full_name,
+                hm.relationship,
+                EXTRACT(YEAR FROM AGE(NOW(), p.dob))::integer AS age,
+                p.occupation,
+                p.estimated_monthly_income AS income,
+                hm.status,
+                hm.is_primary
+         FROM household_memberships hm
+         JOIN persons p ON p.id = hm.person_id
+         WHERE hm.household_id = $1
+         ORDER BY hm.is_primary DESC, p.surname, p.first_name`,
+        [row.household_id],
+      );
+      members = memberRows.map((m: any) => ({
+        id: m.id,
+        fullName: m.full_name,
+        relationship: m.relationship,
+        age: m.age,
+        occupation: m.occupation,
+        income: m.income != null ? Number(m.income) : null,
+        status: m.status || null,
+        isPrimary: m.is_primary,
+      }));
+    }
+
+    return {
+      controlNo: row.control_no ?? null,
+      beneficiaryId: row.beneficiary_id ?? null,
+      accessCardCode,
+      members,
+    };
+  }
+
   async getComplianceStatus(
     caseId: string,
     caller?: { id: string; role: string },
