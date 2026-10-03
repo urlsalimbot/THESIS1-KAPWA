@@ -32,76 +32,6 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
         <div
           class="flex gap-2"
         >
-          <select
-            aria-label="Summary report year"
-            class="h-8 rounded-md border bg-background px-2 text-xs"
-          >
-            <option
-              value="2026"
-            >
-              2026
-            </option>
-            <option
-              value="2025"
-            >
-              2025
-            </option>
-            <option
-              value="2024"
-            >
-              2024
-            </option>
-            <option
-              value="2023"
-            >
-              2023
-            </option>
-          </select>
-          <select
-            aria-label="Summary report semester"
-            class="h-8 rounded-md border bg-background px-2 text-xs"
-          >
-            <option
-              value="1"
-            >
-              1st Semester (Q1+Q2)
-            </option>
-            <option
-              value="2"
-            >
-              2nd Semester (Q3+Q4)
-            </option>
-          </select>
-          <button
-            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
-            type="button"
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-download mr-1"
-              fill="none"
-              height="14"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="14"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 15V3"
-              />
-              <path
-                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-              />
-              <path
-                d="m7 10 5 5 5-5"
-              />
-            </svg>
-             
-            Export Summary Report
-          </button>
           <button
             class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
             type="button"
@@ -136,6 +66,49 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
             New Intake
           </button>
         </div>
+      </div>
+    </div>
+    <div
+      class="mt-2 mb-1 flex flex-wrap items-center gap-3"
+    >
+      <span
+        class="text-xs font-medium text-muted-foreground"
+      >
+        Trend range
+      </span>
+      <div
+        aria-label="Trend range"
+        class="flex items-center rounded-md border border-border p-0.5 bg-muted/30"
+        role="group"
+      >
+        <button
+          aria-pressed="false"
+          class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          1 Week
+        </button>
+        <button
+          aria-pressed="false"
+          class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          1 Month
+        </button>
+        <button
+          aria-pressed="false"
+          class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          3 Months
+        </button>
+        <button
+          aria-pressed="true"
+          class="px-2.5 py-1 text-xs rounded font-medium transition-colors bg-primary text-primary-foreground shadow-sm"
+          type="button"
+        >
+          6 Months
+        </button>
       </div>
     </div>
     <div
@@ -762,47 +735,9 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
             class="flex flex-col space-y-1.5 p-6 pb-2"
           >
             <div
-              class="flex items-center justify-between gap-2 flex-wrap"
+              class="tracking-tight text-sm font-semibold"
             >
-              <div
-                class="tracking-tight text-sm font-semibold"
-              >
-                Trends
-              </div>
-              <div
-                aria-label="Trend range"
-                class="flex items-center rounded-md border border-border p-0.5 bg-muted/30"
-                role="group"
-              >
-                <button
-                  aria-pressed="false"
-                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
-                  type="button"
-                >
-                  1 Week
-                </button>
-                <button
-                  aria-pressed="false"
-                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
-                  type="button"
-                >
-                  1 Month
-                </button>
-                <button
-                  aria-pressed="false"
-                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors text-muted-foreground hover:text-foreground"
-                  type="button"
-                >
-                  3 Months
-                </button>
-                <button
-                  aria-pressed="true"
-                  class="px-2.5 py-1 text-xs rounded font-medium transition-colors bg-primary text-primary-foreground shadow-sm"
-                  type="button"
-                >
-                  6 Months
-                </button>
-              </div>
+              Trends
             </div>
           </div>
           <div
@@ -1193,6 +1128,89 @@ exports[`DashboardPage > snapshot: DashboardPage rendered DOM with stat cards + 
             </table>
           </div>
         </div>
+      </div>
+    </div>
+    <div
+      class="mt-4 rounded-xl border bg-card px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+    >
+      <span
+        class="text-sm font-medium text-foreground"
+      >
+        Export Summary Report
+      </span>
+      <div
+        class="flex gap-2 items-center"
+      >
+        <select
+          aria-label="Summary report year"
+          class="h-8 rounded-md border bg-background px-2 text-xs"
+        >
+          <option
+            value="2026"
+          >
+            2026
+          </option>
+          <option
+            value="2025"
+          >
+            2025
+          </option>
+          <option
+            value="2024"
+          >
+            2024
+          </option>
+          <option
+            value="2023"
+          >
+            2023
+          </option>
+        </select>
+        <select
+          aria-label="Summary report semester"
+          class="h-8 rounded-md border bg-background px-2 text-xs"
+        >
+          <option
+            value="1"
+          >
+            1st Semester (Q1+Q2)
+          </option>
+          <option
+            value="2"
+          >
+            2nd Semester (Q3+Q4)
+          </option>
+        </select>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-sm h-9 rounded-md px-3"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-download mr-1"
+            fill="none"
+            height="14"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="14"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 15V3"
+            />
+            <path
+              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+            />
+            <path
+              d="m7 10 5 5 5-5"
+            />
+          </svg>
+           
+          Export Summary Report
+        </button>
       </div>
     </div>
   </div>

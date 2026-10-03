@@ -6,7 +6,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { DashboardService } from './dashboard.service';
 import { CaseStatus } from '../cases/case.entity';
 import { AuthenticatedRequest } from '../auth/types';
-import { SLA_OVERDUE_DAYS } from '../common/constants';
+import { SLA_OVERDUE_DAYS, RECENT_CASES_LIMIT } from '../common/constants';
+
+/**
+ * The window values the dashboard's range selector offers. The main dashboard
+ * endpoint accepts only these — anything else falls back to no cutoff, so the
+ * unfiltered numbers are preserved for callers that do not pass a range.
+ */
+const DASHBOARD_RANGES = ['1w', '1m', '3m', '6m'] as const;
 
 @ApiTags('Dashboard')
 @Controller('dashboard')
@@ -20,13 +27,17 @@ export class DashboardController {
   @Get()
   @Roles('admin', 'social_worker', 'coordinator')
   @ApiOperation({ summary: 'Get dashboard summary' })
-  async getDashboard(@Request() req: AuthenticatedRequest) {
+  async getDashboard(@Request() req: AuthenticatedRequest, @Query('range') range?: string) {
     try {
       const userBarangay = req.user?.role === 'coordinator'
         ? req.user.assignedBarangay
         : undefined;
+      // The range selector filters the dashboard's date-derived numbers. Only
+      // the four known windows are accepted — anything else counts everything,
+      // the behavior these endpoints had before the selector moved here.
+      const createdAfter = DashboardService.rangeStart(DASHBOARD_RANGES.includes(range as never) ? range : undefined);
       const [metrics, sla, servedToday, lastSync] = await Promise.all([
-        this.dashService.getMetrics(userBarangay),
+        this.dashService.getMetrics(userBarangay, createdAfter),
         this.dashService.getSlaCompliance(userBarangay),
         this.dashService.getServedToday(),
         this.dashService.getLastSync(),
@@ -34,7 +45,7 @@ export class DashboardController {
 
       let recentCasesRaw: any[] = [];
       try {
-        recentCasesRaw = await this.dashService.getRecentCases(userBarangay);
+        recentCasesRaw = await this.dashService.getRecentCases(userBarangay, 1, RECENT_CASES_LIMIT, createdAfter);
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
         const errStack = e instanceof Error ? e.stack : '';

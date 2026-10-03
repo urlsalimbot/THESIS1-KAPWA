@@ -24,7 +24,7 @@ import { SlaTimer } from '@/components/sla/SlaTimer';
 import { StatsRow } from '@/components/dashboard/StatsRow';
 import { CaseStatusChart } from '@/components/dashboard/CaseStatusChart';
 import { SlaWidget } from '@/components/dashboard/SlaWidget';
-import { TrendsChart } from '@/components/dashboard/TrendsChart';
+import { TrendsChart, type TrendRange, TREND_RANGES } from '@/components/dashboard/TrendsChart';
 import { NeedsAttention } from '@/components/dashboard/NeedsAttention';
 import { BarangayBreakdown } from '@/components/dashboard/BarangayBreakdown';
 import { ActivityCalendar } from '@/components/dashboard/ActivityCalendar';
@@ -77,7 +77,8 @@ export function DashboardPage() {
     { label: t('dashboard.disbursedThisMonth', 'Disbursed This Month'), value: '₱0', change: 'N/A', icon: DollarSign, iconClass: 'bg-emerald-100 text-emerald-800' },
   ];
 
-  const swrKey = WORKER_ROLES.includes(role) ? queryKeys.dashboard.stats() : null;
+  const [range, setRange] = useState<TrendRange>('6m');
+  const swrKey = WORKER_ROLES.includes(role) ? queryKeys.dashboard.stats(range) : null;
   const { data, isLoading } = useSWR<DashboardData>(swrKey);
   const now = new Date();
   const { data: dailyCounts } = useSWR<DailyCounts>(
@@ -212,7 +213,6 @@ export function DashboardPage() {
               {exportError && <span className="text-xs text-destructive self-center">{exportError}</span>}
             </>
           )}
-          {(role === 'admin' || role === 'social_worker') && summaryExportControls}
           <Button size="sm" variant="outline" onClick={() => navigate('/intake/referrals')}>
             {t('dashboard.reviewReferrals', 'Review Referrals')}
           </Button>
@@ -221,6 +221,31 @@ export function DashboardPage() {
           </Button>
         </div>
       }>
+
+      {/* The range selector belongs to the whole dashboard, not to the trends
+          card: it filters the stats, the status chart, the barangay breakdown
+          and the below table through rangeStart on the server. TrendsChart is
+          fed the same value so its window matches the numbers it sits beside. */}
+      <div className="mt-2 mb-1 flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium text-muted-foreground">{t('dashboard.trendRange', 'Trend range')}</span>
+        <div className="flex items-center rounded-md border border-border p-0.5 bg-muted/30" role="group" aria-label={t('dashboard.trendRange', 'Trend range')}>
+          {TREND_RANGES.map((r) => (
+            <button
+              key={r.value}
+              type="button"
+              onClick={() => setRange(r.value)}
+              aria-pressed={range === r.value}
+              className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${
+                range === r.value
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {t(r.labelKey, r.label)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {data && (
         <StatsRow
@@ -236,7 +261,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <div className="lg:col-span-2"><CaseStatusChart data={data?.byStatus || []} /></div>
         <div className="lg:col-span-1"><ActivityCalendar data={dailyCounts ?? null} year={now.getFullYear()} month={now.getMonth() + 1} /></div>
-        <div className="lg:col-span-2"><TrendsChart /></div>
+        <div className="lg:col-span-2"><TrendsChart range={range} /></div>
         <div className="lg:row-span-2 lg:col-span-1"><BarangayBreakdown cases={barangayData} /></div>
         <div className="lg:col-span-1"><div className="h-full overflow-y-auto" style={{ maxHeight: '300px' }}><SlaWidget overdueCount={data?.urgentCount ?? 0} /></div></div>
         <div className="lg:col-span-1"><div className="h-full"><NeedsAttention cases={cases.map(c => ({ id: c.id, name: `${c.surname}, ${c.first}`.trim(), status: c.status }))} /></div></div>
@@ -251,6 +276,34 @@ export function DashboardPage() {
         </div>
         <DataTable columns={columns} data={cases} rowCount={cases.length} pagination={{ pageIndex: 0, pageSize: cases.length || 1 }} sorting={[]} showPagination={false} />
       </div>
+
+      {/* The summary export sits after the dashboard elements rather than in
+          the page header: the report is generated from a chosen year and
+          semester, not from the data on this page, so its controls read closer
+          to a footer action than a header filter. */}
+      {(role === 'admin' || role === 'social_worker') && (
+        <div className="mt-4 rounded-xl border bg-card px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm font-medium text-foreground">
+            {t('reports.exportSummary', 'Export Summary Report')}
+          </span>
+          <div className="flex gap-2 items-center">
+            <select aria-label={t('reports.summaryYear', 'Summary report year')} value={summaryYear}
+              onChange={(e) => setSummaryYear(Number(e.target.value))}
+              className="h-8 rounded-md border bg-background px-2 text-xs">
+              {[0, 1, 2, 3].map((d) => { const y = now.getFullYear() - d; return <option key={y} value={y}>{y}</option>; })}
+            </select>
+            <select aria-label={t('reports.summarySemester', 'Summary report semester')} value={summarySemester}
+              onChange={(e) => setSummarySemester(Number(e.target.value))}
+              className="h-8 rounded-md border bg-background px-2 text-xs">
+              <option value={1}>{t('reports.semester1', '1st Semester (Q1+Q2)')}</option>
+              <option value={2}>{t('reports.semester2', '2nd Semester (Q3+Q4)')}</option>
+            </select>
+            <Button size="sm" variant="outline" onClick={handleExportSummary} disabled={summaryExporting}>
+              <Download size={14} className="mr-1" /> {summaryExporting ? t('dashboard.generating', 'Generating...') : t('reports.exportSummary', 'Export Summary Report')}
+            </Button>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }

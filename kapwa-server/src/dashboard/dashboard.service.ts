@@ -39,6 +39,34 @@ export class DashboardService {
     return 0;
   }
 
+  /**
+   * The first day (ISO yyyy-mm-dd) covered by a dashboard range, on the same
+   * window basis `getTrends` buckets by: '1w' is the Monday of the current
+   * calendar week, '1m' the first of the current month, '3m'/'6m' the first of
+   * the month that starts the 3- or 6-month window. Shared with the metrics and
+   * recent-cases filters so every date-derived number on the dashboard counts
+   * from the same edge the trend chart draws.
+   *
+   * Open-ended callers: the selector was added with the existing endpoints in
+   * mind, so `rangeToDate` and `getTrends` agree by construction — the cutoff is
+   * the first bucket's start.
+   */
+  static rangeStart(range: string | undefined): string | undefined {
+    const now = new Date();
+    if (range === '1w') {
+      // Monday-first calendar week, exactly as getTrends computes it.
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      return monday.toISOString().slice(0, 10);
+    }
+    if (range === '1m') return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    if (range === '3m') return new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10);
+    if (range === '6m') return new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
+    // Unknown or absent range: no cutoff, matching the endpoints' former
+    // unfiltered behavior rather than guessing a window.
+    return undefined;
+  }
+
   invalidateCache(): void {
     this.cache?.invalidate('^dashboard:');
   }
@@ -141,7 +169,7 @@ export class DashboardService {
   }
 
 
-  async getRecentCases(barangay?: string, page = 1, limit = RECENT_CASES_LIMIT) {
+  async getRecentCases(barangay?: string, page = 1, limit = RECENT_CASES_LIMIT, createdAfter?: string) {
     const qb = this.caseRepo
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'b')
@@ -152,6 +180,11 @@ export class DashboardService {
 
     if (barangay) {
       qb.andWhere('EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay))', { barangay: `%${barangay}%` });
+    }
+    // The dashboard's range selector drives this; a case is "in range" when
+    // filed within the window, on the same created_at basis the metrics use.
+    if (createdAfter) {
+      qb.andWhere('c.created_at >= :createdAfter', { createdAfter: `${createdAfter}T00:00:00Z` });
     }
 
     paginate(qb, page, limit);
@@ -168,6 +201,9 @@ export class DashboardService {
           '(SELECT b2.id FROM beneficiaries b2 JOIN persons b2p ON b2p.id = b2.person_id ' +
           'WHERE EXISTS (SELECT 1 FROM person_addresses pa2 WHERE pa2.person_id = b2p.id AND (pa2.barangay ILIKE :barangay OR pa2.raw ILIKE :barangay)))',
           { barangay: `%${barangay}%` });
+      }
+      if (createdAfter) {
+        qb2.andWhere('c.created_at >= :createdAfter', { createdAfter: `${createdAfter}T00:00:00Z` });
       }
       paginate(qb2, page, limit);
       const cases = await qb2.getMany();

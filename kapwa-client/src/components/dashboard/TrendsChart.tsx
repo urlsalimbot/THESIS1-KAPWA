@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import useSWR from 'swr';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -13,43 +12,24 @@ interface TrendData {
 
 export type TrendRange = '1w' | '1m' | '3m' | '6m';
 
-const RANGES: { value: TrendRange; labelKey: string; label: string }[] = [
+export const TREND_RANGES: { value: TrendRange; labelKey: string; label: string }[] = [
   { value: '1w', labelKey: 'dashboard.range1w', label: '1 Week' },
   { value: '1m', labelKey: 'dashboard.range1m', label: '1 Month' },
   { value: '3m', labelKey: 'dashboard.range3m', label: '3 Months' },
   { value: '6m', labelKey: 'dashboard.range6m', label: '6 Months' },
 ];
 
-export function TrendsChart() {
+export function TrendsChart({ range }: { range?: TrendRange }) {
   const { t } = useTranslation();
-  const [range, setRange] = useState<TrendRange>('6m');
-  const { data } = useSWR<TrendData[]>(queryKeys.dashboard.trends(range));
+  const active = range ?? '6m';
+  const { data } = useSWR<TrendData[]>(queryKeys.dashboard.trends(active));
 
   const series = data || [];
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <CardTitle className="text-sm font-semibold">{t('dashboard.trends', 'Trends')}</CardTitle>
-          <div className="flex items-center rounded-md border border-border p-0.5 bg-muted/30" role="group" aria-label={t('dashboard.trendRange', 'Trend range')}>
-            {RANGES.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => setRange(r.value)}
-                aria-pressed={range === r.value}
-                className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${
-                  range === r.value
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t(r.labelKey, r.label)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <CardTitle className="text-sm font-semibold">{t('dashboard.trends', 'Trends')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {series.length === 0 ? (
