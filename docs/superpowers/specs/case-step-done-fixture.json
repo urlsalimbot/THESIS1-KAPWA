@@ -196,33 +196,25 @@
     "expected": true
   },
   {
-    "name": "step4 not done: signature and outcome on an active case",
+    "name": "step4 not done: closure outcome recorded but the status floor is not met",
     "step": 4,
-    "caseData": { "status": "active", "clientSignature": "sig", "closureOutcome": "done" },
+    "caseData": { "status": "active", "closureOutcome": "done" },
     "interventionCount": 0,
     "opts": {},
     "expected": false
   },
   {
-    "name": "step4 done: on a transitioning case",
+    "name": "step4 done: closure outcome on a transitioning case",
     "step": 4,
-    "caseData": { "status": "transitioning", "clientSignature": "sig", "closureOutcome": "done" },
+    "caseData": { "status": "transitioning", "closureOutcome": "done" },
     "interventionCount": 0,
     "opts": {},
     "expected": true
   },
   {
-    "name": "step4 not done: closure outcome without a client signature",
+    "name": "step4 not done: transitioning without a closure outcome",
     "step": 4,
-    "caseData": { "status": "transitioning", "closureOutcome": "done" },
-    "interventionCount": 0,
-    "opts": {},
-    "expected": false
-  },
-  {
-    "name": "step4 not done: client signature without a closure outcome",
-    "step": 4,
-    "caseData": { "status": "transitioning", "clientSignature": "sig" },
+    "caseData": { "status": "transitioning" },
     "interventionCount": 0,
     "opts": {},
     "expected": false

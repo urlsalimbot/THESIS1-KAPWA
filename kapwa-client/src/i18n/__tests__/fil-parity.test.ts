@@ -81,7 +81,6 @@ const ALLOWED_IDENTICAL = new Set([
   'caseView.implement.modeOfDelivery.cash',
   'caseView.implement.modeOfDelivery.inKind',
   'caseView.implement.req',
-  'caseView.signatures.pettyCashVoucher',
   'caseView.stepper.phaseIn',
   'caseView.stepper.phaseOut',
   'approvals.phaseIn',

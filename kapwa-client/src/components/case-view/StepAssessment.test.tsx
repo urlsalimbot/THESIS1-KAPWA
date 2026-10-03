@@ -20,7 +20,7 @@ type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | nul
 function renderAssessment(
   caseData: Record<string, unknown>,
   assessment: Record<string, unknown> = {},
-  opts: { readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal; userRole?: string } = {},
+  opts: { readOnly?: boolean; transitionReadOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal; userRole?: string } = {},
 ) {
   return render(
     <StepAssessment
@@ -32,6 +32,7 @@ function renderAssessment(
       saving={false}
       userRole={opts.userRole ?? 'social_worker'}
       readOnly={opts.readOnly}
+      transitionReadOnly={opts.transitionReadOnly}
       lockReadOnly={opts.lockReadOnly}
       stepLock={opts.stepLock}
     />,
@@ -198,6 +199,34 @@ describe('StepAssessment — sealing step 1', () => {
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
     expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
+  });
+
+  // Finding: a sealed step was read-only *because* of the seal, and the seal was
+  // folded into the one `readOnly` that also gated the transition — so sealing
+  // step 1 hid "Complete Assessment" and the worker had to unlock, advance, and
+  // re-seal. The seal guards the step's data; the hop it prepares for is not
+  // data. `transitionReadOnly` is the base signal, without the seal.
+  it('keeps Complete Assessment available while the step is sealed, but not its Save', () => {
+    const stepLock = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    renderAssessment(
+      filledCaseData({ frvaScore: 45 }),
+      { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45 },
+      { readOnly: true, transitionReadOnly: false, stepLock },
+    );
+
+    expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeEnabled();
+    // The seal still freezes the data — no way to change the frozen fields.
+    expect(screen.queryByRole('button', { name: 'Save Assessment' })).toBeNull();
+  });
+
+  it('withholds the transition when the base signal does, seal or not', () => {
+    renderAssessment(
+      filledCaseData({ frvaScore: 45 }),
+      { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45 },
+      { readOnly: true, transitionReadOnly: true },
+    );
+
+    expect(screen.queryByRole('button', { name: /Complete Assessment/ })).toBeNull();
   });
 
   it('shows who sealed this step and offers the release', () => {

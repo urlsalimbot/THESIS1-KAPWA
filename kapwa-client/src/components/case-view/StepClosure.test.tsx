@@ -15,8 +15,6 @@ vi.mock('@/lib/api', () => ({
 
 type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
 
-const SIGNATURE = 'data:image/png;base64,iVBORw0KGgo=';
-
 function renderStep(
   caseData: any,
   opts: { readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal } = {},
@@ -33,25 +31,25 @@ function renderStep(
 }
 
 describe('StepClosure — sealing step 5', () => {
-  // `stepperStepDone(4, …)` wants an outcome AND a captured signature, and
-  // `transitioning` is the earliest status that clears this step's floor — a
-  // prefilled outcome on an earlier case must not read as a finished closure.
+  // `stepperStepDone(4, …)` wants a closure outcome, and `transitioning` is the
+  // earliest status that clears this step's floor — a prefilled outcome on an
+  // earlier case must not read as a finished closure.
   it('disables Lock while the closure is not done', () => {
-    renderStep({ status: 'transitioning', closureOutcome: 'graduated' });
+    renderStep({ status: 'transitioning' });
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
     expect(screen.getByText(/Complete this step before sealing it/)).toBeTruthy();
   });
 
-  it('enables Lock once the outcome and the signature are recorded', () => {
-    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE });
+  it('enables Lock once the outcome is recorded', () => {
+    renderStep({ status: 'transitioning', closureOutcome: 'graduated' });
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
   it('shows who sealed this step and offers the release', () => {
     const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
-    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { stepLock });
+    renderStep({ status: 'transitioning', closureOutcome: 'graduated' }, { stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
     expect(screen.getByRole('button', { name: /unlock/i })).toBeTruthy();
@@ -96,7 +94,7 @@ describe('StepClosure — sealing step 5', () => {
     // Routed to the bar, that signal renders `null` and step 5 can never be
     // sealed at all — so the bar reads `lockReadOnly` instead.
     renderStep(
-      { status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE },
+      { status: 'transitioning', closureOutcome: 'graduated' },
       { readOnly: true, lockReadOnly: false },
     );
 
@@ -114,14 +112,14 @@ describe('StepClosure — sealing step 5', () => {
     // Critical lockout — the step body is read-only *because* it is sealed, so
     // the release is the one control that has to survive.
     const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
-    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { readOnly: true, stepLock });
+    renderStep({ status: 'transitioning', closureOutcome: 'graduated' }, { readOnly: true, stepLock });
 
     expect(screen.getByRole('button', { name: /unlock/i })).toBeTruthy();
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
     const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
-    renderStep({ status: 'transitioning', closureOutcome: 'graduated', clientSignature: SIGNATURE }, { readOnly: true, lockReadOnly: true, stepLock });
+    renderStep({ status: 'transitioning', closureOutcome: 'graduated' }, { readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /unlock/i })).toBeNull();

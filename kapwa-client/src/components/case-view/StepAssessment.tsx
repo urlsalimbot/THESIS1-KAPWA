@@ -21,6 +21,16 @@ interface StepAssessmentProps {
   saving: boolean;
   userRole?: string;
   readOnly?: boolean;
+  /**
+   * Whether this step's forward transition ("Complete Assessment") is withheld.
+   * Split from `readOnly` because a sealed step is read-only *because* of its
+   * seal, and the seal guards the step's fields — not the lifecycle hop they
+   * complete. Folding the seal into one flag hid the transition the moment the
+   * worker sealed the step, so the natural "seal, then submit" order blocked the
+   * very advance the seal was preparing for. Defaults to `readOnly`, so a caller
+   * that omits it keeps the previous behaviour.
+   */
+  transitionReadOnly?: boolean;
   /** This step's own seal row, or null — the case view resolves it. */
   stepLock?: StepLock | null;
   /**
@@ -35,7 +45,7 @@ interface StepAssessmentProps {
 }
 
 export function StepAssessment({
-  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, lockReadOnly = false, stepLock,
+  caseId, caseData, assessment, onAssessmentChange, onSave, saving, userRole, readOnly, transitionReadOnly = readOnly, lockReadOnly = false, stepLock,
 }: StepAssessmentProps) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
@@ -165,25 +175,29 @@ export function StepAssessment({
           {/* One Save per step: it persists every field in this card, because
               the whole assessment object is saved together. Its rule belongs to
               it as well — a viewer gets no Save row, and a separator left
-              standing would end the card on a line ruling off nothing. */}
-          {!readOnly && (
+              standing would end the card on a line ruling off nothing.
+              The transition is gated on `transitionReadOnly`, not `readOnly`, so
+              a sealed step still offers the advance it was sealed in aid of. */}
+          {(!readOnly || !transitionReadOnly) && (
             <>
               <Separator />
               <div className="flex items-center gap-2">
-                <Button onClick={onSave} disabled={saving}>
-                  {saving ? t('caseView.saving', 'Saving...') : t('caseView.assessment.saveAssessment', 'Save Assessment')}
-                </Button>
-                {assessmentDone && !hasScore && caseData?.status === 'enrolled' && (
+                {!readOnly && (
+                  <Button onClick={onSave} disabled={saving}>
+                    {saving ? t('caseView.saving', 'Saving...') : t('caseView.assessment.saveAssessment', 'Save Assessment')}
+                  </Button>
+                )}
+                {!readOnly && assessmentDone && !hasScore && caseData?.status === 'enrolled' && (
                   <span className="text-xs text-muted-foreground">
                     {t('caseView.assessment.scoreRequiredHint', 'Add an FRVA or SWDI score above to complete the assessment.')}
                   </span>
                 )}
-                {canTransition && (
+                {!transitionReadOnly && canTransition && (
                   <Button onClick={markAssessmentComplete} disabled={transitioning} variant="default">
                     {transitioning ? t('caseView.completing', 'Completing...') : t('caseView.assessment.completeAssessment', '✓ Complete Assessment → Proceed to Intervention')}
                   </Button>
                 )}
-                {caseData?.status === 'assessed' && (
+                {!transitionReadOnly && caseData?.status === 'assessed' && (
                   <span className="text-xs text-emerald-600 font-medium">{t('caseView.assessment.assessmentCompleted', '✓ Assessment completed')}</span>
                 )}
               </div>

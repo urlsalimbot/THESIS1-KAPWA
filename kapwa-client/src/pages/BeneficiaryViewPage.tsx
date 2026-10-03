@@ -23,11 +23,10 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
-import { api, uploadSignature, uploadReceipt, dataURItoBlob } from "../lib/api";
+import { api, uploadReceipt } from "../lib/api";
 import { queryKeys } from "../lib/query-keys";
 import { FamilyGraph } from "../components/family/FamilyGraph";
 import { ConsentManager } from "../components/consent/ConsentManager";
-import SignaturePad from "../components/forms/SignaturePad";
 import { PageShell } from "@/components/PageShell";
 import { CardGridSkeleton } from "@/components/skeletons/CardGridSkeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -188,7 +187,6 @@ export function BeneficiaryViewPage() {
     amount: "",
     fundSource: "Regular",
   });
-  const [intSigDataUrl, setIntSigDataUrl] = useState<string | null>(null);
   const [intReceiptFile, setIntReceiptFile] = useState<File | null>(null);
   const [intSubmitting, setIntSubmitting] = useState(false);
   const [intError, setIntError] = useState("");
@@ -284,16 +282,7 @@ export function BeneficiaryViewPage() {
     setIntError("");
     setIntSubmitting(true);
     try {
-      let workerSignatureUrl = "";
       let receiptUrl = "";
-
-      if (intSigDataUrl) {
-        const blob = dataURItoBlob(intSigDataUrl);
-        workerSignatureUrl = await uploadSignature(
-          blob,
-          `sig-${Date.now()}.png`,
-        );
-      }
 
       if (intReceiptFile) {
         receiptUrl = await uploadReceipt(intReceiptFile, intReceiptFile.name);
@@ -309,7 +298,6 @@ export function BeneficiaryViewPage() {
 
       setInterventionCaseId(null);
       setIntForm({ type: "FA", amount: "", fundSource: "Regular" });
-      setIntSigDataUrl(null);
       setIntReceiptFile(null);
     } catch (err: any) {
       setIntError(err.message || t("beneficiaries.logInterventionFailed", "Failed to log intervention"));
@@ -620,7 +608,6 @@ export function BeneficiaryViewPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <SignaturePad onSave={(dataUrl: string) => setIntSigDataUrl(dataUrl)} label={t("beneficiaries.workerSignature", "Worker Signature")} />
                   <div className="space-y-1">
                     <label className="text-xs font-medium">{t("beneficiaries.receiptOptional", "Receipt (optional)")}</label>
                     <input type="file" accept="image/*" className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground" onChange={e => setIntReceiptFile(e.target.files?.[0] || null)} aria-label={t("beneficiaries.clientReceipt", "Client Receipt")} />
@@ -628,7 +615,7 @@ export function BeneficiaryViewPage() {
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" disabled={intSubmitting}>{intSubmitting ? t("beneficiaries.saving", "Saving...") : t("beneficiaries.submitIntervention", "Submit Intervention")}</Button>
-                  <Button variant="outline" size="sm" type="button" onClick={() => { setInterventionCaseId(null); setIntError(""); setIntSigDataUrl(null); setIntReceiptFile(null); }}>{t("beneficiaries.cancel", "Cancel")}</Button>
+                  <Button variant="outline" size="sm" type="button" onClick={() => { setInterventionCaseId(null); setIntError(""); setIntReceiptFile(null); }}>{t("beneficiaries.cancel", "Cancel")}</Button>
                 </div>
               </form>
             </div>

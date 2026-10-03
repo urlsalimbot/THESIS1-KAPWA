@@ -131,7 +131,7 @@ export function stepperStepDone(i: number, caseData: any, interventionCount: num
     case 2: return (opts.interAgencyReferralCount ?? 0) > 0
       || Boolean(opts.referralNotNeeded ?? caseData?.referralNotNeeded);
     case 3: return !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan;
-    case 4: return !!caseData?.clientSignature && !!caseData?.closureOutcome;
+    case 4: return !!caseData?.closureOutcome;
     default: return false;
   }
 }

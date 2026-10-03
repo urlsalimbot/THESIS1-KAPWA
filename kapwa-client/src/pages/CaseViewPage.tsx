@@ -467,6 +467,7 @@ export function CaseViewPage() {
       onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
       userRole={user?.role}
       readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), 0)}
+      transitionReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
       lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
       stepLock={lockFor(0)} />,
     <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role}

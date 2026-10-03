@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle, Clock, Download, Lock } from 'lucide-react';
 import { downloadCsrPdf } from '@/lib/api';
-import SignaturePad from '../forms/SignaturePad';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 
@@ -44,10 +43,7 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
   const [closure, setClosure] = useState({
     closureOutcome: caseData?.closureOutcome || '',
     exitNotes: caseData?.exitNotes || '',
-    clientSignature: caseData?.clientSignature || '',
   });
-
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
 
   async function handleSave() {
     setSaving(true);
@@ -55,7 +51,6 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
       await api.patch(`/cases/${caseId}/closure`, {
         closureOutcome: closure.closureOutcome || null,
         exitNotes: closure.exitNotes || null,
-        clientSignature: closure.clientSignature || null,
       });
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
@@ -131,58 +126,6 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
             placeholder={t('caseView.closure.exitNotesPlaceholder', 'Final notes before case closure...')}
             disabled={isClosed || readOnly}
           />
-        </div>
-      </div>
-
-      {/* Client Signature */}
-      <div className="rounded-lg border bg-card">
-        <div className="px-4 py-3">
-          <h3 className="text-sm font-semibold">{t('caseView.closure.clientSignature', 'Client Signature *')}</h3>
-        </div>
-        <Separator />
-        <div className="px-4 py-3">
-          {closure.clientSignature ? (
-            <div className="space-y-2">
-              <img
-                src={closure.clientSignature}
-                alt={t('caseView.closure.clientSignatureAlt', 'Client signature')}
-                className="max-h-20 border rounded bg-white"
-              />
-              <p className="text-xs text-muted-foreground">{t('caseView.closure.signed', 'Signed')}</p>
-              {!isClosed && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setClosure(c => ({ ...c, clientSignature: '' }))}
-                >
-                  {t('caseView.closure.clearSignature', 'Clear Signature')}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">{t('caseView.closure.noSignature', 'No signature captured yet.')}</p>
-              {!isClosed && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSignaturePad(!showSignaturePad)}
-                >
-                  {showSignaturePad ? t('caseView.cancel', 'Cancel') : t('caseView.closure.captureSignature', 'Capture Signature')}
-                </Button>
-              )}
-            </div>
-          )}
-          {showSignaturePad && !closure.clientSignature && (
-            <div className="mt-3">
-              <SignaturePad
-                onSave={(signature: string) => {
-                  setClosure(c => ({ ...c, clientSignature: signature }));
-                  setShowSignaturePad(false);
-                }}
-              />
-            </div>
-          )}
         </div>
       </div>
 

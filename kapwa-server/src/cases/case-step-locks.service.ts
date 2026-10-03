@@ -68,7 +68,6 @@ interface StepDoneCase {
   clientCategory?: string | null;
   selfRelianceLevel?: number | null;
   sustainabilityPlan?: string | null;
-  clientSignature?: string | null;
   closureOutcome?: string | null;
 }
 
@@ -214,7 +213,7 @@ export class CaseStepLocksService {
       // never `case_referrals`, which is the transition plan's agency list.
       case 2: return (opts.interAgencyReferralCount ?? 0) > 0 || Boolean(opts.referralNotNeeded);
       case 3: return !!caseData.selfRelianceLevel && !!caseData.sustainabilityPlan;
-      case 4: return !!caseData.clientSignature && !!caseData.closureOutcome;
+      case 4: return !!caseData.closureOutcome;
       default: return false;
     }
   }
@@ -252,7 +251,6 @@ export class CaseStepLocksService {
         clientCategory: c.clientCategory,
         selfRelianceLevel: c.selfRelianceLevel,
         sustainabilityPlan: c.sustainabilityPlan,
-        clientSignature: c.clientSignature,
         closureOutcome: c.closureOutcome,
       },
       interventionCount,

@@ -847,15 +847,17 @@ describe('CasesService', () => {
         .rejects.toThrow('Still open: Case Study & Closure');
     });
 
-    // The gate asks for the step whose work *completes* on this edge, not for
-    // every step due — at `transitioning` all five are due, and naming four of
-    // them would send the worker to re-seal finished work.
-    it('names only the closure step, by the label the stepper uses', async () => {
+    // Closure requires every step due at `transitioning` — all five — not just
+    // the step whose work completes on this edge. Step 4's own edge
+    // (`active -> transitioning`) is admin-only, so it can never carry a gate;
+    // closure is the last point step 4 can be asked for. The message therefore
+    // names every open due step, closure included.
+    it('names every open due step, closure included', async () => {
       repoMock.findOne.mockResolvedValue(transitioning());
       stepLocksRepoMock.find.mockResolvedValue([]);
 
       await expect(service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' }))
-        .rejects.toThrow('Lock every step before closing this case. Still open: Case Study & Closure');
+        .rejects.toThrow('Lock every step before closing this case. Still open: Assess & Interview, Intervention & Requirements, Inter-agency Referrals, Evaluate Help Given, Case Study & Closure');
     });
 
     // Same carve-out as the hand-off gate, for the same stated reason: an admin
@@ -878,12 +880,12 @@ describe('CasesService', () => {
 
     // The missing-data complaint is cheaper and more specific, so it must still be
     // the one a worker sees before being told to go and seal a step.
-    it('leaves the missing-signature complaint in front of the seal complaint', async () => {
-      repoMock.findOne.mockResolvedValue(transitioning({ clientSignature: null, closureOutcome: null }));
+    it('leaves the missing-outcome complaint in front of the seal complaint', async () => {
+      repoMock.findOne.mockResolvedValue(transitioning({ closureOutcome: null }));
       stepLocksRepoMock.find.mockResolvedValue([]);
 
       await expect(service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' }))
-        .rejects.toThrow('Client signature and closure outcome are required for closure');
+        .rejects.toThrow('Closure outcome is required for closure');
     });
 
     /**
@@ -1103,23 +1105,25 @@ describe('FSM — close', () => {
   });
 
   it('should close case when role is social_worker', async () => {
-    // Step 5's seal is now required to leave `transitioning` (see the step-5 seal
-    // gate in this suite). A social worker closing a case is the case the gate
-    // exists for, so it has to arrive with the seal taken.
-    const existing = { id: '1', status: CaseStatus.TRANSITIONING, clientSignature: 'sig', closureOutcome: 'graduated', updatedAt: new Date() } as Case;
+    // Closure requires every step due at `transitioning`, so a social worker
+    // closing a case arrives with all five seals taken — the case the gate
+    // exists for.
+    const existing = { id: '1', status: CaseStatus.TRANSITIONING, closureOutcome: 'graduated', updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
-    stepLocksRepoMock.find.mockResolvedValue([
-      { id: 'lock-4', caseId: '1', stepIndex: 4, lockedBy: 'u1', lockedByName: 'Juan', lockedAt: new Date() },
-    ]);
+    stepLocksRepoMock.find.mockResolvedValue(
+      [0, 1, 2, 3, 4].map((stepIndex) => ({
+        id: `lock-${stepIndex}`, caseId: '1', stepIndex, lockedBy: 'u1', lockedByName: 'Juan', lockedAt: new Date(),
+      })),
+    );
     repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.CLOSED });
     const result = await service.close('1', CaseStatus.CLOSED, 'social_worker');
     expect(result.status).toBe(CaseStatus.CLOSED);
   });
 
-  it('should throw when closing without client signature', async () => {
+  it('should throw when closing without a closure outcome', async () => {
     const existing = { id: '1', status: CaseStatus.TRANSITIONING, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
-    await expect(service.close('1', CaseStatus.CLOSED, 'admin')).rejects.toThrow('Client signature and closure outcome are required');
+    await expect(service.close('1', CaseStatus.CLOSED, 'admin')).rejects.toThrow('Closure outcome is required for closure');
   });
 
   it('rejects closing a case straight from enrolled (no signature/outcome/case study)', async () => {

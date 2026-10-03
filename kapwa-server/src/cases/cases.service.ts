@@ -13,7 +13,7 @@ import { CaseStepLock } from './case-step-lock.entity';
 // boot, which no unit test can see. The labels are all this file needs, and an
 // error that spells a step differently from the stepper costs the worker a trip
 // to the UI to find out what is open.
-import { CASE_STEP_LABELS, stepsDueAt, stepsBecomingDueAt } from './case-step-labels';
+import { CASE_STEP_LABELS, stepsDueAt } from './case-step-labels';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -363,7 +363,7 @@ export class CasesService {
               ch.created_at,
               TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name, u.name_extension)) AS changed_by_name
        FROM case_history ch
-       LEFT JOIN users u ON u.id = ch.changed_by_id
+       LEFT JOIN users u ON u.id::text = ch.changed_by_id
        WHERE ch.case_id = $1
        ORDER BY ch.created_at ASC`,
       [caseId],
@@ -425,8 +425,8 @@ export class CasesService {
       if (c.status !== CaseStatus.TRANSITIONING) {
         throw new BadRequestException('Case must be in transitioning status to close');
       }
-      if (!c.clientSignature || !c.closureOutcome) {
-        throw new BadRequestException('Client signature and closure outcome are required for closure');
+      if (!c.closureOutcome) {
+        throw new BadRequestException('Closure outcome is required for closure');
       }
     }
     if (c.status === CaseStatus.ENROLLED && newStatus === CaseStatus.ASSESSED && (!c.problemsPresented || !c.socialWorkerAssessment || !c.clientCategory)) {
@@ -469,10 +469,14 @@ export class CasesService {
     // nothing asked whether anyone deliberately sealed them, and a case could
     // reach `closed` with its closure step never sealed by anyone.
     //
-    // `stepsBecomingDueAt`, not `stepsDueAt`, and not a listed index: each of
-    // these gates is about the step whose work *completes* on this edge, and that
-    // is the step floored at exactly the status being left. Naming an index here
-    // is how the hand-off gate came to demand steps that could not be sealed.
+    // Closure therefore asks for every step due at `transitioning` — all five —
+    // not just the step whose work completes on this edge. Step 4's own edge,
+    // `active -> transitioning`, cannot carry its gate (`CASE_FSM_ROLES[ACTIVE]`
+    // is empty, so only `admin` may take it, and `admin` is the caller this rule
+    // exempts), so closure is the last point at which step 4 can be required of
+    // anyone. Requiring the earlier steps again costs nothing: a case only reaches
+    // `transitioning` through `in_review -> active`, which already required them,
+    // and re-checking also catches a step unlocked after approval.
     //
     // `active -> transitioning` is deliberately *not* gated, and the gap is real:
     // `CASE_FSM_ROLES[ACTIVE]` is empty, so `canTransition` admits `admin` and
@@ -481,7 +485,7 @@ export class CasesService {
     // FSM, so it becomes a gap to close if a role is ever added there — not a
     // silent assumption.
     if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && userRole !== 'admin') {
-      this.assertStepsSealed(c, stepsBecomingDueAt(c.status), 'closing this case');
+      this.assertStepsSealed(c, stepsDueAt(c.status), 'closing this case');
     }
     if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
       const interventionCount = await this.getInterventionCount(c.id);
