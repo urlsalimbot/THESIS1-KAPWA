@@ -362,3 +362,43 @@ with `clientCategory` changed `Indigent` -> `4Ps` by the D2 experiment, a checkl
 was deleted to reset the D3 deadlock; nothing else was removed.
 
 Both dev servers were left running: API :3000, client :3001.
+---
+
+## Intake → FSM lifecycle → Closed (playwright-cli, UI-only)
+
+Case **KAPWA-2026-00061** (beneficiary "Lifecycle M Pwtest", barangay Poblacion),
+driven entirely through the UI with `playwright-cli`. No API calls were made.
+
+| Step | UI action | Result |
+|---|---|---|
+| Intake | Filled General Intake, submitted → prior-records review → **Register as new client** | Case created, **Enrolled** |
+| Step 1 | Assessment filled + saved, then **Lock** | Sealed by Juan Dela Cruz |
+| Enrolled→Assessed | **✓ Complete Assessment → Proceed to Intervention** | **Assessed** |
+| Step 2 | **Add Intervention** (Home Visit) → requirement **Passed on-site, no copy** (1/1) → **Lock** | Sealed |
+| Step 3 | **No Referrals issued** → **Lock** | Sealed |
+| Assessed→In Review | **Flag for admin review** (disabled until steps 0/1/2 sealed) → Confirm | **In Review** |
+| In Review→Active | admin **Approve & activate** + signature "Rosario G. Mendoza" | **Active**, "Approved By" recorded |
+| Step 4 | Self-Reliance **Level 3** + sustainability plan + target date → Save → **Mark Ready for Graduation** | **Transitioning** |
+| Close (early) | **Close case** before step 5 sealed | **Refused**: toast "The case could not be moved", names **Case Study & Closure** |
+| Step 5 | Outcome **Graduated** + exit notes + drawn client signature → Save Progress → **Lock** | Sealed by Rosario G. Mendoza |
+| Transitioning→Closed | **Close case** → Confirm | **Closed** |
+
+**Gates confirmed live:** "Flag for admin review" stays disabled until the due
+steps are sealed; "Close case" is refused with the open step named until step 5
+is sealed — the server gate, surfaced in the UI.
+
+**Findings**
+
+1. **Sealing a step hides its own forward transition.** Sealing step 1 while
+   Enrolled removed the "Complete Assessment → Proceed to Intervention" button —
+   the sealed card folds to read-only, transition included — so the worker had to
+   **Unlock → advance → re-seal**. Same shape at step 4 (sealing would hide "Mark
+   Ready for Graduation"). The natural "seal, then submit" order is blocked for
+   step-owned hops.
+2. **Step 4 (Evaluate Help Given) is never gated.** It was left unsealed and the
+   case still closed. Consistent with the recorded gap (active→transitioning is
+   admin-only, so a step-4 seal gate would bind nobody), but "all steps sealed"
+   is not actually enforced at closure.
+3. **Pre-existing 500 on `/cases/:id/history`** — "operator does not exist:
+   uuid = character varying" — the case view's history fetch fails (console
+   errors). Matches the earlier D4 record; unrelated to the lock feature.
