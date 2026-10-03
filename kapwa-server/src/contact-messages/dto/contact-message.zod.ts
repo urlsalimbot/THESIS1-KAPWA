@@ -8,3 +8,9 @@ export const CreateContactMessageSchema = z.object({
 });
 
 export type CreateContactMessageInput = z.infer<typeof CreateContactMessageSchema>;
+
+export const ReplyContactMessageSchema = z.object({
+  content: z.string().trim().min(1).max(5000),
+});
+
+export type ReplyContactMessageInput = z.infer<typeof ReplyContactMessageSchema>;

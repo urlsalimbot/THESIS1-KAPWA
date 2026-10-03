@@ -4,12 +4,14 @@ import { ContactMessagesService } from './contact-messages.service';
 import { ContactMessage } from './contact-message.entity';
 import { User } from '../auth/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailerService } from '../common/mailer.service';
 
 describe('ContactMessagesService', () => {
   let svc: ContactMessagesService;
   const repo = { save: jest.fn(), create: jest.fn(), find: jest.fn(), findOne: jest.fn(), count: jest.fn() };
   const userRepo = { find: jest.fn() };
   const notifications = { createMany: jest.fn() };
+  const mailer = { sendMail: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -19,6 +21,7 @@ describe('ContactMessagesService', () => {
         { provide: getRepositoryToken(ContactMessage), useValue: repo },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: NotificationsService, useValue: notifications },
+        { provide: MailerService, useValue: mailer },
       ],
     }).compile();
     svc = module.get(ContactMessagesService);
@@ -87,5 +90,60 @@ describe('ContactMessagesService', () => {
     repo.count.mockResolvedValue(3);
     await expect(svc.findAll()).resolves.toEqual([{ id: 'a' }]);
     await expect(svc.unreadCount()).resolves.toBe(3);
+  });
+
+  describe('reply', () => {
+    const message = {
+      id: 'msg-1',
+      name: 'Juan Dela Cruz',
+      email: 'juan@example.com',
+      subject: 'Assistance request',
+      message: 'I would like to request assistance.',
+      status: 'new' as const,
+    };
+
+    it('emails the reply with a re-prefixed subject and marks the message read', async () => {
+      repo.findOne.mockResolvedValue({ ...message });
+      repo.save.mockImplementation((d) => Promise.resolve(d));
+      mailer.sendMail.mockResolvedValue(true);
+
+      const out = await svc.reply('msg-1', 'We can help with that.');
+
+      expect(mailer.sendMail).toHaveBeenCalledWith(
+        'juan@example.com',
+        'Re: Assistance request',
+        'We can help with that.',
+      );
+      expect(out.status).toBe('read');
+      expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'read' }));
+    });
+
+    it('uses a fallback subject when the inquiry had none', async () => {
+      repo.findOne.mockResolvedValue({ ...message, subject: null });
+      repo.save.mockImplementation((d) => Promise.resolve(d));
+      mailer.sendMail.mockResolvedValue(true);
+
+      await svc.reply('msg-1', 'Reply body');
+
+      expect(mailer.sendMail).toHaveBeenCalledWith(
+        'juan@example.com',
+        'Re: Your inquiry to MSWDO Norzagaray',
+        'Reply body',
+      );
+    });
+
+    it('throws NotFoundException for an unknown message', async () => {
+      repo.findOne.mockResolvedValue(null);
+      await expect(svc.reply('missing', 'body')).rejects.toThrow('Contact message not found');
+      expect(mailer.sendMail).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a delivery failure and does not mark the message read', async () => {
+      repo.findOne.mockResolvedValue({ ...message });
+      mailer.sendMail.mockResolvedValue(false);
+
+      await expect(svc.reply('msg-1', 'body')).rejects.toThrow('Could not send the reply email');
+      expect(repo.save).not.toHaveBeenCalled();
+    });
   });
 });

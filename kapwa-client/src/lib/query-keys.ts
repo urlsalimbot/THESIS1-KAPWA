@@ -158,6 +158,7 @@ export const queryKeys = {
       memo(`chat.conversation.${userId}`, () => ['chat', 'conversation', userId] as const),
     unread: () => memo('chat.unread', () => ['chat', 'unread'] as const),
     chatUsers: () => memo('chat.users', () => ['chat', 'users'] as const),
+    contactMessages: () => memo('chat.contactMessages', () => ['chat', 'contact-messages'] as const),
   },
   sync: {
     all: ['sync'] as const,

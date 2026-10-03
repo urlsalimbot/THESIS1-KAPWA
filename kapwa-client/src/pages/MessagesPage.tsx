@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { ContactMessagesPanel } from '@/components/ContactMessagesPanel';
 
 const safeDecodeJWT = (token: string) => {
   try {
@@ -104,6 +105,8 @@ export function MessagesPage() {
   const { userId: urlUserId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [tab, setTab] = useState<'chat' | 'contact'>('chat');
+  const isStaff = user?.role === 'admin' || user?.role === 'social_worker';
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [pendingNew, setPendingNew] = useState<ChatMsg[]>([]);
   const [text, setText] = useState('');
@@ -283,6 +286,31 @@ export function MessagesPage() {
 
   return (
     <PageShell title={t('messages.title', 'Messages')} description={t('messages.description', 'Chat with your team')}>
+      {isStaff && (
+        <div className="mb-3 flex gap-1 rounded-lg border bg-card p-1 w-fit">
+          <button
+            onClick={() => setTab('chat')}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              tab === 'chat' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+            )}
+          >
+            {t('messages.tabChat', 'Chat')}
+          </button>
+          <button
+            onClick={() => setTab('contact')}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              tab === 'contact' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+            )}
+          >
+            {t('messages.tabContact', 'Contact Messages')}
+          </button>
+        </div>
+      )}
+      {tab === 'contact' && isStaff ? (
+        <ContactMessagesPanel />
+      ) : (
       <div className="flex h-[calc(100vh-12rem)] gap-0 rounded-xl border bg-card overflow-hidden shadow-sm">
         {/* Sidebar */}
         <div className={cn(
@@ -570,6 +598,7 @@ export function MessagesPage() {
           )}
         </div>
       </div>
+      )}
     </PageShell>
   );
 }
