@@ -402,3 +402,27 @@ is sealed — the server gate, surfaced in the UI.
 3. **Pre-existing 500 on `/cases/:id/history`** — "operator does not exist:
    uuid = character varying" — the case view's history fetch fails (console
    errors). Matches the earlier D4 record; unrelated to the lock feature.
+
+---
+
+## Fixes for the three findings + signature-pad removal (verified)
+
+- **Finding 3 (history 500)** — fixed and verified live. The join compared
+  `users.id` (uuid) with `case_history.changed_by_id` (varchar); it now casts
+  `u.id::text`. Reopened KAPWA-2026-00061: no `/cases/:id/history` 500 in the
+  console, and the trail renders (Enrolled → Assessed → In Review → Approved by
+  admin → …).
+- **Finding 1 (sealed step hid its own transition)** — fixed and verified live.
+  Sealed step 0 on KAPWA-2026-00053: **"✓ Complete Assessment → Proceed to
+  Intervention" stays**, "Save Assessment" is gone, the seal strip and Unlock
+  show. The seal freezes the data, not the hop it prepares for.
+- **Finding 2 (step 4 never gated)** — fixed; covered by the server gate specs.
+  `transitioning -> closed` now asks for every step due at `transitioning` (all
+  five), so step 4 — whose own edge is admin-only and therefore ungated — is
+  required at closure. The refusal message now names every open due step. Not
+  re-driven through a full lifecycle live; the gate tests pin it.
+- **Signature pad removed** — the canvas component, the dead `StepSignatures`
+  card, and the beneficiary view's worker pad are gone; the closure done-predicate,
+  the close precondition, the fixture, and both locales drop `clientSignature`.
+  The admin's **typed approver signature is kept** — a text field recording who
+  approved, not a pad.
