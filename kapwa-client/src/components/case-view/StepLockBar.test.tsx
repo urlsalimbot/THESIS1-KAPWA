@@ -448,4 +448,35 @@ describe('StepLockBar', () => {
 
     expect(await screen.findByText(/Bela Santos/)).toBeTruthy();
   });
+
+  it('lets a second writer take over after a release', async () => {
+    // The presence-only comparison this replaces could not see a second writer
+    // swap one sealed row for a different one: `present` stayed true, so the
+    // override survived and the bar kept offering a Lock for a step that was
+    // sealed again. Row identity is what makes the parent win.
+    const user = userEvent.setup();
+    const { rerender } = renderBar({ locked: lockedRow });
+
+    await user.click(screen.getByRole('button', { name: /unlock/i }));
+    // The release is reflected before the parent re-reads it.
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeTruthy();
+
+    rerender(
+      <>
+        <Toaster />
+        <StepLockBar
+          caseId="c1"
+          stepIndex={0}
+          caseData={doneCaseData}
+          interventionCount={0}
+          onChanged={noop}
+          locked={{ stepIndex: 0, lockedByName: 'Bela Santos', lockedAt: '2026-10-03T09:00:00Z' }}
+        />
+      </>,
+    );
+
+    // A different seal, so the parent's answer wins — no Lock on a sealed step.
+    expect(await screen.findByText(/Bela Santos/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^lock$/i })).toBeNull();
+  });
 });

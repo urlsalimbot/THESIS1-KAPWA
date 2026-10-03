@@ -54,6 +54,22 @@ export function stepLockKey(caseId: string, stepIndex: number): string {
 }
 
 /**
+ * Whether two `stepLocks` rows are the same seal.
+ *
+ * `lockedAt` is the identity of a seal — one timestamp per seal, stable across
+ * reloads. Two rows sharing it are the same seal; two with different ones are
+ * different seals even when both are sealed, which is the case a presence-only
+ * comparison cannot see. A row with no timestamp cannot identify itself, so the
+ * whole row is compared instead of letting two unknowns look identical.
+ */
+function sameRow(a: StepLock | null, b: StepLock | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.lockedAt && b.lockedAt) return a.lockedAt === b.lockedAt;
+  return a.lockedByName === b.lockedByName && a.lockedAt === b.lockedAt;
+}
+
+/**
  * The control that seals one case step, mounted once per step.
  *
  * "Done" is *asked for*, never decided here: `stepperStepDone` already exists
@@ -80,25 +96,19 @@ export function StepLockBar({
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   // What this bar last wrote, for the window in which the parent has not
-  // re-read it yet. `present` is the parent's answer at the time of the write;
-  // while the parent still reports that same answer this bar knows better, and
-  // the moment the parent's answer moves — a refresh that lands later, or
-  // another worker — the parent wins. Comparing presence rather than identity
-  // keeps an unrelated parent re-render (a new object literal for the same row)
-  // from wiping the override.
-  //
-  // Presence-only has one blind spot: a second writer that swaps one sealed row
-  // for a different sealed row keeps `present` true, so the override survives
-  // and the bar shows the old locker until the override is cleared. Seeing that
-  // needs row identity (e.g. `lockedAt`), which this bar does not track. It is
-  // unreachable with a single writer and is documented rather than fixed.
-  const [mine, setMine] = useState<{ present: boolean; row: StepLock | null } | null>(null);
+  // re-read it yet. `parentRow` is the parent's row at the time of the write;
+  // while the parent still reports that same row this bar knows better, and the
+  // moment the parent's row changes — a refresh that lands later, or another
+  // worker — the parent wins. Comparing by `lockedAt` (the seal's identity)
+  // rather than by presence keeps an unrelated parent re-render (a new object
+  // literal for the same row) from wiping the override, while still letting a
+  // second writer that swaps one sealed row for a different one take over.
+  const [mine, setMine] = useState<{ row: StepLock | null; parentRow: StepLock | null } | null>(null);
 
   const done = stepperStepDone(stepIndex, caseData, interventionCount, opts ?? {});
   const path = `/cases/${caseId}/steps/${stepIndex}/lock`;
   const notDoneHint = t('caseView.lock.notDoneHint', 'Complete this step before sealing it.');
-  const parentSealed = Boolean(locked);
-  const lock = mine && mine.present === parentSealed ? mine.row : locked;
+  const lock = mine && sameRow(mine.parentRow, locked ?? null) ? mine.row : locked;
 
   /**
    * Run one write, then report the refresh separately.
@@ -151,13 +161,13 @@ export function StepLockBar({
     // renders the format helper's own "—" rather than an invented value.
     const row = (result ?? {}) as Partial<StepLock>;
     setMine({
-      present: parentSealed,
+      parentRow: locked ?? null,
       row: { stepIndex, lockedByName: row.lockedByName, lockedAt: row.lockedAt ?? '' },
     });
   };
 
   const releaseWritten = () => {
-    setMine({ present: parentSealed, row: null });
+    setMine({ parentRow: locked ?? null, row: null });
   };
 
   if (lock) {
