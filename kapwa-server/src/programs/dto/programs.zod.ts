@@ -10,7 +10,6 @@ export const ApprovalStepSchema = z.object({
 export const CreateProgramSchema = z.object({
   name: z.string().min(1, 'Program name is required'),
   category: z.string().optional(),
-  waitingPeriodDays: z.number().int().nonnegative().optional(),
   requiredDocuments: z.array(z.string()).optional(),
   fundSources: z.array(z.string()).optional(),
   approvalWorkflow: z.array(ApprovalStepSchema).optional(),   // WAS: z.array(z.string())
@@ -22,7 +21,6 @@ export const CreateProgramSchema = z.object({
 export const UpdateProgramSchema = z.object({
   name: z.string().min(1).optional(),
   category: z.string().optional(),
-  waitingPeriodDays: z.number().int().nonnegative().optional(),
   requiredDocuments: z.array(z.string()).optional(),
   fundSources: z.array(z.string()).optional(),
   approvalWorkflow: z.array(ApprovalStepSchema).optional(),

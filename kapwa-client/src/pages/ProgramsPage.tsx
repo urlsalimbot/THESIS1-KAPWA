@@ -21,7 +21,6 @@ interface ProgramRecord {
   id: string;
   name: string;
   category?: string;
-  waitingPeriodDays?: number;
   legalBasis?: string;
   requiredDocuments?: string[];
   fundSources?: string[];
@@ -181,9 +180,6 @@ export function ProgramsPage() {
 
                 <CardContent className="flex flex-1 flex-col gap-3">
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {r.waitingPeriodDays != null && (
-                      <span>{t('programs.wait', 'Wait: {{days}}d', { days: r.waitingPeriodDays })}</span>
-                    )}
                     {r.fundSources?.length ? (
                       <span>{t('programs.fundsCount', '{{count}} fund source(s)', { count: r.fundSources.length })}</span>
                     ) : null}

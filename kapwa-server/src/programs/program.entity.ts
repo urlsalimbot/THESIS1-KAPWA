@@ -26,9 +26,6 @@ export class Program extends BaseEntity {
   @Column({ nullable: true })
   category?: string;
 
-  @Column({ nullable: true })
-  waitingPeriodDays?: number;
-
   @Exclude()
   @OneToMany(() => ProgramFundSource, f => f.program, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   fundSourceRows!: ProgramFundSource[];

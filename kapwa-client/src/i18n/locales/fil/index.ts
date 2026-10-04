@@ -1531,8 +1531,6 @@ const fil: EnLocale = {
     "title": "Mga Programa",
     "updated": "Na-update",
     "viewDetails": "Tingnan ang mga detalye",
-    "wait": "Hintay: {{days}} araw",
-    "waitingPeriod": "Panahon ng Paghihintay",
     "workflowSteps": "Mga Hakbang ng Workflow"
   },
   "settings": {
@@ -2304,7 +2302,6 @@ const fil: EnLocale = {
   "programsPublic": {
     "backToPrograms": "Bumalik sa mga programa",
     "ctaHint": "Kailangan ng tulong sa pagpili? Magtanong sa opisina ng MSWDO.",
-    "waitingPeriodShort": "Panahon ng paghihintay",
     "fundedBy": "Pinagkukunan ng pondo",
     "moreDocuments": "{{count}} pa sa pahina ng programa",
     "description": "Mga available na programa at serbisyong panlipunan na inaalok ng MSWDO ng Norzagaray.",
@@ -2318,8 +2315,6 @@ const fil: EnLocale = {
     "requiredDocuments": "Mga Kinakailangang Dokumento",
     "title": "Mga Programa ng Social Assistance",
     "viewDetails": "Tingnan ang detalye",
-    "waitingPeriod": "Panahon ng paghihintay: {{days}} araw",
-    "waitingPeriodValue": "{{days}} araw pagkatapos ng huling tulong"
   },
   "announcementsPublic": {
     "description": "Mga update, paunawa, at impormasyon mula sa MSWDO ng Norzagaray.",

@@ -16,7 +16,7 @@ const MAX_CACHE_SIZE = 10_000;
 const ALLOWED_COLUMNS = new Set([
   "id","name","surname","first_name","middle_name","last_name","name_extension","gender","dob","phone",
   "email","password","role","full_name",
-  "is_active","device_id","category","waiting_period_days",
+  "is_active","device_id","category",
   "consent_status",
   "approval_workflow","form_template","created_at","updated_at","barangay",
   "estimated_income","verified_by","status","control_no","beneficiary_id",

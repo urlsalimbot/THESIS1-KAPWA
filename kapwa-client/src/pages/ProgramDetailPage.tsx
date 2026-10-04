@@ -32,7 +32,6 @@ interface ProgramDetail {
   id: string;
   name: string;
   category?: string;
-  waitingPeriodDays?: number;
   legalBasis?: string;
   requiredDocuments?: string[];
   fundSources?: string[];
@@ -163,9 +162,6 @@ export function ProgramDetailPage() {
               )}
               <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
                 {program.category && <InfoRow label={t('programs.category', 'Category')}>{program.category}</InfoRow>}
-                <InfoRow label={t('programs.waitingPeriod', 'Waiting Period')}>
-                  {program.waitingPeriodDays != null ? t('programs.days', '{{count}} days', { count: program.waitingPeriodDays }) : '—'}
-                </InfoRow>
                 <InfoRow label={t('programs.formVersion', 'Form Version')}>{program.formVersion}</InfoRow>
                 <InfoRow label={t('programs.status', 'Status')}>
                   <span className="inline-flex items-center gap-1">
@@ -277,9 +273,6 @@ export function ProgramDetailPage() {
             <div className="px-4 py-2">
               <InfoRow label={t('programs.created', 'Created')}>{formatDate(program.createdAt)}</InfoRow>
               <InfoRow label={t('programs.updated', 'Updated')}>{formatDate(program.updatedAt)}</InfoRow>
-              <InfoRow label={t('programs.waitingShort', 'Waiting')}>
-                {program.waitingPeriodDays != null ? t('programs.days', '{{count}} days', { count: program.waitingPeriodDays }) : '—'}
-              </InfoRow>
             </div>
           </section>
         </div>

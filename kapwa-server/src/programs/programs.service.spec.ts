@@ -48,8 +48,7 @@ describe('ProgramsService', () => {
       const data = {
         name: 'AICS',
         category: 'Medical Assistance',
-        waitingPeriodDays: 3,
-        legalBasis: 'RA 11223',
+          legalBasis: 'RA 11223',
         requiredDocuments: ['Valid ID', 'Barangay Certificate'],
         fundSources: ['DSWD', 'LGU'],
         approvalWorkflow: [
@@ -65,8 +64,7 @@ describe('ProgramsService', () => {
       expect(repoMock.create).toHaveBeenCalledWith({
         name: 'AICS',
         category: 'Medical Assistance',
-        waitingPeriodDays: 3,
-        legalBasis: 'RA 11223',
+          legalBasis: 'RA 11223',
         approvalWorkflow: data.approvalWorkflow,
         isActive: true,
         // fundSources/requiredDocuments are decomposed into child rows
@@ -158,8 +156,7 @@ describe('ProgramsService', () => {
         id: '1',
         name: 'AICS',
         category: 'Medical',
-        waitingPeriodDays: 3,
-        legalBasis: 'RA 11223',
+          legalBasis: 'RA 11223',
         requiredDocuments: ['Valid ID'],
         fundSources: ['DSWD'],
         approvalWorkflow: [

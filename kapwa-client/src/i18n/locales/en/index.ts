@@ -2011,8 +2011,6 @@ const en = {
     "title": "Programs",
     "updated": "Updated",
     "viewDetails": "View Details",
-    "wait": "Wait: {{days}}d",
-    "waitingPeriod": "Waiting Period",
     "workflowSteps": "Workflow Steps",
   },
   "about": {
@@ -2056,7 +2054,6 @@ const en = {
   "programsPublic": {
     "backToPrograms": "Back to programs",
     "ctaHint": "Need help choosing? Ask the MSWDO office.",
-    "waitingPeriodShort": "Waiting period",
     "fundedBy": "Funded by",
     "moreDocuments": "{{count}} more on the program page",
     "description": "Available assistance programs and services offered by the MSWDO of Norzagaray.",
@@ -2070,8 +2067,6 @@ const en = {
     "requiredDocuments": "Required Documents",
     "title": "Social Assistance Programs",
     "viewDetails": "View details",
-    "waitingPeriod": "Waiting period: {{days}} days",
-    "waitingPeriodValue": "{{days}} day(s) after last assistance",
   },
   "announcementsPublic": {
     "description": "Updates, advisories, and information from the MSWDO of Norzagaray.",

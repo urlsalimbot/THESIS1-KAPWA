@@ -18,11 +18,11 @@ describe('ProgramsPublicController', () => {
 
   it('lists active programs mapped to public-safe fields', async () => {
     svc.findAll.mockResolvedValue([
-      { id: 'p1', name: 'AICS', category: 'Aid', waitingPeriodDays: 5, fundSources: ['LGU'], requiredDocuments: undefined, legalBasis: 'RA 11165', approvalWorkflow: [{ stepName: 'x' }] },
+      { id: 'p1', name: 'AICS', category: 'Aid', fundSources: ['LGU'], requiredDocuments: undefined, legalBasis: 'RA 11165', approvalWorkflow: [{ stepName: 'x' }] },
     ]);
     const result = await ctrl.list();
     expect(result).toEqual([
-      { id: 'p1', name: 'AICS', category: 'Aid', waitingPeriodDays: 5, fundSources: ['LGU'], requiredDocuments: undefined, legalBasis: 'RA 11165' },
+      { id: 'p1', name: 'AICS', category: 'Aid', fundSources: ['LGU'], requiredDocuments: undefined, legalBasis: 'RA 11165' },
     ]);
     expect(result[0]).not.toHaveProperty('approvalWorkflow');
     expect(svc.findAll).toHaveBeenCalledWith(true);

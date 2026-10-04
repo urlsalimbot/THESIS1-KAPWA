@@ -51,7 +51,6 @@ export function CreateProgramPage() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [legalBasis, setLegalBasis] = useState('');
-  const [waitingPeriodDays, setWaitingPeriodDays] = useState('7');
   const [fundSources, setFundSources] = useState<string[]>(['']);
   const [requiredDocuments, setRequiredDocuments] = useState<string[]>(['']);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([emptyStep()]);
@@ -81,7 +80,6 @@ export function CreateProgramPage() {
         name: name.trim(),
         category: category.trim() || undefined,
         legalBasis: legalBasis.trim() || undefined,
-        waitingPeriodDays: parseInt(waitingPeriodDays, 10) || undefined,
         fundSources: fundSources.map(s => s.trim()).filter(Boolean),
         requiredDocuments: requiredDocuments.map(s => s.trim()).filter(Boolean),
         approvalWorkflow: workflowSteps
@@ -134,8 +132,6 @@ export function CreateProgramPage() {
               <Input id="program-category" required value={category} onChange={e => setCategory(e.target.value)} placeholder={t('programs.categoryPlaceholder', 'e.g. Medical, Livelihood, Child Welfare')} className="h-9" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground" htmlFor="program-wait">{t('programs.waitingPeriod', 'Waiting Period (days)')}</label>
-              <Input id="program-wait" type="number" min={0} value={waitingPeriodDays} onChange={e => setWaitingPeriodDays(e.target.value)} className="h-9" />
             </div>
           </div>
           <div className="space-y-1">

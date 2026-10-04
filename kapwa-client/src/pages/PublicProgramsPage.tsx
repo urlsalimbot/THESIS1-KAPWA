@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { ScrollText, HandHeart, ArrowRight, Clock, FileText } from 'lucide-react';
+import { ScrollText, HandHeart, ArrowRight, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { PageContainer } from '@/components/public/PageContainer';
@@ -13,7 +13,6 @@ interface PublicProgram {
   id: string;
   name: string;
   category?: string;
-  waitingPeriodDays?: number;
   fundSources?: string[];
   requiredDocuments?: string[];
   legalBasis?: string;
@@ -86,14 +85,6 @@ export function PublicProgramsPage() {
                       <Badge variant="secondary" className="shrink-0">
                         {p.category}
                       </Badge>
-                    )}
-                    {p.waitingPeriodDays != null && (
-                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock size={13} aria-hidden="true" />
-                        {t('programsPublic.waitingPeriod', 'Waiting period: {{days}} days', {
-                          days: p.waitingPeriodDays,
-                        })}
-                      </span>
                     )}
                   </div>
 

@@ -17,7 +17,6 @@ export interface PublicProgram {
   id: string;
   name: string;
   category?: string;
-  waitingPeriodDays?: number;
   fundSources?: string[];
   requiredDocuments?: string[];
   legalBasis?: string;
@@ -68,14 +67,6 @@ export function ProgramCard({ program, className }: { program: PublicProgram; cl
         <CardTitle className="font-heading text-lg font-semibold tracking-tight">
           {program.name}
         </CardTitle>
-        {program.waitingPeriodDays != null && (
-          <p className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-            <Clock size={13} aria-hidden="true" />
-            {t('services.waitingPeriod', 'Processing: ~{{days}} days', {
-              days: program.waitingPeriodDays,
-            })}
-          </p>
-        )}
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col gap-3">

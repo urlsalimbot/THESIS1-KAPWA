@@ -3,12 +3,11 @@ import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import { ArrowLeft, ArrowRight, Clock, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { PageContainer } from '@/components/public/PageContainer';
-import { PageHero } from '@/components/public/PageHero';
 import { programIcon, type PublicProgram } from '@/components/public/ProgramsCarousel';
 
 /**
@@ -71,50 +70,43 @@ export function PublicProgramDetailPage() {
           {t('programsPublic.backToPrograms', 'Back to programs')}
         </Link>
 
-        <PageHero
-          icon={Icon}
-          eyebrow={data.category || t('public.programs', 'Programs')}
-          title={data.name}
-        />
-
         <div className="mx-auto max-w-3xl">
           <Card className="border-border/60">
             <CardContent className="space-y-6 p-6 sm:p-8">
-              {/* Quick facts: waiting period + funding, side by side on sm+ */}
-              {(data.waitingPeriodDays != null && data.waitingPeriodDays > 0) || funds.length > 0 ? (
-                <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {data.waitingPeriodDays != null && data.waitingPeriodDays > 0 && (
-                    <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-                      <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        <Clock size={13} aria-hidden="true" />
-                        {t('programsPublic.waitingPeriodShort', 'Waiting period')}
-                      </dt>
-                      <dd className="mt-1.5 text-sm font-medium text-foreground">
-                        {t('programsPublic.waitingPeriodValue', '{{days}} day(s) after last assistance', {
-                          days: data.waitingPeriodDays,
-                        })}
-                      </dd>
-                    </div>
-                  )}
-                  {funds.length > 0 && (
-                    <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {t('programsPublic.fundSources', 'Fund Sources')}
-                      </dt>
-                      <dd className="mt-2 flex flex-wrap gap-1.5">
-                        {funds.map((f) => (
-                          <span
-                            key={f}
-                            className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground/85"
-                          >
-                            {f}
-                          </span>
-                        ))}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              ) : null}
+              {/* Card header: the category icon, category, and program name
+                  live INSIDE the card with the rest of the program details. */}
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-inset ring-accent/15">
+                  <Icon size={24} className="text-accent" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+                    {data.category || t('public.programs', 'Programs')}
+                  </p>
+                  <h1 className="mt-1 font-heading text-2xl font-bold leading-[1.15] tracking-tight text-balance sm:text-3xl">
+                    {data.name}
+                  </h1>
+                </div>
+              </div>
+              <Separator />
+
+              {funds.length > 0 && (
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('programsPublic.fundSources', 'Fund Sources')}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {funds.map((f) => (
+                      <span
+                        key={f}
+                        className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground/85"
+                      >
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {docs.length > 0 && (
                 <>

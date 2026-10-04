@@ -148,7 +148,8 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_reference ON audit_log(reference_id)`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS irf_cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), blotter_entry_number TEXT UNIQUE NOT NULL, case_category TEXT NOT NULL, datetime_reported TIMESTAMP, datetime_incident TIMESTAMP, item_a_reporting_person JSONB, item_b_person_reported JSONB, encrypted_narration BYTEA, case_disposition TEXT, msdw_signature_url TEXT, reporting_signature_url TEXT, created_at TIMESTAMP DEFAULT NOW() )`);
-  await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, waiting_period_days INTEGER, approval_workflow JSONB, form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, approval_workflow JSONB, form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`ALTER TABLE programs DROP COLUMN IF EXISTS waiting_period_days`);
   await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS program_type TEXT`);
   // Mirrors ProgramServicesAndInterventionTypes0000000000080 — the
   // Program → Services matrix.
