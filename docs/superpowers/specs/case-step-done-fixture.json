@@ -667,5 +667,31 @@
     },
     "expected": true,
     "step": "enrollments"
+  },
+  {
+    "name": "court_hearings done: one recorded hearing",
+    "caseData": {
+      "status": "enrolled",
+      "caseCategory": "Children in Conflict with the Law (CICL)"
+    },
+    "interventionCount": 0,
+    "opts": {
+      "courtHearingCount": 1
+    },
+    "expected": true,
+    "step": "court_hearings"
+  },
+  {
+    "name": "court_hearings not done: no hearings recorded",
+    "caseData": {
+      "status": "enrolled",
+      "caseCategory": "Children in Conflict with the Law (CICL)"
+    },
+    "interventionCount": 0,
+    "opts": {
+      "courtHearingCount": 0
+    },
+    "expected": false,
+    "step": "court_hearings"
   }
 ]

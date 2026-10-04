@@ -1,7 +1,7 @@
 import { stepsDueAt, stepsBecomingDueAt, CASE_STEP_FLOORS, CASE_STEP_LABELS, CASE_STATUS_INDEX, stepsForCategory, COMMON_STEPS, categoryStepsFor } from './case-step-labels';
 
 const COMMON = ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
-const CICL = ['assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
+const CICL = ['assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
 
 /**
  * `stepsDueAt` is the whole fix for an unsatisfiable gate, so it is asserted
@@ -150,16 +150,18 @@ describe('template registry', () => {
     expect(stepsForCategory('Solo Parent')).toEqual(['assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure']);
   });
 
-  it('injects exactly one category step before enrollment for each statutory category', () => {
-    expect(categoryStepsFor('Children in Conflict with the Law (CICL)')).toEqual(['discernment']);
-    expect(categoryStepsFor('Violence Against Women and Their Children (VAWC)')).toEqual(['protection_order']);
+  it('injects the hearings step for legal categories plus the category step', () => {
+    expect(categoryStepsFor('Children in Conflict with the Law (CICL)')).toEqual(['court_hearings', 'discernment']);
+    expect(categoryStepsFor('Violence Against Women and Their Children (VAWC)')).toEqual(['court_hearings', 'protection_order']);
+    expect(categoryStepsFor('Children in Need of Special Protection (CNSP)')).toEqual(['court_hearings']);
+    expect(categoryStepsFor('Indigency / Court-Ordered Social Case Study')).toEqual(['court_hearings']);
     expect(categoryStepsFor('Solo Parent')).toEqual(['solo_parent']);
-    expect(categoryStepsFor('Adoption & Foster Care Case')).toEqual(['adoption']);
+    expect(categoryStepsFor('Adoption & Foster Care Case')).toEqual(['court_hearings', 'adoption']);
     expect(categoryStepsFor(undefined)).toEqual([]);
   });
 
   it('every template starts with assessment and contains the common steps in order', () => {
-    for (const category of ['Children in Conflict with the Law (CICL)', 'Violence Against Women and Their Children (VAWC)', 'Solo Parent', 'Adoption & Foster Care Case']) {
+    for (const category of ['Children in Conflict with the Law (CICL)', 'Violence Against Women and Their Children (VAWC)', 'Children in Need of Special Protection (CNSP)', 'Indigency / Court-Ordered Social Case Study', 'Solo Parent', 'Adoption & Foster Care Case']) {
       const tpl = stepsForCategory(category);
       expect(tpl[0]).toBe('assessment');
       const commonKeys = tpl.filter((k) => COMMON_STEPS.includes(k));
@@ -168,7 +170,7 @@ describe('template registry', () => {
   });
 
   it('every injected category step has a label and a floor of 0', () => {
-    for (const category of ['Children in Conflict with the Law (CICL)', 'Violence Against Women and Their Children (VAWC)', 'Solo Parent', 'Adoption & Foster Care Case']) {
+    for (const category of ['Children in Conflict with the Law (CICL)', 'Violence Against Women and Their Children (VAWC)', 'Children in Need of Special Protection (CNSP)', 'Indigency / Court-Ordered Social Case Study', 'Solo Parent', 'Adoption & Foster Care Case']) {
       for (const k of categoryStepsFor(category)) {
         expect(typeof CASE_STEP_LABELS[k]).toBe('string');
         expect(CASE_STEP_FLOORS[k]).toBe(0);
@@ -176,9 +178,9 @@ describe('template registry', () => {
     }
   });
 
-  it('CICL due steps at enrolled include discernment, and fit the template order', () => {
+  it('CICL due steps at enrolled include court hearings and discernment, and fit the template order', () => {
     const due = stepsDueAt('enrolled', 'Children in Conflict with the Law (CICL)');
-    expect(due).toEqual(['assessment', 'discernment', 'enrollments', 'interventions', 'referrals']);
+    expect(due).toEqual(['assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals']);
     // The injected step sits between assessment and enrollment, never at the end.
     const tpl = stepsForCategory('Children in Conflict with the Law (CICL)');
     expect(tpl).toEqual(CICL);

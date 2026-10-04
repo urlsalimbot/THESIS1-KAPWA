@@ -38,8 +38,9 @@ describe('CaseStepper — lifecycle labels', () => {
         enrollmentCount={0}
       />,
     );
-    expect(screen.getByRole('button', { name: '2. Discernment Assessment' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '3. Program Enrollments' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '2. Court Hearings' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '3. Discernment Assessment' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '4. Program Enrollments' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '1. Assess & Interview' })).toBeTruthy();
   });
 });
@@ -294,7 +295,7 @@ describe('stepperStatus', () => {
   it('includes the injected category step for a category case', () => {
     const status = stepperStatus({ status: 'assessed', caseCategory: 'Children in Conflict with the Law (CICL)' }, 0, 0, {});
     expect(Object.keys(status)).toEqual([
-      'assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+      'assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
     ]);
   });
 });

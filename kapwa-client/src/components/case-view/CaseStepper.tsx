@@ -11,6 +11,8 @@ export interface StepperProgressOpts {
   interventionNotNeeded?: boolean;
   /** The case row's "no program needed" decision (enrollments step). */
   enrollmentsNotNeeded?: boolean;
+  /** How many non-cancelled hearings the court_hearings step counts. */
+  courtHearingCount?: number;
   /**
    * How many `inter_agency_referrals` rows the case has, as the case detail
    * endpoint stamps it — the same unscoped count the server's seal weighs.
@@ -45,16 +47,24 @@ export const COMMON_STEP_KEYS = [
  */
 export const CATEGORY_STEP_TEMPLATES: Record<string, string[]> = {
   'Children in Conflict with the Law (CICL)': [
-    'assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Violence Against Women and Their Children (VAWC)': [
-    'assessment', 'protection_order', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'court_hearings', 'protection_order', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+  ],
+  // CNSP and Court-Ordered SCS are legal categories: explicit templates with
+  // the hearings step (the server's case-step-labels.ts is the same registry).
+  'Children in Need of Special Protection (CNSP)': [
+    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+  ],
+  'Indigency / Court-Ordered Social Case Study': [
+    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Solo Parent': [
     'assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Adoption & Foster Care Case': [
-    'assessment', 'adoption', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'court_hearings', 'adoption', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
 };
 
@@ -84,6 +94,7 @@ export const STEP_LABEL_KEYS: Record<string, { key: string; fallback: string }> 
   protection_order: { key: 'caseView.stepper.protectionOrder', fallback: 'Protection Order' },
   solo_parent: { key: 'caseView.stepper.soloParent', fallback: 'Solo Parent ID' },
   adoption: { key: 'caseView.stepper.adoption', fallback: 'Adoption & Foster Care' },
+  court_hearings: { key: 'caseView.stepper.courtHearings', fallback: 'Court Hearings' },
 };
 
 const STEP_DESCRIPTIONS: Record<string, { key: string; fallback: string }> = {
@@ -97,6 +108,7 @@ const STEP_DESCRIPTIONS: Record<string, { key: string; fallback: string }> = {
   protection_order: { key: 'caseView.stepper.protectionOrderDesc', fallback: 'Protection order type and issuance (R.A. 9262)' },
   solo_parent: { key: 'caseView.stepper.soloParentDesc', fallback: 'Solo Parent ID issuance (R.A. 8972)' },
   adoption: { key: 'caseView.stepper.adoptionDesc', fallback: 'DVC, case study, CDCLAA documents (R.A. 11642)' },
+  court_hearings: { key: 'caseView.stepper.courtHearingsDesc', fallback: 'Record court hearings; dates sync to the team calendar' },
 };
 
 /** Which lifecycle phase a step belongs to, for the stepper's grouping. */
@@ -107,6 +119,7 @@ export const STEP_PHASE: Record<string, 'phaseIn' | 'implementation' | 'phaseOut
   protection_order: 'phaseIn',
   solo_parent: 'phaseIn',
   adoption: 'phaseIn',
+  court_hearings: 'phaseIn',
   interventions: 'implementation',
   referrals: 'implementation',
   evaluate: 'phaseOut',
@@ -136,6 +149,7 @@ export const STEP_FLOORS: Record<string, number> = {
   protection_order: 0,
   solo_parent: 0,
   adoption: 0,
+  court_hearings: 0,
   evaluate: 3,
   closure: 4,
 };
@@ -230,6 +244,10 @@ export function stepperStepDone(
       return !!caseData?.soloParentIdIssuedDate && !!caseData?.soloParentIdNumber;
     case 'adoption':
       return !!caseData?.adoptionDvcDate && !!caseData?.adoptionCaseStudyDate;
+    // Court Hearings: at least one recorded hearing that was not cancelled
+    // (attended or not — a not-attended hearing is still a recorded fact).
+    case 'court_hearings':
+      return (opts.courtHearingCount ?? 0) > 0;
     case 'evaluate':
       return !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan;
     case 'closure':

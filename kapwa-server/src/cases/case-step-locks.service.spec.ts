@@ -12,7 +12,7 @@ import { Case } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity';
-import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
+import { CaseEvent } from '../case-events/case-event.entity';import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { Program } from '../programs/program.entity';
 import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -41,6 +41,8 @@ interface DoneFixtureCase {
      * asserting a rule the predicate no longer has.
      */
     interAgencyReferralCount?: number;
+    /** How many non-cancelled `case_events` rows the court_hearings step counts. */
+    courtHearingCount?: number;
   };
   /**
    * The server-facing inputs for the interventions step's requirements branch:
@@ -127,6 +129,7 @@ describe('CaseStepLocksService', () => {
   let programRepo: { find: jest.Mock };
   let interventionRepo: { query: jest.Mock };
   let enrollmentRepo: { count: jest.Mock };
+  let caseEventRepo: { count: jest.Mock };
   let auditLog: { log: jest.Mock };
 
   const swUser = {
@@ -162,6 +165,8 @@ describe('CaseStepLocksService', () => {
   const programFind = jest.fn().mockResolvedValue([]);
   // The program_enrollments count the enrollments step reads.
   const enrollmentCount = jest.fn().mockResolvedValue(0);
+  // The non-cancelled case_events count the court_hearings step reads.
+  const courtHearingCount = jest.fn().mockResolvedValue(0);
 
   /**
    * Stand in for the two queries the interventions step makes against the
@@ -202,7 +207,7 @@ describe('CaseStepLocksService', () => {
     interventionRepo = { query: interventionQuery };
     programRepo = { find: programFind };
     enrollmentRepo = { count: enrollmentCount };
-
+    caseEventRepo = { count: courtHearingCount };
     // The insert half of the upsert: every builder call returns itself, and
     // `execute` hands back the row Postgres would have returned.
     const insertQb = {
@@ -256,6 +261,7 @@ describe('CaseStepLocksService', () => {
         { provide: getRepositoryToken(CaseIntervention), useValue: interventionRepo },
         { provide: getRepositoryToken(ProgramEnrollment), useValue: enrollmentRepo },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepo },
+        { provide: getRepositoryToken(CaseEvent), useValue: caseEventRepo },
       ],
     }).compile();
 
@@ -362,7 +368,7 @@ describe('CaseStepLocksService', () => {
 
   it('names every step so an error message cannot spell one step two ways', () => {
     expect(Object.keys(CASE_STEP_LABELS).sort()).toEqual(
-      ['adoption', 'assessment', 'closure', 'discernment', 'enrollments', 'evaluate',
+      ['adoption', 'assessment', 'closure', 'court_hearings', 'discernment', 'enrollments', 'evaluate',
         'interventions', 'protection_order', 'referrals', 'solo_parent'],
     );
     for (const [key, label] of Object.entries(CASE_STEP_LABELS)) {
@@ -485,7 +491,7 @@ describe('CaseStepLocksService', () => {
 
       // Every other step guards its whole route: their bodies carry nothing but
       // their own data, so an exemption there would be an unexplained hole.
-      it.each(['assessment', 'enrollments', 'interventions', 'referrals', 'discernment', 'protection_order', 'solo_parent', 'adoption', 'closure'])(
+      it.each(['assessment', 'enrollments', 'interventions', 'referrals', 'discernment', 'protection_order', 'solo_parent', 'adoption', 'court_hearings', 'closure'])(
         'guards step %s even for a visits-only body', async (step) => {
           lockRepo.findOne.mockResolvedValue({
             caseId: 'c1', stepKey: step, lockedByName: 'Ana', lockedAt: new Date(),
@@ -741,6 +747,7 @@ describe('CaseStepLocksService', () => {
       findById.mockResolvedValue(caseFor(fx));
       interventionCount.mockResolvedValue(fx.interventionCount);
       enrollmentCount.mockResolvedValue(fx.enrollmentCount ?? 0);
+      courtHearingCount.mockResolvedValue(fx.opts.courtHearingCount ?? 0);
       stubRequirementInputs(fx);
       stubReferralInputs(fx);
       lockRepo.create.mockImplementation((data: Partial<CaseStepLock>) => ({ ...data }));
@@ -754,7 +761,7 @@ describe('CaseStepLocksService', () => {
     });
 
     it('covers every step the common template offers', () => {
-      expect(new Set(FIXTURE.map(f => f.step))).toEqual(new Set(COMMON_STEPS));
+      expect(new Set(FIXTURE.map(f => f.step))).toEqual(new Set([...COMMON_STEPS, 'court_hearings']));
     });
 
     /**

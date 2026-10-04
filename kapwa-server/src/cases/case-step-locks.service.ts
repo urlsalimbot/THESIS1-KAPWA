@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ConflictException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial, In } from 'typeorm';
+import { Repository, DeepPartial, In, Not } from 'typeorm';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -9,6 +9,7 @@ import { Program } from '../programs/program.entity';
 import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { User } from '../auth/user.entity';
+import { CaseEvent } from '../case-events/case-event.entity';
 
 /**
  * Re-exported, not declared here: `CasesService` has to name the open steps in
@@ -54,6 +55,8 @@ interface StepDoneOpts {
    * step does not read it.
    */
   interAgencyReferralCount?: number;
+  /** How many non-cancelled `case_events` rows the court_hearings step reads. */
+  courtHearingCount?: number;
 }
 
 /** The case fields the done-predicate reads, so it takes a plain object. */
@@ -100,6 +103,10 @@ export class CaseStepLocksService {
     // does not have to require the referrals module.
     @InjectRepository(InterAgencyReferral)
     private readonly interAgencyReferrals: Repository<InterAgencyReferral>,
+    // `case_events` for the court_hearings step's "a hearing is recorded"
+    // clause. Registered in `cases.module.ts` beside the others.
+    @InjectRepository(CaseEvent)
+    private readonly caseEvents: Repository<CaseEvent>,
     @Optional() private readonly auditLog?: AuditLogService,
   ) {}
 
@@ -249,6 +256,10 @@ export class CaseStepLocksService {
         return !!caseData.soloParentIdIssuedDate && !!caseData.soloParentIdNumber;
       case 'adoption':
         return !!caseData.adoptionDvcDate && !!caseData.adoptionCaseStudyDate;
+      // Court Hearings: at least one recorded hearing that was not cancelled
+      // (attended or not — a not-attended hearing is still a recorded fact).
+      case 'court_hearings':
+        return (opts.courtHearingCount ?? 0) > 0;
       case 'evaluate':
         return !!caseData.selfRelianceLevel && !!caseData.sustainabilityPlan;
       case 'closure':
@@ -292,6 +303,9 @@ export class CaseStepLocksService {
     // same shape as the program query above, for the same reason.
     const interAgencyReferralCount =
       stepKey === 'referrals' ? await this.countInterAgencyReferrals(caseId) : 0;
+    // The one extra query the court_hearings step needs, and only it needs it.
+    const courtHearingCount =
+      stepKey === 'court_hearings' ? await this.countCourtHearings(caseId) : 0;
     return this.stepDone(
       stepKey,
       {
@@ -319,6 +333,7 @@ export class CaseStepLocksService {
         referralNotNeeded: Boolean(c.referralNotNeeded),
         interventionNotNeeded: Boolean(c.interventionNotNeeded),
         enrollmentsNotNeeded: Boolean(c.enrollmentsNotNeeded),
+        courtHearingCount,
       },
     );
   }
@@ -333,6 +348,15 @@ export class CaseStepLocksService {
    */
   private async countInterAgencyReferrals(caseId: string): Promise<number> {
     return this.interAgencyReferrals.count({ where: { caseId } });
+  }
+
+  /**
+   * The case's non-cancelled hearings/visits. Cancelled rows are excluded
+   * because a cancelled hearing is a decision *not* to hold it — the client's
+   * step reads the same filter off its own fetched list.
+   */
+  private async countCourtHearings(caseId: string): Promise<number> {
+    return this.caseEvents.count({ where: { caseId, status: Not('cancelled') } });
   }
 
   /**

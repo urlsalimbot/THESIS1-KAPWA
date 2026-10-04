@@ -38,16 +38,25 @@ export const COMMON_STEPS: string[] = [
  */
 export const CATEGORY_STEP_TEMPLATES: Record<string, string[]> = {
   'Children in Conflict with the Law (CICL)': [
-    'assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Violence Against Women and Their Children (VAWC)': [
-    'assessment', 'protection_order', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'court_hearings', 'protection_order', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+  ],
+  // CNSP and Court-Ordered SCS used to fall back to the common template; both
+  // are legal categories, so they gain an explicit template carrying the
+  // hearings step (spec §5.1).
+  'Children in Need of Special Protection (CNSP)': [
+    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+  ],
+  'Indigency / Court-Ordered Social Case Study': [
+    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Solo Parent': [
     'assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Adoption & Foster Care Case': [
-    'assessment', 'adoption', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'court_hearings', 'adoption', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
 };
 
@@ -63,6 +72,7 @@ export const CASE_STEP_LABELS: Record<string, string> = {
   protection_order: 'Protection Order',
   solo_parent: 'Solo Parent ID',
   adoption: 'Adoption & Foster Care',
+  court_hearings: 'Court Hearings',
 };
 
 /** Every key that may appear in any template, for the "unknown step" guard. */
@@ -105,6 +115,7 @@ export const CASE_STEP_FLOORS: Record<string, number> = {
   protection_order: 0,
   solo_parent: 0,
   adoption: 0,
+  court_hearings: 0,
   evaluate: 3,
   closure: 4,
 };

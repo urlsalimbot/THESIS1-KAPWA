@@ -64,7 +64,7 @@ describe('cases step-locks require graph', () => {
       param: unknown;
     }>;
 
-  /** The five `{ index, token }` pairs the locks service's repositories must carry. */
+  /** The six `{ index, token }` pairs the locks service's repositories must carry. */
   const expectedRepoDeps = () => {
     const { CaseStepLock } = require('./case-step-lock.entity');
     const { CaseIntervention } = require('../case-interventions/case-intervention.entity');
@@ -75,12 +75,15 @@ describe('cases step-locks require graph', () => {
     // too: an unregistered repository parameter is invisible in
     // `design:paramtypes` and only fails at bootstrap.
     const { InterAgencyReferral } = require('../inter-agency-referrals/inter-agency-referral.entity');
+    // The court_hearings step's count, registered in cases.module.ts forFeature.
+    const { CaseEvent } = require('../case-events/case-event.entity');
     return [
       { index: 0, param: getRepositoryToken(CaseStepLock) },
       { index: 2, param: getRepositoryToken(CaseIntervention) },
       { index: 3, param: getRepositoryToken(Program) },
       { index: 4, param: getRepositoryToken(ProgramEnrollment) },
       { index: 5, param: getRepositoryToken(InterAgencyReferral) },
+      { index: 6, param: getRepositoryToken(CaseEvent) },
     ];
   };
 
@@ -90,9 +93,9 @@ describe('cases step-locks require graph', () => {
    * the audit-log index, which the audit log must stay last at because it is
    * `@Optional()`.
    */
-  const REPO_INDEXES = [0, 2, 3, 4, 5];
-  const PARAM_COUNT = 7;
-  const AUDIT_INDEX = 6;
+  const REPO_INDEXES = [0, 2, 3, 4, 5, 6];
+  const PARAM_COUNT = 8;
+  const AUDIT_INDEX = 7;
 
   /**
    * The order `AppModule` gives: the cases module pulls in `cases.service`
