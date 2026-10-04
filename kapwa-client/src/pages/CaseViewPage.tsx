@@ -42,6 +42,7 @@ import { StepTransition } from '@/components/case-view/StepTransition';
 import { StepClosure } from '@/components/case-view/StepClosure';
 import { StepEnrollments } from '@/components/case-view/StepEnrollments';
 import { StepDiscernment, StepProtectionOrder, StepSoloParent, StepAdoption } from '@/components/case-view/StepCategoryFields';
+import { StepCourtHearings } from '@/components/case-view/StepCourtHearings';
 import { InterAgencyReferral } from '@/components/referrals/referral-utils';
 
 /** Decimal columns arrive from the API as strings ("78.00"); coerce or drop. */
@@ -176,6 +177,11 @@ export function CaseViewPage() {
   const { data: enrollments = [] } = useSWR<any[]>(
     id ? queryKeys.cases.enrollments(id) : null,
   );
+  // Court hearings + scheduled visits. The same SWR key StepCourtHearings
+  // uses, so the step and the stepper's done-predicate read one fetch.
+  const { data: caseEvents = [] } = useSWR<any[]>(
+    id ? queryKeys.cases.events(id) : null,
+  );
   const { data: documents = [] } = useSWR<any[]>(
     id ? queryKeys.filing.byCase(id) : null,
   );
@@ -252,6 +258,11 @@ export function CaseViewPage() {
   // number. `caseData.referrals` is not that list either: it is the transition
   // plan's agency list over `case_referrals`, which no referral letter writes.
   const interAgencyReferralCount = caseData?.interAgencyReferralCount ?? 0;
+  // Non-cancelled events only: a cancelled hearing is a decision not to hold
+  // it, which is the same filter the server's seal predicate applies.
+  const courtHearingCount = Array.isArray(caseEvents)
+    ? (caseEvents as any[]).filter((e) => e.status !== 'cancelled').length
+    : 0;
   const progressOpts: StepperProgressOpts = useMemo(
     // `requirementsMet` is threaded because it is not on the case row.
     // `interAgencyReferralCount` is on the row, but it is restated here from the
@@ -261,8 +272,8 @@ export function CaseViewPage() {
     // `stepperStepDone` falls back to it, so restating them here would be a
     // second copy of one rule — and an explicit `false` would outvote the row,
     // which the server (coercing to `Boolean(c.x)`) could never honour.
-    () => ({ requirementsMet, interAgencyReferralCount }),
-    [requirementsMet, interAgencyReferralCount],
+    () => ({ requirementsMet, interAgencyReferralCount, courtHearingCount }),
+    [requirementsMet, interAgencyReferralCount, courtHearingCount],
   );
 
   useEffect(() => {
@@ -553,6 +564,9 @@ export function CaseViewPage() {
         case 'adoption':
           return <StepAdoption key={stepLockKey(id!, key)} {...common}
             readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        case 'court_hearings':
+          return <StepCourtHearings key={stepLockKey(id!, key)} {...common} userRole={user?.role}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
         default:
           return null;
       }
@@ -723,7 +737,7 @@ export function CaseViewPage() {
             {/* `requirementsMet` only: the stepper applies the case-row fallback
                 for the two "not needed" decisions itself, so naming them here
                 would restate a rule that lives in one place. */}
-            <CaseStepper currentStep={currentStep} onStepClick={(key) => setCurrentStep(key)} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} />
+            <CaseStepper currentStep={currentStep} onStepClick={(key) => setCurrentStep(key)} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} courtHearingCount={courtHearingCount} />
           </div>
 
           {/* Active Step Content */}

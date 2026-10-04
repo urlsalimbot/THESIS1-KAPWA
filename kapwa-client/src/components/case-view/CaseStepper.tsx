@@ -282,14 +282,16 @@ interface CaseStepperProps {
   interventionNotNeeded?: boolean;
   /** `opts.interAgencyReferralCount` — see `StepperProgressOpts`. */
   interAgencyReferralCount?: number;
+  /** `opts.courtHearingCount` — see `StepperProgressOpts`. */
+  courtHearingCount?: number;
 }
 
-export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, enrollmentCount, requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount }: CaseStepperProps) {
+export function CaseStepper({ currentStep, onStepClick, caseData, interventionCount, enrollmentCount, requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount, courtHearingCount }: CaseStepperProps) {
   const { t } = useTranslation();
   // Handed straight through: `stepperStepDone` applies the case-row fallback for
   // the decisions itself, so doing it here as well would be a second place
   // holding the same rule.
-  const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount };
+  const progress: StepperProgressOpts = { requirementsMet, referralNotNeeded, interventionNotNeeded, interAgencyReferralCount, courtHearingCount };
   const template = stepsForCategory(caseData?.caseCategory);
   // Labels and descriptions come from the keyed vocabulary so this stepper and
   // `CaseActionBar` cannot drift on a step's name.

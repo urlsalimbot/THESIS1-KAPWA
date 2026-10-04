@@ -22,6 +22,11 @@ export const queryKeys = {
       memo(`cases.interventions.${caseId}`, () => ['cases', caseId, 'interventions'] as const),
     enrollments: (caseId: string) =>
       memo(`cases.enrollments.${caseId}`, () => ['cases', caseId, 'enrollments'] as const),
+    // Court hearings + scheduled home visits. The key shape matches the global
+    // SWR fetcher (api.get joins array parts into a path), so the endpoint is
+    // /cases/:id/events.
+    events: (caseId: string) =>
+      memo(`cases.events.${caseId}`, () => ['cases', caseId, 'events'] as const),
   },
   beneficiaries: {
     all: ['beneficiaries'] as const,

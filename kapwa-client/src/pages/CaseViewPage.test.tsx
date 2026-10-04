@@ -104,6 +104,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -113,7 +114,6 @@ describe('CaseViewPage — government ID photo', () => {
     // Clear the global SWR cache so each test gets a fresh useSWR fetch.
     await mutate(() => true, undefined, { revalidate: false });
   });
-
   it('shows the Government ID panel when a photo is returned for an admin', async () => {
     mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
 
@@ -222,6 +222,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -244,6 +245,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -281,6 +283,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -308,6 +311,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -339,6 +343,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -380,6 +385,7 @@ describe('CaseViewPage — GIS PDF', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -407,6 +413,7 @@ describe('CaseViewPage — 4Ps', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -431,6 +438,7 @@ describe('CaseViewPage — 4Ps', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -835,6 +843,7 @@ describe('CaseViewPage — who acted on this case', () => {
       if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('caseId')) return Promise.resolve([]);
@@ -911,6 +920,7 @@ describe('CaseViewPage — inter-agency referral rows', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       // One row, so the list is populated — an empty-state-only assertion would
       // pass whether or not the row still pretended to be a link.
@@ -1101,6 +1111,7 @@ describe('CaseViewPage — every step starts at the top', () => {
       if (k.includes('history')) return Promise.resolve([]);
       if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
       if (k.includes('programs')) return Promise.resolve([]);
