@@ -16,7 +16,6 @@ export class Person extends BaseEntity {
   @Column({ name: 'philsys_number', unique: true, nullable: true }) philsysNumber?: string;
   @Column({ name: 'place_of_birth', nullable: true }) placeOfBirth?: string;
   @Column({ name: 'civil_status', nullable: true }) civilStatus?: string;
-  @Column({ name: 'philhealth_number', nullable: true }) philhealthNumber?: string;
   @Column({ nullable: true }) occupation?: string;
   @Column({ name: 'estimated_monthly_income', type: 'decimal', precision: 12, scale: 2, nullable: true }) estimatedMonthlyIncome?: number;
   @Column({ type: 'tsvector', name: 'search_vector', select: false, nullable: true }) searchVector?: string;

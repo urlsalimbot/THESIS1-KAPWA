@@ -59,11 +59,11 @@ export class AnalyticsService {
   private async computeDemographics(filters: AnalyticsFilters) {
     const rows: Array<{
       person_id: string; gender: string | null; age: number | null; civil_status: string | null; occupation: string | null;
-      has_philhealth: boolean; household_income: string | null; household_id: string | null; barangay: string | null;
+      has_philsys: boolean; household_income: string | null; household_id: string | null; barangay: string | null;
     }> = await this.caseRepo.query(
       `SELECT p.id AS person_id, p.gender, EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.dob))::int AS age,
               p.civil_status, p.occupation,
-              (p.philhealth_number IS NOT NULL AND p.philhealth_number <> '') AS has_philhealth,
+              (p.philsys_number IS NOT NULL AND p.philsys_number <> '') AS has_philsys,
               ph.estimated_income AS household_income, b.household_id, ph.barangay
        FROM persons p
        JOIN beneficiaries b ON b.person_id = p.id
@@ -145,8 +145,8 @@ export class AnalyticsService {
       ? dependents / working
       : null;
 
-    const covered = persons.filter(p => p.has_philhealth).length;
-    const philhealthCoverage = persons.length >= MIN_CELL && covered >= MIN_CELL
+    const covered = persons.filter(p => p.has_philsys).length;
+    const philsysCoverage = persons.length >= MIN_CELL && covered >= MIN_CELL
       ? { value: covered / persons.length }
       : { suppressed: true as const };
 
@@ -170,7 +170,7 @@ export class AnalyticsService {
       incomeBands,
       householdSize,
       dependencyRatio,
-      philhealthCoverage,
+      philsysCoverage,
     };
   }
 

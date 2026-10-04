@@ -54,7 +54,6 @@ export class Beneficiary extends BaseEntity {
   @Expose() get placeOfBirth(): string | undefined { return this.person?.placeOfBirth; }
   @Expose() get civilStatus(): string | undefined { return this.person?.civilStatus; }
   @Expose() get currentAddress(): Record<string, string> | undefined { return this.person?.currentAddress; }
-  @Expose() get philhealthNumber(): string | undefined { return this.person?.philhealthNumber; }
   @Expose() get occupation(): string | undefined { return this.person?.occupation; }
   @Expose() get estimatedMonthlyIncome(): number | undefined { return this.person?.estimatedMonthlyIncome; }
   @Expose() get age(): number | undefined { return this.person?.age; }

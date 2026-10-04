@@ -15,7 +15,7 @@ interface DemographicsResponse {
   incomeBands: Array<{ label: string; count: SuppressedCell }>;
   householdSize: Array<{ label: string; count: SuppressedCell }>;
   dependencyRatio: number | null;
-  philhealthCoverage: SuppressedCell;
+  philsysCoverage: SuppressedCell;
 }
 
 function isSuppressed(cell: SuppressedCell | undefined): boolean {
@@ -128,7 +128,7 @@ export function DemographicsTab({ filters }: { filters: Record<string, unknown> 
           <CardHeader className="pb-1"><CardTitle className="text-sm">{t('analytics.demographics.dependency', 'Dependency ratio')}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <p className="text-2xl font-semibold">{data.dependencyRatio != null ? data.dependencyRatio.toFixed(2) : '—'}</p>
-            <p className="text-sm text-muted-foreground">{t('analytics.demographics.philhealth', 'PhilHealth coverage')}: <Cell cell={data.philhealthCoverage} /></p>
+            <p className="text-sm text-muted-foreground">{t('analytics.demographics.philsys', 'PhilSys ID coverage')}: <Cell cell={data.philsysCoverage} /></p>
           </CardContent>
         </Card>
         <Card>

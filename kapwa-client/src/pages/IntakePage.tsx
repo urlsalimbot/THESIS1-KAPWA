@@ -54,7 +54,7 @@ interface PersonForm {
   surname: string; firstName: string; middleName: string; extension: string;
   gender: string; dob: string; placeOfBirth: string; civilStatus: string;
   cellularNumber: string; email: string; currentAddress: AddressFields;
-  philhealthNumber: string; occupation: string; estimatedMonthlyIncome: string;
+  philsysNumber: string; occupation: string; estimatedMonthlyIncome: string;
 }
 
 /** Which referral this intake was handed off from, if any. */
@@ -70,7 +70,7 @@ const emptyPerson = (): PersonForm => ({
   surname: '', firstName: '', middleName: '', extension: '',
   gender: '', dob: '', placeOfBirth: '', civilStatus: '',
   cellularNumber: '', email: '', currentAddress: { ...emptyAddress },
-  philhealthNumber: '', occupation: '', estimatedMonthlyIncome: '',
+  philsysNumber: '', occupation: '', estimatedMonthlyIncome: '',
 });
 
 function FieldError({ error, children }: { error: string; children: React.ReactNode }) {
@@ -185,8 +185,8 @@ function PersonFields({ prefix, form, onChange, onAddressChange, errors, showAge
       <IntakeAddressBlock value={form.currentAddress} onChange={(f, v) => onAddressChange('currentAddress', f, v)} label={t('intake.address', 'Address')} errors={errors} fieldPrefix={prefix} />
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">{t('intake.philhealthNumber', 'PhilHealth Number')}</label>
-        <Input value={form.philhealthNumber} onChange={e => onChange('philhealthNumber', e.target.value)} aria-label={`${prefix}-philhealthNumber`} placeholder={t('intake.optional', 'Optional')} />
+        <label className="text-sm font-medium">{t('intake.philsysNumber', 'PhilSys Number')}</label>
+        <Input value={form.philsysNumber} onChange={e => onChange('philsysNumber', e.target.value)} aria-label={`${prefix}-philsysNumber`} placeholder={t('intake.optional', 'Optional')} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -366,7 +366,7 @@ export function IntakePage() {
       cellularNumber: prefill.cellularNumber ?? prev.cellularNumber,
       occupation: prefill.occupation ?? prev.occupation,
       estimatedMonthlyIncome: prefill.estimatedMonthlyIncome ?? prev.estimatedMonthlyIncome,
-      philhealthNumber: prefill.philhealthNumber ?? prev.philhealthNumber,
+      philsysNumber: prefill.philsysNumber ?? prev.philsysNumber,
       // Merge rather than replace: region/province/city keep the Norzagaray
       // defaults, and only non-empty referral values are applied because the
       // intake validates street and barangay as min(1).
@@ -448,7 +448,7 @@ export function IntakePage() {
       dob: beneficiary.dob || undefined,
       phone: beneficiary.cellularNumber || undefined,
       email: beneficiary.email || undefined,
-      philhealthNumber: beneficiary.philhealthNumber || undefined,
+      philsysNumber: beneficiary.philsysNumber || undefined,
     };
   }
 
@@ -547,7 +547,7 @@ export function IntakePage() {
         city: psgcNameFor(form.currentAddress.city),
         province: psgcNameFor(form.currentAddress.province),
       },
-      philhealthNumber: form.philhealthNumber || undefined,
+      philsysNumber: form.philsysNumber || undefined,
       occupation: form.occupation,
       estimatedMonthlyIncome: parseFloat(form.estimatedMonthlyIncome.replace(/,/g, '')) || 0,
     };
@@ -612,7 +612,7 @@ export function IntakePage() {
       && !form.gender && !form.dob && !form.placeOfBirth.trim()
       && !form.civilStatus && !form.cellularNumber.trim() && !form.email.trim()
       && !form.currentAddress.street.trim() && !form.currentAddress.barangay.trim()
-      && !form.philhealthNumber.trim() && !form.occupation.trim()
+      && !form.philsysNumber.trim() && !form.occupation.trim()
       && !form.estimatedMonthlyIncome.trim();
     const formIsEmpty = blank(beneficiary)
       && (beneficiaryIsClaimant || blank(claimant))

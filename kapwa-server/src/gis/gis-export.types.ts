@@ -19,7 +19,7 @@ export interface GisPersonData {
   occupation?: string;
   income?: number;
   phone?: string | null;
-  philhealthNumber?: string;
+  philsysNumber?: string;
   relationshipToBeneficiary?: string;
   address: GisAddressData;
 }

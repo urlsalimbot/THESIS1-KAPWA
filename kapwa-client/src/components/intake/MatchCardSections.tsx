@@ -18,7 +18,7 @@ export interface MatchCandidate {
     gender: string; age: number; dob?: string; phone: string; email?: string;
     occupation: string; estimatedMonthlyIncome: number; civilStatus: string;
     currentAddress: Record<string, string> | null;
-    philhealthNumber?: string;
+    philsysNumber?: string;
   };
   matchedPerson: {
     id: string;
@@ -28,7 +28,7 @@ export interface MatchCandidate {
     gender: string; age: number; dob?: string; phone: string; email?: string;
     occupation: string; estimatedMonthlyIncome: number; civilStatus: string;
     currentAddress: Record<string, string> | null;
-    philhealthNumber?: string;
+    philsysNumber?: string;
     category?: string;
   };
   allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;
@@ -54,7 +54,7 @@ export interface MatchIntakeFields {
   age?: number | string;
   cellularNumber?: string;
   email?: string;
-  philhealthNumber?: string;
+  philsysNumber?: string;
   currentAddress?: { barangay?: string } | null;
 }
 
@@ -63,7 +63,7 @@ export interface MatchIntakeFields {
 const MATCHED_ON_KEY: Record<string, string> = {
   phone: 'intake.matchedOnPhone',
   email: 'intake.matchedOnEmail',
-  philhealth: 'intake.matchedOnPhilHealth',
+  philsys: 'intake.matchedOnPhilsys',
   both_names: 'intake.matchedOnBothNames',
   dob_name: 'intake.matchedOnDobName',
   phonetic_surname: 'intake.matchedOnPhoneticSurname',
@@ -72,7 +72,7 @@ const MATCHED_ON_KEY: Record<string, string> = {
 const MATCHED_ON_FALLBACK: Record<string, string> = {
   phone: 'Phone match',
   email: 'Email match',
-  philhealth: 'PhilHealth match',
+  philsys: 'PhilSys match',
   both_names: 'Both names',
   dob_name: 'DOB + name',
   phonetic_surname: 'Sound-alike surname',
@@ -178,8 +178,8 @@ function MatchCompare({ candidate, intake, t }: { candidate: MatchCandidate; int
       <MatchRow label={t('intake.reviewPhone', 'Phone')} newVal={formatIntakeField(intake, 'cellularNumber')} existingVal={matched.phone || ''} t={t} />
       <MatchRow label={t('intake.reviewEmail', 'Email')} newVal={formatIntakeField(intake, 'email')} existingVal={matched.email || ''} t={t} />
       <MatchRow label={t('intake.barangay', 'Barangay')} newVal={formatIntakeField(intake, 'barangay')} existingVal={matched.currentAddress?.barangay || ''} t={t} />
-      {matched.philhealthNumber && (
-        <MatchRow label={t('intake.philhealth', 'PhilHealth')} newVal={formatIntakeField(intake, 'philhealthNumber')} existingVal={matched.philhealthNumber} t={t} />
+      {matched.philsysNumber && (
+        <MatchRow label={t('intake.philsys', 'PhilSys')} newVal={formatIntakeField(intake, 'philsysNumber')} existingVal={matched.philsysNumber} t={t} />
       )}
     </section>
   );

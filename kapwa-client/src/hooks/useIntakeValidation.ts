@@ -32,7 +32,7 @@ const personSchema = z.object({
   province: z.string().min(1, 'Province is required'),
   region: z.string().min(1, 'Region is required'),
   postalCode: z.string().min(1, 'Postal code is required'),
-  philhealthNumber: z.string().optional(),
+  philsysNumber: z.string().optional(),
   occupation: z.string().min(1, 'Occupation is required'),
   estimatedMonthlyIncome: z.string().refine(val => {
     const num = parseFloat(val.replace(/,/g, ''));
@@ -45,7 +45,7 @@ export interface PersonFormValues {
   gender: string; dob: string; placeOfBirth: string; civilStatus: string;
   cellularNumber: string; email: string; street: string; barangay: string;
   city: string; province: string; region: string; postalCode: string;
-  philhealthNumber: string; occupation: string; estimatedMonthlyIncome: string;
+  philsysNumber: string; occupation: string; estimatedMonthlyIncome: string;
 }
 
 export type ValidationErrors = Record<string, string>;

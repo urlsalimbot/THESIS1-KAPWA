@@ -35,7 +35,7 @@ const PersonSchema = z.object({
   cellularNumber: z.string().regex(/^09\d{9}$/, 'Must be a valid 11-digit PH mobile number starting with 09'),
   email: z.string().email('Email is required').min(1, 'Email is required'),
   currentAddress: AddressSchema,
-  philhealthNumber: z.string().optional(),
+  philsysNumber: z.string().optional(),
   occupation: z.string().min(1, 'Occupation is required'),
   estimatedMonthlyIncome: z.number().nonnegative('Monthly income must be 0 or higher'),
 });
@@ -95,7 +95,7 @@ export const MatchCheckInputSchema = z.object({
   dob: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
-  philhealthNumber: z.string().optional(),
+  philsysNumber: z.string().optional(),
 });
 
 export type MatchCheckInput = z.infer<typeof MatchCheckInputSchema>;
@@ -120,7 +120,6 @@ export interface MatchCandidate {
     estimatedMonthlyIncome: number;
     civilStatus: string;
     currentAddress: Record<string, string> | null;
-    philhealthNumber?: string;
   };
   /** The roster person who actually matched (beneficiary or household member). */
   matchedPerson: {
@@ -139,7 +138,6 @@ export interface MatchCandidate {
     estimatedMonthlyIncome: number;
     civilStatus: string;
     currentAddress: Record<string, string> | null;
-    philhealthNumber?: string;
     category?: string;
   };
   allBeneficiaries: Array<{ id: string; surname: string; firstName: string }>;

@@ -138,7 +138,7 @@ describe('IntakeService', () => {
       currentAddress: { street: '123 Purok 1', barangay: 'Bigte', city: 'Norzagaray', province: 'Bulacan', region: '03', postalCode: '3012' },
       occupation: 'Farmer',
       estimatedMonthlyIncome: 8500,
-      philhealthNumber: '123456789001',
+      philsysNumber: '123456789001',
     },
     claimant: {
       surname: 'Dela Cruz',
@@ -366,7 +366,7 @@ describe('IntakeService', () => {
       expect(benRepo.create).not.toHaveBeenCalled();
     });
 
-    it('rejects (409) a philhealth number already registered to a different client', async () => {
+    it('rejects (409) a PhilSys number already registered to a different client', async () => {
       queryRunnerMock.manager.findOne = jest.fn().mockImplementation((entity: unknown) =>
         entity === Person
           ? Promise.resolve({ id: 'other-person', surname: 'Reyes', firstName: 'Ana', dob: new Date('1980-01-01') })
@@ -375,30 +375,30 @@ describe('IntakeService', () => {
 
       await expect(
         service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW }),
-      ).rejects.toThrow('PhilHealth number already registered to another client');
+      ).rejects.toThrow('PhilSys number already registered to another client');
 
       expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalled();
       expect(queryRunnerMock.commitTransaction).not.toHaveBeenCalled();
       expect(personRepo.create).not.toHaveBeenCalled();
     });
 
-    it('maps a DB unique violation on philhealth to a 409 instead of a generic 500', async () => {
+    it('maps a DB unique violation on philsys to a 409 instead of a generic 500', async () => {
       const saveMock = mockSaveSequence();
       saveMock.mockRejectedValueOnce({
         code: '23505',
-        message: 'duplicate key value violates unique constraint "persons_philhealth_number_key"',
+        message: 'duplicate key value violates unique constraint "persons_philsys_number_key"',
       });
       stubCreates();
 
       await expect(
         service.submitIntake(validIntakeInput, { id: 'caller-1', role: UserRole.SW }),
-      ).rejects.toThrow('PhilHealth number already registered to another client');
+      ).rejects.toThrow('PhilSys number already registered to another client');
 
       expect(queryRunnerMock.rollbackTransaction).toHaveBeenCalled();
       expect(queryRunnerMock.commitTransaction).not.toHaveBeenCalled();
     });
 
-    it('passes a unique philhealth number straight through to person creation', async () => {
+    it('passes a unique PhilSys number straight through to person creation', async () => {
       const saveMock = mockSaveSequence();
       saveMock
         .mockResolvedValueOnce({ id: 'person-uuid-1' })
@@ -418,7 +418,7 @@ describe('IntakeService', () => {
 
       expect(result.controlNo).toBe('KAPWA-2026-00001');
       expect(personRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ philhealthNumber: '123456789001' }),
+        expect.objectContaining({ philsysNumber: '123456789001' }),
       );
       expect(queryRunnerMock.rollbackTransaction).not.toHaveBeenCalled();
     });
@@ -723,7 +723,7 @@ describe('IntakeService', () => {
         {
           household_id: 'hh-phone', sim_surname: 0, sim_first: 0, family_score: 0,
           dob_match: false, phone_match: true, email_match: false,
-          philhealth_match: false, barangay_match: false,
+          philsys_match: false, barangay_match: false,
           ben_id: 'ben-1', surname: 'Reyes', first_name: 'Josh', gender: 'Male', age: 30,
           all_beneficiaries: [], family_members: [], case_exists_30d: false, last_case_date: null,
         },
@@ -740,7 +740,7 @@ describe('IntakeService', () => {
       dataSourceMock.query = jest.fn().mockResolvedValue([
         {
           household_id: 'hh-1', sim_surname: 1, sim_first: 1, family_score: 0,
-          dob_match: false, phone_match: false, email_match: false, philhealth_match: false, barangay_match: false,
+          dob_match: false, phone_match: false, email_match: false, philsys_match: false, barangay_match: false,
           person_id: 'person-member', ben_id: null, role: 'member', member_relationship: 'Child',
           surname: 'Santos', first_name: 'Lorna', gender: 'Female', age: 12,
           household_barangay: 'Bigte',

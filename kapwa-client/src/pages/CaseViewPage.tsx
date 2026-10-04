@@ -553,7 +553,7 @@ export function CaseViewPage() {
         civilStatus: (ben?.civilStatus as string) || '', cellularNumber: (ben?.phone as string) || '',
         occupation: (ben?.occupation as string) || '',
         estimatedMonthlyIncome: (ben?.estimatedMonthlyIncome as number)?.toString() || '',
-        philhealthNumber: (ben?.philhealthNumber as string) || '',
+        philsysNumber: (ben?.philsysNumber as string) || '',
         familyMembers: (famGraph?.members || []).map((m: any) => ({
           id: m.id, surname: m.surname ?? '', firstName: m.firstName ?? '',
           middleName: m.middleName ?? '', extension: m.extension ?? '', gender: m.gender ?? '',

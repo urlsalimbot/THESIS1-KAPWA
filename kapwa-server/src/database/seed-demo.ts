@@ -80,18 +80,18 @@ interface Person {
   surname: string; firstName: string; middleName: string; gender: string; dob: string;
   phone: string; address: string; philsysNumber: string; stage: string;
   occupation: string; civilStatus: string; placeOfBirth: string;
-  estimatedMonthlyIncome: number; philhealthNumber: string; category: string;
+  estimatedMonthlyIncome: number; category: string;
 }
 
 const people: Person[] = [
-  { surname: 'Dela Cruz', firstName: 'Juan', middleName: 'M', gender: 'Male', dob: '1952-03-14', phone: '09171234001', address: 'Poblacion, Norzagaray', philsysNumber: '1234-5678-9012', stage: 'closed', occupation: 'Retired', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 0, philhealthNumber: '01-234567890-1', category: 'Senior Citizen' },
-  { surname: 'Santos', firstName: 'Maria', middleName: 'L', gender: 'Female', dob: '1985-07-22', phone: '09171234002', address: 'Bigte, Norzagaray', philsysNumber: '2234-5678-9012', stage: 'active', occupation: 'Street Vendor', civilStatus: 'Widowed', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 4500, philhealthNumber: '02-234567890-2', category: 'Person with Disability' },
-  { surname: 'Ramos', firstName: 'Pedro', middleName: 'S', gender: 'Male', dob: '1978-01-09', phone: '09171234003', address: 'Matictic, Norzagaray', philsysNumber: '3234-5678-9012', stage: 'in_review', occupation: 'Construction Worker', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 6500, philhealthNumber: '03-234567890-3', category: 'Indigent' },
-  { surname: 'Villanueva', firstName: 'Ana', middleName: 'C', gender: 'Female', dob: '1990-11-30', phone: '09171234004', address: 'Partida, Norzagaray', philsysNumber: '4234-5678-9012', stage: 'active', occupation: 'Housewife', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 0, philhealthNumber: '04-234567890-4', category: 'Person with Disability' },
-  { surname: 'Mendoza', firstName: 'Rosa', middleName: 'P', gender: 'Female', dob: '1948-05-02', phone: '09171234005', address: 'Poblacion, Norzagaray', philsysNumber: '5234-5678-9012', stage: 'transitioning', occupation: 'Retired', civilStatus: 'Widowed', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 0, philhealthNumber: '05-234567890-5', category: 'Senior Citizen' },
-  { surname: 'Garcia', firstName: 'Jose', middleName: 'D', gender: 'Male', dob: '1965-09-18', phone: '09171234006', address: 'San Mateo, Norzagaray', philsysNumber: '6234-5678-9012', stage: 'enrolled', occupation: 'Farmer', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 5000, philhealthNumber: '06-234567890-6', category: 'Indigent' },
-  { surname: 'Fernandez', firstName: 'Liza', middleName: 'R', gender: 'Female', dob: '1982-02-25', phone: '09171234007', address: 'FVR, Norzagaray', philsysNumber: '7234-5678-9012', stage: 'assessed', occupation: 'Sari-sari Store Owner', civilStatus: 'Single', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 8000, philhealthNumber: '07-234567890-7', category: 'Family Head and Other Needy Adult' },
-  { surname: 'Reyes', firstName: 'Pedro', middleName: 'P', gender: 'Male', dob: '1988-03-21', phone: '09171000005', address: 'Bigte, Norzagaray', philsysNumber: '8234-5678-9012', stage: 'active', occupation: 'Tricycle Driver', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 7000, philhealthNumber: '08-234567890-8', category: 'Indigent' },
+  { surname: 'Dela Cruz', firstName: 'Juan', middleName: 'M', gender: 'Male', dob: '1952-03-14', phone: '09171234001', address: 'Poblacion, Norzagaray', philsysNumber: '1234-5678-9012', stage: 'closed', occupation: 'Retired', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 0, category: 'Senior Citizen' },
+  { surname: 'Santos', firstName: 'Maria', middleName: 'L', gender: 'Female', dob: '1985-07-22', phone: '09171234002', address: 'Bigte, Norzagaray', philsysNumber: '2234-5678-9012', stage: 'active', occupation: 'Street Vendor', civilStatus: 'Widowed', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 4500, category: 'Person with Disability' },
+  { surname: 'Ramos', firstName: 'Pedro', middleName: 'S', gender: 'Male', dob: '1978-01-09', phone: '09171234003', address: 'Matictic, Norzagaray', philsysNumber: '3234-5678-9012', stage: 'in_review', occupation: 'Construction Worker', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 6500, category: 'Indigent' },
+  { surname: 'Villanueva', firstName: 'Ana', middleName: 'C', gender: 'Female', dob: '1990-11-30', phone: '09171234004', address: 'Partida, Norzagaray', philsysNumber: '4234-5678-9012', stage: 'active', occupation: 'Housewife', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 0, category: 'Person with Disability' },
+  { surname: 'Mendoza', firstName: 'Rosa', middleName: 'P', gender: 'Female', dob: '1948-05-02', phone: '09171234005', address: 'Poblacion, Norzagaray', philsysNumber: '5234-5678-9012', stage: 'transitioning', occupation: 'Retired', civilStatus: 'Widowed', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 0, category: 'Senior Citizen' },
+  { surname: 'Garcia', firstName: 'Jose', middleName: 'D', gender: 'Male', dob: '1965-09-18', phone: '09171234006', address: 'San Mateo, Norzagaray', philsysNumber: '6234-5678-9012', stage: 'enrolled', occupation: 'Farmer', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 5000, category: 'Indigent' },
+  { surname: 'Fernandez', firstName: 'Liza', middleName: 'R', gender: 'Female', dob: '1982-02-25', phone: '09171234007', address: 'FVR, Norzagaray', philsysNumber: '7234-5678-9012', stage: 'assessed', occupation: 'Sari-sari Store Owner', civilStatus: 'Single', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 8000, category: 'Family Head and Other Needy Adult' },
+  { surname: 'Reyes', firstName: 'Pedro', middleName: 'P', gender: 'Male', dob: '1988-03-21', phone: '09171000005', address: 'Bigte, Norzagaray', philsysNumber: '8234-5678-9012', stage: 'active', occupation: 'Tricycle Driver', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 7000, category: 'Indigent' },
 ];
 
 const CATEGORIES: Record<string, string> = {
@@ -234,7 +234,7 @@ async function main(): Promise<void> {
       gender: p.gender, dob: p.dob, placeOfBirth: p.placeOfBirth, civilStatus: p.civilStatus,
       cellularNumber: p.phone, email: `${p.firstName.toLowerCase()}.${p.surname.toLowerCase().replace(/\s+/g, '')}@demo.test`,
       currentAddress: { street: p.address, barangay, city: 'Norzagaray', province: 'Bulacan', region: 'Region III (Central Luzon)', postalCode: '3013' },
-      philhealthNumber: p.philhealthNumber, occupation: p.occupation, estimatedMonthlyIncome: p.estimatedMonthlyIncome,
+      occupation: p.occupation, estimatedMonthlyIncome: p.estimatedMonthlyIncome,
     };
     const fam = FAMILY[p.surname];
     const intake = await call(worker, 'POST', '/intake', {

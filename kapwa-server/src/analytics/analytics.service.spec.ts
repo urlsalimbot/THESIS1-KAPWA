@@ -24,11 +24,11 @@ describe('AnalyticsService', () => {
   describe('getDemographics', () => {
     it('suppresses small cells and keeps cells of 5 or more', async () => {
       repoMock.query.mockResolvedValue([
-        { person_id: 'p1', gender: 'Male', age: 4, civil_status: 'Single', occupation: null, has_philhealth: false, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p2', gender: 'Female', age: 10, civil_status: 'Single', occupation: 'Student', has_philhealth: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p3', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philhealth: true, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
-        { person_id: 'p4', gender: 'Female', age: 65, civil_status: 'Widowed', occupation: 'Retired', has_philhealth: false, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
-        { person_id: 'p5', gender: 'Male', age: 30, civil_status: 'Married', occupation: null, has_philhealth: false, household_income: null, household_id: 'h3', barangay: null },
+        { person_id: 'p1', gender: 'Male', age: 4, civil_status: 'Single', occupation: null, has_philsys: false, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p2', gender: 'Female', age: 10, civil_status: 'Single', occupation: 'Student', has_philsys: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p3', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philsys: true, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
+        { person_id: 'p4', gender: 'Female', age: 65, civil_status: 'Widowed', occupation: 'Retired', has_philsys: false, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
+        { person_id: 'p5', gender: 'Male', age: 30, civil_status: 'Married', occupation: null, has_philsys: false, household_income: null, household_id: 'h3', barangay: null },
       ]);
       const result = await service.getDemographics({});
       // civilStatus and incomeBands both contain suppressed cells here, so the
@@ -43,13 +43,13 @@ describe('AnalyticsService', () => {
       // working-age denominator (2) is below MIN_CELL, so the ratio is suppressed
       expect(result.dependencyRatio).toBeNull();
       // covered (2) is below MIN_CELL even though the cohort is not
-      expect(result.philhealthCoverage).toEqual({ suppressed: true });
+      expect(result.philsysCoverage).toEqual({ suppressed: true });
     });
 
     it('computes non-suppressed values for a larger cohort', async () => {
       const rows = [
-        ...Array.from({ length: 8 }, (_, i) => ({ person_id: `pa${i}`, gender: 'Male', age: 4, civil_status: 'Single', occupation: 'Farmer', has_philhealth: true, household_income: '4000', household_id: `ha${i}`, barangay: 'Poblacion' })),
-        ...Array.from({ length: 12 }, (_, i) => ({ person_id: `pb${i}`, gender: 'Female', age: 30, civil_status: 'Married', occupation: 'Teacher', has_philhealth: false, household_income: '12000', household_id: `hb${i}`, barangay: 'Bigte' })),
+        ...Array.from({ length: 8 }, (_, i) => ({ person_id: `pa${i}`, gender: 'Male', age: 4, civil_status: 'Single', occupation: 'Farmer', has_philsys: true, household_income: '4000', household_id: `ha${i}`, barangay: 'Poblacion' })),
+        ...Array.from({ length: 12 }, (_, i) => ({ person_id: `pb${i}`, gender: 'Female', age: 30, civil_status: 'Married', occupation: 'Teacher', has_philsys: false, household_income: '12000', household_id: `hb${i}`, barangay: 'Bigte' })),
       ];
       repoMock.query.mockResolvedValue(rows);
       const result = await service.getDemographics({});
@@ -64,14 +64,14 @@ describe('AnalyticsService', () => {
         { label: 'Farmer', count: { value: 8 } },
       ]);
       expect(result.dependencyRatio).toBeCloseTo(8 / 12);
-      expect(result.philhealthCoverage).toEqual({ value: 0.4 });
+      expect(result.philsysCoverage).toEqual({ value: 0.4 });
       expect(result.householdSize.find(b => b.label === '1')?.count).toEqual({ value: 20 });
     });
 
     it('buckets households by size, capping at 8+, and suppresses small buckets', async () => {
       const rows = [
-        { person_id: 's1p1', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philhealth: true, household_income: '4000', household_id: 'small', barangay: 'Poblacion' },
-        ...Array.from({ length: 9 }, (_, i) => ({ person_id: `s9p${i}`, gender: 'Female', age: 30, civil_status: 'Married', occupation: 'Teacher', has_philhealth: true, household_income: '12000', household_id: 'large', barangay: 'Bigte' })),
+        { person_id: 's1p1', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philsys: true, household_income: '4000', household_id: 'small', barangay: 'Poblacion' },
+        ...Array.from({ length: 9 }, (_, i) => ({ person_id: `s9p${i}`, gender: 'Female', age: 30, civil_status: 'Married', occupation: 'Teacher', has_philsys: true, household_income: '12000', household_id: 'large', barangay: 'Bigte' })),
       ];
       repoMock.query.mockResolvedValue(rows);
       const result = await service.getDemographics({});
@@ -97,7 +97,7 @@ describe('AnalyticsService', () => {
         Object.entries(ageByBracket).flatMap(([bracket, age]) =>
           Array.from({ length: bracket === small ? 1 : 5 }, (_, i) => ({
             person_id: `${gender[0]}_${bracket}_${i}`, gender, age, civil_status: 'Single', occupation: null,
-            has_philhealth: false, household_income: '12000', household_id: `${gender[0]}h_${bracket}_${i}`, barangay: 'Poblacion',
+            has_philsys: false, household_income: '12000', household_id: `${gender[0]}h_${bracket}_${i}`, barangay: 'Poblacion',
           })));
       repoMock.query.mockResolvedValue([...byGender('Male', '0-5'), ...byGender('Female', '60+')]);
       const result = await service.getDemographics({});
@@ -115,7 +115,7 @@ describe('AnalyticsService', () => {
     it('complementarily suppresses a second civil-status cell when exactly one is small', async () => {
       const person = (id: string, status: string) => ({
         person_id: id, gender: 'Male', age: 40, civil_status: status, occupation: null,
-        has_philhealth: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
+        has_philsys: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
       });
       repoMock.query.mockResolvedValue([
         ...Array.from({ length: 6 }, (_, i) => person(`s${i}`, 'Single')),
@@ -132,7 +132,7 @@ describe('AnalyticsService', () => {
     it('complementarily suppresses a second income band when exactly one is small', async () => {
       const person = (id: string, income: string | null) => ({
         person_id: id, gender: 'Male', age: 40, civil_status: 'Single', occupation: null,
-        has_philhealth: false, household_income: income, household_id: `h_${id}`, barangay: 'Poblacion',
+        has_philsys: false, household_income: income, household_id: `h_${id}`, barangay: 'Poblacion',
       });
       const rows = [
         ...Array.from({ length: 10 }, (_, i) => person(`a${i}`, '4000')),
@@ -158,7 +158,7 @@ describe('AnalyticsService', () => {
           for (let m = 0; m < size; m++) {
             rows.push({
               person_id: `s${size}h${h}p${m}`, gender: 'Male', age: 40, civil_status: 'Married', occupation: null,
-              has_philhealth: false, household_income: '12000', household_id: `s${size}h${h}`, barangay: 'Poblacion',
+              has_philsys: false, household_income: '12000', household_id: `s${size}h${h}`, barangay: 'Poblacion',
             });
           }
         }
@@ -166,7 +166,7 @@ describe('AnalyticsService', () => {
       for (let m = 0; m < 8; m++) {
         rows.push({
           person_id: `s8h0p${m}`, gender: 'Male', age: 40, civil_status: 'Married', occupation: null,
-          has_philhealth: false, household_income: '12000', household_id: 's8h0', barangay: 'Poblacion',
+          has_philsys: false, household_income: '12000', household_id: 's8h0', barangay: 'Poblacion',
         });
       }
       repoMock.query.mockResolvedValue(rows);
@@ -180,7 +180,7 @@ describe('AnalyticsService', () => {
     it('adds no complementary suppression when a family has zero or two-plus small cells', async () => {
       const person = (id: string, status: string) => ({
         person_id: id, gender: 'Male', age: 40, civil_status: status, occupation: null,
-        has_philhealth: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
+        has_philsys: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
       });
       repoMock.query.mockResolvedValue([
         ...Array.from({ length: 6 }, (_, i) => person(`z1_${i}`, 'Single')),
@@ -201,12 +201,12 @@ describe('AnalyticsService', () => {
 
     it('counts a person once when duplicate beneficiary rows are returned', async () => {
       repoMock.query.mockResolvedValue([
-        { person_id: 'p1', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philhealth: true, household_income: '12000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p1', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philhealth: true, household_income: '12000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p2', gender: 'Male', age: 4, civil_status: 'Single', occupation: null, has_philhealth: false, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p3', gender: 'Female', age: 10, civil_status: 'Single', occupation: 'Student', has_philhealth: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p4', gender: 'Female', age: 65, civil_status: 'Widowed', occupation: 'Retired', has_philhealth: false, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
-        { person_id: 'p5', gender: 'Male', age: 30, civil_status: 'Married', occupation: null, has_philhealth: false, household_income: null, household_id: 'h3', barangay: null },
+        { person_id: 'p1', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philsys: true, household_income: '12000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p1', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philsys: true, household_income: '12000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p2', gender: 'Male', age: 4, civil_status: 'Single', occupation: null, has_philsys: false, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p3', gender: 'Female', age: 10, civil_status: 'Single', occupation: 'Student', has_philsys: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p4', gender: 'Female', age: 65, civil_status: 'Widowed', occupation: 'Retired', has_philsys: false, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
+        { person_id: 'p5', gender: 'Male', age: 30, civil_status: 'Married', occupation: null, has_philsys: false, household_income: null, household_id: 'h3', barangay: null },
       ]);
       const result = await service.getDemographics({});
       // three civil-status values (all <5) keep the persons total hidden
@@ -217,10 +217,10 @@ describe('AnalyticsService', () => {
 
     it('suppresses the dependency ratio for cohorts below the cell minimum', async () => {
       repoMock.query.mockResolvedValue([
-        { person_id: 'p1', gender: 'Male', age: 4, civil_status: 'Single', occupation: null, has_philhealth: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p2', gender: 'Female', age: 10, civil_status: 'Single', occupation: 'Student', has_philhealth: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
-        { person_id: 'p3', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philhealth: true, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
-        { person_id: 'p4', gender: 'Female', age: 30, civil_status: 'Married', occupation: 'Teacher', has_philhealth: false, household_income: '12000', household_id: 'h3', barangay: 'Bigte' },
+        { person_id: 'p1', gender: 'Male', age: 4, civil_status: 'Single', occupation: null, has_philsys: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p2', gender: 'Female', age: 10, civil_status: 'Single', occupation: 'Student', has_philsys: true, household_income: '4000', household_id: 'h1', barangay: 'Poblacion' },
+        { person_id: 'p3', gender: 'Male', age: 40, civil_status: 'Married', occupation: 'Farmer', has_philsys: true, household_income: '12000', household_id: 'h2', barangay: 'Bigte' },
+        { person_id: 'p4', gender: 'Female', age: 30, civil_status: 'Married', occupation: 'Teacher', has_philsys: false, household_income: '12000', household_id: 'h3', barangay: 'Bigte' },
       ]);
       const result = await service.getDemographics({});
       expect(result.dependencyRatio).toBeNull();
@@ -229,7 +229,7 @@ describe('AnalyticsService', () => {
     it('suppresses the dependency ratio when either age group is below the cell minimum', async () => {
       const person = (id: string, age: number) => ({
         person_id: id, gender: 'Male', age, civil_status: 'Single', occupation: null,
-        has_philhealth: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
+        has_philsys: false, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
       });
       repoMock.query.mockResolvedValue([
         ...Array.from({ length: 6 }, (_, i) => person(`d${i}`, 4)),
@@ -256,21 +256,21 @@ describe('AnalyticsService', () => {
     it('suppresses PhilHealth coverage when the covered count is below the cell minimum', async () => {
       const person = (id: string, covered: boolean) => ({
         person_id: id, gender: 'Male', age: 30, civil_status: 'Single', occupation: null,
-        has_philhealth: covered, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
+        has_philsys: covered, household_income: '12000', household_id: `h_${id}`, barangay: 'Poblacion',
       });
       repoMock.query.mockResolvedValue([
         ...Array.from({ length: 6 }, (_, i) => person(`p${i}`, false)),
         ...Array.from({ length: 4 }, (_, i) => person(`c${i}`, true)),
       ]);
       const fewCovered = await service.getDemographics({});
-      expect(fewCovered.philhealthCoverage).toEqual({ suppressed: true });
+      expect(fewCovered.philsysCoverage).toEqual({ suppressed: true });
 
       repoMock.query.mockResolvedValue([
         ...Array.from({ length: 5 }, (_, i) => person(`p2_${i}`, false)),
         ...Array.from({ length: 5 }, (_, i) => person(`c2_${i}`, true)),
       ]);
       const enoughCovered = await service.getDemographics({});
-      expect(enoughCovered.philhealthCoverage).toEqual({ value: 0.5 });
+      expect(enoughCovered.philsysCoverage).toEqual({ value: 0.5 });
     });
 
     it('suppresses the persons total when a civil-status cell is suppressed', async () => {
@@ -285,7 +285,7 @@ describe('AnalyticsService', () => {
       const incomes = ['4000', '7000', '12000', '30000', '45000', null];
       repoMock.query.mockResolvedValue(statuses.map((entry, i) => ({
         person_id: entry.id, gender: 'Male', age: 40, civil_status: entry.status, occupation: null,
-        has_philhealth: true, household_income: incomes[i % incomes.length], household_id: `h_${entry.id}`, barangay: 'Poblacion',
+        has_philsys: true, household_income: incomes[i % incomes.length], household_id: `h_${entry.id}`, barangay: 'Poblacion',
       })));
       const result = await service.getDemographics({});
       // Each income band holds six people, so only civil status can trigger.
@@ -298,7 +298,7 @@ describe('AnalyticsService', () => {
       const incomes = ['4000', '7000', '12000', '30000', '45000', null];
       const buildRow = (id: string, householdId: string, index: number) => ({
         person_id: id, gender: 'Male', age: 40, civil_status: 'Married', occupation: null,
-        has_philhealth: true, household_income: incomes[Math.floor(index / 5)], household_id: householdId, barangay: 'Poblacion',
+        has_philsys: true, household_income: incomes[Math.floor(index / 5)], household_id: householdId, barangay: 'Poblacion',
       });
       const rows: Array<Record<string, unknown>> = [];
       for (let h = 0; h < 5; h++) rows.push(buildRow(`one_${h}`, `one_${h}`, h));

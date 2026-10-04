@@ -261,7 +261,7 @@ async function main(): Promise<void> {
   }
 
   try {
-    await insertMany('persons', ['id', 'surname', 'first_name', 'middle_name', 'gender', 'dob', 'philsys_number', 'place_of_birth', 'civil_status', 'philhealth_number', 'occupation', 'estimated_monthly_income'], persons);
+    await insertMany('persons', ['id', 'surname', 'first_name', 'middle_name', 'gender', 'dob', 'philsys_number', 'place_of_birth', 'civil_status', 'occupation', 'estimated_monthly_income'], persons);
     await insertMany('households', ['id', 'primary_beneficiary_id', 'barangay', 'estimated_income', 'verified_by', 'access_card_code'], households);
     await insertMany('beneficiaries', ['id', 'person_id', 'household_id'], beneficiaries);
     await insertMany('household_memberships', ['id', 'person_id', 'household_id', 'relationship', 'is_primary'], memberships);

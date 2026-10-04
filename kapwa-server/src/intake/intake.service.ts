@@ -176,15 +176,15 @@ export class IntakeService {
       ? queryRunner.manager.save(Person, entity)
       : this.personRepo.save(entity);
 
-    // Duplicate-PhilHealth guard, on every path (dedup-reuse and fresh-create
+    // Duplicate-PhilSys guard, on every path (dedup-reuse and fresh-create
     // alike): a number already registered to a DIFFERENT client was previously
     // either silently merged into that client's record or blew up as a generic
     // 500 (DB unique violation). Surface it as a field-targeted 409 instead.
     let existing: Person | null = null;
-    if (data.philhealthNumber) {
-      existing = await find({ philhealthNumber: data.philhealthNumber });
+    if (data.philsysNumber) {
+      existing = await find({ philsysNumber: data.philsysNumber });
       if (existing && !this.isSameClient(existing, data)) {
-        throw new ConflictException('PhilHealth number already registered to another client');
+        throw new ConflictException('PhilSys number already registered to another client');
       }
     }
 
@@ -329,7 +329,7 @@ export class IntakeService {
     gender: string; dob: string; age?: number; placeOfBirth?: string;
     civilStatus?: string; cellularNumber?: string; email?: string;
     currentAddress?: Record<string, string>;
-    philhealthNumber?: string; occupation?: string; estimatedMonthlyIncome?: number;
+    philsysNumber?: string; occupation?: string; estimatedMonthlyIncome?: number;
   }): Partial<Person> & { surname: string; firstName: string; gender: string; dob: Date } {
     return {
       surname: data.surname,
@@ -340,7 +340,7 @@ export class IntakeService {
       dob: new Date(data.dob),
       placeOfBirth: data.placeOfBirth,
       civilStatus: data.civilStatus,
-      philhealthNumber: data.philhealthNumber || undefined,
+      philsysNumber: data.philsysNumber || undefined,
       occupation: data.occupation,
       estimatedMonthlyIncome: data.estimatedMonthlyIncome,
     };
@@ -628,15 +628,15 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         this.logger.warn(`submitIntake rejected: ${error.message}`);
         throw error;
       }
-      // Safety net for the duplicate-PhilHealth guard: if a prod-only unique
-      // index on persons.philhealth_number rejects the insert (e.g. the dedup
+      // Safety net for the duplicate-PhilSys guard: if a prod-only unique
+      // index on persons.philsys_number rejects the insert (e.g. the dedup
       // lookup raced two different identities under the same number), report it
       // as the same field-targeted 409 instead of the generic 500.
       if (
         (error as { code?: string; message?: string })?.code === '23505' &&
-        /philhealth/i.test((error as { message?: string })?.message ?? '')
+        /philsys/i.test((error as { message?: string })?.message ?? '')
       ) {
-        throw new ConflictException('PhilHealth number already registered to another client');
+        throw new ConflictException('PhilSys number already registered to another client');
       }
       this.logger.error('submitIntake failed', error instanceof Error ? error.stack : undefined);
       throw new InternalServerErrorException('Service temporarily unavailable. Please try again.');
@@ -664,7 +664,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           'beneficiary' AS role,
           NULL::text AS member_relationship,
           p.surname, p.first_name, p.middle_name, p.gender, p.dob,
-          p.philhealth_number, p.occupation, p.estimated_monthly_income, p.civil_status
+          p.philsys_number, p.occupation, p.estimated_monthly_income, p.civil_status
         FROM households h
         JOIN beneficiaries b ON b.household_id = h.id
         JOIN persons p ON p.id = b.person_id
@@ -672,7 +672,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         SELECT
           h.id, NULL, p.id, 'member', hm.relationship,
           p.surname, p.first_name, p.middle_name, p.gender, p.dob,
-          p.philhealth_number, p.occupation, p.estimated_monthly_income, p.civil_status
+          p.philsys_number, p.occupation, p.estimated_monthly_income, p.civil_status
         FROM households h
         JOIN household_memberships hm ON hm.household_id = h.id
         JOIN persons p ON p.id = hm.person_id
@@ -690,7 +690,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         SELECT
           hs.household_id, hs.person_id, hs.ben_id, hs.role, hs.member_relationship,
           hs.surname, hs.first_name, hs.middle_name, hs.gender,
-          hs.dob, hs.philhealth_number, hs.occupation, hs.estimated_monthly_income, hs.civil_status,
+          hs.dob, hs.philsys_number, hs.occupation, hs.estimated_monthly_income, hs.civil_status,
           similarity(hs.surname, $1::text) AS sim_surname,
           similarity(hs.first_name, $2::text) AS sim_first,
           CASE WHEN $3::text[] IS NOT NULL AND array_length($3::text[], 1) > 0 THEN (
@@ -718,8 +718,8 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
               AND lower(trim(pc.value)) = lower(trim($6::text))
           ) ELSE false END) AS email_match,
           (CASE WHEN $7::text IS NOT NULL AND $7::text <> '' THEN
-            COALESCE(regexp_replace(hs.philhealth_number, '[^0-9]', '', 'g') = regexp_replace($7::text, '[^0-9]', '', 'g'), false)
-          ELSE false END) AS philhealth_match,
+            COALESCE(regexp_replace(hs.philsys_number, '[^0-9]', '', 'g') = regexp_replace($7::text, '[^0-9]', '', 'g'), false)
+          ELSE false END) AS philsys_match,
           (CASE WHEN $8::text IS NOT NULL AND $8::text <> '' THEN EXISTS (
             SELECT 1 FROM person_addresses pa
             WHERE pa.person_id = hs.person_id AND pa.address_type = 'current'
@@ -731,7 +731,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       SELECT
         hs.household_id AS household_id,
         hs.sim_surname, hs.sim_first, hs.family_score,
-        hs.dob_match, hs.phone_match, hs.email_match, hs.philhealth_match, hs.barangay_match,
+        hs.dob_match, hs.phone_match, hs.email_match, hs.philsys_match, hs.barangay_match,
         hs.person_id, hs.ben_id, hs.role, hs.member_relationship,
         hs.surname, hs.first_name, hs.middle_name, hs.gender,
         (SELECT pa2.raw FROM person_addresses pa2 WHERE pa2.person_id = hs.person_id AND pa2.address_type = 'current' LIMIT 1) AS address,
@@ -742,7 +742,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         to_char(hs.dob, 'YYYY-MM-DD') AS dob,
         (SELECT jsonb_build_object('barangay', pa3.barangay, 'city', pa3.city, 'province', pa3.province)
          FROM person_addresses pa3 WHERE pa3.person_id = hs.person_id AND pa3.address_type = 'current' LIMIT 1) AS current_address,
-        hs.philhealth_number, EXTRACT(YEAR FROM AGE(NOW(), hs.dob))::integer AS age, br.category,
+        hs.philsys_number, EXTRACT(YEAR FROM AGE(NOW(), hs.dob))::integer AS age, br.category,
         bp.id AS primary_ben_id, pp.surname AS primary_surname, pp.first_name AS primary_first_name,
         pp.middle_name AS primary_middle_name, pp.gender AS primary_gender,
         EXTRACT(YEAR FROM AGE(NOW(), pp.dob))::integer AS primary_age,
@@ -753,7 +753,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         pp.civil_status AS primary_civil_status,
         (SELECT jsonb_build_object('barangay', pa3p.barangay, 'city', pa3p.city, 'province', pa3p.province)
          FROM person_addresses pa3p WHERE pa3p.person_id = pp.id AND pa3p.address_type = 'current' LIMIT 1) AS primary_current_address,
-        pp.philhealth_number AS primary_philhealth_number,
+        pp.philsys_number AS primary_philsys_number,
         h.barangay AS household_barangay,
         (SELECT json_agg(json_build_object('id', b2.id, 'surname', p2.surname, 'first_name', p2.first_name))
          FROM beneficiaries b2
@@ -805,11 +805,11 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
       JOIN persons pp ON pp.id = bp.person_id
       LEFT JOIN beneficiary_roles br ON br.person_id = hs.person_id
       WHERE hs.sim_surname >= 0.4 OR hs.sim_first >= 0.4 OR hs.family_score >= 0.6
-        OR hs.dob_match OR hs.phone_match OR hs.email_match OR hs.philhealth_match OR hs.barangay_match
+        OR hs.dob_match OR hs.phone_match OR hs.email_match OR hs.philsys_match OR hs.barangay_match
       ORDER BY (0.6 * ((hs.sim_surname + hs.sim_first) / 2) + 0.4 * hs.family_score) DESC
       LIMIT 50`,
       [data.surname, data.firstName, familyNames.length > 0 ? familyNames : null,
-        data.dob ?? null, data.phone ?? null, data.email ?? null, data.philhealthNumber ?? null, data.barangay ?? null],
+        data.dob ?? null, data.phone ?? null, data.email ?? null, data.philsysNumber ?? null, data.barangay ?? null],
     );
 
     const candidates: MatchCandidate[] = (raw as any[])
@@ -822,7 +822,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           dobMatch: Boolean(r.dob_match),
           phoneMatch: Boolean(r.phone_match),
           emailMatch: Boolean(r.email_match),
-          philhealthMatch: Boolean(r.philhealth_match),
+          philsysMatch: Boolean(r.philsys_match),
           barangayMatch: Boolean(r.barangay_match),
           surnamePhoneticMatch: soundex(r.surname) === soundex(data.surname),
         }),
@@ -854,7 +854,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           estimatedMonthlyIncome: r.primary_income ? parseFloat(r.primary_income) : 0,
           civilStatus: r.primary_civil_status || '',
           currentAddress: r.primary_current_address || null,
-          philhealthNumber: r.primary_philhealth_number || undefined,
+          philsysNumber: r.primary_philsys_number || undefined,
         },
         matchedPerson: {
           id: r.person_id,
@@ -872,7 +872,7 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
           estimatedMonthlyIncome: r.estimated_monthly_income ? parseFloat(r.estimated_monthly_income) : 0,
           civilStatus: r.civil_status || '',
           currentAddress: r.current_address || null,
-          philhealthNumber: r.philhealth_number || undefined,
+          philsysNumber: r.philsys_number || undefined,
           category: r.category || undefined,
         },
         allBeneficiaries: r.all_beneficiaries || [],
@@ -1049,7 +1049,7 @@ const caseEntity = this.caseRepo.create({
       // Same duplicate-PhilHealth safety net as submitIntake.
       if (
         (error as { code?: string; message?: string })?.code === '23505' &&
-        /philhealth/i.test((error as { message?: string })?.message ?? '')
+        /philsys/i.test((error as { message?: string })?.message ?? '')
       ) {
         throw new ConflictException('PhilHealth number already registered to another client');
       }

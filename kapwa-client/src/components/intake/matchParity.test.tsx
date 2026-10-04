@@ -20,7 +20,7 @@ const intake: MatchIntakeFields = {
   dob: '2015-03-30',
   cellularNumber: '09171234567',
   email: 'ana@example.com',
-  philhealthNumber: '12-3456789012-3',
+  philsysNumber: '12-3456789012-3',
   currentAddress: { barangay: 'Bigte' },
 };
 
@@ -44,7 +44,7 @@ const candidate: MatchCandidate = {
     estimatedMonthlyIncome: 8000,
     civilStatus: 'Married',
     currentAddress: { barangay: 'Bigte' },
-    philhealthNumber: '12-3456789012-3',
+    philsysNumber: '12-3456789012-3',
   },
   matchedPerson: {
     id: 'person-ana',

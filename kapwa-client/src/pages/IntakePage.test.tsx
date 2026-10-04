@@ -372,8 +372,8 @@ describe('IntakePage — user-scoped draft', () => {
 
   const seedDraft = (surname: string) => ({
     data: {
-      beneficiary: { surname, firstName: '', middleName: '', extension: '', gender: '', dob: '', placeOfBirth: '', civilStatus: '', cellularNumber: '', email: '', currentAddress: { street: '', barangay: '', city: '0301413000', province: '0301400000', region: '03', postalCode: '3013', psgcCode: '' }, philhealthNumber: '', occupation: '', estimatedMonthlyIncome: '' },
-      claimant: { surname: '', firstName: '', middleName: '', extension: '', gender: '', dob: '', placeOfBirth: '', civilStatus: '', cellularNumber: '', email: '', currentAddress: {}, philhealthNumber: '', occupation: '', estimatedMonthlyIncome: '' },
+      beneficiary: { surname, firstName: '', middleName: '', extension: '', gender: '', dob: '', placeOfBirth: '', civilStatus: '', cellularNumber: '', email: '', currentAddress: { street: '', barangay: '', city: '0301413000', province: '0301400000', region: '03', postalCode: '3013', psgcCode: '' }, philsysNumber: '', occupation: '', estimatedMonthlyIncome: '' },
+      claimant: { surname: '', firstName: '', middleName: '', extension: '', gender: '', dob: '', placeOfBirth: '', civilStatus: '', cellularNumber: '', email: '', currentAddress: {}, philsysNumber: '', occupation: '', estimatedMonthlyIncome: '' },
       relationshipToBeneficiary: '',
       family: [],
       beneficiaryIsClaimant: false,
@@ -690,7 +690,7 @@ describe('IntakePage — draft recovery for a referral hand-off', () => {
         street: '123 Rizal St', barangay: 'Bigte', city: '0301413000',
         province: '0301400000', region: '03', postalCode: '3012', psgcCode: '',
       },
-      philhealthNumber: '', occupation: 'Fisherman', estimatedMonthlyIncome: '15000',
+      philsysNumber: '', occupation: 'Fisherman', estimatedMonthlyIncome: '15000',
       ...over,
     };
   }
@@ -930,13 +930,13 @@ function candidateFixture() {
     primaryBeneficiary: {
       id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan', gender: 'Male', age: 40,
       phone: '09171234000', occupation: 'Farmer', estimatedMonthlyIncome: 8500,
-      civilStatus: 'Married', currentAddress: { barangay: 'Bangkal' }, philhealthNumber: '07-1',
+      civilStatus: 'Married', currentAddress: { barangay: 'Bangkal' }, philsysNumber: '07-1',
     },
     matchedPerson: {
       id: 'person-2', role: 'member', relationship: 'Child', surname: 'Dela Cruz', firstName: 'Ana',
       gender: 'Female', age: 14, dob: '2012-01-01', phone: '',
       occupation: 'Student', estimatedMonthlyIncome: 0, civilStatus: 'Single',
-      currentAddress: { barangay: 'Bangkal' }, philhealthNumber: undefined,
+      currentAddress: { barangay: 'Bangkal' }, philsysNumber: undefined,
     },
     allBeneficiaries: [{ id: 'ben-1', surname: 'Dela Cruz', firstName: 'Juan' }],
     familyMembers: [

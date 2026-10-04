@@ -25,7 +25,7 @@ describe('DemographicsTab', () => {
       incomeBands: [{ label: '<5k', count: { value: 20 } }],
       householdSize: [{ label: '1', count: { value: 10 } }, { label: '8+', count: { suppressed: true } }],
       dependencyRatio: 0.8,
-      philhealthCoverage: { value: 0.55 },
+      philsysCoverage: { value: 0.55 },
     });
   });
 

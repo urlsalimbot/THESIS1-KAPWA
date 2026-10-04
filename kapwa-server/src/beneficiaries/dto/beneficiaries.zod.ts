@@ -22,7 +22,6 @@ export const CreateBeneficiarySchema = z.object({
   civilStatus: z.string().optional(),
   placeOfBirth: z.string().optional(),
   estimatedMonthlyIncome: z.number().optional(),
-  philhealthNumber: z.string().optional(),
   category: z.string().optional(),
 });
 

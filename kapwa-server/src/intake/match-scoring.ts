@@ -22,8 +22,8 @@ export interface MatchSignals {
   phoneMatch: boolean;
   /** Case/whitespace-insensitive email agreement. */
   emailMatch: boolean;
-  /** Digits-only PhilHealth number agreement. */
-  philhealthMatch: boolean;
+  /** Digits-only PhilSys number agreement. */
+  philsysMatch: boolean;
   /** Current-address barangay agreement. */
   barangayMatch: boolean;
   /** Soundex agreement on the surname (sound-alike spelling variants). */
@@ -54,7 +54,7 @@ export const MATCH_RULES = {
 export const MATCH_REASON_TOKENS = {
   phone: 'phone',
   email: 'email',
-  philhealth: 'philhealth',
+  philsys: 'philsys',
   bothNames: 'both_names',
   dobName: 'dob_name',
   phoneticSurname: 'phonetic_surname',
@@ -63,7 +63,7 @@ export const MATCH_REASON_TOKENS = {
 
 export function assessMatchCandidate(s: MatchSignals): MatchAssessment {
   const nameAvg = (s.simSurname + s.simFirstName) / 2;
-  const strongPii = s.phoneMatch || s.emailMatch || s.philhealthMatch;
+  const strongPii = s.phoneMatch || s.emailMatch || s.philsysMatch;
   const score =
     0.35 * nameAvg +
     0.2 * s.familyScore +
@@ -78,7 +78,7 @@ export function assessMatchCandidate(s: MatchSignals): MatchAssessment {
   if (uniquePii) {
     if (s.phoneMatch) mark(MATCH_REASON_TOKENS.phone);
     if (s.emailMatch) mark(MATCH_REASON_TOKENS.email);
-    if (s.philhealthMatch) mark(MATCH_REASON_TOKENS.philhealth);
+    if (s.philsysMatch) mark(MATCH_REASON_TOKENS.philsys);
   }
 
   const bothNameParts =

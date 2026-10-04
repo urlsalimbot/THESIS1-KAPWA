@@ -281,7 +281,15 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_chat_conversation ON chat_messages(conversation_id)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_chat_participants ON chat_messages(sender_id, recipient_id)`);
   // -- Person Schema Redesign (2026-07-21)
-  await q.query(`CREATE TABLE IF NOT EXISTS persons ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), surname TEXT NOT NULL, first_name TEXT NOT NULL, middle_name TEXT, gender TEXT CHECK (gender IN ('Male','Female')), dob DATE NOT NULL, philsys_number TEXT UNIQUE, place_of_birth TEXT, civil_status TEXT, philhealth_number TEXT, occupation TEXT, estimated_monthly_income DECIMAL(12,2), search_vector TSVECTOR, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`CREATE TABLE IF NOT EXISTS persons ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), surname TEXT NOT NULL, first_name TEXT NOT NULL, middle_name TEXT, gender TEXT CHECK (gender IN ('Male','Female')), dob DATE NOT NULL, philsys_number TEXT UNIQUE, place_of_birth TEXT, civil_status TEXT, occupation TEXT, estimated_monthly_income DECIMAL(12,2), search_vector TSVECTOR, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'persons' AND column_name = 'philhealth_number') THEN
+      UPDATE persons SET philsys_number = philhealth_number
+      WHERE philhealth_number IS NOT NULL AND philsys_number IS NULL
+        AND NOT EXISTS (SELECT 1 FROM persons p2 WHERE p2.philsys_number = persons.philhealth_number);
+      ALTER TABLE persons DROP COLUMN philhealth_number;
+    END IF;
+  END $$;`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_name_trgm ON persons USING gin (surname gin_trgm_ops, first_name gin_trgm_ops)`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_person_search ON persons USING gin(search_vector)`);
   await q.query(`ALTER TABLE beneficiaries ADD COLUMN IF NOT EXISTS person_id UUID REFERENCES persons(id)`);

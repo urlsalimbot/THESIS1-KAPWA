@@ -56,7 +56,7 @@ export class BeneficiariesService {
     gender: string; dob: Date; address?: string; phone?: string;
     philsysNumber?: string; householdId?: string;
     occupation?: string; civilStatus?: string; placeOfBirth?: string;
-    estimatedMonthlyIncome?: number; philhealthNumber?: string; category?: string;
+    estimatedMonthlyIncome?: number; category?: string;
   },
     actorId?: string,
   ) {
@@ -72,7 +72,6 @@ export class BeneficiariesService {
         civilStatus: data.civilStatus,
         placeOfBirth: data.placeOfBirth,
         estimatedMonthlyIncome: data.estimatedMonthlyIncome,
-        philhealthNumber: data.philhealthNumber,
       });
       person.contacts = data.phone ? [{ personId: undefined as any, contactType: 'phone', value: data.phone, isPrimary: true } as PersonContact] : [];
       person.addresses = data.address ? [{ personId: undefined as any, addressType: 'current', raw: data.address, isPrimary: true } as PersonAddress] : [];

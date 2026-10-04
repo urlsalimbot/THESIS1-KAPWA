@@ -49,7 +49,7 @@ describe('AnalyticsPage', () => {
       }
       return Promise.resolve({
         summary: { personsServed: { suppressed: true }, householdsCovered: { suppressed: true }, barangaysCovered: { suppressed: true } },
-        ageSex: [], civilStatus: [], occupation: [], incomeBands: [], householdSize: [], dependencyRatio: null, philhealthCoverage: { suppressed: true },
+        ageSex: [], civilStatus: [], occupation: [], incomeBands: [], householdSize: [], dependencyRatio: null, philsysCoverage: { suppressed: true },
       });
     });
   });

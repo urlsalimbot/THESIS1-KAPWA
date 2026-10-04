@@ -7,7 +7,7 @@ const validPerson = {
   cellularNumber: '09171234567', email: 'juan@example.com',
   street: '123 Rizal St', barangay: 'Bangkal', city: 'Norzagaray',
   province: '0314000000', region: '03', postalCode: '3012',
-  philhealthNumber: '', occupation: 'Fisherman', estimatedMonthlyIncome: '15000',
+  philsysNumber: '', occupation: 'Fisherman', estimatedMonthlyIncome: '15000',
 };
 
 describe('validatePerson', () => {

@@ -7,12 +7,12 @@ function signals(
   simSurname: number,
   simFirstName: number,
   familyScore = 0,
-  pii: Partial<Pick<MatchSignals, 'dobMatch' | 'phoneMatch' | 'emailMatch' | 'philhealthMatch' | 'barangayMatch' | 'surnamePhoneticMatch'>> = {},
+  pii: Partial<Pick<MatchSignals, 'dobMatch' | 'phoneMatch' | 'emailMatch' | 'philsysMatch' | 'barangayMatch' | 'surnamePhoneticMatch'>> = {},
 ): MatchSignals {
   return {
     simSurname, simFirstName, familyScore,
     dobMatch: false, phoneMatch: false, emailMatch: false,
-    philhealthMatch: false, barangayMatch: false, surnamePhoneticMatch: false,
+    philsysMatch: false, barangayMatch: false, surnamePhoneticMatch: false,
     ...pii,
   };
 }
@@ -46,7 +46,7 @@ describe('assessMatchCandidate', () => {
     expect(phone.score).toBeCloseTo(0.2, 5);
 
     expect(assessMatchCandidate(signals(0, 0, 0, { emailMatch: true })).matchedOn).toEqual(['email']);
-    expect(assessMatchCandidate(signals(0, 0, 0, { philhealthMatch: true })).matchedOn).toEqual(['philhealth']);
+    expect(assessMatchCandidate(signals(0, 0, 0, { philsysMatch: true })).matchedOn).toEqual(['philsys']);
   });
 
   it('never flags on DOB or barangay alone (weak shared attributes)', () => {

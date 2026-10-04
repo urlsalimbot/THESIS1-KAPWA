@@ -633,7 +633,7 @@ export function BeneficiaryViewPage() {
                     dob: (ben.dob as string) || "", placeOfBirth: (ben.placeOfBirth as string) || "",
                     civilStatus: (ben.civilStatus as string) || "", cellularNumber: (ben.phone as string) || "",
                     occupation: (ben.occupation as string) || "", estimatedMonthlyIncome: (ben.estimatedMonthlyIncome as number)?.toString() || "",
-                    philhealthNumber: (ben.philhealthNumber as string) || "",
+                    philsysNumber: (ben.philsysNumber as string) || "",
                     familyMembers: family.map(m => ({
                       id: m.id,
                       surname: m.surname ?? "",

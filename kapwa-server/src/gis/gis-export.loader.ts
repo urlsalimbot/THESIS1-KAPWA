@@ -106,7 +106,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
       occupation: asText(person?.occupation) || undefined,
       income: person?.estimatedMonthlyIncome != null ? Number(person.estimatedMonthlyIncome) : undefined,
       phone: person?.phone ?? null,
-      philhealthNumber: asText(person?.philhealthNumber) || undefined,
+      philsysNumber: asText(person?.philsysNumber) || undefined,
       address: beneficiaryPerson.address,
     },
     claimant: {
