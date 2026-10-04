@@ -208,6 +208,57 @@ export async function migrate() {
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS intervention_type TEXT`);
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS program_enrollment_id UUID`);
 
+  // Mirrors CaseEventsAndReminders0000000000083: court hearings + scheduled
+  // home visits, the reminder dedupe ledger, and reminder lead-time settings.
+  await q.query(`CREATE TABLE IF NOT EXISTS case_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+    event_type VARCHAR(32) NOT NULL,
+    attended BOOLEAN,
+    title TEXT,
+    venue TEXT,
+    event_date DATE NOT NULL,
+    start_time TIME,
+    end_time TIME,
+    notes TEXT,
+    status VARCHAR(32) NOT NULL DEFAULT 'planned',
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_events_case ON case_events(case_id)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_events_date ON case_events(event_date)`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_case_events_status_date ON case_events(status, event_date)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS case_event_reminders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    event_id UUID NOT NULL REFERENCES case_events(id) ON DELETE CASCADE,
+    offset_minutes INTEGER NOT NULL,
+    channel VARCHAR(16) NOT NULL,
+    sent_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_case_event_reminders ON case_event_reminders(event_id, offset_minutes, channel)`);
+  await q.query(`CREATE TABLE IF NOT EXISTS reminder_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    scope VARCHAR(16) NOT NULL,
+    user_id UUID REFERENCES users(id),
+    event_type VARCHAR(32) NOT NULL,
+    offsets JSONB NOT NULL,
+    updated_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CHECK (scope IN ('system','worker')),
+    CHECK ((scope = 'system' AND user_id IS NULL) OR (scope = 'worker' AND user_id IS NOT NULL))
+  )`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_reminder_system_type ON reminder_settings(event_type) WHERE scope = 'system'`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_reminder_worker_type ON reminder_settings(user_id, event_type) WHERE scope = 'worker'`);
+  await q.query(`INSERT INTO reminder_settings (id, scope, event_type, offsets)
+    SELECT uuid_generate_v7(), 'system', 'court_hearing', '[4320,1440,180]'::jsonb
+    WHERE NOT EXISTS (SELECT 1 FROM reminder_settings WHERE scope='system' AND event_type='court_hearing')`);
+  await q.query(`INSERT INTO reminder_settings (id, scope, event_type, offsets)
+    SELECT uuid_generate_v7(), 'system', 'home_visit', '[1440,180]'::jsonb
+    WHERE NOT EXISTS (SELECT 1 FROM reminder_settings WHERE scope='system' AND event_type='home_visit')`);
+
   // Mirrors CreateCaseStepLocks0000000000074 + CaseStepLocksStepKey0000000000079.
   // case_id is TEXT to match the case-scoped children above. Fresh boots get
   // the keyed shape; the idempotent statements below convert older boots.
@@ -955,6 +1006,17 @@ export async function migrate() {
     updated_at timestamptz NOT NULL DEFAULT now()
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_team_blocks_user_date ON team_schedule_blocks (user_id, block_date)`);
+  // Team-schedule sync columns + FK backstop (Mirrors CaseEventsAndReminders
+  // …0083; service removes blocks before deleting events, the FK keeps a
+  // missed removal from orphaning a block).
+  await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS source VARCHAR(32) NOT NULL DEFAULT 'manual'`);
+  await q.query(`ALTER TABLE team_schedule_blocks ADD COLUMN IF NOT EXISTS source_ref UUID`);
+  await q.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_blocks_source_ref') THEN
+      ALTER TABLE team_schedule_blocks ADD CONSTRAINT fk_blocks_source_ref FOREIGN KEY (source_ref) REFERENCES case_events(id) ON DELETE SET NULL;
+    END IF;
+  END $$`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_blocks_source_ref ON team_schedule_blocks(source_ref)`);
   await q.query(`CREATE TABLE IF NOT EXISTS office_events (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
     title text NOT NULL,
