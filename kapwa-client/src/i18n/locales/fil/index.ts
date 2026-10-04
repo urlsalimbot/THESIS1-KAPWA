@@ -2302,6 +2302,8 @@ const fil: EnLocale = {
   },
   "programsPublic": {
     "backToPrograms": "Bumalik sa mga programa",
+    "ctaHint": "Kailangan ng tulong sa pagpili? Magtanong sa opisina ng MSWDO.",
+    "waitingPeriodShort": "Panahon ng paghihintay",
     "fundedBy": "Pinagkukunan ng pondo",
     "moreDocuments": "{{count}} pa sa pahina ng programa",
     "description": "Mga available na programa at serbisyong panlipunan na inaalok ng MSWDO ng Norzagaray.",

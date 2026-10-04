@@ -2054,6 +2054,8 @@ const en = {
   },
   "programsPublic": {
     "backToPrograms": "Back to programs",
+    "ctaHint": "Need help choosing? Ask the MSWDO office.",
+    "waitingPeriodShort": "Waiting period",
     "fundedBy": "Funded by",
     "moreDocuments": "{{count}} more on the program page",
     "description": "Available assistance programs and services offered by the MSWDO of Norzagaray.",
