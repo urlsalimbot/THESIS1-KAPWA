@@ -4,10 +4,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 import { CaseEvent } from './case-event.entity';
 import { CaseEventReminder } from './case-event-reminder.entity';
-import { ReminderSetting } from './reminder-setting.entity';
 import { Case } from '../cases/case.entity';
 import { User } from '../auth/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ReminderSettingsService } from './reminder-settings.service';
 import { NotificationCategory, NotificationType } from '../notifications/notification.entity';
 
 const REMINDER_CHANNELS = ['in_app', 'email'] as const;
@@ -30,7 +30,7 @@ export class CaseEventReminderService {
   constructor(
     @InjectRepository(CaseEvent) private readonly events: Repository<CaseEvent>,
     @InjectRepository(CaseEventReminder) private readonly ledger: Repository<CaseEventReminder>,
-    @InjectRepository(ReminderSetting) private readonly settings: Repository<ReminderSetting>,
+    private readonly reminderSettings: ReminderSettingsService,
     @InjectRepository(Case) private readonly cases: Repository<Case>,
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly notifications: NotificationsService,
@@ -126,15 +126,12 @@ export class CaseEventReminderService {
   }
 
   /**
-   * Worker override row wins; otherwise the system default. Absent rows for
-   * either scope mean zero offsets (no reminders), never a crash — and an
-   * explicit empty array is a deliberate "no reminders".
+   * The offsets in force for this worker + event type. Delegated to
+   * `ReminderSettingsService` so the dispatcher and the settings API share one
+   * resolution rule (worker override → system default → none).
    */
-  async resolveOffsets(eventType: string, workerId: string): Promise<number[]> {
-    const worker = await this.settings.findOne({ where: { scope: 'worker', userId: workerId, eventType } });
-    if (worker) return Array.isArray(worker.offsets) ? worker.offsets : [];
-    const system = await this.settings.findOne({ where: { scope: 'system', eventType } });
-    return system && Array.isArray(system.offsets) ? system.offsets : [];
+  resolveOffsets(eventType: string, workerId: string): Promise<number[]> {
+    return this.reminderSettings.resolveOffsets(eventType, workerId);
   }
 
   private reminderCopy(event: CaseEvent, controlNo: string): { title: string; message: string } {

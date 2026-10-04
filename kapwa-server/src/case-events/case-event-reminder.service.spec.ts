@@ -3,11 +3,11 @@ import { CaseEventReminderService } from './case-event-reminder.service';
 describe('CaseEventReminderService', () => {
   const events = { find: jest.fn() };
   const reminders = { findOne: jest.fn(), insert: jest.fn(), update: jest.fn() };
-  const settings = { findOne: jest.fn() };
+  const reminderSettings = { resolveOffsets: jest.fn() };
   const cases = { findOne: jest.fn() };
   const users = { findOne: jest.fn() };
   const notifs = { create: jest.fn(), checkConsent: jest.fn(), sendEmailDirect: jest.fn() };
-  const svc = new CaseEventReminderService(events as any, reminders as any, settings as any, cases as any, users as any, notifs as any);
+  const svc = new CaseEventReminderService(events as any, reminders as any, reminderSettings as any, cases as any, users as any, notifs as any);
 
   // 2026-10-19 09:00. The event is 2026-10-20 09:00.
   // offset 4320 (3d) → remind_at 10-17 09:00 — due (catch-up)
@@ -25,7 +25,7 @@ describe('CaseEventReminderService', () => {
     events.find.mockResolvedValue([event]);
     cases.findOne.mockResolvedValue(caseRow);
     users.findOne.mockResolvedValue({ id: 'w1', email: 'worker@mswdo.gov', isActive: true });
-    settings.findOne.mockResolvedValue({ scope: 'system', eventType: 'court_hearing', offsets: [4320, 1440, 180] });
+    reminderSettings.resolveOffsets.mockResolvedValue([4320, 1440, 180]);
     reminders.findOne.mockResolvedValue(null);
     reminders.insert.mockResolvedValue({});
     reminders.update.mockResolvedValue({});
@@ -55,24 +55,20 @@ describe('CaseEventReminderService', () => {
     expect(reminders.insert).toHaveBeenCalledWith(expect.objectContaining({ offsetMinutes: 4320 }));
   });
 
-  it('uses the worker override instead of the system default', async () => {
-    // Worker override: 2 days before → remind_at 10-18 09:00, due. The system
-    // default's 1440/180 offsets must NOT be used.
-    settings.findOne.mockImplementation(({ where }: any) =>
-      Promise.resolve(where.scope === 'worker'
-        ? { scope: 'worker', eventType: 'court_hearing', offsets: [2880] }
-        : { scope: 'system', eventType: 'court_hearing', offsets: [4320, 1440, 180] }));
+  it('asks the settings resolver for the assigned worker and uses its answer', async () => {
+    // The precedence rule itself (worker override beats system default, empty
+    // list disables) is pinned in reminder-settings.service.spec.ts; here the
+    // dispatcher must ask for the assigned worker's event type.
+    reminderSettings.resolveOffsets.mockResolvedValue([2880]);
     const res = await svc.checkForReminders(now);
+    expect(reminderSettings.resolveOffsets).toHaveBeenCalledWith('court_hearing', 'w1');
     expect(res.dispatched).toBe(2);
     expect(reminders.insert).toHaveBeenCalledWith(expect.objectContaining({ offsetMinutes: 2880, channel: 'in_app' }));
     expect(reminders.insert).not.toHaveBeenCalledWith(expect.objectContaining({ offsetMinutes: 1440 }));
   });
 
-  it('treats an explicit empty worker override as no reminders', async () => {
-    settings.findOne.mockImplementation(({ where }: any) =>
-      Promise.resolve(where.scope === 'worker'
-        ? { scope: 'worker', eventType: 'court_hearing', offsets: [] }
-        : { scope: 'system', eventType: 'court_hearing', offsets: [4320, 1440, 180] }));
+  it('treats an empty resolved list as no reminders', async () => {
+    reminderSettings.resolveOffsets.mockResolvedValue([]);
     const res = await svc.checkForReminders(now);
     expect(res.dispatched).toBe(0);
     expect(reminders.insert).not.toHaveBeenCalled();
@@ -119,7 +115,7 @@ describe('CaseEventReminderService', () => {
   });
 
   it('does nothing when no offsets are configured for the event type', async () => {
-    settings.findOne.mockResolvedValue(null);
+    reminderSettings.resolveOffsets.mockResolvedValue([]);
     const res = await svc.checkForReminders(now);
     expect(res.dispatched).toBe(0);
     expect(reminders.insert).not.toHaveBeenCalled();
