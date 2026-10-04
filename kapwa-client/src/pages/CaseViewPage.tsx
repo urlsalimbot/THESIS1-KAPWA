@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useMemo, useId } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { referralStatusLabel, statusLabel } from '@/i18n/display';
+import { statusLabel } from '@/i18n/display';
 import useSWR, { useSWRConfig } from 'swr';
 import {
   User, Users, Clock, AlertTriangle, Phone, MapPin, FileText, FileSignature, Download, FileWarning,
-  Plus, Lock, Send, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
+  Plus, Lock, MoreHorizontal, RotateCcw, Activity, CreditCard, ClipboardList, Ban,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -215,7 +215,7 @@ export function CaseViewPage() {
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
   }, [idPhoto]);
-  const { data: iarReferrals, isLoading: iarLoading } = useSWR(
+  const { data: iarReferrals } = useSWR(
     id ? queryKeys.interAgencyReferrals.byCase(id) : null,
     (key) => api.get<InterAgencyReferral[]>(key),
   );
@@ -272,6 +272,24 @@ export function CaseViewPage() {
       initialNavDone.current = true;
     }
   }, [caseData, interventions, progressOpts]);
+
+  // Every step change puts the reader at the top of the page. The stepper sits
+  // in a sticky header, so without this a worker on step 5 (the tallest card)
+  // who clicks back to step 1 lands halfway down a card they have not seen —
+  // the page keeps the scroll offset of the step just left, and the two cards
+  // are nowhere near the same height. The first render is skipped: a reload or
+  // a back-navigation arrives with a restored offset that is the reader's own,
+  // not a stale step's, and yanking it to the top loses their place. A step
+  // chosen by the initial-nav effect above lands after that first render, so
+  // this still scrolls for it.
+  const firstStepRender = useRef(true);
+  useEffect(() => {
+    if (firstStepRender.current) {
+      firstStepRender.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
 
   // Breadcrumb shows the control number, not the URL's UUID.
   useEffect(() => {
@@ -940,40 +958,12 @@ export function CaseViewPage() {
             </SectionCard>
           )}
 
-          {/* Inter-Agency Referrals card */}
-          <SectionCard icon={Send} title={t('cases.interAgencyReferrals', 'Inter-Agency Referrals')}>
-            <div className="px-4 py-3 space-y-2">
-              {iarLoading ? (
-                <p className="text-xs text-muted-foreground">{t('cases.loadingCase', 'Loading case...')}</p>
-              ) : (iarReferrals || []).length === 0 ? (
-                <p className="text-xs text-muted-foreground">{t('cases.noInterAgencyReferrals', 'No inter-agency referrals for this case')}</p>
-              ) : (
-                (iarReferrals || []).map(r => (
-                  // A static record, not a link: /agency/referrals/:id was removed
-                  // with the referral lifecycle (9fa73f5), so the row no longer
-                  // pretends to open anywhere.
-                  <div
-                    key={r.id}
-                    className="w-full rounded-md border border-border/60 px-3 py-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {r.person ? `${r.person.firstName} ${r.person.surname}`.trim() : r.id}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {r.fromAgency?.name || r.fromAgencyId} → {r.toAgency?.name || r.toAgencyId}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant={r.status === 'declined' ? 'destructive' : 'default'}>{referralStatusLabel(t, r.status)}</Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </SectionCard>
+          {/* No inter-agency referrals card here any more. The referrals step
+              already lists them with the actions that complete that step, so
+              this was a second, read-only copy of the same rows in a column
+              that runs beside every step — and for a worker whose agency is not
+              on a referral the agency-scoped list here read empty while the
+              step showed the referral, which looks like data loss. */}
 
           {/* Incident Reports */}
           <SectionCard

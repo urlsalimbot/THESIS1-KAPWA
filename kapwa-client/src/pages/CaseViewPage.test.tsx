@@ -916,17 +916,26 @@ describe('CaseViewPage — inter-agency referral rows', () => {
       // pass whether or not the row still pretended to be a link.
       if (k.includes('inter-agency-referrals')) return Promise.resolve([mockReferral]);
       if (k.includes('caseId')) return Promise.resolve([]);
-      if (k.includes('cases')) return Promise.resolve(mockCase);
+      if (k.includes('cases')) {
+        // A referral on record makes the referrals step done, which is what makes
+        // the stepper let a worker open it — the step is the only home these rows
+        // have now, so a test that cannot reach it asserts nothing.
+        return Promise.resolve({ ...mockCase, interAgencyReferralCount: 1 });
+      }
       return Promise.resolve(null);
     });
     await mutate(() => true, undefined, { revalidate: false });
   });
 
-  it('offers no way to leave the case for a referral — the detail route is retired', async () => {
+  /** Opens the referrals step, where the rows now live. */
+  async function openReferralsStep() {
     renderWithSWR(<CaseViewPage />);
+    fireEvent.click(await screen.findByRole('button', { name: /Inter-agency Referrals/i }));
+    return screen.findByText(/Referred to PESO Norzagaray/i);
+  }
 
-    // The row must be on screen before the "no link" claims mean anything.
-    const row = await screen.findByText('Maria Reyes');
+  it('offers no way to leave the case for a referral — the detail route is retired', async () => {
+    const row = await openReferralsStep();
 
     const hrefs = [...document.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(hrefs.filter((h) => h?.includes('/agency/referrals'))).toEqual([]);
@@ -936,12 +945,22 @@ describe('CaseViewPage — inter-agency referral rows', () => {
     expect(row.closest('a, button')).toBeNull();
   });
 
-  it('still shows the referral as a record — parties and status', async () => {
-    renderWithSWR(<CaseViewPage />);
+  it('still shows the referral as a record — office and status', async () => {
+    await openReferralsStep();
 
-    expect(await screen.findByText('Maria Reyes')).toBeTruthy();
-    expect(screen.getByText('MSWDO Norzagaray → PESO Norzagaray')).toBeTruthy();
-    expect(screen.getByText('Referred')).toBeTruthy();
+    expect(screen.getByText(/Referred to PESO Norzagaray/i)).toBeTruthy();
+    expect(screen.getByText('referred')).toBeTruthy();
+  });
+
+  // The sidebar ran beside every step and carried its own read-only copy of the
+  // referral rows, so the same referral appeared twice on one screen. It also
+  // read empty for a worker whose agency is not on the referral while the step
+  // showed it — which looks like data loss, not like scoping.
+  it('keeps the sidebar free of referrals — the step owns them', async () => {
+    await openReferralsStep();
+
+    const aside = screen.getByRole('complementary');
+    expect(aside.textContent).not.toMatch(/PESO|Inter-Agency Referrals/i);
   });
 });
 
@@ -1060,5 +1079,80 @@ describe('CaseViewPage — a sealed step', () => {
     // bigger version of the defect being fixed.
     fireEvent.click(await screen.findByRole('button', { name: /Intervention & Requirements/i }));
     expect(await screen.findByRole('button', { name: /Add Intervention/i })).toBeTruthy();
+  });
+});
+
+describe('CaseViewPage — every step starts at the top', () => {
+  const scrollTo = window.scrollTo as unknown as ReturnType<typeof vi.fn>;
+  // Enough done that the page opens on a later step: the initial-nav effect picks
+  // it after the first render, which is a step change like any other.
+  const ASSESSED = {
+    status: 'assessed',
+    problemsPresented: 'Financial difficulty',
+    socialWorkerAssessment: 'Needs financial assistance',
+    clientCategory: 'Indigent',
+    caseCategory: 'Individual in Crisis Situation (AICS)',
+    enrollmentsNotNeeded: true,
+  };
+
+  function stub(caseData: Record<string, unknown> = {}) {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve([]);
+      if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, ...caseData });
+      if (k.includes('caseId')) return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+  }
+
+  beforeEach(async () => {
+    mockApiGet.mockReset();
+    mockUseAuth.mockReset();
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'SW', role: 'social_worker' } });
+    scrollTo.mockClear();
+    await mutate(() => true, undefined, { revalidate: false });
+  });
+
+  // The stepper sits in a sticky header, so switching steps keeps the scroll
+  // offset of the step just left and lands the worker halfway down a card they
+  // have not seen — the cards are nowhere near the same height.
+  it('scrolls to the top when the worker switches steps', async () => {
+    // Assessment complete, so the page opens on the interventions step and the
+    // stepper lets the worker walk back to the steps already done.
+    stub(ASSESSED);
+    renderWithSWR(<CaseViewPage />);
+    await screen.findByRole('button', { name: /Add Intervention/i });
+    scrollTo.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: /^1\. Assess & Interview/i }));
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  // A reload or a back-navigation arrives with a restored offset that is the
+  // reader's own, not a stale step's. Yanking it to the top loses their place.
+  it('leaves the offset alone on the first render', async () => {
+    stub();
+    renderWithSWR(<CaseViewPage />);
+    await screen.findByRole('heading', { name: 'Assessment & Diagnosis' });
+
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  // The step the page opens on is chosen after the first render, so it is a
+  // step *change* like any other and scrolls with the rest.
+  it('scrolls to the top for the step the case opens on', async () => {
+    stub(ASSESSED);
+    renderWithSWR(<CaseViewPage />);
+
+    await waitFor(() => {
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    });
   });
 });
