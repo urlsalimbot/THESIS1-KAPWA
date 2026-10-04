@@ -1364,6 +1364,7 @@ const en = {
     "reason": "Reason",
     "reasonForReferral": "Reason for Referral *",
     "reasonPlaceholder": "Describe why this resident is being referred to MSWDO...",
+    "referralLabel": "Municipal Referral",
     "referralDetails": "Referral Details",
     "residentName": "Name of the Resident",
     "sex": "Sex *",

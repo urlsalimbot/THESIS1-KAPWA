@@ -1447,6 +1447,7 @@ const fil: EnLocale = {
     "street": "Kalye / Purok",
     "submitFailed": "Nabigo ang pagsusumite ng referral",
     "submitReferral": "Isumite ang Referral",
+    "referralLabel": "Referral ng Munisipalidad",
     "toMswdo": "MSWDO Norzagaray",
     "submitted": "Na-isumite ang referral",
     "submittedDesc": "Nai-refer na ang residente sa MSWDO para sa assessment.",

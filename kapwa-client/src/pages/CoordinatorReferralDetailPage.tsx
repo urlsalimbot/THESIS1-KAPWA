@@ -7,7 +7,8 @@ import { PageShell } from '@/components/PageShell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { AlertCircle } from 'lucide-react';
 import { formatDate, residentName } from '../lib/format';
 
 interface ReferralDetail {
@@ -64,18 +65,22 @@ export function CoordinatorReferralDetailPage() {
     };
   }, [id]);
 
+  // The PageShell header already carries the back control (backTo below);
+  // there is deliberately no second back button in the body.
   const backTo = { label: t('coordinator.myReferrals', 'My Referrals'), onClick: () => navigate('/coordinator/referrals') };
 
   if (loading) {
     return (
       <PageShell title={t('coordinator.referralDetails', 'Referral Details')} description="" backTo={backTo}>
-        <Card>
-          <div className="p-4 space-y-3">
-            {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-4 w-full" />
-            ))}
-          </div>
-        </Card>
+        <div className="mx-auto w-full max-w-2xl">
+          <Card>
+            <div className="p-5 space-y-3">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
+            </div>
+          </Card>
+        </div>
       </PageShell>
     );
   }
@@ -101,59 +106,75 @@ export function CoordinatorReferralDetailPage() {
       description={t('coordinator.detailsFor', 'Referral information for {{name}}', { name: residentName(referral.surname, referral.firstName) })}
       backTo={backTo}
     >
-      <div className="max-w-3xl space-y-4">
+      <div className="mx-auto w-full max-w-2xl">
         <Card>
-          <CardContent className="p-4 space-y-4">
+          <CardContent className="p-5 sm:p-6 space-y-5">
+            {/* Referral summary: resident, the coordinator→MSWDO chain, status */}
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold">{residentName(referral.surname, referral.firstName)}</h2>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t('coordinator.referralLabel', 'Municipal Referral')}
+                </p>
+                <h2 className="text-xl font-semibold font-heading leading-tight text-foreground">
+                  {residentName(referral.surname, referral.firstName)}
+                </h2>
+                <p className="text-sm text-muted-foreground">
                   {t('referral.referredBy', 'Referred By')}: {referral.coordinator?.fullName || '—'} → {t('coordinator.toMswdo', 'MSWDO Norzagaray')}
                 </p>
               </div>
-              <Badge variant={variantMap[referral.status] || 'secondary'}>{referralStatusLabel(t, referral.status)}</Badge>
+              <Badge variant={variantMap[referral.status] || 'secondary'} className="shrink-0">
+                {referralStatusLabel(t, referral.status)}
+              </Badge>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <Separator />
+
+            {/* Key details */}
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
               <div>
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.barangay', 'Barangay')}</span>
-                <p className="font-medium">{referral.barangay}</p>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('coordinator.barangay', 'Barangay')}</dt>
+                <dd className="mt-1 font-medium text-foreground">{referral.barangay}</dd>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.address', 'Address')}</span>
-                <p className="font-medium">{address}</p>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('coordinator.address', 'Address')}</dt>
+                <dd className="mt-1 font-medium text-foreground">{address}</dd>
               </div>
-              <div className="col-span-2">
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.reason', 'Reason')}</span>
-                <p className="font-medium">{referral.reason}</p>
-              </div>
+              {referral.phone && (
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('coordinator.phone', 'Contact Number')}</dt>
+                  <dd className="mt-1 font-medium text-foreground">{referral.phone}</dd>
+                </div>
+              )}
               <div>
-                <span className="text-xs text-muted-foreground font-medium">{t('coordinator.date', 'Date')}</span>
-                <p className="font-medium">{formatDate(referral.createdAt)}</p>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('coordinator.date', 'Date')}</dt>
+                <dd className="mt-1 font-medium text-foreground">{formatDate(referral.createdAt)}</dd>
               </div>
               {referral.case?.controlNo && (
                 <div>
-                  <span className="text-xs text-muted-foreground font-medium">{t('coordinator.caseNo', 'Case No.')}</span>
-                  <p className="font-medium">{referral.case.controlNo}</p>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('coordinator.caseNo', 'Case No.')}</dt>
+                  <dd className="mt-1 font-mono font-medium text-foreground">{referral.case.controlNo}</dd>
                 </div>
               )}
-              {referral.declineReason && (
-                <div className="col-span-2">
-                  <span className="text-xs text-destructive">{t('coordinator.declineReason', 'Decline Reason')}</span>
-                  <p className="font-medium">{referral.declineReason}</p>
+            </dl>
+
+            {referral.reason && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('coordinator.reason', 'Reason')}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-foreground">{referral.reason}</p>
                 </div>
-              )}
-            </div>
+              </>
+            )}
+
+            {referral.declineReason && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-destructive">{t('coordinator.declineReason', 'Decline Reason')}</p>
+                <p className="mt-1 text-sm leading-relaxed text-foreground">{referral.declineReason}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        <button
-          type="button"
-          onClick={() => navigate('/coordinator/referrals')}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft size={14} /> {t('coordinator.myReferrals', 'My Referrals')}
-        </button>
       </div>
     </PageShell>
   );
