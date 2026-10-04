@@ -446,8 +446,8 @@ export function WeekView({
               return (
                 <div
                   key={day}
-                  className={`relative min-h-[16rem] ${i === 0 ? 'border-l-0' : 'border-l'}`}
-                  style={{ display: 'grid', gridTemplateRows: 'repeat(24, minmax(1.05rem, 1fr))' }}
+                  className={`relative h-64 ${i === 0 ? 'border-l-0' : 'border-l'}`}
+                  style={{ display: 'grid', gridTemplateRows: 'repeat(24, minmax(0, 1fr))' }}
                 >
                   {dayBlocks.map(slice => {
                     const block = slice.block;
