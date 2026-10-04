@@ -20,6 +20,8 @@ export const queryKeys = {
     detail: (id: string) => memo(`cases.detail.${id}`, () => ['cases', id] as const),
     interventions: (caseId: string) =>
       memo(`cases.interventions.${caseId}`, () => ['cases', caseId, 'interventions'] as const),
+    enrollments: (caseId: string) =>
+      memo(`cases.enrollments.${caseId}`, () => ['cases', caseId, 'enrollments'] as const),
   },
   beneficiaries: {
     all: ['beneficiaries'] as const,

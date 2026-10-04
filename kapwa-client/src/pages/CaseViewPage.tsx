@@ -16,20 +16,21 @@ import { api, downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl, getFilingOb
 import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
 import { formatDate, formatDateTime } from '../lib/format';
-import { isAssessmentStepDone, interventionRequirementsMet } from '../lib/case-progress';
+import { interventionRequirementsMet } from '../lib/case-progress';
 import { setCaseLabel } from '../lib/breadcrumbs';
 import { humanizeError } from '../lib/errors';
 import { useAuth } from '../lib/auth-context';
 import { PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { FamilyGraph } from '../components/family/FamilyGraph';
-import { CaseStepper, stepperStepDone, StepperProgressOpts } from '@/components/case-view/CaseStepper';
+import { CaseStepper, stepperStepDone, stepperStatus, stepsForCategory, StepperProgressOpts } from '@/components/case-view/CaseStepper';
 import { CaseActionBar } from '@/components/case-view/CaseActionBar';
 import { stepLockKey, type StepLock } from '@/components/case-view/StepLockBar';
 import { isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
@@ -39,6 +40,8 @@ import { StepImplementHIP } from '@/components/case-view/StepImplementHIP';
 import { StepIntegratedDelivery } from '@/components/case-view/StepIntegratedDelivery';
 import { StepTransition } from '@/components/case-view/StepTransition';
 import { StepClosure } from '@/components/case-view/StepClosure';
+import { StepEnrollments } from '@/components/case-view/StepEnrollments';
+import { StepDiscernment, StepProtectionOrder, StepSoloParent, StepAdoption } from '@/components/case-view/StepCategoryFields';
 import { InterAgencyReferral } from '@/components/referrals/referral-utils';
 
 /** Decimal columns arrive from the API as strings ("78.00"); coerce or drop. */
@@ -55,14 +58,15 @@ const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destr
   active: 'default',
   transitioning: 'secondary',
   closed: 'outline',
+  aftercare: 'secondary',
 };
 
-function findFirstPendingStep(caseData: any, interventionCount: number, opts: StepperProgressOpts = {}): number {
-  if (!isAssessmentStepDone(caseData)) return 0;
-  for (let i = 1; i < 5; i++) {
-    if (!stepperStepDone(i, caseData, interventionCount, opts)) return i;
+function findFirstPendingStep(caseData: any, interventionCount: number, enrollmentCount: number, opts: StepperProgressOpts = {}): string {
+  const template = stepsForCategory(caseData?.caseCategory);
+  for (const key of template) {
+    if (!stepperStepDone(key, caseData, interventionCount, enrollmentCount, opts)) return key;
   }
-  return 4;
+  return 'closure';
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -72,6 +76,7 @@ const STATUS_LABELS: Record<string, string> = {
   active: 'Active',
   transitioning: 'Transitioning',
   closed: 'Closed',
+  aftercare: 'Aftercare',
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -159,7 +164,7 @@ export function CaseViewPage() {
     }
   }
 
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState('assessment');
   const initialNavDone = useRef(false);
 
   const { data: caseData, isLoading } = useSWR<any>(
@@ -167,6 +172,9 @@ export function CaseViewPage() {
   );
   const { data: interventions = [] } = useSWR<any[]>(
     id ? queryKeys.cases.interventions(id) : null,
+  );
+  const { data: enrollments = [] } = useSWR<any[]>(
+    id ? queryKeys.cases.enrollments(id) : null,
   );
   const { data: documents = [] } = useSWR<any[]>(
     id ? queryKeys.filing.byCase(id) : null,
@@ -259,7 +267,7 @@ export function CaseViewPage() {
 
   useEffect(() => {
     if (caseData && !initialNavDone.current) {
-      const pending = findFirstPendingStep(caseData, interventions.length, progressOpts);
+      const pending = findFirstPendingStep(caseData, interventions.length, enrollments.length, progressOpts);
       setCurrentStep(pending);
       initialNavDone.current = true;
     }
@@ -289,17 +297,15 @@ export function CaseViewPage() {
     benId ? queryKeys.beneficiaries.familyGraph(benId) : null,
   );
 
-  const caseClosed = caseData?.status === 'closed';
-  const stepDone = useMemo(() => {
-    const opts = progressOpts;
-    return [
-      isAssessmentStepDone(caseData),
-      stepperStepDone(1, caseData, interventions.length, opts),
-      stepperStepDone(2, caseData, interventions.length, opts),
-      stepperStepDone(3, caseData, interventions.length, opts),
-      stepperStepDone(4, caseData, interventions.length, opts),
-    ];
-  }, [caseData, interventions, progressOpts]);
+  const caseClosed = ['closed', 'aftercare'].includes(caseData?.status);
+  const inAftercare = caseData?.status === 'aftercare';
+  // Legal categories carry a court docket number (spec §5.5): CICL, VAWC and
+  // child protection cases move through the courts alongside the social file.
+  const isLegalCategory = ['Children in Conflict with the Law (CICL)', 'Violence Against Women and Their Children (VAWC)', 'Children in Need of Special Protection (CNSP)'].includes(caseData?.caseCategory);
+  const stepDone = useMemo(
+    () => stepperStatus(caseData, interventions.length, enrollments.length, progressOpts),
+    [caseData, interventions, enrollments, progressOpts],
+  );
 
   const ben = caseData?.beneficiary;
   const benAddress = addressNames(ben?.currentAddress) || ben?.address;
@@ -434,8 +440,8 @@ export function CaseViewPage() {
   // its own row and never sees the `stepLocks` array — five steps reading the
   // same array to find their own index is five chances to answer for the wrong
   // step.
-  const lockFor = (i: number): StepLock | null =>
-    ((caseData?.stepLocks ?? []) as StepLock[]).find((l) => l.stepIndex === i) ?? null;
+  const lockFor = (key: string): StepLock | null =>
+    ((caseData?.stepLocks ?? []) as StepLock[]).find((l) => l.stepKey === key) ?? null;
 
   // A sealed step's fields are read-only, so its own editing affordances go away
   // with them. The server refuses those writes with a 409 either way, so this is
@@ -455,8 +461,8 @@ export function CaseViewPage() {
   // plain lifecycle signal (`caseClosed`), never this helper. `CaseViewPage —
   // step 5 sealed` is the test that pins it; an earlier version of this file
   // folded the seal into step 5's `lockReadOnly` and shipped that lockout.
-  const sealed = (i: number): boolean => lockFor(i) != null;
-  const bodyReadOnly = (base: boolean, step: number): boolean => base || sealed(step);
+  const sealed = (key: string): boolean => lockFor(key) != null;
+  const bodyReadOnly = (base: boolean, step: string): boolean => base || sealed(step);
 
   // The key names the case as well as the step, because `StepLockBar` remembers
   // the outcome of its own write in state carrying neither: an instance reused
@@ -464,46 +470,78 @@ export function CaseViewPage() {
   // step half is insurance (only one step renders at a time, under keys that
   // already differ) while the case half is the one a mount can actually outlive —
   // see `stepLockKey`.
-  const stepComponents = [
-    <StepAssessment key={stepLockKey(id!, 0)} caseId={id!} caseData={caseData} assessment={assessment}
-      onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
-      userRole={user?.role}
-      readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), 0)}
-      transitionReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
-      lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
-      stepLock={lockFor(0)} />,
-    <StepImplementHIP key={stepLockKey(id!, 1)} caseId={id!} caseData={caseData} userRole={user?.role}
-      readOnly={bodyReadOnly(caseClosed, 1)} lockReadOnly={caseClosed}
-      stepLock={lockFor(1)} />,
-    <StepIntegratedDelivery key={stepLockKey(id!, 2)} caseId={id!} caseData={caseData} userRole={user?.role}
-      readOnly={bodyReadOnly(caseClosed, 2)} lockReadOnly={caseClosed}
-      stepLock={lockFor(2)} />,
-    // Transition plan + follow-up visits stay savable for the whole active phase:
-    // stepDone[3] (plan saved) must NOT flip readOnly or the worker is left adding
-    // follow-up visits with the only "Save Transition Plan" button hidden. Only
-    // closure locks the step.
-    //
-    // A *seal* of this step is deliberately not folded in here. The seal claims the
-    // self-reliance assessment is finished, and the visits are ongoing progress
-    // monitoring that is in no step's done-predicate — the server's
-    // `CASE_STEP_UNGUARDED_FIELDS` lets a visits-only body past a sealed step 4
-    // precisely so sealing the assessment cannot stop a home visit being recorded.
-    // `StepTransition` therefore derives its own two signals from `stepLock` (see
-    // `assessmentReadOnly` there): the assessment freezes, the visits and the Save
-    // button do not. Folding the seal into this `readOnly` is what put the client
-    // and the server at odds.
-    <StepTransition key={stepLockKey(id!, 3)} caseId={id!} caseData={caseData} userRole={user?.role}
-      readOnly={caseClosed} lockReadOnly={caseClosed}
-      stepLock={lockFor(3)} />,
-    // `readOnly` here is `stepDone[4]`, which flips true exactly when this step
-    // becomes sealable — so the seal gets its own signal. Passing `readOnly` to
-    // the bar instead hid the Lock button on the only step it was written for,
-    // the same trap step 3's comment above avoids by keeping `stepDone[3]` out of
-    // its `readOnly`.
-    <StepClosure key={stepLockKey(id!, 4)} caseId={id!} caseData={caseData}
-      readOnly={bodyReadOnly(stepDone[4] || caseClosed, 4)}
-      lockReadOnly={caseClosed} stepLock={lockFor(4)} />,
-  ];
+  // Each step component is mounted under its template key; category steps
+    // (discernment, protection_order, solo_parent, adoption) exist only when
+    // the case's category template carries them — the same registry the
+    // server's `stepsForCategory` reads, so the mount set and the seal
+    // endpoints agree.
+    const template = stepsForCategory(caseData?.caseCategory);
+    const mountStep = (key: string): React.ReactNode => {
+      const stepLock = lockFor(key);
+      const common = { caseId: id!, caseData, stepLock };
+      switch (key) {
+        case 'assessment':
+          return <StepAssessment key={stepLockKey(id!, key)} {...common} assessment={assessment}
+            onAssessmentChange={setAssessment} onSave={saveAssessment} saving={savingAssessment}
+            userRole={user?.role}
+            readOnly={bodyReadOnly(caseClosed || !['enrolled', 'assessed'].includes(caseData?.status), key)}
+            transitionReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)}
+            lockReadOnly={caseClosed || !['enrolled', 'assessed'].includes(caseData?.status)} />;
+        case 'enrollments':
+          return <StepEnrollments key={stepLockKey(id!, key)} {...common} userRole={user?.role}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        case 'interventions':
+          return <StepImplementHIP key={stepLockKey(id!, key)} {...common} userRole={user?.role}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        case 'referrals':
+          return <StepIntegratedDelivery key={stepLockKey(id!, key)} {...common} userRole={user?.role}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        // Transition plan + follow-up visits stay savable for the whole active
+        // phase: stepDone.evaluate (plan saved) must NOT flip readOnly or the
+        // worker is left adding follow-up visits with the only "Save Transition
+        // Plan" button hidden. Only closure locks the step.
+        //
+        // A *seal* of this step is deliberately not folded in here. The seal
+        // claims the self-reliance assessment is finished, and the visits are
+        // ongoing progress monitoring that is in no step's done-predicate — the
+        // server's `CASE_STEP_UNGUARDED_FIELDS` lets a visits-only body past a
+        // sealed evaluate step precisely so sealing the assessment cannot stop a
+        // home visit being recorded. `StepTransition` therefore derives its own
+        // two signals from `stepLock` (see `assessmentReadOnly` there): the
+        // assessment freezes, the visits and the Save button do not. Folding the
+        // seal into this `readOnly` is what put the client and the server at
+        // odds.
+        case 'evaluate':
+          return <StepTransition key={stepLockKey(id!, key)} {...common} userRole={user?.role}
+            readOnly={caseClosed} lockReadOnly={caseClosed} />;
+        // `readOnly` here is `stepDone.closure`, which flips true exactly when
+        // this step becomes sealable — so the seal gets its own signal. Passing
+        // `readOnly` to the bar instead hid the Lock button on the only step it
+        // was written for, the same trap the evaluate comment above avoids by
+        // keeping `stepDone.evaluate` out of its `readOnly`.
+        case 'closure':
+          return <StepClosure key={stepLockKey(id!, key)} {...common}
+            readOnly={bodyReadOnly(stepDone.closure || caseClosed, key)}
+            lockReadOnly={caseClosed} />;
+        case 'discernment':
+          return <StepDiscernment key={stepLockKey(id!, key)} {...common}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        case 'protection_order':
+          return <StepProtectionOrder key={stepLockKey(id!, key)} {...common}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        case 'solo_parent':
+          return <StepSoloParent key={stepLockKey(id!, key)} {...common}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        case 'adoption':
+          return <StepAdoption key={stepLockKey(id!, key)} {...common}
+            readOnly={bodyReadOnly(caseClosed, key)} lockReadOnly={caseClosed} />;
+        default:
+          return null;
+      }
+    };
+    const stepComponents: Record<string, React.ReactNode> = Object.fromEntries(
+      template.map((key) => [key, mountStep(key)]),
+    );
 
   const renewCase = () => navigate('/intake', {
     state: {
@@ -628,6 +666,18 @@ export function CaseViewPage() {
                 </DropdownMenu>
               </div>
             </div>
+            {(caseData.courtDocketNumber || isLegalCategory) && (
+              <>
+                <Separator />
+                <p className="px-4 py-2 text-xs text-muted-foreground">
+                  {t('cases.courtDocket', 'Court docket number')}:{' '}
+                  <span className="font-medium">{caseData.courtDocketNumber || '—'}</span>
+                  {!inAftercare && user?.role !== 'coordinator' && (
+                    <CourtDocketEditor caseId={id!} initial={caseData.courtDocketNumber || ''} />
+                  )}
+                </p>
+              </>
+            )}
             {caseData.renewalOfCaseId && (
               <>
                 <Separator />
@@ -646,11 +696,16 @@ export function CaseViewPage() {
           </section>
 
           {/* Stepper — sticky so step switching stays reachable on long cases */}
+          {inAftercare && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+              {t('cases.aftercareBanner', 'This case is in Aftercare — the post-closure follow-up phase. The step template is sealed and read-only (DSWD AO 10 s. 2007 §VIII.G).')}
+            </div>
+          )}
           <div className="sticky top-2 z-10 rounded-lg border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
             {/* `requirementsMet` only: the stepper applies the case-row fallback
                 for the two "not needed" decisions itself, so naming them here
                 would restate a rule that lives in one place. */}
-            <CaseStepper currentStep={currentStep} onStepClick={(s) => setCurrentStep(s)} caseData={caseData} interventionCount={interventions.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} />
+            <CaseStepper currentStep={currentStep} onStepClick={(key) => setCurrentStep(key)} caseData={caseData} interventionCount={interventions.length} enrollmentCount={enrollments.length} requirementsMet={requirementsMet} interAgencyReferralCount={interAgencyReferralCount} />
           </div>
 
           {/* Active Step Content */}
@@ -1037,6 +1092,40 @@ function Meta({ label, value }: { label: string; value: React.ReactNode }) {
       <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 font-medium break-words">{value}</dd>
     </div>
+  );
+}
+
+/** Inline editor for the court docket number (`PATCH /cases/:id/meta`). */
+function CourtDocketEditor({ caseId, initial }: { caseId: string; initial: string }) {
+  const { t } = useTranslation();
+  const { mutate } = useSWRConfig();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  async function save() {
+    setSaving(true);
+    try {
+      await api.patch(`/cases/${caseId}/meta`, { courtDocketNumber: value.trim() || null });
+      await mutate(queryKeys.cases.detail(caseId));
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+  if (!open) {
+    return (
+      <Button size="sm" variant="ghost" className="ml-2 h-6 text-xs" onClick={() => { setValue(initial); setOpen(true); }}>
+        {t('cases.editDocket', 'Edit')}
+      </Button>
+    );
+  }
+  return (
+    <span className="ml-2 inline-flex items-center gap-1">
+      <Input className="h-6 w-48 text-xs" value={value} onChange={(e) => setValue(e.target.value)}
+        placeholder={t('cases.docketPlaceholder', 'e.g. SPL-2026-0041')} />
+      <Button size="sm" className="h-6 text-xs" onClick={save} disabled={saving}>{t('common.save', 'Save')}</Button>
+      <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+    </span>
   );
 }
 

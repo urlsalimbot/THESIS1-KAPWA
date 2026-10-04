@@ -10,16 +10,19 @@ import { stepperStepDone, type StepperProgressOpts } from './CaseStepper';
 
 /** The `case.stepLocks` row as `findById` serializes it. */
 export interface StepLock {
-  stepIndex: number;
+  stepKey: string;
   lockedByName?: string;
   lockedAt: string;
 }
 
 export interface StepLockBarProps {
   caseId: string;
-  stepIndex: number;
+  /** The stable step key (`assessment`, `discernment`, `closure`, …). */
+  stepKey: string;
   caseData: any;
   interventionCount: number;
+  /** Defaults to 0 for steps that do not weigh enrollments. */
+  enrollmentCount?: number;
   opts?: StepperProgressOpts;
   locked?: StepLock | null;
   onChanged: () => void | Promise<void>;
@@ -27,10 +30,10 @@ export interface StepLockBarProps {
 }
 
 /**
- * The React key for one step's mount: the case **and** the step index.
+ * The React key for one step's mount: the case **and** the step key.
  *
  * This bar records the outcome of its own write in local state that carries
- * neither a step index nor a case id, so a reused instance would render
+ * neither a step key nor a case id, so a reused instance would render
  * whichever step or case it last sealed. One definition, because the case view
  * and the specs have to build the same key and a copy on either side is how they
  * would disagree about which mounts may share an instance.
@@ -38,19 +41,19 @@ export interface StepLockBarProps {
  * The two halves are not equally load-bearing today, and the difference is worth
  * knowing before anyone "simplifies" this:
  *
- *  - **The case half is tested.** The case view's five mounts outlive a
+ *  - **The case half is tested.** The case view's mounts outlive a
  *    case-to-case navigation — the route swaps, the array does not — so a bar can
  *    genuinely be reused across two cases and show a seal the new case never
  *    had. `StepLocksAcrossSteps.test.tsx` fails if the case drops out.
  *  - **The step half is future-proofing.** The view renders one step at a time
  *    out of `stepComponents`, and each entry is a different component type, so
  *    switching steps unmounts whatever stood there whether or not the key varies.
- *    No test distinguishes the key from a bare step index today; it is kept so
+ *    No test distinguishes the key from a bare step key today; it is kept so
  *    that mounting more than one step at a time — the shape `StepLockBar` was
  *    reviewed for — stays correct without revisiting this file.
  */
-export function stepLockKey(caseId: string, stepIndex: number): string {
-  return `${caseId}:${stepIndex}`;
+export function stepLockKey(caseId: string, stepKey: string): string {
+  return `${caseId}:${stepKey}`;
 }
 
 /**
@@ -85,9 +88,10 @@ function sameRow(a: StepLock | null, b: StepLock | null): boolean {
  */
 export function StepLockBar({
   caseId,
-  stepIndex,
+  stepKey,
   caseData,
   interventionCount,
+  enrollmentCount = 0,
   opts,
   locked,
   onChanged,
@@ -105,8 +109,8 @@ export function StepLockBar({
   // second writer that swaps one sealed row for a different one take over.
   const [mine, setMine] = useState<{ row: StepLock | null; parentRow: StepLock | null } | null>(null);
 
-  const done = stepperStepDone(stepIndex, caseData, interventionCount, opts ?? {});
-  const path = `/cases/${caseId}/steps/${stepIndex}/lock`;
+  const done = stepperStepDone(stepKey, caseData, interventionCount, enrollmentCount, opts ?? {});
+  const path = `/cases/${caseId}/steps/${stepKey}/lock`;
   const notDoneHint = t('caseView.lock.notDoneHint', 'Complete this step before sealing it.');
   const lock = mine && sameRow(mine.parentRow, locked ?? null) ? mine.row : locked;
 
@@ -162,7 +166,7 @@ export function StepLockBar({
     const row = (result ?? {}) as Partial<StepLock>;
     setMine({
       parentRow: locked ?? null,
-      row: { stepIndex, lockedByName: row.lockedByName, lockedAt: row.lockedAt ?? '' },
+      row: { stepKey, lockedByName: row.lockedByName, lockedAt: row.lockedAt ?? '' },
     });
   };
 

@@ -40,8 +40,9 @@ const actualStepsDueAt = (
 ).stepsDueAt;
 
 const noop = () => {};
+const lockSteps: Record<number, string> = { 0: 'assessment', 5: 'enrollments', 1: 'interventions', 2: 'referrals', 3: 'evaluate', 4: 'closure' };
 const locksFor = (steps: number[]) =>
-  steps.map((stepIndex) => ({ stepIndex, lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' }));
+  steps.map((stepIndex) => ({ stepKey: lockSteps[stepIndex], lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' }));
 
 // The exact string the server sends when the all-locked gate fires from a stale
 // client (cases.service.ts). It names the open steps in the stepper's own
@@ -80,14 +81,14 @@ describe('CaseActionBar', () => {
     // endpoint rejects them — they can never appear in `stepLocks`. A rule asking
     // for all five leaves this button permanently disabled and no social worker
     // can ever flag a case. This fails against such a rule.
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) } });
+    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) } });
 
     expect(flagButton()).toBeEnabled();
     expect(screen.queryByText(/seal these steps/i)).toBeNull();
   });
 
   it('names only the steps that are still open, and says so in the stepper\'s own words', () => {
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 1]) } });
+    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1]) } });
 
     expect(flagButton()).toBeDisabled();
     expect(screen.getByText('Inter-agency Referrals')).toBeTruthy();
@@ -96,13 +97,14 @@ describe('CaseActionBar', () => {
     expect(screen.queryByText('Evaluate Help Given')).toBeNull();
     expect(screen.queryByText('Case Study & Closure')).toBeNull();
     expect(screen.queryByText('Intervention & Requirements')).toBeNull();
+    expect(screen.queryByText('Program Enrollments')).toBeNull();
   });
 
   it('derives the open set by calling stepsDueAt with the case status', () => {
-    mockStepsDueAt.mockReturnValue([1, 2]);
+    mockStepsDueAt.mockReturnValue(['interventions', 'referrals']);
     const { unmount } = renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0]) } });
 
-    expect(mockStepsDueAt).toHaveBeenCalledWith('assessed');
+    expect(mockStepsDueAt).toHaveBeenCalledWith('assessed', undefined);
     // Follows the derivation on both branches, so it cannot pass by rendering a
     // literal that happens to agree for one status.
     expect(screen.getByText('Intervention & Requirements')).toBeTruthy();
@@ -142,7 +144,7 @@ describe('CaseActionBar', () => {
   });
 
   it('enables Close once every due step is sealed', () => {
-    renderBar({ caseData: { status: 'transitioning', stepLocks: locksFor([0, 1, 2, 3, 4]) } });
+    renderBar({ caseData: { status: 'transitioning', stepLocks: locksFor([0, 5, 1, 2, 3, 4]) } });
 
     expect(screen.getByRole('button', { name: /close case/i })).toBeEnabled();
   });
@@ -152,7 +154,7 @@ describe('CaseActionBar', () => {
   it('confirms, naming the effect, then flags the case for review', async () => {
     const user = userEvent.setup();
     const onChanged = vi.fn();
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) }, onChanged });
+    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) }, onChanged });
 
     await user.click(flagButton());
 
@@ -195,7 +197,7 @@ describe('CaseActionBar', () => {
     const user = userEvent.setup();
     const onChanged = vi.fn();
     mockApiPatch.mockRejectedValue(new ApiError(400, { message: SERVER_GATE_MESSAGE }));
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) }, onChanged });
+    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) }, onChanged });
 
     await user.click(flagButton());
     await user.click(confirmButton());
@@ -213,7 +215,7 @@ describe('CaseActionBar', () => {
   it('reports a committed transition whose refresh failed as a refresh failure', async () => {
     const user = userEvent.setup();
     const onChanged = vi.fn().mockRejectedValue(new Error('offline'));
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) }, onChanged });
+    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) }, onChanged });
 
     await user.click(flagButton());
     await user.click(confirmButton());
@@ -241,7 +243,7 @@ describe('CaseActionBar', () => {
     const user = userEvent.setup();
     const onChanged = vi.fn().mockRejectedValue(new Error('offline'));
     const { rerender } = renderBar({
-      caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) }, onChanged,
+      caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) }, onChanged,
     });
 
     await user.click(flagButton());
@@ -293,9 +295,11 @@ describe('CaseActionBar', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('offers nothing at closed, which has no successor', () => {
+  it('offers the aftercare hop at closed, and nothing at aftercare (terminal)', () => {
     renderBar({ caseData: { status: 'closed' }, userRole: 'admin' });
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: /move to aftercare/i })).toBeTruthy();
+    renderBar({ caseData: { status: 'aftercare' }, userRole: 'admin' });
+    expect(screen.queryAllByRole('button name=/move to aftercare/i')).toHaveLength(0);
   });
 
   it('offers nothing to a role the FSM does not admit from this status', () => {
@@ -337,7 +341,7 @@ describe('CaseActionBar', () => {
 
   it('offers one control for the hand-off, and clicking it is the only write', async () => {
     const user = userEvent.setup();
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) } });
+    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) } });
 
     // Two controls for one transition means one of them carries the all-locked
     // gate and the other is a way around it — which is the bypass this feature
@@ -351,7 +355,7 @@ describe('CaseActionBar', () => {
 
   it('closes without writing, so a second look costs nothing', async () => {
     const user = userEvent.setup();
-    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 1, 2]) } });
+    renderBar({ caseData: { status: 'assessed', stepLocks: locksFor([0, 5, 1, 2]) } });
 
     await user.click(flagButton());
     await user.click(screen.getByRole('button', { name: /^cancel$/i }));
@@ -364,22 +368,25 @@ describe('CaseActionBar', () => {
 // --- the shared derivation itself -----------------------------------------
 
 describe('stepsDueAt', () => {
-  it('asks for the three steps that are due at assessed, never the Phase-Out pair', () => {
-    expect(stepsDueAt('assessed')).toEqual([0, 1, 2]);
-    expect(stepsDueAt('assessed').some((i) => i >= 3)).toBe(false);
+  it('asks for the Phase-In steps that are due at assessed, never the Phase-Out pair', () => {
+    expect(stepsDueAt('assessed')).toEqual(['assessment', 'enrollments', 'interventions', 'referrals']);
+    expect(stepsDueAt('assessed').includes('evaluate')).toBe(false);
+    expect(stepsDueAt('assessed').includes('closure')).toBe(false);
   });
 
-  it('widens with the lifecycle and stays empty-free at every real status', () => {
-    expect(stepsDueAt('enrolled')).toEqual([0, 1, 2]);
-    expect(stepsDueAt('active')).toEqual([0, 1, 2, 3]);
-    expect(stepsDueAt('transitioning')).toEqual([0, 1, 2, 3, 4]);
-    expect(stepsDueAt('closed')).toEqual([0, 1, 2, 3, 4]);
+  it('widens with the lifecycle, honoring the category template', () => {
+    expect(stepsDueAt('enrolled')).toEqual(['assessment', 'enrollments', 'interventions', 'referrals']);
+    expect(stepsDueAt('active')).toEqual(['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate']);
+    expect(stepsDueAt('transitioning')).toEqual(['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure']);
+    expect(stepsDueAt('closed')).toEqual(['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure']);
+    // A CICL case carries its injected step in the due set.
+    expect(stepsDueAt('enrolled', 'Children in Conflict with the Law (CICL)')).toContain('discernment');
   });
 
   it('asks for the Phase-In work rather than waving through an unread status', () => {
     for (const unknown of ['something-else', null, undefined]) {
       expect(stepsDueAt(unknown).length).toBeGreaterThan(0);
-      expect(stepsDueAt(unknown).every((i) => i < 3)).toBe(true);
+      expect(stepsDueAt(unknown).every((key) => key !== 'evaluate' && key !== 'closure')).toBe(true);
     }
   });
 });

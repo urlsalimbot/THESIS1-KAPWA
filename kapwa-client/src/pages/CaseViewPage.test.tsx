@@ -102,6 +102,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('id-photo')) return Promise.resolve(mockIdPhoto);
       if (k.includes('caseIdPhoto')) return Promise.resolve(mockIdPhoto);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -154,6 +155,7 @@ describe('CaseViewPage — government ID photo', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([{ id: 'i1', programId: 'p1', serviceName: 'Burial Assistance' }]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -177,6 +179,7 @@ describe('CaseViewPage — government ID photo', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([{ id: 'i1', programId: 'p1', serviceName: 'Burial Assistance' }]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -189,7 +192,7 @@ describe('CaseViewPage — government ID photo', () => {
           status: 'assessed',
           interventionNotNeeded: false,
           frvaScore: 30,
-          stepLocks: [0, 1, 2].map((stepIndex) => ({ stepIndex, lockedAt: '2026-10-01T09:00:00Z' })),
+          stepLocks: ['assessment', 'enrollments', 'interventions', 'referrals'].map((stepKey) => ({ stepKey, lockedAt: '2026-10-01T09:00:00Z' })),
         });
       }
       return Promise.resolve(null);
@@ -217,6 +220,7 @@ describe('CaseViewPage — government ID photo', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -238,6 +242,7 @@ describe('CaseViewPage — government ID photo', () => {
       if (k.includes('id-photo')) return Promise.resolve(mockIdPhoto);
       if (k.includes('caseIdPhoto')) return Promise.resolve(mockIdPhoto);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -274,6 +279,7 @@ describe('CaseViewPage — government ID photo', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -300,6 +306,7 @@ describe('CaseViewPage — government ID photo', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -330,6 +337,7 @@ describe('CaseViewPage — government ID photo', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -370,6 +378,7 @@ describe('CaseViewPage — GIS PDF', () => {
       if (k.includes('id-photo')) return Promise.resolve(mockIdPhoto);
       if (k.includes('caseIdPhoto')) return Promise.resolve(mockIdPhoto);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -396,6 +405,7 @@ describe('CaseViewPage — 4Ps', () => {
       const k = JSON.stringify(key);
       if (k.includes('fourps')) return Promise.resolve({ total: 0, complied: 0, rate: 0, byType: {}, entries: [] });
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -419,6 +429,7 @@ describe('CaseViewPage — 4Ps', () => {
       const k = JSON.stringify(key);
       if (k.includes('fourps')) return Promise.resolve({ total: 0, complied: 0, rate: 0, byType: {}, entries: [] });
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -445,6 +456,10 @@ describe('CaseViewPage — stepper gating', () => {
     problemsPresented: 'Financial difficulty',
     socialWorkerAssessment: 'Needs financial assistance',
     clientCategory: 'Indigent',
+    caseCategory: 'Individual in Crisis Situation (AICS)',
+    // Enrollments step: done only with a row or the recorded decision — without
+    // either, the initial navigation stops at the enrollments step.
+    enrollmentsNotNeeded: true,
     frvaScore: 65,
   };
   const interventionMock = [{ id: 'i1', programId: 'p1', serviceName: 'Medical Assistance', deliveryDate: '2026-07-01', amount: 500 }];
@@ -455,6 +470,7 @@ describe('CaseViewPage — stepper gating', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve(interventionMock);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -472,17 +488,17 @@ describe('CaseViewPage — stepper gating', () => {
   // stepper. The stepper labels its own buttons "<n>. <label>", which is
   // unique to it.
   function hipStepButton() {
-    return screen.getByRole('button', { name: '2. Intervention & Requirements' });
+    return screen.getByRole('button', { name: '3. Intervention & Requirements' });
   }
 
   function deliveryStepButton() {
-    return screen.getByRole('button', { name: '3. Inter-agency Referrals' });
+    return screen.getByRole('button', { name: '4. Inter-agency Referrals' });
   }
 
   it('keeps Intervention & Requirements unchecked when an intervention exists but required documents are missing', async () => {
     renderWithSWR(<CaseViewPage />);
-    const step2 = await waitFor(hipStepButton);
-    expect(step2.textContent).toContain('2');
+    const step = await waitFor(hipStepButton);
+    expect(step.textContent).toContain('3');
   });
 
   it('checks Intervention & Requirements once every required document is confirmed', async () => {
@@ -490,6 +506,7 @@ describe('CaseViewPage — stepper gating', () => {
       const k = JSON.stringify(key);
       if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf', verifiedAt: '2026-07-02T00:00:00Z' }]);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve(interventionMock);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -506,14 +523,15 @@ describe('CaseViewPage — stepper gating', () => {
 
   it('keeps Inter-agency Referrals unchecked until a referral is issued or deemed not needed', async () => {
     renderWithSWR(<CaseViewPage />);
-    const step3 = await waitFor(deliveryStepButton);
-    expect(step3.textContent).toContain('3');
+    const step4 = await waitFor(deliveryStepButton);
+    expect(step4.textContent).toContain('4');
   });
 
   it('checks Inter-agency Referrals when the case records referral-not-needed', async () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve(interventionMock);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -525,9 +543,9 @@ describe('CaseViewPage — stepper gating', () => {
     await mutate(() => true, undefined, { revalidate: false });
 
     renderWithSWR(<CaseViewPage />);
-    const step3 = await waitFor(deliveryStepButton);
-    expect(step3.textContent).not.toContain('3');
-    expect(step3.querySelector('svg')).not.toBeNull();
+    const step4 = await waitFor(deliveryStepButton);
+    expect(step4.textContent).not.toContain('4');
+    expect(step4.querySelector('svg')).not.toBeNull();
   });
 
   /**
@@ -542,6 +560,7 @@ describe('CaseViewPage — stepper gating', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve(interventionMock);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -567,6 +586,7 @@ describe('CaseViewPage — stepper gating', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve(interventionMock);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -616,11 +636,16 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     problemsPresented: 'Financial difficulty',
     socialWorkerAssessment: 'Needs financial assistance',
     clientCategory: 'Indigent',
+    caseCategory: 'Individual in Crisis Situation (AICS)',
     frvaScore: 65,
     selfRelianceLevel: 3,
     sustainabilityPlan: 'sari-sari store',
     clientSignature: SIGNATURE,
     closureOutcome: 'graduated',
+    // The enrollments step is done only with a row or the recorded decision —
+    // without it the initial navigation would stop at step 2 and never reach
+    // the closure this describe is about.
+    enrollmentsNotNeeded: true,
     // Step 2's completion is the case-level referral count, which the detail
     // endpoint stamps. The scoped list below is for display; without this field
     // the nav stops at step 2 and never reaches the closure this describe tests.
@@ -635,6 +660,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
       const k = JSON.stringify(key);
       if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) {
         return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
       }
@@ -661,7 +687,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     // Step 5 has to be the one on screen: the nav lands on the first pending
     // step, and a case with all five done lands on the last.
     await screen.findByRole('heading', { name: 'Case Closure' });
-    expect(screen.getByRole('button', { name: '5. Case Study & Closure' })).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByRole('button', { name: '6. Case Study & Closure' })).toHaveAttribute('aria-current', 'step');
 
     // The step really is read-only — its own Save is gone, because the closure
     // is complete. This is the state that used to swallow the Lock button too.
@@ -689,6 +715,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
         const k = JSON.stringify(key);
         if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
         if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
         if (k.includes('interventions')) {
           return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
         }
@@ -706,7 +733,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
     }
 
     it('shows the seal and offers the release', async () => {
-      await renderStepFive([{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }]);
+      await renderStepFive([{ stepKey: 'closure', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }]);
 
       // The strip names who sealed it…
       expect(await screen.findByText(/Locked by Ana Cruz/)).toBeTruthy();
@@ -724,7 +751,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
       // the body would be read-only seal or not, and this would stay green if
       // the page stopped folding the seal in at all.
       await renderStepFive(
-        [{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }],
+        [{ stepKey: 'closure', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' }],
         { clientSignature: null, closureOutcome: null },
       );
 
@@ -746,6 +773,7 @@ describe('CaseViewPage — step 5 is sealable once its closure is complete', () 
       const k = JSON.stringify(key);
       if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) {
         return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
       }
@@ -805,6 +833,7 @@ describe('CaseViewPage — who acted on this case', () => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve(opts.history ?? []);
       if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
@@ -880,6 +909,7 @@ describe('CaseViewPage — inter-agency referral rows', () => {
       const k = JSON.stringify(key);
       if (k.includes('id-photo') || k.includes('caseIdPhoto')) return Promise.resolve(null);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) return Promise.resolve([]);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       // One row, so the list is populated — an empty-state-only assertion would
@@ -932,7 +962,7 @@ describe('CaseViewPage — inter-agency referral rows', () => {
  */
 describe('CaseViewPage — a sealed step', () => {
   const STEP_ONE_SEALED = [
-    { stepIndex: 0, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' },
+    { stepKey: 'assessment', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' },
   ];
 
   /**
@@ -950,6 +980,7 @@ describe('CaseViewPage — a sealed step', () => {
     mockApiGet.mockImplementation((key: unknown) => {
       const k = JSON.stringify(key);
       if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
       if (k.includes('interventions')) {
         return Promise.resolve([{ id: 'iv-1', programId: 'p1', serviceName: 'Medical Assistance' }]);
       }

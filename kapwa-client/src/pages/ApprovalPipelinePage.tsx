@@ -138,9 +138,9 @@ export function ApprovalPipelinePage() {
                         asks for the referral count rather than reading `case.referrals` —
                         passing nothing here would report "no referral" for a case that has
                         one, on a card drawn from the same predicate as the case view. */}
-                      {stepperStatus(c, c.interventionCount ?? 0, {
+                      {Object.values(stepperStatus(c, c.interventionCount ?? 0, 0, {
                         interAgencyReferralCount: c.interAgencyReferralCount ?? 0,
-                      }).map((done, si) => (
+                      })).map((done, si) => (
                         <span
                           key={si}
                           title={done ? t('approvals.stepDone', 'Step done') : t('approvals.stepPending', 'Step pending')}

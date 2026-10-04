@@ -40,7 +40,9 @@ export const CASE_TRANSITION_ROLES: Record<string, string[]> = {
   in_review: [],
   active: [],
   transitioning: ['social_worker'],
-  closed: [],
+  closed: ['social_worker'],
+  // Terminal post-closure phase: no outgoing edges (mirrors CASE_FSM_ROLES).
+  aftercare: [],
 };
 
 /**

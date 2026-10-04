@@ -26,7 +26,7 @@ export interface CaseActionBarProps {
  * `src/lib/case-fsm-parity.test.ts`, so the two cannot drift silently.
  */
 type CaseStatus =
-  | 'enrolled' | 'assessed' | 'in_review' | 'active' | 'transitioning' | 'closed';
+  | 'enrolled' | 'assessed' | 'in_review' | 'active' | 'transitioning' | 'closed' | 'aftercare';
 
 /** An i18n key with the English text to fall back on. */
 type Copy = { key: string; fallback: string };
@@ -144,6 +144,18 @@ const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
     // discovering them from a 400 after they press it.
     gateOnDueStepLocks: true,
   },
+  // Post-closure follow-up: a closed case may move to the terminal aftercare
+  // phase (DSWD AO 10 s. 2007 §VIII.G). No outgoing edges exist from aftercare.
+  closed: {
+    to: 'aftercare',
+    path: '/cases/%s/status',
+    label: { key: 'caseView.action.moveToAftercare', fallback: 'Move to Aftercare' },
+    title: { key: 'caseView.action.aftercareTitle', fallback: 'Move this case to aftercare?' },
+    body: {
+      key: 'caseView.action.aftercareBody',
+      fallback: 'The case leaves Closed and enters the terminal post-closure follow-up phase. Aftercare cases render read-only with the full step template sealed.',
+    },
+  },
 };
 
 /** Replaces the `%s` placeholder in a hop's endpoint with the case id. */
@@ -226,15 +238,15 @@ function CaseHopControl({
    * Read through the same `stepsDueAt` the server's gate reads.
    */
   const openSteps = hop.gateOnDueStepLocks && !isAdmin
-    ? stepsDueAt(status).filter((i) =>
-        !((caseData?.stepLocks ?? []) as StepLock[]).some((l) => l?.stepIndex === i),
+    ? stepsDueAt(status, caseData?.caseCategory).filter((key) =>
+        !((caseData?.stepLocks ?? []) as StepLock[]).some((l) => l?.stepKey === key),
       )
     : [];
   const gated = openSteps.length > 0;
 
-  const stepName = (i: number): string => {
-    const entry = STEP_LABEL_KEYS[i];
-    return entry ? t(entry.key, entry.fallback) : `#${i + 1}`;
+  const stepName = (key: string): string => {
+    const entry = STEP_LABEL_KEYS[key];
+    return entry ? t(entry.key, entry.fallback) : key;
   };
 
   /**
@@ -335,8 +347,8 @@ function CaseHopControl({
               {t('caseView.action.lockedStepsHeading', 'Seal these steps before flagging for review:')}
             </p>
             <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
-              {openSteps.map((i) => (
-                <li key={i}>{stepName(i)}</li>
+              {openSteps.map((key) => (
+                <li key={key}>{stepName(key)}</li>
               ))}
             </ul>
           </div>

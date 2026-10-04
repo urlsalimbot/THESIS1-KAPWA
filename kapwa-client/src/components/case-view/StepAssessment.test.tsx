@@ -15,7 +15,7 @@ vi.mock('@/lib/offline-queue', () => ({ queueFsmTransition: vi.fn() }));
 vi.mock('swr', () => ({ useSWRConfig: () => ({ mutate: mockMutate }) }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+type Seal = { stepKey: string; lockedByName?: string; lockedAt: string } | null;
 
 function renderAssessment(
   caseData: Record<string, unknown>,
@@ -197,9 +197,9 @@ describe('StepAssessment — sealing step 1', () => {
     mockPatch.mockResolvedValue({});
   });
 
-  // Step 1's seal, all four states. `stepperStepDone(0, …)` reads
-  // problemsPresented + clientCategory, so this case is done at step 1 and
-  // nowhere else.
+  // The assessment seal. The done-predicate reads problemsPresented +
+  // socialWorkerAssessment + clientCategory + caseCategory, so a case is done
+  // at assessment only when all four are set.
   it('disables Lock while the assessment is not done', () => {
     renderAssessment({ problemsPresented: 'Poverty' });
 
@@ -210,7 +210,12 @@ describe('StepAssessment — sealing step 1', () => {
   });
 
   it('enables Lock once the assessment is done', () => {
-    renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' });
+    renderAssessment({
+      problemsPresented: 'Poverty',
+      socialWorkerAssessment: 'Needs aid',
+      clientCategory: 'Indigent',
+      caseCategory: 'Individual in Crisis Situation (AICS)',
+    });
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
     expect(screen.queryByText(/Complete this step before sealing it/)).toBeNull();
@@ -222,7 +227,7 @@ describe('StepAssessment — sealing step 1', () => {
   // re-seal. The seal guards the step's data; the hop it prepares for is not
   // data. `transitionReadOnly` is the base signal, without the seal.
   it('keeps Complete Assessment available while the step is sealed, but not its Save', () => {
-    const stepLock = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'assessment', lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderAssessment(
       filledCaseData({ frvaScore: 45 }),
       { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45 },
@@ -245,7 +250,7 @@ describe('StepAssessment — sealing step 1', () => {
   });
 
   it('shows who sealed this step and offers the release', () => {
-    const stepLock = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'assessment', lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' }, {}, { stepLock });
 
     expect(screen.getByText(`Locked by Juan Dela Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
@@ -263,7 +268,7 @@ describe('StepAssessment — sealing step 1', () => {
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
-    const stepLock = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'assessment', lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderAssessment({ problemsPresented: 'Poverty', clientCategory: 'Indigent' }, {}, { readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Juan Dela Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();

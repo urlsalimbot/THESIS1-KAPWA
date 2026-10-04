@@ -42,6 +42,7 @@ function completeCaseData(over: Record<string, unknown> = {}) {
     problemsPresented: 'Poverty',
     clientCategory: 'Indigent',
     socialWorkerAssessment: 'Needs financial aid',
+    caseCategory: 'Individual in Crisis Situation (AICS)',
     frvaScore: 65,
     referrals: [{ agencyName: 'RHU', status: 'referred' }],
     selfRelianceLevel: 3,
@@ -77,9 +78,9 @@ function Steps({
   caseData: any;
   stepLocks?: StepLock[];
   /** Per-step `lockReadOnly`, as the case view computes it. */
-  opts?: { lockReadOnly?: (step: number) => boolean };
+  opts?: { lockReadOnly?: (stepKey: string) => boolean };
 }) {
-  const lockFor = (i: number) => stepLocks.find((l) => l.stepIndex === i) ?? null;
+  const lockFor = (key: string) => stepLocks.find((l) => l.stepKey === key) ?? null;
   // The case view's two-flag wiring, reproduced here: a sealed step's own fields
   // go read-only, while `lockReadOnly` — which decides whether the seal is
   // offered at all — does not follow the seal. Without this the components would
@@ -93,13 +94,13 @@ function Steps({
   // test in `CaseViewPage.test.tsx` catches it at the source, and the invariant
   // test below catches it in these components for *every* step, so neither file
   // has to know which step it was.
-  const bodyReadOnly = (i: number) => lockFor(i) != null;
-  const lockReadOnly = (i: number) => opts.lockReadOnly?.(i) ?? false;
+  const bodyReadOnly = (key: string) => lockFor(key) != null;
+  const lockReadOnly = (key: string) => opts.lockReadOnly?.(key) ?? false;
   return (
     <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
       <Toaster />
       <StepAssessment
-        key={stepLockKey(caseId, 0)}
+        key={stepLockKey(caseId, 'assessment')}
         caseId={caseId}
         caseData={caseData}
         assessment={{ problemsPresented: '', socialWorkerAssessment: '', clientCategory: '', frvaScore: null, swdiScore: null }}
@@ -107,36 +108,42 @@ function Steps({
         onSave={() => {}}
         saving={false}
         userRole="social_worker"
-        readOnly={bodyReadOnly(0)}
-        lockReadOnly={lockReadOnly(0)}
-        stepLock={lockFor(0)}
+        readOnly={bodyReadOnly('assessment')}
+        lockReadOnly={lockReadOnly('assessment')}
+        stepLock={lockFor('assessment')}
       />
       <StepImplementHIP
-        key={stepLockKey(caseId, 1)}
+        key={stepLockKey(caseId, 'interventions')}
         caseId={caseId}
         caseData={caseData}
         userRole="social_worker"
-        readOnly={bodyReadOnly(1)}
-        lockReadOnly={lockReadOnly(1)}
-        stepLock={lockFor(1)}
+        readOnly={bodyReadOnly('interventions')}
+        lockReadOnly={lockReadOnly('interventions')}
+        stepLock={lockFor('interventions')}
       />
       <StepIntegratedDelivery
-        key={stepLockKey(caseId, 2)}
+        key={stepLockKey(caseId, 'referrals')}
         caseId={caseId}
         caseData={caseData}
         userRole="social_worker"
-        readOnly={bodyReadOnly(2)}
-        lockReadOnly={lockReadOnly(2)}
-        stepLock={lockFor(2)}
+        readOnly={bodyReadOnly('referrals')}
+        lockReadOnly={lockReadOnly('referrals')}
+        stepLock={lockFor('referrals')}
       />
-      <StepTransition key={stepLockKey(caseId, 3)} caseId={caseId} caseData={caseData} userRole="admin" readOnly={bodyReadOnly(3)} lockReadOnly={lockReadOnly(3)} stepLock={lockFor(3)} />
-      <StepClosure key={stepLockKey(caseId, 4)} caseId={caseId} caseData={caseData} readOnly={bodyReadOnly(4)} lockReadOnly={lockReadOnly(4)} stepLock={lockFor(4)} />
+      <StepTransition key={stepLockKey(caseId, 'evaluate')} caseId={caseId} caseData={caseData} userRole="admin" readOnly={bodyReadOnly('evaluate')} lockReadOnly={lockReadOnly('evaluate')} stepLock={lockFor('evaluate')} />
+      <StepClosure key={stepLockKey(caseId, 'closure')} caseId={caseId} caseData={caseData} readOnly={bodyReadOnly('closure')} lockReadOnly={lockReadOnly('closure')} stepLock={lockFor('closure')} />
     </SWRConfig>
   );
 }
 
-const LOCKERS = ['Ana Cruz', 'Ben Dela Cruz', 'Cara Lim', 'Dan Ortiz', 'Elena Reyes'];
-const stepLocks: StepLock[] = LOCKERS.map((lockedByName, stepIndex) => ({ stepIndex, lockedByName, lockedAt: AT }));
+const KEY_STEPS: Record<string, string> = {
+  assessment: 'Ana Cruz',
+  interventions: 'Ben Dela Cruz',
+  referrals: 'Cara Lim',
+  evaluate: 'Dan Ortiz',
+  closure: 'Elena Reyes',
+};
+const stepLocks: StepLock[] = Object.entries(KEY_STEPS).map(([stepKey, lockedByName]) => ({ stepKey, lockedByName, lockedAt: AT }));
 
 describe('the five step seals', () => {
   beforeEach(() => {
@@ -163,8 +170,8 @@ describe('the five step seals', () => {
     // The POST answers with the row it wrote, so each bar's own outcome is
     // rendered from the response rather than from a shared fixture.
     mockApiPost.mockImplementation((path: string) => {
-      const stepIndex = Number(/\/steps\/(\d+)\/lock/.exec(path)?.[1]);
-      return Promise.resolve({ stepIndex, lockedByName: 'Seal Writer', lockedAt: AT });
+      const stepKey = /\/steps\/([a-z_]+)\/lock/.exec(path)?.[1] ?? '';
+      return Promise.resolve({ stepKey, lockedByName: 'Seal Writer', lockedAt: AT });
     });
   });
 
@@ -174,7 +181,7 @@ describe('the five step seals', () => {
     // All five strips, and one strip per locker: the shape that catches a bar
     // handed a sibling's row. (It does not distinguish the key's step half from a
     // bare step index — see `stepLockKey`, which says which half is load-bearing.)
-    LOCKERS.forEach((name) => {
+    Object.values(KEY_STEPS).forEach((name) => {
       expect(screen.getByText(`Locked by ${name} · ${formatDate(AT)}`)).toBeTruthy();
     });
     expect(screen.getAllByText(/^Locked by /)).toHaveLength(5);
@@ -199,10 +206,11 @@ describe('the five step seals', () => {
     for (let i = 0; i < 5; i += 1) fireEvent.click(locks[i]);
 
     // One write per bar, to the step that bar was mounted for. A bar reused
-    // across steps, or handed another step's index, lands on the wrong path.
+    // across steps, or handed another step's key, lands on the wrong path.
     await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(5));
-    for (let i = 0; i < 5; i += 1) {
-      expect(mockApiPost).toHaveBeenCalledWith(`/cases/c1/steps/${i}/lock`);
+    const STEP_PATHS = ['assessment', 'interventions', 'referrals', 'evaluate', 'closure'];
+    for (const key of STEP_PATHS) {
+      expect(mockApiPost).toHaveBeenCalledWith(`/cases/c1/steps/${key}/lock`);
     }
   });
 });
@@ -234,16 +242,16 @@ describe('a sealed step is not editable', () => {
       return [];
     });
     mockApiPost.mockImplementation((path: string) => {
-      const stepIndex = Number(/\/steps\/(\d+)\/lock/.exec(path)?.[1]);
-      return Promise.resolve({ stepIndex, lockedByName: 'Seal Writer', lockedAt: AT });
+      const stepKey = /\/steps\/([a-z_]+)\/lock/.exec(path)?.[1] ?? '';
+      return Promise.resolve({ stepKey, lockedByName: 'Seal Writer', lockedAt: AT });
     });
   });
 
   it.each([
-    ['step 0', 0, /Save Assessment/i],
-    ['step 1', 1, /Add Intervention/i],
-  ] as const)('withholds %s\'s own editing control while it is sealed', async (_name, stepIndex, control) => {
-    const sealed = [{ stepIndex, lockedByName: 'Ana Cruz', lockedAt: AT }];
+    ['step assessment', 'assessment', /Save Assessment/i],
+    ['step interventions', 'interventions', /Add Intervention/i],
+  ] as const)('withholds %s\'s own editing control while it is sealed', async (_name, stepKey, control) => {
+    const sealed = [{ stepKey, lockedByName: 'Ana Cruz', lockedAt: AT }];
     render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={sealed} />);
 
     // The list that feeds step 1's done-predicate has to arrive first, or the
@@ -268,7 +276,7 @@ describe('a sealed step is not editable', () => {
     expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy();
 
     rerender(
-      <Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepIndex: 1, lockedByName: 'Ana Cruz', lockedAt: AT }]} />,
+      <Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepKey: 'interventions', lockedByName: 'Ana Cruz', lockedAt: AT }]} />,
     );
 
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull());
@@ -301,7 +309,7 @@ describe('a sealed step is not editable', () => {
     expect(screen.getByRole('button', { name: /No Referrals issued/i })).toBeTruthy();
 
     rerender(
-      <Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepIndex: 2, lockedByName: 'Ana Cruz', lockedAt: AT }]} />,
+      <Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepKey: 'referrals', lockedByName: 'Ana Cruz', lockedAt: AT }]} />,
     );
 
     await waitFor(() =>
@@ -314,7 +322,7 @@ describe('a sealed step is not editable', () => {
   });
 
   it('says on the strip that releasing the seal is how to change the step', async () => {
-    render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepIndex: 0, lockedByName: 'Ana Cruz', lockedAt: AT }]} />);
+    render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepKey: 'assessment', lockedByName: 'Ana Cruz', lockedAt: AT }]} />);
 
     // Without this line the fields are disabled and the worker has no account of
     // why, or of how to get them back.
@@ -322,7 +330,7 @@ describe('a sealed step is not editable', () => {
   });
 
   it('leaves the other steps editable — a seal is per step', async () => {
-    render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepIndex: 0, lockedByName: 'Ana Cruz', lockedAt: AT }]} />);
+    render(<Steps caseId="c1" caseData={completeCaseData()} stepLocks={[{ stepKey: 'assessment', lockedByName: 'Ana Cruz', lockedAt: AT }]} />);
 
     expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Add Intervention/i })).toBeTruthy();
@@ -339,19 +347,22 @@ describe('a sealed step is not editable', () => {
    * strip that withholds the button is a lockout whose only exit is a raw
    * `DELETE /cases/:id/steps/N/lock`.
    */
-  it.each([0, 1, 2, 3, 4])('step %i keeps its Unlock while its body is sealed', async (step) => {
-    render(
-      <Steps
-        caseId="c1"
-        caseData={completeCaseData()}
-        stepLocks={[{ stepIndex: step, lockedByName: 'Ana Cruz', lockedAt: AT }]}
-      />,
-    );
+  it.each(['assessment', 'interventions', 'referrals', 'evaluate', 'closure'])(
+    'step %s keeps its Unlock while its body is sealed',
+    async (stepKey) => {
+      render(
+        <Steps
+          caseId="c1"
+          caseData={completeCaseData()}
+          stepLocks={[{ stepKey, lockedByName: 'Ana Cruz', lockedAt: AT }]}
+        />,
+      );
 
-    expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
-    expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^unlock$/i })).toBeTruthy();
-  });
+      expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
+      expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(AT)}`)).toBeTruthy();
+      expect(screen.getByRole('button', { name: /^unlock$/i })).toBeTruthy();
+    },
+  );
 
   // And the converse, so the parameter is doing work: the caller decides, and a
   // `lockReadOnly` that is true withholds the release.
@@ -360,7 +371,7 @@ describe('a sealed step is not editable', () => {
       <Steps
         caseId="c1"
         caseData={completeCaseData()}
-        stepLocks={[{ stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: AT }]}
+        stepLocks={[{ stepKey: 'closure', lockedByName: 'Ana Cruz', lockedAt: AT }]}
         opts={{ lockReadOnly: () => true }}
       />,
     );

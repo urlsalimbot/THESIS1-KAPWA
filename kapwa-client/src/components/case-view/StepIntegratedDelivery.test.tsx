@@ -37,7 +37,7 @@ function renderStep(
     lockReadOnly?: boolean;
     role?: string;
     referralNotNeeded?: boolean;
-    stepLock?: { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+    stepLock?: { stepKey: string; lockedByName?: string; lockedAt: string } | null;
     caseDataOverrides?: Record<string, unknown>;
   } = {},
 ) {
@@ -299,7 +299,7 @@ describe('StepIntegratedDelivery — sealing step 3', () => {
   });
 
   it('shows who sealed this step and offers the release', () => {
-    const stepLock = { stepIndex: 2, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'referrals', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderStep([], { referralNotNeeded: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
@@ -316,7 +316,7 @@ describe('StepIntegratedDelivery — sealing step 3', () => {
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
-    const stepLock = { stepIndex: 2, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'referrals', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderStep([], { referralNotNeeded: true, readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();

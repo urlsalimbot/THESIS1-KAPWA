@@ -33,6 +33,20 @@ const ALLOWED_IDENTICAL = new Set([
   'analytics.clustering.silhouette',
   'analytics.concentration.barangay',
   'caseView.integrated.endorsementLetter',
+  // status.aftercare + caseView.stepper.*: the step names are case-management
+  // phase vocabulary used untranslated in MSWDO practice (same class as the
+  // allowlisted category.*/interventionType.* display maps).
+  'status.aftercare',
+  'caseView.stepper.enrollments',
+  'caseView.stepper.enrollmentsDesc',
+  'caseView.stepper.discernment',
+  'caseView.stepper.discernmentDesc',
+  'caseView.stepper.protectionOrder',
+  'caseView.stepper.protectionOrderDesc',
+  'caseView.stepper.soloParent',
+  'caseView.stepper.soloParentDesc',
+  'caseView.stepper.adoption',
+  'caseView.stepper.adoptionDesc',
   'analytics.demographics.dependency',
   'analytics.equity.coverageRatio',
   'analytics.filters.barangay',

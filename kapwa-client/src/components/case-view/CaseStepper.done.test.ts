@@ -19,7 +19,8 @@ import { interventionRequirementsMet } from '@/lib/case-progress';
  */
 interface DoneFixtureCase {
   name: string;
-  step: number;
+  step: string;
+  enrollmentCount?: number;
   caseData: any;
   interventionCount: number;
   opts: any;
@@ -46,7 +47,7 @@ const fixture: DoneFixtureCase[] = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')
 describe('stepperStepDone against the shared fixture', () => {
   for (const c of fixture) {
     it(c.name, () => {
-      expect(stepperStepDone(c.step, c.caseData, c.interventionCount, c.opts)).toBe(c.expected);
+      expect(stepperStepDone(c.step, c.caseData, c.interventionCount, c.enrollmentCount ?? 0, c.opts)).toBe(c.expected);
     });
   }
 });

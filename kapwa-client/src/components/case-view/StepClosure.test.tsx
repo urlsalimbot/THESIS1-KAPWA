@@ -13,7 +13,7 @@ vi.mock('@/lib/api', () => ({
   filingDocIdFromUrl: () => null,
 }));
 
-type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+type Seal = { stepKey: string; lockedByName?: string; lockedAt: string } | null;
 
 function renderStep(
   caseData: any,
@@ -48,7 +48,7 @@ describe('StepClosure — sealing step 5', () => {
   });
 
   it('shows who sealed this step and offers the release', () => {
-    const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'closure', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderStep({ status: 'transitioning', closureOutcome: 'graduated' }, { stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
@@ -111,14 +111,14 @@ describe('StepClosure — sealing step 5', () => {
     // must still get the Unlock. Defaulting it to `readOnly` reproduced the
     // Critical lockout — the step body is read-only *because* it is sealed, so
     // the release is the one control that has to survive.
-    const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'closure', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderStep({ status: 'transitioning', closureOutcome: 'graduated' }, { readOnly: true, stepLock });
 
     expect(screen.getByRole('button', { name: /unlock/i })).toBeTruthy();
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
-    const stepLock = { stepIndex: 4, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'closure', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderStep({ status: 'transitioning', closureOutcome: 'graduated' }, { readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();

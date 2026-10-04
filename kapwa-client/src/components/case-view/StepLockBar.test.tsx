@@ -45,10 +45,11 @@ const actualStepperStepDone = (
 const noop = () => {};
 const NOT_DONE_HINT = /Complete this step before sealing it/;
 
-// Step 0 reads problemsPresented + clientCategory, so this case is done at step
-// 0 and nowhere else.
-const doneCaseData = { status: 'enrolled', problemsPresented: 'a', clientCategory: 'b' };
-const lockedRow = { stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+// The assessment step reads problemsPresented + socialWorkerAssessment +
+// clientCategory + caseCategory, so this case is done at assessment and nowhere
+// else.
+const doneCaseData = { status: 'enrolled', problemsPresented: 'a', socialWorkerAssessment: 's', clientCategory: 'b', caseCategory: 'c' };
+const lockedRow = { stepKey: 'assessment', lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01T09:00:00Z' };
 
 function renderBar(props: Partial<React.ComponentProps<typeof StepLockBar>> = {}) {
   return render(
@@ -56,7 +57,7 @@ function renderBar(props: Partial<React.ComponentProps<typeof StepLockBar>> = {}
       <Toaster />
       <StepLockBar
         caseId="c1"
-        stepIndex={0}
+        stepKey="assessment"
         caseData={doneCaseData}
         interventionCount={0}
         onChanged={noop}
@@ -83,7 +84,7 @@ describe('StepLockBar', () => {
     // Step 3 needs a self-reliance level *and* a sustainability plan; `active`
     // is the earliest status that clears its status floor, so the only thing
     // missing is the data.
-    renderBar({ stepIndex: 3, caseData: { status: 'active' } });
+    renderBar({ stepKey: 'evaluate', caseData: { status: 'active' } });
 
     const lock = screen.getByRole('button', { name: /^lock$/i });
     expect(lock).toBeDisabled();
@@ -121,41 +122,41 @@ describe('StepLockBar', () => {
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
-  const rows: Array<{ stepIndex: number; caseData: any; interventionCount: number; opts: StepperProgressOpts }> = [
+  const rows: Array<{ stepKey: string; caseData: any; interventionCount: number; opts: StepperProgressOpts }> = [
     // Every step in both states, so no branch of the borrowed predicate is
     // left unexercised by the component that borrows it.
-    { stepIndex: 0, caseData: doneCaseData, interventionCount: 0, opts: {} },
-    { stepIndex: 0, caseData: { status: 'enrolled', problemsPresented: 'a' }, interventionCount: 0, opts: {} },
-    { stepIndex: 1, caseData: { status: 'enrolled' }, interventionCount: 1, opts: {} },
-    { stepIndex: 1, caseData: { status: 'enrolled' }, interventionCount: 0, opts: {} },
-    { stepIndex: 2, caseData: {}, interventionCount: 0, opts: { interAgencyReferralCount: 1 } },
-    { stepIndex: 2, caseData: {}, interventionCount: 0, opts: {} },
+    { stepKey: 'assessment', caseData: doneCaseData, interventionCount: 0, opts: {} },
+    { stepKey: 'assessment', caseData: { status: 'enrolled', problemsPresented: 'a' }, interventionCount: 0, opts: {} },
+    { stepKey: 'interventions', caseData: { status: 'enrolled' }, interventionCount: 1, opts: {} },
+    { stepKey: 'interventions', caseData: { status: 'enrolled' }, interventionCount: 0, opts: {} },
+    { stepKey: 'referrals', caseData: {}, interventionCount: 0, opts: { interAgencyReferralCount: 1 } },
+    { stepKey: 'referrals', caseData: {}, interventionCount: 0, opts: {} },
     // The shape this predicate used to read. Present so the bar's coverage keeps
     // proving it asks `stepperStepDone` rather than holding its own idea — and,
     // incidentally, that the shape does not now complete the step.
-    { stepIndex: 2, caseData: { referrals: [{ id: 'r1' }] }, interventionCount: 0, opts: {} },
-    { stepIndex: 3, caseData: { status: 'active', selfRelianceLevel: 2, sustainabilityPlan: 'p' }, interventionCount: 0, opts: {} },
-    { stepIndex: 3, caseData: { status: 'active', selfRelianceLevel: 2 }, interventionCount: 0, opts: {} },
-    { stepIndex: 4, caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' }, interventionCount: 0, opts: {} },
-    { stepIndex: 4, caseData: { status: 'transitioning', clientSignature: 'sig' }, interventionCount: 0, opts: {} },
+    { stepKey: 'referrals', caseData: { referrals: [{ id: 'r1' }] }, interventionCount: 0, opts: {} },
+    { stepKey: 'evaluate', caseData: { status: 'active', selfRelianceLevel: 2, sustainabilityPlan: 'p' }, interventionCount: 0, opts: {} },
+    { stepKey: 'evaluate', caseData: { status: 'active', selfRelianceLevel: 2 }, interventionCount: 0, opts: {} },
+    { stepKey: 'closure', caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' }, interventionCount: 0, opts: {} },
+    { stepKey: 'closure', caseData: { status: 'transitioning', clientSignature: 'sig' }, interventionCount: 0, opts: {} },
     // The opts-gated branches: a referral / intervention recorded as not needed
     // is the only thing that satisfies these steps with no rows behind them.
-    { stepIndex: 1, caseData: { status: 'enrolled' }, interventionCount: 0, opts: { interventionNotNeeded: true } },
-    { stepIndex: 2, caseData: { status: 'enrolled' }, interventionCount: 0, opts: { referralNotNeeded: true } },
+    { stepKey: 'interventions', caseData: { status: 'enrolled' }, interventionCount: 0, opts: { interventionNotNeeded: true } },
+    { stepKey: 'referrals', caseData: { status: 'enrolled' }, interventionCount: 0, opts: { referralNotNeeded: true } },
   ];
 
   it.each(rows)(
-    'enables Lock iff stepperStepDone is true for step $stepIndex',
-    ({ stepIndex, caseData, interventionCount, opts }) => {
-      const expected = actualStepperStepDone(stepIndex, caseData, interventionCount, opts);
-      const { container } = renderBar({ stepIndex, caseData, interventionCount, opts });
+    'enables Lock iff stepperStepDone is true for step $stepKey',
+    ({ stepKey, caseData, interventionCount, opts }) => {
+      const expected = actualStepperStepDone(stepKey, caseData, interventionCount, 0, opts);
+      const { container } = renderBar({ stepKey, caseData, interventionCount, opts });
 
       const lock = within(container).getByRole('button', { name: /^lock$/i });
       if (expected) expect(lock).toBeEnabled();
       else expect(lock).toBeDisabled();
 
       // And it is *this* function that decided, with the props it was handed.
-      expect(mockStepperStepDone).toHaveBeenLastCalledWith(stepIndex, caseData, interventionCount, opts);
+      expect(mockStepperStepDone).toHaveBeenLastCalledWith(stepKey, caseData, interventionCount, 0, opts);
     },
   );
 
@@ -177,7 +178,7 @@ describe('StepLockBar', () => {
   it('still names the seal when the locker row has no name', () => {
     // `displayName()` on the server returns undefined for a user row with no
     // name parts at all, so the strip must not render "Locked by  · <date>".
-    renderBar({ locked: { stepIndex: 0, lockedAt: lockedRow.lockedAt } });
+    renderBar({ locked: { stepKey: 'assessment', lockedAt: lockedRow.lockedAt } });
 
     expect(
       screen.getByText(`Locked by Unknown · ${formatDate(lockedRow.lockedAt)}`),
@@ -205,7 +206,7 @@ describe('StepLockBar', () => {
   it('offers no control at all in readOnly on a step that is ready to seal', () => {
     // The same hole on the *enabled* button, which is the one a user would
     // actually click: a done step renders a live Lock without the readOnly gate.
-    renderBar({ readOnly: true, caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' }, stepIndex: 4 });
+    renderBar({ readOnly: true, caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' }, stepKey: 'closure' });
 
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
@@ -217,13 +218,13 @@ describe('StepLockBar', () => {
     // server does too; a bar that passed `opts` raw would leave a step the
     // stepper calls done with no way to seal it, and the server's 400 is the
     // only thing the user would ever see about it.
-    renderBar({ stepIndex: 2, caseData: { status: 'active', referrals: [], referralNotNeeded: true } });
+    renderBar({ stepKey: 'referrals', caseData: { status: 'active', referrals: [], referralNotNeeded: true } });
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
 
   it('reads a recorded no-intervention decision off the case row too', () => {
-    renderBar({ stepIndex: 1, caseData: { status: 'enrolled', interventionNotNeeded: true }, interventionCount: 0 });
+    renderBar({ stepKey: 'interventions', caseData: { status: 'enrolled', interventionNotNeeded: true }, interventionCount: 0 });
 
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
   });
@@ -237,7 +238,7 @@ describe('StepLockBar', () => {
 
     await user.click(screen.getByRole('button', { name: /^lock$/i }));
 
-    expect(mockApiPost).toHaveBeenCalledWith('/cases/c1/steps/0/lock');
+    expect(mockApiPost).toHaveBeenCalledWith('/cases/c1/steps/assessment/lock');
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });
 
@@ -248,17 +249,17 @@ describe('StepLockBar', () => {
 
     await user.click(screen.getByRole('button', { name: /unlock/i }));
 
-    expect(mockApiDel).toHaveBeenCalledWith('/cases/c1/steps/0/lock');
+    expect(mockApiDel).toHaveBeenCalledWith('/cases/c1/steps/assessment/lock');
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });
 
   it('addresses the endpoint of the step it is mounted on', async () => {
     const user = userEvent.setup();
-    renderBar({ stepIndex: 4, caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' } });
+    renderBar({ stepKey: 'closure', caseData: { status: 'transitioning', clientSignature: 'sig', closureOutcome: 'out' } });
 
     await user.click(screen.getByRole('button', { name: /^lock$/i }));
 
-    expect(mockApiPost).toHaveBeenCalledWith('/cases/c1/steps/4/lock');
+    expect(mockApiPost).toHaveBeenCalledWith('/cases/c1/steps/closure/lock');
   });
 
   // `busy` is the whole of the double-click defence: it is the button's
@@ -267,7 +268,7 @@ describe('StepLockBar', () => {
   it('does not re-send a seal while the first request is in flight', async () => {
     const user = userEvent.setup();
     let release = () => {};
-    mockApiPost.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' }); }));
+    mockApiPost.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({ stepKey: 'assessment', lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' }); }));
     renderBar();
 
     const lock = screen.getByRole('button', { name: /^lock$/i });
@@ -377,7 +378,7 @@ describe('StepLockBar', () => {
     // The write committed and the seal exists. Reporting it as "Could not seal
     // this step" would be a lie the user acts on: the bar would still show Lock,
     // and the retry would write a second audit row for a step already sealed.
-    mockApiPost.mockResolvedValue({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
+    mockApiPost.mockResolvedValue({ stepKey: 'assessment', lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
     const onChanged = vi.fn().mockRejectedValue(new Error('Network request failed'));
     const user = userEvent.setup();
     renderBar({ onChanged });
@@ -392,7 +393,7 @@ describe('StepLockBar', () => {
     // The deliberate half of the previous test: the seal exists, so the bar
     // must say so from the POST's own answer rather than keep the button that
     // invites a duplicate.
-    mockApiPost.mockResolvedValue({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
+    mockApiPost.mockResolvedValue({ stepKey: 'assessment', lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
     const onChanged = vi.fn().mockRejectedValue(new Error('Network request failed'));
     const user = userEvent.setup();
     renderBar({ onChanged });
@@ -422,7 +423,7 @@ describe('StepLockBar', () => {
     // state. Once the parent moves — a refresh that lands later, or another
     // worker — its answer wins, so the bar cannot go on disagreeing with the
     // record it is meant to be showing.
-    mockApiPost.mockResolvedValue({ stepIndex: 0, lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
+    mockApiPost.mockResolvedValue({ stepKey: 'assessment', lockedByName: 'Ana Reyes', lockedAt: '2026-10-02T08:00:00Z' });
     const onChanged = vi.fn().mockRejectedValue(new Error('Network request failed'));
     const user = userEvent.setup();
     const { rerender } = renderBar({ onChanged });
@@ -437,7 +438,7 @@ describe('StepLockBar', () => {
         <Toaster />
         <StepLockBar
           caseId="c1"
-          stepIndex={0}
+          stepKey="assessment"
           caseData={doneCaseData}
           interventionCount={0}
           onChanged={onChanged}
@@ -466,11 +467,11 @@ describe('StepLockBar', () => {
         <Toaster />
         <StepLockBar
           caseId="c1"
-          stepIndex={0}
+          stepKey="assessment"
           caseData={doneCaseData}
           interventionCount={0}
           onChanged={noop}
-          locked={{ stepIndex: 0, lockedByName: 'Bela Santos', lockedAt: '2026-10-03T09:00:00Z' }}
+          locked={{ stepKey: 'assessment', lockedByName: 'Bela Santos', lockedAt: '2026-10-03T09:00:00Z' }}
         />
       </>,
     );

@@ -302,7 +302,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
           coerces and could never honour, would outvote the row. */}
       <StepLockBar
         caseId={caseId}
-        stepIndex={2}
+        stepKey="referrals"
         caseData={caseData}
         interventionCount={0}
         opts={{ interAgencyReferralCount: caseData?.interAgencyReferralCount ?? 0 }}

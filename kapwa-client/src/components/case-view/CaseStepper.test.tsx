@@ -2,34 +2,57 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CaseStepper, stepperStepDone, stepperStatus } from './CaseStepper';
 
+const COMMON_LABELS = [
+  'Assess & Interview',
+  'Program Enrollments',
+  'Intervention & Requirements',
+  'Inter-agency Referrals',
+  'Evaluate Help Given',
+  'Case Study & Closure',
+];
+
+// A done assessment: all four fields the step's predicate reads.
+const doneAssessment = {
+  problemsPresented: 'a',
+  socialWorkerAssessment: 'b',
+  clientCategory: 'c',
+  caseCategory: 'd',
+  status: 'enrolled',
+};
+
 describe('CaseStepper — lifecycle labels', () => {
-  it('renders the five lifecycle step labels', () => {
-    render(<CaseStepper currentStep={0} onStepClick={() => {}} caseData={{}} interventionCount={0} />);
-    ['Assess & Interview', 'Intervention & Requirements', 'Inter-agency Referrals', 'Evaluate Help Given', 'Case Study & Closure']
-      .forEach((label, i) => {
-        expect(screen.getByRole('button', { name: `${i + 1}. ${label}` })).toBeTruthy();
-      });
+  it('renders the six common lifecycle step labels in template order', () => {
+    render(<CaseStepper currentStep="assessment" onStepClick={() => {}} caseData={{}} interventionCount={0} enrollmentCount={0} />);
+    COMMON_LABELS.forEach((label, i) => {
+      expect(screen.getByRole('button', { name: `${i + 1}. ${label}` })).toBeTruthy();
+    });
+  });
+
+  it('injects the category step for a CICL case, between assessment and enrollments', () => {
+    render(
+      <CaseStepper
+        currentStep="assessment"
+        onStepClick={() => {}}
+        caseData={{ caseCategory: 'Children in Conflict with the Law (CICL)' }}
+        interventionCount={0}
+        enrollmentCount={0}
+      />,
+    );
+    expect(screen.getByRole('button', { name: '2. Discernment Assessment' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '3. Program Enrollments' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '1. Assess & Interview' })).toBeTruthy();
   });
 });
 
 describe('CaseStepper — the referral count reaches the rendered step', () => {
-  // The count is threaded through a prop, and the component has to hand it to
-  // `stepperStepDone`. Nothing else covers that hop: `stepperStepDone`'s own
-  // tests call the function directly, so a `CaseStepper` that dropped the prop
-  // would render a step 2 that never completes while every predicate test passed.
-  const base = {
-    problemsPresented: 'a',
-    clientCategory: 'b',
-    status: 'enrolled',
-  };
-
-  it('marks step 3 done when the count says a referral was issued', () => {
+  it('marks the referrals step done when the count says a referral was issued', () => {
     render(
       <CaseStepper
-        currentStep={0}
+        currentStep="assessment"
         onStepClick={() => {}}
-        caseData={base}
+        caseData={{ ...doneAssessment, clientCategory: 'b' }}
         interventionCount={0}
+        enrollmentCount={0}
         interAgencyReferralCount={1}
       />,
     );
@@ -37,68 +60,65 @@ describe('CaseStepper — the referral count reaches the rendered step', () => {
     // The stepper marks a done step with a check and an accessible label that no
     // longer says the step is merely "not available" — asserted through the
     // check's own presence rather than a class, which Tailwind reorders.
-    expect(screen.getByRole('button', { name: '3. Inter-agency Referrals' }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '4. Inter-agency Referrals' }).querySelector('svg')).toBeTruthy();
   });
 
-  it('leaves step 3 pending without one', () => {
+  it('leaves the referrals step pending without one', () => {
     render(
-      <CaseStepper currentStep={0} onStepClick={() => {}} caseData={base} interventionCount={0} />,
+      <CaseStepper currentStep="assessment" onStepClick={() => {}} caseData={doneAssessment} interventionCount={0} enrollmentCount={0} />,
     );
 
-    expect(screen.getByRole('button', { name: '3. Inter-agency Referrals' }).querySelector('svg')).toBeNull();
+    expect(screen.getByRole('button', { name: '4. Inter-agency Referrals' }).querySelector('svg')).toBeNull();
   });
 });
 
 describe('stepperStepDone — Implement HIP gating', () => {
-  it('requires an intervention before step 2 completes', () => {
-    expect(stepperStepDone(1, {}, 0, {})).toBe(false);
-    expect(stepperStepDone(1, {}, 1, {})).toBe(true);
+  it('requires an intervention before the interventions step completes', () => {
+    expect(stepperStepDone('interventions', {}, 0, 0, {})).toBe(false);
+    expect(stepperStepDone('interventions', {}, 1, 0, {})).toBe(true);
   });
 
-  it('does not check step 2 until required documents are uploaded', () => {
+  it('does not complete the interventions step until required documents are uploaded', () => {
     const caseData = { status: 'assessed' };
-    expect(stepperStepDone(1, caseData, 1, { requirementsMet: false })).toBe(false);
+    expect(stepperStepDone('interventions', caseData, 1, 0, { requirementsMet: false })).toBe(false);
   });
 
-  it('checks step 2 once the intervention exists and requirements are met', () => {
+  it('completes the interventions step once the intervention exists and requirements are met', () => {
     const caseData = { status: 'assessed' };
-    expect(stepperStepDone(1, caseData, 1, { requirementsMet: true })).toBe(true);
+    expect(stepperStepDone('interventions', caseData, 1, 0, { requirementsMet: true })).toBe(true);
   });
 
   it('falls back to the intervention-only check when no progress data is supplied', () => {
-    expect(stepperStepDone(1, {}, 1)).toBe(true);
-    expect(stepperStepDone(1, {}, 0)).toBe(false);
+    expect(stepperStepDone('interventions', {}, 1, 0)).toBe(true);
+    expect(stepperStepDone('interventions', {}, 0, 0)).toBe(false);
   });
 });
 
 describe('stepperStepDone — Service Delivery gating', () => {
   it('is NOT done on interventions alone anymore', () => {
-    expect(stepperStepDone(2, {}, 2, {})).toBe(false);
+    expect(stepperStepDone('referrals', {}, 2, 0, {})).toBe(false);
   });
 
   it('is done when an inter-agency referral is issued', () => {
-    // `interAgencyReferralCount` is the count of `inter_agency_referrals` rows,
-    // supplied by whichever surface fetched them. The case view and step 3 both
-    // read their own list of exactly those rows.
-    expect(stepperStepDone(2, {}, 0, { interAgencyReferralCount: 1 })).toBe(true);
+    expect(stepperStepDone('referrals', {}, 0, 0, { interAgencyReferralCount: 1 })).toBe(true);
   });
 
   it('is NOT done on a case_referrals row alone', () => {
     // The shape this predicate used to read. `case.referrals` is the transition
     // plan's agency list over `case_referrals`, not the referral the endorsement
     // letter issues, and it has 0 rows in every database this project has run —
-    // so reading it left step 2 unsealable with no route out.
+    // so reading it left the step unsealable with no route out.
     const caseData = { referrals: [{ agencyName: 'DSWD', status: 'pending', reason: 'x' }] };
-    expect(stepperStepDone(2, caseData, 0, {})).toBe(false);
+    expect(stepperStepDone('referrals', caseData, 0, 0, {})).toBe(false);
   });
 
   it('is done when the social worker decides a referral is not needed', () => {
-    expect(stepperStepDone(2, {}, 0, { referralNotNeeded: true })).toBe(true);
+    expect(stepperStepDone('referrals', {}, 0, 0, { referralNotNeeded: true })).toBe(true);
   });
 
   it('is NOT done when no referral exists and no decision was recorded', () => {
     const caseData = { status: 'active' };
-    expect(stepperStepDone(2, caseData, 3, { referralNotNeeded: false })).toBe(false);
+    expect(stepperStepDone('referrals', caseData, 3, 0, { referralNotNeeded: false })).toBe(false);
   });
 
   // The not-needed decisions live on the case row as well as in opts, and a
@@ -106,18 +126,51 @@ describe('stepperStepDone — Service Delivery gating', () => {
   // bar) must read them the same way the stepper does. The fallback is inside
   // the predicate rather than at each call site for that reason.
   it('falls back to the case row when opts carries no decision', () => {
-    expect(stepperStepDone(2, { referrals: [], referralNotNeeded: true }, 0, {})).toBe(true);
-    expect(stepperStepDone(1, { interventionNotNeeded: true }, 0, {})).toBe(true);
+    expect(stepperStepDone('referrals', { referrals: [], referralNotNeeded: true }, 0, 0, {})).toBe(true);
+    expect(stepperStepDone('interventions', { interventionNotNeeded: true }, 0, 0, {})).toBe(true);
   });
 
   it('lets an explicit false in opts override a true on the case row', () => {
-    expect(stepperStepDone(2, { referrals: [], referralNotNeeded: true }, 0, { referralNotNeeded: false })).toBe(false);
-    expect(stepperStepDone(1, { interventionNotNeeded: true }, 0, { interventionNotNeeded: false })).toBe(false);
+    expect(stepperStepDone('referrals', { referrals: [], referralNotNeeded: true }, 0, 0, { referralNotNeeded: false })).toBe(false);
+    expect(stepperStepDone('interventions', { interventionNotNeeded: true }, 0, 0, { interventionNotNeeded: false })).toBe(false);
+  });
+});
+
+describe('stepperStepDone — enrollments', () => {
+  it('is done with at least one enrollment, or the recorded decision', () => {
+    expect(stepperStepDone('enrollments', { status: 'enrolled' }, 0, 1, {})).toBe(true);
+    expect(stepperStepDone('enrollments', { status: 'enrolled' }, 0, 0, { enrollmentsNotNeeded: true })).toBe(true);
+    expect(stepperStepDone('enrollments', { status: 'enrolled' }, 0, 0, {})).toBe(false);
+    // The case-row fallback for the decision, like the other not-needed rows.
+    expect(stepperStepDone('enrollments', { status: 'enrolled', enrollmentsNotNeeded: true }, 0, 0, {})).toBe(true);
+  });
+});
+
+describe('stepperStepDone — category steps', () => {
+  it('discernment requires the assessment date and result', () => {
+    expect(stepperStepDone('discernment', { discernmentAssessedAt: '2026-10-01' }, 0, 0, {})).toBe(false);
+    expect(stepperStepDone('discernment', { discernmentAssessedAt: '2026-10-01', discernmentResult: 'discerned' }, 0, 0, {})).toBe(true);
+  });
+
+  it('protection order requires the order type', () => {
+    expect(stepperStepDone('protection_order', { protectionOrderType: 'Barangay Protection Order (BPO)' }, 0, 0, {})).toBe(true);
+    expect(stepperStepDone('protection_order', {}, 0, 0, {})).toBe(false);
+  });
+
+  it('solo parent requires the ID issued date and number', () => {
+    expect(stepperStepDone('solo_parent', { soloParentIdIssuedDate: '2026-10-01', soloParentIdNumber: 'SP-1' }, 0, 0, {})).toBe(true);
+    expect(stepperStepDone('solo_parent', { soloParentIdIssuedDate: '2026-10-01' }, 0, 0, {})).toBe(false);
+  });
+
+  it('adoption requires the DVC and case-study dates', () => {
+    expect(stepperStepDone('adoption', { adoptionDvcDate: '2026-10-01', adoptionCaseStudyDate: '2026-10-02' }, 0, 0, {})).toBe(true);
+    expect(stepperStepDone('adoption', { adoptionDvcDate: '2026-10-01' }, 0, 0, {})).toBe(false);
   });
 });
 
 describe('CaseStepper rendering', () => {
   const baseCase = {
+    ...doneAssessment,
     status: 'assessed',
     selfRelianceLevel: null,
     sustainabilityPlan: null,
@@ -129,58 +182,67 @@ describe('CaseStepper rendering', () => {
     return screen.getByText(label).closest('button')!;
   }
 
-  it('shows the step number, not a check, when step 2 requirements are missing', () => {
+  it('shows the step number, not a check, when the interventions requirements are missing', () => {
     render(
-      <CaseStepper currentStep={0} onStepClick={vi.fn()} caseData={baseCase} interventionCount={1} requirementsMet={false} />,
+      <CaseStepper currentStep="assessment" onStepClick={vi.fn()} caseData={baseCase} interventionCount={1} enrollmentCount={0} requirementsMet={false} />,
     );
-    expect(stepButton('Intervention & Requirements').textContent).toContain('2');
+    expect(stepButton('Intervention & Requirements').textContent).toContain('3');
   });
 
-  it('shows a check on step 2 once an intervention and all required documents exist', () => {
+  it('shows a check on the interventions step once an intervention and all required documents exist', () => {
     render(
-      <CaseStepper currentStep={0} onStepClick={vi.fn()} caseData={baseCase} interventionCount={2} requirementsMet={true} />,
+      <CaseStepper currentStep="assessment" onStepClick={vi.fn()} caseData={baseCase} interventionCount={2} enrollmentCount={0} requirementsMet={true} />,
     );
-    const step2 = stepButton('Intervention & Requirements');
-    expect(step2.textContent).not.toContain('2');
-    expect(step2.querySelector('svg')).not.toBeNull();
-  });
-
-  it('shows a check on step 3 when the referral-not-needed decision is recorded', () => {
-    render(
-      <CaseStepper
-        currentStep={0}
-        onStepClick={vi.fn()}
-        caseData={{ ...baseCase, referralNotNeeded: true }}
-        interventionCount={2}
-        requirementsMet={true}
-      />,
-    );
-    const step3 = stepButton('Inter-agency Referrals');
+    const step3 = stepButton('Intervention & Requirements');
     expect(step3.textContent).not.toContain('3');
     expect(step3.querySelector('svg')).not.toBeNull();
   });
 
-  it('keeps step 3 unchecked when there is no referral and no decision recorded', () => {
+  it('shows a check on the referrals step when the referral-not-needed decision is recorded', () => {
     render(
-      <CaseStepper currentStep={0} onStepClick={vi.fn()} caseData={baseCase} interventionCount={2} requirementsMet={true} referralNotNeeded={false} />,
+      <CaseStepper
+        currentStep="assessment"
+        onStepClick={vi.fn()}
+        caseData={{ ...baseCase, referralNotNeeded: true }}
+        interventionCount={2}
+        enrollmentCount={0}
+        requirementsMet={true}
+      />,
     );
-    expect(stepButton('Inter-agency Referrals').textContent).toContain('3');
+    const step4 = stepButton('Inter-agency Referrals');
+    expect(step4.textContent).not.toContain('4');
+    expect(step4.querySelector('svg')).not.toBeNull();
+  });
+
+  it('keeps the referrals step unchecked when there is no referral and no decision recorded', () => {
+    render(
+      <CaseStepper currentStep="assessment" onStepClick={vi.fn()} caseData={baseCase} interventionCount={2} enrollmentCount={0} requirementsMet={true} referralNotNeeded={false} />,
+    );
+    expect(stepButton('Inter-agency Referrals').textContent).toContain('4');
+  });
+
+  it('marks the enrollments step done with an enrollment', () => {
+    render(
+      <CaseStepper currentStep="assessment" onStepClick={vi.fn()} caseData={baseCase} interventionCount={2} enrollmentCount={1} requirementsMet={true} />,
+    );
+    expect(stepButton('Program Enrollments').querySelector('svg')).not.toBeNull();
   });
 
   it('locks Evaluate Help Given when the referral step is done but the intervention step is not', () => {
     const onClick = vi.fn();
     render(
       <CaseStepper
-        currentStep={2}
+        currentStep="referrals"
         onStepClick={onClick}
         caseData={{ ...baseCase, referralNotNeeded: true }}
         interventionCount={0}
+        enrollmentCount={0}
         requirementsMet={true}
       />,
     );
-    const step4 = stepButton('Evaluate Help Given');
-    expect(step4.getAttribute('aria-disabled')).toBe('true');
-    step4.click();
+    const step5 = stepButton('Evaluate Help Given');
+    expect(step5.getAttribute('aria-disabled')).toBe('true');
+    step5.click();
     expect(onClick).not.toHaveBeenCalled();
   });
 
@@ -188,43 +250,51 @@ describe('CaseStepper rendering', () => {
     const onClick = vi.fn();
     render(
       <CaseStepper
-        currentStep={1}
+        currentStep="interventions"
         onStepClick={onClick}
         caseData={{ ...baseCase, referralNotNeeded: true }}
         interventionCount={1}
+        enrollmentCount={0}
         requirementsMet={true}
         interventionNotNeeded={false}
       />,
     );
-    const step4 = stepButton('Evaluate Help Given');
-    expect(step4.getAttribute('aria-disabled')).not.toBe('true');
-    step4.click();
-    expect(onClick).toHaveBeenCalledWith(3);
+    const step5 = stepButton('Evaluate Help Given');
+    expect(step5.getAttribute('aria-disabled')).not.toBe('true');
+    step5.click();
+    expect(onClick).toHaveBeenCalledWith('evaluate');
   });
 });
 
 describe('stepperStepDone — Phase-Out steps require the case to reach Phase-Out', () => {
   it('does not mark Evaluate Help Given done before the case is active', () => {
     const prefilled = { status: 'in_review', selfRelianceLevel: 3, sustainabilityPlan: 'plan' };
-    expect(stepperStepDone(3, prefilled, 1, {})).toBe(false);
-    expect(stepperStepDone(3, { ...prefilled, status: 'active' }, 1, {})).toBe(true);
+    expect(stepperStepDone('evaluate', prefilled, 1, 0, {})).toBe(false);
+    expect(stepperStepDone('evaluate', { ...prefilled, status: 'active' }, 1, 0, {})).toBe(true);
   });
 
   it('does not mark Case Study & Closure done before Phase-Out', () => {
     const prefilled = { status: 'active', clientSignature: 'sig', closureOutcome: 'graduated' };
-    expect(stepperStepDone(4, prefilled, 1, {})).toBe(false);
-    expect(stepperStepDone(4, { ...prefilled, status: 'transitioning' }, 1, {})).toBe(true);
-    expect(stepperStepDone(4, { ...prefilled, status: 'closed' }, 1, {})).toBe(true);
+    expect(stepperStepDone('closure', prefilled, 1, 0, {})).toBe(false);
+    expect(stepperStepDone('closure', { ...prefilled, status: 'transitioning' }, 1, 0, {})).toBe(true);
+    expect(stepperStepDone('closure', { ...prefilled, status: 'closed' }, 1, 0, {})).toBe(true);
   });
 
   it('does not cap steps when the status is unknown (partial payload)', () => {
-    expect(stepperStepDone(3, { selfRelianceLevel: 3, sustainabilityPlan: 'plan' }, 1, {})).toBe(true);
+    expect(stepperStepDone('evaluate', { selfRelianceLevel: 3, sustainabilityPlan: 'plan' }, 1, 0, {})).toBe(true);
   });
 });
 
 describe('stepperStatus', () => {
-  it('maps each step through stepperStepDone with progress opts', () => {
-    const status = stepperStatus({ status: 'assessed' }, 1, { requirementsMet: false, referralNotNeeded: true });
-    expect(status).toEqual([false, false, true, false, false]);
+  it('maps each template step through stepperStepDone with progress opts', () => {
+    const status = stepperStatus({ status: 'assessed' }, 1, 0, { requirementsMet: false, referralNotNeeded: true });
+    expect(Object.values(status)).toEqual([false, false, false, true, false, false]);
+  });
+
+  it('includes the injected category step for a category case', () => {
+    const status = stepperStatus({ status: 'assessed', caseCategory: 'Children in Conflict with the Law (CICL)' }, 0, 0, {});
+    expect(Object.keys(status)).toEqual([
+      'assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    ]);
   });
 });

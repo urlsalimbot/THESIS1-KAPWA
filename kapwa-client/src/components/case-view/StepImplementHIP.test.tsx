@@ -249,7 +249,7 @@ describe('StepImplementHIP — completing step 2', () => {
 });
 
 describe('StepImplementHIP — sealing step 2', () => {
-  type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+  type Seal = { stepKey: string; lockedByName?: string; lockedAt: string } | null;
 
   beforeEach(() => {
     mockApiGet.mockReset();
@@ -339,7 +339,7 @@ describe('StepImplementHIP — sealing step 2', () => {
   });
 
   it('shows who sealed this step and offers the release', () => {
-    const stepLock = { stepIndex: 1, lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'interventions', lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' };
     renderSeal({ interventions: delivered, stepLock });
 
     expect(screen.getByText(`Locked by Lorna Santos · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
@@ -356,7 +356,7 @@ describe('StepImplementHIP — sealing step 2', () => {
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
-    const stepLock = { stepIndex: 1, lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'interventions', lockedByName: 'Lorna Santos', lockedAt: '2026-10-01T09:00:00Z' };
     renderSeal({ interventions: delivered, readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Lorna Santos · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();

@@ -158,7 +158,7 @@ export function StepClosure({ caseId, caseData, readOnly, lockReadOnly = false, 
           the case it exists for. */}
       <StepLockBar
         caseId={caseId}
-        stepIndex={4}
+        stepKey="closure"
         caseData={caseData}
         interventionCount={0}
         locked={stepLock}

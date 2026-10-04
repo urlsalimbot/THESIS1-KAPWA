@@ -347,7 +347,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
           though its plan is read-only. */}
       <StepLockBar
         caseId={caseId}
-        stepIndex={3}
+        stepKey="evaluate"
         caseData={caseData}
         interventionCount={0}
         locked={stepLock}

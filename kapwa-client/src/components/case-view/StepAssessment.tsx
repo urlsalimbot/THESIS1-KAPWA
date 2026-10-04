@@ -237,7 +237,7 @@ export function StepAssessment({
           the worker that releasing the seal is how to change them. */}
       <StepLockBar
         caseId={caseId}
-        stepIndex={0}
+        stepKey="assessment"
         caseData={caseData}
         interventionCount={0}
         locked={stepLock}

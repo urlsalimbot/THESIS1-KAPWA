@@ -18,7 +18,7 @@ beforeEach(() => {
   mockPatch.mockResolvedValue({});
 });
 
-type Seal = { stepIndex: number; lockedByName?: string; lockedAt: string } | null;
+type Seal = { stepKey: string; lockedByName?: string; lockedAt: string } | null;
 
 function renderStep(caseData: any, opts: { readOnly?: boolean; lockReadOnly?: boolean; stepLock?: Seal } = {}) {
   return render(
@@ -107,7 +107,7 @@ describe('StepTransition — sealing step 4', () => {
   });
 
   it('shows who sealed this step and offers the release', () => {
-    const stepLock = { stepIndex: 3, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'evaluate', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderStep({ status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' }, { stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
@@ -123,7 +123,7 @@ describe('StepTransition — sealing step 4', () => {
   });
 
   it('leaves a sealed step readable for a viewer, with the release withheld', () => {
-    const stepLock = { stepIndex: 3, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const stepLock = { stepKey: 'evaluate', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     renderStep({ status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' }, { readOnly: true, lockReadOnly: true, stepLock });
 
     expect(screen.getByText(`Locked by Ana Cruz · ${formatDate(stepLock.lockedAt)}`)).toBeTruthy();
@@ -145,7 +145,7 @@ describe('StepTransition — sealing step 4', () => {
    * would pass a test of the other.
    */
   describe('follow-up visits stay savable while step 4 is sealed', () => {
-    const SEALED = { stepIndex: 3, lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
+    const SEALED = { stepKey: 'evaluate', lockedByName: 'Ana Cruz', lockedAt: '2026-10-01T09:00:00Z' };
     const done = { status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' };
 
     it('keeps the Add Visit control and a save button', () => {

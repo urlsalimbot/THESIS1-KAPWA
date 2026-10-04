@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { CASE_TRANSITION_ROLES } from './role-access';
-import { STATUS_INDEX, STEP_MIN_STATUS } from '@/components/case-view/CaseStepper';
+import { STATUS_INDEX, STEP_FLOORS } from '@/components/case-view/CaseStepper';
 
 /**
  * The client's copies of the server's case-FSM facts, asserted equal to the
@@ -147,17 +147,17 @@ describe('the client mirrors of the server case FSM', () => {
     expect(statuses.length).toBeGreaterThan(0);
   });
 
-  it('STEP_MIN_STATUS equals the server CASE_STEP_MIN_STATUS', () => {
-    const body = arrayLiteral(serverSource('case-step-labels.ts'), 'CASE_STEP_MIN_STATUS');
-    // No capture group here, so the whole match is `[0]` — `[, n]` would destructure
-    // `undefined` and produce a row of NaN.
-    const floors = [...body.matchAll(/-?\d+/g)].map((m) => Number(m[0]));
-    expect(floors.length).toBeGreaterThan(0);
-    expect(STEP_MIN_STATUS).toEqual(floors);
-    // Length is the part `toEqual` would forgive: a client array with extra
-    // trailing floors would otherwise pass with the extra steps demanded at every
-    // status.
-    expect(STEP_MIN_STATUS.length).toBe(floors.length);
+it('STEP_FLOORS equals the server CASE_STEP_FLOORS, key for key', () => {
+    const body = objectLiteral(serverSource('case-step-labels.ts'), 'CASE_STEP_FLOORS');
+    const floors: Record<string, number> = {};
+    for (const [, key, value] of body.matchAll(/([A-Za-z_]+):\s*(\d+)/g)) floors[key] = Number(value);
+    expect(Object.keys(floors).length).toBeGreaterThan(0);
+    expect(sorted(STEP_FLOORS)).toEqual(sorted(floors));
+    // A key present on one side only is compared rather than skipped.
+    const keys = [...new Set([...Object.keys(STEP_FLOORS), ...Object.keys(floors)])];
+    for (const key of keys) {
+      expect({ key, floor: STEP_FLOORS[key] ?? null }).toEqual({ key, floor: floors[key] ?? null });
+    }
   });
 
   /**

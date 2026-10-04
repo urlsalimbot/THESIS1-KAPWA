@@ -355,7 +355,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
             of adrift at the bottom of the step. */}
         <StepLockBar
           caseId={caseId}
-          stepIndex={1}
+          stepKey="interventions"
           caseData={caseData}
           // The count comes from the list this card already renders, which is the
           // same row set the server counts.
