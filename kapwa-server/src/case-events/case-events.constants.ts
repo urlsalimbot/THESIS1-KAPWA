@@ -7,3 +7,19 @@ export const LEGAL_CATEGORIES: ReadonlySet<string> = new Set([
   'Adoption & Foster Care Case',
   'Indigency / Court-Ordered Social Case Study',
 ]);
+
+/**
+ * Whether an event belongs on the shared calendar: planned, home visits
+ * unconditionally, hearings only when the office attends. The single
+ * definition — `CaseEventsService` (create/update) and
+ * `TeamScheduleSyncService` (reassignment) both read it, so a reassignment can
+ * never resurrect a block for a done, cancelled or not-attended event.
+ */
+export function shouldSyncCaseEvent(event: {
+  status?: string | null;
+  eventType?: string | null;
+  attended?: boolean | null;
+}): boolean {
+  return event.status === 'planned'
+    && (event.eventType === 'home_visit' || event.attended === true);
+}

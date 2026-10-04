@@ -48,7 +48,7 @@ describe('TeamScheduleSyncService', () => {
   });
 
   it('moves all synced blocks to the new worker on reassignment', async () => {
-    eventRepo.find.mockResolvedValue([event]);
+    eventRepo.find.mockResolvedValue([{ ...event, attended: true }]);
     blockRepo.findOne.mockResolvedValue(null);
     blockRepo.create.mockImplementation((x) => x);
     blockRepo.save.mockResolvedValue({});
@@ -56,5 +56,31 @@ describe('TeamScheduleSyncService', () => {
     expect(eventRepo.find).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ caseId: 'case-9' }) }));
     expect(blockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ userId: 'worker-2' }));
     expect(blockRepo.delete).toHaveBeenCalledWith(expect.objectContaining({ source: 'case_event', sourceRef: 'evt-1' }));
+  });
+
+  it('does not re-create blocks for done, cancelled or not-attended events on reassignment', async () => {
+    eventRepo.find.mockResolvedValue([
+      { ...event, id: 'e-done', status: 'done', attended: true },
+      { ...event, id: 'e-cancelled', status: 'cancelled', attended: true },
+      { ...event, id: 'e-not-attending', status: 'planned', attended: null },
+    ]);
+    blockRepo.findOne.mockResolvedValue(null);
+    blockRepo.create.mockImplementation((x) => x);
+    blockRepo.save.mockResolvedValue({});
+    await svc.moveForCase('case-9', 'worker-2');
+    // The old worker's blocks are cleared...
+    expect(blockRepo.delete).toHaveBeenCalledTimes(3);
+    // ...and nothing is re-created on the new worker's calendar.
+    expect(blockRepo.create).not.toHaveBeenCalled();
+    expect(blockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('re-creates a planned home visit on reassignment (no attendance gate)', async () => {
+    eventRepo.find.mockResolvedValue([{ ...event, id: 'e-visit', eventType: 'home_visit', attended: null }]);
+    blockRepo.findOne.mockResolvedValue(null);
+    blockRepo.create.mockImplementation((x) => x);
+    blockRepo.save.mockResolvedValue({});
+    await svc.moveForCase('case-9', 'worker-2');
+    expect(blockRepo.create).toHaveBeenCalledWith(expect.objectContaining({ userId: 'worker-2', blockType: 'home_visit' }));
   });
 });

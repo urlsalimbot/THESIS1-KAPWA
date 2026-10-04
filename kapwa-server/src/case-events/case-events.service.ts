@@ -8,7 +8,7 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { CreateCaseEventInput, CreateCaseEventSchema, UpdateCaseEventInput, UpdateCaseEventSchema } from './dto/case-events.zod';
 
 export { LEGAL_CATEGORIES } from './case-events.constants';
-import { LEGAL_CATEGORIES } from './case-events.constants';
+import { LEGAL_CATEGORIES, shouldSyncCaseEvent } from './case-events.constants';
 
 @Injectable()
 export class CaseEventsService {
@@ -25,11 +25,10 @@ export class CaseEventsService {
     return this.events.find({ where: { caseId }, order: { eventDate: 'ASC', startTime: 'ASC' } });
   }
 
-  // True when the event belongs on the shared calendar: planned,
-  // home visits unconditionally, hearings only when the office attends.
+  // True when the event belongs on the shared calendar — one rule, shared with
+  // the sync service (see `shouldSyncCaseEvent`).
   shouldSync(event: Pick<CaseEvent, 'status' | 'eventType' | 'attended'>): boolean {
-    return event.status === 'planned'
-      && (event.eventType === 'home_visit' || event.attended === true);
+    return shouldSyncCaseEvent(event);
   }
 
   private async loadCase(caseId: string): Promise<Case> {

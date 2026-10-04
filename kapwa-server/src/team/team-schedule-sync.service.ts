@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { TeamScheduleBlock } from './team-schedule-block.entity';
 import { Case } from '../cases/case.entity';
 import { CaseEvent } from '../case-events/case-event.entity';
+import { shouldSyncCaseEvent } from '../case-events/case-events.constants';
 
 // System-managed mirror of case_events into team_schedule_blocks. This is the
 // ONLY writer of `source='case_event'` blocks: the public team-schedule API
@@ -60,7 +61,11 @@ export class TeamScheduleSyncService {
     const controlNo = c?.controlNo ?? '';
     for (const e of events) {
       await this.removeForEvent(e.id);
-      await this.upsertForEvent(e, newWorkerId, controlNo);
+      // Only events that belong on a calendar come back — a reassignment must
+      // not resurrect a block for a done/cancelled/not-attended event.
+      if (shouldSyncCaseEvent(e)) {
+        await this.upsertForEvent(e, newWorkerId, controlNo);
+      }
     }
   }
 }
