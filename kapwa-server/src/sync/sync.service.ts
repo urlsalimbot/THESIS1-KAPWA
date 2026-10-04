@@ -559,7 +559,7 @@ export class SyncService implements OnApplicationShutdown {
       ? (payload?.case_id ?? payload?.caseId)
       : await this.requirementCaseId(recordId);
     if (!caseId) return;
-    await this.stepLocks.assertUnsealed(caseId, 1, payload);
+    await this.stepLocks.assertUnsealed(caseId, 'interventions', payload);
   }
 
   private async requirementCaseId(recordId: string): Promise<string | undefined> {

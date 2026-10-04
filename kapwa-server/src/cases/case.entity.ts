@@ -14,7 +14,10 @@ export enum CaseStatus {
   IN_REVIEW = 'in_review',
   ACTIVE = 'active',
   TRANSITIONING = 'transitioning',
-  CLOSED = 'closed'
+  CLOSED = 'closed',
+  // Terminal post-closure phase: the case returns for follow-up after
+  // termination of active services (DSWD AO 10 s. 2007 §VIII.G).
+  AFTERCARE = 'aftercare'
 }
 
 @Entity('cases')
@@ -185,6 +188,60 @@ export class Case extends BaseEntity {
 
   @Column({ name: 'case_category', nullable: true })
   caseCategory?: string;
+
+  // Court docket number for legal categories (CICL, VAWC, CNSP court cases).
+  @Column({ name: 'court_docket_number', nullable: true })
+  courtDocketNumber?: string;
+
+  // CICL step — discernment assessment (R.A. 9344 §22 / DSWD AO 10 s. 2007).
+  @Column({ name: 'discernment_assessed_at', type: 'date', nullable: true })
+  discernmentAssessedAt?: string;
+
+  @Column({ name: 'discernment_result', nullable: true })
+  discernmentResult?: string;
+
+  @Column({ name: 'discernment_notes', type: 'text', nullable: true })
+  discernmentNotes?: string;
+
+  // VAWC step — protection order (R.A. 9262 §8/§14–16).
+  @Column({ name: 'protection_order_type', nullable: true })
+  protectionOrderType?: string;
+
+  @Column({ name: 'protection_order_issued_at', type: 'date', nullable: true })
+  protectionOrderIssuedAt?: string;
+
+  @Column({ name: 'protection_order_issued_by', nullable: true })
+  protectionOrderIssuedBy?: string;
+
+  @Column({ name: 'protection_order_notes', type: 'text', nullable: true })
+  protectionOrderNotes?: string;
+
+  // Enrollments step — explicit "no program needed" decision.
+  @Column({ name: 'enrollments_not_needed', type: 'boolean', default: false })
+  enrollmentsNotNeeded!: boolean;
+
+  // Solo Parent step — ID issuance (R.A. 8972 §4).
+  @Column({ name: 'solo_parent_id_issued_date', type: 'date', nullable: true })
+  soloParentIdIssuedDate?: string;
+
+  @Column({ name: 'solo_parent_id_number', nullable: true })
+  soloParentIdNumber?: string;
+
+  @Column({ name: 'solo_parent_notes', type: 'text', nullable: true })
+  soloParentNotes?: string;
+
+  // Adoption & Foster Care step — document spine (R.A. 11642).
+  @Column({ name: 'adoption_dvc_date', type: 'date', nullable: true })
+  adoptionDvcDate?: string;
+
+  @Column({ name: 'adoption_case_study_date', type: 'date', nullable: true })
+  adoptionCaseStudyDate?: string;
+
+  @Column({ name: 'adoption_cdclaa_received', type: 'boolean', nullable: true })
+  adoptionCdclaaReceived?: boolean;
+
+  @Column({ name: 'adoption_notes', type: 'text', nullable: true })
+  adoptionNotes?: string;
 
   @Column({ name: 'interviewed_by', nullable: true })
   interviewedBy?: string;

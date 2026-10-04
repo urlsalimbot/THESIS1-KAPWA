@@ -24,27 +24,26 @@ function mapStatus(s: string): CaseStatus {
   return STATUS_ALIASES[s] || (s as CaseStatus);
 }
 
-// Strict step-index parse for the step-lock routes. `parseInt` is the obvious
-// choice and is wrong here: it turns "1.5" into 1, so a request for a step that
-// does not exist would seal step 1 instead and return 201. `ParseIntPipe` does
-// not help either — it parseInts first and only then checks `isInteger`, by
-// which point the truncation has already happened. Only bare decimal digits are
-// accepted; the 0..4 range stays with the service, which owns the message.
-const STEP_INDEX_PATTERN = /^\d+$/;
-function parseStepIndex(raw: string): number {
-  if (!STEP_INDEX_PATTERN.test(raw)) {
-    throw new BadRequestException(`Step index must be a whole number, got "${raw}"`);
+// Strict step-key parse for the step-lock routes: only stable catalog keys are
+// accepted (assessment, discernment, …). The range of *known* keys stays with
+// the service, which owns the message.
+const STEP_KEY_PATTERN = /^[a-z_]+$/;
+function parseStepKey(raw: string): string {
+  if (!STEP_KEY_PATTERN.test(raw)) {
+    throw new BadRequestException(`Step key must be a lowercase key, got "${raw}"`);
   }
-  return Number(raw);
+  return raw;
 }
 
 import {
   CreateCaseSchema, UpdateStatusSchema, ApproveCaseSchema,
   UpdateDocumentsSchema, OverrideStatusSchema, DisburseSchema, RejectCaseSchema,
   AssessmentV2Schema, TransitionPlanSchema, RequirementsSchema, ClosureSchema,
-  ReferralDecisionSchema,
+  ReferralDecisionSchema, DiscernmentSchema, ProtectionOrderSchema, SoloParentSchema,
+  AdoptionSchema, CaseMetaSchema,
   CreateCaseInput, ApproveCaseInput, OverrideStatusInput, DisburseInput, AssessmentV2Input,
   TransitionPlanInput, RequirementsInput, ClosureInput, ReferralDecisionInput,
+  DiscernmentInput, ProtectionOrderInput, SoloParentInput, AdoptionInput, CaseMetaInput,
 } from './dto/cases.zod';
 
 @ApiTags('Cases')
@@ -191,7 +190,7 @@ export class CasesController {
     @Body(new ZodPipe(AssessmentV2Schema)) body: AssessmentV2Input,
     @Request() req: AuthenticatedRequest,
   ) {
-    await this.stepLocks.assertUnsealed(id, 0);
+    await this.stepLocks.assertUnsealed(id, 'assessment');
     return this.casesService.updateAssessmentV2(id, body, req.user?.id);
   }
 
@@ -206,7 +205,7 @@ export class CasesController {
     // writes step 4's self-reliance assessment and also the case's follow-up
     // visits, and only the former is what step 4's seal claims. See
     // `CASE_STEP_UNGUARDED_FIELDS`.
-    await this.stepLocks.assertUnsealed(id, 3, body);
+    await this.stepLocks.assertUnsealed(id, 'evaluate', body);
     return this.casesService.updateTransitionPlan(id, body, req.user?.id);
   }
 
@@ -216,7 +215,7 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(RequirementsSchema)) body: RequirementsInput,
   ) {
-    await this.stepLocks.assertUnsealed(id, 1);
+    await this.stepLocks.assertUnsealed(id, 'interventions');
     return this.casesService.updateRequirements(id, body);
   }
 
@@ -227,7 +226,7 @@ export class CasesController {
     @Body(new ZodPipe(ClosureSchema)) body: ClosureInput,
     @Request() req: AuthenticatedRequest,
   ) {
-    await this.stepLocks.assertUnsealed(id, 4);
+    await this.stepLocks.assertUnsealed(id, 'closure');
     return this.casesService.updateClosure(id, body, req.user?.role);
   }
 
@@ -237,7 +236,7 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
   ) {
-    await this.stepLocks.assertUnsealed(id, 2);
+    await this.stepLocks.assertUnsealed(id, 'referrals');
     return this.casesService.updateReferralDecision(id, body.notNeeded);
   }
 
@@ -247,8 +246,72 @@ export class CasesController {
     @Param('id') id: string,
     @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
   ) {
-    await this.stepLocks.assertUnsealed(id, 1);
+    await this.stepLocks.assertUnsealed(id, 'interventions');
     return this.casesService.updateInterventionDecision(id, body.notNeeded);
+  }
+
+  @Patch(':id/enrollments-decision')
+  @Roles('admin', 'social_worker')
+  async updateEnrollmentsDecision(
+    @Param('id') id: string,
+    @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
+  ) {
+    await this.stepLocks.assertUnsealed(id, 'enrollments');
+    return this.casesService.updateEnrollmentsDecision(id, body.notNeeded);
+  }
+
+  @Patch(':id/discernment')
+  @Roles('admin', 'social_worker')
+  async updateDiscernment(
+    @Param('id') id: string,
+    @Body(new ZodPipe(DiscernmentSchema)) body: DiscernmentInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    await this.stepLocks.assertUnsealed(id, 'discernment');
+    return this.casesService.updateDiscernment(id, body, req.user?.id);
+  }
+
+  @Patch(':id/protection-order')
+  @Roles('admin', 'social_worker')
+  async updateProtectionOrder(
+    @Param('id') id: string,
+    @Body(new ZodPipe(ProtectionOrderSchema)) body: ProtectionOrderInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    await this.stepLocks.assertUnsealed(id, 'protection_order');
+    return this.casesService.updateProtectionOrder(id, body, req.user?.id);
+  }
+
+  @Patch(':id/solo-parent')
+  @Roles('admin', 'social_worker')
+  async updateSoloParent(
+    @Param('id') id: string,
+    @Body(new ZodPipe(SoloParentSchema)) body: SoloParentInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    await this.stepLocks.assertUnsealed(id, 'solo_parent');
+    return this.casesService.updateSoloParent(id, body, req.user?.id);
+  }
+
+  @Patch(':id/adoption')
+  @Roles('admin', 'social_worker')
+  async updateAdoption(
+    @Param('id') id: string,
+    @Body(new ZodPipe(AdoptionSchema)) body: AdoptionInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    await this.stepLocks.assertUnsealed(id, 'adoption');
+    return this.casesService.updateAdoption(id, body, req.user?.id);
+  }
+
+  @Patch(':id/meta')
+  @Roles('admin', 'social_worker')
+  async updateMeta(
+    @Param('id') id: string,
+    @Body(new ZodPipe(CaseMetaSchema)) body: CaseMetaInput,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.casesService.updateCaseMeta(id, body, req.user?.id);
   }
 
   // Each step-field write above opens with `assertUnsealed(id, step)`, naming the
@@ -265,27 +328,27 @@ export class CasesController {
   // Sealing a step is reversible by the same two roles, so both verbs sit
   // together. The service re-derives whether the step is done; the client is
   // never asked to vouch for it.
-  @Post(':id/steps/:stepIndex/lock')
+  @Post(':id/steps/:step/lock')
   @Roles('admin', 'social_worker')
   @HttpCode(201)
   @ApiOperation({ summary: 'Seal a completed case step' })
   async lockStep(
     @Param('id') id: string,
-    @Param('stepIndex') stepIndex: string,
+    @Param('step') step: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.stepLocks.lock(id, parseStepIndex(stepIndex), req.user);
+    return this.stepLocks.lock(id, parseStepKey(step), req.user);
   }
 
-  @Delete(':id/steps/:stepIndex/lock')
+  @Delete(':id/steps/:step/lock')
   @Roles('admin', 'social_worker')
   @ApiOperation({ summary: 'Release a sealed case step' })
   async unlockStep(
     @Param('id') id: string,
-    @Param('stepIndex') stepIndex: string,
+    @Param('step') step: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    await this.stepLocks.unlock(id, parseStepIndex(stepIndex), req.user);
+    await this.stepLocks.unlock(id, parseStepKey(step), req.user);
     return { ok: true };
   }
 

@@ -171,10 +171,50 @@ export const ReferralDecisionSchema = z.object({
   notNeeded: z.boolean(),
 });
 
+// Category-step payloads (spec §5). Each is accepted only for the case
+// category whose template carries the step — the service rejects others.
+const dateOrEmpty = () =>
+  z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional());
+
+export const DiscernmentSchema = z.object({
+  discernmentAssessedAt: dateOrEmpty(),
+  discernmentResult: z.enum(['discerned', 'not_discerned']).optional(),
+  discernmentNotes: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+}).refine(d => d.discernmentAssessedAt || d.discernmentResult || d.discernmentNotes, { message: 'nothing to save' });
+
+export const ProtectionOrderSchema = z.object({
+  protectionOrderType: z.enum(['Barangay Protection Order (BPO)', 'Temporary Protection Order (TPO)', 'Permanent Protection Order (PPO)']).optional(),
+  protectionOrderIssuedAt: dateOrEmpty(),
+  protectionOrderIssuedBy: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+  protectionOrderNotes: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+}).refine(d => d.protectionOrderType || d.protectionOrderIssuedAt || d.protectionOrderIssuedBy || d.protectionOrderNotes, { message: 'nothing to save' });
+
+export const SoloParentSchema = z.object({
+  soloParentIdIssuedDate: dateOrEmpty(),
+  soloParentIdNumber: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+  soloParentNotes: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+}).refine(d => d.soloParentIdIssuedDate || d.soloParentIdNumber || d.soloParentNotes, { message: 'nothing to save' });
+
+export const AdoptionSchema = z.object({
+  adoptionDvcDate: dateOrEmpty(),
+  adoptionCaseStudyDate: dateOrEmpty(),
+  adoptionCdclaaReceived: z.boolean().optional(),
+  adoptionNotes: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+}).refine(d => d.adoptionDvcDate || d.adoptionCaseStudyDate || d.adoptionCdclaaReceived !== undefined || d.adoptionNotes, { message: 'nothing to save' });
+
+export const CaseMetaSchema = z.object({
+  courtDocketNumber: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+});
+
 export type TransitionPlanInput = z.infer<typeof TransitionPlanSchema>;
 export type RequirementsInput = z.infer<typeof RequirementsSchema>;
 export type ReferralDecisionInput = z.infer<typeof ReferralDecisionSchema>;
 export type AssessmentV2Input = z.infer<typeof AssessmentV2Schema>;
+export type DiscernmentInput = z.infer<typeof DiscernmentSchema>;
+export type ProtectionOrderInput = z.infer<typeof ProtectionOrderSchema>;
+export type SoloParentInput = z.infer<typeof SoloParentSchema>;
+export type AdoptionInput = z.infer<typeof AdoptionSchema>;
+export type CaseMetaInput = z.infer<typeof CaseMetaSchema>;
 export type ClosureInput = z.infer<typeof ClosureSchema>;
 
 export const BulkExportSchema = z.object({

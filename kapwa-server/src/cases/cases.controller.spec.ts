@@ -20,6 +20,12 @@ describe('CasesController step-lock routes', () => {
     updateClosure: jest.fn(),
     updateReferralDecision: jest.fn(),
     updateInterventionDecision: jest.fn(),
+    updateEnrollmentsDecision: jest.fn(),
+    updateDiscernment: jest.fn(),
+    updateProtectionOrder: jest.fn(),
+    updateSoloParent: jest.fn(),
+    updateAdoption: jest.fn(),
+    updateCaseMeta: jest.fn(),
   };
   const stepLocks = {
     lock: jest.fn(),
@@ -52,29 +58,30 @@ describe('CasesController step-lock routes', () => {
     ctrl = module.get(CasesController);
   });
 
-  // The route is the boundary where a step index becomes a number, and it is
-  // the only place `parseInt`-style truncation could silently seal a *different*
-  // step than the caller named: `1.5` truncates to 1. The service rejects a
-  // non-integer, but the route can never hand it one, so this is asserted here.
-  describe('step index parsing', () => {
-    it('passes a plain integer through unchanged', async () => {
-      stepLocks.lock.mockResolvedValue({ stepIndex: 3 });
-      await ctrl.lockStep('c1', '3', req);
-      expect(stepLocks.lock).toHaveBeenCalledWith('c1', 3, req.user);
+  // The route is the boundary where a step key becomes the string param the
+  // service validates, and it is the only place a malformed key could be lost:
+  // keys are lowercase snake identifiers, and anything else is refused here so
+  // URLs like `steps/1.5/lock` fail loudly instead of reaching the service.
+  describe('step key parsing', () => {
+    it('passes a plain key through unchanged', async () => {
+      stepLocks.lock.mockResolvedValue({ stepKey: 'referrals' });
+      await ctrl.lockStep('c1', 'referrals', req);
+      expect(stepLocks.lock).toHaveBeenCalledWith('c1', 'referrals', req.user);
     });
 
     it.each([
       ['1.5', 'a fractional index'],
-      ['0.0', 'a zero-valued fraction'],
+      ['3', 'a numeric-looking key'],
       ['2abc', 'trailing garbage'],
-      ['abc', 'a non-numeric index'],
+      ['Assessment', 'an uppercase key'],
       ['-1', 'a negative index'],
       ['+1', 'a signed index'],
       ['1e0', 'exponent notation'],
       [' 1', 'a leading space'],
       ['0x2', 'hex notation'],
-      ['', 'an empty index'],
-    ])('rejects %p (%s) instead of truncating it into a valid step', async (raw) => {
+      ['', 'an empty key'],
+      ['UnderScore', 'an uppercase key'],
+    ])('rejects %p (%s) instead of passing it through', async (raw) => {
       // Whichever step a lenient parse would have produced, nothing is sealed.
       await expect(ctrl.lockStep('c1', raw, req)).rejects.toBeInstanceOf(BadRequestException);
       expect(stepLocks.lock).not.toHaveBeenCalled();
@@ -87,21 +94,21 @@ describe('CasesController step-lock routes', () => {
     // the client was checking, and the response would look like a success.
     it('does not turn a fractional index into the step below it', async () => {
       await expect(ctrl.lockStep('c1', '1.5', req)).rejects.toBeInstanceOf(BadRequestException);
-      expect(stepLocks.lock).not.toHaveBeenCalledWith('c1', 1, expect.anything());
+      expect(stepLocks.lock).not.toHaveBeenCalledWith('c1', 'interventions', expect.anything());
     });
 
-    it('lets the service own the range check for a well-formed but unknown index', async () => {
-      // '7' is an integer, so the route must not pre-empt the service's own
-      // 0..4 validation — that message names the allowed range.
-      stepLocks.lock.mockRejectedValue(new BadRequestException('Unknown step 7 — expected 0..4'));
-      await expect(ctrl.lockStep('c1', '7', req)).rejects.toThrow(/expected 0\.\.4/);
-      expect(stepLocks.lock).toHaveBeenCalledWith('c1', 7, req.user);
+    it('lets the service own the catalog check for a well-formed but unknown key', async () => {
+      // 'bogus' matches the key pattern, so the route must not pre-empt the
+      // service's own catalog validation — that message names the allowed keys.
+      stepLocks.lock.mockRejectedValue(new BadRequestException('Unknown step "bogus" — expected one of: assessment, …'));
+      await expect(ctrl.lockStep('c1', 'bogus', req)).rejects.toThrow(/Unknown step/);
+      expect(stepLocks.lock).toHaveBeenCalledWith('c1', 'bogus', req.user);
     });
 
     it('returns ok after a release', async () => {
       stepLocks.unlock.mockResolvedValue(undefined);
-      await expect(ctrl.unlockStep('c1', '2', req)).resolves.toEqual({ ok: true });
-      expect(stepLocks.unlock).toHaveBeenCalledWith('c1', 2, req.user);
+      await expect(ctrl.unlockStep('c1', 'referrals', req)).resolves.toEqual({ ok: true });
+      expect(stepLocks.unlock).toHaveBeenCalledWith('c1', 'referrals', req.user);
     });
   });
 
@@ -120,23 +127,24 @@ describe('CasesController step-lock routes', () => {
       stepLocks.assertUnsealed.mockResolvedValue(undefined);
     });
 
-    const CASES: Array<[string, number, () => Promise<unknown>]> = [
-      ['assessment', 0, () => ctrl.updateAssessment('c1', {} as any, req)],
-      ['requirements', 1, () => ctrl.updateRequirements('c1', {} as any)],
-      ['intervention-decision', 1, () => ctrl.updateInterventionDecision('c1', { notNeeded: true })],
-      ['referral-decision', 2, () => ctrl.updateReferralDecision('c1', { notNeeded: true })],
-      ['transition-plan', 3, () => ctrl.updateTransitionPlan('c1', {} as any, req)],
-      ['closure', 4, () => ctrl.updateClosure('c1', {} as any, req)],
+    const CASES: Array<[string, string, () => Promise<unknown>]> = [
+      ['assessment', 'assessment', () => ctrl.updateAssessment('c1', {} as any, req)],
+      ['requirements', 'interventions', () => ctrl.updateRequirements('c1', {} as any)],
+      ['intervention-decision', 'interventions', () => ctrl.updateInterventionDecision('c1', { notNeeded: true })],
+      ['referral-decision', 'referrals', () => ctrl.updateReferralDecision('c1', { notNeeded: true })],
+      ['enrollments-decision', 'enrollments', () => ctrl.updateEnrollmentsDecision('c1', { notNeeded: true })],
+      ['transition-plan', 'evaluate', () => ctrl.updateTransitionPlan('c1', {} as any, req)],
+      ['closure', 'closure', () => ctrl.updateClosure('c1', {} as any, req)],
     ];
 
-    it.each(CASES)('checks the seal of step for %s', async (route, stepIndex, call) => {
+    it.each(CASES)('checks the seal of step for %s', async (route, stepKey, call) => {
       await call();
 
       // `transition-plan` is the one route that hands the guard its body, so that
       // the guard can tell a visits-only write from one that moves the assessment.
       // Asserting the whole call for that route is what pins it; the rest pass no
-      // body and are asserted on `(caseId, stepIndex)` alone.
-      const expectedArgs = route === 'transition-plan' ? ['c1', 3, {}] : ['c1', stepIndex];
+      // body and are asserted on `(caseId, stepKey)` alone.
+      const expectedArgs = route === 'transition-plan' ? ['c1', 'evaluate', {}] : ['c1', stepKey];
       expect(stepLocks.assertUnsealed.mock.calls.at(-1)?.slice(0, expectedArgs.length)).toEqual(expectedArgs);
     });
 
@@ -154,7 +162,7 @@ describe('CasesController step-lock routes', () => {
 
       await ctrl.updateTransitionPlan('c1', body as any, req);
 
-      expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 3, body);
+      expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'evaluate', body);
       // …and the write still happened, so the guard let it through rather than the
       // route skipping the save.
       expect(cases.updateTransitionPlan).toHaveBeenCalledWith('c1', body, req.user?.id);

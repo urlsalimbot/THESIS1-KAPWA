@@ -13,6 +13,15 @@ export class CaseIntervention extends BaseEntity {
   @Column({ name: 'service_name' })
   serviceName!: string;
 
+  // Typed service from the intervention catalog (spec §4.4); NULL on legacy
+  // rows created before typing existed — they render as "uncatalogued".
+  @Column({ name: 'intervention_type', nullable: true })
+  interventionType?: string;
+
+  // The program enrollment the service was delivered under (optional).
+  @Column({ name: 'program_enrollment_id', type: 'uuid', nullable: true })
+  programEnrollmentId?: string;
+
   @Column({ nullable: true })
   category?: string;
 

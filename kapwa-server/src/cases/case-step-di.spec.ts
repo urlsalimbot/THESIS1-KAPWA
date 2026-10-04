@@ -64,13 +64,14 @@ describe('cases step-locks require graph', () => {
       param: unknown;
     }>;
 
-  /** The four `{ index, token }` pairs the locks service's repositories must carry. */
+  /** The five `{ index, token }` pairs the locks service's repositories must carry. */
   const expectedRepoDeps = () => {
     const { CaseStepLock } = require('./case-step-lock.entity');
     const { CaseIntervention } = require('../case-interventions/case-intervention.entity');
     const { Program } = require('../programs/program.entity');
-    // Step 2's referral count. `InterAgencyReferral` is registered in
-    // `cases.module.ts` forFeature like the other two, so it must be named here
+    const { ProgramEnrollment } = require('../case-enrollments/program-enrollment.entity');
+    // The referrals step's count. `InterAgencyReferral` is registered in
+    // `cases.module.ts` forFeature like the others, so it must be named here
     // too: an unregistered repository parameter is invisible in
     // `design:paramtypes` and only fails at bootstrap.
     const { InterAgencyReferral } = require('../inter-agency-referrals/inter-agency-referral.entity');
@@ -78,18 +79,20 @@ describe('cases step-locks require graph', () => {
       { index: 0, param: getRepositoryToken(CaseStepLock) },
       { index: 2, param: getRepositoryToken(CaseIntervention) },
       { index: 3, param: getRepositoryToken(Program) },
-      { index: 4, param: getRepositoryToken(InterAgencyReferral) },
+      { index: 4, param: getRepositoryToken(ProgramEnrollment) },
+      { index: 5, param: getRepositoryToken(InterAgencyReferral) },
     ];
   };
 
   /**
    * Constructor order, stated once. (lockRepo, cases, interventions, programs,
-   * interAgencyReferrals, auditLog) — the repository indexes and the audit-log
-   * index, which the audit log must stay last at because it is `@Optional()`.
+   * enrollments, interAgencyReferrals, auditLog) — the repository indexes and
+   * the audit-log index, which the audit log must stay last at because it is
+   * `@Optional()`.
    */
-  const REPO_INDEXES = [0, 2, 3, 4];
-  const PARAM_COUNT = 6;
-  const AUDIT_INDEX = 5;
+  const REPO_INDEXES = [0, 2, 3, 4, 5];
+  const PARAM_COUNT = 7;
+  const AUDIT_INDEX = 6;
 
   /**
    * The order `AppModule` gives: the cases module pulls in `cases.service`

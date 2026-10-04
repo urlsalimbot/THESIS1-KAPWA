@@ -4,12 +4,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { CaseStepLocksService, CASE_STEP_LABELS, CASE_STEP_UNGUARDED_FIELDS } from './case-step-locks.service';
+import { COMMON_STEPS } from './case-step-labels';
 import { CaseStepLock } from './case-step-lock.entity';
 import { CasesService } from './cases.service';
 import { CasesExportService } from './cases-export.service';
 import { Case } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
+import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity';
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { Program } from '../programs/program.entity';
 import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
@@ -21,30 +23,32 @@ import { User } from '../auth/user.entity';
 
 interface DoneFixtureCase {
   name: string;
-  step: number;
+  step: string;
   caseData: Record<string, unknown>;
   interventionCount: number;
+  enrollmentCount?: number;
   opts: {
     requirementsMet?: boolean;
     referralNotNeeded?: boolean;
     interventionNotNeeded?: boolean;
+    enrollmentsNotNeeded?: boolean;
     /**
-     * How many `inter_agency_referrals` rows the case has — what step 2 counts
-     * as "a referral is issued". Declared here rather than inferred from
-     * `caseData.referrals` because `Case.referrals` is the *transition plan's*
-     * agency list over `case_referrals`, a different table the referral letter
-     * never writes; an entry that put them in `caseData` would be asserting a
-     * rule the predicate no longer has.
+     * How many `inter_agency_referrals` rows the case has — what the referrals
+     * step counts as "a referral is issued". Declared here rather than inferred
+     * from `caseData.referrals` because `Case.referrals` is the *transition
+     * plan's* agency list over `case_referrals`, a different table the referral
+     * letter never writes; an entry that put them in `caseData` would be
+     * asserting a rule the predicate no longer has.
      */
     interAgencyReferralCount?: number;
   };
   /**
-   * The server-facing inputs for step 1's requirements branch: which programs
-   * the case's interventions name, what documents those programs require, and
-   * the `case_requirements` rows behind the checklist. `opts.requirementsMet`
-   * stays the *given* the client consumes; these fields are the shape the server
-   * re-derives it from, and the two must agree — see "the given and the
-   * declared inputs describe the same step".
+   * The server-facing inputs for the interventions step's requirements branch:
+   * which programs the case's interventions name, what documents those programs
+   * require, and the `case_requirements` rows behind the checklist.
+   * `opts.requirementsMet` stays the *given* the client consumes; these fields
+   * are the shape the server re-derives it from, and the two must agree — see
+   * "the given and the declared inputs describe the same step".
    */
   requirements?: {
     interventionProgramIds: Array<string | null>;
@@ -67,11 +71,11 @@ const FIXTURE: DoneFixtureCase[] = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')
 /**
  * Translate one fixture case into the `Case` shape `findById` returns.
  *
- * The fixture states the three progress flags in the client's `opts` form.
+ * The fixture states the progress flags in the client's `opts` form.
  * Server-side each one is a column on the case instead, so the flag is
  * rendered as the column that produces it: `requirementsMet` as a
  * `requirementsChecklist` whose entries are all met (or one that is not), and
- * the two recorded decisions as their boolean columns. `caseData` is already
+ * the recorded decisions as their boolean columns. `caseData` is already
  * keyed on the `Case` field and getter names, so it passes through as-is.
  *
  * A case that declares `requirements` uses that case's own checklist, because
@@ -80,7 +84,7 @@ const FIXTURE: DoneFixtureCase[] = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')
  * checklist of three documents or a stray entry belonging to no program.
  */
 function caseFor(fx: DoneFixtureCase): Partial<Case> {
-  const { requirementsMet, referralNotNeeded, interventionNotNeeded } = fx.opts;
+  const { requirementsMet, referralNotNeeded, interventionNotNeeded, enrollmentsNotNeeded } = fx.opts;
   return {
     id: 'c1',
     ...fx.caseData,
@@ -91,6 +95,7 @@ function caseFor(fx: DoneFixtureCase): Partial<Case> {
       : { requirementsChecklist: fx.requirements?.checklist ?? { 'Valid ID': requirementsMet } }),
     ...(referralNotNeeded === undefined ? {} : { referralNotNeeded }),
     ...(interventionNotNeeded === undefined ? {} : { interventionNotNeeded }),
+    ...(enrollmentsNotNeeded === undefined ? {} : { enrollmentsNotNeeded }),
   } as unknown as Partial<Case>;
 }
 
@@ -121,6 +126,7 @@ describe('CaseStepLocksService', () => {
   let lockRepo: any;
   let programRepo: { find: jest.Mock };
   let interventionRepo: { query: jest.Mock };
+  let enrollmentRepo: { count: jest.Mock };
   let auditLog: { log: jest.Mock };
 
   const swUser = {
@@ -132,29 +138,36 @@ describe('CaseStepLocksService', () => {
     firstName: 'Lorna', middleName: 'B.', lastName: 'Santos', nameExtension: null,
   } as unknown as User;
 
-  // Step 0 is done only when problemsPresented and clientCategory are both set,
-  // so an empty case is the cheapest way to make a step not-done.
+  // The assessment step is done only when problemsPresented,
+  // socialWorkerAssessment, clientCategory and caseCategory are all set, so an
+  // empty case is the cheapest way to make a step not-done.
   const notDoneCase = { id: 'c1', status: 'enrolled' } as unknown as Case;
-  const doneCase = { id: 'c1', status: 'enrolled', problemsPresented: 'a', clientCategory: 'b' } as unknown as Case;
+  const doneCase = {
+    id: 'c1', status: 'enrolled',
+    problemsPresented: 'a', clientCategory: 'b', socialWorkerAssessment: 'c', caseCategory: 'd',
+  } as unknown as Case;
 
   const findById = jest.fn();
   const interventionCount = jest.fn().mockResolvedValue(0);
-  // The `inter_agency_referrals` count step 2 reads. Stubbed on the repository
-  // rather than the case, because the rows live in their own table — a stub that
-  // answered off `findById` would let a predicate reading `case.referrals` pass.
+  // The `inter_agency_referrals` count the referrals step reads. Stubbed on the
+  // repository rather than the case, because the rows live in their own table —
+  // a stub that answered off `findById` would let a predicate reading
+  // `case.referrals` pass.
   const referralCount = jest.fn().mockResolvedValue(0);
-  // The step-1 requirement inputs: which programs the case's interventions
-  // name, and what those programs require. Both default to "no program imposes
-  // anything", which is what an intervention with a null `program_id` looks
-  // like — the client reads that as nothing outstanding too.
+  // The interventions-step requirement inputs: which programs the case's
+  // interventions name, and what those programs require. Both default to "no
+  // program imposes anything", which is what an intervention with a null
+  // `program_id` looks like — the client reads that as nothing outstanding too.
   const interventionQuery = jest.fn().mockResolvedValue([]);
   const programFind = jest.fn().mockResolvedValue([]);
+  // The program_enrollments count the enrollments step reads.
+  const enrollmentCount = jest.fn().mockResolvedValue(0);
 
   /**
-   * Stand in for the two queries step 1 makes against the case's programs. A
-   * fixture case that declares no `requirements` falls back to "no program
-   * imposes anything", so a case that never had programs keeps its meaning
-   * without having to declare a program to say so.
+   * Stand in for the two queries the interventions step makes against the
+   * case's programs. A fixture case that declares no `requirements` falls back
+   * to "no program imposes anything", so a case that never had programs keeps
+   * its meaning without having to declare a program to say so.
    */
   const stubRequirementInputs = (fx: DoneFixtureCase) => {
     const req = fx.requirements;
@@ -165,16 +178,17 @@ describe('CaseStepLocksService', () => {
   };
 
   /**
-   * Step 2's inputs. An absent `interAgencyReferralCount` means zero referrals,
-   * which is also what the stub's own default says — so an entry that forgets to
-   * declare a referral is asserting "none issued", which is what it means.
+   * The referrals step's inputs. An absent `interAgencyReferralCount` means zero
+   * referrals, which is also what the stub's own default says — so an entry
+   * that forgets to declare a referral is asserting "none issued", which is
+   * what it means.
    */
   const stubReferralInputs = (fx: DoneFixtureCase) => {
     referralCount.mockResolvedValue(fx.opts.interAgencyReferralCount ?? 0);
   };
 
-  /** Step 1 on an enrolled case: status-independent, so the checklist decides. */
-  const step1Case = (checklist: Record<string, boolean> | undefined) =>
+  /** The interventions step on an enrolled case: floor 0, so the checklist decides. */
+  const stepInterventionsCase = (checklist: Record<string, boolean> | undefined) =>
     ({ id: 'c1', status: 'enrolled', requirementsChecklist: checklist } as unknown as Case);
 
   beforeEach(async () => {
@@ -182,10 +196,12 @@ describe('CaseStepLocksService', () => {
     findById.mockResolvedValue(notDoneCase);
     interventionCount.mockResolvedValue(0);
     referralCount.mockResolvedValue(0);
+    enrollmentCount.mockResolvedValue(0);
     interventionQuery.mockResolvedValue([]);
     programFind.mockResolvedValue([]);
     interventionRepo = { query: interventionQuery };
     programRepo = { find: programFind };
+    enrollmentRepo = { count: enrollmentCount };
 
     // The insert half of the upsert: every builder call returns itself, and
     // `execute` hands back the row Postgres would have returned.
@@ -204,7 +220,7 @@ describe('CaseStepLocksService', () => {
           raw: [{
             id: 'row-1',
             case_id: v.caseId,
-            step_index: v.stepIndex,
+            step_key: v.stepKey,
             locked_by: v.lockedBy,
             locked_by_name: v.lockedByName,
             locked_at: new Date('2026-10-01'),
@@ -238,6 +254,7 @@ describe('CaseStepLocksService', () => {
         { provide: getRepositoryToken(CaseStepLock), useValue: lockRepo },
         { provide: getRepositoryToken(Program), useValue: programRepo },
         { provide: getRepositoryToken(CaseIntervention), useValue: interventionRepo },
+        { provide: getRepositoryToken(ProgramEnrollment), useValue: enrollmentRepo },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepo },
       ],
     }).compile();
@@ -251,29 +268,30 @@ describe('CaseStepLocksService', () => {
 
   it('rejects locking a step that is not done, naming the predicate', async () => {
     findById.mockResolvedValue(notDoneCase);
-    await expect(service.lock('c1', 0, swUser)).rejects.toThrow(BadRequestException);
-    await expect(service.lock('c1', 0, swUser)).rejects.toThrow(/not complete/i);
+    await expect(service.lock('c1', 'assessment', swUser)).rejects.toThrow(BadRequestException);
+    await expect(service.lock('c1', 'assessment', swUser)).rejects.toThrow(/not complete/i);
     // The rejection happens before any write.
     expect(lockRepo.save).not.toHaveBeenCalled();
+    expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
   });
 
   it('locks a done step and snapshots the locker name', async () => {
     findById.mockResolvedValue(doneCase);
-    const saved = await service.lock('c1', 0, swUser);
-    expect(saved.stepIndex).toBe(0);
+    const saved = await service.lock('c1', 'assessment', swUser);
+    expect(saved.stepKey).toBe('assessment');
     expect(saved.lockedBy).toBe('u1');
     expect(saved.lockedByName).toBe('Juan Dela Cruz');
   });
 
   it('is idempotent when the same step is locked twice', async () => {
     findById.mockResolvedValue(doneCase);
-    const first = await service.lock('c1', 0, swUser);
-    const again = await service.lock('c1', 0, otherSwUser);
+    const first = await service.lock('c1', 'assessment', swUser);
+    const again = await service.lock('c1', 'assessment', otherSwUser);
     expect(again.lockedByName).toBe('Lorna B. Santos');
     expect(again.lockedBy).toBe('u2');
-    expect(again.stepIndex).toBe(0);
+    expect(again.stepKey).toBe('assessment');
     // A second seal of the same step is one upsert, not an insert that would
-    // violate uq_case_step_locks_case_step.
+    // violate uq_case_step_locks_case_step_key.
     expect(lockRepo.insertQb.execute).toHaveBeenCalledTimes(2);
     expect(lockRepo.save).not.toHaveBeenCalled();
     expect(first).toBeDefined();
@@ -284,21 +302,20 @@ describe('CaseStepLocksService', () => {
   // the (case, step) unique key, and the seal timestamp left alone so the row
   // keeps the moment of the *first* seal.
   it('seals with a single atomic upsert rather than a read-then-write', async () => {
-    findById.mockResolvedValue(doneCase);
-    // Step 2 (Inter-agency Referrals) needs a referral to be done at all, and a
-    // referral is an `inter_agency_referrals` row.
     findById.mockResolvedValue({ id: 'c1', status: 'active' } as unknown as Case);
+    // The referrals step needs a referral to be done at all, and a referral is
+    // an `inter_agency_referrals` row.
     referralCount.mockResolvedValue(1);
-    await service.lock('c1', 2, swUser);
+    await service.lock('c1', 'referrals', swUser);
     expect(lockRepo.findOne).not.toHaveBeenCalled();
     expect(lockRepo.insertQb.insert).toHaveBeenCalled();
     expect(lockRepo.insertQb.into).toHaveBeenCalledWith(CaseStepLock);
     expect(lockRepo.insertQb.values).toHaveBeenCalledWith({
-      caseId: 'c1', stepIndex: 2, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz',
+      caseId: 'c1', stepKey: 'referrals', lockedBy: 'u1', lockedByName: 'Juan Dela Cruz',
     });
     expect(lockRepo.insertQb.orUpdate).toHaveBeenCalledWith(
       ['locked_by', 'locked_by_name'],
-      ['case_id', 'step_index'],
+      ['case_id', 'step_key'],
     );
     // locked_at is deliberately absent: overwriting it would reset the seal
     // time on every re-seal.
@@ -307,73 +324,82 @@ describe('CaseStepLocksService', () => {
 
   it('unlocks only the named step', async () => {
     findById.mockResolvedValue(doneCase);
-    await service.lock('c1', 0, swUser);
-    await service.unlock('c1', 0, swUser);
-    expect(lockRepo.delete).toHaveBeenCalledWith({ caseId: 'c1', stepIndex: 0 });
+    await service.lock('c1', 'assessment', swUser);
+    await service.unlock('c1', 'assessment', swUser);
+    expect(lockRepo.delete).toHaveBeenCalledWith({ caseId: 'c1', stepKey: 'assessment' });
   });
 
   /**
-   * A release is one `DELETE ... WHERE case_id = ? AND step_index = ?`, so a
+   * A release is one `DELETE ... WHERE case_id = ? AND step_key = ?`, so a
    * concurrent seal cannot be undone by a read that saw the old state — and a
    * concurrent release cannot be lost by two callers both deciding to proceed.
    * A read-then-delete would reintroduce both. This is the same reasoning as
    * `lock`'s upsert, and it is why neither method reads the row it writes.
    */
   it('releases in one statement, never reading the row it deletes', async () => {
-    findById.mockResolvedValue(doneCase);
-    await service.unlock('c1', 2, swUser);
+    await service.unlock('c1', 'closure', swUser);
 
     expect(lockRepo.delete).toHaveBeenCalledTimes(1);
-    expect(lockRepo.delete).toHaveBeenCalledWith({ caseId: 'c1', stepIndex: 2 });
+    expect(lockRepo.delete).toHaveBeenCalledWith({ caseId: 'c1', stepKey: 'closure' });
     expect(lockRepo.findOne).not.toHaveBeenCalled();
     expect(lockRepo.find).not.toHaveBeenCalled();
   });
 
-  it('rejects a step index outside 0..4', async () => {
-    await expect(service.lock('c1', 7, swUser)).rejects.toThrow(BadRequestException);
-    await expect(service.lock('c1', -1, swUser)).rejects.toThrow(BadRequestException);
-    await expect(service.lock('c1', 1.5, swUser)).rejects.toThrow(BadRequestException);
-    // A bad index never reaches the case lookup.
+  it('rejects an unknown step key', async () => {
+    await expect(service.lock('c1', '7', swUser)).rejects.toThrow(BadRequestException);
+    await expect(service.lock('c1', 'not-a-step', swUser)).rejects.toThrow(BadRequestException);
+    await expect(service.lock('c1', '', swUser)).rejects.toThrow(BadRequestException);
+    // A bad key never reaches the case lookup.
     expect(findById).not.toHaveBeenCalled();
   });
 
+  it('rejects a step that is not part of the case template', async () => {
+    // A common-template case (no category) has no discernment step.
+    findById.mockResolvedValue(notDoneCase);
+    await expect(service.lock('c1', 'discernment', swUser)).rejects.toThrow(BadRequestException);
+    await expect(service.lock('c1', 'discernment', swUser)).rejects.toThrow(/template/i);
+  });
+
   it('names every step so an error message cannot spell one step two ways', () => {
-    expect(Object.keys(CASE_STEP_LABELS).map(Number).sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4]);
-    for (const [index, label] of Object.entries(CASE_STEP_LABELS)) {
+    expect(Object.keys(CASE_STEP_LABELS).sort()).toEqual(
+      ['adoption', 'assessment', 'closure', 'discernment', 'enrollments', 'evaluate',
+        'interventions', 'protection_order', 'referrals', 'solo_parent'],
+    );
+    for (const [key, label] of Object.entries(CASE_STEP_LABELS)) {
       expect(typeof label).toBe('string');
       expect((label as string).length).toBeGreaterThan(0);
       // The lock rejection names the step by this label, so a blank or
       // missing entry would surface as `"" is not complete yet`.
-      expect(index).toMatch(/^[0-4]$/);
+      expect(key).toMatch(/^[a-z_]+$/);
     }
   });
 
   it('records an audit entry for both a seal and a release', async () => {
     findById.mockResolvedValue(doneCase);
-    await service.lock('c1', 0, swUser);
-    expect(auditLog.log).toHaveBeenCalledWith('case.step_lock', 'c1', 'u1', { stepIndex: 0 });
-    await service.unlock('c1', 0, swUser);
-    expect(auditLog.log).toHaveBeenCalledWith('case.step_unlock', 'c1', 'u1', { stepIndex: 0 });
+    await service.lock('c1', 'assessment', swUser);
+    expect(auditLog.log).toHaveBeenCalledWith('case.step_lock', 'c1', 'u1', { stepKey: 'assessment' });
+    await service.unlock('c1', 'assessment', swUser);
+    expect(auditLog.log).toHaveBeenCalledWith('case.step_unlock', 'c1', 'u1', { stepKey: 'assessment' });
   });
 
   describe('assertUnsealed', () => {
     it('passes when the step carries no seal', async () => {
       lockRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.assertUnsealed('c1', 0)).resolves.toBeUndefined();
+      await expect(service.assertUnsealed('c1', 'assessment')).resolves.toBeUndefined();
     });
 
     it('refuses when the step is sealed, naming the step and who sealed it', async () => {
       lockRepo.findOne.mockResolvedValue({
-        caseId: 'c1', stepIndex: 0, lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+        caseId: 'c1', stepKey: 'assessment', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
       });
 
-      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(ConflictException);
+      await expect(service.assertUnsealed('c1', 'assessment')).rejects.toThrow(ConflictException);
       // The message has to name the step *and* say how to proceed, or a worker
       // who needs to correct a sealed step is simply stuck.
-      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(/Assess & Interview/);
-      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(/Juan Dela Cruz/);
-      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(/release the seal/i);
+      await expect(service.assertUnsealed('c1', 'assessment')).rejects.toThrow(/Assess & Interview/);
+      await expect(service.assertUnsealed('c1', 'assessment')).rejects.toThrow(/Juan Dela Cruz/);
+      await expect(service.assertUnsealed('c1', 'assessment')).rejects.toThrow(/release the seal/i);
     });
 
     // The refusal must be about *this* step. A `findOne` that ignored its where
@@ -382,19 +408,19 @@ describe('CaseStepLocksService', () => {
     it('asks about the named step only', async () => {
       lockRepo.findOne.mockResolvedValue(null);
 
-      await service.assertUnsealed('c1', 4);
+      await service.assertUnsealed('c1', 'closure');
 
-      expect(lockRepo.findOne).toHaveBeenCalledWith({ where: { caseId: 'c1', stepIndex: 4 } });
+      expect(lockRepo.findOne).toHaveBeenCalledWith({ where: { caseId: 'c1', stepKey: 'closure' } });
     });
 
     // Not a fast path: the whole point is that the client cannot be trusted to
     // have asked, and a cache would answer "unsealed" for a step sealed since.
     it('re-reads the seal on every call rather than caching', async () => {
       lockRepo.findOne.mockResolvedValue(null);
-      await service.assertUnsealed('c1', 0);
+      await service.assertUnsealed('c1', 'assessment');
 
-      lockRepo.findOne.mockResolvedValue({ caseId: 'c1', stepIndex: 0, lockedByName: 'Lorna', lockedAt: new Date() });
-      await expect(service.assertUnsealed('c1', 0)).rejects.toThrow(ConflictException);
+      lockRepo.findOne.mockResolvedValue({ caseId: 'c1', stepKey: 'assessment', lockedByName: 'Lorna', lockedAt: new Date() });
+      await expect(service.assertUnsealed('c1', 'assessment')).rejects.toThrow(ConflictException);
 
       expect(lockRepo.findOne).toHaveBeenCalledTimes(2);
     });
@@ -402,47 +428,48 @@ describe('CaseStepLocksService', () => {
     /**
      * The unguarded-fields exemption.
      *
-     * A seal claims the *step's own data* is finished. One route carries that plus
-     * data the seal never claimed — `PATCH /cases/:id/transition-plan` writes step
-     * 4's self-reliance assessment and the case's follow-up / home visits, which
-     * are ongoing monitoring in no step's done-predicate. Guarding the route would
-     * mean a worker who sealed the assessment could never record another home
-     * visit, which is the `StepTransition` mount comment's warning taken as fact.
+     * A seal claims the *step's own data* is finished. One route carries that
+     * plus data the seal never claimed — `PATCH /cases/:id/transition-plan`
+     * writes the `evaluate` step's self-reliance assessment and the case's
+     * follow-up / home visits, which are ongoing monitoring in no step's
+     * done-predicate. Guarding the route would mean a worker who sealed the
+     * assessment could never record another home visit, which is the
+     * `StepTransition` mount comment's warning taken as fact.
      *
-     * So the guard judges *the keys the body carries*, and this is where that rule
-     * is pinned. The step index and the exemption live in one file
-     * (`case-step-labels.ts`) precisely so the guard here and the comment at the
-     * mount cannot disagree about which step owns what.
+     * So the guard judges *the keys the body carries*, and this is where that
+     * rule is pinned. The step key and the exemption live in one file
+     * (`case-step-labels.ts`) precisely so the guard here and the comment at
+     * the mount cannot disagree about which step owns what.
      */
     describe('bodies that change nothing the seal guards', () => {
       const VISITS = [{ date: '2026-10-01', type: 'Home Visit', notes: '', outcome: '' }];
-      const sealedStep4 = () =>
+      const sealedEvaluate = () =>
         lockRepo.findOne.mockResolvedValue({
-          caseId: 'c1', stepIndex: 3, lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+          caseId: 'c1', stepKey: 'evaluate', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
         });
 
-      it('lets a visits-only body past a sealed step 4', async () => {
-        sealedStep4();
+      it('lets a visits-only body past a sealed evaluate step', async () => {
+        sealedEvaluate();
 
-        await expect(service.assertUnsealed('c1', 3, { followUpVisits: VISITS })).resolves.toBeUndefined();
+        await expect(service.assertUnsealed('c1', 'evaluate', { followUpVisits: VISITS })).resolves.toBeUndefined();
         // It never even asks: a body that cannot change the sealed step does not
         // need to know whether it is sealed.
         expect(lockRepo.findOne).not.toHaveBeenCalled();
       });
 
       it('still refuses a body that also moves the assessment', async () => {
-        sealedStep4();
+        sealedEvaluate();
 
         await expect(
-          service.assertUnsealed('c1', 3, { followUpVisits: VISITS, sustainabilityPlan: 'new plan' }),
+          service.assertUnsealed('c1', 'evaluate', { followUpVisits: VISITS, sustainabilityPlan: 'new plan' }),
         ).rejects.toThrow(ConflictException);
       });
 
       it('refuses an assessment-only body', async () => {
-        sealedStep4();
+        sealedEvaluate();
 
         await expect(
-          service.assertUnsealed('c1', 3, { selfRelianceLevel: 3 }),
+          service.assertUnsealed('c1', 'evaluate', { selfRelianceLevel: 3 }),
         ).rejects.toThrow(ConflictException);
       });
 
@@ -451,20 +478,21 @@ describe('CaseStepLocksService', () => {
         lockRepo.findOne.mockResolvedValue(null);
 
         await expect(
-          service.assertUnsealed('c1', 3, { selfRelianceLevel: 3, followUpVisits: VISITS }),
+          service.assertUnsealed('c1', 'evaluate', { selfRelianceLevel: 3, followUpVisits: VISITS }),
         ).resolves.toBeUndefined();
         expect(lockRepo.findOne).toHaveBeenCalled();
       });
 
       // Every other step guards its whole route: their bodies carry nothing but
       // their own data, so an exemption there would be an unexplained hole.
-      it.each([0, 1, 2, 4])('guards step %i even for a visits-only body', async (step) => {
-        lockRepo.findOne.mockResolvedValue({
-          caseId: 'c1', stepIndex: step, lockedByName: 'Ana', lockedAt: new Date(),
-        });
+      it.each(['assessment', 'enrollments', 'interventions', 'referrals', 'discernment', 'protection_order', 'solo_parent', 'adoption', 'closure'])(
+        'guards step %s even for a visits-only body', async (step) => {
+          lockRepo.findOne.mockResolvedValue({
+            caseId: 'c1', stepKey: step, lockedByName: 'Ana', lockedAt: new Date(),
+          });
 
-        await expect(service.assertUnsealed('c1', step, { followUpVisits: VISITS })).rejects.toThrow(ConflictException);
-      });
+          await expect(service.assertUnsealed('c1', step, { followUpVisits: VISITS })).rejects.toThrow(ConflictException);
+        });
 
       // Three shapes that fail closed rather than open. Each is a shape Zod has
       // already rejected by the time the guard runs, so none is reachable in
@@ -478,25 +506,24 @@ describe('CaseStepLocksService', () => {
         ['a string body', 'followUpVisits=[]'],
       ])('refuses %s', async (_name, body) => {
         lockRepo.findOne.mockResolvedValue({
-          caseId: 'c1', stepIndex: 3, lockedByName: 'Ana', lockedAt: new Date(),
+          caseId: 'c1', stepKey: 'evaluate', lockedByName: 'Ana', lockedAt: new Date(),
         });
 
-        await expect(service.assertUnsealed('c1', 3, body)).rejects.toThrow(ConflictException);
+        await expect(service.assertUnsealed('c1', 'evaluate', body)).rejects.toThrow(ConflictException);
       });
 
       // The declaration itself, so the two files cannot drift.
-      it('declares the exemption for step 3 only, and names the visit fields', () => {
-        expect(Object.keys(CASE_STEP_UNGUARDED_FIELDS)).toEqual(['3']);
-        expect(CASE_STEP_UNGUARDED_FIELDS[3]).toEqual(['followUpVisits', 'followUpDate']);
+      it('declares the exemption for the evaluate step only, and names the visit fields', () => {
+        expect(Object.keys(CASE_STEP_UNGUARDED_FIELDS)).toEqual(['evaluate']);
+        expect(CASE_STEP_UNGUARDED_FIELDS.evaluate).toEqual(['followUpVisits', 'followUpDate']);
       });
     });
 
-    // An unknown index is the same 400 the seal endpoint raises, so a route
-    // wired to the wrong step index is a loud failure rather than a silent
+    // An unknown key is the same 400 the seal endpoint raises, so a route
+    // wired to a wrong step key is a loud failure rather than a silent
     // "nothing to check".
-    it('rejects an out-of-range step before it looks anything up', async () => {
-      await expect(service.assertUnsealed('c1', 5)).rejects.toThrow(BadRequestException);
-      await expect(service.assertUnsealed('c1', -1)).rejects.toThrow(BadRequestException);
+    it('rejects an unknown step before it looks anything up', async () => {
+      await expect(service.assertUnsealed('c1', 'nope')).rejects.toThrow(BadRequestException);
       expect(lockRepo.findOne).not.toHaveBeenCalled();
     });
   });
@@ -505,56 +532,48 @@ describe('CaseStepLocksService', () => {
     it('answers false when the step carries no seal', async () => {
       lockRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.isSealed('c1', 1)).resolves.toBe(false);
+      await expect(service.isSealed('c1', 'interventions')).resolves.toBe(false);
     });
 
     it('answers true when the step is sealed', async () => {
-      lockRepo.findOne.mockResolvedValue({ caseId: 'c1', stepIndex: 1, lockedByName: 'Ana', lockedAt: new Date() });
+      lockRepo.findOne.mockResolvedValue({ caseId: 'c1', stepKey: 'interventions', lockedByName: 'Ana', lockedAt: new Date() });
 
-      await expect(service.isSealed('c1', 1)).resolves.toBe(true);
+      await expect(service.isSealed('c1', 'interventions')).resolves.toBe(true);
     });
 
     it('asks about the named case and step only', async () => {
       lockRepo.findOne.mockResolvedValue(null);
 
-      await service.isSealed('c9', 1);
+      await service.isSealed('c9', 'interventions');
 
-      expect(lockRepo.findOne).toHaveBeenCalledWith({ where: { caseId: 'c9', stepIndex: 1 } });
+      expect(lockRepo.findOne).toHaveBeenCalledWith({ where: { caseId: 'c9', stepKey: 'interventions' } });
     });
 
     it('rejects an unknown step rather than reporting unsealed', async () => {
-      await expect(service.isSealed('c1', 5)).rejects.toThrow(BadRequestException);
+      await expect(service.isSealed('c1', 'nope')).rejects.toThrow(BadRequestException);
       expect(lockRepo.findOne).not.toHaveBeenCalled();
     });
   });
 
-  it('lists the sealed steps of a case in step order', async () => {
+  it('lists the sealed steps of a case in template order', async () => {
     const rows = [
-      { stepIndex: 3, lockedBy: 'u2', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
-      { stepIndex: 1, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
+      { stepKey: 'evaluate', lockedBy: 'u2', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
+      { stepKey: 'interventions', lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
     ];
-    // The stub honours the `order` the service asks for, the way Postgres
-    // would: asserting the ascending result is only meaningful if the sort is
-    // really the database's job and not the service quietly re-sorting.
-    lockRepo.find.mockImplementation((opts: any) =>
-      Promise.resolve(
-        [...rows].sort((a, b) =>
-          opts?.order?.stepIndex === 'ASC' ? a.stepIndex - b.stepIndex : 0,
-        ),
-      ),
-    );
+    lockRepo.find.mockResolvedValue(rows);
+    findById.mockResolvedValue({ id: 'c1', status: 'active', caseCategory: null } as unknown as Case);
+
     const listed = await service.listForCase('c1');
     expect(listed).toEqual([
-      { stepIndex: 1, lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
-      { stepIndex: 3, lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
+      { stepKey: 'interventions', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
+      { stepKey: 'evaluate', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
     ]);
     // Only the three fields the payload needs: the row id and lockedBy are
     // server-internal and must not ride along to the client.
-    expect(Object.keys(listed[0]).sort()).toEqual(['lockedAt', 'lockedByName', 'stepIndex']);
-    expect(lockRepo.find).toHaveBeenCalledWith({
-      where: { caseId: 'c1' },
-      order: { stepIndex: 'ASC' },
-    });
+    expect(Object.keys(listed[0]).sort()).toEqual(['lockedAt', 'lockedByName', 'stepKey']);
+    // The order is the template's, not a database sort: step keys do not sort
+    // lexically in template order.
+    expect(lockRepo.find).toHaveBeenCalledWith({ where: { caseId: 'c1' } });
   });
 
   describe('the required documents behind the case’s programs', () => {
@@ -572,7 +591,7 @@ describe('CaseStepLocksService', () => {
     // requires a document nobody ever recorded. The UI keeps Lock disabled; the
     // server must refuse too, or the seal lands on a case that was never ready.
     it('refuses to seal when a program requires a document the checklist never got', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': true }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([
         programRow('p1', [
@@ -581,13 +600,13 @@ describe('CaseStepLocksService', () => {
         ]),
       ]);
 
-      await expect(service.lock('c1', 1, swUser)).rejects.toThrow(/not complete/i);
+      await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
     });
 
     // The same case with the missing document recorded as met: now both
     // surfaces agree, and the seal must go through.
     it('seals once every document the programs require is on the checklist', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': true, 'Barangay Certificate': true }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true, 'Barangay Certificate': true }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([
         programRow('p1', [
@@ -596,7 +615,7 @@ describe('CaseStepLocksService', () => {
         ]),
       ]);
 
-      await expect(service.lock('c1', 1, swUser)).resolves.toBeDefined();
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
 
     // The fail-safe direction, and the mirror of the case above: a checklist row
@@ -604,21 +623,21 @@ describe('CaseStepLocksService', () => {
     // and ignores it, so an unmet stray cannot hold a step hostage — the server
     // used to weigh it and refuse a seal the UI happily offers.
     it('ignores an unmet checklist entry that belongs to no program of the case', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': true, 'Medical Abstract': false }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true, 'Medical Abstract': false }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([programRow('p1', [{ key: 'Valid ID', mandatory: true }])]);
 
-      await expect(service.lock('c1', 1, swUser)).resolves.toBeDefined();
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
 
     // The empty case: no program imposes anything, so an unmet checklist row is
     // not outstanding against any of them. Matches the client, which answers
     // from `requiredKeys.length === 0` before it ever looks at the checklist.
     it('treats a case whose interventions name no program as imposing nothing', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': false }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': false }));
       interventionQuery.mockResolvedValue([{ program_id: null }]);
 
-      await expect(service.lock('c1', 1, swUser)).resolves.toBeDefined();
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
       // Nothing to weigh, so the programs are never loaded.
       expect(programFind).not.toHaveBeenCalled();
     });
@@ -627,11 +646,11 @@ describe('CaseStepLocksService', () => {
     // checklist is not consulted for it — the client's `requiredKeys` is empty
     // across the whole case and it returns before reading the checklist.
     it('treats a linked program that requires nothing as imposing nothing', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': false }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': false }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([programRow('p1', [])]);
 
-      await expect(service.lock('c1', 1, swUser)).resolves.toBeDefined();
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
 
     // `mandatory` is display-only: a conditional document ("… if applicable")
@@ -639,7 +658,7 @@ describe('CaseStepLocksService', () => {
     // server that relaxed on the flag would disagree with it on every program
     // that carries one.
     it('requires a document the program flags as non-mandatory', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': true }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([
         programRow('p1', [
@@ -648,14 +667,14 @@ describe('CaseStepLocksService', () => {
         ]),
       ]);
 
-      await expect(service.lock('c1', 1, swUser)).rejects.toThrow(/not complete/i);
+      await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
     });
 
     // Only the programs behind *this* case's interventions count, and the keys
     // are de-duplicated across them, so a document two programs share is one
     // requirement — the client's `[...new Set(...)]` over the flatMap.
     it('weighs only the linked programs, counting a shared document once', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': true }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }, { program_id: 'p1' }]);
       programFind.mockImplementation(({ where }: any) =>
         Promise.resolve(
@@ -670,32 +689,48 @@ describe('CaseStepLocksService', () => {
         ),
       );
 
-      await expect(service.lock('c1', 1, swUser)).resolves.toBeDefined();
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
 
     // The programs come off `case_interventions`, the table
     // `getInterventionCount` already reads — one parameterized query, the same
     // conventions, so the two cannot drift onto different rows.
     it('reads the programs off case_interventions the way the count does', async () => {
-      findById.mockResolvedValue(step1Case({ 'Valid ID': true }));
+      findById.mockResolvedValue(stepInterventionsCase({ 'Valid ID': true }));
       interventionQuery.mockResolvedValue([{ program_id: 'p1' }]);
       programFind.mockResolvedValue([programRow('p1', [{ key: 'Valid ID', mandatory: true }])]);
 
-      await service.lock('c1', 1, swUser);
+      await service.lock('c1', 'interventions', swUser);
       expect(interventionQuery).toHaveBeenCalledWith(
         expect.stringContaining('case_interventions'),
         ['c1'],
       );
     });
 
-    // Steps other than 1 never read the checklist, so they must not pay for the
-    // two program queries either.
+    // Steps other than interventions never read the checklist, so they must not
+    // pay for the two program queries either.
     it('loads no program for a step that does not weigh requirements', async () => {
       findById.mockResolvedValue(doneCase);
 
-      await service.lock('c1', 0, swUser);
+      await service.lock('c1', 'assessment', swUser);
       expect(interventionQuery).not.toHaveBeenCalled();
       expect(programFind).not.toHaveBeenCalled();
+    });
+
+    // The enrollments count is only for the enrollments step.
+    it('loads no enrollment count for a step that does not weigh enrollments', async () => {
+      findById.mockResolvedValue(doneCase);
+
+      await service.lock('c1', 'assessment', swUser);
+      expect(enrollmentCount).not.toHaveBeenCalled();
+    });
+
+    it('loads the enrollment count for the enrollments step', async () => {
+      findById.mockResolvedValue({ id: 'c1', status: 'enrolled' } as unknown as Case);
+      enrollmentCount.mockResolvedValue(1);
+
+      await expect(service.lock('c1', 'enrollments', swUser)).resolves.toBeDefined();
+      expect(enrollmentCount).toHaveBeenCalledWith({ where: { caseId: 'c1' } });
     });
   });
 
@@ -705,6 +740,7 @@ describe('CaseStepLocksService', () => {
     it.each(FIXTURE)('$name', async (fx) => {
       findById.mockResolvedValue(caseFor(fx));
       interventionCount.mockResolvedValue(fx.interventionCount);
+      enrollmentCount.mockResolvedValue(fx.enrollmentCount ?? 0);
       stubRequirementInputs(fx);
       stubReferralInputs(fx);
       lockRepo.create.mockImplementation((data: Partial<CaseStepLock>) => ({ ...data }));
@@ -717,8 +753,8 @@ describe('CaseStepLocksService', () => {
       }
     });
 
-    it('covers every step the stepper offers', () => {
-      expect(new Set(FIXTURE.map(f => f.step))).toEqual(new Set([0, 1, 2, 3, 4]));
+    it('covers every step the common template offers', () => {
+      expect(new Set(FIXTURE.map(f => f.step))).toEqual(new Set(COMMON_STEPS));
     });
 
     /**
@@ -729,9 +765,9 @@ describe('CaseStepLocksService', () => {
      * sees its own half, so a drifted entry passes both.
      *
      * The two halves are tied together here instead. Once an intervention
-     * exists, step 1's first clause (`interventionCount > 0 ||
+     * exists, the interventions step's first clause (`interventionCount > 0 ||
      * interventionNotNeeded`) is already true whatever the no-intervention
-     * decision says, so step 1's verdict is exactly `requirementsMet ?? true` —
+     * decision says, so the step's verdict is exactly `requirementsMet ?? true` —
      * the same value the branch itself computes, which is why the filter below
      * keys on `interventionCount > 0` alone and needs nothing about
      * `interventionNotNeeded`. `expected` and the given are therefore the same
@@ -762,11 +798,11 @@ describe('CaseStepLocksService', () => {
     /**
      * The justification for the `it.each` filter above, as an executable claim
      * rather than a comment: with an intervention on the case, the recorded
-     * no-intervention decision cannot rescue step 1, because the first clause of
-     * the branch is already satisfied. So an entry carrying
-     * `interventionNotNeeded: true` alongside `interventionCount: 1` still has to
-     * follow `requirementsMet`, and excluding such entries from the filter would
-     * quietly skip checking them rather than protect them.
+     * no-intervention decision cannot rescue the interventions step, because
+     * the first clause of the branch is already satisfied. So an entry carrying
+     * `interventionNotNeeded: true` alongside `interventionCount: 1` still has
+     * to follow `requirementsMet`, and excluding such entries from the filter
+     * would quietly skip checking them rather than protect them.
      */
     it('still weighs requirements when a no-intervention decision is also recorded', async () => {
       findById.mockResolvedValue({
@@ -778,7 +814,7 @@ describe('CaseStepLocksService', () => {
       programFind.mockResolvedValue([programRow('p1', [{ key: 'Valid ID', mandatory: true }])]);
 
       // The decision does not buy the step its way past an unmet document.
-      await expect(service.lock('c1', 1, swUser)).rejects.toThrow(/not complete/i);
+      await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
 
       // …and once the document is met, the step is done and the decision is
       // simply redundant rather than contradictory.
@@ -786,15 +822,15 @@ describe('CaseStepLocksService', () => {
         id: 'c1', status: 'enrolled', interventionNotNeeded: true,
         requirementsChecklist: { 'Valid ID': true },
       } as unknown as Case);
-      await expect(service.lock('c1', 1, swUser)).resolves.toBeDefined();
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
 
-    // The `default:` arm of the predicate is unreachable through the five
-    // stepper indexes, and the index range is validated before the predicate
-    // runs. Pin that ordering, so relaxing the range check cannot turn an
-    // unknown step into a silently-sealable one.
-    it('rejects an out-of-range step before the predicate could answer for it', async () => {
-      await expect(service.lock('c1', 5, swUser)).rejects.toThrow(BadRequestException);
+    // The `default:` arm of the predicate is unreachable through the common
+    // template keys, and the key range is validated before the predicate runs.
+    // Pin that ordering, so relaxing the range check cannot turn an unknown
+    // step into a silently-sealable one.
+    it('rejects an unknown step before the predicate could answer for it', async () => {
+      await expect(service.lock('c1', 'bogus', swUser)).rejects.toThrow(BadRequestException);
       expect(findById).not.toHaveBeenCalled();
     });
   });

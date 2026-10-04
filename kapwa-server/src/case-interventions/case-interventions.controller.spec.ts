@@ -46,17 +46,17 @@ describe('CaseInterventionsController sealed step 1', () => {
 
   it('checks step 1 before creating an intervention', async () => {
     await ctrl.create('c1', {} as any, req);
-    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'interventions');
   });
 
   it('checks step 1 before updating an intervention', async () => {
     await ctrl.update('c1', 'i1', {} as any);
-    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'interventions');
   });
 
   it('checks step 1 before deleting an intervention', async () => {
     await ctrl.delete('c1', 'i1');
-    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'interventions');
   });
 
   // The read stays available: a sealed step must remain inspectable, or the

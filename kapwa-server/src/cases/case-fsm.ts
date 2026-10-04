@@ -10,7 +10,10 @@ export const CASE_FSM: Record<CaseStatus, CaseStatus[]> = {
   [CaseStatus.IN_REVIEW]: [CaseStatus.ACTIVE],
   [CaseStatus.ACTIVE]: [CaseStatus.TRANSITIONING],
   [CaseStatus.TRANSITIONING]: [CaseStatus.CLOSED],
-  [CaseStatus.CLOSED]: [],
+  [CaseStatus.CLOSED]: [CaseStatus.AFTERCARE],
+  // Terminal: post-closure follow-up phase (DSWD AO 10 s. 2007 §VIII.G — the
+  // case returns to the C/MSWDO for aftercare services after termination).
+  [CaseStatus.AFTERCARE]: [],
 };
 
 // Non-admin roles allowed to act from each status. `admin` is always allowed
@@ -18,13 +21,15 @@ export const CASE_FSM: Record<CaseStatus, CaseStatus[]> = {
 // controller role gates — a role listed here must have a reachable endpoint:
 //   enrolled/assessed -> social_worker (request review, submit for review)
 //   transitioning     -> social_worker (close)
+//   closed            -> social_worker, admin (move to aftercare)
 export const CASE_FSM_ROLES: Record<CaseStatus, string[]> = {
   [CaseStatus.ENROLLED]: ['social_worker'],
   [CaseStatus.ASSESSED]: ['social_worker'],
   [CaseStatus.IN_REVIEW]: [],
   [CaseStatus.ACTIVE]: [],
   [CaseStatus.TRANSITIONING]: ['social_worker'],
-  [CaseStatus.CLOSED]: [],
+  [CaseStatus.CLOSED]: ['social_worker'],
+  [CaseStatus.AFTERCARE]: [],
 };
 
 export function isValidTransition(from: CaseStatus, to: CaseStatus): boolean {

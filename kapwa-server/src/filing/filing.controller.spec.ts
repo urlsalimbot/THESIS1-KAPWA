@@ -150,7 +150,7 @@ describe('FilingController — download self-healing', () => {
     const out = await controller.download('d1', adminReq, { set: jest.fn() } as any);
     // The read is served; only the write is withheld.
     expect(out).toBeInstanceOf(StreamableFile);
-    expect(stepLocks.isSealed).toHaveBeenCalledWith('c1', 1);
+    expect(stepLocks.isSealed).toHaveBeenCalledWith('c1', 'interventions');
     expect(service.ensureFileOnDisk).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'd1', requirementKey: 'birth_cert' }),
       { heal: false },
@@ -222,7 +222,7 @@ describe('FilingController — step-1 seal on requirement writes', () => {
   it('checks step 1 before a requirement upload writes case_requirements', async () => {
     await controller.upload(file, { caseId: 'c1', requirementKey: 'Valid ID' }, sw);
 
-    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'interventions');
   });
 
   it('does not guard an upload that carries no requirement key', async () => {
@@ -236,7 +236,7 @@ describe('FilingController — step-1 seal on requirement writes', () => {
 
     await controller.verify('d1', { verified: true }, sw);
 
-    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'interventions');
   });
 
   it('does not guard verifying a document tied to no requirement', async () => {
@@ -252,7 +252,7 @@ describe('FilingController — step-1 seal on requirement writes', () => {
 
     await controller.delete('d1', sw);
 
-    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 1);
+    expect(stepLocks.assertUnsealed).toHaveBeenCalledWith('c1', 'interventions');
   });
 
   it('does not write when the seal is up', async () => {

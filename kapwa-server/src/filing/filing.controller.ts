@@ -40,7 +40,7 @@ export class FilingController {
     // Only a requirement upload writes `case_requirements`; a photo or an
     // approval document changes no sealed data, so it is not refused.
     if (metadata.caseId && metadata.requirementKey) {
-      await this.stepLocks.assertUnsealed(metadata.caseId, 1);
+      await this.stepLocks.assertUnsealed(metadata.caseId, 'interventions');
     }
     return this.filingService.upload(file, {
       ...metadata,
@@ -98,7 +98,7 @@ export class FilingController {
     // nothing step 1's seal reads.
     const doc = await this.filingService.findOne(id);
     if (doc.caseId && doc.requirementKey) {
-      await this.stepLocks.assertUnsealed(doc.caseId, 1);
+      await this.stepLocks.assertUnsealed(doc.caseId, 'interventions');
     }
     return this.filingService.setVerified(id, body.verified, req.user?.id || req.user?.sub);
   }
@@ -130,7 +130,7 @@ export class FilingController {
     // heal: the file is served when it is on disk, and a genuinely missing file
     // still 404s, but nothing under the seal moves through a GET.
     const sealed = doc.caseId && doc.requirementKey
-      ? await this.stepLocks.isSealed(doc.caseId, 1)
+      ? await this.stepLocks.isSealed(doc.caseId, 'interventions')
       : false;
     if (!(await this.filingService.ensureFileOnDisk(doc, { heal: !sealed }))) {
       throw new NotFoundException('File not found on disk: the stored document was removed and its record cleaned up. Re-upload or re-issue the document.');
@@ -153,7 +153,7 @@ export class FilingController {
       throw new ForbiddenException('You are not allowed to remove this document');
     }
     if (doc.caseId && doc.requirementKey) {
-      await this.stepLocks.assertUnsealed(doc.caseId, 1);
+      await this.stepLocks.assertUnsealed(doc.caseId, 'interventions');
     }
     return this.filingService.delete(id);
   }

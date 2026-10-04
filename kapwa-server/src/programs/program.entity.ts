@@ -3,6 +3,7 @@ import { Expose, Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
 import { ProgramFundSource } from './program-fund-source.entity';
 import { ProgramRequiredDocument } from './program-required-document.entity';
+import { ProgramService } from './program-service.entity';
 
 export interface ApprovalStep {
   stepName: string;
@@ -16,6 +17,11 @@ export class Program extends BaseEntity {
 
   @Column()
   name!: string;
+
+  // Machine key of the seeded catalog (aics, social_pension, diversion, …);
+  // NULL for custom programs created through CreateProgramPage.
+  @Column({ name: 'program_type', nullable: true })
+  programType?: string;
 
   @Column({ nullable: true })
   category?: string;
@@ -51,6 +57,17 @@ export class Program extends BaseEntity {
   get requiredDocumentDetails(): Array<{ key: string; mandatory: boolean }> | undefined {
     if (!this.requiredDocumentRows || this.requiredDocumentRows.length === 0) return undefined;
     return this.requiredDocumentRows.map(d => ({ key: d.documentKey, mandatory: !!d.mandatory }));
+  }
+
+  @Exclude()
+  @OneToMany(() => ProgramService, s => s.programId, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  serviceRows!: ProgramService[];
+
+  /** The intervention types this program renders (Program → Services matrix). */
+  @Expose()
+  get services(): string[] | undefined {
+    if (!this.serviceRows || this.serviceRows.length === 0) return undefined;
+    return this.serviceRows.map(s => s.interventionType);
   }
 
   @Column({ type: 'jsonb', name: 'approval_workflow', nullable: true })

@@ -13,7 +13,7 @@ import { CaseStepLock } from './case-step-lock.entity';
 // boot, which no unit test can see. The labels are all this file needs, and an
 // error that spells a step differently from the stepper costs the worker a trip
 // to the UI to find out what is open.
-import { CASE_STEP_LABELS, stepsDueAt } from './case-step-labels';
+import { CASE_STEP_LABELS, stepsDueAt, stepsForCategory } from './case-step-labels';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -21,7 +21,7 @@ import { HouseholdMembership } from '../beneficiaries/household-membership.entit
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input } from './dto/cases.zod';
+import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input, DiscernmentInput, ProtectionOrderInput, SoloParentInput, AdoptionInput, CaseMetaInput } from './dto/cases.zod';
 import {
   SATURDAY, SUNDAY,
   PENDING_ESCALATION_DAYS, REVIEW_ESCALATION_DAYS, APPROVED_ESCALATION_DAYS,
@@ -49,12 +49,13 @@ export class CasesService {
   ) {}
 
   /**
-   * Next control number for the current year, e.g. KAPWA-2026-00047.
+   * Next control number for the current year, e.g. MSWD-2026-00047.
    *
    * Backed by an atomic per-year counter row (`case_control_counters`) rather
    * than max+1 over existing rows: deleting the newest case no longer lets a
    * later intake reuse its number, and concurrent intakes each get a distinct
-   * value (the ON CONFLICT UPDATE takes a row lock).
+   * value (the ON CONFLICT UPDATE takes a row lock). Uniqueness is on the full
+   * string, so legacy `KAPWA-…` numbers coexist untouched.
    */
   async generateControlNo(): Promise<string> {
     const year = new Date().getFullYear();
@@ -67,7 +68,7 @@ export class CasesService {
       [year],
     );
     const seq = Number(rows[0]?.last_seq ?? 1);
-    return `KAPWA-${year}-${String(seq).padStart(CONTROL_NO_PAD_WIDTH, '0')}`;
+    return `MSWD-${year}-${String(seq).padStart(CONTROL_NO_PAD_WIDTH, '0')}`;
   }
 
   async create(data: Partial<Case>, actorId?: string) {
@@ -284,11 +285,18 @@ export class CasesService {
     }
 
     // Sealed steps travel with the detail payload so the case view's seal strip
-    // does not need a second round-trip. `case_step_locks.case_id` is TEXT and
-    // `cases.id` is UUID, but this is a TypeORM `where` on a bound string, so
-    // there is no text = uuid comparison to trip over.
-    (c as any).stepLocks = (await this.stepLocksRepo.find({ where: { caseId: id }, order: { stepIndex: 'ASC' } }))
-      .map((l) => ({ stepIndex: l.stepIndex, lockedByName: l.lockedByName, lockedAt: l.lockedAt }));
+    // does not need a second round-trip, in the case's template order. `case_step_locks.case_id`
+    // is TEXT and `cases.id` is UUID, but this is a TypeORM `where` on a bound
+    // string, so there is no text = uuid comparison to trip over.
+    const templateOrder = stepsForCategory(c.caseCategory);
+    const lockedRows = await this.stepLocksRepo.find({ where: { caseId: id } });
+    const lockByKey = new Map(lockedRows.map((l) => [l.stepKey, l]));
+    (c as any).stepLocks = templateOrder
+      .filter((key) => lockByKey.has(key))
+      .map((key) => {
+        const l = lockByKey.get(key)!;
+        return { stepKey: l.stepKey, lockedByName: l.lockedByName, lockedAt: l.lockedAt };
+      });
 
     // Load claimant (if different from beneficiary)
     if (c.beneficiary?.personId) {
@@ -403,15 +411,15 @@ export class CasesService {
    * here — so the set a gate demands is by construction a set the seal endpoint
    * will accept at this status.
    */
-  private assertStepsSealed(c: Case, requiredSteps: number[], doing: string): void {
-    const sealed = ((c as any).stepLocks ?? []) as Array<{ stepIndex: number }>;
-    const open = requiredSteps.filter((i) => !sealed.some((l) => l.stepIndex === i));
+  private assertStepsSealed(c: Case, requiredSteps: string[], doing: string): void {
+    const sealed = ((c as any).stepLocks ?? []) as Array<{ stepKey: string }>;
+    const open = requiredSteps.filter((key) => !sealed.some((l) => l.stepKey === key));
     if (open.length === 0) return;
-    // Name the steps as the stepper does. "step 4" in an error while the UI says
-    // "Case Study & Closure" sends the worker looking for a number.
+    // Name the steps as the stepper does. "closure" in an error while the UI
+    // says "Case Study & Closure" sends the worker looking for the right name.
     throw new BadRequestException(
       `Lock every step before ${doing}. ` +
-      `Still open: ${open.map((i) => CASE_STEP_LABELS[i]).join(', ')}`,
+      `Still open: ${open.map((key) => CASE_STEP_LABELS[key] ?? key).join(', ')}`,
     );
   }
 
@@ -460,7 +468,7 @@ export class CasesService {
     // omits `userRole` is therefore gated, not waved through — fail closed, so
     // forgetting the argument cannot become the bypass.
     if (c.status === CaseStatus.ASSESSED && newStatus === CaseStatus.IN_REVIEW && userRole !== 'admin') {
-      this.assertStepsSealed(c, stepsDueAt(c.status),
+      this.assertStepsSealed(c, stepsDueAt(c.status, c.caseCategory),
         'flagging this case for admin review');
     }
     // Phase-Out. Step 4 (Evaluate Help Given) and step 5 (Case Study & Closure)
@@ -485,7 +493,14 @@ export class CasesService {
     // FSM, so it becomes a gap to close if a role is ever added there — not a
     // silent assumption.
     if (c.status === CaseStatus.TRANSITIONING && newStatus === CaseStatus.CLOSED && userRole !== 'admin') {
-      this.assertStepsSealed(c, stepsDueAt(c.status), 'closing this case');
+      this.assertStepsSealed(c, stepsDueAt(c.status, c.caseCategory), 'closing this case');
+    }
+    // Terminal aftercare: only a closed case may move to aftercare (post-closure
+    // follow-up, DSWD AO 10 s. 2007 §VIII.G). No outgoing edges exist in the FSM.
+    if (newStatus === CaseStatus.AFTERCARE) {
+      if (c.status !== CaseStatus.CLOSED) {
+        throw new BadRequestException('Case must be closed before moving to aftercare');
+      }
     }
     if (c.status === CaseStatus.IN_REVIEW && newStatus === CaseStatus.ACTIVE) {
       const interventionCount = await this.getInterventionCount(c.id);
@@ -765,6 +780,86 @@ export class CasesService {
     return this.caseRepo.save(caseEntity);
   }
 
+  async updateEnrollmentsDecision(id: string, notNeeded: boolean) {
+    const caseEntity = await this.caseRepo.findOne({ where: { id } });
+    if (!caseEntity) throw new NotFoundException('Case not found');
+    // Recording "no program needed" and enrolling at the same time is a
+    // contradiction a worker might not notice; the enrollments step's
+    // done-predicate accepts either, so the decision is reverted when an
+    // enrollment exists.
+    caseEntity.enrollmentsNotNeeded = notNeeded;
+    return this.caseRepo.save(caseEntity);
+  }
+
+  /** Category-step savers — each refuses a category whose template lacks the step. */
+  private requireCategory(c: Case, expected: string, stepLabel: string): void {
+    if (stepsForCategory(c.caseCategory).includes(stepLabel)) return;
+    throw new BadRequestException(
+      `"${CASE_STEP_LABELS[stepLabel]}" is not part of the template for category "${c.caseCategory ?? '(none)'}".`,
+    );
+  }
+
+  private async saveCategoryStepFields(
+    id: string,
+    fields: Array<[keyof Case, unknown]>,
+    expectedCategoryKey: string,
+    stepKey: string,
+    actorId?: string,
+  ) {
+    const c = await this.findById(id);
+    this.requireCategory(c, expectedCategoryKey, stepKey);
+    for (const [field, value] of fields) {
+      if (value !== undefined) (c as any)[field] = value;
+    }
+    c.updatedAt = new Date();
+    const saved = await this.caseRepo.save(c);
+    await this.auditLog?.log(`case.${stepKey}`, id, actorId, { [stepKey]: true });
+    return saved;
+  }
+
+  async updateDiscernment(id: string, data: DiscernmentInput, actorId?: string) {
+    return this.saveCategoryStepFields(id, [
+      ['discernmentAssessedAt', data.discernmentAssessedAt],
+      ['discernmentResult', data.discernmentResult],
+      ['discernmentNotes', data.discernmentNotes],
+    ], 'Children in Conflict with the Law (CICL)', 'discernment', actorId);
+  }
+
+  async updateProtectionOrder(id: string, data: ProtectionOrderInput, actorId?: string) {
+    return this.saveCategoryStepFields(id, [
+      ['protectionOrderType', data.protectionOrderType],
+      ['protectionOrderIssuedAt', data.protectionOrderIssuedAt],
+      ['protectionOrderIssuedBy', data.protectionOrderIssuedBy],
+      ['protectionOrderNotes', data.protectionOrderNotes],
+    ], 'Violence Against Women and Their Children (VAWC)', 'protection_order', actorId);
+  }
+
+  async updateSoloParent(id: string, data: SoloParentInput, actorId?: string) {
+    return this.saveCategoryStepFields(id, [
+      ['soloParentIdIssuedDate', data.soloParentIdIssuedDate],
+      ['soloParentIdNumber', data.soloParentIdNumber],
+      ['soloParentNotes', data.soloParentNotes],
+    ], 'Solo Parent', 'solo_parent', actorId);
+  }
+
+  async updateAdoption(id: string, data: AdoptionInput, actorId?: string) {
+    return this.saveCategoryStepFields(id, [
+      ['adoptionDvcDate', data.adoptionDvcDate],
+      ['adoptionCaseStudyDate', data.adoptionCaseStudyDate],
+      ['adoptionCdclaaReceived', data.adoptionCdclaaReceived],
+      ['adoptionNotes', data.adoptionNotes],
+    ], 'Adoption & Foster Care Case', 'adoption', actorId);
+  }
+
+  async updateCaseMeta(id: string, data: CaseMetaInput, actorId?: string) {
+    const c = await this.findById(id);
+    if (data.courtDocketNumber !== undefined) c.courtDocketNumber = data.courtDocketNumber;
+    c.updatedAt = new Date();
+    const saved = await this.caseRepo.save(c);
+    await this.auditLog?.log('case.meta', id, actorId, data);
+    return saved;
+  }
+
   /**
    * Public because the step-done predicate reuses it: a second count query
    * against `case_interventions` could disagree with this one and let a step be
@@ -808,6 +903,15 @@ export class CasesService {
 
   async updateAssessmentV2(id: string, data: AssessmentV2Input, actorId?: string) {
     const c = await this.findById(id);
+    // The case category defines the step template, so it is editable only while
+    // the case is `enrolled` (step 1 in progress). Once the case leaves
+    // `enrolled`, a category change would retroactively swap the template the
+    // seals were taken against (spec §9).
+    if (data.caseCategory !== undefined && c.status !== CaseStatus.ENROLLED && data.caseCategory !== c.caseCategory) {
+      throw new BadRequestException(
+        'The case category cannot be changed once the case leaves the enrolled status — the step template it defines is already locked.',
+      );
+    }
     // Only assign fields the payload actually provides. TypeORM skips
     // `undefined` on save, so an unconditional Object.assign would *clear*
     // scores when a later partial save (e.g. "Save Assessment" after

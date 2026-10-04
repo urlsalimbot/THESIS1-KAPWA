@@ -4,20 +4,20 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 import { AuthenticatedRequest } from '../auth/types';
-import { CaseInterventionsService } from './case-interventions.service';
+import { CaseEnrollmentsService } from './case-enrollments.service';
 import { CaseStepLocksService } from '../cases/case-step-locks.service';
-import { CreateCaseInterventionSchema, UpdateCaseInterventionSchema, CreateCaseInterventionInput, UpdateCaseInterventionInput } from './dto/case-interventions.zod';
+import { CreateProgramEnrollmentSchema, UpdateProgramEnrollmentSchema, CreateProgramEnrollmentInput, UpdateProgramEnrollmentInput } from './dto/case-enrollments.zod';
 
-@Controller('cases/:caseId/interventions')
+@Controller('cases/:caseId/enrollments')
 @UseGuards(JwtAuthGuard, RolesGuard)
-export class CaseInterventionsController {
+export class CaseEnrollmentsController {
   constructor(
-    private service: CaseInterventionsService,
-    // Step 1's seal. The interventions *are* this step's own data, so writing
-    // one while step 1 is sealed is the same defect as editing a sealed
-    // assessment — a claim standing on data nobody agreed to. Asserted here, on
-    // the route, rather than in the service: the service cannot know a seal
-    // exists, and a client-only check is bypassable by calling the route
+    private service: CaseEnrollmentsService,
+    // The enrollments step's seal. The enrollments *are* this step's own data,
+    // so writing one while the step is sealed is the same defect as editing a
+    // sealed assessment — a claim standing on data nobody agreed to. Asserted
+    // here, on the route, rather than in the service: the service cannot know a
+    // seal exists, and a client-only check is bypassable by calling the route
     // directly.
     private stepLocks: CaseStepLocksService,
   ) {}
@@ -32,24 +32,28 @@ export class CaseInterventionsController {
   @Roles('admin', 'social_worker')
   async create(
     @Param('caseId') caseId: string,
-    @Body(new ZodPipe(CreateCaseInterventionSchema)) body: CreateCaseInterventionInput,
+    @Body(new ZodPipe(CreateProgramEnrollmentSchema)) body: CreateProgramEnrollmentInput,
     @Request() req: AuthenticatedRequest,
   ) {
-    await this.stepLocks.assertUnsealed(caseId, 'interventions');
+    await this.stepLocks.assertUnsealed(caseId, 'enrollments');
     return this.service.create(caseId, body, req.user?.id);
   }
 
   @Patch(':id')
   @Roles('admin', 'social_worker')
-  async update(@Param('caseId') caseId: string, @Param('id') id: string, @Body(new ZodPipe(UpdateCaseInterventionSchema)) body: UpdateCaseInterventionInput) {
-    await this.stepLocks.assertUnsealed(caseId, 'interventions');
+  async update(
+    @Param('caseId') caseId: string,
+    @Param('id') id: string,
+    @Body(new ZodPipe(UpdateProgramEnrollmentSchema)) body: UpdateProgramEnrollmentInput,
+  ) {
+    await this.stepLocks.assertUnsealed(caseId, 'enrollments');
     return this.service.update(caseId, id, body);
   }
 
   @Delete(':id')
   @Roles('admin', 'social_worker')
   async delete(@Param('caseId') caseId: string, @Param('id') id: string) {
-    await this.stepLocks.assertUnsealed(caseId, 'interventions');
+    await this.stepLocks.assertUnsealed(caseId, 'enrollments');
     return this.service.delete(caseId, id);
   }
 }

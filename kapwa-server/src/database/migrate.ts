@@ -100,6 +100,25 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS social_worker_assessment TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS client_category TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS case_category TEXT`);
+  // Mirrors AddCaseArchitectureColumns0000000000078.
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS court_docket_number TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS discernment_assessed_at DATE`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS discernment_result TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS discernment_notes TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS protection_order_type TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS protection_order_issued_at DATE`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS protection_order_issued_by TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS protection_order_notes TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS enrollments_not_needed BOOLEAN NOT NULL DEFAULT FALSE`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS solo_parent_id_issued_date DATE`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS solo_parent_id_number TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS solo_parent_notes TEXT`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS adoption_dvc_date DATE`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS adoption_case_study_date DATE`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS adoption_cdclaa_received BOOLEAN`);
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS adoption_notes TEXT`);
+  await q.query(`ALTER TABLE cases DROP CONSTRAINT IF EXISTS cases_status_check`);
+  await q.query(`ALTER TABLE cases ADD CONSTRAINT cases_status_check CHECK (status IN ('enrolled','assessed','in_review','active','transitioning','closed','aftercare'))`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS nature_of_service TEXT[]`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS financial_subsidies JSONB`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS amount_assistance DECIMAL(12,2)`);
@@ -130,6 +149,20 @@ export async function migrate() {
 
   await q.query(`CREATE TABLE IF NOT EXISTS irf_cases ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), blotter_entry_number TEXT UNIQUE NOT NULL, case_category TEXT NOT NULL, datetime_reported TIMESTAMP, datetime_incident TIMESTAMP, item_a_reporting_person JSONB, item_b_person_reported JSONB, encrypted_narration BYTEA, case_disposition TEXT, msdw_signature_url TEXT, reporting_signature_url TEXT, created_at TIMESTAMP DEFAULT NOW() )`);
   await q.query(`CREATE TABLE IF NOT EXISTS programs ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), name TEXT NOT NULL, category TEXT, waiting_period_days INTEGER, approval_workflow JSONB, form_template JSONB, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW() )`);
+  await q.query(`ALTER TABLE programs ADD COLUMN IF NOT EXISTS program_type TEXT`);
+  // Mirrors ProgramServicesAndInterventionTypes0000000000080 — the
+  // Program → Services matrix.
+  await q.query(`CREATE TABLE IF NOT EXISTS program_services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    program_id UUID NOT NULL REFERENCES programs(id),
+    intervention_type TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT uq_program_services_program_type UNIQUE (program_id, intervention_type)
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_services_program ON program_services(program_id)`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS intervention_type TEXT`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS program_enrollment_id UUID`);
   // F12 (deployability): the entity maps approval_workflow as jsonb ApprovalStep[];
   // a fresh boot must create it jsonb (not the legacy text[]) or POST /programs
   // with an approvalWorkflow array fails with "malformed array literal". The
@@ -174,18 +207,44 @@ export async function migrate() {
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_case ON case_interventions(case_id)`);
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
 
-  // Mirrors CreateCaseStepLocks0000000000074. case_id is TEXT to match the
-  // case-scoped children above.
+  // Mirrors CreateCaseStepLocks0000000000074 + CaseStepLocksStepKey0000000000079.
+  // case_id is TEXT to match the case-scoped children above. Fresh boots get
+  // the keyed shape; the idempotent statements below convert older boots.
   await q.query(`CREATE TABLE IF NOT EXISTS case_step_locks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     case_id TEXT NOT NULL,
-    step_index SMALLINT NOT NULL,
+    step_key TEXT NOT NULL,
     locked_by UUID,
     locked_by_name TEXT,
     locked_at TIMESTAMP DEFAULT NOW(),
-    CONSTRAINT uq_case_step_locks_case_step UNIQUE (case_id, step_index)
+    CONSTRAINT uq_case_step_locks_case_step_key UNIQUE (case_id, step_key)
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_step_locks_case ON case_step_locks(case_id)`);
+  await q.query(`ALTER TABLE case_step_locks ADD COLUMN IF NOT EXISTS step_index SMALLINT`);
+  await q.query(`
+    UPDATE case_step_locks SET step_key = CASE step_index
+      WHEN 0 THEN 'assessment' WHEN 1 THEN 'interventions'
+      WHEN 2 THEN 'referrals' WHEN 3 THEN 'evaluate' WHEN 4 THEN 'closure'
+    END WHERE step_key IS NULL
+  `);
+  await q.query(`ALTER TABLE case_step_locks DROP CONSTRAINT IF EXISTS uq_case_step_locks_case_step`);
+  await q.query(`ALTER TABLE case_step_locks DROP CONSTRAINT IF EXISTS uq_case_step_locks_case_step_key`);
+  await q.query(`ALTER TABLE case_step_locks ADD CONSTRAINT uq_case_step_locks_case_step_key UNIQUE (case_id, step_key)`);
+  await q.query(`ALTER TABLE case_step_locks DROP COLUMN IF EXISTS step_index`);
+
+  // Mirrors AddProgramEnrollments0000000000077 (per-case program enrollment).
+  await q.query(`CREATE TABLE IF NOT EXISTS program_enrollments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    case_id UUID NOT NULL REFERENCES cases(id),
+    program_id UUID NOT NULL REFERENCES programs(id),
+    enrolled_at DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT uq_program_enrollments_case_program UNIQUE (case_id, program_id)
+  )`);
+  await q.query(`CREATE INDEX IF NOT EXISTS idx_program_enrollments_case ON program_enrollments(case_id)`);
 
   await q.query(`CREATE TABLE IF NOT EXISTS chat_messages ( id UUID PRIMARY KEY DEFAULT uuid_generate_v7(), sender_id TEXT NOT NULL, recipient_id TEXT NOT NULL, content TEXT NOT NULL, conversation_id TEXT NOT NULL, is_read BOOLEAN DEFAULT FALSE, read_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW() )`);
 

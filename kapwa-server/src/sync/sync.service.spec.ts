@@ -144,7 +144,7 @@ describe('SyncService', () => {
     expect(result.results[0].status).toBe('applied');
     expect(stepLocksMock.assertUnsealed).toHaveBeenCalledWith(
       'case-2',
-      1,
+      'interventions',
       expect.objectContaining({ requirement_key: 'valid_id', met: true }),
     );
   });
@@ -173,7 +173,7 @@ describe('SyncService', () => {
     expect(result.results[0].reason).toMatch(/sealed/);
     expect(stepLocksMock.assertUnsealed).toHaveBeenCalledWith(
       'case-1',
-      1,
+      'interventions',
       expect.objectContaining({ met: true }),
     );
     // A refused replay must never reach the write.

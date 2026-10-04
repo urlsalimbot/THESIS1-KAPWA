@@ -21,6 +21,7 @@ import { FilingModule } from './filing/filing.module';
 import { UsersModule } from './users/users.module';
 import { AccessCardsModule } from './access-cards/access-cards.module';
 import { CaseInterventionsModule } from './case-interventions/case-interventions.module';
+import { CaseEnrollmentsModule } from './case-enrollments/case-enrollments.module';
 import { LcrModule } from './lcr/lcr.module';
 import { SlaModule } from './sla/sla.module';
 import { OtpModule } from './otp/otp.module';
@@ -94,6 +95,7 @@ import { AppController } from './app.controller';
     UsersModule,
     AccessCardsModule,
     CaseInterventionsModule,
+    CaseEnrollmentsModule,
     LcrModule,
     SlaModule,
     OtpModule,

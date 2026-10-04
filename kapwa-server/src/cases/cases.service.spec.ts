@@ -113,7 +113,7 @@ describe('CasesService', () => {
     it('takes the next value from the atomic per-year counter', async () => {
       repoMock.manager.query = jest.fn().mockResolvedValue([{ last_seq: 47 }]);
       const year = new Date().getFullYear();
-      await expect(service.generateControlNo()).resolves.toBe(`KAPWA-${year}-00047`);
+      await expect(service.generateControlNo()).resolves.toBe(`MSWD-${year}-00047`);
       const [sql, params] = repoMock.manager.query.mock.calls[0];
       expect(sql).toMatch(/INSERT INTO case_control_counters/);
       expect(sql).toMatch(/ON CONFLICT \(year\) DO UPDATE/);
@@ -123,7 +123,7 @@ describe('CasesService', () => {
     it('falls back to 1 when the counter returns no row', async () => {
       repoMock.manager.query = jest.fn().mockResolvedValue([]);
       const year = new Date().getFullYear();
-      await expect(service.generateControlNo()).resolves.toBe(`KAPWA-${year}-00001`);
+      await expect(service.generateControlNo()).resolves.toBe(`MSWD-${year}-00001`);
     });
   });
 
@@ -573,14 +573,14 @@ describe('CasesService', () => {
     it('carries the sealed steps on the detail payload', async () => {
       repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ACTIVE } as Case);
       stepLocksRepoMock.find.mockResolvedValue([
-        { id: 'r1', caseId: '1', stepIndex: 1, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
-        { id: 'r2', caseId: '1', stepIndex: 3, lockedBy: 'u2', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
+        { id: 'r1', caseId: '1', stepKey: 'interventions', lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
+        { id: 'r2', caseId: '1', stepKey: 'evaluate', lockedBy: 'u2', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
       ]);
 
       const result: any = await service.findById('1');
       expect(result.stepLocks).toEqual([
-        { stepIndex: 1, lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
-        { stepIndex: 3, lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
+        { stepKey: 'interventions', lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-02') },
+        { stepKey: 'evaluate', lockedByName: 'Lorna B. Santos', lockedAt: new Date('2026-10-01') },
       ]);
     });
 
@@ -589,11 +589,11 @@ describe('CasesService', () => {
     it('omits the lock row id and locker uuid from the payload', async () => {
       repoMock.findOne.mockResolvedValue({ id: '1', status: CaseStatus.ACTIVE } as Case);
       stepLocksRepoMock.find.mockResolvedValue([
-        { id: 'r1', caseId: '1', stepIndex: 0, lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date() },
+        { id: 'r1', caseId: '1', stepKey: 'assessment', lockedBy: 'u1', lockedByName: 'Juan Dela Cruz', lockedAt: new Date() },
       ]);
 
       const result: any = await service.findById('1');
-      expect(Object.keys(result.stepLocks[0]).sort()).toEqual(['lockedAt', 'lockedByName', 'stepIndex']);
+      expect(Object.keys(result.stepLocks[0]).sort()).toEqual(['lockedAt', 'lockedByName', 'stepKey']);
     });
 
     it('asks for the sealed steps in step order, one query per case', async () => {
@@ -602,9 +602,9 @@ describe('CasesService', () => {
 
       const result: any = await service.findById('1');
       expect(result.stepLocks).toEqual([]);
+      // The find has no order: the payload is assembled in template order.
       expect(stepLocksRepoMock.find).toHaveBeenCalledWith({
         where: { caseId: '1' },
-        order: { stepIndex: 'ASC' },
       });
       expect(stepLocksRepoMock.find).toHaveBeenCalledTimes(1);
     });
@@ -671,8 +671,12 @@ describe('CasesService', () => {
       ...extra,
     } as unknown as Case);
 
-    const sealed = (...stepIndexes: number[]) => stepIndexes.map((stepIndex) => ({
-      id: `lock-${stepIndex}`, caseId: '1', stepIndex, lockedBy: 'u1',
+    // Step-key order of the common template: the sealed() helper takes keys and
+    // the findById payload is assembled in template order, so the rows are
+    // listed in that order whatever order the stub handed back.
+    const TEMPLATE_KEYS = ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
+    const sealed = (...keys: string[]) => keys.map((key) => ({
+      id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1',
       lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
     }));
 
@@ -680,14 +684,15 @@ describe('CasesService', () => {
       repoMock.save.mockImplementation(async (c: any) => c);
     });
 
-    // At `assessed` (status index 1) the due steps are 0, 1 and 2 — assessment,
-    // intervention, referrals. Steps 4 and 5 are Phase-Out work floored at
-    // `active` and `transitioning`: their Lock buttons are disabled in the UI and
-    // the seal endpoint rejects them, so demanding them here made the gate
+    // At `assessed` (status index 1) the due steps are assessment, enrollments,
+    // interventions and referrals — the Phase-In and Implementation work with
+    // floor 0. `evaluate` and `closure` are Phase-Out work floored at `active`
+    // and `transitioning`: their Lock buttons are disabled in the UI and the
+    // seal endpoint rejects them, so demanding them here made the gate
     // unsatisfiable for the only role it applies to.
     it('allows the hand-off once the steps due at assessed are sealed, without the phase-out steps', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2));
+      stepLocksRepoMock.find.mockResolvedValue(sealed('assessment', 'enrollments', 'interventions', 'referrals'));
 
       const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
 
@@ -695,11 +700,11 @@ describe('CasesService', () => {
       expect(repoMock.save).toHaveBeenCalled();
     });
 
-    // Steps 3 and 4 unsealed as well, so this also proves the gate ignores them
-    // rather than passing on some accident of ordering.
+    // The phase-out steps unsealed as well, so this also proves the gate ignores
+    // them rather than passing on some accident of ordering.
     it('ignores steps that cannot be sealed yet at this status', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2));
+      stepLocksRepoMock.find.mockResolvedValue(sealed('assessment', 'enrollments', 'interventions', 'referrals'));
 
       const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
 
@@ -708,24 +713,24 @@ describe('CasesService', () => {
 
     it('refuses the hand-off while a due step is still open, naming it the way the stepper does', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 2));
+      stepLocksRepoMock.find.mockResolvedValue(sealed('assessment', 'referrals'));
 
       await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
-        .rejects.toThrow(/Still open: Intervention & Requirements/);
+        .rejects.toThrow(/Still open: Program Enrollments, Intervention & Requirements/);
     });
 
-    // One seal, two gaps: the message is the worker's work list, so it has to
+    // Two seals, two gaps: the message is the worker's work list, so it has to
     // name every open *due* step, by the UI's name, in step order — and nothing
     // else, or a worker at `assessed` is told to seal a step whose Lock button is
     // disabled.
     it('names every open due step, in step order, and no step that is not yet due', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(1));
+      stepLocksRepoMock.find.mockResolvedValue(sealed('interventions'));
 
       await expect(service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' }))
         .rejects.toThrow(
           'Lock every step before flagging this case for admin review. Still open: ' +
-          'Assess & Interview, Inter-agency Referrals',
+          'Assess & Interview, Program Enrollments, Inter-agency Referrals',
         );
     });
 
@@ -744,9 +749,9 @@ describe('CasesService', () => {
 
     // Sealing more than is due stays harmless: the worker who got to `in_review`
     // and kept working should not be blocked from handing on.
-    it('allows the hand-off when all five steps are sealed', async () => {
+    it('allows the hand-off when every step of the template is sealed', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3, 4));
+      stepLocksRepoMock.find.mockResolvedValue(sealed(...TEMPLATE_KEYS));
 
       const result = await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
 
@@ -792,7 +797,7 @@ describe('CasesService', () => {
      */
     it('reads the seals findById already loaded, with no second query', async () => {
       repoMock.findOne.mockResolvedValue(assessed());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2));
+      stepLocksRepoMock.find.mockResolvedValue(sealed('assessment', 'enrollments', 'interventions', 'referrals'));
 
       await service.transition('1', CaseStatus.IN_REVIEW, { userRole: 'social_worker' });
 
@@ -826,8 +831,12 @@ describe('CasesService', () => {
       ...extra,
     } as unknown as Case);
 
-    const sealed = (...stepIndexes: number[]) => stepIndexes.map((stepIndex) => ({
-      id: `lock-${stepIndex}`, caseId: '1', stepIndex, lockedBy: 'u1',
+    // Step-key order of the common template: the sealed() helper takes keys and
+    // the findById payload is assembled in template order, so the rows are
+    // listed in that order whatever order the stub handed back.
+    const TEMPLATE_KEYS = ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
+    const sealed = (...keys: string[]) => keys.map((key) => ({
+      id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1',
       lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
     }));
 
@@ -837,7 +846,7 @@ describe('CasesService', () => {
 
     it('closes once every due step, closure included, is sealed', async () => {
       repoMock.findOne.mockResolvedValue(transitioning());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3, 4));
+      stepLocksRepoMock.find.mockResolvedValue(sealed(...TEMPLATE_KEYS));
 
       const result = await service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' });
 
@@ -848,7 +857,7 @@ describe('CasesService', () => {
     // the closure step's own seal — which is the hole.
     it('refuses to close while the closure step is unsealed, naming it as the stepper does', async () => {
       repoMock.findOne.mockResolvedValue(transitioning());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3));
+      stepLocksRepoMock.find.mockResolvedValue(sealed('assessment', 'enrollments', 'interventions', 'referrals', 'evaluate'));
 
       await expect(service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' }))
         .rejects.toThrow('Still open: Case Study & Closure');
@@ -864,7 +873,7 @@ describe('CasesService', () => {
       stepLocksRepoMock.find.mockResolvedValue([]);
 
       await expect(service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' }))
-        .rejects.toThrow('Lock every step before closing this case. Still open: Assess & Interview, Intervention & Requirements, Inter-agency Referrals, Evaluate Help Given, Case Study & Closure');
+        .rejects.toThrow('Lock every step before closing this case. Still open: Assess & Interview, Program Enrollments, Intervention & Requirements, Inter-agency Referrals, Evaluate Help Given, Case Study & Closure');
     });
 
     // Same carve-out as the hand-off gate, for the same stated reason: an admin
@@ -903,7 +912,7 @@ describe('CasesService', () => {
      */
     it('reads the seals findById already loaded, with no second query', async () => {
       repoMock.findOne.mockResolvedValue(transitioning());
-      stepLocksRepoMock.find.mockResolvedValue(sealed(0, 1, 2, 3, 4));
+      stepLocksRepoMock.find.mockResolvedValue(sealed(...TEMPLATE_KEYS));
 
       await service.transition('1', CaseStatus.CLOSED, { userRole: 'social_worker' });
 
@@ -1099,8 +1108,8 @@ describe('FSM — close', () => {
     const existing = { id: '1', status: CaseStatus.TRANSITIONING, closureOutcome: 'graduated', updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
     stepLocksRepoMock.find.mockResolvedValue(
-      [0, 1, 2, 3, 4].map((stepIndex) => ({
-        id: `lock-${stepIndex}`, caseId: '1', stepIndex, lockedBy: 'u1', lockedByName: 'Juan', lockedAt: new Date(),
+      ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'].map((stepKey) => ({
+        id: `lock-${stepKey}`, caseId: '1', stepKey, lockedBy: 'u1', lockedByName: 'Juan', lockedAt: new Date(),
       })),
     );
     repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.CLOSED });
@@ -1241,7 +1250,7 @@ describe('updateAssessmentV2 — case_assistances', () => {
     created = [];
     repoMock.findOne.mockResolvedValue({
       id: 'case-1',
-      status: CaseStatus.ASSESSED,
+      status: CaseStatus.ENROLLED,
       updatedAt: new Date(),
       assistances: [],
     } as any);
@@ -1277,6 +1286,39 @@ describe('updateAssessmentV2 — case_assistances', () => {
     } as any);
     const saved = repoMock.save.mock.calls[0][0] as any;
     expect(saved.caseCategory).toBe('Individual in Crisis Situation (AICS)');
+  });
+
+  // The case category defines the step template, so it is editable only while
+  // the case is `enrolled`; a category swap on an assessed case would
+  // retroactively retarget the seals taken against the old template (spec §9).
+  it('rejects a caseCategory change once the case leaves enrolled', async () => {
+    repoMock.findOne.mockResolvedValue({
+      id: 'case-1',
+      status: CaseStatus.ASSESSED,
+      caseCategory: 'Solo Parent',
+      updatedAt: new Date(),
+      assistances: [],
+    } as any);
+    await expect(service.updateAssessmentV2('case-1', {
+      caseCategory: 'Violence Against Women and Their Children (VAWC)',
+    } as any)).rejects.toThrow(/case category cannot be changed/);
+    expect(repoMock.save).not.toHaveBeenCalled();
+  });
+
+  // Re-saving the *same* category on a later status is a no-op, not a template
+  // swap — the step template does not move because the value did not (spec §9).
+  it('allows re-saving the same caseCategory after assessment', async () => {
+    repoMock.findOne.mockResolvedValue({
+      id: 'case-1',
+      status: CaseStatus.ASSESSED,
+      caseCategory: 'Solo Parent',
+      updatedAt: new Date(),
+      assistances: [],
+    } as any);
+    await expect(service.updateAssessmentV2('case-1', {
+      problemsPresented: 'need',
+      caseCategory: 'Solo Parent',
+    } as any)).resolves.toBeDefined();
   });
 
   it('sets caseId on case_assistance rows when financial data is provided', async () => {

@@ -1,12 +1,15 @@
-import { stepsDueAt, stepsBecomingDueAt, CASE_STEP_MIN_STATUS, CASE_STEP_LABELS, CASE_STATUS_INDEX } from './case-step-labels';
+import { stepsDueAt, stepsBecomingDueAt, CASE_STEP_FLOORS, CASE_STEP_LABELS, CASE_STATUS_INDEX, stepsForCategory, COMMON_STEPS, categoryStepsFor } from './case-step-labels';
+
+const COMMON = ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
+const CICL = ['assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure'];
 
 /**
  * `stepsDueAt` is the whole fix for an unsatisfiable gate, so it is asserted
- * against the property that makes it correct rather than against the numbers it
+ * against the property that makes it correct rather than against the keys it
  * happens to return: **every step it names must be one the seal endpoint would
  * accept at that status.** The seal endpoint's acceptance is
  * `CaseStepLocksService.stepDone`, which floors each step at
- * `CASE_STEP_MIN_STATUS[i]` (except steps 0 and 1, which are status-independent).
+ * `CASE_STEP_FLOORS[key]`.
  *
  * If someone raises a floor, this set shrinks with it automatically and the gate
  * can never again demand a step that cannot be sealed. If someone derived the
@@ -15,21 +18,12 @@ import { stepsDueAt, stepsBecomingDueAt, CASE_STEP_MIN_STATUS, CASE_STEP_LABELS,
 describe('stepsDueAt', () => {
   const LIFECYCLE = ['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed'];
 
-  /**
-   * The floor `stepDone` actually applies to a step, honouring the
-   * status-independent exemption. Steps 0 and 1 are exempt because step 1 is the
-   * step that *submits* an assessed case — flooring it on a later status made
-   * "Submit for Review" unreachable.
-   */
-  const effectiveFloor = (stepIndex: number): number =>
-    stepIndex === 0 || stepIndex === 1 ? 0 : CASE_STEP_MIN_STATUS[stepIndex];
-
   it('names only steps the done-predicate can accept at that status', () => {
     for (const status of LIFECYCLE) {
       const index = CASE_STATUS_INDEX[status];
-      for (const stepIndex of stepsDueAt(status)) {
-        expect({ status, stepIndex, floor: effectiveFloor(stepIndex) <= index }).toEqual({
-          status, stepIndex, floor: true,
+      for (const stepKey of stepsDueAt(status)) {
+        expect({ status, stepKey, floor: (CASE_STEP_FLOORS[stepKey] ?? 0) <= index }).toEqual({
+          status, stepKey, floor: true,
         });
       }
     }
@@ -37,15 +31,15 @@ describe('stepsDueAt', () => {
 
   it('has a label for every step it can name', () => {
     for (const status of LIFECYCLE) {
-      for (const stepIndex of stepsDueAt(status)) {
-        expect(typeof CASE_STEP_LABELS[stepIndex]).toBe('string');
-        expect(CASE_STEP_LABELS[stepIndex].length).toBeGreaterThan(0);
+      for (const stepKey of stepsDueAt(status)) {
+        expect(typeof CASE_STEP_LABELS[stepKey]).toBe('string');
+        expect(CASE_STEP_LABELS[stepKey].length).toBeGreaterThan(0);
       }
     }
   });
 
   it('grows monotonically with the lifecycle, and never drops a step', () => {
-    let previous: number[] = [];
+    let previous: string[] = [];
     for (const status of LIFECYCLE) {
       const due = stepsDueAt(status);
       // Every previously-due step is still due, and the set is in step order.
@@ -62,21 +56,31 @@ describe('stepsDueAt', () => {
     expect(stepsDueAt(null).length).toBeGreaterThan(0);
     expect(stepsDueAt(undefined).length).toBeGreaterThan(0);
     // And those sets are still sealable, or the gate would be stuck the other way.
-    expect(stepsDueAt(null).every((i) => effectiveFloor(i) <= 0)).toBe(true);
+    expect(stepsDueAt(null).every((k) => (CASE_STEP_FLOORS[k] ?? 0) <= 0)).toBe(true);
   });
 
   it('puts the Phase-In and Implementation work first, as the ledger records', () => {
-    // The concrete expectation behind the ruling: at `assessed` the gate asks for
-    // assessment, intervention and referrals, and not for the phase-out steps
-    // whose Lock buttons are disabled at that status.
-    expect(stepsDueAt('assessed')).toEqual([0, 1, 2]);
-    expect(stepsDueAt('assessed').some((i) => i >= 3)).toBe(false);
+    // At `assessed` the gate asks for the Phase-In + Implementation steps, and
+    // not for the phase-out steps whose Lock buttons are disabled at that status.
+    expect(stepsDueAt('assessed')).toEqual(['assessment', 'enrollments', 'interventions', 'referrals']);
+    expect(stepsDueAt('assessed').includes('evaluate')).toBe(false);
+    expect(stepsDueAt('assessed').includes('closure')).toBe(false);
   });
 
   it('only asks for the phase-out steps once they exist in the lifecycle', () => {
-    expect(stepsDueAt('active')).toEqual([0, 1, 2, 3]);
-    expect(stepsDueAt('transitioning')).toEqual([0, 1, 2, 3, 4]);
-    expect(stepsDueAt('closed')).toEqual([0, 1, 2, 3, 4]);
+    expect(stepsDueAt('active')).toEqual(['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate']);
+    expect(stepsDueAt('transitioning')).toEqual(COMMON);
+    expect(stepsDueAt('closed')).toEqual(COMMON);
+  });
+
+  it('is limited to the case category template', () => {
+    // A CICL case's due steps at `enrolled` include the injected discernment
+    // step; a VAWC case's template names protection_order instead — but a common
+    // (category-less) case never sees either.
+    expect(stepsDueAt('enrolled', 'Children in Conflict with the Law (CICL)')).toContain('discernment');
+    expect(stepsDueAt('enrolled', 'Violence Against Women and Their Children (VAWC)')).toContain('protection_order');
+    expect(stepsDueAt('enrolled').includes('discernment')).toBe(false);
+    expect(stepsDueAt('enrolled', 'Solo Parent')).toEqual(['assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals']);
   });
 });
 
@@ -87,13 +91,13 @@ describe('stepsDueAt', () => {
  */
 describe('stepsBecomingDueAt', () => {
   it('names the step that comes due at exactly this lifecycle position', () => {
-    expect(stepsBecomingDueAt('active')).toEqual([3]);
-    expect(stepsBecomingDueAt('transitioning')).toEqual([4]);
+    expect(stepsBecomingDueAt('active')).toEqual(['evaluate']);
+    expect(stepsBecomingDueAt('transitioning')).toEqual(['closure']);
   });
 
   it('names nothing at the positions where no step begins', () => {
-    // `enrolled` and `assessed` share floor 0, so two steps begin there and the
-    // lifecycle has no position with no newly-due step until `in_review`.
+    // `enrolled`, `assessed` and `in_review` share floor 0 for the Phase-In
+    // steps, so no step *begins* at `in_review`.
     expect(stepsBecomingDueAt('in_review')).toEqual([]);
     expect(stepsBecomingDueAt('closed')).toEqual([]);
   });
@@ -103,11 +107,9 @@ describe('stepsBecomingDueAt', () => {
   // the all-five version was. If a floor moves, this is what fails.
   it('only names steps the done-predicate can accept at that status', () => {
     const LIFECYCLE = ['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed'];
-    const effectiveFloor = (i: number): number =>
-      i === 0 || i === 1 ? 0 : CASE_STEP_MIN_STATUS[i];
     for (const status of LIFECYCLE) {
-      for (const stepIndex of stepsBecomingDueAt(status)) {
-        expect(effectiveFloor(stepIndex) === CASE_STATUS_INDEX[status]).toBe(true);
+      for (const stepKey of stepsBecomingDueAt(status)) {
+        expect((CASE_STEP_FLOORS[stepKey] ?? 0) === CASE_STATUS_INDEX[status]).toBe(true);
       }
     }
   });
@@ -119,7 +121,7 @@ describe('stepsBecomingDueAt', () => {
     for (const status of LIFECYCLE) {
       const due = stepsDueAt(status);
       const becoming = stepsBecomingDueAt(status);
-      expect(becoming.every((i) => due.includes(i))).toBe(true);
+      expect(becoming.every((k) => due.includes(k))).toBe(true);
       expect(becoming.length <= due.length).toBe(true);
     }
   });
@@ -132,10 +134,53 @@ describe('stepsBecomingDueAt', () => {
 
   it('has a label for every step it can name', () => {
     for (const status of ['enrolled', 'assessed', 'in_review', 'active', 'transitioning', 'closed']) {
-      for (const stepIndex of stepsBecomingDueAt(status)) {
-        expect(typeof CASE_STEP_LABELS[stepIndex]).toBe('string');
-        expect(CASE_STEP_LABELS[stepIndex].length).toBeGreaterThan(0);
+      for (const stepKey of stepsBecomingDueAt(status)) {
+        expect(typeof CASE_STEP_LABELS[stepKey]).toBe('string');
+        expect(CASE_STEP_LABELS[stepKey].length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('template registry', () => {
+  it('defaults to the common template for a missing category', () => {
+    expect(stepsForCategory(undefined)).toEqual(COMMON);
+    expect(stepsForCategory(null)).toEqual(COMMON);
+    expect(stepsForCategory('Some Unknown Category')).toEqual(COMMON);
+    expect(stepsForCategory('Solo Parent')).toEqual(['assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure']);
+  });
+
+  it('injects exactly one category step before enrollment for each statutory category', () => {
+    expect(categoryStepsFor('Children in Conflict with the Law (CICL)')).toEqual(['discernment']);
+    expect(categoryStepsFor('Violence Against Women and Their Children (VAWC)')).toEqual(['protection_order']);
+    expect(categoryStepsFor('Solo Parent')).toEqual(['solo_parent']);
+    expect(categoryStepsFor('Adoption & Foster Care Case')).toEqual(['adoption']);
+    expect(categoryStepsFor(undefined)).toEqual([]);
+  });
+
+  it('every template starts with assessment and contains the common steps in order', () => {
+    for (const category of ['Children in Conflict with the Law (CICL)', 'Violence Against Women and Their Children (VAWC)', 'Solo Parent', 'Adoption & Foster Care Case']) {
+      const tpl = stepsForCategory(category);
+      expect(tpl[0]).toBe('assessment');
+      const commonKeys = tpl.filter((k) => COMMON_STEPS.includes(k));
+      expect(commonKeys).toEqual(COMMON);
+    }
+  });
+
+  it('every injected category step has a label and a floor of 0', () => {
+    for (const category of ['Children in Conflict with the Law (CICL)', 'Violence Against Women and Their Children (VAWC)', 'Solo Parent', 'Adoption & Foster Care Case']) {
+      for (const k of categoryStepsFor(category)) {
+        expect(typeof CASE_STEP_LABELS[k]).toBe('string');
+        expect(CASE_STEP_FLOORS[k]).toBe(0);
+      }
+    }
+  });
+
+  it('CICL due steps at enrolled include discernment, and fit the template order', () => {
+    const due = stepsDueAt('enrolled', 'Children in Conflict with the Law (CICL)');
+    expect(due).toEqual(['assessment', 'discernment', 'enrollments', 'interventions', 'referrals']);
+    // The injected step sits between assessment and enrollment, never at the end.
+    const tpl = stepsForCategory('Children in Conflict with the Law (CICL)');
+    expect(tpl).toEqual(CICL);
   });
 });
