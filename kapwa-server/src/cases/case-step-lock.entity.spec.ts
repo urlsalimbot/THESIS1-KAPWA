@@ -2,7 +2,6 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getMetadataArgsStorage } from 'typeorm';
 import { CaseStepLock } from './case-step-lock.entity';
-import { CreateCaseStepLocks0000000000074 } from '../database/migrations/CreateCaseStepLocks0000000000074';
 import { CaseStepLocksStepKey0000000000079 } from '../database/migrations/CaseStepLocksStepKey0000000000079';
 
 // Records the SQL a migration emits without touching a database.
