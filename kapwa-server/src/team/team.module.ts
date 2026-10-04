@@ -6,6 +6,7 @@ import { TeamStatus } from './team-status.entity';
 import { TeamInvite } from './team-invite.entity';
 import { TeamScheduleService } from './team-schedule.service';
 import { TeamScheduleController } from './team-schedule.controller';
+import { TeamScheduleSyncService } from './team-schedule-sync.service';
 import { OfficeEventsService } from './office-events.service';
 import { OfficeEventsController } from './office-events.controller';
 import { TeamStatusService } from './team-status.service';
@@ -18,6 +19,8 @@ import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
+import { Case } from '../cases/case.entity';
+import { CaseEvent } from '../case-events/case-event.entity';
 
 // Team workspace: schedule blocks, office events, whereabouts status,
 // schedule invites. Controller guards resolve through AuthModule
@@ -26,7 +29,7 @@ import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 // module uses.
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TeamScheduleBlock, OfficeEvent, TeamStatus, TeamInvite, ConsentLedger]),
+    TypeOrmModule.forFeature([TeamScheduleBlock, OfficeEvent, TeamStatus, TeamInvite, ConsentLedger, Case, CaseEvent]),
     AuthModule,
     AuditModule,
     // Status upserts broadcast over the notifications gateway (exported from
@@ -42,10 +45,12 @@ import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
   ],
   providers: [
     TeamScheduleService,
+    TeamScheduleSyncService,
     OfficeEventsService,
     TeamStatusService,
     TeamInvitesService,
     TeamAchievementsService,
   ],
+  exports: [TeamScheduleSyncService],
 })
 export class TeamModule {}

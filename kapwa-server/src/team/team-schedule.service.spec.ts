@@ -485,4 +485,20 @@ describe('TeamScheduleService', () => {
     expect(findWhere.endDate).toEqual(expect.objectContaining({ _type: 'raw' }));
     expect(result).toHaveLength(1);
   });
+
+  it('rejects edits to a synced (case_event) block', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', source: 'case_event' });
+    await expect(
+      service.updateBlock('b1', { note: 'x' }, workerReq as any) as any,
+    ).rejects.toThrow(/managed by the case file/);
+    expect(repoMock.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects deletes of a synced (case_event) block', async () => {
+    repoMock.findOne.mockResolvedValue({ id: 'b1', userId: 'w1', source: 'case_event' });
+    await expect(
+      service.deleteBlock('b1', workerReq as any, 'w1') as any,
+    ).rejects.toThrow(/managed by the case file/);
+    expect(repoMock.delete).not.toHaveBeenCalled();
+  });
 });
