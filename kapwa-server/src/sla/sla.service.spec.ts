@@ -42,22 +42,19 @@ describe('SlaService', () => {
   // Aug 28 (Fri) = 6, Aug 31 (Mon) = 5, Sep 1 (Tue) = 4, Sep 2 (Wed) = 3, Sep 3 (Thu) = 2.
   const date = (d: string) => new Date(`${d}T00:00:00Z`);
 
-  it('escalates an active case at the program waiting period and warns one day earlier', async () => {
+  it('escalates an active case at the global threshold and warns one working day earlier', async () => {
+    // APPROVED_ESCALATION_DAYS = 3, APPROVED_WARNING_DAYS = 2. The program
+    // waiting_period_days column was dropped in migration 0081, so the branch
+    // reads the constants directly (the raw query is gone — it would throw).
     caseRepo.find
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
-        activeCase('c-esc', date('2026-08-31')), // 5 working days
-        activeCase('c-warn', date('2026-09-01')), // 4 working days
-        activeCase('c-ok', date('2026-09-02')),   // 3 working days
+        activeCase('c-esc', date('2026-08-31')), // 5 working days → escalation
+        activeCase('c-warn', date('2026-09-03')), // 2 working days → warning
+        activeCase('c-ok', date('2026-09-04')),   // 0 working days → nothing
       ]);
-    caseRepo.query
-      .mockResolvedValueOnce([
-        { case_id: 'c-esc', waiting_period_days: '5' },
-        { case_id: 'c-warn', waiting_period_days: '5' },
-        { case_id: 'c-ok', waiting_period_days: '5' },
-      ])
-      .mockResolvedValue([{ id: 'admin-1' }]);
+    caseRepo.query.mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
 
@@ -69,19 +66,30 @@ describe('SlaService', () => {
     }>;
     expect(rows).toHaveLength(2); // one escalation + one warning, one admin
     expect(rows.some(r => r.title.includes('SLA Escalation'))).toBe(true);
-    expect(rows.some(r => r.message.includes('> 5 days'))).toBe(true);
+    expect(rows.some(r => r.message.includes('> 3 days'))).toBe(true);
   });
 
-  it('falls back to global thresholds when the program has no waiting period', async () => {
+  it('never queries the dropped waiting_period_days column for active cases', async () => {
+    caseRepo.find
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([activeCase('c-1', date('2026-08-31'))]);
+    caseRepo.query.mockResolvedValue([{ id: 'admin-1' }]);
+
+    await service.checkAndEscalate();
+
+    const queries = (caseRepo.query as jest.Mock).mock.calls.map(([sql]: [string]) => String(sql));
+    expect(queries.some((sql) => sql.includes('waiting_period_days'))).toBe(false);
+  });
+
+  it('uses the global escalation threshold for an active case', async () => {
     caseRepo.find
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         activeCase('c-esc', date('2026-09-01')), // 4 working days — above global escalation of 3
       ]);
-    caseRepo.query
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([{ id: 'admin-1' }]);
+    caseRepo.query.mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
 
@@ -91,16 +99,14 @@ describe('SlaService', () => {
     expect(rows[0]).toEqual(expect.objectContaining({ referenceId: 'c-esc' }));
   });
 
-  it('escalates at the global threshold when the case has no program at all', async () => {
+  it('escalates an active case at exactly the global escalation threshold', async () => {
     caseRepo.find
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         activeCase('c-warn', date('2026-09-02')), // 3 working days → global warning is 2, escalation 3
       ]);
-    caseRepo.query
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([{ id: 'admin-1' }]);
+    caseRepo.query.mockResolvedValue([{ id: 'admin-1' }]);
 
     const result = await service.checkAndEscalate();
 

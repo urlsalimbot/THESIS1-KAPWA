@@ -56,42 +56,20 @@ export class SlaService {
       }
     }
 
-    // ACTIVE cases carry ≥1 intervention (FSM gate), so the program is resolved
-    // via case_interventions.program_id. SLA thresholds then come from the
-    // program's waiting_period_days (escalation = waiting period, warning = one
-    // working day earlier); programs without it fall back to the global
-    // APPROVED_* constants.
+    // ACTIVE cases: the program `waiting_period_days` column was dropped in
+    // migration 0081, so the thresholds are the global APPROVED_* constants.
+    // (The old raw query over that column would throw on every tick once an
+    // ACTIVE case existed.)
     const activeOverdue = await this.caseRepo.find({
       where: { status: CaseStatus.ACTIVE },
     });
-    let wpdByCase = new Map<string, number>();
-    if (activeOverdue.length > 0) {
-      const rows = await this.caseRepo.query(
-        `SELECT DISTINCT ON (ci.case_id) ci.case_id, p.waiting_period_days
-         FROM case_interventions ci
-         JOIN programs p ON p.id = ci.program_id
-         WHERE ci.case_id = ANY($1)
-           AND p.waiting_period_days IS NOT NULL
-         ORDER BY ci.case_id, ci.created_at DESC`,
-        [activeOverdue.map(c => c.id)],
-      );
-      wpdByCase = new Map(
-        (rows as Array<{ case_id: string; waiting_period_days: string | number }>).map(r => [
-          r.case_id,
-          Number(r.waiting_period_days),
-        ]),
-      );
-    }
     for (const c of activeOverdue) {
       const age = this.workingDays(c.createdAt, new Date());
-      const wpd = wpdByCase.get(c.id);
-      const escDays = wpd ?? APPROVED_ESCALATION_DAYS;
-      const warnDays = wpd != null ? Math.max(1, wpd - 1) : APPROVED_WARNING_DAYS;
-      if (age >= escDays) {
-        this.stageAlert(alerts, c, 'active', `Admin attention required — case active > ${escDays} days without transition`);
+      if (age >= APPROVED_ESCALATION_DAYS) {
+        this.stageAlert(alerts, c, 'active', `Admin attention required — case active > ${APPROVED_ESCALATION_DAYS} days without transition`);
         escalated++;
-      } else if (age >= warnDays) {
-        this.stageAlert(alerts, c, 'active', `Warning: case active > ${warnDays} days without transition`);
+      } else if (age >= APPROVED_WARNING_DAYS) {
+        this.stageAlert(alerts, c, 'active', `Warning: case active > ${APPROVED_WARNING_DAYS} days without transition`);
         warnings++;
       }
     }
