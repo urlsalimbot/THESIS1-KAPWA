@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { interventionRequirementsMet, requiredDocumentKeys } from '@/lib/case-progress';
+import { INTERVENTION_TYPES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ interface Program {
   name: string;
   category?: string;
   requiredDocuments?: string[];
+  services?: string[];
 }
 
 interface StepImplementHIPProps {
@@ -69,6 +71,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   const [addOpen, setAddOpen] = useState(false);
   const EMPTY_FORM = {
     programId: '',
+    interventionType: '',
     serviceName: '',
     category: '',
     deliveryDate: '',
@@ -111,6 +114,11 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
      program and so has no documents to preview. */
   const selectedProgram = programs.find(p => p.id === form.programId);
   const selectedDocKeys = selectedProgram ? requiredDocumentKeys(selectedProgram) : [];
+  // The Program → Services matrix: a chosen program offers only its own
+  // services (spec §6.2); no program / ad-hoc offers the whole catalog.
+  const serviceOptions = (selectedProgram?.services && selectedProgram.services.length > 0)
+    ? selectedProgram.services
+    : [...INTERVENTION_TYPES];
   /* The scope the header's checklist is given: nothing selected means nothing
      to preview — the form is reset whenever the dialog closes, so this is empty
      for the whole of the dialog's closed life and the saved interventions are
@@ -135,6 +143,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
       const category = selectedProgram?.category || form.category || undefined;
       await api.post(`/cases/${caseId}/interventions`, {
         programId: form.programId?.startsWith('adhoc:') ? null : form.programId || null,
+        interventionType: form.interventionType || null,
         serviceName,
         category,
         deliveryDate: form.deliveryDate || null,
@@ -406,6 +415,22 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               )}
             </div>
 
+            {!form.programId.startsWith('adhoc:') && form.programId && (
+              <div className="space-y-1.5">
+                <Label htmlFor="intv-service-type">{t('caseView.implement.serviceType', 'Service *')}</Label>
+                <select
+                  id="intv-service-type"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={form.interventionType}
+                  onChange={e => setForm(f => ({ ...f, interventionType: e.target.value }))}
+                >
+                  <option value="">{t('caseView.implement.selectService', '— Select the service rendered —')}</option>
+                  {serviceOptions.map((code) => (
+                    <option key={code} value={code}>{t(`interventionType.${code}`, code)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {form.programId.startsWith('adhoc:') && (
               <div className="space-y-1.5">
                 <Label htmlFor="intv-service-name">{t('caseView.implement.serviceName', 'Service Name *')}</Label>
@@ -475,7 +500,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeAdd}>{t('caseView.cancel', 'Cancel')}</Button>
-            <Button onClick={handleAdd} disabled={saving || (!form.programId && !form.serviceName)}>
+            <Button onClick={handleAdd} disabled={saving || (!form.programId && !form.serviceName) || Boolean(form.programId && !form.programId.startsWith('adhoc:') && !form.interventionType)}>
               {saving ? t('caseView.saving', 'Saving...') : t('caseView.implement.saveIntervention', 'Save Intervention')}
             </Button>
           </DialogFooter>

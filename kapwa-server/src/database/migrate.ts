@@ -161,8 +161,6 @@ export async function migrate() {
     CONSTRAINT uq_program_services_program_type UNIQUE (program_id, intervention_type)
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_program_services_program ON program_services(program_id)`);
-  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS intervention_type TEXT`);
-  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS program_enrollment_id UUID`);
   // F12 (deployability): the entity maps approval_workflow as jsonb ApprovalStep[];
   // a fresh boot must create it jsonb (not the legacy text[]) or POST /programs
   // with an approvalWorkflow array fails with "malformed array literal". The
@@ -206,6 +204,8 @@ export async function migrate() {
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_interventions_case ON case_interventions(case_id)`);
   await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS intervention_type TEXT`);
+  await q.query(`ALTER TABLE case_interventions ADD COLUMN IF NOT EXISTS program_enrollment_id UUID`);
 
   // Mirrors CreateCaseStepLocks0000000000074 + CaseStepLocksStepKey0000000000079.
   // case_id is TEXT to match the case-scoped children above. Fresh boots get

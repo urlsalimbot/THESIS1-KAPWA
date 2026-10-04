@@ -24,6 +24,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { setBreadcrumbLabel } from '@/lib/breadcrumbs';
 import { api, uploadReceipt } from "../lib/api";
+import { INTERVENTION_TYPES } from "../lib/constants";
 import { queryKeys } from "../lib/query-keys";
 import { FamilyGraph } from "../components/family/FamilyGraph";
 import { ConsentManager } from "../components/consent/ConsentManager";
@@ -206,7 +207,8 @@ export function BeneficiaryViewPage() {
     null,
   );
   const [intForm, setIntForm] = useState({
-    type: "FA",
+    programId: "",
+    interventionType: "financial_grant",
     amount: "",
     fundSource: "Regular",
   });
@@ -264,6 +266,10 @@ export function BeneficiaryViewPage() {
       // The roster simply does not change; the worker can retry.
     }
   }
+
+  const { data: quickPrograms = [] } = useSWR<Array<{ id: string; name: string; category?: string; services?: string[] }>>(
+    queryKeys.programs.list(),
+  );
 
   const { data: cardSummary } = useSWR<{ cardCode: string; total: number; byCategory: Record<string, number> }>(
     id && beneficiary?.accessCardCode ? queryKeys.accessCards.summary(id) : null,
@@ -352,16 +358,20 @@ export function BeneficiaryViewPage() {
         receiptUrl = await uploadReceipt(intReceiptFile, intReceiptFile.name);
       }
 
+      const quickProgram = quickPrograms.find(p => p.id === intForm.programId);
+      const quickServiceLabel = t(`interventionType.${intForm.interventionType}`, intForm.interventionType);
       await api.post(`/cases/${interventionCaseId}/interventions`, {
-        serviceName: intForm.type,
-        category: intForm.type,
+        programId: intForm.programId || null,
+        interventionType: intForm.interventionType,
+        serviceName: quickProgram ? quickProgram.name : quickServiceLabel,
+        category: quickProgram?.category ?? null,
         deliveryDate: new Date().toISOString().split('T')[0],
         amount: parseFloat(intForm.amount) || 0,
         fundSource: intForm.fundSource,
       });
 
       setInterventionCaseId(null);
-      setIntForm({ type: "FA", amount: "", fundSource: "Regular" });
+      setIntForm({ programId: "", interventionType: "financial_grant", amount: "", fundSource: "Regular" });
       setIntReceiptFile(null);
     } catch (err: any) {
       setIntError(err.message || t("beneficiaries.logInterventionFailed", "Failed to log intervention"));
@@ -712,16 +722,21 @@ export function BeneficiaryViewPage() {
               </div>
               {intError && <div className="mb-3 rounded bg-destructive/10 p-2 text-xs text-destructive">{intError}</div>}
               <form onSubmit={handleLogIntervention} className="space-y-3">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("beneficiaries.type", "Type")}</label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.type} onChange={e => setIntForm({ ...intForm, type: e.target.value })} aria-label={t("beneficiaries.interventionType", "Intervention Type")}>
-                      <option value="FA">{t("beneficiaries.intFinancial", "Financial Assistance")}</option>
-                      <option value="C">{t("beneficiaries.intCounseling", "Counseling")}</option>
-                      <option value="CSR">CSR</option>
-                      <option value="R">{t("beneficiaries.intReferral", "Referral")}</option>
-                      <option value="H">{t("beneficiaries.intHealthcare", "Healthcare")}</option>
-                      <option value="HV">{t("beneficiaries.intHomeVisit", "Home Visit")}</option>
+                    <label className="text-xs font-medium">{t("beneficiaries.program", "Program")}</label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.programId} onChange={e => { const p = e.target.value; setIntForm({ ...intForm, programId: p, interventionType: p ? (quickPrograms.find(x => x.id === p)?.services?.[0] ?? intForm.interventionType) : intForm.interventionType }); }} aria-label={t("beneficiaries.program", "Program")}>
+                      <option value="">{t("beneficiaries.noProgram", "— No program —")}</option>
+                      {quickPrograms.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">{t("beneficiaries.type", "Service")}</label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={intForm.interventionType} onChange={e => setIntForm({ ...intForm, interventionType: e.target.value })} aria-label={t("beneficiaries.interventionType", "Intervention Type")}>
+                      {(intForm.programId ? (quickPrograms.find(p => p.id === intForm.programId)?.services ?? []) : INTERVENTION_TYPES).map((code: string) => (
+                        <option key={code} value={code}>{t(`interventionType.${code}`, code)}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -744,6 +759,7 @@ export function BeneficiaryViewPage() {
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" disabled={intSubmitting}>{intSubmitting ? t("beneficiaries.saving", "Saving...") : t("beneficiaries.submitIntervention", "Submit Intervention")}</Button>
                   <Button variant="outline" size="sm" type="button" onClick={() => { setInterventionCaseId(null); setIntError(""); setIntReceiptFile(null); }}>{t("beneficiaries.cancel", "Cancel")}</Button>
+                </div>
                 </div>
               </form>
             </div>

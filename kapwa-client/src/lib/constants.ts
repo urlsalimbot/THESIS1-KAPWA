@@ -1,3 +1,25 @@
+/**
+ * The typed intervention catalog — the client half of
+ * `docs/superpowers/specs/case-catalog.json` (mirrored here as literals
+ * because the client's Docker build context is `kapwa-client/` and cannot
+ * import the repo-root file). The server reads the same catalog from
+ * `src/common/case-catalog.ts`; `case-fsm-parity.test.ts` ties all three
+ * copies to the JSON.
+ */
+export const INTERVENTION_TYPES: readonly string[] = [
+  'financial_grant', 'medical_assistance', 'burial_assistance', 'transport_assistance',
+  'food_pack', 'educational_assistance', 'livelihood_seed', 'training_seminar',
+  'crisis_counseling', 'psychosocial_support', 'parent_effectiveness', 'youth_engagement',
+  'community_service', 'legal_assistance', 'medico_legal_assistance', 'referral_pao',
+  'protection_order_issued', 'protective_custody', 'shelter_assistance', 'scsr_generated',
+  'home_visit', 'health_checkup',
+];
+export const PROGRAM_TYPES: readonly string[] = [
+  'aics', 'social_pension', 'supplemental_feeding', 'livelihood', 'family_welfare',
+  'women_welfare', 'disability_aid', 'cct', 'child_welfare', 'medical', 'shelter',
+  'diversion', 'aftercare', 'counseling', 'legal_referral', 'disaster_relief',
+];
+
 export const BARANGAYS = [
   'Bangkal', 'Baraka', 'Bigte', 'Bitungol', 'Friendship Village Resources (FVR)',
   'Matictic', 'Minuyan', 'Partida', 'Pinagtulayan', 'Poblacion',

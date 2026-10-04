@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { CASE_TRANSITION_ROLES } from './role-access';
 import { STATUS_INDEX, STEP_FLOORS } from '@/components/case-view/CaseStepper';
+import { INTERVENTION_TYPES, PROGRAM_TYPES } from '@/lib/constants';
 
 /**
  * The client's copies of the server's case-FSM facts, asserted equal to the
@@ -201,5 +202,26 @@ it('STEP_FLOORS equals the server CASE_STEP_FLOORS, key for key', () => {
     expect(Object.keys(index).length).toBeGreaterThan(0);
     expect(sorted(STATUS_INDEX)).toEqual(sorted(index));
     expect(Object.keys(STATUS_INDEX).some((k) => !(k in index))).toBe(false);
+  });
+
+  it('INTERVENTION_TYPES and PROGRAM_TYPES equal the canonical catalog JSON', () => {
+    const catalog = JSON.parse(
+      readFileSync(
+        path.resolve(import.meta.dirname, '../../../docs/superpowers/specs/case-catalog.json'),
+        'utf8',
+      ),
+    ) as { interventionTypes: string[]; programTypes: string[] };
+    expect(catalog.interventionTypes.length).toBeGreaterThan(0);
+    expect([...INTERVENTION_TYPES].sort()).toEqual([...catalog.interventionTypes].sort());
+    expect([...PROGRAM_TYPES].sort()).toEqual([...catalog.programTypes].sort());
+  });
+
+  it('every intervention type has an i18n label in both locales', () => {
+    const en = readFileSync(path.resolve(import.meta.dirname, '../i18n/locales/en/index.ts'), 'utf8');
+    const fil = readFileSync(path.resolve(import.meta.dirname, '../i18n/locales/fil/index.ts'), 'utf8');
+    for (const code of INTERVENTION_TYPES) {
+      expect(en).toContain(`"${code}"`);
+      expect(fil).toContain(`"${code}"`);
+    }
   });
 });
