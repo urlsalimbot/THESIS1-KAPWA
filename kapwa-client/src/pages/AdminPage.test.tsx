@@ -56,6 +56,13 @@ describe('AdminPage', () => {
     expect(screen.getByText(/Audit Log/)).toBeTruthy();
   });
 
+  it('no longer shows a Contact Messages tab (it lives in Messages)', async () => {
+    renderWithSWR(<AdminPage />);
+    await screen.findByText('User Management');
+    expect(screen.queryByRole('tab', { name: /contact messages/i })).toBeNull();
+    expect(screen.queryByText('Contact Inbox')).toBeNull();
+  });
+
   it('renders User Management card heading by default', async () => {
     renderWithSWR(<AdminPage />);
     expect(await screen.findByText('User Management')).toBeTruthy();

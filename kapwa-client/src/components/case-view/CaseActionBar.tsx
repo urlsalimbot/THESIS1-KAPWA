@@ -138,6 +138,11 @@ const FORWARD_HOPS: Partial<Record<CaseStatus, CaseHop>> = {
       key: 'caseView.action.closeBody',
       fallback: 'The case moves from Transitioning to Closed. Closure requires the closure outcome and every step sealed.',
     },
+    // The server refuses a non-admin close while any due step is unsealed
+    // (`assertStepsSealed` on `transitioning -> closed`); gate the client the
+    // same way so the button names the open steps instead of the worker
+    // discovering them from a 400 after they press it.
+    gateOnDueStepLocks: true,
   },
 };
 

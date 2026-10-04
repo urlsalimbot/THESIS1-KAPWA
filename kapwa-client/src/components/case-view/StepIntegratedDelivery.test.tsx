@@ -83,6 +83,24 @@ describe('StepIntegratedDelivery — referral or an explicit no-referral decisio
     expect(screen.getByRole('button', { name: /No Referrals issued/i })).toBeTruthy();
   });
 
+  it('shows which office and why for an issued referral', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('inter-agency-referrals')) {
+        return Promise.resolve([
+          { id: 'r1', toAgencyId: 'ag-rhu', toAgency: { id: 'ag-rhu', name: 'Rural Health Unit' }, reason: 'Medical coordination', status: 'referred' },
+        ]);
+      }
+      if (k.includes('agencies')) return Promise.resolve(AGENCIES);
+      return Promise.resolve(null);
+    });
+
+    renderStep();
+
+    expect(await screen.findByText(/Referred to Rural Health Unit/i)).toBeTruthy();
+    expect(screen.getByText(/Reason: Medical coordination/i)).toBeTruthy();
+  });
+
   it('records "no referrals issued" through the decision endpoint', async () => {
     // The server's in_review -> active gate rejects a case for a missing
     // referral decision; before this control existed no client code could ever

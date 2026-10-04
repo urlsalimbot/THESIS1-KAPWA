@@ -128,6 +128,25 @@ describe('CaseActionBar', () => {
     expect(mockApiPatch).not.toHaveBeenCalled();
   });
 
+  // --- the close edge, gated on the due step seals the server also asks for --
+
+  it('gates Close on the due step seals, matching the server', () => {
+    // The server refuses a non-admin close while any due step is unsealed
+    // (`assertStepsSealed` on transitioning -> closed). The bar must gate the
+    // same way, or the worker learns the open step from a 400 after pressing.
+    renderBar({ caseData: { status: 'transitioning', stepLocks: locksFor([0, 1, 2, 3]) } });
+
+    const close = screen.getByRole('button', { name: /close case/i });
+    expect(close).toBeDisabled();
+    expect(screen.getByText('Case Study & Closure')).toBeTruthy();
+  });
+
+  it('enables Close once every due step is sealed', () => {
+    renderBar({ caseData: { status: 'transitioning', stepLocks: locksFor([0, 1, 2, 3, 4]) } });
+
+    expect(screen.getByRole('button', { name: /close case/i })).toBeEnabled();
+  });
+
   // --- the worker's hand-off, when it is allowed ---------------------------
 
   it('confirms, naming the effect, then flags the case for review', async () => {

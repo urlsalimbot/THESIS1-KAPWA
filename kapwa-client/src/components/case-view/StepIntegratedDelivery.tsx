@@ -13,6 +13,16 @@ import { Agency, LEGAL_BASIS_OPTIONS } from '@/components/referrals/referral-uti
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { useTranslation } from 'react-i18next';
 
+interface ReferralRow {
+  id: string;
+  toAgencyId: string;
+  toAgency?: { id: string; code?: string; name?: string } | null;
+  reason?: string;
+  status?: string;
+  legalBasisCode?: string;
+  notes?: string;
+}
+
 interface StepIntegratedDeliveryProps {
   caseId: string;
   caseData: any;
@@ -49,7 +59,7 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
   const [issuing, setIssuing] = useState(false);
   const [savingDecision, setSavingDecision] = useState(false);
 
-  const { data: referrals, mutate: revalidate } = useSWR<{ id: string; toAgencyId: string }[]>(
+  const { data: referrals, mutate: revalidate } = useSWR<ReferralRow[]>(
     queryKeys.interAgencyReferrals.byCase(caseId),
   );
   const { data: agencies } = useSWR<Agency[]>(queryKeys.agencies.list());
@@ -146,19 +156,47 @@ export function StepIntegratedDelivery({ caseId, caseData, userRole, readOnly, l
             </div>
           )}
         </div>
-        <div className="border-t px-4 py-4 flex items-center justify-center">
+        <div className="border-t px-4 py-4">
           {hasReferrals ? (
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">
+            <div className="space-y-3">
+              {/* Which office and why — the two things the endorsement letter
+                  records and the reader of this step needs. */}
+              <ul className="space-y-2">
+                {(referrals || []).map((r) => (
+                  <li key={r.id} className="rounded-md border border-border/60 px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {t('caseView.integrated.referredTo', 'Referred to {{office}}', {
+                          office: r.toAgency?.name || t('caseView.integrated.receivingAgency', 'the receiving agency'),
+                        })}
+                      </p>
+                      {r.status && <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>}
+                    </div>
+                    {r.reason && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t('caseView.integrated.referralReason', 'Reason: {{reason}}', { reason: r.reason })}
+                      </p>
+                    )}
+                    {r.legalBasisCode && (
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {t('caseView.integrated.legalBasisShort', 'Legal basis: {{code}}', { code: r.legalBasisCode })}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-center text-xs text-muted-foreground">
                 {t('caseView.integrated.issuedHint', 'Endorsement letter issued for this case.')}
               </p>
               {!readOnly && (
-                <Button className="mt-2" size="sm" onClick={redownload} disabled={issuing}>
-                  <FileText size={14} className="mr-1" />
-                  {issuing
-                    ? t('caseView.integrated.issuing', 'Issuing...')
-                    : t('caseView.integrated.endorsementLetter', 'Endorsement Letter')}
-                </Button>
+                <div className="text-center">
+                  <Button size="sm" onClick={redownload} disabled={issuing}>
+                    <FileText size={14} className="mr-1" />
+                    {issuing
+                      ? t('caseView.integrated.issuing', 'Issuing...')
+                      : t('caseView.integrated.endorsementLetter', 'Endorsement Letter')}
+                  </Button>
+                </div>
               )}
             </div>
           ) : (
