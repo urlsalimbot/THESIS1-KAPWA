@@ -15,7 +15,7 @@ export class CaseEventReminder extends BaseEntity {
   @Column({ type: 'varchar', length: 16 })
   channel!: string;
 
-  @Column({ name: 'sent_at', nullable: true })
+  @Column({ name: 'sent_at', type: 'timestamp', nullable: true })
   sentAt?: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

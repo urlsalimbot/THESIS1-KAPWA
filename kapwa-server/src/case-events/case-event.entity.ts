@@ -46,7 +46,7 @@ export class CaseEvent extends BaseEntity {
   @Column({ type: 'varchar', length: 32, default: 'planned' })
   status!: string;
 
-  @Column({ name: 'created_by', nullable: true })
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
   createdBy?: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

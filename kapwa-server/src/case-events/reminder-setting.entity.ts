@@ -13,7 +13,7 @@ export class ReminderSetting extends BaseEntity {
   @Column({ type: 'varchar', length: 16 })
   scope!: string;
 
-  @Column({ name: 'user_id', nullable: true })
+  @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId?: string | null;
 
   @Column({ name: 'event_type', type: 'varchar', length: 32 })
@@ -22,7 +22,7 @@ export class ReminderSetting extends BaseEntity {
   @Column({ type: 'jsonb' })
   offsets!: number[];
 
-  @Column({ name: 'updated_by', nullable: true })
+  @Column({ name: 'updated_by', type: 'uuid', nullable: true })
   updatedBy?: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
