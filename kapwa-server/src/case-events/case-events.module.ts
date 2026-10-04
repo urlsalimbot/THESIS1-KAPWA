@@ -5,6 +5,7 @@ import { CaseEventReminder } from './case-event-reminder.entity';
 import { ReminderSetting } from './reminder-setting.entity';
 import { Case } from '../cases/case.entity';
 import { User } from '../auth/user.entity';
+import { ConsentLedger } from '../beneficiaries/consent-ledger.entity';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
@@ -17,7 +18,9 @@ import { ReminderSettingsController } from './reminder-settings.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CaseEvent, CaseEventReminder, ReminderSetting, Case, User]),
+    // ConsentLedger is registered here for the AbacGuard every guarded
+    // controller module must satisfy (same wiring as TeamModule/CasesModule).
+    TypeOrmModule.forFeature([CaseEvent, CaseEventReminder, ReminderSetting, Case, User, ConsentLedger]),
     AuthModule, NotificationsModule, AuditModule, TeamModule,
   ],
   providers: [CaseEventsService, CaseEventReminderService, ReminderSettingsService],
