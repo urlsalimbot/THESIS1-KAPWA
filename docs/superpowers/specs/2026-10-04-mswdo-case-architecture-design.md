@@ -125,22 +125,36 @@ move to keys.
 
 ### 4.4 Programs & interventions shape (evaluated)
 
-The existing tables already fit the model; two additive changes key the domains the way the
+The existing tables already fit the model; three additive changes key the domains the way the
 MSWDO reference does:
 
 - **`programs.program_type TEXT NULL`** — seeded catalog (`social_pension`, `supplemental_feeding`,
-  `diversion`, `livelihood`, `education`, `medical`, `burial`, `food_non_food`, `shelter`,
-  `aftercare`). `name` stays the display label; `program_type` is the queryable key for
-  enrollments and the later AICS-budget phase.
-- **`case_interventions.intervention_type TEXT NULL`** — seeded catalog (`financial_grant`,
-  `scsr_generated`, `crisis_counseling`, `referral_pao`, `protection_order_issued`,
-  `medical_assistance`, `burial_assistance`, `livelihood_seed`, `legal_assistance`,
-  `home_visit`). `service_name` stays the human label.
+  `diversion`, `livelihood`, `education`, `medical`, `burial`, `financial`, `food`, `transport`,
+  `cct`, `disaster_relief`, `counseling`, `legal_referral`, `disability_aid`, `child_welfare`,
+  `family_welfare`, `aics`, `aftercare`, `shelter`). `name` stays the display label;
+  `program_type` is the queryable key for enrollments and the later AICS-budget phase.
+  `seed-programs.ts` assigns `programType` to every seeded program (Medical Assistance →
+  `medical`, AICS → `aics`, 4Ps → `cct`, Senior Citizen Social Pension → `social_pension`, …)
+  and gains two new seeds: **Juvenile Diversion Program** (`diversion`, used by CICL cases) and
+  **Aftercare Support** (`aftercare`, used by aftercare-status cases).
+- **`case_interventions.intervention_type TEXT NULL`** — seeded catalog of codes + labels:
+  `financial_grant` (Financial Grant), `scsr_generated` (Social Case Study Report Generated),
+  `crisis_counseling` (Crisis Counseling), `referral_pao` (Referral to Public Attorney's
+  Office), `protection_order_issued` (Temporary Protection Order Issued), `medical_assistance`,
+  `burial_assistance`, `livelihood_seed`, `legal_assistance`, `home_visit`. `service_name`
+  stays the human label (defaults to the catalog label).
 - **`case_interventions.program_enrollment_id UUID NULL → program_enrollments(id)`** — links a
   delivered intervention to the enrollment it was delivered under (the
   Program-Enrollment → Intervention-Logs link).
 
 Existing rows: `program_type`/`intervention_type` null (legacy), treated as "uncatalogued".
+
+**`programs.approval_workflow` stays** (evaluated, not removed). It is not dead code:
+`CreateProgramPage` collects the steps, `ProgramDetailPage`/`ProgramsPage` render them,
+`programs.service` validates the shape, and the sync column manifest carries the column. It is
+not *executed* by the approvals pipeline — which runs on case statuses — but removing it would
+ripple through the entity, zod, service, two pages, i18n, the sync manifest, and migration
+history for little gain. Out of scope for this rework.
 
 ## 5. Category steps (initial catalog)
 
@@ -189,12 +203,29 @@ report** and the PAPs' **home study report**. The step tracks the MSWDO's part:
 For legal categories (CICL, VAWC, CNSP) the case header shows an editable **Court Docket No.**,
 saved via `PATCH /cases/:id/meta`.
 
-## 6. Program Enrollments step (`enrollments`)
+## 6. Enrollment & intervention UIs
+
+### 6.1 Program Enrollments step (`enrollments`)
 
 - Shows the case's enrollments: program, enrollment date, status; add/remove/edit.
 - Endpoints: `GET/POST /cases/:id/enrollments`, `DELETE /cases/:id/enrollments/:id`,
   and `PATCH /cases/:id/enrollments-decision { notNeeded }` (mirrors the referrals decision).
 - The case-view detail payload carries the enrollments list (and `enrollments_not_needed`).
+
+### 6.2 Interventions client UI
+
+The seeded `intervention_type` catalog drives the intervention logging UIs so logged
+interventions are typed, not free text:
+
+- The **Beneficiary quick log** (BeneficiaryViewPage "Log Intervention") and the case-view's
+  **New Intervention** dialog (StepImplementHIP) replace their hard-coded type options
+  (FA/C/CSR/R/H/HV) with the catalog: the select renders the catalog labels and the payload
+  sends `interventionType` (code) plus `serviceName` (label). The case-view intervention list
+  and the beneficiary interventions panel display the resolved label.
+- Server: `POST /cases/:id/interventions` accepts `interventionType` (enum, optional); rows
+  without one render "uncatalogued".
+- `seed-demo.ts` assigns `interventionType` to seeded intervention rows (mapping the legacy
+  codes: FA → `financial_grant`, C → `crisis_counseling`, R → `referral_pao`, …).
 
 ## 7. Aftercare
 
@@ -227,6 +258,7 @@ assessment schema enforces it (a `caseCategory` change on an assessed+ case is r
 | `PATCH /cases/:id/solo-parent` | Solo Parent step save |
 | `PATCH /cases/:id/adoption` | Adoption & Foster Care step save |
 | `PATCH /cases/:id/meta` `{ courtDocketNumber }` | court docket |
+| `POST /cases/:id/interventions` | add an intervention (gains `interventionType` enum) |
 | `PATCH /cases/:id/status` `{ status: 'aftercare' }` | via the existing endpoint + FSM edge |
 
 ## 11. Migration & rollout plan
@@ -241,6 +273,10 @@ Five TypeORM migrations, each mirrored by idempotent statements in `src/database
   drop `step_index`.
 - **`…0000000000080`** — `programs.program_type`; `case_interventions.intervention_type`
   and `program_enrollment_id`.
+- **Seed updates (not migrations):** `seed-programs.ts` gains `programType` per program plus the
+  Juvenile Diversion Program and Aftercare Support seeds; `seed-demo.ts` assigns
+  `interventionType` to seeded intervention rows; the intervention/program type catalogs ship
+  as shared constants (server/client parity test).
 
 Rollout: single cohesive change set on `main`; CI (server jest + coverage, client vitest +
 coverage, docker build); then the running stack applies migrations.
@@ -251,10 +287,11 @@ coverage, docker build); then the running stack applies migrations.
   existing `case-fsm-parity` pattern); templates per category pinned.
 - Server: lock service key-based; gates on keys; enrollments CRUD + decision; discernment /
   protection-order / solo-parent / adoption / meta endpoints; aftercare transition + SLA
-  exclusion; control-number prefix; category immutability; program/intervention type seeds.
+  exclusion; control-number prefix; category immutability; program/intervention type catalogs
+  (parity + seeds).
 - Client: stepper renders CICL vs VAWC vs Solo Parent vs Adoption vs common templates;
-  lock-by-key; the five new step UIs; CaseActionBar gates; aftercare banner/action;
-  court-docket header.
+  lock-by-key; the five new step UIs; the typed intervention logging UIs (quick log +
+  New Intervention dialog); CaseActionBar gates; aftercare banner/action; court-docket header.
 - Existing index-pinning specs migrate to keys (`StepLocksAcrossSteps`, `CaseStepper.done`,
   `case-step-locks.service.spec`, etc.).
 
