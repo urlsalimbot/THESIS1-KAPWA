@@ -22,6 +22,15 @@ export class TeamScheduleSyncService {
     return this.blocks.findOne({ where: { source: 'case_event', sourceRef: eventId } });
   }
 
+  /**
+   * The calendar note's middle term. UI-created events carry no title (the
+   * forms collect date/time/venue/notes), so the raw `event_type` must never
+   * reach the calendar — a human label stands in.
+   */
+  private static eventLabel(eventType: string): string {
+    return eventType === 'court_hearing' ? 'Court hearing' : 'Home visit';
+  }
+
   async upsertForEvent(
     event: { id: string; eventType: string; eventDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; venue?: string | null; status: string },
     workerId: string | null | undefined,
@@ -29,7 +38,7 @@ export class TeamScheduleSyncService {
   ): Promise<void> {
     if (!workerId) return;
     const existing = await this.blockForEvent(event.id);
-    const note = `Case ${controlNo} — ${event.title ?? event.eventType}${event.venue ? ` (${event.venue})` : ''}`;
+    const note = `Case ${controlNo} — ${event.title ?? TeamScheduleSyncService.eventLabel(event.eventType)}${event.venue ? ` (${event.venue})` : ''}`;
     const patch = {
       userId: workerId,
       blockDate: event.eventDate,

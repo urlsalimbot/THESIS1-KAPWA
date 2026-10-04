@@ -441,7 +441,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-muted-foreground" />
                     <span className="font-medium">{formatDate(ev.eventDate)}</span>
-                    {ev.startTime && (<><span className="text-muted-foreground">·</span><span>{ev.startTime}</span></>)}
+                    {ev.startTime && (<><span className="text-muted-foreground">·</span><span>{String(ev.startTime).slice(0, 5)}</span></>)}
                   </div>
                   {ev.notes && <p className="text-xs text-muted-foreground">{ev.notes}</p>}
                 </div>

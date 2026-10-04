@@ -42,6 +42,27 @@ describe('TeamScheduleSyncService', () => {
     expect(blockRepo.create).not.toHaveBeenCalled();
   });
 
+  it('uses a human label in the note when the event has no title', async () => {
+    // UI-created events carry no title (the forms collect date/time/venue/
+    // notes), so the note must not leak the raw enum into the calendar.
+    blockRepo.findOne.mockResolvedValue(null);
+    blockRepo.create.mockImplementation((x) => x);
+    blockRepo.save.mockResolvedValue({});
+    await svc.upsertForEvent({ ...event, title: null } as any, 'worker-1', 'MSWD-2026-0012');
+    const note = (blockRepo.create as jest.Mock).mock.calls[0][0].note as string;
+    expect(note).toContain('Court hearing');
+    expect(note).not.toContain('court_hearing');
+  });
+
+  it('labels a home visit without a title as "Home visit"', async () => {
+    blockRepo.findOne.mockResolvedValue(null);
+    blockRepo.create.mockImplementation((x) => x);
+    blockRepo.save.mockResolvedValue({});
+    await svc.upsertForEvent({ ...event, eventType: 'home_visit', title: null, venue: null } as any, 'worker-1', 'MSWD-2026-0012');
+    const note = (blockRepo.create as jest.Mock).mock.calls[0][0].note as string;
+    expect(note).toBe('Case MSWD-2026-0012 — Home visit');
+  });
+
   it('removes the block for a cancelled event', async () => {
     await svc.removeForEvent('evt-1');
     expect(blockRepo.delete).toHaveBeenCalledWith(expect.objectContaining({ source: 'case_event', sourceRef: 'evt-1' }));

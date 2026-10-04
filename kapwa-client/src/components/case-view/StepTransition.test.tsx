@@ -264,6 +264,13 @@ describe('StepTransition — scheduled home visits', () => {
     ));
   });
 
+  it('renders the visit time as HH:MM, not the raw HH:MM:SS column', async () => {
+    renderWithEvents([{ ...SCHEDULED, startTime: '14:00:00' }]);
+    const row = (await screen.findByText(/Check-up/)).closest('div') as HTMLElement;
+    expect(row.textContent).toContain('14:00');
+    expect(row.textContent).not.toContain('14:00:00');
+  });
+
   it('schedules a new home visit for the case', async () => {
     const user = userEvent.setup();
     renderWithEvents([]);
