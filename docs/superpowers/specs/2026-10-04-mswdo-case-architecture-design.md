@@ -1,0 +1,221 @@
+# MSWDO Case Architecture — Sub-project A: Case File, Stepper, and Program Enrollments
+
+Date: 2026-10-04
+Status: approved design (brainstormed section by section) — not yet implemented
+
+## 1. Goal and scope
+
+Make the case model mirror the MSWDO operating model —
+`[Client Profile] → [Case File] → [Intake/Assessment] → [Program Enrollments] → [Intervention Logs]` —
+by (a) introducing **stable step keys** with a **per-category step template** (case-type-specific
+stepper steps), (b) adding a **Program Enrollments** step and table, (c) adding **court docket**
+tracking for legal cases, (d) a terminal **Aftercare** status, and (e) an **MSWD-** control-number
+scheme. This is sub-project **A**; the statutory-alerts engine (Phase C details below), document
+templates, and AICS budget tracking are separate later phases.
+
+### Non-goals (later phases)
+- **B — Document templates**: SCSR / Certificate of Indigency generators (reuse the existing
+  COE/PCV/endorsement export pipeline).
+- **C — Statutory alerts**: legal-deadline engine. Verified timeline sources are recorded in
+  Appendix A so the phase-C spec starts from the law, not folklore.
+- **D — AICS budget tracking**: per-client quarter/year caps + municipal budget watch.
+
+## 2. Recorded decisions (from the brainstorm)
+
+| Question | Decision |
+|---|---|
+| Stepper shape | **Case-type-specific steps** — the stepper adapts to the case category |
+| Category steps vs lifecycle | **Layered injection** — common lifecycle steps stay; category steps are injected between them |
+| Status model | Keep the FSM; add a terminal **`aftercare`** status after `closed` |
+| Case number scheme | New cases use **`MSWD-<year>-<seq>`**; existing `KAPWA-…` numbers untouched |
+| Program enrollments | **Per-case** `program_enrollments`, rendered as its own common step **right after Assess & Interview** |
+| Step identification | **Stable string step keys** (`case_step_locks.step_key`), order from a per-category template |
+
+## 3. The step model
+
+### 3.1 Keys and common template
+
+Steps are identified by stable string keys, in display order:
+
+```
+common:  assessment, enrollments, interventions, referrals, evaluate, closure
+CICL:    assessment, discernment, enrollments, interventions, referrals, evaluate, closure
+VAWC:    assessment, protection_order, enrollments, interventions, referrals, evaluate, closure
+```
+
+Cases with no category (legacy) use the common template. The catalog is a registry: adding a
+category step later is adding a template entry, not touching the stepper core.
+
+### 3.2 Lifecycle floors (when a step becomes due/sealable)
+
+Replaces `CASE_STEP_MIN_STATUS`:
+
+| Step key | Due at lifecycle position |
+|---|---|
+| `assessment`, `enrollments`, `interventions`, `referrals`, `discernment`, `protection_order` | `enrolled` (0) |
+| `evaluate` | `active` (3) |
+| `closure` | `transitioning` (4) |
+
+`stepsDueAt(status, category)` returns the ordered due keys from the case's template.
+Transition gates (`assessed → in_review`, `transitioning → closed`) and `assertStepsSealed`
+operate on keys.
+
+### 3.3 Done-predicates
+
+| Step key | Done when |
+|---|---|
+| `assessment` | `problemsPresented && socialWorkerAssessment && clientCategory && caseCategory` (existing + category) |
+| `enrollments` | `program_enrollments` has ≥ 1 row **or** `enrollments_not_needed` |
+| `interventions` | existing predicate (intervention or `interventionNotNeeded`; required documents met) |
+| `referrals` | existing predicate (referral or `referralNotNeeded`) |
+| `discernment` | `discernmentAssessedAt` and `discernmentResult` set |
+| `protection_order` | `protectionOrderType` set |
+| `evaluate` | existing transition-plan predicate |
+| `closure` | existing closure predicate (`closureOutcome`) |
+
+### 3.4 Step locks
+
+`case_step_locks` gains `step_key` (unique per case), migrations map existing rows
+(`0→assessment, 1→interventions, 2→referrals, 3→evaluate, 4→closure`), and the integer
+`step_index` column is dropped. Seal/unlock APIs, `StepLockBar`, the case view's
+`lockFor`/done maps, and the `filing` document-verify gate (`assertUnsealed(caseId, …)`)
+move to keys.
+
+## 4. Data model
+
+### 4.1 `cases` new columns
+
+| Column | Type | Notes |
+|---|---|---|
+| `court_docket_number` | TEXT NULL | legal categories (CICL, VAWC, CNSP) |
+| `discernment_assessed_at` | DATE NULL | CICL step |
+| `discernment_result` | TEXT NULL | `discerned` \| `not_discerned` |
+| `discernment_notes` | TEXT NULL | |
+| `protection_order_type` | TEXT NULL | `Barangay Protection Order (BPO)` \| `Temporary Protection Order (TPO)` \| `Permanent Protection Order (PPO)` |
+| `protection_order_issued_at` | DATE NULL | |
+| `protection_order_issued_by` | TEXT NULL | issuing authority (Punong Barangay / court) |
+| `protection_order_notes` | TEXT NULL | |
+| `enrollments_not_needed` | BOOLEAN NOT NULL DEFAULT FALSE | explicit "no programs" decision |
+| `status` | enum + `aftercare` | terminal |
+
+### 4.2 `program_enrollments` (new table)
+
+- `id UUID PK` · `case_id UUID NOT NULL → cases(id)` · `program_id UUID NOT NULL → programs(id)`
+- `enrolled_at DATE NOT NULL` · `status TEXT NOT NULL DEFAULT 'active'` (`active | completed | withdrawn`)
+- `created_by UUID NULL` · `created_at` / `updated_at`
+- **UNIQUE `(case_id, program_id)`**
+
+### 4.3 `case_step_locks`
+
+- Add `step_key TEXT NOT NULL`; UNIQUE `(case_id, step_key)`; backfill from `step_index`;
+  drop `step_index`.
+
+## 5. Category steps (initial catalog)
+
+### 5.1 CICL — `discernment` (Discernment Assessment)
+
+Under R.A. 9344 §6/§22 the social worker determines whether a CICL (above 15, below 18)
+**acted with discernment** — this decides diversion vs intervention program. The step records:
+
+- `discernment_assessed_at` (date), `discernment_result` (`discerned | not_discerned`),
+  `discernment_notes`.
+- UI: date picker, result choice, notes; a hint shows the pathway implied by the result
+  (diversion if discerned; intervention program if not).
+- Done = date **and** result set. Hidden for non-CICL categories.
+
+### 5.2 VAWC — `protection_order`
+
+Under R.A. 9262 §8/§14–16 there are three protection orders with different issuers and
+validities. The step records:
+
+- `protection_order_type` (BPO / TPO / PPO), `protection_order_issued_at`,
+  `protection_order_issued_by`, `protection_order_notes`.
+- UI: type select, issued date/authority, notes; validity hint (BPO 15 days, TPO 30 days,
+  PPO until revoked). Hidden for non-VAWC categories.
+
+### 5.3 Court docket
+
+For legal categories (CICL, VAWC, CNSP) the case header shows an editable **Court Docket No.**,
+saved via `PATCH /cases/:id/meta`.
+
+## 6. Program Enrollments step (`enrollments`)
+
+- Shows the case's enrollments: program, enrollment date, status; add/remove/edit.
+- Endpoints: `GET/POST /cases/:id/enrollments`, `DELETE /cases/:id/enrollments/:id`,
+  and `PATCH /cases/:id/enrollments-decision { notNeeded }` (mirrors the referrals decision).
+- The case-view detail payload carries the enrollments list (and `enrollments_not_needed`).
+
+## 7. Aftercare
+
+- `CaseStatus.AFTERCARE = 'aftercare'`; FSM edge **`closed → aftercare`** (admin, social_worker);
+  no outgoing edges; SLA alerts exclude aftercare.
+- A closed case's action bar offers **"Move to Aftercare"**; aftercare cases render a read-only
+  banner with the full step template sealed.
+- Generalizes to PWUD aftercare, CICL diversion follow-up, VAWC safety monitoring.
+
+## 8. Control numbers
+
+`generateControlNo()` → `MSWD-<year>-<seq>` (same `case_control_counters` row; uniqueness is on
+the full string, so `KAPWA-` and `MSWD-` coexist).
+
+## 9. Case-category immutability
+
+`caseCategory` defines the step template, so it is editable only while the case is `enrolled`
+(during Step 1). Once the case leaves `enrolled`, it locks — the step-1 UI states why; the
+assessment schema enforces it (a `caseCategory` change on an assessed+ case is rejected).
+
+## 10. API surface added
+
+| Endpoint | Purpose |
+|---|---|
+| `GET/POST /cases/:id/enrollments` | list / add an enrollment |
+| `DELETE /cases/:id/enrollments/:enrollmentId` | remove one |
+| `PATCH /cases/:id/enrollments-decision` `{ notNeeded }` | explicit no-programs decision |
+| `PATCH /cases/:id/discernment` | CICL step save |
+| `PATCH /cases/:id/protection-order` | VAWC step save |
+| `PATCH /cases/:id/meta` `{ courtDocketNumber }` | court docket |
+| `PATCH /cases/:id/status` `{ status: 'aftercare' }` | via the existing endpoint + FSM edge |
+
+## 11. Migration & rollout plan
+
+Three TypeORM migrations, each mirrored by idempotent statements in `src/database/migrate.ts`
+(the fresh-boot bootstrap):
+
+- **`…0000000000077`** — `program_enrollments` (+ indexes, unique).
+- **`…0000000000078`** — `cases` legal/aftercare columns + status enum.
+- **`…0000000000079`** — `case_step_locks.step_key`: add, backfill, rebuild unique, drop `step_index`.
+
+Rollout: single cohesive change set on `main`; CI (server jest + coverage, client vitest +
+coverage, docker build); then the running stack applies migrations.
+
+## 12. Testing
+
+- **Parity**: server/client step templates, labels, and floors cross-checked (extends the
+  existing `case-fsm-parity` pattern); templates per category pinned.
+- Server: lock service key-based; gates on keys; enrollments CRUD + decision; discernment /
+  protection-order / meta endpoints; aftercare transition + SLA exclusion; control-number
+  prefix; category immutability.
+- Client: stepper renders CICL vs VAWC vs common templates; lock-by-key; the three new step
+  UIs; CaseActionBar gates; aftercare banner/action; court-docket header.
+- Existing index-pinning specs migrate to keys (`StepLocksAcrossSteps`, `CaseStepper.done`,
+  `case-step-locks.service.spec`, etc.).
+
+## 13. Risks and open items
+
+- **Sync manifest**: `case_step_locks` participates in device sync — column lists in
+  `sync.service.ts` must be updated for the `step_key` swap; verify conflict resolution paths.
+- **Index-pinning tests**: the largest mechanical churn is migrating specs that reference
+  integer step indices to keys.
+- **Case-detail payload size**: enrollments ride on the case detail; fine for the current
+  volumes, keep it in mind.
+- **Legacy cases**: category `NULL` → common template; their locks map to keys by position.
+
+## Appendix A — Statutory sources (verified 2026-10-04)
+
+- **R.A. 9344 (Juvenile Justice and Welfare Act), §6, §22**: discernment — child 15 or under
+  exempt (intervention program); age 15–17 exempt *unless* acting with discernment, decided by
+  the social worker; §21 custody turnover **≤ 8 hours**; §26 diversion proceedings **≤ 45 days**.
+- **R.A. 9262 (VAWC Act), §8, §14–16**: BPO (Punong Barangay, ex parte, **15 days**), TPO
+  (court, ex parte, **30 days**), PPO (court, until revoked); §9 social workers may file;
+  §40 MSWDO shelter/counseling duties.
+- These timelines are inputs for the **Phase C** statutory-alerts design.
