@@ -1,5 +1,6 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, Index, Unique } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from 'typeorm';
 import { BaseEntity } from '../common/base.entity';
+import { Program } from './program.entity';
 
 /**
  * One row per (program, intervention_type): the Program → Services matrix.
@@ -12,6 +13,13 @@ import { BaseEntity } from '../common/base.entity';
 export class ProgramService extends BaseEntity {
   @Column({ name: 'program_id' })
   programId!: string;
+
+  // The inverse side of `Program.serviceRows` — TypeORM needs the *relation*
+  // here (not the `program_id` column), and without it every Program query
+  // fails at `joinColumns`.
+  @ManyToOne(() => Program, (p) => p.serviceRows, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'program_id' })
+  program!: Program;
 
   @Column({ name: 'intervention_type' })
   interventionType!: string;

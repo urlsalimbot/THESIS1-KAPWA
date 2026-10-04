@@ -15,12 +15,29 @@ import { seedPrograms } from './seed-programs';
 const API = process.env.API_BASE || 'http://localhost:3000/api/v1';
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+// Double-submit CSRF: the guard sets a readable `csrf-token` cookie on any
+// request that lacks one and refuses unsafe methods without a matching
+// `X-CSRF-Token` header. Node's fetch has no cookie jar, so this script keeps
+// its own — without it every write 403s with "Missing CSRF token".
+let csrfToken: string | null = null;
+function captureCsrf(res: Response): void {
+  const cookies = (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
+  for (const cookie of cookies) {
+    const m = /^csrf-token=([^;]+)/.exec(cookie);
+    if (m) csrfToken = m[1];
+  }
+}
+function csrfHeaders(): Record<string, string> {
+  return csrfToken ? { 'X-CSRF-Token': csrfToken, Cookie: `csrf-token=${csrfToken}` } : {};
+}
+
 async function login(email: string, password: string): Promise<string> {
   const r = await fetch(`${API}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
     body: JSON.stringify({ email, password }),
   });
+  captureCsrf(r);
   if (!r.ok) throw new Error(`login ${email}: ${r.status} ${await r.text()}`);
   return (await r.json()).accessToken;
 }
@@ -34,9 +51,10 @@ async function call(
 ): Promise<{ status: number; json: any }> {
   const r = await fetch(`${API}${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...csrfHeaders() },
     body: body ? JSON.stringify(body) : undefined,
   });
+  captureCsrf(r);
   const text = await r.text();
   let json: any;
   try { json = JSON.parse(text); } catch { json = text; }
@@ -53,7 +71,8 @@ async function uploadRequirement(token: string, caseId: string, requirementKey: 
   fd.append('category', 'requirement');
   fd.append('notes', 'Seeded demo requirement');
   fd.append('file', new Blob([Buffer.from('%PDF-1.3 demo')], { type: 'application/pdf' }), `${requirementKey.replace(/[^a-z0-9]+/gi, '_')}.pdf`);
-  const r = await fetch(`${API}/filing/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+  const r = await fetch(`${API}/filing/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, ...csrfHeaders() }, body: fd });
+  captureCsrf(r);
   if (r.status >= 400) console.warn(`  WARN requirement upload '${requirementKey}' -> ${r.status}`);
 }
 
@@ -107,12 +126,24 @@ const ASSESSMENT_BASE = {
   interviewedBy: 'Maria Clara Santos',
 };
 
+// The case category (the step-template key) that matches each client category.
+// Required by the assessment schema since the case-architecture work: without
+// it every assessment save 400s and the demo's whole case flow collapses to
+// `enrolled`.
+const CASE_CATEGORY: Record<string, string> = {
+  'Senior Citizen': 'Elderly / Senior Citizen Welfare',
+  'Person with Disability': 'Person with Disability (PWD)',
+  'Indigent': 'Individual in Crisis Situation (AICS)',
+  'Family Head and Other Needy Adult': 'Individual in Crisis Situation (AICS)',
+};
+
 // Assessment carries the case's single themed service as `natureOfService` so
 // the recorded assessment matches the case's one assistance.
 const assessmentFor = (stage: string) => ({
   ...ASSESSMENT_BASE,
   natureOfService: SERVICES[stage],
   clientCategory: CATEGORIES[stage],
+  caseCategory: CASE_CATEGORY[CATEGORIES[stage]] ?? 'Individual in Crisis Situation (AICS)',
 });
 
 // Legacy `category` codes map to typed catalog services (spec §4.4): FA →
@@ -222,19 +253,17 @@ async function main(): Promise<void> {
     const personId = personRow[0]?.person_id;
     console.log(`intake enrolled ${p.firstName} ${p.surname} (${caseId.slice(0, 8)}) stage=${p.stage} — access card auto-generated`);
 
-    if (['assessed', 'in_review', 'active', 'transitioning', 'closed'].includes(p.stage)) {
-      await call(worker, 'PATCH', `/cases/${caseId}/assessment`, assessmentFor(p.stage), 'assessment');
-      await call(worker, 'PATCH', `/cases/${caseId}/request-review`, undefined, 'request-review');
-    } else if (p.stage === 'enrolled') {
-      // enrolled: assessment only (no review) so the case stays enrolled but
-      // still carries client_category + interviewed_by.
+    const withInterventions = ['active', 'transitioning', 'closed'].includes(p.stage);
+    const pastAssessment = ['assessed', 'in_review', 'active', 'transitioning', 'closed'].includes(p.stage);
+
+    if (pastAssessment || p.stage === 'enrolled') {
       await call(worker, 'PATCH', `/cases/${caseId}/assessment`, assessmentFor(p.stage), 'assessment');
     }
-    if (['in_review', 'active', 'transitioning', 'closed'].includes(p.stage)) {
-      await call(worker, 'PATCH', `/cases/${caseId}/status`, { status: 'in_review' }, 'to-in_review');
-    }
-    if (['active', 'transitioning', 'closed'].includes(p.stage)) {
-      // interventions must be logged BEFORE activation (FSM enforces this)
+
+    // Interventions are implementation work and are logged while the case is
+    // still in Phase-In (the step is due at `enrolled`), before the worker
+    // flags the case for review.
+    if (withInterventions) {
       for (const iv of INTERVENTIONS[p.stage]) {
         const programId = programIdFor(programs, String(iv.serviceName));
         if (!programId) console.warn(`  WARN no program matched for intervention '${iv.serviceName}'`);
@@ -249,6 +278,30 @@ async function main(): Promise<void> {
           .flatMap((pid) => (programs.find((pr: any) => pr.id === pid)?.requiredDocuments || []) as string[]),
       )];
       for (const key of requiredKeys) await uploadRequirement(admin, caseId, key);
+    }
+
+    // The `assessed -> in_review` gate demands every step *due at assessed*
+    // sealed, so the demo records the decisions and seals them exactly as the
+    // case view asks a worker to. Cases with no intervention yet record the
+    // "no intervention" decision; every one of these cases has no referral.
+    if (['in_review', 'active', 'transitioning', 'closed'].includes(p.stage)) {
+      if (!withInterventions) {
+        await call(worker, 'PATCH', `/cases/${caseId}/intervention-decision`, { notNeeded: true }, 'intervention-decision');
+      }
+      await call(worker, 'PATCH', `/cases/${caseId}/enrollments-decision`, { notNeeded: true }, 'enrollments-decision');
+      await call(worker, 'PATCH', `/cases/${caseId}/referral-decision`, { notNeeded: true }, 'referral-decision');
+      for (const step of ['assessment', 'enrollments', 'interventions', 'referrals']) {
+        await call(worker, 'POST', `/cases/${caseId}/steps/${step}/lock`, undefined, `seal-${step}`);
+      }
+    }
+
+    if (pastAssessment) {
+      await call(worker, 'PATCH', `/cases/${caseId}/request-review`, undefined, 'request-review');
+    }
+    if (['in_review', 'active', 'transitioning', 'closed'].includes(p.stage)) {
+      await call(worker, 'PATCH', `/cases/${caseId}/status`, { status: 'in_review' }, 'to-in_review');
+    }
+    if (withInterventions) {
       await call(admin, 'PATCH', `/cases/${caseId}/approve`, { status: 'active', signature: 'Admin Approval' }, 'approve');
       // COE/PCV are issued manually now; the demo issues both so the documents
       // surface on the case view.
@@ -257,9 +310,13 @@ async function main(): Promise<void> {
     }
     if (['transitioning', 'closed'].includes(p.stage)) {
       await call(admin, 'PATCH', `/cases/${caseId}/transition-plan`, TRANSITION, 'transition-plan');
-      // The transition gate requires the inter-agency referral decision.
-      await call(admin, 'PATCH', `/cases/${caseId}/referral-decision`, { notNeeded: true }, 'referral-decision');
+      // The inter-agency referral decision was already recorded (and the step
+      // sealed) before the review hop — re-applying it here would 409 on the
+      // seal, which is exactly what the seal is for.
       await call(admin, 'PATCH', `/cases/${caseId}/disburse`, { status: 'transitioning' }, 'disburse');
+      // Evaluate Help Given's data is saved; seal it so the strip shows the
+      // Phase-Out work done (the close hop itself is admin, so ungated).
+      await call(worker, 'POST', `/cases/${caseId}/steps/evaluate/lock`, undefined, 'seal-evaluate');
     }
     if (p.stage === 'closed') {
       await call(admin, 'PATCH', `/cases/${caseId}/closure`, CLOSURE, 'closure');
@@ -327,9 +384,13 @@ async function main(): Promise<void> {
     const ag = await call(admin, 'GET', '/agencies');
     const rhu = (ag.json || []).find((a: any) => a.code === 'RHU');
     if (rhu) {
-      const r = await call(admin, 'POST', '/inter-agency-referrals', {
-        beneficiaryId: ref.benId, caseId: ref.caseId, toAgencyId: rhu.id,
-        reason: 'Medical follow-up and specialist consultation', legalBasisCode: 'RA 10754',
+      // The referral row is created as the side effect of issuing the
+      // endorsement letter (there is no bare POST /inter-agency-referrals
+      // route; that call used to 404 and the Referrals page stayed empty).
+      const r = await call(admin, 'POST', `/inter-agency-referrals/case/${ref.caseId}/endorsement-letter`, {
+        toAgencyId: rhu.id,
+        reason: 'Medical follow-up and specialist consultation',
+        legalBasisCode: 'RA 10754',
       }, 'referral');
       console.log('inter-agency referral:', r.status);
     }

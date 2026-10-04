@@ -60,7 +60,7 @@ export class Program extends BaseEntity {
   }
 
   @Exclude()
-  @OneToMany(() => ProgramService, s => s.programId, { eager: true, cascade: true, orphanedRowAction: 'delete' })
+  @OneToMany(() => ProgramService, s => s.program, { eager: true, cascade: true, orphanedRowAction: 'delete' })
   serviceRows!: ProgramService[];
 
   /** The intervention types this program renders (Program → Services matrix). */
