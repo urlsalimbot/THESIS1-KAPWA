@@ -220,6 +220,10 @@ export async function migrate() {
     CONSTRAINT uq_case_step_locks_case_step_key UNIQUE (case_id, step_key)
   )`);
   await q.query(`CREATE INDEX IF NOT EXISTS idx_case_step_locks_case ON case_step_locks(case_id)`);
+  // Existing DBs (pre-key schema, or an old bootstrap that created step_index):
+  // add the key column and convert, so the backfill below can never reference a
+  // column that is not there. Fresh boots get step_key from the CREATE above.
+  await q.query(`ALTER TABLE case_step_locks ADD COLUMN IF NOT EXISTS step_key TEXT`);
   await q.query(`ALTER TABLE case_step_locks ADD COLUMN IF NOT EXISTS step_index SMALLINT`);
   await q.query(`
     UPDATE case_step_locks SET step_key = CASE step_index
@@ -227,6 +231,7 @@ export async function migrate() {
       WHEN 2 THEN 'referrals' WHEN 3 THEN 'evaluate' WHEN 4 THEN 'closure'
     END WHERE step_key IS NULL
   `);
+  await q.query(`ALTER TABLE case_step_locks ALTER COLUMN step_key SET NOT NULL`);
   await q.query(`ALTER TABLE case_step_locks DROP CONSTRAINT IF EXISTS uq_case_step_locks_case_step`);
   await q.query(`ALTER TABLE case_step_locks DROP CONSTRAINT IF EXISTS uq_case_step_locks_case_step_key`);
   await q.query(`ALTER TABLE case_step_locks ADD CONSTRAINT uq_case_step_locks_case_step_key UNIQUE (case_id, step_key)`);
