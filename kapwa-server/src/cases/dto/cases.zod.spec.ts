@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { ZodPipe } from '../../common/pipes/zod.pipe';
-import { ApproveCaseSchema, UpdateStatusSchema } from './cases.zod';
+import { ApproveCaseSchema, UpdateStatusSchema, AssessmentV2Schema } from './cases.zod';
 
 /**
  * The approving path carries no signature. The approver is the authenticated
@@ -39,5 +39,27 @@ describe('ApproveCaseSchema', () => {
 
   it('leaves a signature-free status change legal', () => {
     expect(() => new ZodPipe(UpdateStatusSchema).transform({ status: 'active' }, { type: 'body' } as never)).not.toThrow();
+  });
+});
+
+describe('AssessmentV2Schema — case category', () => {
+  const pipe = new ZodPipe(AssessmentV2Schema);
+  const base = {
+    problemsPresented: 'need',
+    socialWorkerAssessment: 'assess',
+    clientCategory: 'Indigent',
+  };
+
+  it('requires a case category', () => {
+    expect(() => pipe.transform(base, { type: 'body' } as never)).toThrow(BadRequestException);
+  });
+
+  it('accepts one of the MSWDO case categories', () => {
+    expect(pipe.transform({ ...base, caseCategory: 'Children in Conflict with the Law (CICL)' }, { type: 'body' } as never))
+      .toMatchObject({ caseCategory: 'Children in Conflict with the Law (CICL)' });
+  });
+
+  it('refuses an unknown case category', () => {
+    expect(() => pipe.transform({ ...base, caseCategory: 'Not a category' }, { type: 'body' } as never)).toThrow(BadRequestException);
   });
 });

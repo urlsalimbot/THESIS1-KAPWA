@@ -20,6 +20,71 @@ export const CLIENT_CATEGORIES_V2 = [
   'Family Head and Other Needy Adult',
 ] as const;
 
+/**
+ * The MSWDO case categories, grouped as the MSWDO operation manual groups
+ * them. The stored value on `cases.case_category` is the item label itself, so
+ * it renders as-is in the Case Category column; the groups are only the
+ * `<optgroup>` structure of the step-1 select.
+ */
+export interface CaseCategoryGroup {
+  /** i18n key for the group's optgroup label. */
+  key: string;
+  /** English optgroup label. */
+  fallback: string;
+  /** The stored subtype values, in display order. */
+  items: string[];
+}
+
+export const CASE_CATEGORY_GROUPS: CaseCategoryGroup[] = [
+  {
+    key: 'caseView.assessment.caseCategoryGroup.childProtection',
+    fallback: 'Child Protection & Youth Welfare',
+    items: [
+      'Children in Conflict with the Law (CICL)',
+      'Children at Risk (CAR)',
+      'Children in Need of Special Protection (CNSP)',
+      'Abandoned or Neglected Child',
+      'Adoption & Foster Care Case',
+    ],
+  },
+  {
+    key: 'caseView.assessment.caseCategoryGroup.womensWelfare',
+    fallback: "Women's Welfare & Gender-Based Violence",
+    items: [
+      'Violence Against Women and Their Children (VAWC)',
+      'Women in Especially Difficult Circumstances (WEDC)',
+      'Unwed or Disadvantaged Pregnant Woman',
+    ],
+  },
+  {
+    key: 'caseView.assessment.caseCategoryGroup.familyCrisis',
+    fallback: 'Family Crisis & Economic Indigency',
+    items: [
+      'Individual in Crisis Situation (AICS)',
+      'Solo Parent',
+      'Indigency / Court-Ordered Social Case Study',
+      'Marital Discord / Family Intervention',
+    ],
+  },
+  {
+    key: 'caseView.assessment.caseCategoryGroup.sectorSpecific',
+    fallback: 'Sector-Specific Welfare & Development',
+    items: [
+      'Elderly / Senior Citizen Welfare',
+      'Person with Disability (PWD)',
+      'Person Who Used Drugs (PWUD) — Aftercare',
+    ],
+  },
+  {
+    key: 'caseView.assessment.caseCategoryGroup.disaster',
+    fallback: 'Disaster-Induced & Displacement',
+    items: [
+      'Internally Displaced / Calamity Victim',
+      'Emergency Shelter Assistance (ESA)',
+    ],
+  },
+];
+
 export const FINANCIAL_SUBSIDIES = [
   'Food Subsidy', 'Livelihood', 'Education', 'Medical',
   'Guarantee Letter', 'Burial', 'Transportation',

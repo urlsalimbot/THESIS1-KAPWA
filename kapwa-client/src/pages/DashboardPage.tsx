@@ -33,7 +33,7 @@ import { CaseCategoryCell } from '@/components/case-category-cell';
 interface Stat { label: string; value: string; change: string; icon: React.ElementType; iconClass: string; }
 interface CaseRow {
   id: string; no: number; surname: string; first: string; middle: string;
-  gender: string; ageRange: string; category: string; caseCategory?: string[]; barangay: string;
+  gender: string; ageRange: string; category: string; caseCategory?: string; barangay: string;
   date: string; status: string; controlNo: string;
   slaOverdue?: boolean; createdAt: string;
 }
@@ -155,7 +155,7 @@ export function DashboardPage() {
     { accessorKey: 'middle', header: t('dashboard.middleName', 'Middle') },
     { accessorKey: 'gender', header: t('dashboard.gender', 'Gender') },
     { accessorKey: 'category', header: t('dashboard.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{categoryLabel(t, row.original.category)}</Badge> },
-    { accessorKey: 'caseCategory', header: t('dashboard.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell services={row.original.caseCategory} /> },
+    { accessorKey: 'caseCategory', header: t('dashboard.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },
     { accessorKey: 'barangay', header: t('dashboard.barangay', 'Barangay') },
     { accessorKey: 'status', header: t('dashboard.statusColumn', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
     { id: 'actions', header: t('dashboard.actions', 'Actions'), cell: ({ row }) => (

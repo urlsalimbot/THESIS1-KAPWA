@@ -1647,7 +1647,16 @@ const fil: EnLocale = {
       "scoreRequiredHint": "Magdagdag ng FRVA o SWDI na iskor sa itaas upang makumpleto ang assessment.",
       "socialWorkerAssessment": "Pagsusuri ng Social Worker *",
       "swdiPlaceholder": "Social Welfare Development Index",
-      "swdiScore": "SWDI Iskor (0-100)"
+      "swdiScore": "SWDI Iskor (0-100)",
+      "caseCategory": "Kategorya ng Kaso *",
+      "selectCaseCategory": "Pumili ng kategorya…",
+      "caseCategoryGroup": {
+        "childProtection": "Proteksyon ng Bata at Kabataan",
+        "womensWelfare": "Kagalingan ng Kababaihan at Karahasang Pangkasarian",
+        "familyCrisis": "Krisis sa Pamilya at Kahirapan",
+        "sectorSpecific": "Kagalingang Partikular sa Sektor",
+        "disaster": "Kalamidad at Paglilikas",
+      },
     },
     "cancel": "Kanselahin",
     "closing": "Isinasara...",

@@ -612,7 +612,7 @@ describe('CasesService', () => {
 
   describe('updateStatus', () => {
     it('should transition from enrolled to assessed and notify', async () => {
-      const existing = { id: '1', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', status: CaseStatus.ENROLLED, problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', updatedAt: new Date() } as Case;
+      const existing = { id: '1', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', status: CaseStatus.ENROLLED, problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', caseCategory: 'Elderly / Senior Citizen Welfare', updatedAt: new Date() } as Case;
       repoMock.findOne.mockResolvedValue(existing);
       repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.ASSESSED });
 
@@ -622,7 +622,7 @@ describe('CasesService', () => {
     });
 
     it('should notify the linked claimant account on transition', async () => {
-      const existing = { id: '1', beneficiaryId: 'ben-1', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', status: CaseStatus.ENROLLED, problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', updatedAt: new Date() } as Case;
+      const existing = { id: '1', beneficiaryId: 'ben-1', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', status: CaseStatus.ENROLLED, problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', caseCategory: 'Elderly / Senior Citizen Welfare', updatedAt: new Date() } as Case;
       repoMock.findOne.mockResolvedValue(existing);
       repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.ASSESSED });
       repoMock.query.mockResolvedValue([{ id: 'claimant-user-1' }]);
@@ -634,6 +634,13 @@ describe('CasesService', () => {
         ['ben-1'],
       );
       expect(notifMock.notifyCaseUpdate).toHaveBeenCalledWith('claimant-user-1', '1', 'KAPWA-001', CaseStatus.ASSESSED);
+    });
+
+    it('refuses enrolled -> assessed while the case category is missing', async () => {
+      const existing = { id: '1', status: CaseStatus.ENROLLED, problemsPresented: 'Issue', socialWorkerAssessment: 'Needs aid', clientCategory: 'Senior Citizen', updatedAt: new Date() } as Case;
+      repoMock.findOne.mockResolvedValue(existing);
+
+      await expect(service.updateStatus('1', CaseStatus.ASSESSED)).rejects.toThrow('Assessment must be completed');
     });
 
     it('should throw on invalid transition', async () => {
@@ -1255,9 +1262,21 @@ describe('updateAssessmentV2 — case_assistances', () => {
       problemsPresented: 'need',
       socialWorkerAssessment: 'assess',
       clientCategory: 'Indigent',
+      caseCategory: 'Individual in Crisis Situation (AICS)',
       frvaScore: 65,
     } as any);
     expect(created).toEqual([]);
+  });
+
+  it('persists the case category onto the case', async () => {
+    await service.updateAssessmentV2('case-1', {
+      problemsPresented: 'need',
+      socialWorkerAssessment: 'assess',
+      clientCategory: 'Indigent',
+      caseCategory: 'Individual in Crisis Situation (AICS)',
+    } as any);
+    const saved = repoMock.save.mock.calls[0][0] as any;
+    expect(saved.caseCategory).toBe('Individual in Crisis Situation (AICS)');
   });
 
   it('sets caseId on case_assistance rows when financial data is provided', async () => {

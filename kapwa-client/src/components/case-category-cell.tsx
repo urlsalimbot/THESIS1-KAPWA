@@ -1,12 +1,17 @@
-import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
+import { caseCategoryLabel } from '@/i18n/display';
 
 /**
- * Renders a case's requested service(s) as the "Case Category" column. A case
- * can request more than one service, so they are joined; an empty list shows a
- * muted dash rather than a blank cell.
+ * Renders a case's MSWDO category as the "Case Category" column. Empty lists
+ * show a muted dash rather than a blank cell; long category labels truncate
+ * instead of widening the table.
  */
-export function CaseCategoryCell({ services }: { services?: string[] | null }) {
-  const list = (services ?? []).filter(Boolean);
-  if (list.length === 0) return <span className="text-muted-foreground">—</span>;
-  return <Badge variant="outline">{list.join(', ')}</Badge>;
+export function CaseCategoryCell({ category }: { category?: string | null }) {
+  const { t } = useTranslation();
+  if (!category) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="block max-w-[14rem] truncate rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground">
+      {caseCategoryLabel(t, category)}
+    </span>
+  );
 }

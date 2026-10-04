@@ -6,6 +6,9 @@ export const statusLabel = (t: TFunction, raw: string): string =>
 export const categoryLabel = (t: TFunction, raw: string): string =>
   t(`category.${raw}`, { defaultValue: raw });
 
+export const caseCategoryLabel = (t: TFunction, raw: string): string =>
+  t(`caseCategory.${raw}`, { defaultValue: raw });
+
 export const interventionTypeLabel = (t: TFunction, raw: string): string =>
   t(`interventionType.${raw}`, { defaultValue: raw });
 

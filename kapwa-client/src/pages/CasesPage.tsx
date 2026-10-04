@@ -29,7 +29,7 @@ interface CaseRow {
   gender: string;
   ageRange: string;
   category: string;
-  caseCategory: string[];
+  caseCategory: string;
   barangay: string;
   date: string;
   status: string;
@@ -70,7 +70,7 @@ function mapCaseRow(c: Record<string, unknown>, i: number): CaseRow {
     gender: ((ben.gender as string) || '').trim(),
     ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
     category: ((c.clientCategory as string) || '').trim(),
-    caseCategory: Array.isArray(c.serviceRequested) ? (c.serviceRequested as string[]) : [],
+    caseCategory: ((c.caseCategory as string) || '').trim(),
     barangay: ((ben.currentAddress as Record<string, string> | undefined)?.barangay || '').trim() || ((ben.address as string) || '').split(',').pop()?.trim() || '',
     date: c.updatedAt ? formatDateTime(c.updatedAt as string) : '',
     createdAt: (c.createdAt as string) || '',
@@ -222,7 +222,7 @@ export function CasesPage() {
     { accessorKey: 'middle', header: t('cases.middleName', 'Middle') },
     { accessorKey: 'gender', header: t('cases.gender', 'Gender') },
     { accessorKey: 'category', header: t('cases.category', 'Client Category'), cell: ({ row }) => <Badge variant="secondary">{row.original.category ? categoryLabel(t, row.original.category) : ''}</Badge> },
-    { accessorKey: 'caseCategory', header: t('cases.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell services={row.original.caseCategory} /> },
+    { accessorKey: 'caseCategory', header: t('cases.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },
     { accessorKey: 'barangay', header: t('cases.barangay', 'Barangay') },
     { accessorKey: 'status', header: t('cases.status', 'Status'), cell: ({ row }) => <Badge variant={STATUS_BADGES[row.original.status] || 'outline'}>{statusLabel(t, row.original.status)}</Badge> },
     { id: 'actions', header: t('cases.actions', 'Actions'), cell: ({ row }) => <ActionsCell c={row.original} /> },

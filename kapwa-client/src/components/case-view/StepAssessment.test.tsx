@@ -44,6 +44,7 @@ function filledCaseData(over: Record<string, unknown> = {}) {
     problemsPresented: 'Poverty',
     socialWorkerAssessment: 'Needs financial aid',
     clientCategory: 'Child and Youth',
+    caseCategory: 'Individual in Crisis Situation (AICS)',
     ...over,
   };
 }
@@ -80,6 +81,20 @@ describe('StepAssessment — step completion gate and save flow', () => {
     });
     expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeTruthy();
     expect(screen.queryByText(/Add an FRVA or SWDI score/)).toBeNull();
+  });
+
+  it('withholds Complete Assessment until a case category is chosen', () => {
+    renderAssessment(filledCaseData({ frvaScore: 45, caseCategory: '' }), {
+      problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45,
+    });
+    expect(screen.queryByRole('button', { name: /Complete Assessment/ })).toBeNull();
+  });
+
+  it('offers the grouped MSWDO case categories in step 1', () => {
+    renderAssessment(filledCaseData());
+    expect(screen.getByLabelText(/Case Category \*/i)).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Children in Conflict with the Law (CICL)' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Emergency Shelter Assistance (ESA)' })).toBeTruthy();
   });
 
   // The positive half of `CaseActionBar`'s `ownedByStepCard` suppression, and it

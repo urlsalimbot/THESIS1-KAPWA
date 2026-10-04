@@ -7,7 +7,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CLIENT_CATEGORIES_V2 } from '@/lib/constants';
+import { CLIENT_CATEGORIES_V2, CASE_CATEGORY_GROUPS } from '@/lib/constants';
 import { ClipboardList, Lock, Stethoscope } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { StepLockBar, type StepLock } from './StepLockBar';
@@ -54,7 +54,7 @@ export function StepAssessment({
   // narrative fields AND a DSWD tool score. Without the score the FSM blocks
   // assessed -> in_review, so offering "Complete Assessment" without it would
   // let a worker advance the case into a state the next step cannot finish.
-  const assessmentDone = !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment && !!caseData?.clientCategory;
+  const assessmentDone = !!caseData?.problemsPresented && !!caseData?.socialWorkerAssessment && !!caseData?.clientCategory && !!caseData?.caseCategory;
   const hasScore = !!(caseData?.frvaScore || caseData?.swdiScore);
   const canTransition = assessmentDone && hasScore && caseData?.status === 'enrolled' && (userRole === 'social_worker' || userRole === 'admin');
 
@@ -107,6 +107,30 @@ export function StepAssessment({
                     {cat}
                   </label>
                 ))}
+              </div>
+              <div className="mt-4 space-y-1.5">
+                <label htmlFor="case-category" className="text-sm font-medium">
+                  {t('caseView.assessment.caseCategory', 'Case Category *')}
+                </label>
+                {/* The MSWDO case category: required with the rest of step 1, so
+                    the Case Category column in the cases, dashboard and tracker
+                    tables has something to show from day one. */}
+                <select
+                  id="case-category"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={assessment.caseCategory || ''}
+                  onChange={e => onAssessmentChange(a => ({ ...a, caseCategory: e.target.value }))}
+                  disabled={readOnly}
+                >
+                  <option value="">{t('caseView.assessment.selectCaseCategory', 'Select a category…')}</option>
+                  {CASE_CATEGORY_GROUPS.map(group => (
+                    <optgroup key={group.key} label={t(group.key, group.fallback)}>
+                      {group.items.map(item => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="space-y-3">

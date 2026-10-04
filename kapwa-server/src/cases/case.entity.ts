@@ -183,6 +183,9 @@ export class Case extends BaseEntity {
   @Column({ name: 'client_category', nullable: true })
   clientCategory?: string;
 
+  @Column({ name: 'case_category', nullable: true })
+  caseCategory?: string;
+
   @Column({ name: 'interviewed_by', nullable: true })
   interviewedBy?: string;
 

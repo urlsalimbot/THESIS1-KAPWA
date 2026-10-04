@@ -23,6 +23,7 @@ const { mockCases, mockApiGet, mockApiPost, mockApiPut, mockApiPatch, mockApiDel
         address: 'Barangay 1',
       },
       serviceRequested: ['Senior'],
+      caseCategory: 'Individual in Crisis Situation (AICS)',
     },
   ],
   mockApiGet: vi.fn(),
@@ -172,8 +173,9 @@ describe('CasesPage', () => {
     });
   });
 
-  it('shows the case category (service requested) as its own column', async () => {
+  it('shows the case category as its own column', async () => {
     mockApiGet.mockResolvedValue({ data: mockCases, total: 1 });
+    await mutate(() => true, undefined, { revalidate: false });
     render(
       <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0 }}>
         <MemoryRouter initialEntries={['/cases?search=__case_category_test__']}>
@@ -182,6 +184,6 @@ describe('CasesPage', () => {
       </SWRConfig>,
     );
     expect(await screen.findByText('Case Category')).toBeTruthy();
-    expect(await screen.findByText('Senior')).toBeTruthy();
+    expect(await screen.findByText('Individual in Crisis Situation (AICS)')).toBeTruthy();
   });
 });

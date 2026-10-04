@@ -83,7 +83,7 @@ export class DashboardController {
             gender: (person.gender || '').trim(),
             ageRange: age ? (age < 18 ? '0-17' : age > 59 ? '60+' : '18-59') : '',
             category: (c.clientCategory || '').trim(),
-            caseCategory: Array.isArray(c.serviceRequested) ? c.serviceRequested : [],
+            caseCategory: (c.caseCategory || '').trim(),
             status: c.status || 'enrolled',
             slaOverdue,
             barangay: (person.currentAddress?.barangay || '').trim() || (person.address || '').split(',').pop()?.trim() || '',
