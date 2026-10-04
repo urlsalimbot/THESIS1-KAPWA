@@ -10,6 +10,13 @@ import { UpdatePreferenceInput } from './dto/notifications.zod';
 import { NotificationsGateway } from './notifications.gateway';
 import { EmailService } from '../email/email.service';
 
+// Reminder categories are default-on for EMAIL when no preference row exists
+// (absent = opted in) — see `checkConsent`.
+const EMAIL_DEFAULT_OPTIN_CATEGORIES: ReadonlySet<NotificationCategory> = new Set([
+  NotificationCategory.COURT_HEARING,
+  NotificationCategory.HOME_VISIT,
+]);
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -188,7 +195,21 @@ export class NotificationsService {
     const pref = await this.notifPrefRepo.findOne({
       where: { userId, channel: channel as any, category },
     });
-    return pref ? pref.optedIn : false;
+    if (pref) return pref.optedIn;
+    // Reminder categories are default-on for EMAIL when no preference row
+    // exists (absent = opted in), so planned-hearing/visit emails actually
+    // flow; workers opt out via Settings. Every other category keeps
+    // absent = opted out.
+    return channel === NotificationType.EMAIL && EMAIL_DEFAULT_OPTIN_CATEGORIES.has(category);
+  }
+
+  /**
+   * Direct email passthrough for callers that own their own delivery ledger
+   * (the case-event reminder dispatcher). Keeps the reminder service off the
+   * EmailService/transporter wiring.
+   */
+  async sendEmailDirect(to: string, subject: string, body: string): Promise<boolean> {
+    return this.emailService.sendNotificationEmail(to, subject, body);
   }
 
   async sendWithConsent(notifId: string) {

@@ -14,7 +14,11 @@ export enum NotificationCategory {
   CHAT = 'chat',
   APPROVAL = 'approval',
   DISBURSEMENT = 'disbursement',
-  SLA_ESCALATION = 'sla_escalation'
+  SLA_ESCALATION = 'sla_escalation',
+  // Case-event reminders. `notifications.category` is a TEXT column in the
+  // canonical bootstrap, so these need no DB DDL.
+  COURT_HEARING = 'court_hearing',
+  HOME_VISIT = 'home_visit'
 }
 
 @Entity('notifications')

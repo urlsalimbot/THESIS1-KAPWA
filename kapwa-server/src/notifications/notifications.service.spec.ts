@@ -186,6 +186,25 @@ describe('NotificationsService', () => {
     expect(result).toBe(true);
   });
 
+  // Reminder categories: absent preference row means opted IN for email, so
+  // planned-hearing/visit reminders actually flow until a worker opts out.
+  it('checkConsent defaults reminder categories to opted-in for email', async () => {
+    prefRepoMock.findOne.mockResolvedValue(null);
+    await expect(service.checkConsent('u1', 'email', NotificationCategory.COURT_HEARING)).resolves.toBe(true);
+    await expect(service.checkConsent('u1', 'email', NotificationCategory.HOME_VISIT)).resolves.toBe(true);
+  });
+
+  it('checkConsent keeps every other category and channel opted-out when absent', async () => {
+    prefRepoMock.findOne.mockResolvedValue(null);
+    await expect(service.checkConsent('u1', 'email', NotificationCategory.CASE_UPDATE)).resolves.toBe(false);
+    await expect(service.checkConsent('u1', 'in_app', NotificationCategory.COURT_HEARING)).resolves.toBe(false);
+  });
+
+  it('checkConsent honours an explicit opt-out for a reminder category', async () => {
+    prefRepoMock.findOne.mockResolvedValue({ optedIn: false });
+    await expect(service.checkConsent('u1', 'email', NotificationCategory.COURT_HEARING)).resolves.toBe(false);
+  });
+
   it('getPreferences returns user preferences', async () => {
     prefRepoMock.find.mockResolvedValue([{ userId: 'u1', channel: 'sms', category: 'case_update', optedIn: true }]);
     const result = await service.getPreferences('u1');
