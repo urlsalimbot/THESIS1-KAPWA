@@ -122,4 +122,26 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: /notifications/i }));
     expect(await screen.findByRole('columnheader', { name: 'SMS' })).toBeTruthy();
   });
+
+  it('renders the reminder settings card with the worker overrides', async () => {
+    const api = await import('@/lib/api');
+    vi.mocked(api.api.get).mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('config')) return Promise.resolve({ smsEnabled: true });
+      if (k.includes('preferences')) return Promise.resolve([]);
+      if (k.includes('reminder-settings/me')) {
+        return Promise.resolve([{ eventType: 'court_hearing', offsets: [1440] }]);
+      }
+      if (k.includes('reminder-settings/system')) {
+        return Promise.resolve([{ eventType: 'court_hearing', offsets: [4320, 1440, 180] }]);
+      }
+      return Promise.resolve(null);
+    });
+    renderWithProviders(<SettingsPage />);
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }));
+    expect(await screen.findByText('Reminder Settings')).toBeTruthy();
+    // The card lists both event types with their effective lead times.
+    expect(screen.getByText('Court Hearing')).toBeTruthy();
+    expect(screen.getByText('Home Visit')).toBeTruthy();
+  });
 });

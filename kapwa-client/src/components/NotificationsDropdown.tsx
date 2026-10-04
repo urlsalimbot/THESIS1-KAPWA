@@ -30,6 +30,8 @@ const navTarget = (n: Notification, role?: string): string => {
     chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
     sync_conflict: '/tracker',
     sla_escalation: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    court_hearing: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    home_visit: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
   };
   return map[n.category] || '/notifications';
 };

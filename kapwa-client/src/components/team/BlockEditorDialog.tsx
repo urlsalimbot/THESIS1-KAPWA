@@ -42,6 +42,11 @@ export interface BlockEditorDialogProps {
   block?: TeamBlock | null;
   /** Read-only mode (coordinators): hides Save/Delete affordances. */
   readOnly?: boolean;
+  /**
+   * Extra explanation shown above the footer in read-only mode (e.g. a synced
+   * case-event block: "managed by the case file").
+   */
+  readOnlyNotice?: string;
   onSave: (input: TeamBlockInput) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 }
@@ -59,6 +64,7 @@ export function BlockEditorDialog({
   date,
   block = null,
   readOnly = false,
+  readOnlyNotice,
   onSave,
   onDelete,
 }: BlockEditorDialogProps) {
@@ -237,6 +243,10 @@ export function BlockEditorDialog({
             />
           </div>
         </div>
+
+        {readOnly && readOnlyNotice && (
+          <p className="text-xs text-muted-foreground">{readOnlyNotice}</p>
+        )}
 
         <DialogFooter className="gap-2 sm:justify-between">
           {!readOnly && editing && onDelete ? (

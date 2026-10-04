@@ -28,6 +28,8 @@ const navTarget = (n: Notification): string => {
     chat: n.referenceId ? `/messages/${n.referenceId}` : '/messages',
     sync_conflict: '/tracker',
     sla_escalation: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    court_hearing: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
+    home_visit: n.referenceId ? `/cases/${n.referenceId}` : '/cases',
   };
   return map[n.category] || '/notifications';
 };
@@ -40,6 +42,8 @@ const categoryLabels: Record<string, { key: string; label: string }> = {
   sync_conflict: { key: 'notifications.catSyncConflict', label: 'Sync Conflict' },
   system: { key: 'notifications.catSystem', label: 'System' },
   sla_escalation: { key: 'notifications.catSlaEscalation', label: 'SLA Escalation' },
+  court_hearing: { key: 'notifications.catCourtHearing', label: 'Court Hearing' },
+  home_visit: { key: 'notifications.catHomeVisit', label: 'Home Visit' },
 };
 
 const categoryColors: Record<string, string> = {
@@ -50,6 +54,8 @@ const categoryColors: Record<string, string> = {
   sync_conflict: 'bg-destructive/10 text-destructive',
   system: 'bg-slate-100 text-slate-700',
   sla_escalation: 'bg-amber-100 text-amber-700',
+  court_hearing: 'bg-purple-100 text-purple-700',
+  home_visit: 'bg-emerald-100 text-emerald-700',
 };
 
 export function NotificationsPage() {

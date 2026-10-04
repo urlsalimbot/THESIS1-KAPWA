@@ -35,6 +35,10 @@ export interface TeamBlock {
   endTime?: string | null;
   note?: string | null;
   visibleTo: TeamVisibleTo;
+  /** `manual` (staff-created, owner-editable) or `case_event` (synced, read-only). */
+  source?: string;
+  /** The `case_events.id` a synced block mirrors. */
+  sourceRef?: string | null;
 }
 
 export interface TeamEventInput {

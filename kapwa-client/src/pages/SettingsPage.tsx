@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { humanizeError } from '@/lib/errors';
-import { Shield, Smartphone, CheckCircle, Mail, Lock, Bell, User, Copy, Eye, EyeOff, KeyRound, Languages, Phone, Save } from 'lucide-react';
+import { Shield, Smartphone, CheckCircle, Mail, Lock, Bell, User, Copy, Eye, EyeOff, KeyRound, Languages, Phone, Save, AlarmClock } from 'lucide-react';
 import { useLanguage } from '@/i18n/useLanguage';
 
 interface NotificationPref {
@@ -24,7 +24,7 @@ interface NotificationPref {
 }
 
 const CHANNELS = ['in_app', 'sms', 'email'] as const;
-const CATEGORIES = ['case_update', 'approval', 'disbursement', 'chat', 'sync_conflict', 'system'] as const;
+const CATEGORIES = ['case_update', 'approval', 'disbursement', 'chat', 'sync_conflict', 'system', 'court_hearing', 'home_visit'] as const;
 
 const categoryLabels: Record<string, { key: string; label: string }> = {
   case_update: { key: 'settings.catCaseUpdate', label: 'Case Updates' },
@@ -33,6 +33,8 @@ const categoryLabels: Record<string, { key: string; label: string }> = {
   chat: { key: 'settings.catChat', label: 'Chat Messages' },
   sync_conflict: { key: 'settings.catSyncConflict', label: 'Sync Conflicts' },
   system: { key: 'settings.catSystem', label: 'System Notifications' },
+  court_hearing: { key: 'settings.catCourtHearing', label: 'Court Hearings' },
+  home_visit: { key: 'settings.catHomeVisit', label: 'Home Visits' },
 };
 
 const channelLabels: Record<string, { key: string; label: string }> = {
@@ -40,6 +42,176 @@ const channelLabels: Record<string, { key: string; label: string }> = {
   sms: { key: 'settings.channelSms', label: 'SMS' },
   email: { key: 'settings.channelEmail', label: 'Email' },
 };
+
+interface ReminderRow {
+  eventType: string;
+  offsets: number[];
+}
+
+const REMINDER_EVENT_TYPES = ['court_hearing', 'home_visit'] as const;
+const OFFSET_PRESETS = [
+  { minutes: 4320, key: 'settings.reminder3d', label: '3 days' },
+  { minutes: 1440, key: 'settings.reminder1d', label: '1 day' },
+  { minutes: 180, key: 'settings.reminder3h', label: '3 hours' },
+] as const;
+
+function reminderEventLabel(key: string): { key: string; label: string } {
+  return key === 'court_hearing'
+    ? { key: 'settings.reminderCourtHearing', label: 'Court Hearing' }
+    : { key: 'settings.reminderHomeVisit', label: 'Home Visit' };
+}
+
+/**
+ * Lead-time configuration for hearing/visit reminders: workers edit their own
+ * overrides (an empty list means no reminders for them), admins additionally
+ * edit the system defaults everyone inherits. The effective list is the
+ * worker's override when present, else the system default.
+ */
+function ReminderSettingsCard() {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const { data: mine, mutate: mutateMine } = useSWR<ReminderRow[]>('/reminder-settings/me');
+  const { data: system, mutate: mutateSystem } = useSWR<ReminderRow[]>('/reminder-settings/system');
+  const [draft, setDraft] = useState<Record<string, number[]>>({});
+  const [seeded, setSeeded] = useState(false);
+  const [systemDraft, setSystemDraft] = useState<Record<string, number[]>>({});
+  const [systemSeeded, setSystemSeeded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (seeded || !Array.isArray(mine) || !Array.isArray(system)) return;
+    const next: Record<string, number[]> = {};
+    for (const type of REMINDER_EVENT_TYPES) {
+      const own = mine.find((r) => r.eventType === type);
+      const fallback = system.find((r) => r.eventType === type);
+      next[type] = own ? [...(own.offsets ?? [])] : [...(fallback?.offsets ?? [])];
+    }
+    setDraft(next);
+    setSeeded(true);
+  }, [mine, system, seeded]);
+
+  useEffect(() => {
+    if (systemSeeded || !Array.isArray(system)) return;
+    const next: Record<string, number[]> = {};
+    for (const type of REMINDER_EVENT_TYPES) {
+      next[type] = [...(system.find((r) => r.eventType === type)?.offsets ?? [])];
+    }
+    setSystemDraft(next);
+    setSystemSeeded(true);
+  }, [system, systemSeeded]);
+
+  function toggle(list: number[], minutes: number): number[] {
+    return list.includes(minutes)
+      ? list.filter((m) => m !== minutes)
+      : [...list, minutes].sort((a, b) => b - a);
+  }
+
+  async function saveMine() {
+    setSaving(true);
+    try {
+      const rows = REMINDER_EVENT_TYPES.map((type) => ({ eventType: type, offsets: draft[type] ?? [] }));
+      await api.put('/reminder-settings/me', rows);
+      await mutateMine();
+      toast.success(t('settings.remindersSaved', 'Reminder settings saved'));
+    } catch {
+      toast.error(t('settings.remindersSaveFailed', 'Could not save reminder settings'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveSystem() {
+    setSaving(true);
+    try {
+      const rows = REMINDER_EVENT_TYPES.map((type) => ({ eventType: type, offsets: systemDraft[type] ?? [] }));
+      await api.put('/reminder-settings/system', rows);
+      await mutateSystem();
+      toast.success(t('settings.remindersSaved', 'Reminder settings saved'));
+    } catch {
+      toast.error(t('settings.remindersSaveFailed', 'Could not save reminder settings'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function chips(list: number[], onToggle: (minutes: number) => void) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {OFFSET_PRESETS.map((preset) => {
+          const active = list.includes(preset.minutes);
+          return (
+            <button
+              key={preset.minutes}
+              type="button"
+              onClick={() => onToggle(preset.minutes)}
+              aria-pressed={active}
+              className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                active ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {t(preset.key, preset.label)}
+            </button>
+          );
+        })}
+        {list.length === 0 && (
+          <span className="text-xs text-muted-foreground">{t('settings.remindersOff', 'No reminders')}</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+      <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">
+        <AlarmClock size={16} className="text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-foreground">{t('settings.reminders', 'Reminder Settings')}</h2>
+      </div>
+      <div className="p-4 space-y-4">
+        <p className="text-xs text-muted-foreground">
+          {t('settings.remindersHint', 'When to remind the assigned worker before a court hearing or a scheduled home visit. Several lead times can be chained.')}
+        </p>
+        {REMINDER_EVENT_TYPES.map((type) => {
+          const label = reminderEventLabel(type);
+          return (
+            <div key={type} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium">{t(label.key, label.label)}</span>
+              {chips(draft[type] ?? [], (minutes) => setDraft((d) => ({ ...d, [type]: toggle(d[type] ?? [], minutes) })))}
+            </div>
+          );
+        })}
+        <div className="flex justify-end">
+          <Button size="sm" onClick={saveMine} disabled={saving}>
+            <Save size={14} className="mr-1.5" aria-hidden="true" />
+            {saving ? t('settings.saving', 'Saving...') : t('settings.remindersSaveMine', 'Save my reminders')}
+          </Button>
+        </div>
+
+        {isAdmin && (
+          <div className="border-t pt-4">
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+              {t('settings.remindersSystem', 'System defaults (all workers inherit these)')}
+            </p>
+            {REMINDER_EVENT_TYPES.map((type) => {
+              const label = reminderEventLabel(type);
+              return (
+                <div key={type} className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <span className="text-sm">{t(label.key, label.label)}</span>
+                  {chips(systemDraft[type] ?? [], (minutes) => setSystemDraft((d) => ({ ...d, [type]: toggle(d[type] ?? [], minutes) })))}
+                </div>
+              );
+            })}
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={saveSystem} disabled={saving}>
+                {t('settings.remindersSaveSystem', 'Save system defaults')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ProfileTab() {
   const { t } = useTranslation();
@@ -596,6 +768,8 @@ function NotificationsTab() {
     chat: '💬',
     sync_conflict: '⚠️',
     system: '🔔',
+    court_hearing: '⚖️',
+    home_visit: '🏠',
   };
 
   if (isLoading) {
@@ -676,6 +850,8 @@ function NotificationsTab() {
           </Button>
         </div>
       </div>
+
+      <ReminderSettingsCard />
     </div>
   );
 }

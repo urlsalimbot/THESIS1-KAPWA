@@ -291,6 +291,41 @@ describe('TeamWorkspacePage', () => {
     expect(within(dialog).getByRole('button', { name: /Save changes/i })).toBeTruthy();
   });
 
+  it('opens a synced case-event block read-only (no Save/Delete; points at the case)', async () => {
+    mockUser.role = 'admin';
+    mockUser.id = 'u1';
+    const synced = {
+      ...DAY_BLOCK,
+      id: 'b-sync',
+      blockType: 'court_hearing',
+      source: 'case_event',
+      sourceRef: 'e1',
+      note: 'Case MSWD-2026-0012 — Hearing (RTC Bulacan)',
+    };
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('achievements')) {
+        return Promise.resolve({ perStaff: PER_STAFF, range: { from: WEEK_FROM, to: WEEK_TO } });
+      }
+      if (k.includes('statuses')) return Promise.resolve(STATUSES);
+      if (k.includes('/team/blocks')) return Promise.resolve([synced]);
+      if (k.includes('/team/events')) return Promise.resolve([]);
+      if (k.includes('/team/invites/incoming')) return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
+    renderWithSWR(<TeamWorkspacePage />);
+
+    const blockBtn = await screen.findByRole('button', {
+      name: /Court Hearing/,
+    });
+    fireEvent.click(blockBtn);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: /Save changes/i })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: /Delete/i })).toBeNull();
+    expect(within(dialog).getByText(/managed by the case file/i)).toBeTruthy();
+  });
+
   it('a worker clicking a COLLEAGUE\'s block opens nothing (owner-only, no admin exception)', async () => {
     // Ben (u2) views the board: Ana's Monday block (DAY_BLOCK, userId u1) is
     // a colleague's block. Owner-only means no editor — and unlike empty

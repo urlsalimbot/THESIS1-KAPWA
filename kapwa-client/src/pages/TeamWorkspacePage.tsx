@@ -377,7 +377,10 @@ export function TeamWorkspacePage() {
           staffId={draftSlot?.staffId ?? (canEdit ? myUserId : null)}
           date={draftSlot?.date ?? (canEdit ? fromStr : null)}
           block={activeBlock}
-          readOnly={!canEdit}
+          readOnly={!canEdit || activeBlock?.source === 'case_event'}
+          readOnlyNotice={activeBlock?.source === 'case_event'
+            ? t('team.week.syncedFromCase', 'Managed by the case file — edit the hearing or visit on the case instead.')
+            : undefined}
           onSave={handleSaveBlock}
           onDelete={handleDeleteBlock}
         />

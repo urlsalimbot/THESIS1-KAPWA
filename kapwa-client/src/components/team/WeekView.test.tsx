@@ -97,6 +97,20 @@ function renderWeek(
 }
 
 describe('WeekView', () => {
+  it('renders a synced court-hearing block with its label and case note', () => {
+    renderWeek({
+      blocks: [{
+        id: 'b1', userId: 'u1', blockDate: localIsoDay(FROM), blockType: 'court_hearing',
+        startTime: null, endTime: null, visibleTo: 'team', source: 'case_event', sourceRef: 'e1',
+        note: 'Case MSWD-2026-0012 — Hearing (RTC Bulacan)',
+      }],
+    });
+    const chip = screen.getByRole('button', { name: /Court Hearing/ });
+    expect(chip).toBeTruthy();
+    // The case note rides in the tooltip (the chip shows the type label).
+    expect(chip.getAttribute('title')).toContain('MSWD-2026-0012');
+  });
+
   it('renders one row per staff member and Monday-first day columns', () => {
     renderWeek();
 
