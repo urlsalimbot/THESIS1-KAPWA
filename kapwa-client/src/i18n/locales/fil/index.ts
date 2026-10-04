@@ -1781,6 +1781,7 @@ const fil: EnLocale = {
       "noInterventions": "Wala pang naitalang interbensyon. I-click ang \"Add Intervention\" upang idokumento ang mga naihatid na serbisyo.",
       "notes": "Mga Tala",
       "notesPlaceholder": "Mga karagdagang detalye tungkol sa interbensyong ito...",
+      "noEnrollmentHint": "Wala pang program enrollment ang kasong ito — itatala ang serbisyo nang wala nito. Magdagdag ng enrollment sa hakbang na Program Enrollments upang maiugnay ang mga serbisyo sa isang programa.",
       "otherService": "Iba pang serbisyo (tukuyin)…",
       "serviceType": "Serbisyo *",
       "selectService": "— Pumili ng serbisyong ibinigay —",

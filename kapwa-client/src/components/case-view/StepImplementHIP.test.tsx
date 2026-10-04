@@ -95,6 +95,96 @@ describe('StepImplementHIP adhoc intervention', () => {
     expect(payload.serviceName).toBe('Medical Assistance Subsidy');
   });
 
+  // The step 2/step 3 redundancy resolution: when the case has program
+  // enrollments, the New Intervention dialog is scoped to them (the treatment
+  // plan anchors the services — per DSWD/MSWDO practice) instead of re-listing
+  // the whole program catalog, and the saved intervention carries the
+  // enrollment it was delivered under.
+  describe('enrolled-program scoping', () => {
+    function renderWithEnrollment() {
+      mockApiGet.mockImplementation(async (key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('interventions')) return [];
+        if (k.includes('enrollments')) {
+          return [
+            {
+              id: 'enr-1', programId: 'p1',
+              programName: 'Juvenile Diversion & Intervention Program (CICL)',
+              services: ['crisis_counseling', 'community_service'],
+            },
+          ];
+        }
+        if (k.includes('programs')) {
+          return [
+            { id: 'p1', name: 'Juvenile Diversion & Intervention Program (CICL)' },
+            { id: 'p2', name: 'AICS — Assistance to Individuals in Crisis Situation' },
+          ];
+        }
+        return [];
+      });
+      return render(
+        <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+          <StepImplementHIP caseId="case-1" caseData={{ status: 'enrolled', caseCategory: 'Children in Conflict with the Law (CICL)' }} userRole="social_worker" />
+        </SWRConfig>,
+      );
+    }
+
+    it('opens defaulted to the first enrollment and derives services from it', async () => {
+      renderWithEnrollment();
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+
+      // The program select carries the enrollment (not a catalog re-pick) and
+      // defaults to the case's first enrollment.
+      const programSelect = screen.getAllByRole('combobox')[0];
+      expect(programSelect).toHaveValue('enr:enr-1');
+
+      // The Service select is scoped to that enrollment's program services —
+      // not the 22-code full catalog.
+      const serviceSelect = screen.getAllByRole('combobox')[1] as HTMLSelectElement;
+      expect([...serviceSelect.options].map(o => o.textContent)).toEqual(
+        expect.arrayContaining(['Crisis Counseling', 'Community Service']),
+      );
+      expect([...serviceSelect.options].map(o => o.textContent))
+        .not.toEqual(expect.arrayContaining(['Financial Grant']));
+    });
+
+    it('saves the intervention under the enrollment, with the enrollment program', async () => {
+      renderWithEnrollment();
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+
+      const serviceSelect = screen.getAllByRole('combobox')[1];
+      fireEvent.change(serviceSelect, { target: { value: 'crisis_counseling' } });
+      fireEvent.click(screen.getByRole('button', { name: /Save Intervention/ }));
+
+      await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
+      const [path, payload] = mockApiPost.mock.calls[0];
+      expect(path).toBe('/cases/case-1/interventions');
+      expect(payload.programEnrollmentId).toBe('enr-1');
+      expect(payload.programId).toBe('p1');
+      expect(payload.interventionType).toBe('crisis_counseling');
+    });
+
+    it('flags an unenrolled case instead of silently recording unattached services', async () => {
+      mockApiGet.mockImplementation(async (key: unknown) => {
+        const k = JSON.stringify(key);
+        if (k.includes('interventions')) return [];
+        if (k.includes('enrollments')) return [];
+        if (k.includes('programs')) return [];
+        return [];
+      });
+      render(
+        <SWRConfig value={{ fetcher: mockApiGet, dedupingInterval: 0, provider: () => new Map() }}>
+          <StepImplementHIP caseId="case-1" caseData={{ status: 'enrolled', enrollmentsNotNeeded: false }} userRole="social_worker" />
+        </SWRConfig>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Add Intervention/ }));
+      await screen.findByRole('dialog');
+      expect(screen.getByText(/no program enrollment yet/i)).toBeTruthy();
+    });
+  });
+
   it('still prompts to upload documents when the step is readOnly (interventions logged)', async () => {
     // Uploading must not be tied to step completion: once an intervention is
     // logged the step flips readOnly, but the worker still needs to attach

@@ -109,6 +109,7 @@ const en = {
       "notes": "Notes",
       "notesPlaceholder": "Additional details about this intervention...",
       "otherService": "Other service (specify)…",
+      "noEnrollmentHint": "This case has no program enrollment yet — the service will be recorded without one. Add enrollments in the Program Enrollments step to anchor services to a program.",
       "serviceType": "Service *",
       "selectService": "— Select the service rendered —",
       "programService": "Program / Service *",

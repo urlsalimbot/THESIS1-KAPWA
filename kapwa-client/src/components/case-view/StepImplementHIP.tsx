@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -67,6 +67,13 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
     queryKeys.cases.interventions(caseId),
   );
   const { data: programs = [] } = useSWR<Program[]>(queryKeys.programs.list());
+  // The case's program enrollments (Step 2, Program Enrollments). Per MSWDO
+  // practice the treatment plan anchors the services: an intervention is a
+  // service rendered under one of these enrollments, so the dialog's program
+  // select is scoped to them instead of re-listing the whole catalog.
+  const { data: enrollments = [] } = useSWR<Array<{
+    id: string; programId: string; programName: string; services?: string[];
+  }>>(queryKeys.cases.enrollments(caseId));
 
   const [addOpen, setAddOpen] = useState(false);
   const EMPTY_FORM = {
@@ -87,6 +94,18 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
     setAddOpen(false);
     setForm(EMPTY_FORM);
   }
+  /** Open the dialog; when the case has enrollments, default to the first one
+   *  so the worker lands on an enrolled program instead of an empty select.
+   *  The default is applied by the effect below when the enrollment list
+   *  arrives (SWR resolves after this handler runs). */
+  function openAdd() {
+    setAddOpen(true);
+  }
+
+  useEffect(() => {
+    if (!addOpen || form.programId || enrollments.length === 0) return;
+    setForm(prev => (prev.programId ? prev : { ...prev, programId: `enr:${enrollments[0].id}` }));
+  }, [addOpen, enrollments, form.programId]);
   const [saving, setSaving] = useState(false);
   const [savingDecision, setSavingDecision] = useState(false);
   const interventionNotNeeded = Boolean(caseData?.interventionNotNeeded);
@@ -111,14 +130,26 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
      once saved. Hoisted out of `handleAdd` because the preview below and the
      write both need it, and two lookups that could disagree would show the
      worker one program while recording another. An ad-hoc service matches no
-     program and so has no documents to preview. */
+     program and so has no documents to preview.
+     When the case has enrollments, the select's value is `enr:<enrollmentId>`
+     and the effective program is the enrollment's program — the redundancy
+     resolution: services are anchored to enrollments, not re-picked from the
+     full catalog. Without enrollments (or after the recorded "not needed"
+     decision) the legacy full-catalog fallback applies. */
+  const selectedEnrollment = enrollments.find(e => form.programId === `enr:${e.id}`);
   const selectedProgram = programs.find(p => p.id === form.programId);
-  const selectedDocKeys = selectedProgram ? requiredDocumentKeys(selectedProgram) : [];
-  // The Program → Services matrix: a chosen program offers only its own
-  // services (spec §6.2); no program / ad-hoc offers the whole catalog.
-  const serviceOptions = (selectedProgram?.services && selectedProgram.services.length > 0)
-    ? selectedProgram.services
-    : [...INTERVENTION_TYPES];
+  const dialogProgram = selectedEnrollment
+    ? programs.find(p => p.id === selectedEnrollment.programId) ?? null
+    : (selectedProgram ?? null);
+  const selectedDocKeys = dialogProgram ? requiredDocumentKeys(dialogProgram) : [];
+  // The Program → Services matrix: a chosen (enrolled) program offers only its
+  // own services (spec §6.2); no program / ad-hoc offers the whole catalog.
+  const serviceOptions =
+    (selectedEnrollment?.services && selectedEnrollment.services.length > 0)
+      ? selectedEnrollment.services
+      : (dialogProgram?.services && dialogProgram.services.length > 0)
+        ? dialogProgram.services
+        : [...INTERVENTION_TYPES];
   /* The scope the header's checklist is given: nothing selected means nothing
      to preview — the form is reset whenever the dialog closes, so this is empty
      for the whole of the dialog's closed life and the saved interventions are
@@ -127,8 +158,8 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
      render it would hand a fresh array each time and silently defeat a future
      `React.memo`. */
   const pendingProgramIds = useMemo(
-    () => (form.programId && !form.programId.startsWith('adhoc:') ? [form.programId] : []),
-    [form.programId],
+    () => (dialogProgram ? [dialogProgram.id] : []),
+    [dialogProgram],
   );
 
   // Document uploads stay available for eligible roles regardless of step
@@ -139,10 +170,18 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   async function handleAdd() {
     setSaving(true);
     try {
-      const serviceName = selectedProgram?.name || form.serviceName;
-      const category = selectedProgram?.category || form.category || undefined;
+      const programId = form.programId?.startsWith('adhoc:')
+        ? null
+        : selectedEnrollment
+          ? selectedEnrollment.programId
+          : form.programId || null;
+      const serviceName = dialogProgram?.name || form.serviceName;
+      const category = dialogProgram?.category || form.category || undefined;
       await api.post(`/cases/${caseId}/interventions`, {
-        programId: form.programId?.startsWith('adhoc:') ? null : form.programId || null,
+        programId,
+        // Services are anchored to the case's program enrollment (the treatment
+        // plan); the unenrolled fallback sends no enrollment.
+        programEnrollmentId: selectedEnrollment ? selectedEnrollment.id : null,
         interventionType: form.interventionType || null,
         serviceName,
         category,
@@ -379,7 +418,7 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
       {/* Add-intervention modal — a delivery is a record with eight fields, so
           it is confirmed in a dialog the way the referral step already does,
           rather than expanded inline above the list it would push down. */}
-      <Dialog open={addOpen} onOpenChange={(open) => (open ? setAddOpen(true) : closeAdd())}>
+      <Dialog open={addOpen} onOpenChange={(open) => (open ? openAdd() : closeAdd())}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t('caseView.implement.newIntervention', 'New Intervention')}</DialogTitle>
@@ -394,12 +433,26 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
                 id="intv-program"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.programId}
-                onChange={e => setForm(f => ({ ...f, programId: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, programId: e.target.value, interventionType: '' }))}
               >
-                <option value="">{t('caseView.implement.selectProgram', '— Select a program —')}</option>
-                {programs.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} ${t('caseView.implement.req', 'req.')})` : ''}</option>
-                ))}
+                <option value="">
+                  {t('caseView.implement.selectProgram', enrollments.length > 0 ? '— Select an enrolled program —' : '— Select a program —')}
+                </option>
+                {/* Per MSWDO practice the treatment plan anchors the services: the
+                    select lists the case's ENROLLED programs (step 2) when any
+                    exist — no redundant re-picking from the whole catalog. The
+                    legacy full-catalog fallback applies only when there are no
+                    enrollments (or the "no enrollment needed" decision was
+                    recorded). */}
+                {enrollments.length > 0 ? (
+                  enrollments.map(e => (
+                    <option key={e.id} value={`enr:${e.id}`}>{e.programName}</option>
+                  ))
+                ) : (
+                  programs.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}{p.requiredDocuments?.length ? ` (${p.requiredDocuments.length} ${t('caseView.implement.req', 'req.')})` : ''}</option>
+                  ))
+                )}
                 <option value="adhoc:other">
                   {t('caseView.implement.otherService', 'Other service (specify)…')}
                 </option>
@@ -411,6 +464,11 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
               {selectedDocKeys.length > 0 && (
                 <p className="text-xs text-muted-foreground">
                   {t('caseView.implement.programDocsRequired', 'Requires: {{docs}}', { docs: selectedDocKeys.join(', ') })}
+                </p>
+              )}
+              {enrollments.length === 0 && !caseData?.enrollmentsNotNeeded && (
+                <p className="rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                  {t('caseView.implement.noEnrollmentHint', 'This case has no program enrollment yet — the service will be recorded without one. Add enrollments in the Program Enrollments step to anchor services to a program.')}
                 </p>
               )}
             </div>
