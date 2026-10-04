@@ -35,12 +35,16 @@ templates, and AICS budget tracking are separate later phases.
 
 ### 3.1 Keys and common template
 
-Steps are identified by stable string keys, in display order:
+Steps are identified by stable string keys, in display order. Templates key on the **case
+category value** (the stored subtype string), so non-statutory subtypes use the common template
+while each statutory subtype injects its own step:
 
 ```
 common:  assessment, enrollments, interventions, referrals, evaluate, closure
 CICL:    assessment, discernment, enrollments, interventions, referrals, evaluate, closure
 VAWC:    assessment, protection_order, enrollments, interventions, referrals, evaluate, closure
+Solo Parent:  assessment, solo_parent, enrollments, interventions, referrals, evaluate, closure
+Adoption & Foster Care:  assessment, adoption, enrollments, interventions, referrals, evaluate, closure
 ```
 
 Cases with no category (legacy) use the common template. The catalog is a registry: adding a
@@ -52,7 +56,7 @@ Replaces `CASE_STEP_MIN_STATUS`:
 
 | Step key | Due at lifecycle position |
 |---|---|
-| `assessment`, `enrollments`, `interventions`, `referrals`, `discernment`, `protection_order` | `enrolled` (0) |
+| `assessment`, `enrollments`, `interventions`, `referrals`, `discernment`, `protection_order`, `solo_parent`, `adoption` | `enrolled` (0) |
 | `evaluate` | `active` (3) |
 | `closure` | `transitioning` (4) |
 
@@ -70,6 +74,8 @@ operate on keys.
 | `referrals` | existing predicate (referral or `referralNotNeeded`) |
 | `discernment` | `discernmentAssessedAt` and `discernmentResult` set |
 | `protection_order` | `protectionOrderType` set |
+| `solo_parent` | Solo Parent ID issued (`soloParentIdIssuedDate` and `soloParentIdNumber` set) |
+| `adoption` | `adoptionDvcDate` and `adoptionCaseStudyDate` set |
 | `evaluate` | existing transition-plan predicate |
 | `closure` | existing closure predicate (`closureOutcome`) |
 
@@ -96,6 +102,13 @@ move to keys.
 | `protection_order_issued_by` | TEXT NULL | issuing authority (Punong Barangay / court) |
 | `protection_order_notes` | TEXT NULL | |
 | `enrollments_not_needed` | BOOLEAN NOT NULL DEFAULT FALSE | explicit "no programs" decision |
+| `solo_parent_id_issued_date` | DATE NULL | Solo Parent step |
+| `solo_parent_id_number` | TEXT NULL | |
+| `solo_parent_notes` | TEXT NULL | |
+| `adoption_dvc_date` | DATE NULL | Adoption & Foster Care step |
+| `adoption_case_study_date` | DATE NULL | |
+| `adoption_cdclaa_received` | BOOLEAN NULL | |
+| `adoption_notes` | TEXT NULL | |
 | `status` | enum + `aftercare` | terminal |
 
 ### 4.2 `program_enrollments` (new table)
@@ -109,6 +122,25 @@ move to keys.
 
 - Add `step_key TEXT NOT NULL`; UNIQUE `(case_id, step_key)`; backfill from `step_index`;
   drop `step_index`.
+
+### 4.4 Programs & interventions shape (evaluated)
+
+The existing tables already fit the model; two additive changes key the domains the way the
+MSWDO reference does:
+
+- **`programs.program_type TEXT NULL`** — seeded catalog (`social_pension`, `supplemental_feeding`,
+  `diversion`, `livelihood`, `education`, `medical`, `burial`, `food_non_food`, `shelter`,
+  `aftercare`). `name` stays the display label; `program_type` is the queryable key for
+  enrollments and the later AICS-budget phase.
+- **`case_interventions.intervention_type TEXT NULL`** — seeded catalog (`financial_grant`,
+  `scsr_generated`, `crisis_counseling`, `referral_pao`, `protection_order_issued`,
+  `medical_assistance`, `burial_assistance`, `livelihood_seed`, `legal_assistance`,
+  `home_visit`). `service_name` stays the human label.
+- **`case_interventions.program_enrollment_id UUID NULL → program_enrollments(id)`** — links a
+  delivered intervention to the enrollment it was delivered under (the
+  Program-Enrollment → Intervention-Logs link).
+
+Existing rows: `program_type`/`intervention_type` null (legacy), treated as "uncatalogued".
 
 ## 5. Category steps (initial catalog)
 
@@ -133,7 +165,26 @@ validities. The step records:
 - UI: type select, issued date/authority, notes; validity hint (BPO 15 days, TPO 30 days,
   PPO until revoked). Hidden for non-VAWC categories.
 
-### 5.3 Court docket
+### 5.3 Solo Parent — `solo_parent`
+
+Under R.A. 8972 the DSWD worker **assesses eligibility** (income below the NEDA poverty
+threshold) and the LGU issues the **Solo Parent ID** (benefits: parental leave, educational,
+housing). The step records:
+
+- `solo_parent_id_issued_date`, `solo_parent_id_number`, plus optional notes.
+- UI: eligibility assessment fields + ID issuance. Done = ID issued. Hidden for non-Solo-Parent
+  categories.
+
+### 5.4 Adoption & Foster Care — `adoption`
+
+Under R.A. 11642 the LSWDO files CDCLAA petitions and processes DVC, the **child case-study
+report** and the PAPs' **home study report**. The step tracks the MSWDO's part:
+
+- `adoption_dvc_date`, `adoption_case_study_date`, `adoption_cdclaa_received`, plus notes.
+- UI: dates + CDCLAA receipt checkbox; the required reports attach as documents (Phase B will
+  generate the templates). Done = DVC date and case-study date set. Hidden for other categories.
+
+### 5.5 Court docket
 
 For legal categories (CICL, VAWC, CNSP) the case header shows an editable **Court Docket No.**,
 saved via `PATCH /cases/:id/meta`.
@@ -173,17 +224,23 @@ assessment schema enforces it (a `caseCategory` change on an assessed+ case is r
 | `PATCH /cases/:id/enrollments-decision` `{ notNeeded }` | explicit no-programs decision |
 | `PATCH /cases/:id/discernment` | CICL step save |
 | `PATCH /cases/:id/protection-order` | VAWC step save |
+| `PATCH /cases/:id/solo-parent` | Solo Parent step save |
+| `PATCH /cases/:id/adoption` | Adoption & Foster Care step save |
 | `PATCH /cases/:id/meta` `{ courtDocketNumber }` | court docket |
 | `PATCH /cases/:id/status` `{ status: 'aftercare' }` | via the existing endpoint + FSM edge |
 
 ## 11. Migration & rollout plan
 
-Three TypeORM migrations, each mirrored by idempotent statements in `src/database/migrate.ts`
+Five TypeORM migrations, each mirrored by idempotent statements in `src/database/migrate.ts`
 (the fresh-boot bootstrap):
 
 - **`…0000000000077`** — `program_enrollments` (+ indexes, unique).
-- **`…0000000000078`** — `cases` legal/aftercare columns + status enum.
-- **`…0000000000079`** — `case_step_locks.step_key`: add, backfill, rebuild unique, drop `step_index`.
+- **`…0000000000078`** — `cases` columns: court docket, discernment, protection order,
+  solo-parent, adoption, `enrollments_not_needed`; status enum + `aftercare`.
+- **`…0000000000079`** — `case_step_locks.step_key`: add, backfill, rebuild unique,
+  drop `step_index`.
+- **`…0000000000080`** — `programs.program_type`; `case_interventions.intervention_type`
+  and `program_enrollment_id`.
 
 Rollout: single cohesive change set on `main`; CI (server jest + coverage, client vitest +
 coverage, docker build); then the running stack applies migrations.
@@ -193,10 +250,11 @@ coverage, docker build); then the running stack applies migrations.
 - **Parity**: server/client step templates, labels, and floors cross-checked (extends the
   existing `case-fsm-parity` pattern); templates per category pinned.
 - Server: lock service key-based; gates on keys; enrollments CRUD + decision; discernment /
-  protection-order / meta endpoints; aftercare transition + SLA exclusion; control-number
-  prefix; category immutability.
-- Client: stepper renders CICL vs VAWC vs common templates; lock-by-key; the three new step
-  UIs; CaseActionBar gates; aftercare banner/action; court-docket header.
+  protection-order / solo-parent / adoption / meta endpoints; aftercare transition + SLA
+  exclusion; control-number prefix; category immutability; program/intervention type seeds.
+- Client: stepper renders CICL vs VAWC vs Solo Parent vs Adoption vs common templates;
+  lock-by-key; the five new step UIs; CaseActionBar gates; aftercare banner/action;
+  court-docket header.
 - Existing index-pinning specs migrate to keys (`StepLocksAcrossSteps`, `CaseStepper.done`,
   `case-step-locks.service.spec`, etc.).
 
@@ -218,4 +276,10 @@ coverage, docker build); then the running stack applies migrations.
 - **R.A. 9262 (VAWC Act), §8, §14–16**: BPO (Punong Barangay, ex parte, **15 days**), TPO
   (court, ex parte, **30 days**), PPO (court, until revoked); §9 social workers may file;
   §40 MSWDO shelter/counseling duties.
+- **R.A. 8972 (Solo Parents' Welfare Act), §4**: eligibility assessed by the DSWD worker against
+  the NEDA poverty threshold; ID issuance is the LGU workflow the `solo_parent` step records.
+- **R.A. 11642 (Domestic Administrative Adoption and Alternative Child Care Act, 2022)**:
+  LSWDO files CDCLAA petitions (§12); DVC, child case-study and home-study reports are the
+  document spine of the `adoption` step; CDCLAA within **3 months** of DVC/foundling
+  certification (§11).
 - These timelines are inputs for the **Phase C** statutory-alerts design.
