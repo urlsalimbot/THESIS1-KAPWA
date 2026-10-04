@@ -136,7 +136,12 @@ if [ "$MODE" != "frontend" ]; then
     fi
     sleep 4
   done
-  [ "$HEALTHY" = "1" ] || die "API did not become healthy in 120s — check: docker logs $API_CONTAINER"
+  if [ "$HEALTHY" != "1" ]; then
+    echo "─── API health check failed — container state & logs: ───"
+    remote "docker ps -a --filter name=$API_CONTAINER --format '{{.Status}}'"
+    remote "docker logs $API_CONTAINER --tail 120 2>&1" || true
+    die "API did not become healthy in 120s — logs above"
+  fi
 
   # ── 6. Apply schema ────────────────────────────────────────────────────────
   step "Apply schema (bootstrap + incremental migrations, no demo data)"
