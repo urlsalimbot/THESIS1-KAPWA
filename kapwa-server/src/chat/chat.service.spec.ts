@@ -80,6 +80,48 @@ describe('ChatService', () => {
     expect(count).toBe(2);
   });
 
+  // The badge and the conversation list must agree. getConversations hides
+  // senders outside a claimant's assigned workers, so the unread count must
+  // ignore their messages too — otherwise the bell shows "1 unread" next to
+  // "No conversations yet" (the spurious count the claimant cannot resolve,
+  // which surfaced as a contact-message leak report).
+  it('scopes a claimant unread count to assigned workers', async () => {
+    beneficiaryRepoMock.findOne.mockResolvedValue({ id: 'ben-1', userId: 'claimant-1' });
+    caseRepoMock.find.mockResolvedValue([
+      { assignedWorkerId: 'worker-a' },
+      { assignedWorkerId: 'worker-a' },
+    ]);
+    repoMock.count.mockResolvedValue(1);
+
+    const count = await service.getUnreadCount('claimant-1', 'claimant');
+
+    expect(count).toBe(1);
+    expect(repoMock.count).toHaveBeenCalledWith({
+      where: { recipientId: 'claimant-1', isRead: false, senderId: expect.anything() },
+    });
+    // In(worker-a) after de-duplication — the two case rows share one worker.
+    const senderId = repoMock.count.mock.calls[0][0].where.senderId;
+    expect(senderId._value ?? senderId).toEqual(['worker-a']);
+  });
+
+  it('answers 0 for a claimant with no assigned workers', async () => {
+    beneficiaryRepoMock.findOne.mockResolvedValue({ id: 'ben-1', userId: 'claimant-1' });
+    caseRepoMock.find.mockResolvedValue([]);
+
+    const count = await service.getUnreadCount('claimant-1', 'claimant');
+
+    expect(count).toBe(0);
+    expect(repoMock.count).not.toHaveBeenCalled();
+  });
+
+  it('scopes a claimant unread count only for the claimant role', async () => {
+    repoMock.count.mockResolvedValue(3);
+    const count = await service.getUnreadCount('worker-1', 'social_worker');
+    expect(count).toBe(3);
+    // No worker-ids lookup for staff.
+    expect(beneficiaryRepoMock.findOne).not.toHaveBeenCalled();
+  });
+
   it('batches user lookups in getConversations instead of per-conversation findOne', async () => {
     repoMock.find.mockResolvedValue([
       { senderId: 'u1', recipientId: 'u2', content: 'Hello', createdAt: new Date(), isRead: true, conversationId: 'u1_u2' },

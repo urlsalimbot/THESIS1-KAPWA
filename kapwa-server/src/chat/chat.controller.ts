@@ -68,7 +68,7 @@ export class ChatController {
   @Get('unread')
   @Roles('admin', 'social_worker', 'coordinator', 'claimant')
   async getUnreadCount(@Request() req: AuthenticatedRequest) {
-    const count = await this.chatService.getUnreadCount(req.user.id);
+    const count = await this.chatService.getUnreadCount(req.user.id, req.user.role);
     return { count };
   }
 }

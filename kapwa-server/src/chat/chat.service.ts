@@ -130,7 +130,18 @@ export class ChatService {
     );
   }
 
-  async getUnreadCount(userId: string) {
+  async getUnreadCount(userId: string, role?: string) {
+    // Same scoping as getConversations: for a claimant only unread messages
+    // from workers assigned to their case count. Without this the badge could
+    // show "1 unread" while the conversation list (which hides non-assigned
+    // senders) renders empty — a spurious count the claimant cannot resolve.
+    if (role === 'claimant') {
+      const workerIds = await this.getAssignedWorkerIds(userId);
+      if (workerIds.length === 0) return 0;
+      return this.chatRepo.count({
+        where: { recipientId: userId, isRead: false, senderId: In(workerIds) },
+      });
+    }
     return this.chatRepo.count({
       where: { recipientId: userId, isRead: false },
     });

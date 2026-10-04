@@ -29,37 +29,12 @@ interface ConsentRecord {
   id: string; purpose: string; channel: string; status: string; grantedAt: string;
 }
 
-interface NotificationPreference {
-  id?: string;
-  userId?: string;
-  channel: 'sms' | 'in_app';
-  category: string;
-  optedIn: boolean;
-}
-
-const NOTIF_CATEGORIES = [
-  { key: 'case_update', labelKey: 'notifications.catCaseUpdate', label: 'Case Updates' },
-  { key: 'approval', labelKey: 'notifications.catApproval', label: 'Approvals' },
-  { key: 'disbursement', labelKey: 'notifications.catDisbursement', label: 'Disbursements' },
-  { key: 'sync_conflict', labelKey: 'notifications.catSyncConflict', label: 'Sync Conflicts' },
-  { key: 'system', labelKey: 'notifications.catSystem', label: 'System Alerts', locked: true },
-];
-
-const NOTIF_CHANNELS = [
-  { key: 'sms', labelKey: 'notifications.channelSms', label: 'SMS' },
-  { key: 'in_app', labelKey: 'notifications.channelInApp', label: 'In-App' },
-];
-
-const DEFAULT_CATEGORIES = ['case_update', 'approval', 'disbursement', 'sync_conflict', 'system'];
-
 export function ClaimantDashboardPage() {
   const { t } = useTranslation();
   const { data: servicesData } = useSWR<{ services?: ServiceRecord[]; caseStatus?: string; case?: MyCaseDetail | null }>(
     queryKeys.beneficiaries.myServices(),
   );
   const { data: consents = [] } = useSWR<ConsentRecord[]>(queryKeys.beneficiaries.myConsent());
-  const { data: prefs } = useSWR<NotificationPreference[]>('/notifications/preferences');
-  const { data: disbData } = useSWR<{ disbursements: any[]; total: number }>('/beneficiaries/me/disbursements');
   const caseId = servicesData?.case?.id;
   const { data: myDocs = [], mutate: mutateDocs } = useSWR<any[]>(caseId ? `/filing?caseId=${caseId}` : null);
   const { data: myRequirements, mutate: mutateRequirements } = useSWR<{
@@ -138,48 +113,6 @@ export function ClaimantDashboardPage() {
       : t('dashboard.noActiveCase', 'No active case');
   const statusVariant = normalized === 'transitioning' ? 'default' : 'outline';
   const lastSync = servicesData ? Date.now() : null;
-
-  const [preferences, setPreferences] = useState<Record<string, Record<string, boolean>>>(() => {
-    const map: Record<string, Record<string, boolean>> = {};
-    for (const cat of DEFAULT_CATEGORIES) {
-      map[cat] = { sms: cat === 'system', in_app: cat === 'system' };
-    }
-    for (const p of prefs || []) {
-      if (!map[p.category]) map[p.category] = { sms: false, in_app: false };
-      map[p.category][p.channel] = p.optedIn;
-    }
-    return map;
-  });
-  const [prefDirty, setPrefDirty] = useState(false);
-  const [prefSaved, setPrefSaved] = useState(false);
-  const [prefSaving, setPrefSaving] = useState(false);
-
-  async function handleSave() {
-    setPrefSaving(true);
-    try {
-      const updates: { channel: string; category: string; optedIn: boolean }[] = [];
-      for (const [category, channels] of Object.entries(preferences)) {
-        if (category === 'system') continue;
-        for (const [channel, optedIn] of Object.entries(channels)) {
-          updates.push({ channel, category, optedIn });
-        }
-      }
-      await Promise.all(updates.map(u => api.put('/notifications/preferences', u)));
-      setPrefSaved(true);
-      setPrefDirty(false);
-      setTimeout(() => setPrefSaved(false), 3000);
-    } catch (e) { console.error("Failed to save preferences:", e); }
-    finally { setPrefSaving(false); }
-  }
-
-  function togglePref(category: string, channel: string) {
-    if (category === 'system') return;
-    setPreferences(prev => ({
-      ...prev,
-      [category]: { ...prev[category], [channel]: !prev[category]?.[channel] },
-    }));
-    setPrefDirty(true);
-  }
 
   if (loading) {
     return (
@@ -355,33 +288,6 @@ export function ClaimantDashboardPage() {
         )}
       </Card>
 
-      {/* Disbursements */}
-      <Card>
-        <div className="border-b px-4 py-3 flex items-center justify-between">
-          <h2 className="font-semibold text-sm text-primary">{t('claims.disbursements', 'Disbursements')}</h2>
-          {(disbData?.total ?? 0) > 0 && <span className="text-sm font-semibold">₱{(disbData!.total).toLocaleString()}</span>}
-        </div>
-        {(disbData?.disbursements?.length ?? 0) === 0 ? (
-          <CardContent>
-            <p className="text-center py-8 text-sm text-muted-foreground">{t('claims.noDisbursements', 'No disbursements recorded yet.')}</p>
-          </CardContent>
-        ) : (
-          <div className="divide-y">
-            {disbData!.disbursements.map((d: any) => (
-              <div key={d.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">{d.serviceName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {d.controlNo}{d.date ? ` · ${formatDate(d.date)}` : ''}{d.fundSource ? ` · ${d.fundSource}` : ''}
-                  </p>
-                </div>
-                <p className="text-sm font-semibold">₱{Number(d.amount).toLocaleString()}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
       {/* Documents */}
       <Card>
         <div className="border-b px-4 py-3">
@@ -440,68 +346,6 @@ export function ClaimantDashboardPage() {
             </Button>
           )}
           <p className="text-xs text-muted-foreground">{t('claims.dataPrivacyNotice', 'Your data is processed per RA 10173 (Data Privacy Act). You may revoke consent at any time.')}</p>
-        </div>
-      </Card>
-
-      {/* Notification Preferences */}
-      <Card>
-        <div className="border-b px-4 py-3 flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-primary">{t('notifications.preferences', 'Notification Preferences')}</h3>
-          <Button
-            onClick={handleSave}
-            disabled={!prefDirty || prefSaving}
-            variant={prefDirty ? 'default' : 'outline'}
-            size="sm"
-          >
-            {prefSaving ? t('notifications.saving', 'Saving...') : t('notifications.savePreferences', 'Save Preferences')}
-          </Button>
-        </div>
-        {prefSaved && (
-          <div className="mx-4 mt-2 rounded bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-            {t('notifications.preferencesSaved', 'Preferences saved')}
-          </div>
-        )}
-        <div className="p-4">
-          <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-xs">
-            <div className="font-medium text-muted-foreground">{t('notifications.category', 'Category')}</div>
-            {NOTIF_CHANNELS.map(ch => (
-              <div key={ch.key} className="text-center font-medium text-muted-foreground">{t(ch.labelKey, ch.label)}</div>
-            ))}
-            {NOTIF_CATEGORIES.map(cat => (
-              <div key={cat.key} className={`contents ${cat.locked ? 'opacity-50' : ''}`}>
-                <div className="flex items-center gap-2 py-1">
-                  {cat.locked && <span className="text-muted-foreground">🔒</span>}
-                  <span className="text-sm">{t(cat.labelKey, cat.label)}</span>
-                  {cat.locked && <span className="text-xs text-muted-foreground">{t('notifications.alwaysActive', '(always active)')}</span>}
-                </div>
-                {NOTIF_CHANNELS.map(ch => (
-                  <div key={ch.key} className="flex justify-center py-1">
-                    <label className="relative inline-flex cursor-pointer items-center">
-                      <input
-                        type="checkbox"
-                        checked={preferences[cat.key]?.[ch.key] ?? cat.locked}
-                        disabled={cat.locked}
-                        onChange={() => togglePref(cat.key, ch.key)}
-                        className="peer sr-only"
-                        aria-label={t('notifications.toggleAria', '{{category}} {{channel}}', { category: t(cat.labelKey, cat.label), channel: t(ch.labelKey, ch.label) })}
-                      />
-                      <div className={`h-5 w-9 rounded-full transition-colors ${
-                        cat.locked
-                          ? 'bg-primary cursor-not-allowed'
-                          : (preferences[cat.key]?.[ch.key]
-                              ? 'bg-primary'
-                              : 'bg-gray-300 peer-hover:bg-gray-400')
-                      }`}>
-                        <div className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                          (preferences[cat.key]?.[ch.key] ?? cat.locked) ? 'translate-x-[18px]' : 'translate-x-[2px]'
-                        }`} />
-                      </div>
-                    </label>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
         </div>
       </Card>
     </PageShell>
