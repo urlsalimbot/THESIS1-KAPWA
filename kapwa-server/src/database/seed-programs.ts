@@ -6,7 +6,6 @@ interface ProgramSeed {
   id: string;
   name: string;
   category: string;
-  waitingPeriodDays: number;
   requiredDocuments: string[];
   fundSources: string[];
   legalBasis: string;
@@ -60,8 +59,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'AICS — Assistance to Individuals in Crisis Situation',
     category: 'Crisis Intervention',
-    waitingPeriodDays: 7,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of client',
       'Barangay Certificate of Indigency',
       'Medical certificate / hospital bill / quotation (depending on need)',
@@ -81,8 +79,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Medical Assistance',
     category: 'Medical',
-    waitingPeriodDays: 15,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of patient or immediate family member',
       'Barangay Certificate of Indigency',
       'Medical abstract / doctor\'s referral',
@@ -100,8 +97,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Burial Assistance',
     category: 'Burial',
-    waitingPeriodDays: 30,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant / immediate family member',
       'Barangay Certificate of Indigency',
       'Death certificate (PSA)',
@@ -118,8 +114,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Transportation Assistance',
     category: 'Transportation',
-    waitingPeriodDays: 7,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Medical appointment slip / referral (if medical-related)',
@@ -135,8 +130,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Food Assistance',
     category: 'Food',
-    waitingPeriodDays: 14,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Affidavit of need',
@@ -151,8 +145,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Financial Assistance (General)',
     category: 'Financial',
-    waitingPeriodDays: 30,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Letter request / application form',
@@ -168,8 +161,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Educational Assistance',
     category: 'Education',
-    waitingPeriodDays: 90,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of parent / guardian',
       'Barangay Certificate of Indigency',
       'Certificate of Enrollment / registration form',
@@ -188,8 +180,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Solo Parent Support',
     category: 'Family Welfare',
-    waitingPeriodDays: 30,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Solo Parent ID (from DSWD) or Certificate of Solo Parent Status',
@@ -206,8 +197,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Parent Effectiveness Service',
     category: 'Family Welfare',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of participant',
       'Barangay Certificate of Indigency',
       'Referral letter (if from other agency)',
@@ -223,8 +213,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Family Casework Service',
     category: 'Family Welfare',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of client',
       'Social case study report (if available)',
       'Referral letter (if from other agency)',
@@ -241,8 +230,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'VAWC Protection & Women\'s Welfare',
     category: "Women's Welfare",
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of client',
       'Sworn statement / incident report',
       'Barangay blotter / VAW desk report',
@@ -263,8 +251,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Social Pension for Indigent Senior Citizens',
     category: 'Senior Welfare',
-    waitingPeriodDays: 90,
-    requiredDocuments: [
+      requiredDocuments: [
       'Senior Citizen ID / Valid Government ID',
       'Barangay Certificate of Indigency',
       'Birth certificate (PSA) or any proof of age',
@@ -280,8 +267,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'PWD Assistance',
     category: 'PWD Welfare',
-    waitingPeriodDays: 30,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'PWD ID (from DSWD / LGU)',
@@ -300,8 +286,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Child Welfare Assistance',
     category: 'Child Welfare',
-    waitingPeriodDays: 30,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of parent / guardian',
       'Barangay Certificate of Indigency',
       'Birth certificate of child (PSA)',
@@ -321,8 +306,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Supplementary Feeding Program',
     category: 'Child Welfare',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'List of beneficiaries from Barangay Nutrition Council',
       'Parent consent forms',
       'Nutritional assessment form',
@@ -344,8 +328,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Juvenile Diversion & Intervention Program (CICL)',
     category: 'Child Welfare',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Intake Sheet / referral from law enforcement',
       'Act of Discernment assessment (CICL above 15)',
       'Birth certificate (PSA)',
@@ -365,8 +348,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Aftercare Support',
     category: 'Aftercare',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of client',
       'Case closure / discharge document',
       'Referral letter (if from other agency)',
@@ -383,8 +365,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Sustainable Livelihood Program',
     category: 'Livelihood',
-    waitingPeriodDays: 60,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Business plan / project proposal',
@@ -401,8 +382,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Emergency Cash/Food for Work',
     category: 'Livelihood',
-    waitingPeriodDays: 90,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'List of completed work / Certificate of Work Rendered from Barangay',
@@ -420,8 +400,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Crisis Intervention & Psychosocial Support',
     category: 'Mental Health',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of client',
       'Referral letter (if from other agency)',
       'Consent form (for minors, parental consent)',
@@ -436,8 +415,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Referral and Linkage Services',
     category: 'Legal',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of client',
       'Referral letter (if any)',
       'Brief narrative of situation',
@@ -454,8 +432,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: '4Ps — Pantawid Pamilyang Pilipino Program',
     category: 'CCT',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       '4Ps Household ID',
       'Valid ID of parent/guardian',
       'Birth certificates of children (PSA)',
@@ -474,8 +451,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Emergency Shelter Assistance',
     category: 'Disaster Response',
-    waitingPeriodDays: 14,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Certification from BFP (if fire victim)',
@@ -491,8 +467,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Disaster Response and Relief Assistance',
     category: 'Disaster Response',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Barangay disaster assessment report / list of affected families',
@@ -509,8 +484,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Medical Equipment Loan',
     category: 'Medical',
-    waitingPeriodDays: 7,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Medical certificate / doctor\'s prescription for the equipment',
@@ -528,8 +502,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'KALAHI-CIDSS (Community-Driven Development)',
     category: 'Community Development',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Barangay assembly resolution / endorsement',
       'Community sub-project proposal',
       'Listahanan/NHTS-PR reference for household validation',
@@ -545,8 +518,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Walang Gutom Program (Food Stamp)',
     category: 'Food & Nutrition',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'NHTS-PR / Listahanan reference or DSWD validation',
       'Valid ID of household grantee',
       'Barangay Certificate of Indigency',
@@ -562,8 +534,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'UPLIFT (Economic Empowerment)',
     category: 'Livelihood',
-    waitingPeriodDays: 0,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of participant',
       'Barangay Certificate of Indigency',
       'NHTS-PR / Listahanan reference or DSWD validation',
@@ -586,8 +557,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Assistive Device Support',
     category: 'PWD Welfare',
-    waitingPeriodDays: 30,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Medical certificate / quotation for the device',
@@ -602,8 +572,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Legal Referral (PAO)',
     category: 'Legal',
-    waitingPeriodDays: 0,
-    requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
+      requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
     fundSources: ['LGU - Municipal'],
     legalBasis: 'RA 9999 (Free Legal Assistance Act); PAO Operations Manual',
     isActive: true,
@@ -614,8 +583,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Referral – Others',
     category: 'Legal',
-    waitingPeriodDays: 0,
-    requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
+      requiredDocuments: ['Valid ID of client', 'Referral letter (if any)', 'Brief narrative of situation'],
     fundSources: ['LGU - Municipal'],
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
@@ -626,8 +594,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Birth Discrepancy Assistance',
     category: 'Technical',
-    waitingPeriodDays: 15,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of client / parent (if minor)',
       'PSA Birth Certificate',
       'Affidavit of discrepancy / supporting documents',
@@ -642,8 +609,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Case Study Report (CSR)',
     category: 'Technical',
-    waitingPeriodDays: 0,
-    requiredDocuments: ['Valid ID of client', 'Referral letter (if any)'],
+      requiredDocuments: ['Valid ID of client', 'Referral letter (if any)'],
     fundSources: ['LGU - Municipal'],
     legalBasis: 'RA 9433 (Magnificat Act — MSWDO)',
     isActive: true,
@@ -654,8 +620,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Home Visit',
     category: 'Technical',
-    waitingPeriodDays: 0,
-    requiredDocuments: ['Valid ID of client'],
+      requiredDocuments: ['Valid ID of client'],
     fundSources: ['LGU - Municipal'],
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
@@ -666,8 +631,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'PhilHealth Assistance',
     category: 'Medical',
-    waitingPeriodDays: 7,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'PhilHealth member data record',
       'Medical certificate / hospital bill (depending on need)',
@@ -682,8 +646,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Child Custody Support',
     category: 'Technical',
-    waitingPeriodDays: 0,
-    requiredDocuments: ['Valid ID of parent / guardian', 'Referral letter (if any)'],
+      requiredDocuments: ['Valid ID of parent / guardian', 'Referral letter (if any)'],
     fundSources: ['LGU - Municipal', 'DSWD'],
     legalBasis: 'RA 7610; Family Code of the Philippines (EO 209)',
     isActive: true,
@@ -694,8 +657,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Balik Probinsya Assistance',
     category: 'Technical',
-    waitingPeriodDays: 7,
-    requiredDocuments: [
+      requiredDocuments: [
       'Valid ID of claimant',
       'Barangay Certificate of Indigency',
       'Proof of return / provincial relocation plan',
@@ -710,8 +672,7 @@ export const PROGRAMS: ProgramSeed[] = [
     id: uuidv7(),
     name: 'Travel Assessment',
     category: 'Technical',
-    waitingPeriodDays: 7,
-    requiredDocuments: ['Valid ID of claimant', 'Medical appointment slip / referral (if medical-related)'],
+      requiredDocuments: ['Valid ID of claimant', 'Medical appointment slip / referral (if medical-related)'],
     fundSources: ['LGU - Municipal'],
     legalBasis: 'RA 7160 (Local Government Code)',
     isActive: true,
@@ -735,9 +696,9 @@ export async function seedPrograms(dataSource: DataSource) {
       }
 
       await q.query(
-        `INSERT INTO programs (id, name, category, waiting_period_days, legal_basis, is_active, program_type)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [prog.id, prog.name, prog.category, prog.waitingPeriodDays, prog.legalBasis, prog.isActive, prog.programType],
+        `INSERT INTO programs (id, name, category, legal_basis, is_active, program_type)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [prog.id, prog.name, prog.category, prog.legalBasis, prog.isActive, prog.programType],
       );
 
       for (const fundSource of prog.fundSources) {

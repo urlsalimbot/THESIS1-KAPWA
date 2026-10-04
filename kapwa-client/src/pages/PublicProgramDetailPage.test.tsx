@@ -13,7 +13,6 @@ const program = {
   id: 'p1',
   name: 'Cash Assistance',
   category: 'Financial',
-  waitingPeriodDays: 90,
   fundSources: ['DSWD', 'LGU'],
   requiredDocuments: ['Valid ID', 'Proof of Income'],
   legalBasis: 'RA 9262',
@@ -47,7 +46,6 @@ describe('PublicProgramDetailPage', () => {
   it('shows the facts a visitor needs before applying', async () => {
     renderAt();
 
-    expect(await screen.findByText(/90 day\(s\) after last assistance/i)).toBeTruthy();
     expect(screen.getByText('DSWD')).toBeTruthy();
     expect(screen.getByText('LGU')).toBeTruthy();
     expect(screen.getByText('Valid ID')).toBeTruthy();

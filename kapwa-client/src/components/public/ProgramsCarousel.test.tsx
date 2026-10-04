@@ -25,7 +25,7 @@ function program(overrides: Record<string, unknown> = {}) {
     id: 'p1',
     name: 'Medical Assistance',
     category: 'Medical',
-    waitingPeriodDays: 15,
+    
     fundSources: ['LGU - Municipal'],
     requiredDocuments: ['Valid ID', 'Barangay Certificate'],
     legalBasis: 'RA 11223',

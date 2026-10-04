@@ -25,19 +25,18 @@ describe('PublicProgramsPage', () => {
 
   it('renders active programs with fund sources', async () => {
     mockApiGet.mockResolvedValue([
-      { id: 'p1', name: 'AICS', category: 'Financial Assistance', waitingPeriodDays: 5, fundSources: ['LGU'], legalBasis: 'RA 11165' },
+      { id: 'p1', name: 'AICS', category: 'Financial Assistance', fundSources: ['LGU'], legalBasis: 'RA 11165' },
     ]);
     renderPage();
     expect(await screen.findByText('AICS')).toBeTruthy();
     expect(screen.getByText('LGU')).toBeTruthy();
-    expect(screen.getByText(/Waiting period: 5 days/)).toBeTruthy();
   });
 
   it('lists every required document per program', async () => {
     mockApiGet.mockResolvedValue([
       {
         id: 'p1', name: 'Medical Assistance', category: 'Health',
-        waitingPeriodDays: 15, fundSources: ['LGU'],
+        fundSources: ['LGU'],
         requiredDocuments: ['Barangay Certificate of Indigency', 'Valid ID', 'Medical Abstract'],
       },
       {
