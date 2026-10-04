@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { StepTransition } from './StepTransition';
@@ -7,15 +7,17 @@ import { formatDate } from '@/lib/format';
 
 // Hoisted so the sealed-visits tests can read the payload the component actually
 // sent; a `vi.mock` factory cannot close over a test-local `vi.fn()`.
-const { mockPatch } = vi.hoisted(() => ({ mockPatch: vi.fn() }));
+const { mockPatch, mockPost } = vi.hoisted(() => ({ mockPatch: vi.fn(), mockPost: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
-  api: { patch: (...a: unknown[]) => mockPatch(...a), post: vi.fn(), del: vi.fn(), get: vi.fn() },
+  api: { patch: (...a: unknown[]) => mockPatch(...a), post: (...a: unknown[]) => mockPost(...a), del: vi.fn(), get: vi.fn() },
 }));
 
 beforeEach(() => {
   mockPatch.mockReset();
   mockPatch.mockResolvedValue({});
+  mockPost.mockReset();
+  mockPost.mockResolvedValue({});
 });
 
 type Seal = { stepKey: string; lockedByName?: string; lockedAt: string } | null;
@@ -225,5 +227,58 @@ describe('StepTransition — sealing step 4', () => {
       expect(Object.keys(body).some((k) => k === 'selfRelianceLevel')).toBe(true);
       expect(Object.keys(body).some((k) => k === 'sustainabilityPlan')).toBe(true);
     });
+  });
+});
+
+describe('StepTransition — scheduled home visits', () => {
+  const SCHEDULED = {
+    id: 'e1', caseId: 'c1', eventType: 'home_visit', eventDate: '2026-10-24',
+    startTime: '14:00', notes: 'Check-up', status: 'planned',
+  };
+
+  function renderWithEvents(events: unknown[], opts: { readOnly?: boolean } = {}) {
+    const fetcher = vi.fn((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('events')) return Promise.resolve(events);
+      return Promise.resolve(null);
+    });
+    return render(
+      <SWRConfig value={{ provider: () => new Map(), fetcher }}>
+        <StepTransition
+          caseId="c1"
+          caseData={{}}
+          userRole="admin"
+          readOnly={opts.readOnly}
+        />
+      </SWRConfig>,
+    );
+  }
+
+  it('lists scheduled home visits and completes one', async () => {
+    const user = userEvent.setup();
+    renderWithEvents([SCHEDULED]);
+    expect(await screen.findByText(/Check-up/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Complete/ }));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      '/cases/c1/events/e1', expect.objectContaining({ status: 'done' }),
+    ));
+  });
+
+  it('schedules a new home visit for the case', async () => {
+    const user = userEvent.setup();
+    renderWithEvents([]);
+    await user.click(await screen.findByRole('button', { name: /Schedule Home Visit/ }));
+    fireEvent.change(await screen.findByLabelText(/Visit Date/), { target: { value: '2026-11-05' } });
+    await user.click(screen.getByRole('button', { name: /Save Visit/ }));
+    await waitFor(() => expect(mockPost).toHaveBeenCalledWith(
+      '/cases/c1/events',
+      expect.objectContaining({ eventType: 'home_visit', eventDate: '2026-11-05' }),
+    ));
+  });
+
+  it('hides the scheduling controls when read-only', async () => {
+    renderWithEvents([SCHEDULED], { readOnly: true });
+    await screen.findByText(/Check-up/);
+    expect(screen.queryByRole('button', { name: /Schedule Home Visit/ })).toBeNull();
   });
 });

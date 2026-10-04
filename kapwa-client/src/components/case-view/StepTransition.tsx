@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { useSWRConfig } from 'swr';
+import useSWR from 'swr';
+import { toast } from 'sonner';
+import { humanizeError } from '@/lib/errors';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -16,6 +19,15 @@ interface FollowUpVisit {
   type: string;
   notes: string;
   outcome: string;
+}
+
+interface ScheduledVisit {
+  id: string;
+  eventType: string;
+  eventDate: string;
+  startTime?: string | null;
+  notes?: string | null;
+  status: string;
 }
 
 interface StepTransitionProps {
@@ -70,6 +82,55 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
 
   function removeFollowUp(index: number) {
     setFollowUps(prev => prev.filter((_, i) => i !== index));
+  }
+
+  // --- Scheduled home visits (planned `case_events` rows) ---
+  const { data: caseEvents, mutate: mutateEvents } = useSWR<ScheduledVisit[]>(
+    queryKeys.cases.events(caseId),
+  );
+  const [addingScheduled, setAddingScheduled] = useState(false);
+  const [newScheduled, setNewScheduled] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    time: '',
+    notes: '',
+  });
+  const scheduled = (Array.isArray(caseEvents) ? caseEvents : [])
+    .filter((e) => e.eventType === 'home_visit' && e.status === 'planned');
+
+  async function scheduleVisit() {
+    if (!newScheduled.date) return;
+    try {
+      await api.post(`/cases/${caseId}/events`, {
+        eventType: 'home_visit',
+        eventDate: newScheduled.date,
+        startTime: newScheduled.time || undefined,
+        notes: newScheduled.notes || undefined,
+      });
+      toast.success(t('caseView.transition.visitScheduled', 'Home visit scheduled'));
+      setNewScheduled({ date: new Date().toISOString().slice(0, 10), time: '', notes: '' });
+      setAddingScheduled(false);
+      await mutateEvents();
+    } catch (e) {
+      toast.error(t('caseView.transition.visitScheduleFailed', 'Could not schedule the visit'), { description: humanizeError(e) });
+    }
+  }
+
+  async function completeScheduled(id: string) {
+    try {
+      await api.patch(`/cases/${caseId}/events/${id}`, { status: 'done' });
+      await mutateEvents();
+    } catch (e) {
+      toast.error(t('caseView.transition.visitCompleteFailed', 'Could not complete the visit'), { description: humanizeError(e) });
+    }
+  }
+
+  async function cancelScheduled(id: string) {
+    try {
+      await api.patch(`/cases/${caseId}/events/${id}`, { status: 'cancelled' });
+      await mutateEvents();
+    } catch (e) {
+      toast.error(t('caseView.transition.visitCancelFailed', 'Could not cancel the visit'), { description: humanizeError(e) });
+    }
   }
 
   async function handleSave() {
@@ -308,6 +369,91 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
                   >
                     <Trash2 size={12} />
                   </Button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Scheduled Home Visits — planned `case_events` rows, distinct from the
+          history ledger above. A planned visit syncs to the assigned worker's
+          calendar and drives reminders; completing it marks the event done and
+          the calendar block is removed. The history stays its own ledger. */}
+      <div className="rounded-lg border bg-card">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">{t('caseView.transition.scheduledVisits', 'Scheduled Home Visits')}</h3>
+          {!visitsReadOnly && (
+            <Button variant="outline" size="sm" onClick={() => setAddingScheduled(!addingScheduled)}>
+              <Plus size={14} className="mr-1" /> {t('caseView.transition.scheduleVisit', 'Schedule Home Visit')}
+            </Button>
+          )}
+        </div>
+        <Separator />
+        <div className="px-4 py-3 space-y-3">
+          {addingScheduled && (
+            <div className="grid grid-cols-2 gap-2 text-sm p-2 border rounded-md bg-muted/30">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">{t('caseView.transition.visitDate', 'Visit Date *')}</label>
+                <Input
+                  type="date"
+                  aria-label={t('caseView.transition.visitDate', 'Visit Date *')}
+                  value={newScheduled.date}
+                  onChange={e => setNewScheduled(s => ({ ...s, date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">{t('caseView.transition.visitTime', 'Time')}</label>
+                <Input
+                  type="time"
+                  aria-label={t('caseView.transition.visitTime', 'Time')}
+                  value={newScheduled.time}
+                  onChange={e => setNewScheduled(s => ({ ...s, time: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-xs font-medium">{t('caseView.transition.notes', 'Notes')}</label>
+                <Input
+                  value={newScheduled.notes}
+                  onChange={e => setNewScheduled(s => ({ ...s, notes: e.target.value }))}
+                  placeholder={t('caseView.transition.notesPlaceholder', 'Visit notes...')}
+                />
+              </div>
+              <div className="col-span-2 flex gap-2">
+                <Button size="sm" onClick={scheduleVisit} disabled={!newScheduled.date}>
+                  {t('caseView.transition.saveVisit', 'Save Visit')}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setAddingScheduled(false)}>
+                  {t('caseView.cancel', 'Cancel')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {scheduled.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-3">
+              {t('caseView.transition.scheduledEmpty', 'No home visits scheduled.')}
+            </p>
+          ) : (
+            scheduled.map((ev) => (
+              <div key={ev.id} className="flex items-center justify-between gap-3 p-2 rounded border bg-muted/30">
+                <div className="space-y-1 text-sm min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-muted-foreground" />
+                    <span className="font-medium">{formatDate(ev.eventDate)}</span>
+                    {ev.startTime && (<><span className="text-muted-foreground">·</span><span>{ev.startTime}</span></>)}
+                  </div>
+                  {ev.notes && <p className="text-xs text-muted-foreground">{ev.notes}</p>}
+                </div>
+                {!visitsReadOnly && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => completeScheduled(ev.id)}>
+                      {t('caseView.transition.completeVisit', 'Complete')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => cancelScheduled(ev.id)}>
+                      {t('caseView.transition.cancelVisit', 'Cancel Visit')}
+                    </Button>
+                  </div>
                 )}
               </div>
             ))
