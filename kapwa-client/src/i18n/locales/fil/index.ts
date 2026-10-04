@@ -2302,6 +2302,8 @@ const fil: EnLocale = {
   },
   "programsPublic": {
     "backToPrograms": "Bumalik sa mga programa",
+    "fundedBy": "Pinagkukunan ng pondo",
+    "moreDocuments": "{{count}} pa sa pahina ng programa",
     "description": "Mga available na programa at serbisyong panlipunan na inaalok ng MSWDO ng Norzagaray.",
     "empty": "Wala pang nakalistang programa.",
     "fundSources": "Mga Pinagkukunan ng Pondo",

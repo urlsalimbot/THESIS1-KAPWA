@@ -2054,6 +2054,8 @@ const en = {
   },
   "programsPublic": {
     "backToPrograms": "Back to programs",
+    "fundedBy": "Funded by",
+    "moreDocuments": "{{count}} more on the program page",
     "description": "Available assistance programs and services offered by the MSWDO of Norzagaray.",
     "empty": "No programs are currently listed.",
     "fundSources": "Fund Sources",
