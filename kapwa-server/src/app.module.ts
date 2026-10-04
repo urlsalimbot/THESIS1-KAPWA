@@ -36,6 +36,7 @@ import { ContactMessagesModule } from './contact-messages/contact-messages.modul
 import { AnalyticsModule } from './analytics/analytics.module';
 import { FourPsModule } from './fourps/fourps.module';
 import { TeamModule } from './team/team.module';
+import { CaseEventsModule } from './case-events/case-events.module';
 import { SnakeNamingStrategy } from './database/snake-naming.strategy';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { CsrfGuard } from './common/csrf.guard';
@@ -110,6 +111,7 @@ import { AppController } from './app.controller';
     AnalyticsModule,
     FourPsModule,
     TeamModule,
+    CaseEventsModule,
   ],
   controllers: [AppController],
   providers: [

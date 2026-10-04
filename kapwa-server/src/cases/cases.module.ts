@@ -25,6 +25,8 @@ import { AuditModule } from '../audit/audit.module';
 import { GisModule } from '../gis/gis.module';
 import { FilingModule } from '../filing/filing.module';
 import { IrfModule } from '../irf/irf.module';
+import { TeamModule } from '../team/team.module';
+import { CaseEvent } from '../case-events/case-event.entity';
 
 @Module({
   // `CaseIntervention` and `Program` are registered here rather than reached
@@ -39,7 +41,7 @@ import { IrfModule } from '../irf/irf.module';
   // `forwardRef(() => FilingModule)`: the filing module now imports this one for
   // the step-1 seal assertion, and this one imports it for `CasesExportService`'s
   // `FilingService`. Both sides forward-ref the other so Nest resolves the cycle.
-  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, Program, ProgramEnrollment, InterAgencyReferral, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person]), NotificationsModule, AuthModule, AuditModule, GisModule, forwardRef(() => FilingModule), IrfModule],
+  imports: [TypeOrmModule.forFeature([Case, CaseHistory, CaseRequirement, CaseReferral, CaseAssistance, CaseFollowUpVisit, CaseIntervention, CaseStepLock, Program, ProgramEnrollment, InterAgencyReferral, HouseholdMembership, ConsentLedger, BeneficiaryClaimant, Person, CaseEvent]), NotificationsModule, AuthModule, AuditModule, GisModule, forwardRef(() => FilingModule), IrfModule, TeamModule],
   controllers: [CasesController],
   providers: [CasesService, CasesExportService, CaseStepLocksService],
   // `CaseStepLocksService` is exported for one caller: the interventions module

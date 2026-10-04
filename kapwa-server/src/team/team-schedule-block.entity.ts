@@ -42,6 +42,15 @@ export class TeamScheduleBlock extends BaseEntity {
   @Column({ name: 'visible_to', type: 'varchar', length: 32, default: 'team' })
   visibleTo!: string;
 
+  // Sync origin: `manual` blocks are staff-created and owner-editable;
+  // `case_event` blocks are system-managed mirrors of case_events rows
+  // (source_ref = the event id) and are rejected by the write API.
+  @Column({ type: 'varchar', length: 32, default: 'manual' })
+  source!: string;
+
+  @Column({ name: 'source_ref', type: 'uuid', nullable: true })
+  sourceRef?: string | null;
+
   @Column({ name: 'created_by', nullable: true })
   createdBy?: string;
 
