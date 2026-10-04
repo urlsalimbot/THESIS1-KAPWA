@@ -396,6 +396,7 @@ Constraints:
 - `announcements_created_by_fkey`: `announcements(created_by)` → `users(id)` (C1 → C9)
 - `case_compliance_items_household_member_id_fkey`: `case_compliance_items(household_member_id)` → `persons(id)` (C1 → C3)
 - `case_compliance_items_met_by_fkey`: `case_compliance_items(met_by)` → `users(id)` (C1 → C3)
+- `case_events_created_by_fkey`: `case_events(created_by)` → `users(id)` (C1 → C3)
 - `case_interventions_created_by_fkey`: `case_interventions(created_by)` → `users(id)` (C1 → C4)
 - `case_payouts_notified_by_fkey`: `case_payouts(notified_by)` → `users(id)` (C1 → C3)
 - `case_referrals_created_by_fkey`: `case_referrals(created_by)` → `users(id)` (C1 → C3)
@@ -408,6 +409,8 @@ Constraints:
 - `program_enrollments_created_by_fkey`: `program_enrollments(created_by)` → `users(id)` (C1 → C4)
 - `referrals_coordinator_id_fkey`: `referrals(coordinator_id)` → `users(id)` (C1 → C5)
 - `referrals_person_id_fkey`: `referrals(person_id)` → `persons(id)` (C1 → C5)
+- `reminder_settings_updated_by_fkey`: `reminder_settings(updated_by)` → `users(id)` (C1 → C3)
+- `reminder_settings_user_id_fkey`: `reminder_settings(user_id)` → `users(id)` (C1 → C3)
 - `team_invites_from_user_id_fkey`: `team_invites(from_user_id)` → `users(id)` (C1 → C8)
 - `team_invites_to_user_id_fkey`: `team_invites(to_user_id)` → `users(id)` (C1 → C8)
 - `team_schedule_blocks_created_by_fkey`: `team_schedule_blocks(created_by)` → `users(id)` (C1 → C8)
@@ -696,12 +699,53 @@ erDiagram
         timestamp updated_at
     }
 
+    "case_events" {
+        uuid id PK
+        uuid case_id FK
+        varchar(32) event_type
+        boolean attended
+        text title
+        text venue
+        date event_date
+        time without time zone start_time
+        time without time zone end_time
+        text notes
+        varchar(32) status
+        uuid created_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    "case_event_reminders" {
+        uuid id PK
+        uuid event_id FK
+        integer offset_minutes
+        varchar(16) channel
+        timestamp sent_at
+        timestamp created_at
+    }
+
+    "reminder_settings" {
+        uuid id PK
+        varchar(16) scope
+        uuid user_id FK
+        varchar(32) event_type
+        jsonb offsets
+        uuid updated_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
     "cases" ||--o{ "case_compliance_items" : "case_id -> cases.id"
+    "case_events" ||--o{ "case_event_reminders" : "event_id -> case_events.id"
+    "cases" ||--o{ "case_events" : "case_id -> cases.id"
     "cases" ||--o{ "case_payouts" : "case_id -> cases.id"
 ```
 
 **Foreign keys within this cluster:**
 - `case_compliance_items_case_id_fkey`: `case_compliance_items(case_id)` → `cases(id)`
+- `case_event_reminders_event_id_fkey`: `case_event_reminders(event_id)` → `case_events(id)`
+- `case_events_case_id_fkey`: `case_events(case_id)` → `cases(id)`
 - `case_payouts_case_id_fkey`: `case_payouts(case_id)` → `cases(id)`
 
 **Physical columns:**
@@ -947,10 +991,73 @@ Constraints:
 
     - **PK_case_control_counters_pkey**: `PRIMARY KEY (year)`
 
+**`case_events`** (column · datatype · null · key · default)
+
+| Column | Datatype | Null | Key | Default |
+|---|---|---|---|---|
+| `id` | uuid | NO | PK | uuid_generate_v7() |
+| `case_id` | uuid | NO | FK |  |
+| `event_type` | varchar(32) | NO |  |  |
+| `attended` | boolean | YES |  |  |
+| `title` | text | YES |  |  |
+| `venue` | text | YES |  |  |
+| `event_date` | date | NO |  |  |
+| `start_time` | time without time zone | YES |  |  |
+| `end_time` | time without time zone | YES |  |  |
+| `notes` | text | YES |  |  |
+| `status` | varchar(32) | NO |  | 'planned'::character varying |
+| `created_by` | uuid | YES | FK |  |
+| `created_at` | timestamp | YES |  | now() |
+| `updated_at` | timestamp | YES |  | now() |
+
+Constraints:
+
+    - **FK_case_events_case_id_fkey**: `FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE`
+    - **FK_case_events_created_by_fkey**: `FOREIGN KEY (created_by) REFERENCES users(id)`
+    - **PK_case_events_pkey**: `PRIMARY KEY (id)`
+
+**`case_event_reminders`** (column · datatype · null · key · default)
+
+| Column | Datatype | Null | Key | Default |
+|---|---|---|---|---|
+| `id` | uuid | NO | PK | uuid_generate_v7() |
+| `event_id` | uuid | NO | FK |  |
+| `offset_minutes` | integer | NO |  |  |
+| `channel` | varchar(16) | NO |  |  |
+| `sent_at` | timestamp | YES |  |  |
+| `created_at` | timestamp | YES |  | now() |
+
+Constraints:
+
+    - **FK_case_event_reminders_event_id_fkey**: `FOREIGN KEY (event_id) REFERENCES case_events(id) ON DELETE CASCADE`
+    - **PK_case_event_reminders_pkey**: `PRIMARY KEY (id)`
+
+**`reminder_settings`** (column · datatype · null · key · default)
+
+| Column | Datatype | Null | Key | Default |
+|---|---|---|---|---|
+| `id` | uuid | NO | PK | uuid_generate_v7() |
+| `scope` | varchar(16) | NO |  |  |
+| `user_id` | uuid | YES | FK |  |
+| `event_type` | varchar(32) | NO |  |  |
+| `offsets` | jsonb | NO |  |  |
+| `updated_by` | uuid | YES | FK |  |
+| `created_at` | timestamp | YES |  | now() |
+| `updated_at` | timestamp | YES |  | now() |
+
+Constraints:
+
+    - **CHK_reminder_settings_check**: `CHECK (((((scope)::text = 'system'::text) AND (user_id IS NULL)) OR (((scope)::text = 'worker'::text) AND (user_id IS NOT NULL))))`
+    - **PK_reminder_settings_pkey**: `PRIMARY KEY (id)`
+    - **CHK_reminder_settings_scope_check**: `CHECK (((scope)::text = ANY ((ARRAY['system'::character varying, 'worker'::character varying])::text[])))`
+    - **FK_reminder_settings_updated_by_fkey**: `FOREIGN KEY (updated_by) REFERENCES users(id)`
+    - **FK_reminder_settings_user_id_fkey**: `FOREIGN KEY (user_id) REFERENCES users(id)`
+
 **Outgoing/incoming cross-cluster foreign keys involving `Cases, Case Files & Workflow`:**
 
 - `case_compliance_items_household_member_id_fkey`: `case_compliance_items(household_member_id)` → `persons(id)` (C1 → C3)
 - `case_compliance_items_met_by_fkey`: `case_compliance_items(met_by)` → `users(id)` (C1 → C3)
+- `case_events_created_by_fkey`: `case_events(created_by)` → `users(id)` (C1 → C3)
 - `case_payouts_notified_by_fkey`: `case_payouts(notified_by)` → `users(id)` (C1 → C3)
 - `case_referrals_created_by_fkey`: `case_referrals(created_by)` → `users(id)` (C1 → C3)
 - `cases_beneficiary_id_fkey`: `cases(beneficiary_id)` → `beneficiaries(id)` (C2 → C3)
@@ -958,6 +1065,9 @@ Constraints:
 - `irf_cases_case_id_fkey`: `irf_cases(case_id)` → `cases(id)` (C3 → C6)
 - `program_enrollments_case_id_fkey`: `program_enrollments(case_id)` → `cases(id)` (C3 → C4)
 - `referrals_case_id_fkey`: `referrals(case_id)` → `cases(id)` (C3 → C5)
+- `reminder_settings_updated_by_fkey`: `reminder_settings(updated_by)` → `users(id)` (C1 → C3)
+- `reminder_settings_user_id_fkey`: `reminder_settings(user_id)` → `users(id)` (C1 → C3)
+- `fk_blocks_source_ref`: `team_schedule_blocks(source_ref)` → `case_events(id)` (C3 → C8)
 
 ### C4 — Programs, Enrollments & Interventions
 
@@ -1596,6 +1706,8 @@ erDiagram
         text note
         uuid created_by FK
         timestamptz updated_at
+        varchar(32) source
+        uuid source_ref FK
         varchar(32) visible_to
         date end_date
     }
@@ -1670,12 +1782,15 @@ Constraints:
 | `note` | text | YES |  |  |
 | `created_by` | uuid | YES | FK |  |
 | `updated_at` | timestamptz | NO |  | now() |
+| `source` | varchar(32) | NO |  | 'manual'::character varying |
+| `source_ref` | uuid | YES | FK |  |
 | `visible_to` | varchar(32) | NO |  | 'team'::character varying |
 | `end_date` | date | YES |  |  |
 
 Constraints:
 
     - **CHK_chk_team_schedule_blocks_end_date**: `CHECK (((end_date IS NULL) OR (end_date >= block_date)))`
+    - **FK_fk_blocks_source_ref**: `FOREIGN KEY (source_ref) REFERENCES case_events(id) ON DELETE SET NULL`
     - **FK_team_schedule_blocks_created_by_fkey**: `FOREIGN KEY (created_by) REFERENCES users(id)`
     - **PK_team_schedule_blocks_pkey**: `PRIMARY KEY (id)`
     - **FK_team_schedule_blocks_user_id_fkey**: `FOREIGN KEY (user_id) REFERENCES users(id)`
@@ -1705,6 +1820,7 @@ Constraints:
 - `office_events_owner_id_fkey`: `office_events(owner_id)` → `users(id)` (C1 → C8)
 - `team_invites_from_user_id_fkey`: `team_invites(from_user_id)` → `users(id)` (C1 → C8)
 - `team_invites_to_user_id_fkey`: `team_invites(to_user_id)` → `users(id)` (C1 → C8)
+- `fk_blocks_source_ref`: `team_schedule_blocks(source_ref)` → `case_events(id)` (C3 → C8)
 - `team_schedule_blocks_created_by_fkey`: `team_schedule_blocks(created_by)` → `users(id)` (C1 → C8)
 - `team_schedule_blocks_user_id_fkey`: `team_schedule_blocks(user_id)` → `users(id)` (C1 → C8)
 - `team_status_user_id_fkey`: `team_status(user_id)` → `users(id)` (C1 → C8)
@@ -2192,6 +2308,9 @@ Constraints:
 | `case_compliance_items_case_id_fkey` | `case_compliance_items(case_id)` | `cases(id)` |
 | `case_compliance_items_household_member_id_fkey` | `case_compliance_items(household_member_id)` | `persons(id)` |
 | `case_compliance_items_met_by_fkey` | `case_compliance_items(met_by)` | `users(id)` |
+| `case_event_reminders_event_id_fkey` | `case_event_reminders(event_id)` | `case_events(id)` |
+| `case_events_case_id_fkey` | `case_events(case_id)` | `cases(id)` |
+| `case_events_created_by_fkey` | `case_events(created_by)` | `users(id)` |
 | `case_interventions_created_by_fkey` | `case_interventions(created_by)` | `users(id)` |
 | `case_payouts_case_id_fkey` | `case_payouts(case_id)` | `cases(id)` |
 | `case_payouts_notified_by_fkey` | `case_payouts(notified_by)` | `users(id)` |
@@ -2216,8 +2335,11 @@ Constraints:
 | `referrals_case_id_fkey` | `referrals(case_id)` | `cases(id)` |
 | `referrals_coordinator_id_fkey` | `referrals(coordinator_id)` | `users(id)` |
 | `referrals_person_id_fkey` | `referrals(person_id)` | `persons(id)` |
+| `reminder_settings_updated_by_fkey` | `reminder_settings(updated_by)` | `users(id)` |
+| `reminder_settings_user_id_fkey` | `reminder_settings(user_id)` | `users(id)` |
 | `team_invites_from_user_id_fkey` | `team_invites(from_user_id)` | `users(id)` |
 | `team_invites_to_user_id_fkey` | `team_invites(to_user_id)` | `users(id)` |
+| `fk_blocks_source_ref` | `team_schedule_blocks(source_ref)` | `case_events(id)` |
 | `team_schedule_blocks_created_by_fkey` | `team_schedule_blocks(created_by)` | `users(id)` |
 | `team_schedule_blocks_user_id_fkey` | `team_schedule_blocks(user_id)` | `users(id)` |
 | `team_status_user_id_fkey` | `team_status(user_id)` | `users(id)` |
@@ -2261,6 +2383,11 @@ Constraints:
 | `case_compliance_items` | `case_compliance_items_met_by_fkey` | FOREIGN KEY | `FOREIGN KEY (met_by) REFERENCES users(id)` |
 | `case_compliance_items` | `case_compliance_items_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `case_control_counters` | `case_control_counters_pkey` | PRIMARY KEY | `PRIMARY KEY (year)` |
+| `case_event_reminders` | `case_event_reminders_event_id_fkey` | FOREIGN KEY | `FOREIGN KEY (event_id) REFERENCES case_events(id) ON DELETE CASCADE` |
+| `case_event_reminders` | `case_event_reminders_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
+| `case_events` | `case_events_case_id_fkey` | FOREIGN KEY | `FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE` |
+| `case_events` | `case_events_created_by_fkey` | FOREIGN KEY | `FOREIGN KEY (created_by) REFERENCES users(id)` |
+| `case_events` | `case_events_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `case_follow_up_visits` | `case_follow_up_visits_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `case_history` | `PK_case_history` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `case_interventions` | `case_interventions_created_by_fkey` | FOREIGN KEY | `FOREIGN KEY (created_by) REFERENCES users(id)` |
@@ -2332,11 +2459,17 @@ Constraints:
 | `referrals` | `referrals_person_id_fkey` | FOREIGN KEY | `FOREIGN KEY (person_id) REFERENCES persons(id)` |
 | `referrals` | `referrals_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `referrals` | `referrals_status_check` | CHECK | `CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text])))` |
+| `reminder_settings` | `reminder_settings_check` | CHECK | `CHECK (((((scope)::text = 'system'::text) AND (user_id IS NULL)) OR (((scope)::text = 'worker'::text) AND (user_id IS NOT NULL))))` |
+| `reminder_settings` | `reminder_settings_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
+| `reminder_settings` | `reminder_settings_scope_check` | CHECK | `CHECK (((scope)::text = ANY ((ARRAY['system'::character varying, 'worker'::character varying])::text[])))` |
+| `reminder_settings` | `reminder_settings_updated_by_fkey` | FOREIGN KEY | `FOREIGN KEY (updated_by) REFERENCES users(id)` |
+| `reminder_settings` | `reminder_settings_user_id_fkey` | FOREIGN KEY | `FOREIGN KEY (user_id) REFERENCES users(id)` |
 | `sync_queue` | `sync_queue_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `team_invites` | `team_invites_from_user_id_fkey` | FOREIGN KEY | `FOREIGN KEY (from_user_id) REFERENCES users(id)` |
 | `team_invites` | `team_invites_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `team_invites` | `team_invites_to_user_id_fkey` | FOREIGN KEY | `FOREIGN KEY (to_user_id) REFERENCES users(id)` |
 | `team_schedule_blocks` | `chk_team_schedule_blocks_end_date` | CHECK | `CHECK (((end_date IS NULL) OR (end_date >= block_date)))` |
+| `team_schedule_blocks` | `fk_blocks_source_ref` | FOREIGN KEY | `FOREIGN KEY (source_ref) REFERENCES case_events(id) ON DELETE SET NULL` |
 | `team_schedule_blocks` | `team_schedule_blocks_created_by_fkey` | FOREIGN KEY | `FOREIGN KEY (created_by) REFERENCES users(id)` |
 | `team_schedule_blocks` | `team_schedule_blocks_pkey` | PRIMARY KEY | `PRIMARY KEY (id)` |
 | `team_schedule_blocks` | `team_schedule_blocks_user_id_fkey` | FOREIGN KEY | `FOREIGN KEY (user_id) REFERENCES users(id)` |
@@ -2371,6 +2504,7 @@ Constraints:
 | case_assistances | `kapwa-server/src/cases/case-assistance.entity.ts` |
 | case_follow_up_visits | `kapwa-server/src/cases/case-follow-up-visit.entity.ts` |
 | case_step_locks | `kapwa-server/src/cases/case-step-lock.entity.ts` |
+| case_events, case_event_reminders, reminder_settings | `kapwa-server/src/case-events/*.entity.ts` |
 | case_interventions | `kapwa-server/src/case-interventions/case-intervention.entity.ts` |
 | program_enrollments | `kapwa-server/src/case-enrollments/program-enrollment.entity.ts` |
 | programs, program_services | `kapwa-server/src/programs/program.entity.ts, program-service.entity.ts` |
