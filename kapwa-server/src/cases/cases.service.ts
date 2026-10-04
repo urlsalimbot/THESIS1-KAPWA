@@ -21,6 +21,7 @@ import { HouseholdMembership } from '../beneficiaries/household-membership.entit
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { TeamScheduleSyncService } from '../team/team-schedule-sync.service';
 import { AssessmentInput, TransitionPlanInput, RequirementsInput, ClosureInput, AssessmentV2Input, DiscernmentInput, ProtectionOrderInput, SoloParentInput, AdoptionInput, CaseMetaInput } from './dto/cases.zod';
 import {
   SATURDAY, SUNDAY,
@@ -46,6 +47,7 @@ export class CasesService {
     private notifService: NotificationsService,
     private casesExport: CasesExportService,
     @Optional() private auditLog?: AuditLogService,
+    @Optional() private syncService?: TeamScheduleSyncService,
   ) {}
 
   /**
@@ -853,9 +855,16 @@ export class CasesService {
 
   async updateCaseMeta(id: string, data: CaseMetaInput, actorId?: string) {
     const c = await this.findById(id);
+    const prevWorker = c.assignedWorkerId;
     if (data.courtDocketNumber !== undefined) c.courtDocketNumber = data.courtDocketNumber;
+    // null clears the assignment (column is nullable; the entity type omits null).
+    if (data.assignedWorkerId !== undefined) (c as any).assignedWorkerId = data.assignedWorkerId;
     c.updatedAt = new Date();
     const saved = await this.caseRepo.save(c);
+    if (data.assignedWorkerId !== undefined && data.assignedWorkerId !== prevWorker) {
+      // Reassignment (spec §6): synced case-event blocks follow the worker.
+      await this.syncService?.moveForCase(id, data.assignedWorkerId ?? null);
+    }
     await this.auditLog?.log('case.meta', id, actorId, data);
     return saved;
   }

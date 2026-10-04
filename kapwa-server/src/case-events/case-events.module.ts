@@ -9,14 +9,16 @@ import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 import { TeamModule } from '../team/team.module';
+import { CaseEventsService } from './case-events.service';
+import { CaseEventsController } from './case-events.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CaseEvent, CaseEventReminder, ReminderSetting, Case, User]),
     AuthModule, NotificationsModule, AuditModule, TeamModule,
   ],
-  providers: [],
-  controllers: [],
-  exports: [],
+  providers: [CaseEventsService],
+  controllers: [CaseEventsController],
+  exports: [CaseEventsService],
 })
 export class CaseEventsModule {}

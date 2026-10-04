@@ -11,6 +11,7 @@ import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entit
 import { CaseAssistance } from './case-assistance.entity';
 import { CaseStepLock } from './case-step-lock.entity';
 import { canTransition } from './case-fsm';
+import { TeamScheduleSyncService } from '../team/team-schedule-sync.service';
 
 describe('CasesService', () => {
   let service: CasesService;
@@ -20,6 +21,7 @@ describe('CasesService', () => {
   let bcRepoMock: any;
   let stepLocksRepoMock: any;
   let notifMock: any;
+  let syncMock: any;
 
   beforeEach(async () => {
     const queryRunnerMock = {
@@ -40,6 +42,12 @@ describe('CasesService', () => {
     notifMock = {
       notifyCaseUpdate: jest.fn().mockResolvedValue(undefined),
       create: jest.fn().mockResolvedValue({}),
+    };
+
+    syncMock = {
+      moveForCase: jest.fn().mockResolvedValue(undefined),
+      upsertForEvent: jest.fn().mockResolvedValue(undefined),
+      removeForEvent: jest.fn().mockResolvedValue(undefined),
     };
 
     const qbMock = {
@@ -99,6 +107,7 @@ describe('CasesService', () => {
         { provide: getRepositoryToken(CaseStepLock), useValue: stepLocksRepoMock },
         { provide: NotificationsService, useValue: notifMock },
         { provide: CasesExportService, useValue: { missingRequiredDocuments: jest.fn().mockResolvedValue([]), issueCoe: jest.fn(), issuePcv: jest.fn() } },
+        { provide: TeamScheduleSyncService, useValue: syncMock },
       ],
     }).compile();
 
@@ -1335,4 +1344,26 @@ describe('updateAssessmentV2 — case_assistances', () => {
   });
 });
 
+  describe('reassignment moves synced calendar blocks', () => {
+    it('moves blocks when assignedWorkerId changes', async () => {
+      repoMock.findOne = jest.fn().mockResolvedValue({ id: 'case-1', controlNo: 'MSWD-2026-0012', assignedWorkerId: 'w1', updatedAt: new Date() });
+      repoMock.save = jest.fn().mockImplementation((c) => Promise.resolve({ ...c, assignedWorkerId: 'w2' }));
+      await service.updateCaseMeta('case-1', { assignedWorkerId: 'w2' } as any, 'u1');
+      expect(syncMock.moveForCase).toHaveBeenCalledWith('case-1', 'w2');
+    });
+
+    it('does not move blocks when the worker is unchanged', async () => {
+      repoMock.findOne = jest.fn().mockResolvedValue({ id: 'case-1', controlNo: 'MSWD-2026-0012', assignedWorkerId: 'w1', updatedAt: new Date() });
+      repoMock.save = jest.fn().mockImplementation((c) => Promise.resolve({ ...c }));
+      await service.updateCaseMeta('case-1', { assignedWorkerId: 'w1' } as any, 'u1');
+      expect(syncMock.moveForCase).not.toHaveBeenCalled();
+    });
+
+    it('removes blocks when the worker is cleared', async () => {
+      repoMock.findOne = jest.fn().mockResolvedValue({ id: 'case-1', controlNo: 'MSWD-2026-0012', assignedWorkerId: 'w1', updatedAt: new Date() });
+      repoMock.save = jest.fn().mockImplementation((c) => Promise.resolve({ ...c, assignedWorkerId: null }));
+      await service.updateCaseMeta('case-1', { assignedWorkerId: null } as any, 'u1');
+      expect(syncMock.moveForCase).toHaveBeenCalledWith('case-1', null);
+    });
+  });
 });

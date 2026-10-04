@@ -204,6 +204,10 @@ export const AdoptionSchema = z.object({
 
 export const CaseMetaSchema = z.object({
   courtDocketNumber: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
+  // Reassignment surface: when the assigned worker changes, synced calendar
+  // blocks move to the new worker (null clears the assignment and removes
+  // the blocks).
+  assignedWorkerId: z.string().uuid().nullable().optional(),
 });
 
 export type TransitionPlanInput = z.infer<typeof TransitionPlanSchema>;
