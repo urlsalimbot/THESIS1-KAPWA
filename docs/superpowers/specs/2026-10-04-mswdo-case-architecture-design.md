@@ -125,29 +125,29 @@ move to keys.
 
 ### 4.4 Programs & interventions shape (evaluated)
 
-The existing tables already fit the model; three additive changes key the domains the way the
+The existing tables already fit the model; the additive changes key the domains the way the
 MSWDO reference does:
 
-- **`programs.program_type TEXT NULL`** — seeded catalog (`social_pension`, `supplemental_feeding`,
-  `diversion`, `livelihood`, `education`, `medical`, `burial`, `financial`, `food`, `transport`,
-  `cct`, `disaster_relief`, `counseling`, `legal_referral`, `disability_aid`, `child_welfare`,
-  `family_welfare`, `aics`, `aftercare`, `shelter`). `name` stays the display label;
-  `program_type` is the queryable key for enrollments and the later AICS-budget phase.
-  `seed-programs.ts` assigns `programType` to every seeded program (Medical Assistance →
-  `medical`, AICS → `aics`, 4Ps → `cct`, Senior Citizen Social Pension → `social_pension`, …)
-  and gains two new seeds: **Juvenile Diversion Program** (`diversion`, used by CICL cases) and
-  **Aftercare Support** (`aftercare`, used by aftercare-status cases).
-- **`case_interventions.intervention_type TEXT NULL`** — seeded catalog of codes + labels:
-  `financial_grant` (Financial Grant), `scsr_generated` (Social Case Study Report Generated),
-  `crisis_counseling` (Crisis Counseling), `referral_pao` (Referral to Public Attorney's
-  Office), `protection_order_issued` (Temporary Protection Order Issued), `medical_assistance`,
-  `burial_assistance`, `livelihood_seed`, `legal_assistance`, `home_visit`. `service_name`
-  stays the human label (defaults to the catalog label).
-- **`case_interventions.program_enrollment_id UUID NULL → program_enrollments(id)`** — links a
-  delivered intervention to the enrollment it was delivered under (the
-  Program-Enrollment → Intervention-Logs link).
+- **`programs.program_type TEXT NULL`** — seeded catalog: `aics`, `social_pension`,
+  `supplemental_feeding`, `livelihood`, `family_welfare`, `disability_aid`, `cct`, `medical`,
+  `burial`, `transport`, `education`, `food`, `financial`, `child_welfare`, `shelter`,
+  `diversion`, `aftercare`, `counseling`, `legal_referral`, `disaster_relief`. `name` stays the
+  display label; `program_type` keys enrollments and the later AICS-budget phase.
+- **`program_services` (new child table)** — the services a program can render:
+  `program_id → programs(id)`, `intervention_type TEXT`, **UNIQUE `(program_id, intervention_type)`**.
+  This is the Program → Services matrix: an intervention is a **service rendered under a
+  program**, so the logging UI offers only the chosen program's services.
+- **`case_interventions.intervention_type TEXT NULL`** — the service catalog (15 codes):
+  `financial_grant`, `medical_assistance`, `burial_assistance`, `transport_assistance`,
+  `food_pack`, `educational_assistance`, `livelihood_seed`, `training_seminar`,
+  `crisis_counseling`, `legal_assistance`, `referral_pao`, `protection_order_issued`,
+  `scsr_generated`, `home_visit`, `health_checkup`. `service_name` stays the human label.
+- **`case_interventions.program_enrollment_id UUID NULL → program_enrollments(id)`** — the
+  enrollment the service was delivered under.
 
-Existing rows: `program_type`/`intervention_type` null (legacy), treated as "uncatalogued".
+**Seeds mirror real MSWDO programs** (matrix in Appendix B): every seeded program gets a
+`program_type` and its `program_services` rows, so the enrollments select and the intervention
+UI show real, internally consistent options.
 
 **`programs.approval_workflow` stays** (evaluated, not removed). It is not dead code:
 `CreateProgramPage` collects the steps, `ProgramDetailPage`/`ProgramsPage` render them,
@@ -214,16 +214,18 @@ saved via `PATCH /cases/:id/meta`.
 
 ### 6.2 Interventions client UI
 
-The seeded `intervention_type` catalog drives the intervention logging UIs so logged
-interventions are typed, not free text:
+The **Program → Services** matrix drives the intervention logging UIs, so a logged intervention
+is a **service the chosen program actually renders**:
 
-- The **Beneficiary quick log** (BeneficiaryViewPage "Log Intervention") and the case-view's
-  **New Intervention** dialog (StepImplementHIP) replace their hard-coded type options
-  (FA/C/CSR/R/H/HV) with the catalog: the select renders the catalog labels and the payload
-  sends `interventionType` (code) plus `serviceName` (label). The case-view intervention list
-  and the beneficiary interventions panel display the resolved label.
-- Server: `POST /cases/:id/interventions` accepts `interventionType` (enum, optional); rows
-  without one render "uncatalogued".
+- The case-view **New Intervention** dialog (StepImplementHIP) keeps its **Program** select;
+  the **Service** select derives from that program's `program_services` (all catalog services
+  when no program is chosen) and the payload sends `interventionType` + `serviceName`.
+- The **Beneficiary quick log** (BeneficiaryViewPage "Log Intervention") gains an optional
+  **Program** select with the same service derivation (all services when no program).
+- The case-view intervention list and the beneficiary interventions panel render the resolved
+  service label, and rows carry the enrollment they were delivered under.
+- Server: `POST /cases/:id/interventions` accepts `interventionType` (enum, optional);
+  `program_enrollment_id` (uuid, optional). Rows without a type render "uncatalogued".
 - `seed-demo.ts` assigns `interventionType` to seeded intervention rows (mapping the legacy
   codes: FA → `financial_grant`, C → `crisis_counseling`, R → `referral_pao`, …).
 
@@ -258,7 +260,7 @@ assessment schema enforces it (a `caseCategory` change on an assessed+ case is r
 | `PATCH /cases/:id/solo-parent` | Solo Parent step save |
 | `PATCH /cases/:id/adoption` | Adoption & Foster Care step save |
 | `PATCH /cases/:id/meta` `{ courtDocketNumber }` | court docket |
-| `POST /cases/:id/interventions` | add an intervention (gains `interventionType` enum) |
+| `POST /cases/:id/interventions` | add an intervention (`interventionType`, `programEnrollmentId` optional) |
 | `PATCH /cases/:id/status` `{ status: 'aftercare' }` | via the existing endpoint + FSM edge |
 
 ## 11. Migration & rollout plan
@@ -271,12 +273,13 @@ Five TypeORM migrations, each mirrored by idempotent statements in `src/database
   solo-parent, adoption, `enrollments_not_needed`; status enum + `aftercare`.
 - **`…0000000000079`** — `case_step_locks.step_key`: add, backfill, rebuild unique,
   drop `step_index`.
-- **`…0000000000080`** — `programs.program_type`; `case_interventions.intervention_type`
-  and `program_enrollment_id`.
-- **Seed updates (not migrations):** `seed-programs.ts` gains `programType` per program plus the
-  Juvenile Diversion Program and Aftercare Support seeds; `seed-demo.ts` assigns
-  `interventionType` to seeded intervention rows; the intervention/program type catalogs ship
-  as shared constants (server/client parity test).
+- **`…0000000000080`** — `programs.program_type`; **`program_services`** table;
+  `case_interventions.intervention_type` and `program_enrollment_id`.
+- **Seed updates (not migrations):** `seed-programs.ts` seeds `programType` per program, the
+  `program_services` matrix (Appendix B), and the two new programs (Juvenile Diversion
+  Program, Aftercare Support); `seed-demo.ts` assigns `interventionType` to seeded
+  intervention rows; the program-type and service catalogs ship as shared constants
+  (server/client parity test).
 
 Rollout: single cohesive change set on `main`; CI (server jest + coverage, client vitest +
 coverage, docker build); then the running stack applies migrations.
@@ -320,3 +323,37 @@ coverage, docker build); then the running stack applies migrations.
   document spine of the `adoption` step; CDCLAA within **3 months** of DVC/foundling
   certification (§11).
 - These timelines are inputs for the **Phase C** statutory-alerts design.
+
+## Appendix B — Seeded program → service matrix (mirrors MSWDO programs)
+
+Every seeded program gets a `program_type` and its `program_services` rows (the Program →
+Services matrix). New seeds are **Juvenile Diversion Program** (`diversion`) and **Aftercare
+Support** (`aftercare`).
+
+| Program (seed name) | program_type | program_services (intervention_type) |
+|---|---|---|
+| AICS — Assistance to Individuals in Crisis Situation | aics | financial_grant, medical_assistance, burial_assistance, transport_assistance, food_pack, crisis_counseling, scsr_generated |
+| Social Pension for Indigent Senior Citizens | social_pension | financial_grant, scsr_generated, home_visit |
+| Supplementary Feeding Program | supplemental_feeding | food_pack, health_checkup |
+| Sustainable Livelihood Program | livelihood | livelihood_seed, training_seminar |
+| Solo Parent Support | family_welfare | financial_grant, crisis_counseling, legal_assistance, scsr_generated |
+| PWD Assistance | disability_aid | medical_assistance, financial_grant, scsr_generated |
+| 4Ps — Pantawid Pamilyang Pilipino Program | cct | financial_grant, crisis_counseling, health_checkup, educational_assistance |
+| Medical Assistance | medical | medical_assistance, financial_grant, burial_assistance, scsr_generated |
+| Burial Assistance | burial | burial_assistance |
+| Transportation Assistance | transport | transport_assistance |
+| Food Assistance | food | food_pack |
+| Financial Assistance (General) | financial | financial_grant, scsr_generated |
+| Educational Assistance | education | educational_assistance, training_seminar |
+| Child Welfare Assistance | child_welfare | financial_grant, crisis_counseling, legal_assistance, educational_assistance |
+| Livelihood Assistance | livelihood | livelihood_seed, training_seminar |
+| Psychosocial Counseling | counseling | crisis_counseling |
+| Referral and Linkage Services | legal_referral | referral_pao, legal_assistance |
+| Emergency Cash/Food for Work | livelihood | food_pack, financial_grant |
+| Disaster Response and Relief Assistance | disaster_relief | food_pack, transport_assistance, financial_grant |
+| Medical Equipment Loan | medical | medical_assistance |
+| **Juvenile Diversion Program (new)** | diversion | crisis_counseling, training_seminar, legal_assistance, home_visit |
+| **Aftercare Support (new)** | aftercare | home_visit, crisis_counseling, scsr_generated |
+
+`Emergency Shelter Assistance` remains a catalog `program_type` (`shelter`) for LGUs that
+enroll it; it is not seeded unless requested.
