@@ -667,7 +667,7 @@ export function BeneficiaryViewPage() {
                         <span className="text-[10px] text-muted-foreground">{c.date}</span>
                         <StatusBadge status={c.status} />
                         {c.status === "transitioning" && (
-                          <Button variant="default" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setInterventionCaseId(c.id === interventionCaseId ? null : c.id)}>
+                          <Button variant="default" size="sm" className="h-6 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); setInterventionCaseId(c.id === interventionCaseId ? null : c.id); }}>
                             <ClipboardList size={10} className="mr-1" /> {t("beneficiaries.log", "Log")}
                           </Button>
                         )}
