@@ -362,6 +362,9 @@ Quezon/Bombon MSWDO program catalogs (Appendix C).
   Assistance** programs are **merged into AICS** — per the Palanan MSWDO process, AICS is one
   program providing "direct financial assistance and material assistance including medical,
   transportation, financial, burial and food"; its assistance types are its *services*.
+  These six rows still seed as **untyped report-support rows** (`program_type: NULL`) because
+  the GAD summary report's BURIAL/MEDICAL/EDUCATION columns key on the names; they are
+  outside the typed catalog, which keys off `aics` + `intervention_type`.
 - **“Livelihood Assistance”** duplicate dropped (Sustainable Livelihood Program covers it).
 - New: **VAWC Protection & Women's Welfare** (`women_welfare`), **Parent Effectiveness
   Service**, **Family Casework Service**, **Crisis Intervention & Psychosocial Support**

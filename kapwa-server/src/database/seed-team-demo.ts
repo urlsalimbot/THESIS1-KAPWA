@@ -192,11 +192,12 @@ const SERVICES: Array<{
   amount: number;
   mode: string;
   fund: string;
+  interventionType?: string;
 }> = [
-  { name: 'Home Visit', category: 'HV', amount: 0, mode: 'In-kind', fund: 'LGU' },
-  { name: 'Counselling Session', category: 'CS', amount: 0, mode: 'In-kind', fund: 'LGU' },
-  { name: 'Case Conference', category: 'CC', amount: 0, mode: 'In-kind', fund: 'LGU' },
-  { name: 'Financial Assistance (General)', category: 'FA', amount: 2500, mode: 'Cash', fund: 'AICS' },
+  { name: 'Home Visit', category: 'HV', amount: 0, mode: 'In-kind', fund: 'LGU', interventionType: 'home_visit' },
+  { name: 'Counselling Session', category: 'CS', amount: 0, mode: 'In-kind', fund: 'LGU', interventionType: 'crisis_counseling' },
+  { name: 'Case Conference', category: 'CC', amount: 0, mode: 'In-kind', fund: 'LGU', interventionType: 'scsr_generated' },
+  { name: 'AICS — Assistance to Individuals in Crisis Situation', category: 'FA', interventionType: 'financial_grant', amount: 2500, mode: 'Cash', fund: 'AICS' },
 ];
 
 // --- Date helpers (local calendar dates — no UTC shift) ------------------------

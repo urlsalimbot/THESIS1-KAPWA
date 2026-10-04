@@ -88,12 +88,12 @@ const CATEGORIES: Record<string, string> = {
 // exact seeded program names (see seedPrograms) so `programIdFor` links the
 // intervention to a program instead of falling back to a fuzzy match.
 const SERVICES: Record<string, string[]> = {
-  closed: ['Senior Citizen Social Pension'],
-  transitioning: ['Medical Assistance'],
+  closed: ['Social Pension for Indigent Senior Citizens'],
+  transitioning: ['AICS — Assistance to Individuals in Crisis Situation'],
   active: ['PWD Assistance'],
-  in_review: ['Financial Assistance (General)'],
+  in_review: ['AICS — Assistance to Individuals in Crisis Situation'],
   enrolled: ['Emergency Cash/Food for Work'],
-  assessed: ['Livelihood Assistance'],
+  assessed: ['Sustainable Livelihood Program'],
 };
 
 const ASSESSMENT_BASE = {
@@ -115,15 +115,19 @@ const assessmentFor = (stage: string) => ({
   clientCategory: CATEGORIES[stage],
 });
 
+// Legacy `category` codes map to typed catalog services (spec §4.4): FA →
+// financial_grant, HV → home_visit, C → crisis_counseling, CSR →
+// scsr_generated, R → referral_pao. Rows seeded here carry the type their
+// service actually is, so the typed intervention UI renders them correctly.
 const INTERVENTIONS: Record<string, Record<string, unknown>[]> = {
   active: [
-    { serviceName: 'PWD Assistance', category: 'HV', deliveryDate: '2026-07-25', amount: 0, modeOfDelivery: 'In-kind', fundSource: 'LGU', notes: 'Assistive device issued', deliveredBy: 'MSWDO' },
+    { serviceName: 'PWD Assistance', category: 'HV', interventionType: 'medical_assistance', deliveryDate: '2026-07-25', amount: 0, modeOfDelivery: 'In-kind', fundSource: 'LGU', notes: 'Assistive device issued', deliveredBy: 'MSWDO' },
   ],
   transitioning: [
-    { serviceName: 'Medical Assistance', category: 'FA', deliveryDate: '2026-06-15', amount: 4500, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Medical assistance cycle', deliveredBy: 'MSWDO' },
+    { serviceName: 'AICS — Assistance to Individuals in Crisis Situation', category: 'FA', interventionType: 'medical_assistance', deliveryDate: '2026-06-15', amount: 4500, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Medical assistance cycle', deliveredBy: 'MSWDO' },
   ],
   closed: [
-    { serviceName: 'Senior Citizen Social Pension', category: 'FA', deliveryDate: '2026-03-05', amount: 5000, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Social pension cycle', deliveredBy: 'MSWDO' },
+    { serviceName: 'Social Pension for Indigent Senior Citizens', category: 'FA', interventionType: 'financial_grant', deliveryDate: '2026-03-05', amount: 5000, modeOfDelivery: 'Cash', fundSource: 'AICS', notes: 'Social pension cycle', deliveredBy: 'MSWDO' },
   ],
 };
 
@@ -369,7 +373,7 @@ async function main(): Promise<void> {
     } else {
     const renewed = await call(worker, 'POST', '/cases', {
       beneficiaryId: closed.benId,
-      serviceRequested: ['Financial Assistance (General)'],
+      serviceRequested: ['AICS — Assistance to Individuals in Crisis Situation'],
       assignedWorkerId: workerId,
     }, 'renewal-case');
     if (renewed.status < 400) {

@@ -91,26 +91,27 @@ function caseCreatedAt(i: number): Date {
 }
 
 const SERVICES: Array<{ name: string; amount: number; fundSource: string }> = [
-  { name: 'Medical Assistance', amount: 3500, fundSource: 'DSWD - AICS' },
-  { name: 'Food Assistance', amount: 1200, fundSource: 'LGU - Municipal' },
-  { name: 'Educational Assistance', amount: 5000, fundSource: 'LGU - Municipal' },
-  { name: 'Burial Assistance', amount: 8000, fundSource: 'DSWD - AICS' },
+  { name: 'AICS — Assistance to Individuals in Crisis Situation', amount: 3500, fundSource: 'DSWD - AICS' },
+  { name: 'AICS — Assistance to Individuals in Crisis Situation', amount: 1200, fundSource: 'LGU - Municipal' },
+  { name: 'AICS — Assistance to Individuals in Crisis Situation', amount: 5000, fundSource: 'LGU - Municipal' },
+  { name: 'AICS — Assistance to Individuals in Crisis Situation', amount: 8000, fundSource: 'DSWD - AICS' },
   { name: 'Cash for Work', amount: 1500, fundSource: 'LGU - Municipal' },
-  { name: 'Livelihood Assistance', amount: 5000, fundSource: 'DSWD - AICS' },
-  { name: 'Senior Citizen Social Pension', amount: 5000, fundSource: 'DSWD - AICS' },
+  { name: 'Sustainable Livelihood Program', amount: 5000, fundSource: 'DSWD - SLP' },
+  { name: 'Social Pension for Indigent Senior Citizens', amount: 5000, fundSource: 'DSWD - Social Pension Program' },
   { name: 'PWD Assistance', amount: 3000, fundSource: 'LGU - Municipal' },
-  { name: 'Financial Assistance (General)', amount: 3000, fundSource: 'DSWD - AICS' },
+  { name: 'AICS — Assistance to Individuals in Crisis Situation', amount: 3000, fundSource: 'DSWD - AICS' },
 ];
 
-// Engineered co-occurrence: Food Assistance appears with Medical/Educational/
-// Burial/etc. so pairwise rules pass minSupport (0.05) + minConfidence (0.5).
+// Engineered co-occurrence: the assistance programs appear together so
+// pairwise rules pass minSupport (0.05) + minConfidence (0.5).
 const COMPANION: Record<string, string> = {
-  'Medical Assistance': 'Food Assistance',
-  'Educational Assistance': 'Food Assistance',
-  'Burial Assistance': 'Medical Assistance',
-  'Cash for Work': 'Food Assistance',
-  'Livelihood Assistance': 'Food Assistance',
-  'Senior Citizen Social Pension': 'Medical Assistance',
+  'AICS — Assistance to Individuals in Crisis Situation': 'Medical Assistance',
+  'Medical Assistance': 'Burial Assistance',
+  'Burial Assistance': 'Food Assistance',
+  'Educational Assistance': 'Medical Assistance',
+  'Emergency Cash/Food for Work': 'Food Assistance',
+  'Sustainable Livelihood Program': 'Food Assistance',
+  'Social Pension for Indigent Senior Citizens': 'Medical Assistance',
   'PWD Assistance': 'Medical Assistance',
   'Food Assistance': 'Educational Assistance',
   'Financial Assistance (General)': 'Food Assistance',
@@ -240,7 +241,7 @@ async function main(): Promise<void> {
     const count = 1 + (i % 3);
     const services = [svcA.name];
     if (count >= 2) {
-      const comp = COMPANION[svcA.name] ?? 'Food Assistance';
+      const comp = COMPANION[svcA.name] ?? 'AICS — Assistance to Individuals in Crisis Situation';
       services.push(comp);
     }
     if (count >= 3) services.push(pick(SERVICES).name);

@@ -36,6 +36,24 @@ export class CaseInterventionsService {
       throw new ForbiddenException('Beneficiary consent has been revoked — new interventions are not allowed');
     }
 
+    // The enrollment the service was delivered under, when named, must belong
+    // to this case — and, when a program is also named, must be that program's
+    // enrollment, or the service rows under the wrong program.
+    if (data.programEnrollmentId) {
+      const rows = await this.interventionRepo.manager.query(
+        `SELECT program_id FROM program_enrollments WHERE id = $1 AND case_id = $2`,
+        [data.programEnrollmentId, caseId],
+      );
+      if (rows.length === 0) {
+        throw new NotFoundException('Program enrollment not found on this case');
+      }
+      if (data.programId && rows[0].program_id !== data.programId) {
+        throw new ForbiddenException(
+          'The enrollment belongs to a different program than the one named on the intervention',
+        );
+      }
+    }
+
     const cleaned = Object.fromEntries(
       Object.entries(data).map(([k, v]) => [k, v === null ? undefined : v]),
     );
