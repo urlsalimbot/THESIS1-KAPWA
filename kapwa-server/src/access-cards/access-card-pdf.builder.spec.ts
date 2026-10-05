@@ -1,25 +1,7 @@
 import * as zlib from 'zlib';
 import { buildAccessCardPdf } from './access-card-pdf.builder';
 import { AccessCardPdfData } from './access-card-pdf.types';
-
-// pdfkit stores page content in FlateDecode streams and encodes text as
-// hex-encoded TJ arrays, so decode both before asserting on text.
-function searchableText(buf: Buffer): string {
-  const raw = buf.toString('latin1');
-  const streams: string[] = [];
-  const re = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(raw)) !== null) {
-    try {
-      streams.push(zlib.inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1'));
-    } catch {
-      // stream not FlateDecode; ignore
-    }
-  }
-  const hex = streams.join('\n').match(/<([0-9A-Fa-f]+)>/g) ?? [];
-  const decoded = hex.map(h => Buffer.from(h.slice(1, -1), 'hex').toString('latin1')).join('');
-  return `${raw}\n${decoded}`;
-}
+import { isLandscape, searchableText } from '../gis/gis-pdf-test.util';
 
 const fullData: AccessCardPdfData = {
   code: 'NORZ-AC-2026-0001',
@@ -81,5 +63,33 @@ describe('buildAccessCardPdf', () => {
     };
     const buf = await buildAccessCardPdf(bare);
     expect(searchableText(buf)).toContain('%PDF');
+  });
+
+  it('lays the card out landscape, one continuous table per face', async () => {
+    const buf = await buildAccessCardPdf(fullData);
+    expect(isLandscape(buf)).toBe(true);
+    // Both card faces carry the table header; the rows are what continues.
+    const text = searchableText(buf);
+    expect(text).toContain('SERVICES RENDERED');
+    expect(text).toContain('Including Cost if any');
+  });
+
+  it('continues service rows across the two faces instead of repeating them', async () => {
+    // 30 rows: face 1 holds the first 25, face 2 continues with 26–30.
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      date: `01/${String(i + 1).padStart(2, '0')}/2026`,
+      rendered: `SVC-${String(i + 1).padStart(2, '0')}`,
+      agency: 'MSWDO',
+      worker: 'W',
+    }));
+    const buf = await buildAccessCardPdf({ ...fullData, services: many });
+    const text = searchableText(buf);
+    const pages = (text.match(/\/Type \/Page\b/g) ?? []).length;
+    expect(pages).toBe(2);
+    // Every service appears exactly once — the table runs on, never restarts.
+    for (const n of ['SVC-01', 'SVC-25', 'SVC-26', 'SVC-30']) {
+      expect(text.split(n).length - 1).toBe(1);
+    }
+    expect(text).not.toContain('SVC-31');
   });
 });

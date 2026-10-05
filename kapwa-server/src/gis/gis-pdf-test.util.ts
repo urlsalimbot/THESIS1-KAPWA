@@ -105,34 +105,49 @@ export function searchableText(buf: Buffer): string {
     }
   }
 
-  const pageBody = [...bodies.values()].find(b => /\/Type\s*\/Page\b/.test(b)) ?? '';
-  // pdfkit puts /Resources in a separate object (e.g. /Resources 6 0 R);
-  // follow the reference to find the /Font dictionary.
-  const resRef = /\/Resources\s+(\d+)\s+0\s+R/.exec(pageBody);
-  const resBody = resRef ? (bodies.get(Number(resRef[1])) ?? pageBody) : pageBody;
-  const fontResource = new Map<string, number>();
-  const fontsSec = /\/Font\s*<<([\s\S]*?)>>/.exec(resBody)?.[1];
-  if (fontsSec) {
-    for (const fm of fontsSec.matchAll(/\/F(\d+)\s+(\d+)\s+0\s+R/g)) {
-      fontResource.set(`F${fm[1]}`, Number(fm[2]));
-    }
-  }
+  const pageBodies = [...bodies.entries()]
+    .filter(([, body]) => /\/Type\s*\/Page\b/.test(body))
+    .sort((a, b) => a[0] - b[0])
+    .map(([, body]) => body);
 
   let out = '';
-  for (const cm of pageBody.matchAll(/\/Contents\s+(\d+)\s+0\s+R/g)) {
-    const content = streamData.get(Number(cm[1]));
-    if (!content) continue;
-    let cur: string | null = null;
-    const tokenRe = /\/F(\d+)\s+[\d.]+\s+Tf|<([0-9A-Fa-f]+)>|\(((?:[^()\\]|\\.)*)\)/g;
-    let t: RegExpExecArray | null;
-    while ((t = tokenRe.exec(content)) !== null) {
-      if (t[1] !== undefined) { cur = `F${t[1]}`; continue; }
-      const info = cur ? fontInfo.get(fontResource.get(cur) ?? -1) : undefined;
-      if (t[2] !== undefined) out += decodeHex(t[2], info?.toUnicode);
-      else if (t[3] !== undefined) out += t[3];
+  // Decode every page in creation order, so multi-page documents (e.g. the
+  // access card's two card faces) are fully searchable.
+  for (const pageBody of pageBodies) {
+    // pdfkit puts /Resources in a separate object (e.g. /Resources 6 0 R);
+    // follow the reference to find the /Font dictionary.
+    const resRef = /\/Resources\s+(\d+)\s+0\s+R/.exec(pageBody);
+    const resBody = resRef ? (bodies.get(Number(resRef[1])) ?? pageBody) : pageBody;
+    const fontResource = new Map<string, number>();
+    const fontsSec = /\/Font\s*<<([\s\S]*?)>>/.exec(resBody)?.[1];
+    if (fontsSec) {
+      for (const fm of fontsSec.matchAll(/\/F(\d+)\s+(\d+)\s+0\s+R/g)) {
+        fontResource.set(`F${fm[1]}`, Number(fm[2]));
+      }
+    }
+
+    for (const cm of pageBody.matchAll(/\/Contents\s+(\d+)\s+0\s+R/g)) {
+      const content = streamData.get(Number(cm[1]));
+      if (!content) continue;
+      let cur: string | null = null;
+      const tokenRe = /\/F(\d+)\s+[\d.]+\s+Tf|<([0-9A-Fa-f]+)>|\(((?:[^()\\]|\\.)*)\)/g;
+      let t: RegExpExecArray | null;
+      while ((t = tokenRe.exec(content)) !== null) {
+        if (t[1] !== undefined) { cur = `F${t[1]}`; continue; }
+        const info = cur ? fontInfo.get(fontResource.get(cur) ?? -1) : undefined;
+        if (t[2] !== undefined) out += decodeHex(t[2], info?.toUnicode);
+        else if (t[3] !== undefined) out += t[3];
+      }
     }
   }
   return raw + '\n' + out;
+}
+
+/** True when every page box is wider than it is tall. */
+export function isLandscape(buf: Buffer): boolean {
+  const boxes = [...buf.toString('latin1').matchAll(/\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/g)]
+    .map(m => ({ w: Number(m[3]) - Number(m[1]), h: Number(m[4]) - Number(m[2]) }));
+  return boxes.length > 0 && boxes.every(b => b.w > b.h);
 }
 
 /** Number of page objects in the document. */

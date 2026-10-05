@@ -3,11 +3,22 @@ import * as fs from 'fs';
 import { AccessCardPdfData } from './access-card-pdf.types';
 import { MUNICIPAL_MAYOR, ORG_LOCATION } from '../common/constants';
 
-const PAGE_BOTTOM = 790;
+// Landscape A4 (841.89 × 595.28) — the Family Access Card is a landscape
+// document. The cover face and the inner face each carry ONE column of the
+// services table; the rows run on from the first face to the second, so the
+// two panels read as a single table separated only by the page layout.
+const PAGE_W = 841.89;
+const PAGE_H = 595.28;
+const PAGE_BOTTOM = PAGE_H - 55;
 const LEFT = 50;
-const RIGHT = 545;
-const WIDTH = RIGHT - LEFT; // 495
-const HALF = WIDTH / 2; // 247.5
+const RIGHT = PAGE_W - 50;
+const WIDTH = RIGHT - LEFT;
+const HALF = WIDTH / 2;
+const ROW_H = 18;
+/** The header carries a two-line label, so it is taller than a data row. */
+const HEADER_H = 22;
+/** Printed service rows per card face; further faces continue the table. */
+const ROWS_PER_PANEL = 25;
 
 // Pre-printed signature names on the Family Access Card (reference form
 // ACCESS-CARD-COVER). The worker is stamped on the card itself; the mayor
@@ -40,7 +51,10 @@ const PAALALA_LINES = [
 ];
 
 const SERVICES_HEADER = ['DATE', 'SERVICES RENDERED\n(Including Cost if any)', 'BY AGENCY', "WORKER'S NAME\n& SIGNATURE"];
-const SERVICES_COLS = [44, 89, 66, 48.5]; // sums to WIDTH/2 = 247.5
+// Column proportions as printed on the card (portrait half was 247.5pt wide);
+// scaled to the landscape half so the table fills its face.
+const SERVICES_FRACTIONS = [44, 89, 66, 48.5].map(v => v / 247.5);
+const servicesCols = (): number[] => SERVICES_FRACTIONS.map(f => f * HALF);
 
 function fmtDate(v?: Date | string): string {
   if (!v) return '';
@@ -52,25 +66,36 @@ function fmtDate(v?: Date | string): string {
 }
 
 function drawServicesHeader(doc: any, x: number, y: number): number {
+  const cols = servicesCols();
   let cx = x;
-  doc.rect(x, y, SERVICES_COLS.reduce((a, b) => a + b, 0), 18).fillColor('#e6e6e6').fill();
+  doc.rect(x, y, cols.reduce((a, b) => a + b, 0), HEADER_H).fillColor('#e6e6e6').fill();
   SERVICES_HEADER.forEach((label, i) => {
     doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111')
-      .text(label, cx + 2, y + 3, { width: SERVICES_COLS[i] - 4, height: 15 });
-    doc.rect(cx, y, SERVICES_COLS[i], 18).lineWidth(0.5).strokeColor('#999').stroke();
-    cx += SERVICES_COLS[i];
+      .text(label, cx + 2, y + 3, { width: cols[i] - 4, height: HEADER_H - 4 });
+    doc.rect(cx, y, cols[i], HEADER_H).lineWidth(0.5).strokeColor('#999').stroke();
+    cx += cols[i];
   });
-  return y + 18;
+  return y + HEADER_H;
 }
 
-function drawServiceRows(doc: any, x: number, y: number, rows: AccessCardPdfData['services'], minRows: number): number {
-  const total = Math.max(minRows, rows.length);
-  for (let i = 0; i < total; i++) {
-    if (y + 18 > PAGE_BOTTOM) {
-      doc.addPage();
-      y = 60;
-      y = drawServicesHeader(doc, x, y);
-    }
+/**
+ * One face of the services table: title, header and a fixed grid of rows.
+ *
+ * `rows` is the slice that belongs on THIS face — the caller walks the service
+ * list across faces (see `panelSlices`), so the printed result is one table
+ * continued by the page layout instead of two tables repeating the same rows.
+ */
+function drawServicesPanel(
+  doc: any,
+  x: number,
+  y: number,
+  rows: AccessCardPdfData['services'],
+  capacity: number = ROWS_PER_PANEL,
+): void {
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
+    .text("CLIENT'S RECORD OF SERVICES AVAILED", x + 1, y, { width: HALF - 2 });
+  let cy = drawServicesHeader(doc, x, y + 11);
+  for (let i = 0; i < capacity; i++) {
     const row = rows[i];
     const vals = [
       row?.date ?? '',
@@ -79,23 +104,32 @@ function drawServiceRows(doc: any, x: number, y: number, rows: AccessCardPdfData
       row?.worker ?? '',
     ];
     let cx = x;
-    SERVICES_COLS.forEach((w, ci) => {
-      doc.rect(cx, y, w, 18).lineWidth(0.5).strokeColor('#999').stroke();
+    servicesCols().forEach((w, ci) => {
+      doc.rect(cx, cy, w, ROW_H).lineWidth(0.5).strokeColor('#999').stroke();
       doc.font('Helvetica').fontSize(7.5).fillColor('#111')
-        .text(vals[ci] || '', cx + 2, y + 5, { width: w - 4, height: 11, ellipsis: true });
+        .text(vals[ci] || '', cx + 2, cy + 5, { width: w - 4, height: ROW_H - 7, ellipsis: true });
       cx += w;
     });
-    y += 18;
+    cy += ROW_H;
   }
-  return y;
 }
 
-// Client's Record of Services Availed table (title + header + fixed rows).
-function drawServicesPanel(doc: any, x: number, y: number, services: AccessCardPdfData['services'], minRows: number): void {
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111')
-    .text("CLIENT'S RECORD OF SERVICES AVAILED", x + 1, y, { width: HALF - 2 });
-  const headerY = drawServicesHeader(doc, x, y + 11);
-  drawServiceRows(doc, x, headerY, services, minRows);
+/**
+ * The service rows for face `face` (0-based). Each face prints a full grid of
+ * `capacity` rows; the data runs on across faces, so face 1 starts where face 0
+ * stopped and rows are never repeated.
+ */
+function serviceSlice(
+  services: AccessCardPdfData['services'],
+  face: number,
+  capacity: number = ROWS_PER_PANEL,
+): AccessCardPdfData['services'] {
+  return services.slice(face * capacity, (face + 1) * capacity);
+}
+
+/** Faces needed to print `total` service rows (the card always has two). */
+function serviceFaceCount(total: number, capacity: number = ROWS_PER_PANEL): number {
+  return Math.max(2, Math.ceil(total / capacity));
 }
 
 // PAALALA AT GABAY — boxed heading followed by the numbered reminders.
@@ -192,24 +226,29 @@ function drawClientCover(doc: any, x: number, data: AccessCardPdfData): void {
 
   cy += 64;
 
-  // Family Composition
+  // Family Composition — fills the width of the card face, with as many rows
+  // as the signature block leaves room for on the landscape page.
   doc.font('Helvetica-Bold').fontSize(8).fillColor('#111').text('FAMILY COMPOSITION', x + 10, cy);
   cy += 12;
+  const famWidth = HALF - 20;
   const famCols = [
-    { label: 'Family Members', w: 90 },
-    { label: 'Relationship', w: 55 },
-    { label: 'Age', w: 20 },
-    { label: 'Status / Income', w: 60 },
+    { label: 'Family Members', w: famWidth * 0.44 },
+    { label: 'Relationship', w: famWidth * 0.24 },
+    { label: 'Age', w: famWidth * 0.1 },
+    { label: 'Status / Income', w: famWidth * 0.22 },
   ];
   let fx = x + 10;
-  doc.rect(x + 10, cy, 225, 12).fillColor('#e6e6e6').fill();
+  doc.rect(x + 10, cy, famWidth, 12).fillColor('#e6e6e6').fill();
   famCols.forEach(c => {
     doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text(c.label, fx + 2, cy + 2.5, { width: c.w - 4, ellipsis: true });
     doc.rect(fx, cy, c.w, 12).lineWidth(0.5).strokeColor('#999').stroke();
     fx += c.w;
   });
   cy += 12;
-  const totalFam = Math.max(8, data.familyMembers.length);
+  const FAM_ROW_H = 16;
+  const sigY = PAGE_BOTTOM - 52;
+  const famCapacity = Math.max(4, Math.floor((sigY - 34 - cy) / FAM_ROW_H));
+  const totalFam = Math.min(Math.max(8, data.familyMembers.length), famCapacity);
   for (let i = 0; i < totalFam; i++) {
     const m = data.familyMembers[i];
     const vals = [
@@ -219,16 +258,15 @@ function drawClientCover(doc: any, x: number, data: AccessCardPdfData): void {
     ];
     fx = x + 10;
     famCols.forEach((c, ci) => {
-      doc.rect(fx, cy, c.w, 16).lineWidth(0.5).strokeColor('#999').stroke();
+      doc.rect(fx, cy, c.w, FAM_ROW_H).lineWidth(0.5).strokeColor('#999').stroke();
       doc.font('Helvetica').fontSize(7.5).fillColor('#111')
         .text(vals[ci] || '', fx + 2, cy + 4, { width: c.w - 4, ellipsis: true });
       fx += c.w;
     });
-    cy += 16;
+    cy += FAM_ROW_H;
   }
 
-  // Signature block
-  const sigY = Math.max(cy + 16, 690);
+  // Signature block — anchored near the bottom of the landscape face.
   const sigLine = (sx: number, sy: number, w: number): void => {
     doc.moveTo(sx, sy).lineTo(sx + w, sy).lineWidth(0.5).strokeColor('#111').stroke();
   };
@@ -257,7 +295,8 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
   const PDFDocument = require('pdfkit');
   const doc = new PDFDocument({
     size: 'A4',
-    margins: { top: 38, bottom: 40, left: LEFT - 15, right: RIGHT + 15 },
+    layout: 'landscape',
+    margins: { top: 30, bottom: 30, left: 40, right: 40 },
     info: {
       Title: `Access Card ${data.code}`,
       Author: data.officeName ?? 'Municipal Social Welfare and Development Office',
@@ -269,20 +308,30 @@ export async function buildAccessCardPdf(data: AccessCardPdfData): Promise<Buffe
   const buffers: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => buffers.push(chunk));
 
-  // ================= PAGE 1 (cover side): services left, client cover right =================
-  drawServicesPanel(doc, LEFT, 48, data.services, 14);
-  drawClientCover(doc, LEFT + WIDTH / 2, data);
+  const faces = serviceFaceCount(data.services.length);
 
-  // ================= PAGE 2 (inner side): PAALALA left, services right =================
+  // ============ FACE 1 (cover side): services left, client cover right ============
+  // The services table starts here …
+  drawServicesPanel(doc, LEFT, 48, serviceSlice(data.services, 0));
+  drawClientCover(doc, LEFT + HALF, data);
+
+  // ===== FACE 2 (inner side): PAALALA left, the same table continues right =====
+  // … and runs straight on: no repeated rows, only the page layout separates them.
   doc.addPage();
   drawPaalala(doc, LEFT, 48);
-  drawServicesPanel(doc, LEFT + WIDTH / 2, 48, data.services, 14);
+  drawServicesPanel(doc, LEFT + HALF, 48, serviceSlice(data.services, 1));
+
+  // Unusually long service histories continue on further faces of the same table.
+  for (let f = 2; f < faces; f++) {
+    doc.addPage();
+    drawServicesPanel(doc, LEFT, 48, serviceSlice(data.services, f));
+  }
 
   const officeName = data.officeName ?? 'Municipal Social Welfare and Development Office';
   doc.font('Helvetica').fontSize(5.5).fillColor('#888')
     .text(
       `${officeName} | ${ORG_LOCATION.municipality}, ${ORG_LOCATION.province}`,
-      LEFT, 792, { align: 'center', width: WIDTH },
+      LEFT, PAGE_H - 46, { align: 'center', width: WIDTH, lineBreak: false },
     );
 
   doc.end();
