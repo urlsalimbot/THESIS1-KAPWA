@@ -4,7 +4,7 @@ This document describes the KAPWA (MSWDO Norzagaray Social Welfare System) runti
 
 ## 1. Purpose
 
-Documents the KAPWA architecture from two viewpoints: (1) the layered architecture — presentation, application (API), business/service, data-access, and data layers with the cross-cutting concerns that span them — and (2) the client–server architecture — the browser/field clients, the NestJS API server, and the Postgres/Minio data servers, connected by HTTP/HTTPS and WebSocket. All functional requirements (FR-01..FR-17) are mapped onto both views.
+Documents the KAPWA architecture from two viewpoints: (1) the layered architecture — presentation, application (API), business/service, data-access, and data layers with the cross-cutting concerns that span them — and (2) the client–server architecture — the browser/field clients reached through CloudFront, the S3-hosted SPA, the NestJS API running on EC2, and the Amazon RDS (Postgres) + S3 data services, connected by HTTP/HTTPS and WebSocket. All functional requirements (FR-01..FR-17) are mapped onto both views. The deployed topology itself is documented in `09-deployment-diagram.md`.
 
 ## 2. Functional Specification
 
@@ -18,14 +18,14 @@ Documents the KAPWA architecture from two viewpoints: (1) the layered architectu
 | FR-06 | The shared case FSM (case-fsm.ts) is the single source of truth for case transitions — used by the cases module and re-validated by the sync service's `handleFsmTransition` pre-check (sync.service.ts imports `isValidTransition`). |
 | FR-07 | The sync service accepts device deltas with an Ed25519 signature and idempotency checks, rejects unknown underscore-prefixed meta fields (`assertNoUnknownMetaFields`), whitelists payload columns, and resolves conflicts server-wins for financial tables (`ConflictResolver.FINANCIAL_TABLES`). |
 | FR-08 | The notifications gateway pushes realtime messages over WebSocket (namespace `/notifications`, per-user `user:{id}` room); the notifications module provides a REST fallback for clients without a socket. |
-| FR-09 | Minio stores documents (server-side uploads; presigned GET URLs only, bucket init on boot); the export module generates PDF (PDFKit), XLSX, and CSV artifacts. |
+| FR-09 | Documents are stored in **Amazon S3** — the app talks to it through the MinIO-compatible client (`MINIO_ENDPOINT=s3.ap-southeast-1.amazonaws.com`, `MINIO_BUCKET_PREFIX=kapwa-prod`, SigV4 signing): server-side uploads, presigned GET URLs only, bucket init on boot; the export module generates PDF (PDFKit), XLSX, and CSV artifacts. |
 | FR-10 | Health endpoints `/health`, `/health/live`, `/health/ready` reflect Postgres connectivity (`SELECT 1`) and return 503 when the DB is unreachable (app.controller.ts). |
 | FR-11 | JSON structured logging is enabled globally via `app.useLogger` (level, ISO timestamp, message, meta) in main.ts. |
 | FR-12 | Graceful shutdown hooks are enabled via `app.enableShutdownHooks()`; the sync service implements `OnApplicationShutdown` to log the signal and rely on transactional queue entries for retry-safe shutdown. |
 | FR-13 | The PII masking interceptor (pii.interceptor.ts) nulls out PII fields (surname, firstName, middleName, address, phone, dob, philsysNumber) on responses when the beneficiary's consent is revoked, with an admin bypass. |
 | FR-14 | The global `AllExceptionsFilter` (common/filters/http-exception.filter.ts) normalizes all errors into `{ statusCode, message, timestamp, path }`, mapping throttler exceptions to 429 and WebSocket exceptions to 400. |
 | FR-15 | Rate limiting is enforced app-wide by `ThrottlerGuard` registered as a global guard (`ThrottlerModule` 60 requests per 60,000 ms). |
-| FR-16 | Postgres audit: the `pgaudit` extension is enabled during migration bootstrap (migrate.ts) and the `audit_log` table records IRF dispositions; the audit module exposes hash-chain verification and log queries (`/audit/verify-all`, `/audit/logs`). |
+| FR-16 | Postgres audit: the `pgaudit` extension is created during migration bootstrap (migrate.ts) and the `audit_log` table records IRF dispositions; the audit module exposes hash-chain verification and log queries (`/audit/verify-all`, `/audit/logs`). On RDS the extension needs the instance parameter group (`shared_preload_libraries=pgaudit`), so production auditing relies on `audit_log` plus CloudWatch/RDS logs. |
 | FR-17 | Sync idempotency: duplicate deltas are answered from a 24 h idempotency window (`IDEMPOTENCY_TTL_MS = 86_400_000`) backed by an in-memory cache plus the `idempotency_keys` table, with stale-entry eviction. |
 
 ## 3. Architecture Diagrams (Mermaid)
@@ -55,8 +55,8 @@ flowchart TB
     end
 
     subgraph D2["DATA"]
-        DB[("Postgres")]
-        MO[("Minio")]
+        DB[("Amazon RDS<br/>Postgres")]
+        MO[("Amazon S3<br/>objects")]
     end
 
     App --> Ctrl
@@ -69,22 +69,24 @@ flowchart TB
 
 ### 3.2 Client–Server Architecture
 
-Logical and physical separation: clients talk to the API server over HTTP/HTTPS; the API server talks to the data servers; a WebSocket channel carries realtime push. The view is split into two compact diagrams: the request path and the async channels.
+Logical and physical separation: clients reach the system through CloudFront, which serves the SPA from S3 and proxies `/api/*` and `/socket.io/*` to the API on EC2; the API talks to RDS (Postgres) and S3 over TLS; a WebSocket channel carries realtime push. The view is split into two compact diagrams: the request path and the async channels.
 
 #### 3.2a Request path
 
 ```mermaid
 flowchart LR
     C["• Browser SPA<br/>• Field devices"]
-    CD["• Caddy reverse proxy<br/>• Ports 8090 / 443"]
-    API["• NestJS API<br/>• Port 3000"]
-    PG[("Postgres 5432")]
-    MO[("Minio 9000/9001")]
+    CF["• CloudFront (kapwa.software)<br/>• /api/* + /socket.io/* → EC2"]
+    SPA[("• S3 kapwa-software-frontend<br/>• SPA bundle (OAC)")]
+    API["• NestJS API on EC2<br/>• origin.kapwa.software :3000"]
+    PG[("• Amazon RDS<br/>• Postgres 5432 (TLS)")]
+    S3[("• S3 kapwa-prod-*<br/>• documents")]
 
-    C -->|"HTTPS /api/v1"| CD
-    CD --> API
+    C -->|"HTTPS"| CF
+    CF -->|"default /*"| SPA
+    CF -->|"FR-01 /api/*, /socket.io/*"| API
     API -->|"queries"| PG
-    API -->|"objects"| MO
+    API -->|"objects"| S3
 ```
 
 #### 3.2b Async channels
@@ -95,7 +97,7 @@ flowchart LR
     GW["• WS Gateway"]
     SyncS["• Sync service"]
     WEB["• Clients"]
-    PG[("Postgres")]
+    PG[("RDS Postgres")]
 
     API --> GW
     API --> SyncS
@@ -106,9 +108,9 @@ flowchart LR
 
 ## 4. Diagram Narrative
 
-**Layered view (3.1).** The presentation layer holds the React SPA: the app shell (routing, auth context, theme), feature pages that consume data through SWR hooks (FR-03), and the role-filtered chrome (Topbar, Sidebar, BottomNav). The application layer is the NestJS API: controllers receive HTTP requests and pass them through the global pipeline of guards (ThrottlerGuard FR-15, CsrfGuard FR-04, RolesGuard + AbacGuard FR-05), the AllExceptionsFilter (FR-14), and the PiiMaskingInterceptor (FR-13). The business/service layer implements the rules — feature services, the shared case FSM (FR-06), the sync service (FR-07, FR-17), and notifications (FR-08). The data-access layer is TypeORM repositories plus Zod validation pipes; the data layer is Postgres and Minio (FR-09, FR-10). Strictly layered: presentation → application → service → data-access → data. The layered view shows the pure layer structure; the cross-cutting concerns (auth FR-01/02, guards FR-04/05/15, PII masking FR-13, JSON logging FR-11, normalized errors FR-14, graceful shutdown FR-12) are enforced at the API boundaries and are specified in Section 2 rather than drawn as diagram edges.
+**Layered view (3.1).** The presentation layer holds the React SPA: the app shell (routing, auth context, theme), feature pages that consume data through SWR hooks (FR-03), and the role-filtered chrome (Topbar, Sidebar, BottomNav). The application layer is the NestJS API: controllers receive HTTP requests and pass them through the global pipeline of guards (ThrottlerGuard FR-15, CsrfGuard FR-04, RolesGuard + AbacGuard FR-05), the AllExceptionsFilter (FR-14), and the PiiMaskingInterceptor (FR-13). The business/service layer implements the rules — feature services, the shared case FSM (FR-06), the sync service (FR-07, FR-17), and notifications (FR-08). The data-access layer is TypeORM repositories plus Zod validation pipes; the data layer is Amazon RDS (Postgres) and Amazon S3 object storage (FR-09, FR-10). Strictly layered: presentation → application → service → data-access → data. The layered view shows the pure layer structure; the cross-cutting concerns (auth FR-01/02, guards FR-04/05/15, PII masking FR-13, JSON logging FR-11, normalized errors FR-14, graceful shutdown FR-12) are enforced at the API boundaries and are specified in Section 2 rather than drawn as diagram edges.
 
-**Client–server view (3.2).** Two diagrams. (3.2a) **Request path**: clients — the browser SPA and offline-capable field devices — reach the server only through Caddy, which proxies `/api/v1` to the NestJS API (FR-01); the API queries Postgres (relational state, idempotency keys, audit_log — FR-16, FR-17) and stores objects in Minio (FR-09). (3.2b) **Async channels**: the WebSocket gateway pushes realtime notifications into per-user `user:{id}` rooms (FR-08), and the sync service receives offline queue replays as signed deltas, deduplicates them via the 24 h idempotency window, and resolves conflicts against Postgres (FR-07, FR-17).
+**Client–server view (3.2).** Two diagrams. (3.2a) **Request path**: clients — the browser SPA and offline-capable field devices — reach the system only through CloudFront (`kapwa.software`), which serves the SPA bundle from the private S3 frontend bucket (origin access control) and proxies `/api/*` and `/socket.io/*` to the NestJS API on EC2 (`origin.kapwa.software:3000`, FR-01); the API queries Amazon RDS Postgres (relational state, idempotency keys, audit_log — FR-16, FR-17) and stores objects in S3 (FR-09). (3.2b) **Async channels**: the WebSocket gateway pushes realtime notifications into per-user `user:{id}` rooms (FR-08), and the sync service receives offline queue replays as signed deltas, deduplicates them via the 24 h idempotency window, and resolves conflicts against RDS Postgres (FR-07, FR-17).
 
 **Mapping.** Every edge in both diagrams carries the FR id that governs it; the functional table in Section 2 is the contract the diagrams render. The two views are complementary: the layered view answers "how is the software organized inside?", the client–server view answers "which components talk to which, over what protocol?".
 
@@ -124,7 +126,7 @@ flowchart LR
 | Conflict resolution policy (financial tables server-wins, notes append) | `kapwa-server/src/sync/conflict-resolver.ts` |
 | case-fsm.ts — `CASE_FSM`, `isValidTransition`, `canTransition`; shared by cases + sync | `kapwa-server/src/cases/case-fsm.ts` |
 | notifications.gateway.ts — namespace `/notifications`, `user:{id}` room, JWT at connect | `kapwa-server/src/notifications/notifications.gateway.ts` |
-| Minio module — server-side uploads; presigned GET URLs only, bucket init on boot | `kapwa-server/src/minio/minio.service.ts` |
+| Object storage module — MinIO-compatible client; in production it signs against Amazon S3 (`MINIO_ENDPOINT=s3.ap-southeast-1.amazonaws.com`, `MINIO_BUCKET_PREFIX=kapwa-prod`); server-side uploads; presigned GET URLs only, bucket init on boot | `kapwa-server/src/minio/minio.service.ts` |
 | pii-masking interceptor — PII fields nulled when consent revoked, admin bypass | `kapwa-server/src/beneficiaries/pii.interceptor.ts` |
 | all-exceptions filter — 429 for throttler, 400 for WS, normalized `{statusCode, message, timestamp, path}` | `kapwa-server/src/common/filters/http-exception.filter.ts` |
 | Role + ABAC guards — `@Roles` enforcement with ABAC fallback | `kapwa-server/src/auth/guards/roles.guard.ts`, `kapwa-server/src/auth/guards/abac.guard.ts` |
@@ -132,3 +134,5 @@ flowchart LR
 | Offline queue — localStorage queue, version vectors, conflict states | `kapwa-client/src/lib/offline-queue.ts` |
 | Export module — PDF (PDFKit), XLSX, CSV; certificates, monthly funds, audit logs | `kapwa-server/src/export/export.service.ts`, `kapwa-server/src/export/export.controller.ts` |
 | Audit — hash-chain verification, audit logs, `pgaudit` extension + `audit_log` table | `kapwa-server/src/audit/audit.controller.ts`, `kapwa-server/src/database/migrate.ts`, `kapwa-server/src/database/migrations/20260622000005-IRFDispositionEncryption.ts` |
+| Production topology — CloudFront → S3 SPA + EC2 API container → RDS/S3; deploy workflow + `deploy-aws.sh` | `09-deployment-diagram.md`, `docs/DEPLOYMENT-AWS.md`, `.github/workflows/deploy-aws.yml` |
+| API host compose — single `kapwa-api` service (no db/minio/caddy containers) | `kapwa-server/docker-compose.aws.yml` |

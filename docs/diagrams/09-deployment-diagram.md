@@ -1,94 +1,106 @@
 # Deployment Diagram
 
-This document describes how KAPWA (MSWDO Norzagaray Social Welfare System) is deployed on a DigitalOcean Droplet: the five-container Docker Compose topology, published ports, persistent volumes, healthcheck-gated startup order, and the request path from the public Internet through Caddy to the client and API tiers.
+This document describes how KAPWA (MSWDO Norzagaray Social Welfare System) is deployed on AWS in `ap-southeast-1`: the CloudFront distribution that fronts both the S3-hosted SPA and the EC2 API container, the single-container Docker Compose topology on the API host, the private Amazon RDS Postgres instance, the S3 object-storage buckets, and the GitHub Actions pipeline (self-hosted runner on the API host + GitHub-hosted SPA job) that ships it.
 
 ## 1. Purpose
 
-Documents the production droplet topology — five containers (db, api, minio, client, caddy) defined in `kapwa-server/docker-compose.yml` — covering published/exposed ports, persistent volumes, healthcheck-gated startup ordering, and the request path from the Internet through the Caddy reverse proxy to the nginx-served SPA and the NestJS API.
+Documents the production AWS topology — CloudFront (`kapwa.software`), the S3 frontend bucket, one `kapwa-api` container on EC2 (`docker-compose.aws.yml`, no db/minio/caddy containers), Amazon RDS Postgres, and the `kapwa-prod-*` S3 buckets — covering origins and behaviours, security-group ingress, the deploy pipeline (`deploy-aws.sh` via GitHub Actions), migrations/seeding, and backups. The legacy single-host Docker model (`deploy.sh`, `docker-compose.yml`, Caddy + five containers) is superseded and kept only for local/PC development.
 
 ## 2. Functional Specification
 
 | ID | Requirement |
 |----|-------------|
-| FR-01 | Caddy publishes port `8090` (HTTP, mapped to container `:80`) and `443` (HTTPS); it routes `/api/*` and `/socket.io/*` to the API container (`api:3000`) and everything else to the client container (`client:80`), with `/health` answered directly by Caddy (infra/Caddyfile). |
-| FR-02 | The client serves the built SPA as static files from nginx on container port `80` (exposed internally only); the `dist/` bundle is produced by the `node:20-alpine` build stage and copied into `/usr/share/nginx/html` of the `nginx:stable-alpine` production stage (kapwa-client/Dockerfile). |
-| FR-03 | The API exposes port `3000` internally only (`expose`, no host port mapping — direct host access is commented out); it starts only after `db` and `minio` report healthy via `depends_on: condition: service_healthy` (docker-compose.yml). |
-| FR-04 | Postgres persists its data directory `/var/lib/postgresql/data` in the `kapwa-data` volume and starts with `shared_preload_libraries=pgaudit` and `pgaudit.log=all` (Dockerfile.db + compose `command`); the port mapping `5432:5432` makes it reachable on the host for backup tooling. |
-| FR-05 | Minio persists objects in the `minio-data` volume (`/data`) and serves the S3 API on `9000` and the console on `9001`, both exposed internally only (`server /data --console-address ":9001"`). |
-| FR-06 | The named volumes `kapwa-data`, `minio-data`, and `caddy-data` survive container recreation and `docker compose down` (volumes section of docker-compose.yml). |
-| FR-07 | All five services set `restart: unless-stopped`, so containers restart automatically after crashes or droplet reboots. |
-| FR-08 | Deployment is reproducible via `deploy.sh`: validate `infra/.env.production` (file existence plus `JWT_SECRET`/`MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`), `docker compose build --pull`, `up -d`, poll `http://localhost:8090/api/v1/health` (30 × 2 s), run `migrate.js` bootstrap with a 300 s timeout, then run `run-migrations.js` best-effort for existing-DB upgrades (both non-zero exits warn but do not abort), and seed accounts/programs only when the users table is empty. |
-| FR-09 | Healthchecks gate startup order: db (`pg_isready`), minio (`/minio/health/live`), api (HTTP GET `/api/v1/` on 3000, start_period 30 s), client (`wget` on 80), caddy (`wget /health` on 80, start_period 30 s); api depends on db+minio healthy, caddy depends on api healthy + client started. |
-| FR-10 | Database backups run via `infra/backup/backup.sh` (pg_dump custom-format + gzip against the db service), upload to the Minio `backups` bucket, and apply rotation (7 daily, 4 weekly, 3 monthly); scheduled by `infra/backup/cron`. |
-| FR-11 | The db and api containers set `TZ: Asia/Manila` so container timezone matches the agency's local time for logs and audit timestamps. |
-| FR-12 | The db, api, minio, and caddy services load secrets from the shared `env_file: ../infra/.env.production` (caddy also mounts it read-only at `/etc/caddy/.env`). |
-| FR-13 | Healthchecks use bounded probing: db `interval 10 s / timeout 5 s / retries 5`; api `interval 15 s / timeout 10 s / retries 5 / start_period 30 s`; minio `interval 15 s / timeout 10 s / retries 5 / start_period 30 s`; client `interval 15 s / timeout 5 s / retries 3`; caddy `interval 15 s / timeout 10 s / retries 5 / start_period 30 s` (docker-compose.yml). |
+| FR-01 | Amazon CloudFront distribution `E121A545H6DE4O` serves the public hostnames `kapwa.software` and `www.kapwa.software` with an ACM certificate issued in `us-east-1`, `redirect-to-https`, and `index.html` as the default root object. |
+| FR-02 | CloudFront routes by path: the default behaviour (`/*`) targets the `s3-frontend` origin (`kapwa-software-frontend.s3.ap-southeast-1.amazonaws.com`) through an origin access control (`E2ASDNA4VABPR7`) on the private bucket; `/api/*` and `/socket.io/*` target the `ec2-api` origin (custom origin `origin.kapwa.software`, HTTP port `3000`, `http-only`, TLSv1.2, 30 s read timeout). |
+| FR-03 | The API runs as a single Docker Compose service `kapwa-api` on EC2 (`kapwa-server/docker-compose.aws.yml`): `ports: 3000:3000`, `restart: unless-stopped`, healthcheck `GET http://localhost:3000/api/v1/health` (15 s interval, 30 s start period). The stack has **no** db, minio, client, or caddy services — CloudFront is the only entry point. |
+| FR-04 | The API host is EC2 instance `kapwa-api` (`i-0da38972be33ad3c3`, `t3.small`, x86_64) with Elastic IP `3.1.190.141`; IMDSv2 is required. Its security group allows `22` only from the administrator's address and `3000` only from the CloudFront managed prefix list `pl-31a34658` — the API is never exposed to `0.0.0.0/0`. |
+| FR-05 | Postgres is Amazon RDS `kapwa-db` (`kapwa-db.cjkg040y6akq.ap-southeast-1.rds.amazonaws.com:5432`), engine `postgres 16.15`, `db.t3.micro`, 20 GB gp3, storage-encrypted, single-AZ, **not publicly accessible**; its security group `sg-0eba51ec4e1890e7a` allows `5432` only from the API host's security group. The API connects with `DB_SSL=true`. |
+| FR-06 | Documents live in Amazon S3, reached through the MinIO-compatible client (`MINIO_ENDPOINT=s3.ap-southeast-1.amazonaws.com`, `MINIO_PORT=443`, `MINIO_USE_SSL=true`, `MINIO_REGION=ap-southeast-1`, `MINIO_BUCKET_PREFIX=kapwa-prod`): `kapwa-prod-documents`, `kapwa-prod-worker-signatures`, `kapwa-prod-client-receipts`, `kapwa-prod-irf-attachments`, `kapwa-prod-coa-exports`, `kapwa-prod-backups`. The API host has **no IAM instance profile**, so it authenticates with the dedicated IAM user `kapwa-app-s3` (`kapwa-s3-access` policy) whose access key/secret live in `infra/.env.production` as `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`. |
+| FR-07 | Backups: `infra/backup/backup.sh` performs a `pg_dump` (custom format, gzip) against RDS and uploads it to `kapwa-prod-backups`; RDS automated backups add a 1-day point-in-time window. |
+| FR-08 | `deploy-aws.sh api` (run on the host) validates `infra/.env.production` (JWT, MinIO/S3, `IRF_ENCRYPTION_KEY`), builds the API image, runs `docker compose -f kapwa-server/docker-compose.aws.yml up -d`, then applies the schema with `migrate.js` (canonical fresh bootstrap, also run at API startup) and `run-migrations.js` (pending upgrades on existing DBs). Reference data is seeded on every deploy (programs + required documents) and accounts only when the users table is empty (production roster). |
+| FR-09 | `deploy-aws.sh frontend` installs client dependencies, builds the SPA with `VITE_API_URL=/api/v1`, syncs it to `kapwa-software-frontend` with long-lived cache headers for hashed assets, and invalidates the CloudFront distribution. It runs with scoped credentials (`AWS_DEPLOY_ACCESS_KEY_ID` / `AWS_DEPLOY_SECRET_ACCESS_KEY`, restricted to the bucket + invalidation) because it executes on a GitHub-hosted runner. |
+| FR-10 | CI/CD: `.github/workflows/ci.yml` runs the server suite against a Postgres service and the client suite; on success `.github/workflows/deploy-aws.yml` runs as a `workflow_run` with two jobs — `api` on the **self-hosted runner labelled `kapwa-aws` installed on the EC2 host** (no inbound SSH from GitHub; the runner talks outbound only), and `frontend` on `ubuntu-latest`. |
+| FR-11 | The `api` job `rsync`s the repository to `/opt/kapwa` (excluding `.git/`, `node_modules/`, `dist/`, `coverage/`, and **`infra/.env.production`**, which holds the real secrets and is never overwritten) before invoking `deploy-aws.sh api`. |
+| FR-12 | All resources live in `ap-southeast-1`, except the ACM certificate and CloudFront (global), which are in `us-east-1` as AWS requires. |
 
 ## 3. Deployment Diagram (Mermaid)
 
 **Printing:** every diagram below is rendered to its own US-Letter-size PDF by `docs/diagrams/print-diagrams.mjs` (output in `docs/diagrams/print/`, one file per diagram) — run `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs` after editing.
 
+### 3.1 AWS production topology
 
 ```mermaid
 flowchart LR
-  subgraph Droplet["Droplet — Ubuntu 24.04 (Docker + Docker Compose)"]
-    subgraph Compose["kapwa-server/docker-compose.yml"]
-      Caddy["Caddy (kapwa-caddy)<br/>8090:80 + 443:443 · restart unless-stopped"]
-      Client["Client nginx (kapwa-client)<br/>expose 80 · /usr/share/nginx/html<br/>restart unless-stopped"]
-      API["API NestJS (kapwa-api)<br/>expose 3000 · node dist/main.js<br/>restart unless-stopped"]
-      PG[("Postgres (kapwa-db)<br/>5432:5432 · pgaudit<br/>volume: kapwa-data · restart unless-stopped")]
-      Minio[("Minio (kapwa-minio)<br/>expose 9000 / 9001<br/>volume: minio-data · restart unless-stopped")]
-    end
+  subgraph Host["EC2 API host — Docker + Compose (docker-compose.aws.yml)"]
+    API["EC2 kapwa-api (i-0da38972be33ad3c3)<br/>t3.small · EIP 3.1.190.141<br/>Docker Compose: kapwa-api :3000"]
+    Env["infra/.env.production<br/>secrets (rsync-excluded)"]
+    Runner["GitHub self-hosted runner<br/>label: kapwa-aws"]
   end
 
-  Internet["Internet"] -->|"HTTP :8090 / HTTPS :443"| Caddy
+  Internet["Internet<br/>kapwa.software"] -->|"HTTPS"| CF["CloudFront E121A545H6DE4O<br/>ACM (us-east-1) · redirect-to-https<br/>root: index.html"]
 
-  %% FR-01: Caddy routes /api/* and /socket.io/* -> api:3000, everything else -> client:80
-  Caddy -->|"FR-01 /api/*, /socket.io/*"| API
-  Caddy -->|"FR-01 everything else"| Client
+  %% FR-02
+  CF -->|"FR-02 default /* (OAC)"| SPA[("S3 kapwa-software-frontend<br/>SPA bundle (private)")]
+  CF -->|"FR-02 /api/*, /socket.io/*"| API
 
-  %% FR-09: healthchecks gate startup — db and minio healthy before api,
-  %% api healthy + client started before caddy (depends_on: service_healthy / service_started)
-  API -->|"FR-03 / FR-09"| PG
-  API -->|"FR-03 / FR-09"| Minio
+  %% FR-05 / FR-06
+  API -->|"FR-05 Postgres 5432 · DB_SSL=true"| RDS[("Amazon RDS kapwa-db<br/>postgres 16.15 · private · encrypted")]
+  API -->|"FR-06 S3 API (SigV4)"| S3[("S3 kapwa-prod-*<br/>documents · signatures · receipts<br/>irf-attachments · coa-exports · backups")]
 
-  %% FR-06: named volumes (kapwa-data, minio-data, caddy-data) survive container
-  %% recreation and persist Postgres data, Minio objects, and Caddy certs respectively
+  %% FR-10
+  GitHub["GitHub Actions<br/>ci.yml → deploy-aws.yml"] -->|"FR-10 jobs"| Runner
+
+  %% FR-04: 3000 open only to the CloudFront prefix list; 22 from the admin address
+  SGW["Security group sg-050ffe2c45546ca89<br/>3000 ← pl-31a34658 (CloudFront)<br/>22 ← admin address"] -.-> API
+  %% FR-05: RDS SG allows 5432 only from the API host SG
+  SGR["Security group sg-0eba51ec4e1890e7a<br/>5432 ← api host SG"] -.-> RDS
 ```
+
+### 3.2 Deploy pipeline
 
 ```mermaid
 flowchart TD
-  Start["deploy.sh"] --> Env["Validate infra/.env.production<br/>+ JWT_SECRET / MINIO_ROOT_USER / MINIO_ROOT_PASSWORD"]
-  Env -->|"missing → exit 1"| Fail["Abort"]
-  Env --> Build["docker compose build --pull"]
-  Build --> Up["docker compose up -d"]
-  Up --> Health["Poll http://localhost:8090/api/v1/health<br/>30 × 2 s (FR-09)"]
-  Health -->|"healthy"| Migrate["migrate.js bootstrap<br/>timeout 300 (FR-08)"]
-  Migrate --> Inc["run-migrations.js<br/>best-effort (existing DBs)"]
-  Inc --> Seed["Seed accounts/programs<br/>empty DB only"]
-  Seed --> Done["Deployment complete"]
-  Health -.->|"not ready in 60 s"| Warn["WARNING — check compose logs api"]
+  Push["push to main"] --> CI["CI (FR-10)<br/>server jest + Postgres service<br/>client vitest"]
+  CI -->|"success → workflow_run"| Dispatch{"deploy-aws.yml"}
+
+  Dispatch --> ApiJob["api job — self-hosted runner (EC2)"]
+  ApiJob --> Sync["rsync repo → /opt/kapwa<br/>keeps infra/.env.production (FR-11)"]
+  Sync --> DeployApi["deploy-aws.sh api (FR-08)"]
+  DeployApi --> Build["docker compose build"]
+  Build --> Up["compose up -d"]
+  Up --> HealthPoll["poll API health"]
+  HealthPoll --> Migrate["migrate.js bootstrap<br/>+ run-migrations.js"]
+  Migrate --> Seed["seed programs + roster<br/>(empty DB only)"]
+
+  Dispatch --> FeJob["frontend job — ubuntu-latest"]
+  FeJob --> BuildSpa["npm ci + build SPA<br/>VITE_API_URL=/api/v1 (FR-09)"]
+  BuildSpa --> S3Sync["aws s3 sync → kapwa-software-frontend<br/>+ CloudFront invalidation"]
+
+  HealthPoll -.->|"not healthy"| Warn["WARNING — check compose logs api"]
   Migrate -.->|"non-zero"| Warn2["WARNING — run manually"]
-  Inc -.->|"non-zero"| Warn2
 ```
 
 ## 4. Diagram Narrative
 
-**Request path.** A browser request arrives at the droplet's public IP on `:8090` (HTTP development/health probing) or `:443` (HTTPS production, per the commented production stanza in infra/Caddyfile). Caddy applies rate limiting (600 events/minute per remote host) and security headers, then branches: `/api/*` and `/socket.io/*` are reverse-proxied to `api:3000` (FR-01) with `X-Forwarded-*` headers; `/health` is answered directly; everything else falls through to `client:80`, where nginx serves the static SPA bundle built by the multi-stage Dockerfile (FR-02). The API — reachable only inside the compose network — talks to Postgres on `db:5432` (audited via pgaudit, FR-04) and Minio on `minio:9000` for document storage (FR-05). Postgres is additionally published on the host `5432` so `infra/backup/backup.sh` can `pg_dump` it (FR-10).
+**Request path.** A browser request for `kapwa.software` terminates at CloudFront (FR-01), which serves the SPA bundle from the private S3 frontend bucket through an origin access control and proxies `/api/*` and `/socket.io/*` to the EC2 origin `origin.kapwa.software:3000` over HTTP inside AWS (FR-02). The API container — the only service on the host (FR-03) — opens a TLS connection to RDS Postgres (`DB_SSL=true`, FR-05) and signs SigV4 requests to the `kapwa-prod-*` S3 buckets for documents (FR-06). Nothing but CloudFront can reach port 3000, and RDS accepts connections only from the API host's security group, so neither the API nor the database is publicly reachable (FR-04, FR-05).
 
-**Startup order.** Compose starts `db` and `minio` first; the API's `depends_on: condition: service_healthy` (FR-03) holds it until both pass their healthchecks; Caddy's `depends_on` holds it until the API is healthy and the client has started (FR-09). All services restart `unless-stopped` (FR-07) and named volumes persist state across recreation (FR-06).
+**Deploy pipeline.** A push to `main` runs CI; when it succeeds, `deploy-aws.yml` starts two jobs (FR-10). The `api` job executes on the self-hosted runner installed on the EC2 host itself: it `rsync`s the repository into `/opt/kapwa` while preserving the host's secret file (FR-11) and then runs `deploy-aws.sh api`, which validates the environment, rebuilds the image, restarts the stack, and applies migrations plus reference seeds (FR-08). Because the runner dials out to GitHub, no inbound SSH is ever opened for deployments. The `frontend` job runs on a GitHub-hosted runner, builds the SPA with `VITE_API_URL=/api/v1`, syncs it to the frontend bucket and invalidates CloudFront (FR-09). Both jobs are idempotent: re-running them converges the deployment, and migration/seed failures warn rather than abort the API job except on a fresh-database bootstrap failure, where the API exits so the platform can retry cleanly.
 
-**Deploy sequence.** `deploy.sh` (FR-08) validates the production env file and required secrets, builds with `--pull`, starts the stack, polls API health through Caddy on `:8090`, then applies the schema via `migrate.js` (300 s timeout, canonical fresh bootstrap — also run at API startup) followed by `run-migrations.js` as a best-effort no-op for fresh deployments that only applies pending upgrades on existing databases; seeds run only against an empty users table. Both migration steps warn rather than abort, keeping the deploy idempotent.
+**State and recovery.** Relational state lives in RDS (single-AZ, storage-encrypted, 1-day automated backups, FR-05); documents live in S3 (versioning/durability of the service, FR-06); `infra/backup/backup.sh` adds logical dumps into `kapwa-prod-backups` (FR-07). The API host is stateless — the container can be recreated from the image at any time — so the only irreplaceable state is RDS and S3, both managed services.
 
-**Mapping.** The main diagram's edges and annotations carry the FR ids from Section 2; the second diagram renders the FR-08 deploy sequence.
+**Mapping.** The main diagram's edges and annotations carry the FR ids from Section 2; the second diagram renders the FR-08/FR-09/FR-10 pipeline. The runtime layering behind these boxes is documented in `08-system-architecture.md`.
 
 ## 5. Cross-References
 
 | Item | Location |
 |------|----------|
-| Compose topology — 5 services (db, api, minio, client, caddy), container names `kapwa-*`, ports `8090:80`/`443:443`/`5432:5432`, exposes 3000/9000/9001/80, volumes `kapwa-data`/`minio-data`/`caddy-data`, `restart: unless-stopped`, `TZ: Asia/Manila`, `env_file: ../infra/.env.production`, healthchecks + `depends_on: condition: service_healthy`, db command with `shared_preload_libraries=pgaudit` | `kapwa-server/docker-compose.yml` |
+| AWS compose topology — single `kapwa-api` service, `ports: 3000:3000`, healthcheck `/api/v1/health`, `env_file: ../infra/.env.production`, no db/minio/client/caddy services | `kapwa-server/docker-compose.aws.yml` |
+| AWS deploy script — modes `all\|api\|frontend`; `api` builds + `compose up` + migrate + seeds; `frontend` builds the SPA + S3 sync + CloudFront invalidation; defaults (`AWS_HOST=ubuntu@3.1.190.141`, `/opt/kapwa`, `kapwa-software-frontend`, distribution `E121A545H6DE4O`, region `ap-southeast-1`) | `deploy-aws.sh` |
+| CI workflow — server jest against a Postgres service, client vitest + coverage | `.github/workflows/ci.yml` |
+| Deploy workflow — `workflow_run` on CI success; `api` job on the self-hosted `kapwa-aws` runner (rsync to `/opt/kapwa`, `deploy-aws.sh api`); `frontend` job on `ubuntu-latest` (S3 + invalidation via scoped secrets); `workflow_dispatch` for manual runs | `.github/workflows/deploy-aws.yml` |
+| Provisioning runbook — VPC/SGs, RDS instance, S3 buckets, IAM/OIDC, CloudFront + OAC, runner installation, secrets, DNS | `docs/DEPLOYMENT-AWS.md` |
+| Object storage in code — MinIO-compatible client signing against S3 in production (`MINIO_ENDPOINT`, `MINIO_REGION`, `MINIO_BUCKET_PREFIX=kapwa-prod`) | `kapwa-server/src/minio/minio.service.ts` |
 | API image — `node:20-alpine` multi-stage, production stage runs `node dist/main.js`, `EXPOSE 3000`, non-root `appuser` | `kapwa-server/Dockerfile` |
-| Client image — `node:20-alpine` build → `nginx:stable-alpine` production, `dist/` copied to `/usr/share/nginx/html`, `EXPOSE 80` | `kapwa-client/Dockerfile` |
-| Caddy reverse proxy — `:80` with `rate_limit`, security headers, `/api/*` + `/socket.io/*` → `api:3000`, `/health` → 200, fallback → `client:80`; production TLS stanza commented | `infra/Caddyfile` |
-| Deployment script — env validation, `build --pull`, `up -d`, health poll, `migrate.js` bootstrap (timeout 300), `run-migrations.js` best-effort, conditional seeding | `deploy.sh` |
-| Backup — `pg_dump` custom format + gzip against the db service, Minio `backups` bucket upload, rotation (7 daily / 4 weekly / 3 monthly) | `infra/backup/backup.sh`, `infra/backup/cron` |
+| Migration bootstrap at startup — `migrate()` runs before Nest boots (fresh-boot schema + marks migrations applied), then `run-migrations.js` applies pending upgrades | `kapwa-server/src/main.ts`, `kapwa-server/src/database/migrate.ts` |
+| Backup — `pg_dump` custom format + gzip, upload to the backups bucket, rotation (7 daily / 4 weekly / 3 monthly) | `infra/backup/backup.sh`, `infra/backup/cron` |
+| Legacy single-host model (superseded) — Caddy + five containers (db, api, minio, client, caddy) on one Docker host, `8090:80`/`443:443` | `docker-compose.yml`, `infra/Caddyfile`, `deploy.sh`, `docs/DEPLOYMENT.md` |
