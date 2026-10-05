@@ -37,6 +37,7 @@ Desktop.ini
 
 # Testing
 .playwright-mcp/
+.playwright-cli/
 
 # Temp
 tmp/

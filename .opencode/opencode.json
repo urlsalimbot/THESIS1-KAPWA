@@ -3,22 +3,11 @@
   "default_agent": "explore",
   "agent": {
     "e2e-tester": {
-      "description": "Automated E2E + integration testing using Playwright MCP and vitest. Use when the user says run tests, e2e, browser test, test the UI, automated testing, or asks about test coverage.",
+      "description": "Automated E2E + integration testing using the playwright-cli skill and vitest. Load the playwright-cli skill for all browser interaction. Use when the user says run tests, e2e, browser test, test the UI, automated testing, or asks about test coverage.",
       "mode": "subagent",
       "permission": {
         "edit": "deny",
         "bash": "allow"
-      }
-    }
-  },
-  "mcp": {
-    "playwright": {
-      "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp"],
-      "enabled": true,
-      "env": {
-        "BROWSER": "chromium",
-        "HEADLESS": "true"
       }
     }
   },
