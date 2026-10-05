@@ -42,11 +42,11 @@ const ROSTER: SeedAccount[] = [
   // 1 admin
   { email: 'admin@mswdo.test', password: 'admin123', role: 'admin', firstName: 'Rosario', middleName: 'G.', lastName: 'Mendoza', phone: '09171000001' },
   // 5 social workers — city-wide scope, no single primary (3NF child table)
-  { email: 'worker1@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Juan', lastName: 'Dela Cruz', phone: '09171000002', permittedBarangays: BARANGAYS.map(b => b.name) },
-  { email: 'worker2@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Lorna', middleName: 'B.', lastName: 'Santos', phone: '09171000003', permittedBarangays: BARANGAYS.map(b => b.name) },
-  { email: 'worker3@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Rosalie', middleName: 'C.', lastName: 'Camacho', phone: '09171000004', permittedBarangays: BARANGAYS.map(b => b.name) },
-  { email: 'worker4@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Dante', middleName: 'A.', lastName: 'Villanueva', phone: '09171000007', permittedBarangays: BARANGAYS.map(b => b.name) },
-  { email: 'worker5@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Marites', middleName: 'S.', lastName: 'Ramos', phone: '09171000008', permittedBarangays: BARANGAYS.map(b => b.name) },
+  { email: 'worker1@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Juan', middleName: 'Dizon', lastName: 'Dela Cruz', phone: '09171000002', permittedBarangays: BARANGAYS.map(b => b.name) },
+  { email: 'worker2@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Lorna', middleName: 'Bautista', lastName: 'Santos', phone: '09171000003', permittedBarangays: BARANGAYS.map(b => b.name) },
+  { email: 'worker3@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Rosalie', middleName: 'Custodio', lastName: 'Camacho', phone: '09171000004', permittedBarangays: BARANGAYS.map(b => b.name) },
+  { email: 'worker4@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Dante', middleName: 'Villamor', lastName: 'Villanueva', phone: '09171000007', permittedBarangays: BARANGAYS.map(b => b.name) },
+  { email: 'worker5@mswdo.test', password: 'worker123', role: 'social_worker', firstName: 'Marites', middleName: 'Rondina', lastName: 'Ramos', phone: '09171000008', permittedBarangays: BARANGAYS.map(b => b.name) },
   // 13 barangay coordinators — exactly one per barangay
   ...BARANGAYS.map((b, i) => ({
     email: `coordinator.${b.slug}@mswdo.test`,
@@ -58,12 +58,13 @@ const ROSTER: SeedAccount[] = [
     assignedBarangay: b.name,
     permittedBarangays: [b.name],
   })),
-  // 5 claimants — each with a linked case (see CLAIMANT_PEOPLE below)
-  { email: 'pedro.claimant@test.com', password: 'claimant123', role: 'claimant', firstName: 'Pedro', middleName: 'P.', lastName: 'Reyes', phone: '09171000005', person: { surname: 'Reyes', firstName: 'Pedro' } },
-  { email: 'ana.claimant@test.com', password: 'claimant123', role: 'claimant', firstName: 'Ana Marie', middleName: 'L.', lastName: 'Fernandez', phone: '09171000006', person: { surname: 'Fernandez', firstName: 'Ana Marie' } },
-  { email: 'nena.castillo@test.com', password: 'claimant123', role: 'claimant', firstName: 'Nena', middleName: 'C.', lastName: 'Castillo', phone: '09171000009', person: { surname: 'Castillo', firstName: 'Nena' } },
-  { email: 'rico.bautista@test.com', password: 'claimant123', role: 'claimant', firstName: 'Rico', middleName: 'B.', lastName: 'Bautista', phone: '09171000010', person: { surname: 'Bautista', firstName: 'Rico' } },
-  { email: 'carla.dimagiba@test.com', password: 'claimant123', role: 'claimant', firstName: 'Carla', middleName: 'D.', lastName: 'Dimagiba', phone: '09171000011', person: { surname: 'Dimagiba', firstName: 'Carla' } },
+  // 5 claimants — each with a linked case (see CLAIMANT_PEOPLE below);
+  // middle names are full names, not initials (schema: middle_name TEXT)
+  { email: 'pedro.claimant@test.com', password: 'claimant123', role: 'claimant', firstName: 'Pedro', middleName: 'Poblete', lastName: 'Reyes', phone: '09171000005', person: { surname: 'Reyes', firstName: 'Pedro' } },
+  { email: 'ana.claimant@test.com', password: 'claimant123', role: 'claimant', firstName: 'Ana Marie', middleName: 'Lontok', lastName: 'Fernandez', phone: '09171000006', person: { surname: 'Fernandez', firstName: 'Ana Marie' } },
+  { email: 'nena.castillo@test.com', password: 'claimant123', role: 'claimant', firstName: 'Nena', middleName: 'Cruz', lastName: 'Castillo', phone: '09171000009', person: { surname: 'Castillo', firstName: 'Nena' } },
+  { email: 'rico.bautista@test.com', password: 'claimant123', role: 'claimant', firstName: 'Rico', middleName: 'Buenaventura', lastName: 'Bautista', phone: '09171000010', person: { surname: 'Bautista', firstName: 'Rico' } },
+  { email: 'carla.dimagiba@test.com', password: 'claimant123', role: 'claimant', firstName: 'Carla', middleName: 'Dimayuga', lastName: 'Dimagiba', phone: '09171000011', person: { surname: 'Dimagiba', firstName: 'Carla' } },
 ];
 
 interface ClaimantPerson {
@@ -83,11 +84,12 @@ interface ClaimantPerson {
 }
 
 const CLAIMANT_PEOPLE: ClaimantPerson[] = [
-  { surname: 'Reyes', firstName: 'Pedro', middleName: 'P', gender: 'Male', dob: '1988-03-21', phone: '09171000005', address: 'Bigte, Norzagaray', occupation: 'Tricycle Driver', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 7000, category: 'Indigent', serviceRequested: 'AICS — Assistance to Individuals in Crisis Situation' },
-  { surname: 'Fernandez', firstName: 'Ana Marie', middleName: 'L', gender: 'Female', dob: '1982-02-25', phone: '09171000006', address: 'FVR, Norzagaray', occupation: 'Sari-sari Store Owner', civilStatus: 'Single', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 8000, category: 'Family Head and Other Needy Adult', serviceRequested: 'AICS — Assistance to Individuals in Crisis Situation' },
-  { surname: 'Castillo', firstName: 'Nena', middleName: 'C', gender: 'Female', dob: '1975-06-14', phone: '09171000009', address: 'Poblacion, Norzagaray', occupation: 'Housewife', civilStatus: 'Widowed', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 4500, category: 'Family Head and Other Needy Adult', serviceRequested: 'PWD Assistance' },
-  { surname: 'Bautista', firstName: 'Rico', middleName: 'B', gender: 'Male', dob: '1969-11-02', phone: '09171000010', address: 'Minuyan, Norzagaray', occupation: 'Farmer', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 5000, category: 'Indigent', serviceRequested: 'Social Pension for Indigent Senior Citizens' },
-  { surname: 'Dimagiba', firstName: 'Carla', middleName: 'D', gender: 'Female', dob: '1993-04-19', phone: '09171000011', address: 'San Mateo, Norzagaray', occupation: 'Street Vendor', civilStatus: 'Single', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 6000, category: 'Indigent', serviceRequested: 'Sustainable Livelihood Program' },
+  // middle_name is the full middle name (maternal surname), never an initial.
+  { surname: 'Reyes', firstName: 'Pedro', middleName: 'Poblete', gender: 'Male', dob: '1988-03-21', phone: '09171000005', address: 'Bigte, Norzagaray', occupation: 'Tricycle Driver', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 7000, category: 'Indigent', serviceRequested: 'AICS — Assistance to Individuals in Crisis Situation' },
+  { surname: 'Fernandez', firstName: 'Ana Marie', middleName: 'Lontok', gender: 'Female', dob: '1982-02-25', phone: '09171000006', address: 'FVR, Norzagaray', occupation: 'Sari-sari Store Owner', civilStatus: 'Single', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 8000, category: 'Family Head and Other Needy Adult', serviceRequested: 'AICS — Assistance to Individuals in Crisis Situation' },
+  { surname: 'Castillo', firstName: 'Nena', middleName: 'Cruz', gender: 'Female', dob: '1975-06-14', phone: '09171000009', address: 'Poblacion, Norzagaray', occupation: 'Housewife', civilStatus: 'Widowed', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 4500, category: 'Family Head and Other Needy Adult', serviceRequested: 'PWD Assistance' },
+  { surname: 'Bautista', firstName: 'Rico', middleName: 'Buenaventura', gender: 'Male', dob: '1969-11-02', phone: '09171000010', address: 'Minuyan, Norzagaray', occupation: 'Farmer', civilStatus: 'Married', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 5000, category: 'Indigent', serviceRequested: 'Social Pension for Indigent Senior Citizens' },
+  { surname: 'Dimagiba', firstName: 'Carla', middleName: 'Dimayuga', gender: 'Female', dob: '1993-04-19', phone: '09171000011', address: 'San Mateo, Norzagaray', occupation: 'Street Vendor', civilStatus: 'Single', placeOfBirth: 'Norzagaray, Bulacan', estimatedMonthlyIncome: 6000, category: 'Indigent', serviceRequested: 'Sustainable Livelihood Program' },
 ];
 
 async function seedAccountsAndAssignments(): Promise<void> {
@@ -103,6 +105,13 @@ async function seedAccountsAndAssignments(): Promise<void> {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,true)
          ON CONFLICT (email) DO NOTHING`,
         [acct.email, hash, acct.role, acct.firstName, acct.middleName ?? null, acct.lastName, null, acct.phone],
+      );
+      // Converge identity fields on re-runs even when the row already exists
+      // (ON CONFLICT above does nothing) — middle_name is a name, not an
+      // initial, and earlier runs must be repaired.
+      await q.query(
+        `UPDATE users SET first_name = $2, middle_name = $3, last_name = $4, phone = $5 WHERE email = $1`,
+        [acct.email, acct.firstName, acct.middleName ?? null, acct.lastName, acct.phone],
       );
     }
     // Barangay assignments (3NF child table) — delete + insert so a re-run
@@ -174,13 +183,22 @@ async function seedClaimantCases(workerToken: string, workerId: string): Promise
   for (const p of CLAIMANT_PEOPLE) {
     // Idempotency: the API search masks phone (PII), so check the DB directly.
     const dup = await AppDataSource.query(
-      `SELECT b.id FROM beneficiaries b JOIN persons p ON p.id = b.person_id
+      `SELECT b.id, p.id AS person_id FROM beneficiaries b JOIN persons p ON p.id = b.person_id
        LEFT JOIN person_contacts pc ON pc.person_id = p.id AND pc.contact_type = 'phone'
        WHERE p.surname = $1 AND pc.value = $2 LIMIT 1`,
       [p.surname, p.phone],
     );
     if (dup[0]?.id) {
-      console.log(`skip ${p.firstName} ${p.surname} (already exists)`);
+      // Converge on the configured middle name even when the person already
+      // exists (earlier runs seeded initials) — middle_name is a name, not
+      // an initial.
+      if (dup[0].person_id) {
+        await AppDataSource.query(
+          `UPDATE persons SET middle_name = $2 WHERE id = $1`,
+          [dup[0].person_id, p.middleName],
+        );
+      }
+      console.log(`skip ${p.firstName} ${p.surname} (already exists) — middle name synced`);
       continue;
     }
     const personInput = {
