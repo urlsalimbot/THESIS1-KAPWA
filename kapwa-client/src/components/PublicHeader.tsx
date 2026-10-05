@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ROLE_REDIRECT_MAP } from '@/lib/role-access';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { HandHeart, Menu, X } from 'lucide-react';
+import { HandHeart, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from 'react-i18next';
@@ -68,13 +68,8 @@ export function PublicHeader({ user, loading }: PublicHeaderProps) {
                   KAPWA
                 </span>
               </Link>
-              <button
-                className="touch-sm flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
-                onClick={() => setMobileOpen(false)}
-                aria-label={t('public.closeMenu', 'Close menu')}
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
+              {/* The close button is SheetContent's own (top-right) — a second
+                  one here rendered two X buttons on mobile. */}
             </div>
             <nav className="flex flex-col gap-1 p-4">
               {navLinks.map((link) => {

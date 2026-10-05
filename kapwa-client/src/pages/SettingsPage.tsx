@@ -242,6 +242,8 @@ function ProfileTab() {
   const [confirmPw, setConfirmPw] = useState('');
   const [pwError, setPwError] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
 
   const changePassword = useSWRMutation(
     'change-password',
@@ -451,7 +453,26 @@ function ProfileTab() {
           <p className="text-xs text-muted-foreground">{t('settings.passwordMinHint', 'Password must be at least 8 characters.')}</p>
           <div className="space-y-1.5">
             <label htmlFor="current-pw" className="text-xs text-muted-foreground font-medium">{t('settings.currentPassword', 'Current Password')}</label>
-            <Input id="current-pw" type="password" autoComplete="current-password" placeholder={t('settings.currentPasswordPlaceholder', 'Enter current password')} value={currentPw} onChange={e => setCurrentPw(e.target.value)} className="h-9" />
+            <div className="relative">
+              <Input
+                id="current-pw"
+                type={showCurrentPw ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder={t('settings.currentPasswordPlaceholder', 'Enter current password')}
+                value={currentPw}
+                onChange={e => setCurrentPw(e.target.value)}
+                className="pr-10 h-9"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPw(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                aria-label={showCurrentPw ? t('settings.hidePassword', 'Hide password') : t('settings.showPassword', 'Show password')}
+                aria-pressed={showCurrentPw}
+              >
+                {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -479,7 +500,26 @@ function ProfileTab() {
             </div>
             <div className="space-y-1.5">
               <label htmlFor="confirm-pw" className="text-xs text-muted-foreground font-medium">{t('settings.confirmNewPassword', 'Confirm New Password')}</label>
-              <Input id="confirm-pw" type="password" autoComplete="new-password" placeholder={t('settings.repeatPassword', 'Repeat new password')} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className="h-9" />
+              <div className="relative">
+                <Input
+                  id="confirm-pw"
+                  type={showConfirmPw ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder={t('settings.repeatPassword', 'Repeat new password')}
+                  value={confirmPw}
+                  onChange={e => setConfirmPw(e.target.value)}
+                  className="pr-10 h-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPw(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                  aria-label={showConfirmPw ? t('settings.hidePassword', 'Hide password') : t('settings.showPassword', 'Show password')}
+                  aria-pressed={showConfirmPw}
+                >
+                  {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
           </div>
           {pwError && (

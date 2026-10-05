@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
 import { RegisterPage } from './RegisterPage';
@@ -70,6 +71,21 @@ describe('RegisterPage', () => {
   it('renders Password field', () => {
     render(<BrowserRouter><RegisterPage /></BrowserRouter>);
     expect(screen.getByText('Password')).toBeTruthy();
+  });
+
+  it('offers show-password toggles for the password and confirm fields', () => {
+    render(<BrowserRouter><RegisterPage /></BrowserRouter>);
+    const toggles = screen.getAllByRole('button', { name: /show password/i });
+    expect(toggles).toHaveLength(2);
+    expect(screen.getByPlaceholderText('Password').getAttribute('type')).toBe('password');
+    expect(screen.getByPlaceholderText('Confirm Password').getAttribute('type')).toBe('password');
+
+    fireEvent.click(toggles[0]);
+    fireEvent.click(toggles[1]);
+
+    expect(screen.getByPlaceholderText('Password').getAttribute('type')).toBe('text');
+    expect(screen.getByPlaceholderText('Confirm Password').getAttribute('type')).toBe('text');
+    expect(screen.getAllByRole('button', { name: /hide password/i })).toHaveLength(2);
   });
 
   it('shows a proactive password length hint before any submit', () => {

@@ -12,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Loader2, HandHeart, User, Mail, MapPin, Lock } from 'lucide-react';
+import { Loader2, HandHeart, User, Mail, MapPin, Lock, Eye, EyeOff } from 'lucide-react';
 import { api } from '../lib/api';
 import { AuthShell } from '@/components/public/AuthShell';
 
@@ -76,6 +76,8 @@ export function RegisterPage() {
   const [serverError, setServerError] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [emailDelivered, setEmailDelivered] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<RegisterValues>({
@@ -349,9 +351,25 @@ export function RegisterPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t('auth.passwordLabel', 'Password')}</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder={t('auth.passwordLabel', 'Password')} className="h-11 md:h-10" {...field} />
-                        </FormControl>
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder={t('auth.passwordLabel', 'Password')}
+                              className="h-11 md:h-10 pr-10"
+                              {...field}
+                            />
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
+                            aria-pressed={showPassword}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
                         {/* Proactive length hint: don't wait for an invalid submit
                             to teach the constraint. Replaced by the error message
                             once validation actually fires. */}
@@ -368,9 +386,25 @@ export function RegisterPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t('auth.confirmPassword', 'Confirm Password')}</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder={t('auth.confirmPassword', 'Confirm Password')} className="h-11 md:h-10" {...field} />
-                        </FormControl>
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              type={showConfirmPassword ? 'text' : 'password'}
+                              placeholder={t('auth.confirmPassword', 'Confirm Password')}
+                              className="h-11 md:h-10 pr-10"
+                              {...field}
+                            />
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={showConfirmPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
+                            aria-pressed={showConfirmPassword}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

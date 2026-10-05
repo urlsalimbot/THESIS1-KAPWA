@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { SettingsPage } from './SettingsPage';
 import { BrowserRouter } from 'react-router-dom';
@@ -46,6 +46,27 @@ describe('SettingsPage', () => {
     const submit = screen.getByRole('button', { name: /change password/i });
     expect(submit.closest('form')).toBeInstanceOf(HTMLFormElement);
     expect(screen.getByLabelText(/current password/i).closest('form')).toBeInstanceOf(HTMLFormElement);
+  });
+
+  it('offers a show-password toggle on every change-password field', () => {
+    renderWithProviders(<SettingsPage />);
+    const form = screen.getByRole('button', { name: /change password/i }).closest('form') as HTMLFormElement;
+    // Scoped to this form, and anchored so /new password/ does not also match
+    // "Confirm New Password".
+    const current = within(form).getByLabelText(/current password/i);
+    const next = within(form).getByLabelText(/^new password$/i);
+    const confirm = within(form).getByLabelText(/confirm new password/i);
+    expect(current.getAttribute('type')).toBe('password');
+    expect(next.getAttribute('type')).toBe('password');
+    expect(confirm.getAttribute('type')).toBe('password');
+
+    const toggles = within(form).getAllByRole('button', { name: /show password/i });
+    expect(toggles).toHaveLength(3);
+    toggles.forEach(btn => fireEvent.click(btn));
+
+    expect(within(form).getByLabelText(/current password/i).getAttribute('type')).toBe('text');
+    expect(within(form).getByLabelText(/^new password$/i).getAttribute('type')).toBe('text');
+    expect(within(form).getByLabelText(/confirm new password/i).getAttribute('type')).toBe('text');
   });
 
   it('wraps the change-email controls in a real form', () => {

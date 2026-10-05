@@ -61,6 +61,16 @@ describe('PublicHeader', () => {
     expect(screen.getByText('Contact')).toBeTruthy();
   });
 
+  it('renders exactly one close control in the mobile drawer', async () => {
+    // The drawer's header used to render its own X on top of the one
+    // SheetContent already provides, so mobile users saw two close buttons.
+    const user = userEvent.setup();
+    renderHeader();
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    expect(screen.queryByRole('button', { name: /close menu/i })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /close/i })).toHaveLength(1);
+  });
+
   // The drawer trigger is `md:hidden`, so at md and up the only controls that
   // can be reached are the ones rendered outside the drawer. These two assert
   // exactly that, without opening the menu first — the drawer's contents are
