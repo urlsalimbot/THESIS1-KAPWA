@@ -10,6 +10,7 @@ import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity
 import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { User } from '../auth/user.entity';
 import { CaseEvent } from '../case-events/case-event.entity';
+import { InterventionRequiredDocument } from './intervention-required-document.entity';
 
 /**
  * Re-exported, not declared here: `CasesService` has to name the open steps in
@@ -107,6 +108,10 @@ export class CaseStepLocksService {
     // clause. Registered in `cases.module.ts` beside the others.
     @InjectRepository(CaseEvent)
     private readonly caseEvents: Repository<CaseEvent>,
+    // `intervention_required_documents` — the documentary minimum for ad-hoc
+    // crisis services (crisis mode). Registered in `cases.module.ts`.
+    @InjectRepository(InterventionRequiredDocument)
+    private readonly interventionDocs: Repository<InterventionRequiredDocument>,
     @Optional() private readonly auditLog?: AuditLogService,
   ) {}
 
@@ -297,7 +302,7 @@ export class CaseStepLocksService {
     // intervention (or the recorded decision) before this value is consulted.
     const requirementsMet =
       stepKey === 'interventions' && interventionCount > 0
-        ? await this.requirementsMet(caseId, c.requirementsChecklist)
+        ? await this.requirementsMet(caseId, c.requirementsChecklist, Boolean((c as any).crisisMode))
         : true;
     // The one extra query the referrals step needs, and only it needs it — the
     // same shape as the program query above, for the same reason.
@@ -474,21 +479,28 @@ export class CaseStepLocksService {
   private async requirementsMet(
     caseId: string,
     checklist: Record<string, boolean> | undefined,
+    crisisMode: boolean,
   ): Promise<boolean> {
     const programIds = await this.linkedProgramIds(caseId);
-    if (programIds.length === 0) return true;
-    // `requiredDocumentRows` is `eager: true`, so a plain `find` hands back
-    // whole programs and both of the getters the client reads stay derived from
-    // real rows rather than from a hand-built shape.
-    const programs = await this.programs.find({ where: { id: In(programIds) } });
-    // The `In` is the scoping the client does with `programIds.includes(p.id)`
-    // over a full program list: only the programs behind *this* case's
-    // interventions contribute keys, so a document some other program requires
-    // is not this case's requirement.
-    const requiredKeys = [...new Set(programs.flatMap((p) => this.requiredDocumentKeys(p)))];
-    if (requiredKeys.length === 0) return true;
+    const requiredKeys = new Set<string>();
+    if (programIds.length > 0) {
+      const programs = await this.programs.find({ where: { id: In(programIds) } });
+      for (const p of programs) {
+        for (const k of this.requiredDocumentKeys(p)) requiredKeys.add(k);
+      }
+    }
+    // In crisis mode, ad-hoc services (no program) carry their own documentary
+    // minimum — the intervention-anchored documents.
+    if (crisisMode) {
+      const adHocTypes = await this.adHocInterventionTypes(caseId);
+      if (adHocTypes.length > 0) {
+        const docs = await this.interventionDocs.find({ where: { interventionType: In(adHocTypes) } });
+        for (const d of docs) requiredKeys.add(d.documentKey);
+      }
+    }
+    if (requiredKeys.size === 0) return true;
     const met = checklist || {};
-    return requiredKeys.every((key) => met[key] === true);
+    return [...requiredKeys].every((key) => met[key] === true);
   }
 
   /**
@@ -505,6 +517,19 @@ export class CaseStepLocksService {
       [caseId],
     );
     return (rows as Array<{ program_id?: string | null }>).map((r) => r.program_id).filter(Boolean) as string[];
+  }
+
+  /**
+   * The distinct intervention types recorded without a program — the ad-hoc
+   * crisis services. Only these carry intervention-anchored documents, and
+   * only in crisis mode.
+   */
+  private async adHocInterventionTypes(caseId: string): Promise<string[]> {
+    const rows = await this.interventions.query(
+      'SELECT DISTINCT intervention_type FROM case_interventions WHERE case_id = $1 AND program_id IS NULL AND intervention_type IS NOT NULL',
+      [caseId],
+    );
+    return (rows as Array<{ intervention_type: string }>).map((r) => r.intervention_type);
   }
 
   /**

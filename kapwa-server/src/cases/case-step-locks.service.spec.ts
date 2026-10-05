@@ -12,7 +12,8 @@ import { Case } from './case.entity';
 import { CaseHistory } from './case-history.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { ProgramEnrollment } from '../case-enrollments/program-enrollment.entity';
-import { CaseEvent } from '../case-events/case-event.entity';import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
+import { CaseEvent } from '../case-events/case-event.entity';
+import { InterventionRequiredDocument } from './intervention-required-document.entity';import { InterAgencyReferral } from '../inter-agency-referrals/inter-agency-referral.entity';
 import { Program } from '../programs/program.entity';
 import { ProgramRequiredDocument } from '../programs/program-required-document.entity';
 import { HouseholdMembership } from '../beneficiaries/household-membership.entity';
@@ -130,6 +131,7 @@ describe('CaseStepLocksService', () => {
   let interventionRepo: { query: jest.Mock };
   let enrollmentRepo: { count: jest.Mock };
   let caseEventRepo: { count: jest.Mock };
+  let interventionDocsRepo: { find: jest.Mock };
   let auditLog: { log: jest.Mock };
 
   const swUser = {
@@ -167,6 +169,9 @@ describe('CaseStepLocksService', () => {
   const enrollmentCount = jest.fn().mockResolvedValue(0);
   // The non-cancelled case_events count the court_hearings step reads.
   const courtHearingCount = jest.fn().mockResolvedValue(0);
+  // The intervention-anchored documentary minimums the interventions step
+  // reads in crisis mode.
+  const interventionDocsFind = jest.fn().mockResolvedValue([]);
 
   /**
    * Stand in for the two queries the interventions step makes against the
@@ -208,6 +213,7 @@ describe('CaseStepLocksService', () => {
     programRepo = { find: programFind };
     enrollmentRepo = { count: enrollmentCount };
     caseEventRepo = { count: courtHearingCount };
+    interventionDocsRepo = { find: interventionDocsFind };
     // The insert half of the upsert: every builder call returns itself, and
     // `execute` hands back the row Postgres would have returned.
     const insertQb = {
@@ -262,6 +268,7 @@ describe('CaseStepLocksService', () => {
         { provide: getRepositoryToken(ProgramEnrollment), useValue: enrollmentRepo },
         { provide: getRepositoryToken(InterAgencyReferral), useValue: referralRepo },
         { provide: getRepositoryToken(CaseEvent), useValue: caseEventRepo },
+        { provide: getRepositoryToken(InterventionRequiredDocument), useValue: interventionDocsRepo },
       ],
     }).compile();
 
@@ -839,6 +846,37 @@ describe('CaseStepLocksService', () => {
     it('rejects an unknown step before the predicate could answer for it', async () => {
       await expect(service.lock('c1', 'bogus', swUser)).rejects.toThrow(BadRequestException);
       expect(findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('crisis-mode requirements', () => {
+    it('requires intervention-anchored documents for ad-hoc services in crisis mode', async () => {
+      // An ad-hoc medical_assistance in crisis mode must have its documents met.
+      findById.mockResolvedValue({ id: 'c1', status: 'enrolled', crisisMode: true });
+      interventionCount.mockResolvedValue(1);
+      // The intervention has no program → no program documents.
+      interventionQuery.mockResolvedValue([{ intervention_type: 'medical_assistance' }]);
+      // But intervention_required_documents has medical_assistance → medical_certificate.
+      interventionDocsFind.mockResolvedValue([{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }]);
+      // The checklist does not have it → requirementsMet = false → seal refused.
+      await expect(service.lock('c1', 'interventions', swUser)).rejects.toThrow(/not complete/i);
+    });
+
+    it('does not require intervention documents when crisis mode is off', async () => {
+      findById.mockResolvedValue({ id: 'c1', status: 'enrolled', crisisMode: false });
+      interventionCount.mockResolvedValue(1);
+      interventionQuery.mockResolvedValue([{ intervention_type: 'medical_assistance' }]);
+      interventionDocsFind.mockResolvedValue([{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }]);
+      // No program documents, no intervention documents (crisis off) → seal allowed.
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
+    });
+
+    it('allows the seal when intervention documents are met in crisis mode', async () => {
+      findById.mockResolvedValue({ id: 'c1', status: 'enrolled', crisisMode: true, requirementsChecklist: { medical_certificate: true } });
+      interventionCount.mockResolvedValue(1);
+      interventionQuery.mockResolvedValue([{ intervention_type: 'medical_assistance' }]);
+      interventionDocsFind.mockResolvedValue([{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }]);
+      await expect(service.lock('c1', 'interventions', swUser)).resolves.toBeDefined();
     });
   });
 });
