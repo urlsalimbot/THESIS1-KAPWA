@@ -23,7 +23,7 @@ export class CrisisModeAndInterventionDocuments0000000000084 implements Migratio
       ('burial_assistance', 'burial_permit'),
       ('educational_assistance', 'school_registration'),
       ('educational_assistance', 'report_card'),
-      ('transportation_assistance', 'travel_request'),
+      ('transport_assistance', 'travel_request'),
       ('shelter_assistance', 'shelter_request')`);
   }
 

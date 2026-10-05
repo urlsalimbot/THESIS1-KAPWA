@@ -68,7 +68,7 @@ Based on AICS practice — each crisis service type carries its minimum document
 | `burial_assistance` | `burial_permit` |
 | `educational_assistance` | `school_registration` |
 | `educational_assistance` | `report_card` |
-| `transportation_assistance` | `travel_request` |
+| `transport_assistance` | `travel_request` |
 | `shelter_assistance` | `shelter_request` |
 
 Intervention types with no seeded rows (e.g., `crisis_counseling`, `food_pack`, `financial_grant`) have **no documentary minimum** — they can be logged with just the GIS.

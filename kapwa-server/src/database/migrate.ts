@@ -113,6 +113,10 @@ export async function migrate() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
   await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_intervention_documents ON intervention_required_documents(intervention_type, document_key)`);
+  // Seed-key correction: the catalog vocabulary is `transport_assistance`, not
+  // `transportation_assistance` (see case-catalog.ts). Clears a row that an
+  // earlier boot seeded under the wrong key before re-seeding correctly.
+  await q.query(`DELETE FROM intervention_required_documents WHERE intervention_type = 'transportation_assistance'`);
   await q.query(`INSERT INTO intervention_required_documents (intervention_type, document_key)
     SELECT * FROM (VALUES
       ('medical_assistance', 'medical_certificate'),
@@ -121,7 +125,7 @@ export async function migrate() {
       ('burial_assistance', 'burial_permit'),
       ('educational_assistance', 'school_registration'),
       ('educational_assistance', 'report_card'),
-      ('transportation_assistance', 'travel_request'),
+      ('transport_assistance', 'travel_request'),
       ('shelter_assistance', 'shelter_request')
     ) AS v(intervention_type, document_key)
     WHERE NOT EXISTS (SELECT 1 FROM intervention_required_documents WHERE intervention_type = v.intervention_type AND document_key = v.document_key)`);
