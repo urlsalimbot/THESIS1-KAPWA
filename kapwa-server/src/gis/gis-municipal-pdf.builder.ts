@@ -173,7 +173,9 @@ export async function buildMunicipalGisPdf(data: GisPdfData): Promise<Buffer> {
 
   hero: {
     // ---- letterhead -------------------------------------------------------
-    const logoPath = path.join(__dirname, "assets", "norzagaray-bulacan-official-logo.png");
+    // The municipal paper form carries the DSWD logo (heart-in-hands) at the
+    // top left, not the municipal seal.
+    const logoPath = path.join(__dirname, "assets", "DSWD-Logo.png");
     if (fs.existsSync(logoPath)) {
       try {
         doc.image(logoPath, LEFT, 20, { width: 50, height: 50 });
