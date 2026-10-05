@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { PageShell } from '@/components/PageShell';
 import { buildPrefilledFamily } from '@/components/intake/prefillFamily';
 import { MatchCandidateCard, type MatchCandidate } from '@/components/intake/MatchCardSections';
+import { personFullName } from '../lib/format';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -165,7 +166,7 @@ export function IntakeReviewPage() {
       <div className="space-y-6">
         {filtered.map((c) => {
           const matched = c.matchedPerson ?? c.primaryBeneficiary;
-          const fullName = `${matched.firstName} ${matched.surname}`;
+          const fullName = personFullName(matched.firstName, matched.middleName, matched.surname);
           return (
             <MatchCandidateCard
               key={c.householdId}

@@ -4,6 +4,7 @@ import { statusLabel } from '@/i18n/display';
 import { stepperStatus } from '@/components/case-view/CaseStepper';
 import { useNavigate } from 'react-router-dom';
 import { queryKeys } from '../lib/query-keys';
+import { personFullName } from '../lib/format';
 import { ArrowRight, Check } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -30,7 +31,7 @@ interface ApprovalCase {
   requirementsChecklist?: Record<string, boolean>;
   certificateUrl?: string;
   pettyCashVoucherUrl?: string;
-  beneficiary?: { firstName?: string; surname?: string };
+  beneficiary?: { firstName?: string; middleName?: string; surname?: string };
   assignedWorkerId?: string;
   updatedAt: string;
   problemsPresented?: string;
@@ -112,7 +113,7 @@ export function ApprovalPipelinePage() {
                       <div className="min-w-0">
                         <span className="font-medium text-sm text-foreground block truncate">
                           {[
-                            c.beneficiary ? `${c.beneficiary.firstName || ''} ${c.beneficiary.surname || ''}`.trim() : '',
+                            c.beneficiary ? personFullName(c.beneficiary.firstName, c.beneficiary.middleName, c.beneficiary.surname) : '',
                             (c.serviceRequested || []).join(', '),
                           ].filter(Boolean).join(' - ') || c.controlNo}
                         </span>

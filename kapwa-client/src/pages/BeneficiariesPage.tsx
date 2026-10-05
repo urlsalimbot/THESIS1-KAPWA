@@ -1,5 +1,6 @@
 import { BARANGAYS, CLIENT_CATEGORIES } from '../lib/constants';
 import { computeAge } from '../lib/age';
+import { personFullName } from '../lib/format';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +40,7 @@ function BeneficiaryActions({ id }: { id: string }) {
 function mapBeneficiary(b: Record<string, unknown>): Beneficiary {
   return {
     id: b.id as string,
-    name: `${(b.firstName as string) || ''} ${(b.surname as string) || ''}`.trim(),
+    name: personFullName(b.firstName as string, b.middleName as string, b.surname as string, b.extension as string),
     age: computeAge(b.dob as string | undefined),
     barangay: (((b.household as Record<string, unknown> | undefined)?.barangay as string) || ((b.currentAddress as Record<string, string> | undefined)?.barangay) || ((b.address as string) || '').split(',').pop()?.trim() || '').trim(),
     householdSize: ((b.household as Record<string, unknown>)?.familyMemberCount as number) || 1,

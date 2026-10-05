@@ -613,7 +613,7 @@ export function CaseViewPage() {
   return (
     <PageShell
       title={t('cases.caseTitle', 'Case {{controlNo}}', { controlNo: caseData.controlNo })}
-      description={t('cases.beneficiaryOf', 'Beneficiary: {{name}}', { name: `${ben?.firstName || ''} ${ben?.surname || ''}` })}
+      description={t('cases.beneficiaryOf', 'Beneficiary: {{name}}', { name: personFullName(ben?.firstName, ben?.middleName, ben?.surname) })}
       backTo={{ label: t('cases.backToCases', 'Back to Cases'), onClick: () => navigate('/cases') }}
       actions={
         <div className="flex items-center gap-2">

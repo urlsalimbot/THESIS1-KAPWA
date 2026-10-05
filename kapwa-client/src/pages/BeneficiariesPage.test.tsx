@@ -7,8 +7,8 @@ import { BeneficiariesPage } from './BeneficiariesPage';
 
 const { mockBeneficiaries, mockApiGet } = vi.hoisted(() => ({
   mockBeneficiaries: [
-    { id: 'BEN-001', firstName: 'Juan', surname: 'Dela Cruz', barangay: 'Poblacion', status: 'active', category: 'Senior', phone: '09171234567' },
-    { id: 'BEN-002', firstName: 'Maria', surname: 'Santos', barangay: 'Poblacion', status: 'active', category: 'PWD', phone: '09189876543' },
+    { id: 'BEN-001', firstName: 'Juan', middleName: 'Dizon', surname: 'Dela Cruz', barangay: 'Poblacion', status: 'active', category: 'Senior', phone: '09171234567' },
+    { id: 'BEN-002', firstName: 'Maria', middleName: 'Soriano', surname: 'Santos', barangay: 'Poblacion', status: 'active', category: 'PWD', phone: '09189876543' },
   ],
   mockApiGet: vi.fn(),
 }));
@@ -45,8 +45,8 @@ describe('BeneficiariesPage', () => {
 
   it('renders beneficiary name from mock data', async () => {
     renderWithSWR(<BeneficiariesPage />);
-    expect(await screen.findByText('Juan Dela Cruz')).toBeTruthy();
-    expect(await screen.findByText('Maria Santos')).toBeTruthy();
+    expect(await screen.findByText('Juan D. Dela Cruz')).toBeTruthy();
+    expect(await screen.findByText('Maria S. Santos')).toBeTruthy();
   });
 
   it('renders search input for beneficiaries', async () => {
@@ -62,7 +62,7 @@ describe('BeneficiariesPage', () => {
 
   it('api.get is called with a path containing /beneficiaries on mount', async () => {
     renderWithSWR(<BeneficiariesPage />);
-    await screen.findByText('Juan Dela Cruz');
+    await screen.findByText('Juan D. Dela Cruz');
     expect(mockApiGet).toHaveBeenCalled();
     const lastCallArg = mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][0];
     expect(JSON.stringify(lastCallArg)).toContain('beneficiaries');
@@ -71,7 +71,7 @@ describe('BeneficiariesPage', () => {
   it('typing in the search input then clicking Search triggers a second api.get with a search param', async () => {
     renderWithSWR(<BeneficiariesPage />);
     // Wait for the initial mount fetch to complete
-    await screen.findByText('Juan Dela Cruz');
+    await screen.findByText('Juan D. Dela Cruz');
     const initialCallCount = mockApiGet.mock.calls.length;
     expect(initialCallCount).toBeGreaterThan(0);
 

@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addressNames } from "@/lib/psgc";
-import { formatDate } from '../lib/format';
+import { formatDate, personFullName } from '../lib/format';
 
 interface BeneficiaryDetail {
   id: string;
@@ -162,7 +162,7 @@ export function BeneficiaryViewPage() {
   // Breadcrumb should read the beneficiary's name, not the UUID.
   useEffect(() => {
     if (!id || !ben) return;
-    const name = `${ben.firstName || ''} ${ben.surname || ''}`.trim();
+    const name = personFullName(ben.firstName as string, ben.middleName as string, ben.surname as string);
     if (name) setBreadcrumbLabel(id, name);
   }, [id, ben]);
 

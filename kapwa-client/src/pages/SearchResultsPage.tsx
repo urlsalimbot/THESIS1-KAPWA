@@ -7,7 +7,7 @@ import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { formatDate } from '../lib/format';
+import { formatDate, personFullName } from '../lib/format';
 
 interface SearchResult {
   id: string;
@@ -28,7 +28,7 @@ function mapResult(raw: Record<string, unknown>): SearchResult {
   const age = dob ? (() => { const today = new Date(); const b = new Date(dob); let a = today.getFullYear() - b.getFullYear(); if (today < new Date(today.getFullYear(), b.getMonth(), b.getDate())) a--; return a; })() : 0;
   return {
     id: raw.id as string,
-    fullName: `${(raw.firstName as string) || ''} ${(raw.surname as string) || ''}`.trim(),
+    fullName: personFullName(raw.firstName as string, raw.middleName as string, raw.surname as string),
     controlNo: (raw.accessCardCode as string) || (raw.philsysNumber as string) || '',
     barangay: address.split(',').pop()?.trim() || '',
     address,

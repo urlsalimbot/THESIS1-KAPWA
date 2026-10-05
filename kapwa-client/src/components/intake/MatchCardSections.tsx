@@ -186,7 +186,7 @@ function MatchCompare({ candidate, intake, t }: { candidate: MatchCandidate; int
 }
 
 function HouseholdLine({ candidate, t }: { candidate: MatchCandidate; t: TFunction }) {
-  const head = `${candidate.primaryBeneficiary.firstName} ${candidate.primaryBeneficiary.surname}`;
+  const head = personFullName(candidate.primaryBeneficiary.firstName, candidate.primaryBeneficiary.middleName, candidate.primaryBeneficiary.surname);
   const barangay = candidate.primaryBeneficiary.currentAddress?.barangay || '—';
   // One text run on purpose: the line reads as a single fact, and assistive
   // tech announces it as one string rather than as two fragments.
@@ -351,7 +351,7 @@ export function MatchCandidateCard({
   const { t } = useTranslation();
   const band = confidenceBand(candidate.score, t);
   const matched = candidate.matchedPerson ?? candidate.primaryBeneficiary;
-  const fullName = `${matched.firstName} ${matched.surname}`;
+  const fullName = personFullName(matched.firstName, matched.middleName, matched.surname);
 
   return (
     <article

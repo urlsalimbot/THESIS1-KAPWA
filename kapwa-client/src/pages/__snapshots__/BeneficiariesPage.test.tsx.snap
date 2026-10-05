@@ -275,7 +275,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
-                  Juan Dela Cruz
+                  Juan D. Dela Cruz
                 </td>
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
@@ -356,7 +356,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
-                  Maria Santos
+                  Maria S. Santos
                 </td>
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
