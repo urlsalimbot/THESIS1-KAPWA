@@ -859,6 +859,7 @@ export class CasesService {
     if (data.courtDocketNumber !== undefined) c.courtDocketNumber = data.courtDocketNumber;
     // null clears the assignment (column is nullable; the entity type omits null).
     if (data.assignedWorkerId !== undefined) (c as any).assignedWorkerId = data.assignedWorkerId;
+    if (data.crisisMode !== undefined) (c as any).crisisMode = data.crisisMode;
     c.updatedAt = new Date();
     const saved = await this.caseRepo.save(c);
     if (data.assignedWorkerId !== undefined && data.assignedWorkerId !== prevWorker) {

@@ -208,6 +208,9 @@ export const CaseMetaSchema = z.object({
   // blocks move to the new worker (null clears the assignment and removes
   // the blocks).
   assignedWorkerId: z.string().uuid().nullable().optional(),
+  // Crisis mode: worker-toggled flag that reduces documentary requirements
+  // for ad-hoc services to intervention-anchored minimums.
+  crisisMode: z.boolean().optional(),
 });
 
 export type TransitionPlanInput = z.infer<typeof TransitionPlanSchema>;

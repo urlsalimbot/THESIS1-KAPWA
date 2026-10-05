@@ -1366,4 +1366,13 @@ describe('updateAssessmentV2 — case_assistances', () => {
       expect(syncMock.moveForCase).toHaveBeenCalledWith('case-1', null);
     });
   });
+
+  describe('crisis mode toggle', () => {
+    it('sets and clears crisis_mode via the meta endpoint', async () => {
+      repoMock.findOne = jest.fn().mockResolvedValue({ id: 'case-1', controlNo: 'MSWD-2026-00002', crisisMode: false, updatedAt: new Date() });
+      repoMock.save = jest.fn().mockImplementation((c) => Promise.resolve({ ...c, crisisMode: true }));
+      await service.updateCaseMeta('case-1', { crisisMode: true } as any, 'u1');
+      expect(repoMock.save).toHaveBeenCalledWith(expect.objectContaining({ crisisMode: true }));
+    });
+  });
 });
