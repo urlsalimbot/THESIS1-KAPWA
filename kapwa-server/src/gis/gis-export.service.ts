@@ -7,6 +7,10 @@ import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entit
 import { OrgService } from '../common/org.service';
 import { loadGisData } from './gis-export.loader';
 import { buildGisPdf } from './gis-pdf.builder';
+import { buildMunicipalGisPdf } from './gis-municipal-pdf.builder';
+
+/** GIS variations: the national DSWD sheet and the MSWDO municipal sheet. */
+export type GisForm = 'national' | 'municipal';
 
 @Injectable()
 export class GisExportService {
@@ -19,14 +23,16 @@ export class GisExportService {
     private readonly org: OrgService,
   ) {}
 
-  async generateGisPdf(caseId: string): Promise<Buffer> {
+  async generateGisPdf(caseId: string, form: GisForm = 'national'): Promise<Buffer> {
     const data = await loadGisData(
       { caseRepo: this.caseRepo, claimantRepo: this.claimantRepo, interventionRepo: this.interventionRepo },
       caseId,
     );
     data.officeName = await this.org.officeName();
-    const pdf = await buildGisPdf(data);
-    this.logger.warn(`GIS export: case ${caseId} (${data.controlNo}), ${pdf.length} bytes`);
+    const pdf = form === 'municipal' ? await buildMunicipalGisPdf(data) : await buildGisPdf(data);
+    this.logger.warn(
+      `GIS export (${form}): case ${caseId} (${data.controlNo}), ${pdf.length} bytes`,
+    );
     return pdf;
   }
 

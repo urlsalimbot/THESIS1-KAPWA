@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { CaseViewPage } from './CaseViewPage';
@@ -399,8 +400,22 @@ describe('CaseViewPage — GIS PDF', () => {
     mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
     renderWithSWR(<CaseViewPage />);
     const btn = await screen.findByRole('button', { name: /gis \(pdf\)/i });
-    btn.click();
+    // Radix opens the menu from a real pointer sequence.
+    await userEvent.click(btn);
+    // The button is a menu: the national DSWD sheet is one of two variations.
+    const national = await screen.findByRole('menuitem', { name: /national \(dswd\)/i });
+    await userEvent.click(national);
     expect(mockDownloadGisPdf).toHaveBeenCalledWith('C-001');
+  });
+
+  it('offers the municipal GIS variation', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'admin' } });
+    renderWithSWR(<CaseViewPage />);
+    const btn = await screen.findByRole('button', { name: /gis \(pdf\)/i });
+    await userEvent.click(btn);
+    const municipal = await screen.findByRole('menuitem', { name: /municipal \(mswdo\)/i });
+    await userEvent.click(municipal);
+    expect(mockDownloadGisPdf).toHaveBeenCalledWith('C-001', 'municipal');
   });
 });
 

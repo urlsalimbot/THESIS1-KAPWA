@@ -397,10 +397,11 @@ export async function downloadCsrPdf(caseId: string) {
   URL.revokeObjectURL(url);
 }
 
-export async function downloadGisPdf(caseId: string) {
+export async function downloadGisPdf(caseId: string, form: 'national' | 'municipal' = 'national') {
   const token = localStorage.getItem(TOKEN_KEY);
+  const query = form === 'municipal' ? '?form=municipal' : '';
   const res = await fetch(
-    `${API_BASE}/cases/${caseId}/gis-pdf`,
+    `${API_BASE}/cases/${caseId}/gis-pdf${query}`,
     { headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
   if (!res.ok) throw new Error(`GIS export failed: ${res.status}`);
@@ -408,7 +409,10 @@ export async function downloadGisPdf(caseId: string) {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
-  a.download = dispositionFilename(res, exportFileName('GIS', caseId));
+  a.download = dispositionFilename(
+    res,
+    exportFileName(form === 'municipal' ? 'GIS Municipal' : 'GIS', caseId),
+  );
   a.click();
   URL.revokeObjectURL(url);
 }

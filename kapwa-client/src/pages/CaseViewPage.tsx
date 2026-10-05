@@ -693,9 +693,23 @@ export function CaseViewPage() {
                     <FileText size={14} aria-hidden="true" /> {issuing === 'pcv' ? t('cases.issuing', 'Issuing…') : t('cases.issuePcv', 'Issue PCV')}
                   </Button>
                 )}
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadGisPdf(id!)}>
-                  <Download size={14} aria-hidden="true" /> {t('cases.gisPdf', 'GIS (PDF)')}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <Download size={14} aria-hidden="true" /> {t('cases.gisPdf', 'GIS (PDF)')}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {/* Two GIS variations: the national DSWD sheet and the
+                        MSWDO municipal sheet the office uses day to day. */}
+                    <DropdownMenuItem onClick={() => downloadGisPdf(id!)}>
+                      {t('cases.gisNational', 'National (DSWD)')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadGisPdf(id!, 'municipal')}>
+                      {t('cases.gisMunicipal', 'Municipal (MSWDO)')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" aria-label={t('cases.moreActions', 'More actions')}>

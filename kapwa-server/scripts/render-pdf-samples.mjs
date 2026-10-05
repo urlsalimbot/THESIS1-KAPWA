@@ -76,6 +76,7 @@ const { buildCertificateOfEligibilityPdf, buildPettyCashVoucherPdf } =
   loadBuilder('cases/case-documents.builder.js');
 const { buildIrfPdf } = loadBuilder('irf/irf-pdf.builder.js');
 const { buildGisPdf } = loadBuilder('gis/gis-pdf.builder.js');
+const { buildMunicipalGisPdf } = loadBuilder('gis/gis-municipal-pdf.builder.js');
 const { buildAccessCardPdf } = loadBuilder('access-cards/access-card-pdf.builder.js');
 const { buildSummaryReportPdf } = loadBuilder('reports/summary-report-pdf.builder.js');
 
@@ -186,6 +187,23 @@ const gisData = {
     { fullName: 'Dela Cruz, Maria L', relationship: 'Wife', age: 33, occupation: 'Tindera', income: 2500 },
   ],
   interventions: [{ provided: 'FOOD ASSISTANCE', amount: 3000, fundSource: '4Ps' }],
+};
+
+// Municipal variation: the same client, with the municipal form's extra
+// sections (problems presented, service catalogue, funds, other assistance).
+const municipalGisData = {
+  ...gisData,
+  clientCategory: 'Indigent People',
+  problemsPresented: 'Natigil sa trabaho dahil sa sakit; walang pambili ng gamot.',
+  natureOfService: ['medical_assistance', 'transport_assistance'],
+  modeFinancialAssistance: 'Cash',
+  sourceOfFund: 'Regular Funds',
+  legislatorSpecify: 'Hon. Sample Legislator',
+  otherAssistance: { food_pack: {}, used_clothing: {} },
+  interventions: [
+    { provided: 'medical_assistance', amount: 5000, fundSource: 'Regular Funds', modeOfDelivery: 'Cash' },
+    { provided: 'transport_assistance', amount: 1000, fundSource: 'Regular Funds', modeOfDelivery: 'Cash' },
+  ],
 };
 
 const accessCardData = {
@@ -303,6 +321,14 @@ const documents = [
     source: 'gis/gis-pdf.builder.ts',
     paper: 'A4',
     build: () => buildGisPdf(gisData),
+  },
+  {
+    n: '04b',
+    slug: '04b-municipal-general-intake-sheet',
+    label: 'General Intake Sheet (Municipal / MSWDO)',
+    source: 'gis/gis-municipal-pdf.builder.ts',
+    paper: 'A4',
+    build: () => buildMunicipalGisPdf(municipalGisData),
   },
   {
     n: '05',

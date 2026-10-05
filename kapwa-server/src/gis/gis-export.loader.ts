@@ -27,6 +27,21 @@ function addressOf(person: any): GisAddressData {
   };
 }
 
+/** Provincial/home address line, when the person has one on file. */
+function provincialAddressOf(person: any): string | undefined {
+  const addr = Array.isArray(person?.addresses)
+    ? person.addresses.find((a: any) => a.addressType === 'provincial')
+    : null;
+  if (!addr) return undefined;
+  const parts = [addr.raw, addr.barangay, addr.city, addr.province]
+    .map((v: unknown) => asText(v).trim())
+    .filter(Boolean);
+  // De-duplicate the common case where `raw` already contains the full line.
+  const raw = asText(addr.raw).trim();
+  const line = parts.filter(p => p === raw || !raw.includes(p)).join(', ');
+  return line || undefined;
+}
+
 export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Promise<GisPdfData> {
   const c = await deps.caseRepo.findOne({
     where: { id: caseId },
@@ -37,6 +52,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
       'beneficiary.household.members',
       'beneficiary.household.members.person',
       'assignedWorker',
+      'assistances',
     ],
   });
   if (!c) throw new NotFoundException('Case not found');
@@ -94,6 +110,14 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
     assignedWorkerName: asText(c.assignedWorkerName) || c.assignedWorker?.fullName || null,
     approvedByRole: asText(c.approvedByRole) || null,
     assessment: asText(c.socialWorkerAssessment) || undefined,
+    problemsPresented: asText(c.problemsPresented) || undefined,
+    natureOfService: Array.isArray(c.natureOfService)
+      ? c.natureOfService.map((s: unknown) => asText(s)).filter(Boolean)
+      : undefined,
+    modeFinancialAssistance: asText(c.modeFinancialAssistance) || undefined,
+    sourceOfFund: asText(c.sourceOfFund) || undefined,
+    legislatorSpecify: asText(c.legislatorSpecify) || undefined,
+    otherAssistance: (c.otherAssistance as Record<string, unknown> | undefined) || undefined,
     beneficiary: {
       surname: asText(person?.surname),
       firstName: asText(person?.firstName),
@@ -109,6 +133,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
       phone: person?.phone ?? null,
       philsysNumber: asText(person?.philsysNumber) || undefined,
       address: beneficiaryPerson.address,
+      provincialAddress: provincialAddressOf(person),
     },
     claimant: {
       surname: asText(claimantLink?.claimant?.surname),
@@ -123,6 +148,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
       income: claimantLink?.claimant?.estimatedMonthlyIncome != null ? Number(claimantLink.claimant.estimatedMonthlyIncome) : undefined,
       phone: claimantLink?.claimant?.phone ?? null,
       address: claimantPerson.address,
+      provincialAddress: provincialAddressOf(claimantLink?.claimant),
       relationshipToBeneficiary: asText(claimantLink?.relationship) || undefined,
     },
     familyMembers,
@@ -130,6 +156,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
       provided: asText(i.serviceName) || asText(i.programId),
       amount: i.amount != null ? Number(i.amount) : undefined,
       fundSource: asText(i.fundSource) || undefined,
+      modeOfDelivery: asText(i.modeOfDelivery) || undefined,
     })),
   };
 }

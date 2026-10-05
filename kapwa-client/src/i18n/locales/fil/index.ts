@@ -722,6 +722,8 @@ const fil: EnLocale = {
     "caseHistory": "Kasaysayan ng Kaso",
     "caseStudyReport": "Case Study Report",
     "gisPdf": "GIS (PDF)",
+    "gisNational": "Pambansa (DSWD)",
+    "gisMunicipal": "Munisipal (MSWDO)",
     "caseTitle": "Kaso {{controlNo}}",
     "category": "Kategorya",
     "caseCategory": "Kategorya ng Kaso",

@@ -1206,6 +1206,8 @@ const en = {
     "caseHistory": "Case History",
     "caseStudyReport": "Case Study Report",
     "gisPdf": "GIS (PDF)",
+    "gisNational": "National (DSWD)",
+    "gisMunicipal": "Municipal (MSWDO)",
     "caseTitle": "Case {{controlNo}}",
     "category": "Category",
     "caseCategory": "Case Category",

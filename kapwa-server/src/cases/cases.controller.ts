@@ -388,12 +388,20 @@ export class CasesController {
 
   @Get(':id/gis-pdf')
   @Roles('admin', 'social_worker')
-  async downloadGisPdf(@Param('id') id: string, @Res() res: any) {
-    const pdf = await this.gisExportService.generateGisPdf(id);
+  async downloadGisPdf(
+    @Param('id') id: string,
+    @Res() res: any,
+    @Query('form') form?: string,
+  ) {
+    // Two GIS variations: the national DSWD sheet (default) and the MSWDO
+    // municipal sheet. An unknown value falls back to the national form.
+    const variation = form === 'municipal' ? 'municipal' : 'national';
+    const pdf = await this.gisExportService.generateGisPdf(id, variation);
     const controlNo = await this.gisExportService.controlNo(id);
+    const label = variation === 'municipal' ? 'GIS Municipal' : 'GIS';
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${exportFileName('GIS', controlNo)}"`,
+      'Content-Disposition': `attachment; filename="${exportFileName(label, controlNo)}"`,
       'Content-Length': pdf.length,
     });
     res.end(pdf);
