@@ -2,7 +2,7 @@ import { Separator } from '@/components/ui/separator';
 import { User, Calendar, Briefcase, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { addressNames } from '@/lib/psgc';
-import { formatDate } from '../../lib/format';
+import { formatDate, personFullName } from '../../lib/format';
 
 interface StepEnrollmentProps {
   caseData: any;
@@ -90,7 +90,7 @@ export function StepEnrollment({ caseData }: StepEnrollmentProps) {
           <div className="px-4 py-3 space-y-2 text-sm">
             <div>
               <span className="text-muted-foreground text-xs">{t('caseView.enrollment.fullName', 'Full Name')}</span>
-              <p className="font-medium">{ben.firstName} {ben.middleName || ''} {ben.surname}</p>
+              <p className="font-medium">{personFullName(ben.firstName, ben.middleName, ben.surname)}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

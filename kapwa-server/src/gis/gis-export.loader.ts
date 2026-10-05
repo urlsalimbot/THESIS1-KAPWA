@@ -4,6 +4,7 @@ import { Case } from '../cases/case.entity';
 import { CaseIntervention } from '../case-interventions/case-intervention.entity';
 import { BeneficiaryClaimant } from '../beneficiaries/beneficiary-claimant.entity';
 import { GisPdfData, GisAddressData } from './gis-export.types';
+import { middleInitialOf } from '../common/person-name';
 
 export interface GisCaseLoaderDeps {
   caseRepo: Repository<Case>;
@@ -70,7 +71,7 @@ export async function loadGisData(deps: GisCaseLoaderDeps, caseId: string): Prom
     .filter((m: any) => m?.person)
     .map((m: any) => {
       const p = m.person;
-      const fullName = [asText(p.surname), asText(p.firstName), asText(p.middleName)]
+      const fullName = [asText(p.surname), asText(p.firstName), middleInitialOf(asText(p.middleName))]
         .filter(s => s.trim().length > 0)
         .join(', ')
         .replace(/, ([^,]*),/, ', $1');

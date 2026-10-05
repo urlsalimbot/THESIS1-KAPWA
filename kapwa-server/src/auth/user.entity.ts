@@ -1,6 +1,7 @@
 import { Entity, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Expose, Exclude } from 'class-transformer';
 import { BaseEntity } from '../common/base.entity';
+import { displayFullName } from '../common/person-name';
 import { UserToken } from './user-token.entity';
 import { UserBarangayAssignment } from './user-barangay-assignment.entity';
 
@@ -114,14 +115,19 @@ export class User extends BaseEntity {
   updatedAt!: Date;
 
   // --- Legacy flattened shape, now assembled from name-part columns ---
-  // First name first, on purpose. Staff are shown as "Juan Dela Cruz" while
-  // residents are shown as "Dela Cruz, Juan", so the two are never confused on
-  // a page that lists both. Do not reorder this to match the resident format.
+  // First name first, on purpose. Staff are shown as "Juan D. Dela Cruz"
+  // (middle name abbreviated to an initial) while residents are shown as
+  // "Dela Cruz, Juan", so the two are never confused on a page that lists
+  // both. Do not reorder this to match the resident format.
   @Expose() get fullName(): string | undefined {
-    const parts = [this.firstName, this.middleName, this.lastName].filter(Boolean);
-    const name = parts.join(' ').trim();
-    if (!name) return undefined;
-    return this.nameExtension ? `${name} ${this.nameExtension}` : name;
+    return (
+      displayFullName({
+        firstName: this.firstName,
+        middleName: this.middleName,
+        surname: this.lastName,
+        nameExtension: this.nameExtension,
+      }) || undefined
+    );
   }
 
   @Expose() get assignedBarangay(): string | undefined {

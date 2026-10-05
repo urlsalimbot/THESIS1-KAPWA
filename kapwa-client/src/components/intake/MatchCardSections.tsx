@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Check, CheckCircle, Info, Phone, Users, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { formatDate } from '@/lib/format';
+import { formatDate, personFullName } from '@/lib/format';
 import { computeAge } from '@/lib/age';
 import { statusLabel } from '@/i18n/display';
 import { cn } from '@/lib/utils';
@@ -266,7 +266,7 @@ function HouseholdMembers({ candidate, t }: { candidate: MatchCandidate; t: TFun
               )}
             >
               <span className="truncate">
-                {m.firstName} {m.middleName ? `${m.middleName} ` : ''}{m.surname}
+                {personFullName(m.firstName, m.middleName, m.surname)}
                 {m.relationship && (
                   <span className={cn('ml-2 text-xs font-normal', isMatched ? 'text-primary/80' : 'text-muted-foreground')}>
                     · {m.relationship}

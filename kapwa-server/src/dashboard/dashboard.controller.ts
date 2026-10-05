@@ -7,6 +7,7 @@ import { DashboardService } from './dashboard.service';
 import { CaseStatus } from '../cases/case.entity';
 import { AuthenticatedRequest } from '../auth/types';
 import { SLA_OVERDUE_DAYS, RECENT_CASES_LIMIT } from '../common/constants';
+import { displayFullName } from '../common/person-name';
 
 /**
  * The window values the dashboard's range selector offers. The main dashboard
@@ -76,7 +77,7 @@ export class DashboardController {
           return {
             id: c.id,
             no: i + 1,
-            name: [person.firstName, person.middleName, person.surname].filter(Boolean).join(' '),
+            name: displayFullName({ firstName: person.firstName, middleName: person.middleName, surname: person.surname }),
             surname: person.surname || '',
             first: person.firstName || '',
             middle: person.middleName || '',

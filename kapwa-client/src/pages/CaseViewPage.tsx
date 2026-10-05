@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { api, downloadCsrPdf, downloadFilingDoc, filingDocIdFromUrl, getFilingObjectUrl, downloadGisPdf } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { addressNames } from '@/lib/psgc';
-import { formatDate, formatDateTime } from '../lib/format';
+import { formatDate, formatDateTime, personFullName } from '../lib/format';
 import { interventionRequirementsMet } from '../lib/case-progress';
 import { setCaseLabel } from '../lib/breadcrumbs';
 import { humanizeError } from '../lib/errors';
@@ -806,7 +806,7 @@ export function CaseViewPage() {
               <div className="px-4 py-3 space-y-2 text-sm">
                 <div>
                   <span className="text-muted-foreground text-xs">{t('cases.fullName', 'Full Name')}</span>
-                  <p className="font-medium">{ben.firstName} {ben.middleName || ''} {ben.surname}</p>
+                  <p className="font-medium">{personFullName(ben.firstName, ben.middleName, ben.surname)}</p>
                 </div>
                 {(ben.gender || age != null) && (
                   <div className="grid grid-cols-2 gap-3">
@@ -898,8 +898,19 @@ export function CaseViewPage() {
                         <FamilyGraph
                           loading={famLoading && !famGraph}
                           error={null}
-                          members={famGraph?.members || [] as any}
-                          primary={famGraph?.primary || null as any}
+                          members={(famGraph?.members || []).map((m: any) => ({
+                            ...m,
+                            fullName: personFullName(m.firstName, m.middleName, m.surname, m.extension) || m.fullName,
+                          })) as any}
+                          primary={(famGraph?.primary ? {
+                            ...famGraph.primary,
+                            fullName: personFullName(
+                              (famGraph.primary as any).firstName,
+                              (famGraph.primary as any).middleName,
+                              (famGraph.primary as any).surname,
+                              (famGraph.primary as any).extension,
+                            ) || (famGraph.primary as any).fullName,
+                          } : null) as any}
                         />
                       </div>
                     )}

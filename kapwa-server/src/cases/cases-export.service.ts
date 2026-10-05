@@ -9,6 +9,7 @@ import { GisExportService } from '../gis/gis-export.service';
 import { IrfExportService } from '../irf/irf-export.service';
 import { OrgService } from '../common/org.service';
 import { ORG_LOCATION, MUNICIPAL_MAYOR } from '../common/constants';
+import { displayFullName } from '../common/person-name';
 import { PDFDocument as PdfLib } from 'pdf-lib';
 import {
   buildCertificateOfEligibilityPdf,
@@ -133,7 +134,7 @@ export class CasesExportService {
 
   private beneficiaryName(c: Case): string {
     const p = (c.beneficiary as any)?.person;
-    return [p?.firstName, p?.middleName, p?.surname].filter(Boolean).join(' ') || 'N/A';
+    return displayFullName({ firstName: p?.firstName, middleName: p?.middleName, surname: p?.surname }) || 'N/A';
   }
 
   // "Dela Cruz, Juan M." — Last Name, First Name and Middle Initial, exactly as

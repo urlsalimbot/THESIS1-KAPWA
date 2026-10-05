@@ -298,7 +298,13 @@ export class BeneficiariesService {
 
     const primaryMember = person ? {
       id: `primary-${ben.id}`,
-      fullName: `${person.firstName} ${person.middleName ? person.middleName + ' ' : ''}${person.surname}`.trim(),
+      // Full middle name on purpose: the beneficiary view page displays it as
+      // stored (the one surface that does not abbreviate). Other consumers
+      // format initials from the name parts in this payload.
+      fullName: [person.firstName, person.middleName, person.surname]
+        .filter(Boolean)
+        .join(' ')
+        .trim(),
       surname: person.surname,
       firstName: person.firstName,
       middleName: person.middleName ?? null,

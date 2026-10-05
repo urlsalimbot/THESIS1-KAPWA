@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional, Logger } from '@nestjs/common';
+import { displayFullName } from '../common/person-name';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Case, CaseStatus } from './case.entity';
@@ -317,7 +318,7 @@ export class CasesService {
       const bc = await this.bcRepo.findOne({ where: { beneficiaryId: c.beneficiary.personId }, relations: ['claimant'] });
       if (bc && bc.claimant && bc.claimantId !== c.beneficiary.personId) {
         (c as any).claimant = {
-          fullName: `${bc.claimant.firstName || ''} ${bc.claimant.middleName ? bc.claimant.middleName + ' ' : ''}${bc.claimant.surname || ''}`.trim(),
+          fullName: displayFullName({ firstName: bc.claimant.firstName, middleName: bc.claimant.middleName, surname: bc.claimant.surname, nameExtension: bc.claimant.extension }),
           relationship: bc.relationship,
           phone: bc.claimant.phone,
           address: bc.claimant.address,

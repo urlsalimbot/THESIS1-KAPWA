@@ -107,7 +107,7 @@ const FACTS: Array<[string, RegExp]> = [
   ['email comparison', /ana@example\.com/],
   ['case outcome', /new case will be opened/i],
   ['members section', /Household members \(3\)/i],
-  ['spouse in roster', /Maria Santos Dela Cruz/],
+  ['spouse in roster', /Maria S\. Dela Cruz/],
   ['member age', /46 y\/o/],
   // Probing "is this the same family?" needs the attributes that distinguish a
   // relative, not just a name and a relationship.
@@ -172,7 +172,7 @@ describe('match card parity: pop-up vs review page', () => {
       </MemoryRouter>
     );
     const roster = screen.getByRole('list', { name: /Household members/i });
-    const spouseRow = within(roster).getByText('Maria Santos Dela Cruz').closest('li');
+    const spouseRow = within(roster).getByText('Maria S. Dela Cruz').closest('li');
     // One meta line, so a long roster stays scannable and the attributes stay
     // attached to the person they describe.
     expect(within(spouseRow as HTMLElement).getByText('46 y/o · Female · Married · Vendor · active')).toBeTruthy();

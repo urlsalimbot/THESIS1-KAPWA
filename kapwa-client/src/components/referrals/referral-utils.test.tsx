@@ -14,12 +14,12 @@ const FULL = {
 };
 
 describe('referral display names', () => {
-  it('builds the list form with middle name and extension', () => {
-    expect(referralListName(FULL)).toBe('Dela Cruz Jr., Juan Santos');
+  it('builds the list form with middle initial and extension', () => {
+    expect(referralListName(FULL)).toBe('Dela Cruz Jr., Juan S.');
   });
 
   it('builds the inline form in given-name order', () => {
-    expect(referralFullName(FULL)).toBe('Juan Santos Dela Cruz Jr.');
+    expect(referralFullName(FULL)).toBe('Juan S. Dela Cruz Jr.');
   });
 
   it('omits missing name parts without leaving stray separators', () => {

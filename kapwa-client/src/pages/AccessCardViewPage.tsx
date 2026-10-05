@@ -16,7 +16,7 @@ import { CategoryBadge } from '@/components/cards/CategoryBadge';
 import { FormError } from '@/components/FormError';
 import { ACCESS_CARD_CATEGORY_TABS, type AccessCardCategory } from '@/lib/constants';
 import { CreditCard, User, MapPin, Calendar, Phone, Users, Plus, Building2, ArrowLeftRight, Download } from 'lucide-react';
-import { formatDate, todayInManila } from '../lib/format';
+import { formatDate, todayInManila, personFullName } from '../lib/format';
 import { humanizeError } from '../lib/errors';
 
 interface AccessCardService {
@@ -115,7 +115,7 @@ export function AccessCardViewPage() {
   const { data: ben } = useSWR<Record<string, unknown>>(
     id ? queryKeys.beneficiaries.detail(id) : null,
   );
-  const { data: famGraph } = useSWR<{ members?: Array<{ fullName: string; relationship: string; age: number }> }>(
+  const { data: famGraph } = useSWR<{ members?: Array<{ fullName: string; firstName?: string; middleName?: string; surname?: string; extension?: string; relationship: string; age: number }> }>(
     id ? queryKeys.beneficiaries.familyGraph(id) : null,
   );
   const { data: cardData, mutate: cardMutate } = useSWR<{ beneficiary: any; code: string; services: AccessCardService[] }>(
@@ -179,7 +179,7 @@ export function AccessCardViewPage() {
 
   const benInfo = cardData.beneficiary || {};
   const fullName = ben
-    ? `${ben.firstName || ''} ${ben.middleName || ''} ${ben.surname || ''}`.replace(/\s+/g, ' ').trim()
+    ? personFullName(ben.firstName as string, ben.middleName as string, ben.surname as string)
     : `${benInfo.first_name || ''} ${benInfo.surname || ''}`.trim();
 
   return (
@@ -231,7 +231,7 @@ export function AccessCardViewPage() {
           <div className="flex flex-wrap gap-2">
             {famGraph.members.map((m, i) => (
               <Badge key={i} variant="outline" className="text-[10px]">
-                {m.fullName}
+                {personFullName(m.firstName, m.middleName, m.surname, m.extension) || m.fullName}
                 <span className="ml-1 text-muted-foreground">({m.relationship}, {m.age})</span>
               </Badge>
             ))}

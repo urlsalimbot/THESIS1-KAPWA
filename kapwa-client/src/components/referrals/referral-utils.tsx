@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { middleInitial, personFullName } from '../../lib/format';
 
 export interface Agency {
   id: string;
@@ -56,18 +57,18 @@ export interface NameParts {
   extension?: string;
 }
 
-/** `"Dela Cruz Jr., Juan Miguel"` — table and dialog form. */
+/** `"Dela Cruz Jr., Juan M."` — table and dialog form. */
 export function referralListName(p?: NameParts | null): string {
   if (!p) return '';
   const surname = [p.surname, p.extension].filter(Boolean).join(' ');
-  const given = [p.firstName, p.middleName].filter(Boolean).join(' ');
+  const given = [p.firstName, middleInitial(p.middleName)].filter(Boolean).join(' ');
   return [surname, given].filter(Boolean).join(', ');
 }
 
-/** `"Juan Miguel Dela Cruz Jr."` — inline sentence form. */
+/** `"Juan M. Dela Cruz Jr."` — inline sentence form. */
 export function referralFullName(p?: NameParts | null): string {
   if (!p) return '';
-  return [p.firstName, p.middleName, p.surname, p.extension].filter(Boolean).join(' ');
+  return personFullName(p.firstName, p.middleName, p.surname, p.extension);
 }
 
 const NAME_EXTENSIONS = ['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV'];

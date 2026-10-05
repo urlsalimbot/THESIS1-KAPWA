@@ -441,7 +441,7 @@ exports[`CasesPage > snapshot: CasesPage rendered DOM with table layout + status
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"
                 >
-                  M
+                  M.
                 </td>
                 <td
                   class="p-4 align-middle [&:has([role=checkbox])]:pr-0"

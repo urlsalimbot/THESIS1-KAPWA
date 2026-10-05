@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import useSWR, { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, middleInitial } from '../lib/format';
 import { BARANGAYS, CLIENT_CATEGORIES_V2 } from '../lib/constants';
 import { statusLabel, categoryLabel } from '@/i18n/display';
 import { Search, Download, AlertTriangle, Eye } from 'lucide-react';
@@ -219,7 +219,7 @@ export function CasesPage() {
     { accessorKey: 'date', header: t('cases.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{row.original.date}</span> },
     { accessorKey: 'surname', header: t('cases.surname', 'Surname') },
     { accessorKey: 'first', header: t('cases.firstName', 'First') },
-    { accessorKey: 'middle', header: t('cases.middleName', 'Middle') },
+    { accessorKey: 'middle', header: t('cases.middleName', 'Middle'), cell: ({ row }) => middleInitial(row.original.middle) },
     { accessorKey: 'gender', header: t('cases.gender', 'Gender') },
     { accessorKey: 'category', header: t('cases.category', 'Client Category'), cell: ({ row }) => <Badge variant="secondary">{row.original.category ? categoryLabel(t, row.original.category) : ''}</Badge> },
     { accessorKey: 'caseCategory', header: t('cases.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },

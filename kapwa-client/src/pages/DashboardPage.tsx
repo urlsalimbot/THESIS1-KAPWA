@@ -6,7 +6,7 @@ import { TrendingUp, Clock, DollarSign, Plus, Eye, AlertTriangle, Search, Downlo
 import useSWR from 'swr';
 import { queryKeys } from '../lib/query-keys';
 import { categoryLabel, statusLabel } from '@/i18n/display';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, middleInitial } from '@/lib/format';
 import { PageShell } from '@/components/PageShell';
 import { CardGridSkeleton } from '@/components/skeletons/CardGridSkeleton';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
@@ -152,7 +152,7 @@ export function DashboardPage() {
     { accessorKey: 'date', header: t('dashboard.date', 'Date'), cell: ({ row }) => <span className="text-xs text-muted-foreground tabular-nums">{formatDateTime(row.original.date)}</span> },
     { accessorKey: 'surname', header: t('dashboard.surname', 'Surname') },
     { accessorKey: 'first', header: t('dashboard.firstName', 'First') },
-    { accessorKey: 'middle', header: t('dashboard.middleName', 'Middle') },
+    { accessorKey: 'middle', header: t('dashboard.middleName', 'Middle'), cell: ({ row }) => middleInitial((row.original as { middle?: string }).middle) },
     { accessorKey: 'gender', header: t('dashboard.gender', 'Gender') },
     { accessorKey: 'category', header: t('dashboard.category', 'Category'), cell: ({ row }) => <Badge variant="secondary">{categoryLabel(t, row.original.category)}</Badge> },
     { accessorKey: 'caseCategory', header: t('dashboard.caseCategory', 'Case Category'), cell: ({ row }) => <CaseCategoryCell category={row.original.caseCategory} /> },

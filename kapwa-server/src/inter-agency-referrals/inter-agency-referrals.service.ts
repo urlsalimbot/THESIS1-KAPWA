@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { User } from '../auth/user.entity';
 import { Agency } from '../agencies/agency.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { middleInitialOf } from '../common/person-name';
 import { Person } from '../beneficiaries/person.entity';
 import { Household } from '../beneficiaries/household.entity';
 import { Case } from '../cases/case.entity';
@@ -551,7 +552,7 @@ export class InterAgencyReferralsService {
     const person = ref.person;
     const nameParts = [
       person?.firstName,
-      person?.middleName,
+      middleInitialOf(person?.middleName),
       person?.surname,
       person?.extension,
     ].filter((p): p is string => Boolean(p));
