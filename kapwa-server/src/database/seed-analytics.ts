@@ -202,7 +202,7 @@ async function main(): Promise<void> {
     persons.push([
       personId, `${PREFIX}${suffix}`, pick(FIRST_NAMES), 'A',
       gender, dobFor(age), `FILSYS-ANL-${suffix}`, 'Norzagaray, Bulacan',
-      civilStatus, rand() < 0.6 ? `PHL-ANL-${suffix}` : null, occupation, income,
+      civilStatus, occupation, income,
     ]);
 
     // Household membership: rotate through shuffled size groups; first member
