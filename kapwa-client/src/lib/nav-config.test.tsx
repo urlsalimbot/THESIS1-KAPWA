@@ -7,17 +7,20 @@ describe('feature toggles', () => {
     vi.resetModules();
   });
 
-  it('shows Analytics in the nav by default', () => {
-    expect(NAV_GROUPS.map((g) => g.label)).toContain('Insights');
+  it('hides Analytics by default (not a ready feature)', () => {
+    expect(NAV_GROUPS.map((g) => g.label)).not.toContain('Insights');
   });
 
-  it('offers Analytics to staff roles only (not coordinators)', () => {
-    const insights = NAV_GROUPS.find((g) => g.label === 'Insights');
+  it('offers Analytics to staff roles only (not coordinators) when explicitly enabled', async () => {
+    vi.stubEnv('VITE_ENABLE_ANALYTICS', 'true');
+    vi.resetModules();
+    const { NAV_GROUPS: toggledOn } = await import('./nav-config');
+    const insights = toggledOn.find((g) => g.label === 'Insights');
     const analytics = insights?.items.find((i) => i.path === '/analytics');
     expect(analytics?.roles).toEqual(['admin', 'social_worker']);
   });
 
-  it('hides Analytics when the build opts out', async () => {
+  it('stays hidden when the build does not opt in', async () => {
     vi.stubEnv('VITE_ENABLE_ANALYTICS', 'false');
     vi.resetModules();
     const { NAV_GROUPS: toggledOff } = await import('./nav-config');
@@ -75,14 +78,10 @@ describe('Team Workspace route', () => {
 });
 
 describe('Analytics route', () => {
-  it('registers /analytics for staff (admin + social_worker) by default', async () => {
+  it('does not register /analytics by default (not a ready feature)', async () => {
     const { router } = await import('@/routes');
     await router.navigate('/analytics');
     const match = router.state.matches.find((m) => m.route.path === '/analytics');
-    expect(match).toBeDefined();
-    const element = (match?.route as unknown as {
-      element?: { props?: { roles?: string[] } };
-    })?.element;
-    expect(element?.props?.roles).toEqual(['admin', 'social_worker']);
+    expect(match).toBeUndefined();
   });
 });
