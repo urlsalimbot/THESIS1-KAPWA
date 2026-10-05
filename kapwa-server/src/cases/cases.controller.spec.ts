@@ -26,6 +26,7 @@ describe('CasesController step-lock routes', () => {
     updateSoloParent: jest.fn(),
     updateAdoption: jest.fn(),
     updateCaseMeta: jest.fn(),
+    listInterventionDocuments: jest.fn(),
   };
   const stepLocks = {
     lock: jest.fn(),
@@ -214,6 +215,18 @@ describe('CasesController step-lock routes', () => {
       ]) {
         expect(write).not.toHaveBeenCalled();
       }
+    });
+  });
+
+  describe('intervention-documents route', () => {
+    it('serves the crisis-mode documentary catalog', async () => {
+      cases.listInterventionDocuments.mockResolvedValue([
+        { interventionType: 'medical_assistance', documentKey: 'medical_certificate' },
+      ]);
+      await expect(ctrl.listInterventionDocuments()).resolves.toEqual([
+        { interventionType: 'medical_assistance', documentKey: 'medical_certificate' },
+      ]);
+      expect(cases.listInterventionDocuments).toHaveBeenCalled();
     });
   });
 });

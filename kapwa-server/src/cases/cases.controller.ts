@@ -79,6 +79,14 @@ export class CasesController {
     return this.casesService.findAll(page, limit, { status, search, barangay, category, gender, ageRange, sla, dateFrom, dateTo, beneficiaryId: beneficiaryId || undefined });
   }
 
+  @Get('intervention-documents')
+  @Roles('admin', 'social_worker', 'coordinator')
+  async listInterventionDocuments() {
+    // Literal route declared before `@Get(':id')` so the catalog is never
+    // swallowed by the case-detail path (see the crisis-mode design spec §3.2).
+    return this.casesService.listInterventionDocuments();
+  }
+
   @Get('tracker/daily')
   @Roles('admin', 'social_worker', 'coordinator')
   async getTrackerDaily(@Query('date') date?: string, @Query('status') status?: string, @Request() req?: any) {

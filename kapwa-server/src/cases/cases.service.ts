@@ -7,6 +7,7 @@ import { CaseReferral } from './case-referral.entity';
 import { CaseAssistance } from './case-assistance.entity';
 import { CaseFollowUpVisit } from './case-follow-up-visit.entity';
 import { CaseStepLock } from './case-step-lock.entity';
+import { InterventionRequiredDocument } from './intervention-required-document.entity';
 // A plain const from a leaf module, not `CaseStepLocksService`: that service
 // injects `CasesService`, so depending on it here would be a require cycle — and
 // with `emitDecoratorMetadata` that costs the locks service a Nest DI failure at
@@ -48,7 +49,18 @@ export class CasesService {
     private casesExport: CasesExportService,
     @Optional() private auditLog?: AuditLogService,
     @Optional() private syncService?: TeamScheduleSyncService,
+    @Optional() @InjectRepository(InterventionRequiredDocument)
+    private interventionDocsRepo?: Repository<InterventionRequiredDocument>,
   ) {}
+
+  /**
+   * The crisis-mode documentary catalog: every intervention-anchored document
+   * minimum, for the client's requirements panel (GET /cases/intervention-documents,
+   * declared before the `:id` route so it is not swallowed).
+   */
+  async listInterventionDocuments(): Promise<InterventionRequiredDocument[]> {
+    return this.interventionDocsRepo?.find({ order: { interventionType: 'ASC', documentKey: 'ASC' } }) ?? [];
+  }
 
   /**
    * Next control number for the current year, e.g. MSWD-2026-00047.
