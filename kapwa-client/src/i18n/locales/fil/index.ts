@@ -2001,7 +2001,10 @@ const fil: EnLocale = {
       "uploadFailed": "Nabigong i-upload ang {{name}}",
       "uploaded": "Na-upload ang {{name}}",
       "uploading": "Ina-upload ang {{name}}…"
-    }
+    },
+    "crisisMode": "Mode ng Krisis",
+    "exitCrisisMode": "Lumabas sa Crisis Mode",
+    "crisisModeBanner": "Crisis mode — ang mga ad-hoc na serbisyo ay gumagamit ng intervention-anchored na dokumento.",
   },
   "conflict": {
     "description": "Binago ng ibang user ang item na ito habang offline ka. Piliin kung paano ito lulutasin.",

@@ -1166,4 +1166,56 @@ describe('CaseViewPage — every step starts at the top', () => {
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
     });
   });
+
+  it('shows the crisis-mode toggle for a social worker and toggles it', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('id-photo')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('caseIdPhoto')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, crisisMode: false });
+      return Promise.resolve(null);
+    });
+    mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
+    mockApiPatch.mockResolvedValue({});
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Admin', role: 'social_worker' } });
+    renderWithSWR(<CaseViewPage />);
+    const toggle = await screen.findByRole('button', { name: /Crisis Mode/i });
+    expect(toggle).toBeTruthy();
+    fireEvent.click(toggle);
+    await vi.waitFor(() => expect(mockApiPatch).toHaveBeenCalledWith(
+      '/cases/C-001/meta', expect.objectContaining({ crisisMode: true }),
+    ));
+  });
+
+  it('hides the crisis-mode toggle for a claimant', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = JSON.stringify(key);
+      if (k.includes('id-photo')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('caseIdPhoto')) return Promise.resolve(mockIdPhoto);
+      if (k.includes('history')) return Promise.resolve([]);
+      if (k.includes('enrollments')) return Promise.resolve([]);
+      if (k.includes('interventions')) return Promise.resolve([]);
+      if (k.includes('events')) return Promise.resolve([]);
+      if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
+      if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('caseId')) return Promise.resolve([]);
+      if (k.includes('programs')) return Promise.resolve([]);
+      if (k.includes('cases')) return Promise.resolve({ ...mockCase, crisisMode: false });
+      return Promise.resolve(null);
+    });
+    mockGetFilingObjectUrl.mockResolvedValue('blob:mock-id-photo');
+    mockUseAuth.mockReturnValue({ user: { id: '1', fullName: 'Juan', role: 'claimant' } });
+    renderWithSWR(<CaseViewPage />);
+    // Wait for the case page to render (claimants do not see the control number).
+    await vi.waitFor(() => expect(document.querySelectorAll('button').length).toBeGreaterThan(0));
+    expect(screen.queryByRole('button', { name: /Crisis Mode/i })).toBeNull();
+  });
 });

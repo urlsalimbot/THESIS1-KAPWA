@@ -403,6 +403,9 @@ const en = {
         "phone": "Phone Call",
       },
     },
+    "crisisMode": "Crisis Mode",
+    "exitCrisisMode": "Exit Crisis Mode",
+    "crisisModeBanner": "Crisis mode — ad-hoc services use intervention-anchored documents.",
   },
   "interventionType": {
     "FA": "Financial Assistance",
