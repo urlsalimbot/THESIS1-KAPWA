@@ -95,4 +95,33 @@ describe('interventionRequirementsMet', () => {
       'Death certificate (if applicable)': true,
     })).toBe(true);
   });
+
+  describe('crisis-mode intervention documents', () => {
+    const ADHOC = [{ id: 'i1', interventionType: 'medical_assistance' }];
+    const DOCS = [{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }];
+
+    it('requires intervention documents for ad-hoc services in crisis mode', () => {
+      expect(interventionRequirementsMet(ADHOC, [], {}, true, DOCS)).toBe(false);
+    });
+
+    it('does not require intervention documents when crisis mode is off', () => {
+      expect(interventionRequirementsMet(ADHOC, [], {}, false, DOCS)).toBe(true);
+      expect(interventionRequirementsMet(ADHOC, [], {}, undefined, DOCS)).toBe(true);
+    });
+
+    it('returns true once the intervention documents are met', () => {
+      expect(interventionRequirementsMet(ADHOC, [], { medical_certificate: true }, true, DOCS)).toBe(true);
+    });
+
+    it('keeps program documents required alongside crisis docs', () => {
+      const mixed = [{ id: 'i1', programId: 'p1' }, { id: 'i2', interventionType: 'medical_assistance' }];
+      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], {}, true, DOCS)).toBe(false);
+      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], { medical_certificate: true }, true, DOCS)).toBe(false);
+      expect(interventionRequirementsMet(mixed, [program('p1', ['Valid ID'])], { 'Valid ID': true, medical_certificate: true }, true, DOCS)).toBe(true);
+    });
+
+    it('ignores intervention docs for types not in the case', () => {
+      expect(interventionRequirementsMet([{ id: 'i1', interventionType: 'crisis_counseling' }], [], {}, true, DOCS)).toBe(true);
+    });
+  });
 });

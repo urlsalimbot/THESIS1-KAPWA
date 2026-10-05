@@ -598,6 +598,7 @@ describe('CaseViewPage — stepper gating', () => {
       if (k.includes('interventions')) return Promise.resolve(interventionMock);
       if (k.includes('family-graph')) return Promise.resolve({ members: [], primary: null });
       if (k.includes('inter-agency-referrals')) return Promise.resolve([]);
+      if (k.includes('intervention-documents')) return Promise.resolve([]);
       if (k.includes('programs')) return Promise.resolve(programsMock);
       if (k.includes('caseId')) return Promise.resolve([{ requirementKey: 'Valid ID', originalName: 'id.pdf', verifiedAt: '2026-07-02T00:00:00Z' }]);
       if (k.includes('cases')) {

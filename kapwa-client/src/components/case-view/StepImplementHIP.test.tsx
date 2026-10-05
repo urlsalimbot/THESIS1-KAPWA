@@ -355,6 +355,7 @@ describe('StepImplementHIP — sealing step 2', () => {
     caseData?: Record<string, unknown>;
     interventions?: unknown[];
     programs?: unknown[];
+    crisisDocs?: unknown[];
     readOnly?: boolean;
     lockReadOnly?: boolean;
     stepLock?: Seal;
@@ -363,6 +364,7 @@ describe('StepImplementHIP — sealing step 2', () => {
       const k = JSON.stringify(key);
       if (k.includes('interventions')) return opts.interventions ?? [];
       if (k.includes('programs')) return opts.programs ?? [];
+      if (k.includes('intervention-documents')) return opts.crisisDocs ?? [];
       return [];
     });
     return render(
@@ -398,6 +400,28 @@ describe('StepImplementHIP — sealing step 2', () => {
 
   it('enables Lock once a delivery is recorded', async () => {
     renderSeal({ interventions: delivered });
+
+    expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();
+  });
+
+  it('holds the seal while an ad-hoc crisis document is unmet (crisis mode)', async () => {
+    renderSeal({
+      caseData: { id: 'case-1', crisisMode: true, requirementsChecklist: {} },
+      interventions: [{ id: 'iv-2', interventionType: 'medical_assistance', serviceName: 'Medical Assistance' }],
+      crisisDocs: [{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }],
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^lock$/i })).toBeDisabled();
+  });
+
+  it('enables Lock once the ad-hoc crisis document is met', async () => {
+    renderSeal({
+      caseData: { id: 'case-1', crisisMode: true, requirementsChecklist: { medical_certificate: true } },
+      interventions: [{ id: 'iv-2', interventionType: 'medical_assistance', serviceName: 'Medical Assistance' }],
+      crisisDocs: [{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }],
+    });
 
     expect(await screen.findByRole('heading', { name: 'Medical Assistance' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^lock$/i })).toBeEnabled();

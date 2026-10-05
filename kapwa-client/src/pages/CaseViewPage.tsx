@@ -182,6 +182,10 @@ export function CaseViewPage() {
   const { data: caseEvents = [] } = useSWR<any[]>(
     id ? queryKeys.cases.events(id) : null,
   );
+  // Crisis-mode documentary catalog (intervention-anchored minimums).
+  const { data: interventionDocs = [] } = useSWR<any[]>(
+    queryKeys.cases.interventionDocuments(),
+  );
   const { data: documents = [] } = useSWR<any[]>(
     id ? queryKeys.filing.byCase(id) : null,
   );
@@ -247,8 +251,14 @@ export function CaseViewPage() {
   }, [interventions, iarReferrals, caseData]);
 
   const requirementsMet = useMemo(
-    () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
-    [interventions, programs, caseData],
+    () => interventionRequirementsMet(
+      interventions,
+      programs || [],
+      caseData?.requirementsChecklist,
+      Boolean(caseData?.crisisMode),
+      interventionDocs,
+    ),
+    [interventions, programs, caseData, interventionDocs],
   );
   // The case-level referral count, stamped by the detail endpoint. Deliberately
   // NOT `(iarReferrals ?? []).length`: that list is caller-scoped by agency, so a

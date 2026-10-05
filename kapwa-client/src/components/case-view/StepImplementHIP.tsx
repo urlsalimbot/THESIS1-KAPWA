@@ -120,10 +120,13 @@ export function StepImplementHIP({ caseId, caseData, userRole, readOnly, lockRea
   // the checklist it already has, rather than a second copy of the rule. The
   // case view derives the same answer from the same shared function for the
   // stepper, so the three surfaces agree because they call one function, not
-  // because one of them threads a value the others might not.
+  // because one of them threads a value the others might not. In crisis mode,
+  // ad-hoc services (no program) additionally weigh their intervention-anchored
+  // documentary minimums.
+  const { data: crisisDocs = [] } = useSWR<any[]>(queryKeys.cases.interventionDocuments());
   const requirementsMet = useMemo(
-    () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist),
-    [interventions, programs, caseData?.requirementsChecklist],
+    () => interventionRequirementsMet(interventions, programs || [], caseData?.requirementsChecklist, Boolean(caseData?.crisisMode), crisisDocs),
+    [interventions, programs, caseData?.requirementsChecklist, caseData?.crisisMode, crisisDocs],
   );
 
   /* The program the open dialog has selected, and the documents it will demand
