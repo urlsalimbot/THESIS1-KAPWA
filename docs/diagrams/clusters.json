@@ -1,0 +1,134 @@
+[
+ {
+  "id": "C1",
+  "title": "Identity, Users, Contacts & Agencies",
+  "tables": [
+   "persons",
+   "person_addresses",
+   "person_contacts",
+   "users",
+   "user_tokens",
+   "user_barangay_assignments",
+   "beneficiary_claimants",
+   "beneficiary_roles",
+   "agencies",
+   "agency_contacts"
+  ]
+ },
+ {
+  "id": "C2",
+  "title": "Households & Beneficiaries",
+  "tables": [
+   "households",
+   "beneficiaries",
+   "household_memberships"
+  ]
+ },
+ {
+  "id": "C3",
+  "title": "Cases, Compliance & Payouts",
+  "tables": [
+   "cases",
+   "case_compliance_items",
+   "case_payouts"
+  ]
+ },
+ {
+  "id": "C4",
+  "title": "Case Records, Referrals & Workflow",
+  "tables": [
+   "case_history",
+   "case_requirements",
+   "case_referrals",
+   "case_assistances",
+   "case_follow_up_visits",
+   "case_step_locks",
+   "case_control_counters"
+  ]
+ },
+ {
+  "id": "C5",
+  "title": "Case Events & Reminders",
+  "tables": [
+   "case_events",
+   "case_event_reminders",
+   "reminder_settings"
+  ]
+ },
+ {
+  "id": "C6",
+  "title": "Programs, Enrollments & Interventions",
+  "tables": [
+   "programs",
+   "program_fund_sources",
+   "program_required_documents",
+   "form_version_history",
+   "program_enrollments",
+   "program_services",
+   "case_interventions"
+  ]
+ },
+ {
+  "id": "C7",
+  "title": "Referrals",
+  "tables": [
+   "referrals",
+   "inter_agency_referrals"
+  ]
+ },
+ {
+  "id": "C8",
+  "title": "Documents, Reports & IRF",
+  "tables": [
+   "csr_reports",
+   "document_vault",
+   "irf_cases"
+  ]
+ },
+ {
+  "id": "C9",
+  "title": "Access Cards & Number Sequences",
+  "tables": [
+   "access_card_services",
+   "access_card_seq",
+   "irf_blotter_seq"
+  ]
+ },
+ {
+  "id": "C10",
+  "title": "Team Workspace",
+  "tables": [
+   "team_status",
+   "team_invites",
+   "team_schedule_blocks",
+   "office_events"
+  ]
+ },
+ {
+  "id": "C11",
+  "title": "Messaging, Notifications & Content",
+  "tables": [
+   "chat_messages",
+   "notifications",
+   "notification_preferences",
+   "contact_messages",
+   "announcements"
+  ]
+ },
+ {
+  "id": "C12",
+  "title": "Sync, Analytics, Consent & Platform",
+  "tables": [
+   "sync_queue",
+   "version_vectors",
+   "idempotency_keys",
+   "consent_ledger",
+   "audit_log",
+   "otp_codes",
+   "analysis_runs",
+   "analysis_run_clusters",
+   "analysis_run_members",
+   "migrations"
+  ]
+ }
+]
