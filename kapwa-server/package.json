@@ -19,6 +19,7 @@
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts src/database/migrations/Generation",
     "typeorm": "typeorm-ts-node-commonjs",
     "seed": "npx ts-node src/database/seed-accounts.ts",
+    "seed:prod-demo": "npx ts-node src/database/seed-prod-demo.ts",
     "seed:programs": "npx ts-node src/database/seed-programs.ts",
     "test:unit": "jest --testPathPattern=unit",
     "seed:demo": "npx ts-node src/database/seed-demo.ts",

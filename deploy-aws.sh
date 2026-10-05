@@ -6,8 +6,11 @@
 #
 #   1. API  -> EC2, rebuilt from kapwa-server/docker-compose.aws.yml
 #   2. DB   -> fresh-boot bootstrap (idempotent) + pending migrations, then
-#              reference-data seeds (programs always; accounts only on an empty
-#              DB). Demo/seed-demo data is NEVER loaded — it fabricates cases.
+#              reference-data seeds (programs always; production roster only on
+#              an empty DB). Demo/seed-demo + analytics data are NEVER loaded
+#              — they fabricate cases. Empty-DB boots get seed-prod-demo:
+#              1 admin, 5 social workers, 13 barangay coordinators, 5
+#              claimants, each with a linked intake case.
 #   3. SPA  -> built in place, synced to S3 with the correct cache
 #              headers, then invalidated on CloudFront.
 #
@@ -162,14 +165,16 @@ if [ "$MODE" != "frontend" ]; then
     && log "programs + required documents seeded (idempotent)" \
     || log "WARNING: seed-programs failed — run manually: docker exec $API_CONTAINER node dist/database/seed-programs.js"
 
-  # Accounts: only when the users table is empty. seed-accounts is
-  # ON CONFLICT DO NOTHING, but inserting the documented test credentials into a
-  # populated production database is not acceptable, so gate it on an empty DB.
+  # Accounts: only when the users table is empty. seed-prod-demo is
+  # ON CONFLICT DO NOTHING, but inserting the documented test credentials into
+  # a populated production database is not acceptable, so gate it on an empty
+  # DB. It seeds the production demo roster (1 admin, 5 social workers, 13
+  # barangay coordinators, 5 claimants with linked intake cases).
   USERS=$(remote "docker exec $API_CONTAINER node -e 'const{AppDataSource}=require(\"./dist/database/data-source.js\");(async()=>{await AppDataSource.initialize();const c=await AppDataSource.query(\"SELECT COUNT(*)::int AS c FROM users\");console.log(c[0].c);await AppDataSource.destroy()})().catch(e=>{console.error(e.message);process.exit(1)})'" 2>/dev/null || echo "ERR")
   if [ "$USERS" = "0" ]; then
-    remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/seed-accounts.js" >/dev/null \
-      && log "initial accounts seeded — change the test credentials before going live" \
-      || log "WARNING: seed-accounts failed — run manually: docker exec $API_CONTAINER node dist/database/seed-accounts.js"
+    remote "cd $DEPLOY_PATH && docker exec $API_CONTAINER node dist/database/seed-prod-demo.js" >/dev/null \
+      && log "production roster seeded (admin, 5 workers, 13 coordinators, 5 claimants + cases) — change the test credentials before going live" \
+      || log "WARNING: seed-prod-demo failed — run manually: docker exec $API_CONTAINER node dist/database/seed-prod-demo.js"
   elif [ "$USERS" = "ERR" ]; then
     log "WARNING: could not read user count — account seed skipped"
   else
