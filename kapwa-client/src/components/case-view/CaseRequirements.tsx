@@ -58,6 +58,9 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
   const { mutate: globalMutate } = useSWRConfig();
   const { data: interventions = [] } = useSWR<any[]>(queryKeys.cases.interventions(caseId));
   const { data: programs = [] } = useSWR<Program[]>(queryKeys.programs.list());
+  const { data: interventionRequiredDocuments = [] } = useSWR<any[]>(
+    queryKeys.cases.interventionDocuments(),
+  );
   const { data: docs = [] } = useSWR<any[]>(
     caseId ? queryKeys.filing.byCase(caseId) : null,
   );
@@ -79,8 +82,21 @@ export function CaseRequirements({ caseId, caseData, userRole, extraProgramIds, 
     ...(extraProgramIds ?? []),
   ].filter((id): id is string => Boolean(id));
   const relevantPrograms = programs.filter((p) => programIds.includes(p.id));
+  // In crisis mode, ad-hoc services (no program) carry their own documentary
+  // minimum — the intervention-anchored documents.
+  const crisisMode = Boolean((caseData as { crisisMode?: boolean })?.crisisMode);
+  const adHocInterventionTypes = (Array.isArray(interventions) ? interventions : [])
+    .filter((i: any) => !i?.programId && i?.interventionType)
+    .map((i: any) => i.interventionType);
+  const crisisDocKeys = crisisMode
+    ? [...new Set(
+        (interventionRequiredDocuments ?? [])
+          .filter((d: any) => adHocInterventionTypes.includes(d.interventionType))
+          .map((d: any) => d.documentKey),
+      )]
+    : [];
   const allRequirements = [
-    ...new Set(relevantPrograms.flatMap((p) => requiredDocumentKeys(p))),
+    ...new Set([...relevantPrograms.flatMap((p) => requiredDocumentKeys(p)), ...crisisDocKeys]),
   ];
 
   const docsByRequirement: Record<string, any[]> = {};

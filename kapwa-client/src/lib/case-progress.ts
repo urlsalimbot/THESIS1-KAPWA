@@ -44,6 +44,8 @@ export function interventionRequirementsMet(
   interventions: any[],
   programs: any[],
   requirementsChecklist?: Record<string, boolean> | null,
+  crisisMode?: boolean,
+  interventionDocs?: any[],
 ): boolean {
   const programIds = [...new Set(interventions.map((i: any) => i?.programId).filter(Boolean))];
   const requiredKeys = [
@@ -53,6 +55,16 @@ export function interventionRequirementsMet(
         .flatMap((p: any) => requiredDocumentKeys(p)),
     ),
   ];
+  // In crisis mode, ad-hoc services (no program) carry their own documentary
+  // minimum — the intervention-anchored documents.
+  if (crisisMode && Array.isArray(interventionDocs)) {
+    const adHocTypes = new Set(
+      interventions.filter((i: any) => !i?.programId && i?.interventionType).map((i: any) => i.interventionType),
+    );
+    for (const d of interventionDocs) {
+      if (adHocTypes.has(d?.interventionType)) requiredKeys.push(d?.documentKey);
+    }
+  }
   if (requiredKeys.length === 0) return true;
   const met = requirementsChecklist || {};
   return requiredKeys.every((key) => met[key] === true);

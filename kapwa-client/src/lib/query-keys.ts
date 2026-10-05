@@ -27,6 +27,9 @@ export const queryKeys = {
     // /cases/:id/events.
     events: (caseId: string) =>
       memo(`cases.events.${caseId}`, () => ['cases', caseId, 'events'] as const),
+    // Intervention-anchored documentary minimums (crisis mode) — a static
+    // catalog fetch, not per-case.
+    interventionDocuments: () => memo('cases.intervention-documents', () => ['cases', 'intervention-documents'] as const),
   },
   beneficiaries: {
     all: ['beneficiaries'] as const,

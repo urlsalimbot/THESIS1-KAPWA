@@ -45,9 +45,12 @@ const DOCS = [
 function renderRequirements(
   docs: unknown[] = DOCS,
   checklist: Record<string, boolean> = {},
-  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[]; readOnly?: boolean } = {},
+  overrides: { programs?: unknown[]; interventions?: unknown[]; extraProgramIds?: string[]; readOnly?: boolean; caseData?: { crisisMode?: boolean } } = {},
 ) {
   mockSWR.mockImplementation((key: unknown) => {
+    if (Array.isArray(key) && key[0] === 'cases' && key[1] === 'intervention-documents') {
+      return { data: [{ interventionType: 'medical_assistance', documentKey: 'medical_certificate' }] };
+    }
     const root = Array.isArray(key) ? key[0] : key;
     if (root === 'cases') return { data: overrides.interventions ?? INTERVENTIONS };
     if (root === 'programs') return { data: overrides.programs ?? PROGRAMS };
@@ -57,7 +60,7 @@ function renderRequirements(
   return render(
     <CaseRequirements
       caseId="c1"
-      caseData={{ requirementsChecklist: checklist }}
+      caseData={{ requirementsChecklist: checklist, ...(overrides.caseData ?? {}) }}
       userRole="social_worker"
       extraProgramIds={overrides.extraProgramIds}
       readOnly={overrides.readOnly}
@@ -324,5 +327,38 @@ describe('CaseRequirements — previewing a program that is not yet an intervent
 
     expect(screen.queryByText(/includes the program you selected/)).toBeNull();
     expect(screen.getByText('0/2 complete')).toBeTruthy();
+  });
+});
+
+describe('CaseRequirements — crisis-mode intervention documents', () => {
+  beforeEach(() => {
+    mockPatch.mockReset().mockResolvedValue({});
+    mockDel.mockReset().mockResolvedValue({});
+    mockMutate.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('shows intervention-anchored documents for ad-hoc services in crisis mode', async () => {
+    renderRequirements(DOCS, {}, {
+      interventions: [{ id: 'i1', interventionType: 'medical_assistance' }],
+      caseData: { crisisMode: true },
+    });
+    expect(await screen.findByText('medical_certificate')).toBeTruthy();
+  });
+
+  it('does not show intervention documents when crisis mode is off', async () => {
+    renderRequirements(DOCS, {}, {
+      interventions: [{ id: 'i1', interventionType: 'medical_assistance' }],
+      caseData: { crisisMode: false },
+    });
+    await waitFor(() => expect(screen.queryByText('medical_certificate')).toBeNull());
+  });
+
+  it('still shows program documents for enrolled services in crisis mode', async () => {
+    renderRequirements(DOCS, { 'Valid ID': true }, {
+      interventions: [{ id: 'i1', programId: 'p1' }, { id: 'i2', interventionType: 'medical_assistance' }],
+      caseData: { crisisMode: true },
+    });
+    expect(await screen.findByText('Valid ID')).toBeTruthy();
+    expect(await screen.findByText('medical_certificate')).toBeTruthy();
   });
 });
