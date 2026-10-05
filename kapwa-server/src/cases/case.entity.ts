@@ -189,6 +189,11 @@ export class Case extends BaseEntity {
   @Column({ name: 'case_category', nullable: true })
   caseCategory?: string;
 
+  // Crisis mode: worker-toggled; ad-hoc services (no program) then carry their
+  // intervention-anchored documentary minimums instead of none.
+  @Column({ name: 'crisis_mode', type: 'boolean', default: false })
+  crisisMode!: boolean;
+
   // Court docket number for legal categories (CICL, VAWC, CNSP court cases).
   @Column({ name: 'court_docket_number', nullable: true })
   courtDocketNumber?: string;
