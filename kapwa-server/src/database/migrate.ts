@@ -102,6 +102,29 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS case_category TEXT`);
   // Mirrors AddCaseArchitectureColumns0000000000078.
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS court_docket_number TEXT`);
+  // Crisis mode (optional program enrollment) + intervention documentary minimums.
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS crisis_mode BOOLEAN NOT NULL DEFAULT FALSE`);
+  await q.query(`CREATE TABLE IF NOT EXISTS intervention_required_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    intervention_type VARCHAR(32) NOT NULL,
+    document_key VARCHAR(64) NOT NULL,
+    mandatory BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_intervention_documents ON intervention_required_documents(intervention_type, document_key)`);
+  await q.query(`INSERT INTO intervention_required_documents (intervention_type, document_key)
+    SELECT * FROM (VALUES
+      ('medical_assistance', 'medical_certificate'),
+      ('medical_assistance', 'hospital_bill'),
+      ('burial_assistance', 'death_certificate'),
+      ('burial_assistance', 'burial_permit'),
+      ('educational_assistance', 'school_registration'),
+      ('educational_assistance', 'report_card'),
+      ('transportation_assistance', 'travel_request'),
+      ('shelter_assistance', 'shelter_request')
+    ) AS v(intervention_type, document_key)
+    WHERE NOT EXISTS (SELECT 1 FROM intervention_required_documents WHERE intervention_type = v.intervention_type AND document_key = v.document_key)`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS discernment_assessed_at DATE`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS discernment_result TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS discernment_notes TEXT`);
