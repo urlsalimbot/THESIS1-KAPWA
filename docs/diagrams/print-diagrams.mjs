@@ -2,31 +2,35 @@
 /**
  * Render helper for the KAPWA diagram docs.
  *
- * Renders every ```mermaid and ```dot block in the docs/diagrams/*.md files to
- * its own file, in both formats by default:
+ * ```dot blocks (the DFDs) are exported as editable **.drawio** files only —
+ * see dot-to-drawio.mjs. Raster/PDF output was dropped for them: it is not
+ * editable and not print-sharp at the sizes the role views reach.
  *
+ * ```mermaid blocks (every other doc) still render to:
  *   .pdf  page-fit — the diagram is scaled onto one page, choosing the smallest
  *         of Letter / A3 / A2 that keeps label text at 5 pt or larger, so each
  *         diagram prints on exactly one sheet.
  *   .png  raster at 400 ppi by default (`--ppi=300` to change it) on a white
- *         background — for pasting into a word processor or slide deck, where a
- *         page-fitting PDF would just be an image of a page. mermaid renders
- *         through mermaid-cli's scale factor (ppi/96); Graphviz takes the dpi
- *         directly.
+ *         background. mermaid renders through mermaid-cli's scale factor
+ *         (ppi/96); Graphviz takes the dpi directly.
+ * There is no mermaid → drawio exporter yet, so mermaid charts have no
+ * editable form.
  *
  * Usage:
- *   node docs/diagrams/print-diagrams.mjs              # all docs, pdf + png
+ *   node docs/diagrams/print-diagrams.mjs              # drawio (dot) + pdf/png (mermaid)
  *   node docs/diagrams/print-diagrams.mjs 06-erd       # one doc (name fragment)
  *   node docs/diagrams/print-diagrams.mjs --list       # list docs + chart counts
- *   node docs/diagrams/print-diagrams.mjs --pdf        # pdf only
- *   node docs/diagrams/print-diagrams.mjs --png        # png only
+ *   node docs/diagrams/print-diagrams.mjs --drawio     # only the .drawio exports
+ *   node docs/diagrams/print-diagrams.mjs --pdf        # pdf only (mermaid charts)
+ *   node docs/diagrams/print-diagrams.mjs --png        # png only (mermaid charts)
  *   node docs/diagrams/print-diagrams.mjs --letter     # pdf: force US Letter
  *   node docs/diagrams/print-diagrams.mjs --ppi=300    # png raster resolution
  *
- * Output: docs/diagrams/print/<doc>-<n>.pdf and <doc>-<n>.png
+ * Output: docs/diagrams/drawio/<doc>-<n>.drawio (editable, dot charts) and
+ *         docs/diagrams/print/<doc>-<n>.{pdf,png} (mermaid charts)
  *
- * Requires: puppeteer (installed in the mermaid-cli npx cache), Graphviz `dot`,
- * and PUPPETEER_EXECUTABLE_PATH pointing at a Chrome/Chromium binary, e.g.:
+ * Requires: puppeteer (installed in the mermaid-cli npx cache) and
+ * PUPPETEER_EXECUTABLE_PATH pointing at a Chrome/Chromium binary, e.g.:
  *   PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable node docs/diagrams/print-diagrams.mjs
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
@@ -250,14 +254,7 @@ function renderPngs() {
         total++;
       }
     }
-
-    // Graphviz takes the resolution directly, so the PNG is exactly `PPI`.
-    for (const c of charts) {
-      if (c.lang !== 'dot') continue;
-      execFileSync('dot', [`-Gdpi=${PPI}`, '-Tpng', '-o', outName(c)], { input: c.code, stdio: ['pipe', 'pipe', 'pipe'] });
-      setPngDpi(outName(c), PPI);
-      total++;
-    }
+    // ```dot charts are exported as editable .drawio files instead — no raster.
   }
   return total;
 }
@@ -298,11 +295,9 @@ async function renderPdfs() {
     }
     let mi = 0;
     for (const c of charts) {
-      // Graphviz SVGs carry the same width/height + viewBox shape, so they
-      // flow through the same page-fitting renderer as the mermaid ones.
-      const svg = c.lang === 'dot'
-        ? execFileSync('dot', ['-Tsvg'], { input: c.code }).toString()
-        : mermaidSvgs[mi++];
+      // ```dot charts are exported as editable .drawio files instead — no PDF.
+      if (c.lang !== 'mermaid') continue;
+      const svg = mermaidSvgs[mi++];
       await svgToLetterPdf(browser, svg,
         join(OUT_DIR, `${base}-${String(c.index).padStart(2, '0')}.pdf`),
         `${f} — Diagram ${c.index}`);
@@ -367,10 +362,10 @@ async function main() {
   const drawios = doDrawio ? renderDrawio() : 0;
 
   const parts = [];
-  if (pdfs) parts.push(`${pdfs} PDF(s) (page-sized)`);
-  if (pngs) parts.push(`${pngs} PNG(s) (${PPI} ppi)`);
-  if (drawios) parts.push(`${drawios} .drawio (editable)`);
-  console.log(`\nDone: ${parts.join(' + ') || 'nothing to render'} in ${OUT_DIR}`);
+  if (drawios) parts.push(`${drawios} .drawio (editable → drawio/)`);
+  if (pdfs) parts.push(`${pdfs} PDF(s) (page-sized → print/)`);
+  if (pngs) parts.push(`${pngs} PNG(s) (${PPI} ppi → print/)`);
+  console.log(`\nDone: ${parts.join(' + ') || 'nothing to render'}`);
 
   // The two formats should always cover the same set; a gap means one pass
   // silently skipped a document.
