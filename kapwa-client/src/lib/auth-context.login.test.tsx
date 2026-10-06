@@ -49,6 +49,72 @@ describe('AuthProvider — login', () => {
     expect(localStorage.getItem('kapwa_token')).toBe('tok-1');
   });
 
+  it('login() persists the refresh token api.ts needs on the first 401', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        accessToken: 'tok-1',
+        refreshToken: 'refresh-1',
+        user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'admin' },
+      }),
+    });
+
+    let captured: ReturnType<typeof useAuth> | null = null;
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={(a) => { captured = a; }} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await act(async () => { await captured!.login('a@b.com', 'pass'); });
+
+    // The server issues both tokens from issueTokens; dropping the refresh token
+    // meant refresh() found no `refresh_token`, bailed at "nothing to refresh
+    // with", and the session died the moment the access token expired.
+    expect(localStorage.getItem('refresh_token')).toBe('refresh-1');
+    expect(localStorage.getItem('kapwa_token')).toBe('tok-1');
+  });
+
+  it('resolveMfa() persists the refresh token as well as the access token', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ mfaRequired: true, tempToken: 'temp-1' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          accessToken: 'tok-2',
+          refreshToken: 'refresh-2',
+          user: { id: 'u1', email: 'a@b.com', fullName: 'A B', role: 'admin' },
+        }),
+      });
+
+    let captured: ReturnType<typeof useAuth> | null = null;
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AuthProbe onAuth={(a) => { captured = a; }} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await act(async () => { await captured!.login('a@b.com', 'pass'); });
+    await act(async () => { await captured!.resolveMfa('123456'); });
+
+    // The MFA path is a second issuance route; storing only the access token there
+    // would have left the same expiry hole for every MFA-enrolled account.
+    expect(localStorage.getItem('refresh_token')).toBe('refresh-2');
+    expect(localStorage.getItem('kapwa_token')).toBe('tok-2');
+  });
+
   it('login() with MFA required sets mfaChallenge + returns { mfaRequired: true, tempToken }', async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValueOnce({

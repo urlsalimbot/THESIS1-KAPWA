@@ -1683,7 +1683,7 @@ const en = {
     "continueNewClient": "Continue as new client",
     "differs": "Differs",
     "differentPerson": "Not this person",
-    "eligActiveCase": "Has an active case — choosing \"Yes, update info\" will update it instead of creating a new case.",
+    "eligActiveCase": "A case was opened in the last 30 days — choosing \"Yes, update info\" will update it instead of creating a new case.",
     "eligLastCase": "Last case: {{date}} — eligible for a new case.",
     "eligNoPrior": "No prior case on record — a new case will be created.",
     "existingRecord": "Existing record",

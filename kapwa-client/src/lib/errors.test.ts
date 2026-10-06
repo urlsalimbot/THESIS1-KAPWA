@@ -27,6 +27,34 @@ describe('apiErrorMessage', () => {
   it('describes an unknown status without leaking a bare code as the whole message', () => {
     expect(apiErrorMessage(418, null)).toMatch(/request failed/i);
   });
+
+  // ZodPipe reports a rejected body as a message *object*. bodyMessage() used to
+  // ignore it, so every field error was discarded and the worker was shown the
+  // generic "check the highlighted fields" copy with no field ever named.
+  it('flattens a Zod body so a 400 names the fields that failed', () => {
+    const body = {
+      message: {
+        _errors: [],
+        problemsPresented: { _errors: ['Problem/s presented is required'] },
+        socialWorkerAssessment: { _errors: ['Social worker assessment is required'] },
+      },
+    };
+    expect(apiErrorMessage(400, body)).toBe(
+      'Problem/s presented is required Social worker assessment is required',
+    );
+  });
+
+  it('keeps the generic copy for a non-Zod object message', () => {
+    expect(apiErrorMessage(400, { message: { error: 'Bad Request' } }))
+      .toBe('The request was rejected. Please check the highlighted fields.');
+  });
+
+  it('truncates a Zod body to whole messages instead of over-running and losing everything', () => {
+    const body = { message: { field: { _errors: ['x'.repeat(200)] } } };
+    const out = apiErrorMessage(400, body);
+    expect(out.length).toBeLessThanOrEqual(160);
+    expect(out).not.toBe('The request was rejected. Please check the highlighted fields.');
+  });
 });
 
 describe('humanizeError', () => {

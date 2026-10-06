@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { StepAssessment } from './StepAssessment';
 import { formatDate } from '@/lib/format';
 
@@ -52,6 +53,9 @@ function filledCaseData(over: Record<string, unknown> = {}) {
 describe('StepAssessment — step completion gate and save flow', () => {
   beforeEach(() => {
     mockIsOnline.mockReturnValue(true);
+    // Cleared so a per-role endpoint assertion in one test cannot be satisfied
+    // (or broken) by the call left behind by the previous one.
+    mockPatch.mockClear();
     mockPatch.mockResolvedValue({});
   });
 
@@ -115,6 +119,38 @@ describe('StepAssessment — step completion gate and save flow', () => {
       expect(screen.getByRole('button', { name: /Complete Assessment/ })).toBeEnabled();
     },
   );
+
+  // US-020 documents `PATCH /cases/:id/request-review` as the route a worker takes
+  // for enrolled -> assessed, and that endpoint rejects every role but
+  // social_worker by contract — so the two roles offered this button take
+  // different paths. Only exercising one of them leaves the other unguarded.
+  it('a social worker completes the assessment through the audited request-review endpoint', async () => {
+    const user = userEvent.setup();
+    renderAssessment(
+      filledCaseData({ frvaScore: 45 }),
+      { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45 },
+      { userRole: 'social_worker' },
+    );
+
+    await user.click(screen.getByRole('button', { name: /Complete Assessment/ }));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith('/cases/c1/request-review'));
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('admin completes it through the generic status transition, since request-review is SW-only', async () => {
+    const user = userEvent.setup();
+    renderAssessment(
+      filledCaseData({ frvaScore: 45 }),
+      { problemsPresented: 'x', socialWorkerAssessment: 'y', clientCategory: 'z', frvaScore: 45 },
+      { userRole: 'admin' },
+    );
+
+    await user.click(screen.getByRole('button', { name: /Complete Assessment/ }));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith('/cases/c1/status', { status: 'assessed' }));
+    expect(mockPatch).not.toHaveBeenCalledWith('/cases/c1/request-review');
+  });
 
   /**
    * The deepest element holding both, or null if they share none above the

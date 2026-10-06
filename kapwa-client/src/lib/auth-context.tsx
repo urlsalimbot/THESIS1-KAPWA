@@ -100,6 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { mfaRequired: true as const, tempToken: data.tempToken };
     }
     localStorage.setItem('kapwa_token', data.accessToken);
+    // Persist the refresh token too. api.ts reads REFRESH_TOKEN_KEY on the first
+    // 401; when it is missing, refreshToken() takes its "nothing to refresh with"
+    // branch and gives up, so the session died the moment the 1 h access token
+    // expired — every later write returned 401 and a reload bounced to /login.
+    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     setToken(data.accessToken);
     setUser(data.user);
     return data.user;
@@ -123,6 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error('Verification failed');
     const data = await res.json();
     localStorage.setItem('kapwa_token', data.accessToken);
+    // Same as login: every issuance path goes through issueTokens, so this
+    // response carries a refresh token that must be stored or the session
+    // still dies at the access-token TTL.
+    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     setToken(data.accessToken);
     setUser(data.user);
     setMfaChallenge(null);

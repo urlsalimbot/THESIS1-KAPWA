@@ -67,7 +67,15 @@ export function StepAssessment({
         toast.success(t('caseView.assessment.queuedOffline', 'Assessment queued — will sync when online.'));
         return;
       }
-      await api.patch(`/cases/${caseId}/status`, { status: 'assessed' });
+      // US-020: a social worker's route is the audited `request-review` endpoint,
+      // which carries its own "assessment completed" gate. It is SW-only by
+      // contract (cases.service.ts rejects every other role), so admin — allowed
+      // to transition by the FSM — keeps the generic status transition.
+      if (userRole === 'social_worker') {
+        await api.patch(`/cases/${caseId}/request-review`);
+      } else {
+        await api.patch(`/cases/${caseId}/status`, { status: 'assessed' });
+      }
       await mutate(queryKeys.cases.detail(caseId));
     } catch (e) {
       console.error('Failed to complete assessment:', e);
@@ -135,8 +143,9 @@ export function StepAssessment({
             </div>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">{t('caseView.assessment.problemsPresented', 'Problem/s Presented *')}</label>
+                <label htmlFor="problems-presented" className="text-sm font-medium">{t('caseView.assessment.problemsPresented', 'Problem/s Presented *')}</label>
                 <textarea
+                  id="problems-presented"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
                   value={assessment.problemsPresented}
                   onChange={e => onAssessmentChange(a => ({ ...a, problemsPresented: e.target.value }))}
@@ -144,8 +153,9 @@ export function StepAssessment({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">{t('caseView.assessment.socialWorkerAssessment', "Social Worker's Assessment *")}</label>
+                <label htmlFor="social-worker-assessment" className="text-sm font-medium">{t('caseView.assessment.socialWorkerAssessment', "Social Worker's Assessment *")}</label>
                 <textarea
+                  id="social-worker-assessment"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
                   value={assessment.socialWorkerAssessment}
                   onChange={e => onAssessmentChange(a => ({ ...a, socialWorkerAssessment: e.target.value }))}

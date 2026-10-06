@@ -800,6 +800,31 @@ describe('IntakePage — draft recovery for a referral hand-off', () => {
     expect(screen.queryByText(/From referral/)).toBeNull();
   });
 
+  it('does not let a stale plain draft clobber a beneficiary "Add case" prefill', async () => {
+    // A plain draft carries no referral and no renewal, so the hand-off comparison
+    // was `'' === ''` on both sides: it was read as "for this intake", seeded, and
+    // returned before the prefill was ever applied. Add Case therefore reopened the
+    // last unrelated client's details, and the intake could be filed against the
+    // wrong person.
+    seedDraft({ beneficiary: validPerson({ surname: 'Besben', firstName: 'Anton' }) });
+    renderWithState({ prefill: { surname: 'Testben', firstName: 'Anton', dob: '1990-01-15' } });
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByLabelText('ben-surname')).toHaveValue('Testben');
+  });
+
+  it('still restores a plain draft when the "Add case" prefill is for the same person', async () => {
+    // Same client, so the worker's partial work outranks the thinner prefill — the
+    // fix must not cost them their edits when they are correct.
+    seedDraft({ beneficiary: validPerson({ surname: 'Dela Cruz', firstName: 'Juan' }) });
+    renderWithState({ prefill: { surname: 'Dela Cruz', firstName: 'Juan', dob: '1990-01-15' } });
+    await screen.findByRole('heading', { name: /General Intake Form/i });
+
+    expect(screen.getByLabelText('ben-surname')).toHaveValue('Dela Cruz');
+    // Only the draft supplies these; the prefill above does not carry them.
+    expect(screen.getByLabelText('ben-occupation')).toHaveValue('Fisherman');
+  });
+
   it('start over clears the draft and restores the referral prefill, keeping the hand-off', async () => {
     renderWithState({
       prefill: { surname: 'Reyes', firstName: 'Maria', gender: 'Female' },

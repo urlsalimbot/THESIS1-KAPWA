@@ -198,7 +198,12 @@ export const SoloParentSchema = z.object({
 export const AdoptionSchema = z.object({
   adoptionDvcDate: dateOrEmpty(),
   adoptionCaseStudyDate: dateOrEmpty(),
-  adoptionCdclaaReceived: z.boolean().optional(),
+  // Nullable to match the column (`adoption_cdclaa_received` is NULL) and the
+  // form, which initialises the checkbox to null for "not answered yet" and then
+  // submits it verbatim. `.optional()` alone rejects that explicit null with
+  // "Expected boolean, received null", so the step could not be saved until the
+  // box was ticked — and the step gates Program Enrollments.
+  adoptionCdclaaReceived: z.boolean().nullable().optional(),
   adoptionNotes: z.preprocess(v => v === '' || v === null || v === undefined ? undefined : v, z.string().optional()),
 }).refine(d => d.adoptionDvcDate || d.adoptionCaseStudyDate || d.adoptionCdclaaReceived !== undefined || d.adoptionNotes, { message: 'nothing to save' });
 

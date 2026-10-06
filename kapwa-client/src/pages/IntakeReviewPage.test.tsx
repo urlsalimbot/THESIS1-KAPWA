@@ -224,6 +224,11 @@ describe('IntakeReviewPage', () => {
     // case will be created (a different household member may still register).
     expect(screen.queryByText(/no new case will be created/i)).toBeNull();
     expect(screen.getAllByText(/choosing "Yes, update info"/i).length).toBeGreaterThanOrEqual(1);
+    // The flag behind this note is `case_exists_30d`: any case opened in the last
+    // 30 days, whatever its status. It used to read "Has an active case", which
+    // told the worker services were live when the recent case was already Closed.
+    expect(screen.queryByText(/has an active case/i)).toBeNull();
+    expect(screen.getAllByText(/opened in the last 30 days/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('should show "Not this person" buttons per card', async () => {

@@ -52,6 +52,36 @@ function toNumberOrUndefined(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+// Server field name -> where that field lives in the assessment card. The card
+// sits well below the fold, so a rejected save has to pull the worker to the
+// first field the API actually complained about.
+const ASSESSMENT_FIELD_TARGETS: Record<string, string> = {
+  problemsPresented: '#problems-presented',
+  socialWorkerAssessment: '#social-worker-assessment',
+  clientCategory: 'input[name="clientCategory"]',
+  caseCategory: '#case-category',
+  frvaScore: '[placeholder="Family Risk & Vulnerability Assessment"]',
+  swdiScore: '[placeholder="Social Welfare Development Index"]',
+};
+
+/** Scroll the first rejected assessment field into view and focus it. */
+function focusFirstInvalidAssessmentField(err: unknown): void {
+  const e = err as { status?: number; body?: unknown } | null;
+  if (e?.status !== 400) return;
+  const message = (e.body as { message?: unknown } | null)?.message;
+  if (!message || typeof message !== 'object' || Array.isArray(message)) return;
+  for (const key of Object.keys(message)) {
+    if (key === '_errors') continue;
+    const selector = ASSESSMENT_FIELD_TARGETS[key];
+    if (!selector) continue;
+    const el = document.querySelector<HTMLElement>(selector);
+    if (!el) continue;
+    el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
+    return;
+  }
+}
+
 const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   enrolled: 'outline',
   assessed: 'secondary',
@@ -420,6 +450,14 @@ export function CaseViewPage() {
       await mutate(queryKeys.cases.detail(id!));
     } catch (e) {
       console.error('Failed to save assessment:', e);
+      // Previously this logged and returned: a 400 reached the console while the
+      // worker got silence, because the ApiError's message is a Zod object the
+      // toast copy never read. Name what is missing and take them to it — the
+      // card runs well past the fold.
+      toast.error(t('caseView.assessment.saveFailed', 'Could not save the assessment'), {
+        description: humanizeError(e),
+      });
+      focusFirstInvalidAssessmentField(e);
     } finally {
       setSavingAssessment(false);
     }

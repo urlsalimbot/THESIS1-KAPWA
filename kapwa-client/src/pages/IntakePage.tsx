@@ -301,7 +301,8 @@ export function IntakePage() {
   //   2. otherwise the referral/renewal prefill;
   //   3. otherwise nothing.
   // A draft belonging to a different intake never seeds, so a stale draft cannot
-  // clobber a fresh referral hand-off.
+  // clobber a fresh referral hand-off — nor a beneficiary "Add case" prefill, which
+  // names the client this intake is for.
   // Bumped by "start over" so the seeding pass below can run again without
   // changing route.
   const [seedNonce, setSeedNonce] = useState(0);
@@ -338,7 +339,25 @@ export function IntakePage() {
       && (draft.sourceReferral?.id ?? '') === (incoming?.sourceReferral?.id ?? '')
       && (draft.renewalOfCaseId ?? '') === (incoming?.renewalOfCaseId ?? '');
 
-    if (draft && (!incoming?.prefill || draftIsForThisIntake)) {
+    // Which hand-off, if any, this navigation carries.
+    const prefill = incoming?.prefill;
+    // A draft from a plain intake records no referral and no renewal, so against a
+    // prefill both comparisons above evaluate to `'' === ''` and the draft was
+    // treated as "for this intake" — it seeded and returned before the prefill was
+    // ever read. That let a stale draft from an unrelated client silently override
+    // "Add case", so a worker could file an intake against the wrong person. A
+    // plain draft may only outrank a prefill when it is for that same person; a
+    // genuine hand-off (same referral or renewal) still wins unconditionally.
+    const key = (v?: string) => (v ?? '').trim().toLowerCase();
+    const samePersonAsPrefill = !!draft && !!prefill
+      && key(draft.beneficiary.surname) === key(prefill.surname)
+      && key(draft.beneficiary.firstName) === key(prefill.firstName)
+      && (!prefill.dob || !draft.beneficiary.dob
+        || key(draft.beneficiary.dob) === key(prefill.dob));
+    const sameHandoff = draftIsForThisIntake
+      && (!!draft?.sourceReferral || !!draft?.renewalOfCaseId);
+
+    if (draft && (!prefill || samePersonAsPrefill || sameHandoff)) {
       setBeneficiary(draft.beneficiary);
       setClaimant(draft.claimant);
       setRelationshipToBeneficiary(draft.relationshipToBeneficiary);
@@ -350,7 +369,6 @@ export function IntakePage() {
       return;
     }
 
-    const prefill = incoming?.prefill;
     if (!prefill) return;
 
     const address = prefill.currentAddress;

@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { ZodPipe } from '../../common/pipes/zod.pipe';
-import { ApproveCaseSchema, UpdateStatusSchema, AssessmentV2Schema } from './cases.zod';
+import { ApproveCaseSchema, UpdateStatusSchema, AssessmentV2Schema, AdoptionSchema } from './cases.zod';
 
 /**
  * The approving path carries no signature. The approver is the authenticated
@@ -61,5 +61,43 @@ describe('AssessmentV2Schema — case category', () => {
 
   it('refuses an unknown case category', () => {
     expect(() => pipe.transform({ ...base, caseCategory: 'Not a category' }, { type: 'body' } as never)).toThrow(BadRequestException);
+  });
+});
+
+/**
+ * The CDCLAA checkbox is tri-state in the form: it initialises to `null` for
+ * "not answered yet" and is submitted verbatim, and the column it lands on
+ * (`adoption_cdclaa_received`) is nullable. `.optional()` on its own accepts the
+ * key being *absent* but rejects an explicit `null`, so the step could not be
+ * saved until the box was ticked — and that step gates Program Enrollments, which
+ * left the Adoption case unable to advance.
+ */
+describe('AdoptionSchema — tri-state CDCLAA checkbox', () => {
+  const pipe = new ZodPipe(AdoptionSchema);
+  const body = { type: 'body' } as never;
+
+  it('accepts an unanswered checkbox sent as null', () => {
+    expect(pipe.transform({
+      adoptionDvcDate: '2026-10-15',
+      adoptionCaseStudyDate: null,
+      adoptionCdclaaReceived: null,
+      adoptionNotes: null,
+    }, body)).toMatchObject({ adoptionCdclaaReceived: null });
+  });
+
+  it('still accepts an answered checkbox', () => {
+    expect(pipe.transform({ adoptionDvcDate: '2026-10-15', adoptionCdclaaReceived: true }, body))
+      .toMatchObject({ adoptionCdclaaReceived: true });
+    expect(pipe.transform({ adoptionDvcDate: '2026-10-15', adoptionCdclaaReceived: false }, body))
+      .toMatchObject({ adoptionCdclaaReceived: false });
+  });
+
+  it('still refuses a payload carrying nothing to save', () => {
+    expect(() => pipe.transform({}, body)).toThrow(BadRequestException);
+  });
+
+  it('still refuses a non-boolean answer', () => {
+    expect(() => pipe.transform({ adoptionDvcDate: '2026-10-15', adoptionCdclaaReceived: 'yes' }, body))
+      .toThrow(BadRequestException);
   });
 });

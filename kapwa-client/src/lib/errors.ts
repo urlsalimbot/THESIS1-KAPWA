@@ -26,7 +26,41 @@ function bodyMessage(body: unknown): string | undefined {
     const parts = raw.filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
     if (parts.length) return parts.join(' ');
   }
+  // ZodPipe reports a failed body as { _errors: [], field: { _errors: [...] } }.
+  // Read that shape too: otherwise this returns nothing and the caller falls back
+  // to the generic 400 copy, which never says which fields are missing.
+  if (raw && typeof raw === 'object') {
+    const issues: string[] = [];
+    collectZodErrors(raw, issues);
+    if (issues.length) {
+      // Keep whole messages while they fit. The callers drop any detail longer
+      // than MAX_DETAIL_LENGTH outright, so an over-long join would lose the lot.
+      let out = '';
+      for (const issue of issues) {
+        const next = out ? `${out} ${issue}` : issue;
+        if (next.length > MAX_DETAIL_LENGTH) break;
+        out = next;
+      }
+      return out || `${issues[0].slice(0, MAX_DETAIL_LENGTH - 1)}…`;
+    }
+  }
   return undefined;
+}
+
+// Depth-first collection of Zod issue strings. Non-Zod objects (Nest's
+// { error, message } bodies) carry no `_errors`, so they collect nothing and
+// keep their existing generic fallback.
+function collectZodErrors(node: unknown, out: string[]): void {
+  if (!node || typeof node !== 'object') return;
+  const n = node as { _errors?: unknown; [key: string]: unknown };
+  if (Array.isArray(n._errors)) {
+    for (const issue of n._errors) {
+      if (typeof issue === 'string' && issue.trim()) out.push(issue.trim());
+    }
+  }
+  for (const [key, value] of Object.entries(n)) {
+    if (key !== '_errors' && value && typeof value === 'object') collectZodErrors(value, out);
+  }
 }
 
 // Message stored on ApiError: the API's own message when it is short enough to

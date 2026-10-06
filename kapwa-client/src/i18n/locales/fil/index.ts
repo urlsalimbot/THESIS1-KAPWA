@@ -860,7 +860,7 @@ const fil: EnLocale = {
     "continueNewClient": "Magpatuloy bilang bagong kliyente",
     "differs": "Iba",
     "differentPerson": "Hindi ito ang tao",
-    "eligActiveCase": "May aktibong kaso — kung pipiliin ang \"Oo, i-update ang impormasyon\", i-update ito sa halip na gumawa ng bagong kaso.",
+    "eligActiveCase": "May kaso na binuksan sa nakaraang 30 araw — kung pipiliin ang \"Oo, i-update ang impormasyon\", i-update ito sa halip na gumawa ng bagong kaso.",
     "eligLastCase": "Huling kaso: {{date}} — kuwalipikado para sa bagong kaso.",
     "eligNoPrior": "Walang naunang kaso sa rekord — gagawa ng bagong kaso.",
     "existingRecord": "Umiiral na rekord",

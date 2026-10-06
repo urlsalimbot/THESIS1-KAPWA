@@ -110,10 +110,15 @@ function eligibilityNote(candidate: MatchCandidate, t: TFunction): { text: strin
   if (candidate.caseExistsWithin30Days) {
     // Conditional wording: the outcome depends on which action the worker picks,
     // so state what each choice does rather than asserting one outcome.
+    //
+    // `caseExistsWithin30Days` comes from `case_exists_30d`, which counts any
+    // case opened in the last 30 days regardless of status — not an open one. It
+    // used to be labelled "Has an active case", which told the worker the client
+    // had live services running when the recent case was already Closed.
     return {
       text: t(
         'intake.eligActiveCase',
-        'Has an active case — choosing "Yes, update info" will update it instead of creating a new case.',
+        'A case was opened in the last 30 days — choosing "Yes, update info" will update it instead of creating a new case.',
       ),
       icon: 'info',
     };
