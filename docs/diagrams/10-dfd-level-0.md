@@ -19,21 +19,17 @@ speculative flow for a feature that is disabled, removed, or never built.
 
 ## 2. Notation
 
-| Element | Gane & Sarson shape | Rendering used here |
+| Symbol | Name | How it is drawn |
 | --- | --- | --- |
-| External entity | Square rectangle | Square rectangle, thin border |
-| Process | **Rounded** rectangle | Rounded rectangle |
-| Data store | **Open-ended** rectangle | Rectangle with a heavy border, standing in for the open edge |
-| Data flow | Directed arrow, **named with a noun phrase** | Directed arrow, noun-phrase label |
+| Entity | External entity | Filled rectangle (light blue `#cfe2f3`, thin black border) with the entity name inside |
+| Data flow | Data flow | Directed arrow, named with a noun phrase |
+| Process | Process | Rounded rectangle split by a band: the process number in the shaded band, the verb-phrase name in the body |
+| Data store | Data store | Rectangle divided by a vertical rule: the `D`-number in the shaded left cell, the store name in the right cell |
 
-Two deliberate departures from a hand-drawn chart, both forced by the diagram tool:
-
-1. **Data stores** are drawn with a heavy border instead of the open-ended rectangle
-   Gane and Sarson specify. Mermaid has no primitive for an open side, and an open
-   rectangle is a rectangle. The heavy border carries the distinction that the open
-   edge normally provides.
-2. **External entities** and **data stores** are both rectangles. They are told apart by
-   border weight and fill, never by shape alone.
+Every element is drawn by the Graphviz `dot` renderer from the `dot` code blocks below, so
+the printed PDF and the rendered image carry identical symbols. Entities and stores are
+distinguished by shape as well as fill — a store is a divided rectangle, an entity is a
+plain one — never by border weight alone.
 
 Processes are named with a **verb phrase** (`Manage Case Lifecycle…`), not a noun
 phrase. A Gane–Sarson process describes an action the system performs.
@@ -66,55 +62,50 @@ phrase. A Gane–Sarson process describes an action the system performs.
 
 ## 4. Diagram
 
-```mermaid
-flowchart LR
-    classDef entity fill:#ffffff,stroke:#333333,stroke-width:1px,color:#111111
-    classDef process fill:#eef4fb,stroke:#1f4e79,stroke-width:2px,color:#111111
-    classDef store fill:#f5f5f5,stroke:#333333,stroke-width:5px,color:#111111
+```dot
+digraph DFD {
+  rankdir=LR;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.55, nodesep=0.45, margin=0.15];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=8.5, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
 
-    E1["E1 Public Visitor"]
-    E2["E2 Registered User (Claimant)"]
-    E3["E3 Beneficiary and Household Member"]
-    E4["E4 MSWDO Caseworker and Administrator"]
-    E5["E5 Barangay Coordinator"]
-    E6["E6 Partner Agency"]
-    E7["E7 Email Delivery Service"]
+  E1 [shape=box, style=filled, fillcolor="#cfe2f3", color="#111111", penwidth=1.2, width=2.15, height=0.62, fixedsize=false, label=<E1 Public Visitor>];
+  E2 [shape=box, style=filled, fillcolor="#cfe2f3", color="#111111", penwidth=1.2, width=3.17, height=0.62, fixedsize=false, label=<E2 Registered User (Claimant)>];
+  E3 [shape=box, style=filled, fillcolor="#cfe2f3", color="#111111", penwidth=1.2, width=3.40, height=0.62, fixedsize=false, label=<E3 Beneficiary and Household Member>];
+  E4 [shape=box, style=filled, fillcolor="#cfe2f3", color="#111111", penwidth=1.2, width=3.40, height=0.62, fixedsize=false, label=<E4 MSWDO Caseworker and Administrator>];
+  E5 [shape=box, style=filled, fillcolor="#cfe2f3", color="#111111", penwidth=1.2, width=2.66, height=0.62, fixedsize=false, label=<E5 Barangay Coordinator>];
+  E6 [shape=box, style=filled, fillcolor="#cfe2f3", color="#111111", penwidth=1.2, width=2.15, height=0.62, fixedsize=false, label=<E6 Partner Agency>];
+  E7 [shape=box, style=filled, fillcolor="#cfe2f3", color="#111111", penwidth=1.2, width=2.83, height=0.62, fixedsize=false, label=<E7 Email Delivery Service>];
+  P0 [shape=none, margin=0, label=<<TABLE BORDER="1" STYLE="ROUNDED" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" COLOR="#111111">
+    <TR><TD BGCOLOR="#cfe2f3" CELLPADDING="3" WIDTH="150">0</TD></TR>
+    <TR><TD CELLPADDING="7">KAPWA Social Welfare Management System</TD></TR>
+  </TABLE>>];
 
-    P0("0 KAPWA Social Welfare Management System")
-
-    E1 -->|"F1 Contact submission"| P0
-    P0 -->|"F2 Programme catalogue and notice"| E1
-
-    E2 -->|"F3 Account and sign-in credential"| P0
-    E2 -->|"F4 Required-document submission"| P0
-    E2 -->|"F5 Consent instruction"| P0
-    E2 -->|"F6 Case message"| P0
-    P0 -->|"F7 Case status and service history"| E2
-    P0 -->|"F8 Notification and message delivery"| E2
-
-    E3 -->|"F9 Household particular"| P0
-
-    E4 -->|"F10 Intake and eligibility assessment"| P0
-    E4 -->|"F11 Case and follow-up record"| P0
-    E4 -->|"F12 Programme and fund filing"| P0
-    E4 -->|"F13 Administration instruction"| P0
-    E4 -->|"F14 Case message"| P0
-    P0 -->|"F15 Case dossier and instrument"| E4
-    P0 -->|"F16 Performance report"| E4
-    P0 -->|"F17 Notification and message delivery"| E4
-
-    E5 -->|"F18 Referral and access-card request"| P0
-    E5 -->|"F19 Case message"| P0
-    P0 -->|"F20 Referral status and access card"| E5
-    P0 -->|"F21 Notification and message delivery"| E5
-
-    P0 -->|"F22 Inter-agency referral request"| E6
-
-    P0 -->|"F23 Outbound message"| E7
-    E7 -->|"F24 Delivery outcome"| P0
-
-    class E1,E2,E3,E4,E5,E6,E7 entity
-    class P0 process
+  E1 -> P0 [label=<F1 Contact submission>];
+  P0 -> E1 [label=<F2 Programme catalogue and notice>];
+  E2 -> P0 [label=<F3 Account and sign-in credential>];
+  E2 -> P0 [label=<F4 Required-document submission>];
+  E2 -> P0 [label=<F5 Consent instruction>];
+  E2 -> P0 [label=<F6 Case message>];
+  P0 -> E2 [label=<F7 Case status and service history>];
+  P0 -> E2 [label=<F8 Notification and message delivery>];
+  E3 -> P0 [label=<F9 Household particular>];
+  E4 -> P0 [label=<F10 Intake and eligibility assessment>];
+  E4 -> P0 [label=<F11 Case and follow-up record>];
+  E4 -> P0 [label=<F12 Programme and fund filing>];
+  E4 -> P0 [label=<F13 Administration instruction>];
+  E4 -> P0 [label=<F14 Case message>];
+  P0 -> E4 [label=<F15 Case dossier and instrument>];
+  P0 -> E4 [label=<F16 Performance report>];
+  P0 -> E4 [label=<F17 Notification and message delivery>];
+  E5 -> P0 [label=<F18 Referral and access-card request>];
+  E5 -> P0 [label=<F19 Case message>];
+  P0 -> E5 [label=<F20 Referral status and access card>];
+  P0 -> E5 [label=<F21 Notification and message delivery>];
+  P0 -> E6 [label=<F22 Inter-agency referral request>];
+  P0 -> E7 [label=<F23 Outbound message>];
+  E7 -> P0 [label=<F24 Delivery outcome>];
+}
 ```
 
 ---
@@ -190,4 +181,4 @@ documentation:
 - The `UserRole` enumeration, which holds exactly four roles: `admin`,
   `social_worker`, `coordinator`, `claimant`. The `mayor`, `auditor` and `agency_staff`
   roles were sunset by migration and appear nowhere in the server.
-- The mail transport, which leaves the host, making E7 a genuine external entity.
+- The mail transport, which leaves the host, making E7 a genuine external entity.converted 1 block(s) in 10-dfd-level-0.md
