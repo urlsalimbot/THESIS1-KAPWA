@@ -131,10 +131,18 @@ Seeded in the migration: system defaults `court_hearing [4320, 1440, 180]`, `hom
 ### 5.1 New injected step: `court_hearings`
 
 - `case-step-labels.ts`: label `'Court Hearings'`, member of `KNOWN_STEP_KEYS`.
-- `CATEGORY_STEP_TEMPLATES`: inject `court_hearings` between `assessment` and `enrollments` for
-  the five legal categories. CNSP and Court-Ordered SCS currently fall back to `COMMON_STEPS` →
-  they gain explicit template entries (`assessment, court_hearings, enrollments, interventions,
-  referrals, evaluate, closure`).
+- `CATEGORY_STEP_TEMPLATES`: inject `court_hearings` **after `referrals`** for the five legal
+  categories. A case is referred out first, and the hearings the office attends are recorded
+  against a case that already has that hand-off on file — the client's stepper derives step
+  reachability from the template index, so an early position let the step be accomplished before
+  the referral existed. (This section originally specified "between `assessment` and
+  `enrollments`"; the ordering moved, and the position is now pinned by tests in
+  `case-step-labels.spec.ts` and `CaseStepper.test.tsx`.)
+  `STEP_PHASE.court_hearings` is `implementation`, so the phase groups keep ascending step
+  numbers with the step in its new slot.
+  CNSP and Court-Ordered SCS currently fall back to `COMMON_STEPS` →
+  they gain explicit template entries (`assessment, enrollments, interventions, referrals,
+  court_hearings, evaluate, closure`).
 - Step UI: new `StepCourtHearings.tsx` (list + add/edit/complete/cancel hearings; seals render
   exactly like the other category steps; gate on `attended`).
 - Done predicate (in the lock service): ≥ 1 hearing row with `status != 'cancelled'`.

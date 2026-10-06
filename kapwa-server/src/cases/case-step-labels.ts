@@ -35,28 +35,34 @@ export const COMMON_STEPS: string[] = [
  * without a category (legacy) or with a non-statutory subtype gets the common
  * template. Adding a category step later is adding a template entry here, not
  * touching the stepper core.
+ *
+ * `court_hearings` sits **after `referrals`** in every template that carries it:
+ * the case is referred out first, and the hearings the office attends are
+ * recorded against a case that already has that hand-off on file. Its position
+ * is load-bearing — the client's stepper derives step reachability from the
+ * index, so placing it early made it completable before the referral existed.
  */
 export const CATEGORY_STEP_TEMPLATES: Record<string, string[]> = {
   'Children in Conflict with the Law (CICL)': [
-    'assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   'Violence Against Women and Their Children (VAWC)': [
-    'assessment', 'court_hearings', 'protection_order', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'protection_order', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   // CNSP and Court-Ordered SCS used to fall back to the common template; both
   // are legal categories, so they gain an explicit template carrying the
   // hearings step (spec §5.1).
   'Children in Need of Special Protection (CNSP)': [
-    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   'Indigency / Court-Ordered Social Case Study': [
-    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   'Solo Parent': [
     'assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Adoption & Foster Care Case': [
-    'assessment', 'court_hearings', 'adoption', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'adoption', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
 };
 

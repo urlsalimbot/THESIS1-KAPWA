@@ -44,27 +44,33 @@ export const COMMON_STEP_KEYS = [
  * `cases.case_category` value — the same registry the server reads in
  * `case-step-labels.ts`. A case without a category (legacy) or with a
  * non-statutory subtype gets the common template.
+ *
+ * `court_hearings` sits **after `referrals`** in every template that carries it:
+ * the case is referred out first, and the hearings the office attends are
+ * recorded against a case that already has that hand-off on file. This index is
+ * what the reachability rule below reads, so the position — not just the
+ * membership — is the behaviour.
  */
 export const CATEGORY_STEP_TEMPLATES: Record<string, string[]> = {
   'Children in Conflict with the Law (CICL)': [
-    'assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   'Violence Against Women and Their Children (VAWC)': [
-    'assessment', 'court_hearings', 'protection_order', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'protection_order', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   // CNSP and Court-Ordered SCS are legal categories: explicit templates with
   // the hearings step (the server's case-step-labels.ts is the same registry).
   'Children in Need of Special Protection (CNSP)': [
-    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   'Indigency / Court-Ordered Social Case Study': [
-    'assessment', 'court_hearings', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
   'Solo Parent': [
     'assessment', 'solo_parent', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
   ],
   'Adoption & Foster Care Case': [
-    'assessment', 'court_hearings', 'adoption', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+    'assessment', 'adoption', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
   ],
 };
 
@@ -119,7 +125,11 @@ export const STEP_PHASE: Record<string, 'phaseIn' | 'implementation' | 'phaseOut
   protection_order: 'phaseIn',
   solo_parent: 'phaseIn',
   adoption: 'phaseIn',
-  court_hearings: 'phaseIn',
+  // Court hearings follow the inter-agency referral, so they are implementation
+  // work. Keeping them in `phaseIn` would render "6. Court Hearings" inside the
+  // Phase-In group: the number comes from the template index while the group
+  // comes from this map, and the two must walk in the same direction.
+  court_hearings: 'implementation',
   interventions: 'implementation',
   referrals: 'implementation',
   evaluate: 'phaseOut',

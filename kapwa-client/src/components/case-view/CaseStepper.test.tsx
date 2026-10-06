@@ -28,7 +28,7 @@ describe('CaseStepper — lifecycle labels', () => {
     });
   });
 
-  it('injects the category step for a CICL case, between assessment and enrollments', () => {
+  it('injects the category step for a CICL case and puts court hearings after the referral', () => {
     render(
       <CaseStepper
         currentStep="assessment"
@@ -38,10 +38,17 @@ describe('CaseStepper — lifecycle labels', () => {
         enrollmentCount={0}
       />,
     );
-    expect(screen.getByRole('button', { name: '2. Court Hearings' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '3. Discernment Assessment' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '4. Program Enrollments' })).toBeTruthy();
+    // Court hearings are reached only after the inter-agency referral, so they
+    // carry the number that follows it — never slot 2.
     expect(screen.getByRole('button', { name: '1. Assess & Interview' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '2. Discernment Assessment' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '3. Program Enrollments' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '4. Intervention & Requirements' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '5. Inter-agency Referrals' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '6. Court Hearings' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '7. Evaluate Help Given' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '8. Case Study & Closure' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '2. Court Hearings' })).toBeNull();
   });
 });
 
@@ -265,6 +272,77 @@ describe('CaseStepper rendering', () => {
     step5.click();
     expect(onClick).toHaveBeenCalledWith('evaluate');
   });
+
+  // The defect this pins: court hearings were reachable the moment the
+  // assessment was done, so a worker recorded hearings before the case had been
+  // referred out. The hearings step now sits after `referrals` in the template,
+  // so it opens only once that hand-off is on the file.
+  const cicl = { ...baseCase, caseCategory: 'Children in Conflict with the Law (CICL)' };
+
+  it('keeps Court Hearings locked until the inter-agency referral is done', () => {
+    render(
+      <CaseStepper
+        currentStep="assessment"
+        onStepClick={vi.fn()}
+        caseData={{ ...cicl, referralNotNeeded: false }}
+        interventionCount={1}
+        enrollmentCount={1}
+        requirementsMet={true}
+      />,
+    );
+    // The referral step itself stays offered after the assessment — it is the
+    // step this waits on — but it is not done, so the step behind it stays shut.
+    expect(stepButton('Inter-agency Referrals').getAttribute('aria-disabled')).toBe('false');
+    expect(stepButton('Court Hearings').getAttribute('aria-disabled')).toBe('true');
+    expect(stepButton('Court Hearings').getAttribute('title')).toMatch(/Accomplish/i);
+  });
+
+  it('opens Court Hearings once the inter-agency referral is done', () => {
+    const onClick = vi.fn();
+    render(
+      <CaseStepper
+        currentStep="referrals"
+        onStepClick={onClick}
+        caseData={{ ...cicl, referralNotNeeded: true }}
+        interventionCount={1}
+        enrollmentCount={1}
+        requirementsMet={true}
+        referralNotNeeded
+      />,
+    );
+    const hearings = stepButton('Court Hearings');
+    expect(hearings.getAttribute('aria-disabled')).not.toBe('true');
+    hearings.click();
+    expect(onClick).toHaveBeenCalledWith('court_hearings');
+    // …and Evaluate still waits for the hearings to be recorded.
+    expect(stepButton('Evaluate Help Given').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('renders the CICL steps in template order within their phase groups', () => {
+    render(
+      <CaseStepper
+        currentStep="assessment"
+        onStepClick={vi.fn()}
+        caseData={{ caseCategory: 'Children in Conflict with the Law (CICL)' }}
+        interventionCount={0}
+        enrollmentCount={0}
+      />,
+    );
+    // Document order must equal template order: the number comes from the
+    // template index while the group comes from STEP_PHASE, so a hearings step
+    // left in `phaseIn` would surface as "6" inside the first group.
+    const labels = [...document.querySelectorAll('nav button[aria-label]')].map(b => b.getAttribute('aria-label'));
+    expect(labels).toEqual([
+      '1. Assess & Interview',
+      '2. Discernment Assessment',
+      '3. Program Enrollments',
+      '4. Intervention & Requirements',
+      '5. Inter-agency Referrals',
+      '6. Court Hearings',
+      '7. Evaluate Help Given',
+      '8. Case Study & Closure',
+    ]);
+  });
 });
 
 describe('stepperStepDone — Phase-Out steps require the case to reach Phase-Out', () => {
@@ -295,7 +373,7 @@ describe('stepperStatus', () => {
   it('includes the injected category step for a category case', () => {
     const status = stepperStatus({ status: 'assessed', caseCategory: 'Children in Conflict with the Law (CICL)' }, 0, 0, {});
     expect(Object.keys(status)).toEqual([
-      'assessment', 'court_hearings', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate', 'closure',
+      'assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate', 'closure',
     ]);
   });
 });
