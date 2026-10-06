@@ -31,6 +31,7 @@
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
 import { crc32 } from 'node:zlib';
+import { dotToDrawio } from './dot-to-drawio.mjs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -38,6 +39,7 @@ import { execFileSync } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DOCS_DIR = HERE;
 const OUT_DIR = join(HERE, 'print');
+const OUT_DRAWIO_DIR = join(HERE, 'drawio');
 const MARGIN = 24; // points
 const CAPTION_PT = 16; // band reserved at the foot of the page for the caption
 
@@ -62,9 +64,13 @@ const PPI = Number((args.find((a) => a.startsWith('--ppi=')) || '--ppi=400').spl
 // Passing both is the same as passing neither.
 const wantPng = args.includes('--png');
 const wantPdf = args.includes('--pdf');
-const narrowed = wantPng || wantPdf;
+const wantDrawio = args.includes('--drawio');
+const narrowed = wantPng || wantPdf || wantDrawio;
 const doPng = wantPng || !narrowed;
 const doPdf = wantPdf || !narrowed;
+// Editable .drawio exports ride along by default; only ```dot charts have an
+// exporter so far (see dot-to-drawio.mjs), mermaid blocks are skipped.
+const doDrawio = wantDrawio || !narrowed;
 
 // Auto-pick the smallest page that keeps the text at ~5pt or larger. Both A3
 // orientations are tried because a tall diagram (e.g. `cases`, 63 rows) clears
@@ -307,6 +313,42 @@ async function renderPdfs() {
   return total;
 }
 
+/** Nearest preceding markdown heading for the Nth chart — used as page name. */
+function headingFor(md, chartIndex) {
+  const re = /```(mermaid|dot)\n[\s\S]*?```/g;
+  let m;
+  let i = 0;
+  while ((m = re.exec(md))) {
+    i++;
+    if (i !== chartIndex) continue;
+    const before = md.slice(0, m.index);
+    const headings = [...before.matchAll(/^#{1,6}\s+(.+)$/gm)];
+    const last = headings.at(-1)?.[1]?.trim();
+    return last ? last.replace(/^\d+(\.\d+)*[.\s—-]*/, '').trim() : null;
+  }
+  return null;
+}
+
+/** Export every ```dot chart to an editable .drawio file. Returns the count. */
+function renderDrawio() {
+  let total = 0;
+  mkdirSync(OUT_DRAWIO_DIR, { recursive: true });
+  for (const f of files) {
+    const md = readFileSync(join(DOCS_DIR, f), 'utf8');
+    const charts = extractCharts(md);
+    if (charts.length === 0) continue;
+    const base = f.replace('.md', '');
+    for (const c of charts) {
+      if (c.lang !== 'dot') continue; // mermaid → drawio has no exporter yet
+      const pageName = headingFor(md, c.index) ?? `${base} — Diagram ${c.index}`;
+      const xml = dotToDrawio(c.code, pageName);
+      writeFileSync(join(OUT_DRAWIO_DIR, `${base}-${String(c.index).padStart(2, '0')}.drawio`), xml);
+      total++;
+    }
+  }
+  return total;
+}
+
 async function main() {
   if (listOnly) {
     for (const f of files) {
@@ -322,10 +364,12 @@ async function main() {
   // leaves the images on disk.
   const pngs = doPng ? renderPngs() : 0;
   const pdfs = doPdf ? await renderPdfs() : 0;
+  const drawios = doDrawio ? renderDrawio() : 0;
 
   const parts = [];
   if (pdfs) parts.push(`${pdfs} PDF(s) (page-sized)`);
   if (pngs) parts.push(`${pngs} PNG(s) (${PPI} ppi)`);
+  if (drawios) parts.push(`${drawios} .drawio (editable)`);
   console.log(`\nDone: ${parts.join(' + ') || 'nothing to render'} in ${OUT_DIR}`);
 
   // The two formats should always cover the same set; a gap means one pass
