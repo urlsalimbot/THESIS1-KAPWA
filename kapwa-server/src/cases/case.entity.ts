@@ -148,6 +148,15 @@ export class Case extends BaseEntity {
   interventionNotNeeded?: boolean;
 
   /**
+   * The office will attend no court hearing on this case — the Court Hearings
+   * step's "record that none is needed" completion, so a case with no hearings
+   * can still finish the step instead of blocking `active -> transitioning`
+   * forever.
+   */
+  @Column({ name: 'court_hearings_not_needed', type: 'boolean', default: false })
+  courtHearingsNotNeeded?: boolean;
+
+  /**
    * How many `inter_agency_referrals` rows this case has.
    *
    * Not a column: `attachInterventionCounts` stamps it per case for the list

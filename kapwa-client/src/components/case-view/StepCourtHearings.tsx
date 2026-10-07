@@ -8,7 +8,8 @@ import { humanizeError } from '@/lib/errors';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Gavel, Lock, Plus, Trash2 } from 'lucide-react';
+import { Gavel, Lock, Plus, Trash2, Ban, CheckCircle2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { StepLockBar, type StepLock } from './StepLockBar';
 import { toast } from 'sonner';
 
@@ -64,6 +65,28 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
     await mutateEvents();
     await mutate(queryKeys.cases.detail(caseId));
   };
+
+  /**
+   * The step's second completion: record that this case will see no hearing, so
+   * a case with none can still finish the step instead of leaving it open — and
+   * with it the `active -> transitioning` gate that demands every step due at
+   * `active`. Mirrors the enrollment, intervention and referral decisions.
+   */
+  const notNeeded = Boolean(caseData?.courtHearingsNotNeeded);
+  const hasHearings = (events ?? []).some((e) => e.status !== 'cancelled');
+  const [savingDecision, setSavingDecision] = useState(false);
+
+  async function saveDecision(next: boolean) {
+    setSavingDecision(true);
+    try {
+      await api.patch(`/cases/${caseId}/court-hearings-decision`, { notNeeded: next });
+      await refresh();
+    } catch (err) {
+      toast.error(t('caseView.hearings.decisionFailed', 'Could not save the hearing decision'), { description: humanizeError(err) });
+    } finally {
+      setSavingDecision(false);
+    }
+  }
 
   async function addHearing() {
     if (!form.eventDate) return;
@@ -126,12 +149,34 @@ export function StepCourtHearings({ caseId, caseData, userRole, readOnly, lockRe
               <div className="flex items-center gap-2">
                 <Gavel size={16} className="text-primary" />
                 <h3 className="text-sm font-semibold">{t('caseView.hearings.title', 'Court Hearings')}</h3>
+                {notNeeded && (
+                  <Badge variant="outline" className="gap-1 text-[10px]">
+                    <CheckCircle2 size={10} aria-hidden="true" /> {t('caseView.hearings.notNeededBadge', 'No hearing needed')}
+                  </Badge>
+                )}
                 {readOnly && <Lock size={14} className="text-muted-foreground" />}
               </div>
               {canEdit && (
-                <Button size="sm" onClick={() => setAdding(true)}>
-                  <Plus size={14} className="mr-1" aria-hidden="true" /> {t('caseView.hearings.add', 'Add Hearing')}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {!notNeeded && (
+                    <Button size="sm" onClick={() => setAdding(true)}>
+                      <Plus size={14} className="mr-1" aria-hidden="true" /> {t('caseView.hearings.add', 'Add Hearing')}
+                    </Button>
+                  )}
+                  {notNeeded ? (
+                    <Button variant="outline" size="sm" disabled={savingDecision} onClick={() => saveDecision(false)}>
+                      {t('caseView.hearings.undoDecision', 'Undo decision')}
+                    </Button>
+                  ) : (
+                    // Held disabled once a hearing is on file: the decision says
+                    // this case will see none, which a recorded hearing already
+                    // contradicts — and the done-predicate is an OR, so the step
+                    // is finished either way.
+                    <Button variant="secondary" size="sm" disabled={savingDecision || hasHearings} onClick={() => saveDecision(true)}>
+                      <Ban size={14} className="mr-1" aria-hidden="true" /> {t('caseView.hearings.notNeeded', 'No court hearings')}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">

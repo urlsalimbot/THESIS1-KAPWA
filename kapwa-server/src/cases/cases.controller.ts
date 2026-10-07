@@ -271,6 +271,19 @@ export class CasesController {
     return this.casesService.updateEnrollmentsDecision(id, body.notNeeded);
   }
 
+  // The Court Hearings step's second completion. It exists for the same reason
+  // the three above do: without it, a case on which the office attends no
+  // hearing had no way to finish a step that `active -> transitioning` demands.
+  @Patch(':id/court-hearings-decision')
+  @Roles('admin', 'social_worker')
+  async updateCourtHearingsDecision(
+    @Param('id') id: string,
+    @Body(new ZodPipe(ReferralDecisionSchema)) body: ReferralDecisionInput,
+  ) {
+    await this.stepLocks.assertUnsealed(id, 'court_hearings');
+    return this.casesService.updateCourtHearingsDecision(id, body.notNeeded);
+  }
+
   @Patch(':id/discernment')
   @Roles('admin', 'social_worker')
   async updateDiscernment(

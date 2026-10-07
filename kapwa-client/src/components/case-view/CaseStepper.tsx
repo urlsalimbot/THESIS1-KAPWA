@@ -11,6 +11,8 @@ export interface StepperProgressOpts {
   interventionNotNeeded?: boolean;
   /** The case row's "no program needed" decision (enrollments step). */
   enrollmentsNotNeeded?: boolean;
+  /** The case row's "this case will see no hearing" decision. */
+  courtHearingsNotNeeded?: boolean;
   /** How many non-cancelled hearings the court_hearings step counts. */
   courtHearingCount?: number;
   /**
@@ -276,9 +278,12 @@ export function stepperStepDone(
     case 'adoption':
       return !!caseData?.adoptionDvcDate && !!caseData?.adoptionCaseStudyDate;
     // Court Hearings: at least one recorded hearing that was not cancelled
-    // (attended or not — a not-attended hearing is still a recorded fact).
+    // (attended or not — a not-attended hearing is still a recorded fact), or
+    // the recorded decision that this case will see none — the second
+    // completion the enrollment, intervention and referral steps already offer.
     case 'court_hearings':
-      return (opts.courtHearingCount ?? 0) > 0;
+      return (opts.courtHearingCount ?? 0) > 0
+        || Boolean(opts.courtHearingsNotNeeded ?? caseData?.courtHearingsNotNeeded);
     case 'evaluate':
       return !!caseData?.selfRelianceLevel && !!caseData?.sustainabilityPlan;
     case 'closure':

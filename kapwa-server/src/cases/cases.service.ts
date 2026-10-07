@@ -862,6 +862,22 @@ export class CasesService {
     return this.caseRepo.save(caseEntity);
   }
 
+  /**
+   * The Court Hearings step's second completion: record that this case will see
+   * no hearing, so the step can finish without one.
+   *
+   * The done-predicate is an OR, so a case that already has hearings stays done
+   * either way — the flag is a decision about the case, not a lock on its
+   * history, exactly as it is for the enrollment, intervention and referral
+   * decisions.
+   */
+  async updateCourtHearingsDecision(id: string, notNeeded: boolean) {
+    const caseEntity = await this.caseRepo.findOne({ where: { id } });
+    if (!caseEntity) throw new NotFoundException('Case not found');
+    caseEntity.courtHearingsNotNeeded = notNeeded;
+    return this.caseRepo.save(caseEntity);
+  }
+
   /** Category-step savers — each refuses a category whose template lacks the step. */
   private requireCategory(c: Case, expected: string, stepLabel: string): void {
     if (stepsForCategory(c.caseCategory).includes(stepLabel)) return;

@@ -719,5 +719,17 @@
     },
     "expected": false,
     "step": "court_hearings"
+  },
+  {
+    "name": "court_hearings done: no-hearings decision recorded (status active)",
+    "caseData": {
+      "status": "active",
+      "caseCategory": "Children in Conflict with the Law (CICL)",
+      "courtHearingsNotNeeded": true
+    },
+    "interventionCount": 0,
+    "opts": {},
+    "expected": true,
+    "step": "court_hearings"
   }
 ]

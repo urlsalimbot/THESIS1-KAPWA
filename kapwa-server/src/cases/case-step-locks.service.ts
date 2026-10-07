@@ -41,6 +41,7 @@ interface StepDoneOpts {
   referralNotNeeded?: boolean;
   interventionNotNeeded?: boolean;
   enrollmentsNotNeeded?: boolean;
+  courtHearingsNotNeeded?: boolean;
   /**
    * How many inter-agency referrals the case has, read off
    * `inter_agency_referrals` — the table the endorsement letter writes.
@@ -262,9 +263,14 @@ export class CaseStepLocksService {
       case 'adoption':
         return !!caseData.adoptionDvcDate && !!caseData.adoptionCaseStudyDate;
       // Court Hearings: at least one recorded hearing that was not cancelled
-      // (attended or not — a not-attended hearing is still a recorded fact).
+      // (attended or not — a not-attended hearing is still a recorded fact), or
+      // the recorded decision that this case will see none. The second clause is
+      // the same completion the enrollment, intervention and referral steps
+      // already offer; without it a case with no hearings could never finish the
+      // step, and the `active -> transitioning` gate that demands every step due
+      // at `active` could never be satisfied.
       case 'court_hearings':
-        return (opts.courtHearingCount ?? 0) > 0;
+        return (opts.courtHearingCount ?? 0) > 0 || Boolean(opts.courtHearingsNotNeeded);
       case 'evaluate':
         return !!caseData.selfRelianceLevel && !!caseData.sustainabilityPlan;
       case 'closure':
@@ -338,6 +344,7 @@ export class CaseStepLocksService {
         referralNotNeeded: Boolean(c.referralNotNeeded),
         interventionNotNeeded: Boolean(c.interventionNotNeeded),
         enrollmentsNotNeeded: Boolean(c.enrollmentsNotNeeded),
+        courtHearingsNotNeeded: Boolean(c.courtHearingsNotNeeded),
         courtHearingCount,
       },
     );

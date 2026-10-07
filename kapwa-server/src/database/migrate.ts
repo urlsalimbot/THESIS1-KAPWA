@@ -447,6 +447,9 @@ export async function migrate() {
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS approved_by_role VARCHAR`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS referral_not_needed BOOLEAN NOT NULL DEFAULT FALSE`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS intervention_not_needed BOOLEAN NOT NULL DEFAULT FALSE`);
+  // The Court Hearings step's second completion — same shape and default as the
+  // three decision flags above it.
+  await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS court_hearings_not_needed BOOLEAN NOT NULL DEFAULT FALSE`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS self_reliance_plan TEXT`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS referrals JSONB`);
   await q.query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS follow_up_date DATE`);
