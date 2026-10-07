@@ -324,6 +324,47 @@ describe('IntakeReviewPage', () => {
     expect(fm.some(m => m.firstName === 'Liza')).toBe(false);
   });
 
+  it('offers updating the household without opening a case (createCase: false)', async () => {
+    mockLocationState = {
+      candidates: [
+        {
+          householdId: 'hh-querubin', score: 0.9, matchedOn: ['both_names'], caseExistsWithin30Days: false,
+          primaryBeneficiary: {
+            id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo', gender: 'Male', age: 48,
+            dob: '1978-12-01', occupation: 'Farmer', estimatedMonthlyIncome: 8000,
+            civilStatus: 'Married', currentAddress: { barangay: 'Partida' },
+          },
+          matchedPerson: {
+            id: 'person-liza', role: 'member', relationship: 'Child', surname: 'Querubin', firstName: 'Liza',
+            gender: 'Female', age: 11, dob: '2015-03-30', occupation: 'Student', estimatedMonthlyIncome: 0,
+            civilStatus: 'Single', currentAddress: { barangay: 'Partida' },
+          },
+          allBeneficiaries: [{ id: 'ben-pablo', surname: 'Querubin', firstName: 'Pablo' }],
+          familyMembers: [], pastCases: [], lastApprovedCaseDate: null,
+        },
+      ],
+      intakeData: {
+        beneficiary: { surname: 'Querubin', firstName: 'Liza', gender: 'Female', dob: '2015-03-30', currentAddress: { barangay: 'Partida' } },
+        claimant: { surname: 'Querubin', firstName: 'Consuelo', relationshipToBeneficiary: 'Parent' },
+        familyMembers: [], case: {},
+      },
+    };
+    render(
+      <MemoryRouter>
+        <IntakeReviewPage />
+      </MemoryRouter>
+    );
+
+    // A fresh member match would normally open a new case — the record-only
+    // action must still be there, and it must tell the server not to create one.
+    fireEvent.click(screen.getByRole('button', { name: /update household record only/i }));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/intake/confirm/hh-querubin', expect.objectContaining({ createCase: false }));
+    });
+    expect(screen.getByRole('button', { name: /update info & create case/i })).toBeDefined();
+  });
+
   it('uploads the pending ID photo once a case is confirmed', async () => {
     render(
       <MemoryRouter>

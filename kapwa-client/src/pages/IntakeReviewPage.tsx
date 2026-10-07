@@ -77,7 +77,7 @@ export function IntakeReviewPage() {
     });
   }
 
-  async function handleConfirm(householdId: string) {
+  async function handleConfirm(householdId: string, createCase: boolean = true) {
     setLoadingId(householdId);
     try {
       const candidate = sorted.find(c => c.householdId === householdId);
@@ -106,7 +106,7 @@ export function IntakeReviewPage() {
       }
       const result = await api.post<{ caseCreated: boolean; caseId?: string; message: string }>(
         `/intake/confirm/${householdId}`,
-        body,
+        { ...body, createCase },
       );
       // The intake has been consumed either way (case created, or existing case
       // updated), so the draft is spent.
@@ -186,6 +186,16 @@ export function IntakeReviewPage() {
                   : c.matchedPerson?.role === 'member' || !c.caseExistsWithin30Days
                     ? t('intake.updateAndCreate', 'Yes, update info & create case')
                     : t('intake.updateInfo', 'Yes, update info')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleConfirm(c.householdId, false)}
+                disabled={loadingId === c.householdId}
+              >
+                {loadingId === c.householdId
+                  ? t('intake.updating', 'Updating...')
+                  : t('intake.updateRecordOnly', 'Update household record only — no new case')}
               </Button>
               <Button
                 variant="outline"

@@ -223,6 +223,8 @@ export function IntakePage() {
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [probeCandidates, setProbeCandidates] = useState<MatchCandidate[] | null>(null);
   const [confirmedHousehold, setConfirmedHousehold] = useState<MatchCandidate | null>(null);
+  /** The household currently being updated record-only (no new case). */
+  const [confirmedUpdatingOnly, setConfirmedUpdatingOnly] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
   /** True once the match pop-up has presented candidates this session. */
   const [probeShown, setProbeShown] = useState(false);
@@ -620,6 +622,52 @@ export function IntakePage() {
     setSeedNonce(n => n + 1);
   }
 
+  /** The intake payload both the create-case and update-only confirm paths send. */
+  function buildIntakePayload() {
+    return {
+      beneficiary: personToPayload(beneficiary),
+      claimant: beneficiaryIsClaimant
+        ? { ...personToPayload(beneficiary), relationshipToBeneficiary: 'Self' }
+        : { ...personToPayload(claimant), relationshipToBeneficiary },
+      familyMembers: familyMembersPayload(),
+      renewalOfCaseId: renewalOfCaseId || undefined,
+      // Lets the server link the case it creates back to the referral that
+      // handed off to this intake (IntakeService.linkSourceReferral). Read from
+      // component state rather than router state so it survives draft recovery.
+      sourceReferral: sourceReferral
+        ? { type: sourceReferral.type, id: sourceReferral.id }
+        : undefined,
+      // The referral reason rides in the existing serviceRequested slot so it is
+      // not lost now that accepting no longer creates the case itself.
+      case: sourceReferral?.reason ? { serviceRequested: [sourceReferral.reason] } : {},
+    };
+  }
+
+  /**
+   * Update the matched household's records WITHOUT opening a new case. The
+   * household matched but the new episode was rejected (e.g. a duplicate case),
+   * so the correction goes on the record and no case is issued — the server
+   * honors `createCase: false` and skips case creation entirely.
+   */
+  async function handleUpdateOnly(c: MatchCandidate) {
+    if (confirmedUpdatingOnly) return;
+    setConfirmedUpdatingOnly(c.householdId);
+    try {
+      const result = await api.post<{ caseCreated: boolean; caseId?: string; message: string }>(
+        `/intake/confirm/${c.householdId}`,
+        { ...buildIntakePayload(), createCase: false },
+      );
+      clearDraft(userId);
+      toast.info(t('intake.infoUpdated', 'Info updated'), { description: result.message });
+      setConfirmedHousehold(null);
+      navigate('/cases');
+    } catch {
+      toast.error(t('intake.updateFailed', 'Failed to update'), { description: t('intake.tryAgain', 'Please try again.') });
+    } finally {
+      setConfirmedUpdatingOnly(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -681,23 +729,7 @@ export function IntakePage() {
 
     setSubmitting(true);
 
-    const intakePayload = {
-      beneficiary: personToPayload(beneficiary),
-      claimant: beneficiaryIsClaimant
-        ? { ...personToPayload(beneficiary), relationshipToBeneficiary: 'Self' }
-        : { ...personToPayload(claimant), relationshipToBeneficiary },
-      familyMembers: familyMembersPayload(),
-      renewalOfCaseId: renewalOfCaseId || undefined,
-      // Lets the server link the case it creates back to the referral that
-      // handed off to this intake (IntakeService.linkSourceReferral). Read from
-      // component state rather than router state so it survives draft recovery.
-      sourceReferral: sourceReferral
-        ? { type: sourceReferral.type, id: sourceReferral.id }
-        : undefined,
-      // The referral reason rides in the existing serviceRequested slot so it is
-      // not lost now that accepting no longer creates the case itself.
-      case: sourceReferral?.reason ? { serviceRequested: [sourceReferral.reason] } : {},
-    };
+    const intakePayload = buildIntakePayload();
 
     try {
       if (confirmedHousehold) {
@@ -1037,6 +1069,7 @@ export function IntakePage() {
           candidates={probeCandidates}
           intake={beneficiary}
           onConfirm={handleProbeConfirm}
+          onUpdateOnly={handleUpdateOnly}
           onDismiss={() => setProbeCandidates(null)}
         />
       )}

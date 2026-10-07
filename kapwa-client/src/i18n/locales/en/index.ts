@@ -1702,6 +1702,7 @@ const en = {
     "registerNewClient": "Register as new client",
     "updateAndCreate": "Yes, update info & create case",
     "updateInfo": "Yes, update info",
+    "updateRecordOnly": "Update household record only — no new case",
     "youEntered": "You entered",
 "eligMemberNewCase": "Matched as a household member — a new case will be opened for this client in this household.",
     "matchProbeAttachedMember": "Will attach to {{name}}\u2019s household and open a new case for this client — family composition loaded below. Review and edit as needed.",

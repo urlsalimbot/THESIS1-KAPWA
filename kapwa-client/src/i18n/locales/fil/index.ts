@@ -879,6 +879,7 @@ const fil: EnLocale = {
     "registerNewClient": "Magrehistro bilang bagong kliyente",
     "updateAndCreate": "Oo, i-update ang impormasyon at gumawa ng kaso",
     "updateInfo": "Oo, i-update ang impormasyon",
+    "updateRecordOnly": "I-update lang ang rekord ng sambahayan — walang bagong kaso",
     "youEntered": "Inilagay mo",
 "eligMemberNewCase": "Natugma bilang miyembro ng sambahayan — magbubukas ng bagong kaso para sa kliyenteng ito sa sambahayang ito.",
     "matchProbeAttachedMember": "Ikaa-attach sa sambahayan ni {{name}} at magbubukas ng bagong kaso para sa kliyenteng ito — na-load ang komposisyon ng pamilya sa ibaba. Suriin at i-edit kung kailangan.",

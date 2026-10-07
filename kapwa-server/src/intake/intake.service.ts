@@ -979,10 +979,12 @@ const claimPerson = await this.findOrCreatePerson(this.personFromInput(data.clai
         order: { createdAt: 'DESC' },
       });
 
-      const controlNo = recentCase && wasAlreadyBeneficiary ? undefined : await this.casesService.generateControlNo();
+      const controlNo = data.createCase === false || (recentCase && wasAlreadyBeneficiary)
+        ? undefined
+        : await this.casesService.generateControlNo();
 
       let savedCase = null;
-      if (!recentCase || !wasAlreadyBeneficiary) {
+      if (data.createCase !== false && (!recentCase || !wasAlreadyBeneficiary)) {
 const caseEntity = this.caseRepo.create({
           controlNo,
           beneficiaryId: savedBeneficiary.id,
@@ -1038,7 +1040,9 @@ const caseEntity = this.caseRepo.create({
         existingCaseDate,
         message: savedCase
           ? 'Info updated and new case created.'
-          : `Info updated. No new case created — this household already has a case from ${new Date(recentCase!.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}.`,
+          : data.createCase === false
+            ? 'Household record updated. No new case created — update only.'
+            : `Info updated. No new case created — this household already has a case from ${new Date(recentCase!.createdAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}.`,
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, cleanup, within } from '@testing-library/react';
+import { render, screen, cleanup, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
 import { MatchProbeDialog } from './MatchProbeDialog';
@@ -75,7 +75,7 @@ const candidate: MatchCandidate = {
 function renderProbe() {
   return render(
     <MemoryRouter>
-      <MatchProbeDialog candidates={[candidate]} intake={intake} onConfirm={() => {}} onDismiss={() => {}} />
+      <MatchProbeDialog candidates={[candidate]} intake={intake} onConfirm={() => {}} onUpdateOnly={() => {}} onDismiss={() => {}} />
     </MemoryRouter>
   );
 }
@@ -144,7 +144,7 @@ describe('match card parity: pop-up vs review page', () => {
   it('omits the comparison block when no entered details are supplied', () => {
     render(
       <MemoryRouter>
-        <MatchProbeDialog candidates={[candidate]} onConfirm={() => {}} onDismiss={() => {}} />
+        <MatchProbeDialog candidates={[candidate]} onConfirm={() => {}} onUpdateOnly={() => {}} onDismiss={() => {}} />
       </MemoryRouter>
     );
     expect(screen.queryByText('You entered')).toBeNull();
@@ -212,5 +212,17 @@ describe('match card parity: pop-up vs review page', () => {
     );
     const caseList = screen.getByRole('list', { name: /Past cases/i });
     expect(within(caseList).getAllByText('KAPWA-2026-00021')).toHaveLength(1);
+  });
+
+  it('pop-up offers updating the household without opening a new case', () => {
+    const onUpdateOnly = vi.fn();
+    render(
+      <MemoryRouter>
+        <MatchProbeDialog candidates={[candidate]} intake={intake} onConfirm={() => {}} onUpdateOnly={onUpdateOnly} onDismiss={() => {}} />
+      </MemoryRouter>
+    );
+    const btn = screen.getByRole('button', { name: /update household record only/i });
+    fireEvent.click(btn);
+    expect(onUpdateOnly).toHaveBeenCalledWith(candidate);
   });
 });

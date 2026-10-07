@@ -7,12 +7,15 @@ export function MatchProbeDialog({
   candidates,
   intake,
   onConfirm,
+  onUpdateOnly,
   onDismiss,
 }: {
   candidates: MatchCandidate[];
   /** The details the worker just entered, for the "You entered" column. */
   intake?: MatchIntakeFields;
   onConfirm: (candidate: MatchCandidate) => void;
+  /** Same household, but update the records without opening a new case. */
+  onUpdateOnly: (candidate: MatchCandidate) => void;
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
@@ -33,6 +36,9 @@ export function MatchProbeDialog({
             <MatchCandidateCard key={c.householdId} candidate={c} intake={intake}>
               <Button size="sm" onClick={() => onConfirm(c)}>
                 {t('intake.matchProbeConfirm', 'This is the client’s household')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => onUpdateOnly(c)}>
+                {t('intake.updateRecordOnly', 'Update household record only — no new case')}
               </Button>
             </MatchCandidateCard>
           ))}

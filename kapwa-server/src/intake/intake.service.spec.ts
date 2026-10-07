@@ -856,6 +856,49 @@ describe('IntakeService', () => {
       );
     });
 
+    it('forms no new case when the worker chooses update-only (createCase: false)', async () => {
+      hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
+      benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;
+
+      const saveMock = queryRunnerMock.manager.save as jest.Mock;
+      saveMock
+        .mockResolvedValueOnce({ id: 'person-uuid' })
+        .mockResolvedValueOnce({ id: 'new-ben-id' })
+        .mockResolvedValueOnce({ id: 'role-uuid-1' })
+        .mockResolvedValueOnce({ id: 'claim-uuid' })
+        .mockResolvedValueOnce({ id: 'bc-uuid' })
+        .mockResolvedValueOnce({ id: 'fm-person-1' })
+        .mockResolvedValueOnce({ id: 'hm-uuid-1' })
+        .mockResolvedValueOnce({ id: 'consent-uuid' });
+
+      (personRepo.create as jest.Mock).mockReturnValue({});
+      (benRepo.create as jest.Mock).mockReturnValue({});
+      (hhRepo.create as jest.Mock).mockReturnValue({});
+      (caseRepo.create as jest.Mock).mockReturnValue({});
+      (consentRepo.create as jest.Mock).mockReturnValue({});
+      // No recent case at all — the default flow would open one here, and the
+      // whole point of `createCase: false` is that it does not.
+      caseRepo.findOne = jest.fn().mockResolvedValue(null) as any;
+
+      const result = await service.confirmMatch(
+        'existing-hh', { ...validIntakeInput, createCase: false }, ['Bigte'],
+        { id: 'caller-1', role: UserRole.SW },
+      );
+
+      // The household row is updated, the case is not issued.
+      expect(saveMock).toHaveBeenCalled();
+      expect(caseRepo.create).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        updated: true,
+        caseCreated: false,
+        caseId: null,
+        controlNo: null,
+        status: null,
+        beneficiaryId: 'new-ben-id',
+      });
+      expect(result.message).toMatch(/No new case created/);
+    });
+
     it('adds a family-relation claimant to the household roster on confirm', async () => {
       hhRepo.findOne = jest.fn().mockResolvedValue({ id: 'existing-hh', barangay: 'Bigte' }) as any;
       benRepo.find = jest.fn().mockResolvedValue([{ id: 'existing-ben' }]) as any;

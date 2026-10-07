@@ -152,8 +152,16 @@ export interface MatchCandidate {
   lastApprovedCaseDate: string | null;
 }
 
-export const ConfirmMatchInputSchema = IntakeInputSchema;
-export type ConfirmMatchInput = IntakeInput;
+export const ConfirmMatchInputSchema = IntakeInputSchema.extend({
+  // Explicit "update the household, don't open a case". When false, confirmMatch
+  // updates the person/beneficiary/claimant/family records and returns without
+  // creating a new case even when one would otherwise be issued — the worker may
+  // have recognised a duplicate episode and wants the record corrected without a
+  // double case. Defaults to the pre-existing behaviour (create, or reuse a
+  // recent case).
+  createCase: z.boolean().optional(),
+});
+export type ConfirmMatchInput = z.infer<typeof ConfirmMatchInputSchema>;
 
 export interface ConfirmMatchResponse {
   updated: boolean;
