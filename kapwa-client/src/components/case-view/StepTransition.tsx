@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { isSelfSufficient } from '@/lib/self-reliance';
 import { formatDate } from '../../lib/format';
 import { StepLockBar, type StepLock } from './StepLockBar';
+import { stepsDueAt, STEP_LABEL_KEYS } from './CaseStepper';
 
 interface FollowUpVisit {
   date: string;
@@ -484,7 +485,7 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
               <p className="text-sm font-medium text-primary">{t('caseView.transition.planReady', 'Transition plan ready')}</p>
               <p className="text-xs text-muted-foreground">{t('caseView.transition.planReadyHint', 'Mark case as transitioning to begin graduation process.')}</p>
             </div>
-            <TransitionButton caseId={caseId} mutate={mutate} />
+            <TransitionButton caseId={caseId} caseData={caseData} mutate={mutate} />
           </div>
         </div>
       )}
@@ -504,9 +505,26 @@ export function StepTransition({ caseId, caseData, userRole, readOnly, lockReadO
   );
 }
 
-function TransitionButton({ caseId, mutate }: { caseId: string; mutate: any }) {
+function TransitionButton({ caseId, caseData, mutate }: { caseId: string; caseData: any; mutate: any }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+
+  /**
+   * The Implementation phase's gate — the client half of `assertStepsSealed` on
+   * `active -> transitioning`. Reads the same floor-derived `stepsDueAt` the
+   * review and close gates read, so this and the server cannot ask for different
+   * sets: at `active` that is every step but `closure`.
+   *
+   * Deliberately NOT exempting `admin`, unlike those two gates: the server
+   * exempts admin from the review and close gates because a case must be able to
+   * move at all, but `CASE_FSM_ROLES[ACTIVE]` is empty, so this edge admits
+   * `admin` and nobody else. Exempting the only role that can take it would gate
+   * nobody — which is why the button names the open steps rather than greying
+   * out silently and letting the worker meet a 400.
+   */
+  const openSteps = stepsDueAt(caseData?.status, caseData?.caseCategory)
+    .filter((key) => !((caseData?.stepLocks ?? []) as StepLock[]).some((l) => l?.stepKey === key));
+
   async function handleTransition() {
     setLoading(true);
     try {
@@ -518,9 +536,24 @@ function TransitionButton({ caseId, mutate }: { caseId: string; mutate: any }) {
       setLoading(false);
     }
   }
+
+  const label = loading
+    ? t('caseView.processing', 'Processing...')
+    : t('caseView.transition.markReady', '→ Mark Ready for Graduation');
+
+  if (openSteps.length > 0) {
+    const names = openSteps.map((k) => STEP_LABEL_KEYS[k]?.fallback ?? k).join(', ');
+    return (
+      <div className="space-y-1.5">
+        <Button onClick={handleTransition} disabled size="sm">{label}</Button>
+        <p className="text-xs text-destructive">
+          {t('caseView.transition.lockStepsFirst', 'Lock these steps before transitioning: {{steps}}', { steps: names })}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <Button onClick={handleTransition} disabled={loading} size="sm">
-      {loading ? t('caseView.processing', 'Processing...') : t('caseView.transition.markReady', '→ Mark Ready for Graduation')}
-    </Button>
+    <Button onClick={handleTransition} disabled={loading} size="sm">{label}</Button>
   );
 }

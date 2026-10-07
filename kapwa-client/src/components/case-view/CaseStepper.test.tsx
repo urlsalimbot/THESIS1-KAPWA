@@ -260,7 +260,9 @@ describe('CaseStepper rendering', () => {
       <CaseStepper
         currentStep="interventions"
         onStepClick={onClick}
-        caseData={{ ...baseCase, referralNotNeeded: true }}
+        // `active` — Evaluate is Phase-Out work floored at `active`, so the floor
+        // must be met for the implementation rule below to be what decides.
+        caseData={{ ...baseCase, status: 'active', referralNotNeeded: true }}
         interventionCount={1}
         enrollmentCount={0}
         requirementsMet={true}
@@ -273,11 +275,31 @@ describe('CaseStepper rendering', () => {
     expect(onClick).toHaveBeenCalledWith('evaluate');
   });
 
+  // …and the same two implementation steps done *before* `active` do NOT open it:
+  // the floor is a precondition, so Phase-Out work stays in Phase-Out.
+  it('keeps Evaluate Help Given shut before active even when implementation is done', () => {
+    render(
+      <CaseStepper
+        currentStep="interventions"
+        onStepClick={vi.fn()}
+        caseData={{ ...baseCase, status: 'in_review', referralNotNeeded: true }}
+        interventionCount={1}
+        enrollmentCount={0}
+        requirementsMet={true}
+        interventionNotNeeded={false}
+      />,
+    );
+    expect(stepButton('Evaluate Help Given').getAttribute('aria-disabled')).toBe('true');
+  });
+
   // The defect this pins: court hearings were reachable the moment the
   // assessment was done, so a worker recorded hearings before the case had been
   // referred out. The hearings step now sits after `referrals` in the template,
   // so it opens only once that hand-off is on the file.
-  const cicl = { ...baseCase, caseCategory: 'Children in Conflict with the Law (CICL)' };
+  // `active`, so the Court Hearings *floor* is met and these cases isolate the
+  // ordering rule (referrals before hearings) from the phase rule (hearings are
+  // disabled through Phase-In). The phase rule has its own test below.
+  const cicl = { ...baseCase, status: 'active', caseCategory: 'Children in Conflict with the Law (CICL)' };
 
   it('keeps Court Hearings locked until the inter-agency referral is done', () => {
     render(
@@ -317,6 +339,50 @@ describe('CaseStepper rendering', () => {
     // …and Evaluate still waits for the hearings to be recorded.
     expect(stepButton('Evaluate Help Given').getAttribute('aria-disabled')).toBe('true');
   });
+
+  // The phase rule, on its own. Court Hearings is implementation work and stays
+  // shut for the whole of Phase-In (enrolled / assessed / in_review) *even when*
+  // the referral is done — without the floor precondition the index rule would
+  // open it the moment `referrals` completes, which is exactly what the ordering
+  // fix on its own did not cover.
+  it.each(['enrolled', 'assessed', 'in_review'])(
+    'keeps Court Hearings disabled through Phase-In (%s) even once the referral is done',
+    (status) => {
+      render(
+        <CaseStepper
+          currentStep="referrals"
+          onStepClick={vi.fn()}
+          caseData={{ ...cicl, status, referralNotNeeded: true }}
+          interventionCount={1}
+          enrollmentCount={1}
+          requirementsMet={true}
+          referralNotNeeded
+        />,
+      );
+      expect(stepButton('Inter-agency Referrals').getAttribute('aria-disabled')).toBe('false');
+      expect(stepButton('Court Hearings').getAttribute('aria-disabled')).toBe('true');
+    },
+  );
+
+  // …and the same case once it is active: the floor is met, the referral is on
+  // file, and the step opens. This is the other half of the requirement.
+  it.each(['active', 'transitioning'])(
+    'opens Court Hearings at %s once the referral is done',
+    (status) => {
+      render(
+        <CaseStepper
+          currentStep="referrals"
+          onStepClick={vi.fn()}
+          caseData={{ ...cicl, status, referralNotNeeded: true }}
+          interventionCount={1}
+          enrollmentCount={1}
+          requirementsMet={true}
+          referralNotNeeded
+        />,
+      );
+      expect(stepButton('Court Hearings').getAttribute('aria-disabled')).not.toBe('true');
+    },
+  );
 
   it('renders the CICL steps in template order within their phase groups', () => {
     render(

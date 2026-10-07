@@ -121,7 +121,22 @@ export const CASE_STEP_FLOORS: Record<string, number> = {
   protection_order: 0,
   solo_parent: 0,
   adoption: 0,
-  court_hearings: 0,
+  // Court hearings are *implementation* work: the office attends a hearing on a
+  // case that is already active, not on one still being triaged. Floored at
+  // `active`(3) for two reasons that are really one:
+  //
+  //  1. Before `active` the step is Phase-In-inaccessible — the seal endpoint
+  //     rejects it with a 400 and the client's reachability rule keeps the
+  //     stepper entry disabled, so a worker cannot record hearings against a
+  //     case that has not been handed up for review yet.
+  //  2. It drops out of `stepsDueAt('assessed')`, which is the set the
+  //     `assessed -> in_review` gate demands. Left at 0 that gate required a
+  //     sealable-only-at-`active` step while the same step was refusing to be
+  //     sealed — an unsatisfiable gate, the exact shape of the `evaluate`/
+  //     `closure` bug fixed in `5964197`.
+  //
+  // The `active -> transitioning` gate picks it back up via `stepsDueAt('active')`.
+  court_hearings: 3,
   evaluate: 3,
   closure: 4,
 };

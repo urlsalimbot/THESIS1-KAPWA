@@ -549,6 +549,25 @@ export class CasesService {
       if (!(await this.getInterAgencyReferralCount(c.id)) && !c.referralNotNeeded) {
         throw new BadRequestException('Record the inter-agency referral decision before transitioning');
       }
+      // The Implementation phase's own gate. `assessed -> in_review` covers the
+      // Phase-In work and `transitioning -> closed` covers Phase-Out, but this
+      // edge — leaving the phase the services were actually delivered in — was
+      // the only one with no seal gate, so a case could be transitioned with its
+      // Court Hearings never sealed by anyone.
+      //
+      // `stepsDueAt(c.status, ...)` is the same floor-derived set the other two
+      // gates read: at `active`(3) that is every step but `closure`, which is
+      // exactly the set the seal endpoint will accept here (court hearings and
+      // Evaluate are floored at 3, `closure` at 4). Named rather than written
+      // out, so a floor change cannot desynchronise gate and endpoint.
+      //
+      // No admin exemption, unlike the two gates above: `CASE_FSM_ROLES[ACTIVE]`
+      // is empty, so this edge admits `admin` and nobody else — exempting the
+      // only role that can take it would bind no one. The comment above this
+      // block that called a gate here useless was describing the absence; this
+      // is what makes it real.
+      this.assertStepsSealed(c, stepsDueAt(c.status, c.caseCategory),
+        'transitioning out of the implementation phase');
     }
   }
 

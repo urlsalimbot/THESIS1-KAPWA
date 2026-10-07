@@ -159,7 +159,11 @@ export const STEP_FLOORS: Record<string, number> = {
   protection_order: 0,
   solo_parent: 0,
   adoption: 0,
-  court_hearings: 0,
+  // Court hearings: implementation work, floored at `active`(3) — the server's
+  // `CASE_STEP_FLOORS` says the same and `case-fsm-parity.test.ts` fails if the
+  // two drift. Below `active` the Lock button is disabled and, with the
+  // reachability rule below, so is the stepper entry itself.
+  court_hearings: 3,
   evaluate: 3,
   closure: 4,
 };
@@ -395,7 +399,16 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                   const isActive = step.key === currentStep;
                   const implementationDone =
                     doneFor('interventions') && doneFor('referrals');
-                  const isClickable = done || (step.key === 'referrals' && doneFor('assessment')) || (idxOf(step.key) <= highestReachable + 1 && (!['evaluate', 'closure'].includes(step.key) || implementationDone));
+                  // A step cannot be opened before the case reaches its own
+                  // lifecycle floor. This is what keeps Court Hearings shut
+                  // through Phase-In (`enrolled`/`assessed`/`in_review`) even
+                  // once an earlier step would otherwise hand reachability
+                  // forward, and what keeps Evaluate and Closure in their
+                  // phases. `done` already implies the floor — `stepperStepDone`
+                  // floors before it reads any data — so gating on it can never
+                  // hide a step that is already accomplished.
+                  const reachedFloor = statusAtLeast(caseData, STEP_FLOORS[step.key] ?? 0);
+                  const isClickable = reachedFloor && (done || (step.key === 'referrals' && doneFor('assessment')) || (idxOf(step.key) <= highestReachable + 1 && (!['evaluate', 'closure'].includes(step.key) || implementationDone)));
                   return (
                     <button
                       key={step.key}

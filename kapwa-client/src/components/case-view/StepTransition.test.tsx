@@ -77,13 +77,43 @@ describe('StepTransition — owns the active -> transitioning edge', () => {
   // admits from `active` once the admin short-circuit is accounted for, so this
   // is the whole set the bar suppresses for.
   it('is the only control for active -> transitioning, and offers it to an admin', () => {
-    renderStep({ status: 'active', selfRelianceLevel: 3, sustainabilityPlan: 'sari-sari store' });
+    renderStep({
+      status: 'active',
+      selfRelianceLevel: 3,
+      sustainabilityPlan: 'sari-sari store',
+      caseCategory: 'Children in Conflict with the Law (CICL)',
+      // Sealed: `active -> transitioning` now gates on the steps due at `active`
+      // (the Implementation phase's own gate), so with them sealed the control is
+      // offered rather than held back.
+      stepLocks: ['assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'court_hearings', 'evaluate']
+        .map((stepKey) => ({ stepKey, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01' })),
+    });
 
     const control = screen.getByRole('button', { name: /Mark Ready for Graduation/i });
     expect(control).toBeEnabled();
     // And the copy that says what it does, which is the only thing standing in
     // for the confirm dialog this edge does not get.
     expect(screen.getByText(/Mark case as transitioning/i)).toBeTruthy();
+    expect(screen.queryByText(/Lock these steps before transitioning/i)).toBeNull();
+  });
+
+  // The gate itself: the Implementation phase must be sealed before the case
+  // leaves it. The button stays visible and names what is open rather than
+  // greying out silently, so the admin meets the list here and not a 400.
+  it('holds the control while a step due at active is unsealed, and names it', () => {
+    renderStep({
+      status: 'active',
+      selfRelianceLevel: 3,
+      sustainabilityPlan: 'sari-sari store',
+      caseCategory: 'Children in Conflict with the Law (CICL)',
+      // Everything sealed except Court Hearings — the step the gate is for.
+      stepLocks: ['assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate']
+        .map((stepKey) => ({ stepKey, lockedByName: 'Juan Dela Cruz', lockedAt: '2026-10-01' })),
+    });
+
+    const control = screen.getByRole('button', { name: /Mark Ready for Graduation/i });
+    expect(control).toBeDisabled();
+    expect(screen.getByText(/Lock these steps before transitioning/i)).toHaveTextContent('Court Hearings');
   });
 
   it('offers it on an active case only — an admin looking at a different status gets nothing', () => {

@@ -669,9 +669,9 @@
     "step": "enrollments"
   },
   {
-    "name": "court_hearings done: one recorded hearing",
+    "name": "court_hearings done: one recorded hearing (status active: past the floor)",
     "caseData": {
-      "status": "enrolled",
+      "status": "active",
       "caseCategory": "Children in Conflict with the Law (CICL)"
     },
     "interventionCount": 0,
@@ -682,14 +682,40 @@
     "step": "court_hearings"
   },
   {
-    "name": "court_hearings not done: no hearings recorded",
+    "name": "court_hearings not done: no hearings recorded (status active: past the floor)",
+    "caseData": {
+      "status": "active",
+      "caseCategory": "Children in Conflict with the Law (CICL)"
+    },
+    "interventionCount": 0,
+    "opts": {
+      "courtHearingCount": 0
+    },
+    "expected": false,
+    "step": "court_hearings"
+  },
+  {
+    "name": "court_hearings floored: a recorded hearing while still phase-in is not done",
     "caseData": {
       "status": "enrolled",
       "caseCategory": "Children in Conflict with the Law (CICL)"
     },
     "interventionCount": 0,
     "opts": {
-      "courtHearingCount": 0
+      "courtHearingCount": 1
+    },
+    "expected": false,
+    "step": "court_hearings"
+  },
+  {
+    "name": "court_hearings floored: same at assessed",
+    "caseData": {
+      "status": "assessed",
+      "caseCategory": "Children in Conflict with the Law (CICL)"
+    },
+    "interventionCount": 0,
+    "opts": {
+      "courtHearingCount": 1
     },
     "expected": false,
     "step": "court_hearings"

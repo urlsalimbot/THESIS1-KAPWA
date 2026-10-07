@@ -257,6 +257,24 @@ describe('CasesService', () => {
         return [];
       });
 
+    /**
+     * Success-path cases here carry the seals they would have in production.
+     * `active -> transitioning` now runs `assertStepsSealed(stepsDueAt('active'))`
+     * *after* the referral checks, so without seals every "allows/accepts" case
+     * would fail on the newest gate instead of proving the one it was written
+     * for. Seals arrive through `stepLocksRepoMock.find`, the seam `findById`
+     * reads — the same one the seal tests use. The refusal cases are untouched:
+     * the referral gate throws before the seal gate is reached.
+     */
+    beforeEach(() => {
+      stepLocksRepoMock.find.mockResolvedValue(
+        ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate'].map((key) => ({
+          id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1',
+          lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+        })),
+      );
+    });
+
     it('blocks active -> transitioning until a referral decision is recorded', async () => {
       const c = {
         id: '1', status: CaseStatus.ACTIVE, controlNo: 'KAPWA-2026-00001', referrals: [],
@@ -1090,8 +1108,39 @@ describe('FSM — disburse', () => {
     const existing = { id: '1', status: CaseStatus.ACTIVE, assignedWorkerId: 'w1', controlNo: 'KAPWA-001', beneficiaryId: 'b1', selfRelianceLevel: 3, sustainabilityPlan: 'livelihood', referralNotNeeded: true, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);
     repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.TRANSITIONING });
+    stepLocksRepoMock.find.mockResolvedValue(
+      ['assessment', 'enrollments', 'interventions', 'referrals', 'evaluate'].map((key) => ({
+        id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1',
+        lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+      })),
+    );
     const result = await service.disburse('1', CaseStatus.TRANSITIONING, 'admin');
     expect(result.status).toBe(CaseStatus.TRANSITIONING);
+  });
+
+  // The Implementation phase's gate. `active -> transitioning` was the only
+  // phase boundary with no seal gate — review has one, close has one — so a
+  // case could leave the phase its services were delivered in with Court
+  // Hearings never sealed by anyone. Unlike those two gates this one does NOT
+  // exempt admin: `CASE_FSM_ROLES[ACTIVE]` is empty, so admin is the only role
+  // that can take the edge and exempting it would bind nobody.
+  it('refuses active -> transitioning while any step due at active is unsealed', async () => {
+    // CICL carries `court_hearings`; a category-less case falls back to the
+    // common template, which has no such step and would not exercise the gate.
+    const existing = { id: '1', status: CaseStatus.ACTIVE, caseCategory: 'Children in Conflict with the Law (CICL)', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', beneficiaryId: 'b1', selfRelianceLevel: 3, sustainabilityPlan: 'livelihood', referralNotNeeded: true, updatedAt: new Date() } as Case;
+    repoMock.findOne.mockResolvedValue(existing);
+    // Every step due at `active` sealed EXCEPT Court Hearings — the step this
+    // gate exists for. `closure` is floored at `transitioning` so it is not due
+    // yet and correctly absent from both the set and the seals.
+    stepLocksRepoMock.find.mockResolvedValue(
+      ['assessment', 'discernment', 'enrollments', 'interventions', 'referrals', 'evaluate'].map((key) => ({
+        id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1',
+        lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+      })),
+    );
+
+    await expect(service.disburse('1', CaseStatus.TRANSITIONING, 'admin'))
+      .rejects.toThrow(/Court Hearings/);
   });
 
   it('should throw when disburse called by social_worker', async () => {
