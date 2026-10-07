@@ -52,23 +52,41 @@ export function ApprovalPipelinePage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   // Fetch each pipeline status explicitly: the default `/cases` list is
-  // paginated (newest 10) and ordered by createdAt, so in-review / transitioning
-  // cases were routinely missing from their columns.
+  // paginated (newest 10) and ordered by createdAt, so cases outside those ten
+  // were routinely missing from their columns. One hook per status rather than a
+  // loop, because these are hooks and the set is fixed.
+  const { data: rawEnrolled, isLoading: loadingEnrolled } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'enrolled', limit: 200 }));
+  const { data: rawAssessed, isLoading: loadingAssessed } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'assessed', limit: 200 }));
   const { data: rawInReview, isLoading: loadingInReview } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'in_review', limit: 200 }));
   const { data: rawActive, isLoading: loadingActive } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'active', limit: 200 }));
   const { data: rawTransitioning, isLoading: loadingTransitioning } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'transitioning', limit: 200 }));
+  const { data: rawClosed, isLoading: loadingClosed } = useSWR<ApprovalCase[] | { data: ApprovalCase[] }>(queryKeys.cases.list({ status: 'closed', limit: 200 }));
   const unwrapCases = (d: ApprovalCase[] | { data: ApprovalCase[] } | undefined): ApprovalCase[] =>
     Array.isArray(d) ? d : (d?.data ?? []);
-  const cases = [...unwrapCases(rawInReview), ...unwrapCases(rawActive), ...unwrapCases(rawTransitioning)];
-  const loading = loadingInReview || loadingActive || loadingTransitioning;
+  const cases = [
+    ...unwrapCases(rawEnrolled), ...unwrapCases(rawAssessed), ...unwrapCases(rawInReview),
+    ...unwrapCases(rawActive), ...unwrapCases(rawTransitioning), ...unwrapCases(rawClosed),
+  ];
+  const loading = loadingEnrolled || loadingAssessed || loadingInReview || loadingActive || loadingTransitioning || loadingClosed;
   const lastSync = cases.length > 0 ? Date.now() : null;
 
   // Aligned with the case stepper: Phase-In (Assessment) → Implementation
   // (Implement HIP + Service Delivery) → Phase-Out (Transition + Closure).
+  //
+  // Each column carries every status of its phase, not just the one the case
+  // happens to be waiting on — otherwise a case at its own level renders
+  // nowhere. Phase-In is `enrolled / assessed / in_review` exactly as
+  // `CasesService.reject` documents it; Phase-Out is `transitioning / closed`
+  // per this page's own "Transition + Closure" reading. `aftercare` is excluded
+  // deliberately: it is the post-closure phase, not part of this pipeline.
+  //
+  // Fetching per status (rather than one unfiltered list) stays necessary: the
+  // default `/cases` list is paginated to the newest 10 and ordered by
+  // createdAt, so later cases were routinely missing from their columns.
   const pipelinePhases = [
-    { key: 'phase-in', label: t('approvals.phaseIn', 'Phase-In'), statuses: ['in_review'], steps: [0], dot: 'bg-amber-400' },
+    { key: 'phase-in', label: t('approvals.phaseIn', 'Phase-In'), statuses: ['enrolled', 'assessed', 'in_review'], steps: [0], dot: 'bg-amber-400' },
     { key: 'implementation', label: t('approvals.phaseImplementation', 'Implementation'), statuses: ['active'], steps: [1, 2], dot: 'bg-emerald-400' },
-    { key: 'phase-out', label: t('approvals.phaseOut', 'Phase-Out'), statuses: ['transitioning'], steps: [3, 4], dot: 'bg-primary/40' },
+    { key: 'phase-out', label: t('approvals.phaseOut', 'Phase-Out'), statuses: ['transitioning', 'closed'], steps: [3, 4], dot: 'bg-primary/40' },
   ];
   const grouped = pipelinePhases.map(phase => ({
     ...phase,
