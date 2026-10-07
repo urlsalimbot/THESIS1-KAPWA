@@ -30,9 +30,19 @@ export class UsersController {
   @Get()
   @Roles('admin')
   @ApiOperation({ summary: 'List all users' })
-  async findAll(@Query('search') search?: string, @Query('role') role?: string, @Query('status') status?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
+  async findAll(
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+    @Query('status') status?: string,
+    // Subtract one role from the list — the admin panel's staff tabs pass
+    // `exclude=claimant`, which cannot be expressed with the exact-match
+    // `role` param above.
+    @Query('exclude') exclude?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
-    return this.usersService.findAll(search, role, isActive, page ? parseInt(page) : 1, limit ? parseInt(limit) : DEFAULT_PAGE_SIZE);
+    return this.usersService.findAll(search, role, isActive, page ? parseInt(page) : 1, limit ? parseInt(limit) : DEFAULT_PAGE_SIZE, exclude);
   }
 
   @Get(':id')

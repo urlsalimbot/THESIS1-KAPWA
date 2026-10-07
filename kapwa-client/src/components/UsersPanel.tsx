@@ -26,12 +26,17 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { Mail } from 'lucide-react';
 
 interface AppUser {
   id: string; email: string; fullName: string; role: string;
   assignedBarangay: string; isActive: boolean; createdAt: string;
   firstName?: string; middleName?: string; lastName?: string; nameExtension?: string;
   phone?: string; permittedBarangays?: string[]; agencyId?: string;
+  // `false` only for self-registered claimants who have not clicked their
+  // verification link — staff accounts are created pre-verified.
+  emailVerified?: boolean;
 }
 
 interface UsersResponse {
@@ -50,13 +55,13 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLE_OPTIONS = Object.keys(ROLE_LABELS);
 
-// The claimant role is owned by beneficiary self-registration, not the admin
-// panel: it can neither be assigned to a user nor removed from an existing
-// claimant here. It stays in the role *filter* so admins can still find them.
+// The claimant role is owned by beneficiary self-registration: it can neither be
+// assigned to a user nor removed from an existing claimant here. Claimants now
+// also live in their own tab, so the role *filter* offers only the staff roles.
 const CLAIMANT_ROLE = 'claimant';
 const ASSIGNABLE_ROLES = ROLE_OPTIONS.filter((r) => r !== CLAIMANT_ROLE);
 
-type UserTab = 'active' | 'disabled';
+type UserTab = 'active' | 'disabled' | 'claimants';
 
 function initialsOf(user: AppUser): string {
   const source = user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`;
@@ -116,29 +121,37 @@ export default function UsersPanel() {
   const [editAgencyId, setEditAgencyId] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  const effectiveRole = roleFilter === 'all' ? undefined : roleFilter;
-  const effectiveStatus = tab === 'active' ? 'active' : 'inactive';
+  // Claimants live in their own tab (role=claimant). The staff tabs subtract
+  // them with `exclude=claimant`, so "the rest of the users" never contains one
+  // no matter which status tab is open.
+  const isClaimantsTab = tab === 'claimants';
+  const effectiveRole = isClaimantsTab ? CLAIMANT_ROLE : (roleFilter === 'all' ? undefined : roleFilter);
+  const effectiveExclude = isClaimantsTab ? undefined : CLAIMANT_ROLE;
+  const effectiveStatus = tab === 'disabled' ? 'inactive' : 'active';
 
   const { data: agencies } = useSWR<{ id: string; code: string; name: string }[]>(queryKeys.agencies.list());
 
-  // Per-status totals for the tab labels (one cheap request each).
-  const { data: counts } = useSWR<{ active: number; disabled: number }>(
+  // Per-tab totals for the tab labels. Each is a cheap `limit=1` request; the
+  // staff counts subtract claimants, the claimants count is role-scoped.
+  const { data: counts } = useSWR<{ active: number; disabled: number; claimants: number }>(
     ['users', 'counts'],
     async () => {
-      const [a, b] = await Promise.all([
-        api.get<UsersResponse>('/users?status=active&page=1&limit=1'),
-        api.get<UsersResponse>('/users?status=inactive&page=1&limit=1'),
+      const [a, b, c] = await Promise.all([
+        api.get<UsersResponse>('/users?status=active&exclude=claimant&page=1&limit=1'),
+        api.get<UsersResponse>('/users?status=inactive&exclude=claimant&page=1&limit=1'),
+        api.get<UsersResponse>('/users?status=active&role=claimant&page=1&limit=1'),
       ]);
-      return { active: a?.total ?? 0, disabled: b?.total ?? 0 };
+      return { active: a?.total ?? 0, disabled: b?.total ?? 0, claimants: c?.total ?? 0 };
     },
   );
 
   const { data: response, isLoading } = useSWR<UsersResponse>(
-    ['users', search, effectiveRole, effectiveStatus, pagination.pageIndex + 1, pagination.pageSize] as const,
-    ([_key, s, r, st, p, l]: readonly [string, string, string | undefined, string, number, number]) => {
+    ['users', search, effectiveRole, effectiveExclude, effectiveStatus, pagination.pageIndex + 1, pagination.pageSize] as const,
+    ([_key, s, r, ex, st, p, l]: readonly [string, string, string | undefined, string | undefined, string, number, number]) => {
       const params = new URLSearchParams();
       if (s) params.set('search', s);
       if (r) params.set('role', r);
+      if (ex) params.set('exclude', ex);
       params.set('status', st);
       params.set('page', String(p));
       params.set('limit', String(l));
@@ -214,6 +227,22 @@ export default function UsersPanel() {
     } catch (e) { console.error('UsersPanel:', e); }
   }
 
+  // Resend the verification email for an unverified (self-registered) account.
+  // Reuses the public self-service endpoint — it looks the user up by email,
+  // refuses already-verified accounts, and issues a fresh 24h token.
+  const [resending, setResending] = useState<string | null>(null);
+  async function resendVerification(user: AppUser) {
+    setResending(user.id);
+    try {
+      const res = await api.post<{ message?: string }>('/auth/resend-verification', { email: user.email });
+      toast.success(res?.message || t('usersPanel.verificationSent', 'Verification email sent'));
+    } catch {
+      toast.error(t('usersPanel.resendFailed', 'Could not resend the verification email'));
+    } finally {
+      setResending(null);
+    }
+  }
+
   function changeTab(next: string) {
     setTab(next as UserTab);
     setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -264,6 +293,17 @@ export default function UsersPanel() {
       header: t('usersPanel.actions', 'Actions'),
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
+          {row.original.emailVerified === false && (
+            <button
+              onClick={() => resendVerification(row.original)}
+              disabled={resending === row.original.id}
+              title={t('usersPanel.resendAria', 'Resend verification email to {{email}}', { email: row.original.email })}
+              className="w-7 h-7 rounded flex items-center justify-center text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+              aria-label={t('usersPanel.resendAria', 'Resend verification email to {{email}}', { email: row.original.email })}
+            >
+              <Mail size={14} />
+            </button>
+          )}
           <button
             onClick={() => openEdit(row.original)}
             title={t('usersPanel.editAria', 'Edit {{email}}', { email: row.original.email })}
@@ -272,7 +312,7 @@ export default function UsersPanel() {
           >
             <Pencil size={14} />
           </button>
-          {tab === 'active' ? (
+          {row.original.isActive ? (
             <button
               onClick={() => setConfirm({ id: row.original.id, email: row.original.email, action: 'disable' })}
               title={t('usersPanel.disableAria', 'Disable {{email}}', { email: row.original.email })}
@@ -312,22 +352,24 @@ export default function UsersPanel() {
                 aria-label={t('usersPanel.searchPlaceholder', 'Search by email or name')}
               />
             </div>
-            <div className="w-44">
-              <Select
-                value={roleFilter}
-                onValueChange={(v) => { setRoleFilter(v); setPagination(p => ({ ...p, pageIndex: 0 })); }}
-              >
-                <SelectTrigger aria-label={t('usersPanel.filterRole', 'Filter by role')} className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('usersPanel.allRoles', 'All Roles')}</SelectItem>
-                  {ROLE_OPTIONS.map((r) => (
-                    <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isClaimantsTab && (
+              <div className="w-44">
+                <Select
+                  value={roleFilter}
+                  onValueChange={(v) => { setRoleFilter(v); setPagination(p => ({ ...p, pageIndex: 0 })); }}
+                >
+                  <SelectTrigger aria-label={t('usersPanel.filterRole', 'Filter by role')} className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('usersPanel.allRoles', 'All Roles')}</SelectItem>
+                    {ASSIGNABLE_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>{roleLabel(r)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button variant="outline" size="sm" className="h-9" onClick={() => { setSearch(''); setRoleFilter('all'); setPagination(p => ({ ...p, pageIndex: 0 })); }}>
               <RotateCcw size={14} className="mr-1.5" />
               {t('usersPanel.reset', 'Reset')}
@@ -336,7 +378,9 @@ export default function UsersPanel() {
         </CardContent>
       </Card>
 
-      {/* Active / Disabled split — disabled users are kept, never deleted */}
+      {/* Active / Disabled / Claimants split. Claimants are segregated from the
+          staff tabs because they are self-registered accounts, not MSWDO staff;
+          disabled users are kept, never deleted. */}
       <Tabs value={tab} onValueChange={changeTab}>
         <TabsList>
           <TabsTrigger value="active">
@@ -346,6 +390,10 @@ export default function UsersPanel() {
           <TabsTrigger value="disabled">
             {t('usersPanel.tabDisabled', 'Disabled users')}
             {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.disabled}</span> : null}
+          </TabsTrigger>
+          <TabsTrigger value="claimants">
+            {t('usersPanel.tabClaimants', 'Claimants')}
+            {counts ? <span aria-hidden="true" className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.claimants}</span> : null}
           </TabsTrigger>
         </TabsList>
         {/* One table instance per panel (Radix mounts only the active panel), so
@@ -363,6 +411,18 @@ export default function UsersPanel() {
           />
         </TabsContent>
         <TabsContent value="disabled">
+          <DataTable
+            columns={columns}
+            data={users}
+            rowCount={total}
+            loading={isLoading}
+            pagination={pagination}
+            sorting={sorting}
+            onPaginationChange={setPagination}
+            onSortingChange={setSorting}
+          />
+        </TabsContent>
+        <TabsContent value="claimants">
           <DataTable
             columns={columns}
             data={users}

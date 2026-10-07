@@ -1,7 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '../common/constants';
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, FindOptionsWhere } from 'typeorm';
+import { Repository, ILike, FindOptionsWhere, Not } from 'typeorm';
 import { User, UserRole } from '../auth/user.entity';
 import { UserBarangayAssignment } from '../auth/user-barangay-assignment.entity';
 import { AccountProvisioningService } from '../accounts/account-provisioning.service';
@@ -41,10 +41,16 @@ export class UsersService {
     return assignments;
   }
 
-  async findAll(search?: string, role?: string, isActive?: boolean, page = 1, limit = DEFAULT_PAGE_SIZE) {
+  /**
+   * `excludeRole` backs the admin panel's tab split: staff lists subtract
+   * claimants, and the claimants tab asks for them by role — the two are never
+   * combined, so an exact `role` (when present) takes precedence.
+   */
+  async findAll(search?: string, role?: string, isActive?: boolean, page = 1, limit = DEFAULT_PAGE_SIZE, excludeRole?: string) {
     const where: FindOptionsWhere<User> = {};
     if (search) where.email = ILike(`%${search}%`);
     if (role) where.role = role as UserRole;
+    else if (excludeRole) where.role = Not(excludeRole as UserRole);
     if (isActive !== undefined) where.isActive = isActive;
     const [data, total] = await this.userRepo.findAndCount({
       where,

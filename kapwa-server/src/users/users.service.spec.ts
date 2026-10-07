@@ -3,6 +3,7 @@ import { UsersService } from './users.service';
 import { AccountProvisioningService } from '../accounts/account-provisioning.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User, UserRole } from '../auth/user.entity';
+import { FindOperator } from 'typeorm';
 import { ConflictException, BadRequestException } from '@nestjs/common';
 
 describe('UsersService', () => {
@@ -175,6 +176,27 @@ describe('UsersService', () => {
       expect(result.data[0]).not.toHaveProperty('tokens');
       expect(result.data[0]).not.toHaveProperty('mfaSecret');
       expect(result.data[0]).not.toHaveProperty('password');
+    });
+
+    it('subtracts the excluded role from staff lists (admin panel segregation)', async () => {
+      mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll(undefined, undefined, true, 1, 10, 'claimant');
+
+      const arg: any = mockRepo.findAndCount.mock.calls[0][0];
+      expect(arg.where.role).toBeInstanceOf(FindOperator);
+      expect((arg.where.role as FindOperator<string>).value).toBe('claimant');
+      expect(arg.where.isActive).toBe(true);
+    });
+
+    it('lets an exact role match win over the exclusion', async () => {
+      mockRepo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll(undefined, 'coordinator', true, 1, 10, 'claimant');
+
+      const arg: any = mockRepo.findAndCount.mock.calls[0][0];
+      expect(arg.where.role).toBe('coordinator');
+      expect(arg.where.isActive).toBe(true);
     });
   });
 

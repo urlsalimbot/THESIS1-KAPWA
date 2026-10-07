@@ -5,15 +5,16 @@ import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import UsersPanel from './UsersPanel';
 
-const { mockApiGet, mockApiPatch } = vi.hoisted(() => ({
+const { mockApiGet, mockApiPatch, mockApiPost } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
   mockApiPatch: vi.fn(),
+  mockApiPost: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
-    post: vi.fn(),
+    post: (...args: unknown[]) => mockApiPost(...args),
     put: vi.fn(),
     del: vi.fn(),
     patch: (...args: unknown[]) => mockApiPatch(...args),
@@ -54,7 +55,9 @@ describe('UsersPanel', () => {
   beforeEach(async () => {
     mockApiGet.mockReset();
     mockApiPatch.mockReset();
+    mockApiPost.mockReset();
     mockApiPatch.mockResolvedValue({});
+    mockApiPost.mockResolvedValue({ message: 'Verification email sent' });
     mockApiGet.mockImplementation((key: unknown) => {
       const k = String(key);
       if (k.includes('agencies')) {
@@ -197,6 +200,62 @@ describe('UsersPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
     await vi.waitFor(() => {
       expect(mockApiPatch).toHaveBeenCalledWith('/users/c1', expect.not.objectContaining({ role: expect.anything() }));
+    });
+  });
+
+  it('asks the list to subtract claimants on the staff tabs', async () => {
+    renderWithSWR(<UsersPanel />);
+    await screen.findByText('worker1@mswdo.test');
+    const calls = mockApiGet.mock.calls.map((c: unknown[]) => String(c[0]));
+    // `limit=10` distinguishes the table fetch from the count probes (limit=1).
+    expect(calls.some((k) => k.includes('status=active') && k.includes('exclude=claimant') && k.includes('limit=10'))).toBe(true);
+    expect(calls.some((k) => k.includes('status=inactive') && k.includes('exclude=claimant'))).toBe(true);
+  });
+
+  it('segregates claimants into their own tab, queried by role', async () => {
+    const user = userEvent.setup();
+    renderWithSWR(<UsersPanel />);
+    const tab = screen.getByRole('tab', { name: /Claimants/ });
+    expect(tab).toBeTruthy();
+    await user.click(tab);
+    // `waitFor` instead of a bare assertion: the switch triggers a refetch
+    // whose round trip is not synchronously complete, and a fixed delay would
+    // be a flaky proxy for it.
+    await vi.waitFor(() => {
+      const calls = mockApiGet.mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(calls.some((k) => k.includes('role=claimant') && k.includes('status=active') && k.includes('limit=10'))).toBe(true);
+    });
+  });
+
+  it('shows a resend-verification button for unverified accounts and posts the email', async () => {
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('agencies')) return Promise.resolve([]);
+      if (k.includes('users')) {
+        return Promise.resolve({
+          data: [{
+            id: 'u9', email: 'pending@new.test', fullName: 'Pending User',
+            firstName: 'Pending', lastName: 'User', role: 'claimant',
+            assignedBarangay: '', isActive: true, createdAt: '2026-01-05T00:00:00Z',
+            emailVerified: false,
+          }],
+          total: 1, page: 1, limit: 10,
+        });
+      }
+      return Promise.resolve(null);
+    });
+    await mutate(() => true, undefined, { revalidate: false });
+
+    renderWithSWR(<UsersPanel />);
+    const btn = await screen.findByRole('button', { name: /Resend verification email to pending@new.test/ });
+    expect(btn).toBeTruthy();
+    // Settle the row's revalidation render before clicking: `findByRole`
+    // resolves on first appearance, and a click that lands on a node the
+    // refetch is about to replace fires nothing (dead on a detached element).
+    await new Promise((r) => setTimeout(r, 300));
+    screen.getByRole('button', { name: /Resend verification email to pending@new.test/ }).click();
+    await vi.waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledWith('/auth/resend-verification', { email: 'pending@new.test' });
     });
   });
 });
