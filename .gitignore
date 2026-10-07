@@ -86,3 +86,12 @@ pdf/preview/
 
 # local git worktree directory
 .worktrees/
+
+/pdf
+/pdf-samples
+/video-demos
+/tests
+/test-results
+/perf
+/.planning
+/docs
