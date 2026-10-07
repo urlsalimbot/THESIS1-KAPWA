@@ -110,21 +110,27 @@ digraph F2_sign_in {
 
   start [shape=terminator, label="A person wants to work in the system"];
   creds [shape=parallelogram, label="Present account name and secret phrase"];
+  verified [shape=diamond, label="The address has been confirmed?"];
+  confirm [shape=box, label="Ask them to open the confirmation message first"];
+  enabled [shape=diamond, label="The account is still in use?"];
+  hold  [shape=box, label="Send them to the administrator who disabled it"];
   match [shape=diamond, label="Credentials correct?"];
-  refuse[shape=box, label="Show a clear refusal and count the attempt"];
-  limit [shape=diamond, label="Attempt limit reached?"];
-  hold  [shape=box, label="Hold the account until the office releases it"];
+  refuse[shape=box, label="Show a clear refusal"];
   extra [shape=diamond, label="A second check is required for this role?"];
   code  [shape=parallelogram, label="Enter the verification code sent to the person"];
   good  [shape=diamond, label="Code current and correct?"];
   open  [shape=box, label="Open the workspace that belongs to the role"];
   done  [shape=terminator, label="The person is at work"];
 
-  start -> creds -> match;
+  start -> creds -> verified;
+  verified -> confirm [label="No"];
+  confirm -> done;
+  verified -> enabled [label="Yes"];
+  enabled -> hold [label="No"];
+  hold -> done;
+  enabled -> match [label="Yes"];
   match -> refuse [label="No"];
-  refuse -> limit;
-  limit -> hold [label="Yes"];
-  limit -> creds [label="No"];
+  refuse -> creds;
   match -> extra [label="Yes"];
   extra -> open [label="No"];
   extra -> code [label="Yes"];
