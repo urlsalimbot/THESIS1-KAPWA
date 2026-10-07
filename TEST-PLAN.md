@@ -1,21 +1,32 @@
-# E2E Test Plan — Playwright MCP
+# E2E Test Plan — Playwright (playwright-cli)
 
-Verifies the system as of the current HEAD of `main`. Client dev server: `http://localhost:3001` (proxies `/api` → `http://localhost:3000/api/v1`, which carries the global `api` prefix + URI version `v1`).
+Verifies the system as of the current HEAD of `main`. Client dev server: `http://localhost:3001` (proxies `/api` → `http://localhost:3000/api/v1`, which carries the global `api` prefix + URI version `v1`). Drive the browser with the **`playwright-cli`** CLI (see the reference at the foot of this file), not the retired Playwright-MCP tool names this plan previously quoted.
+
+## Coverage as of this revision
+
+What `playwright-cli` has exercised most recently, and what the plan below covers:
+
+- **Roles are four**: `admin`, `social_worker`, `coordinator`, `claimant`. The `mayor`, `auditor` and `agency_staff` roles, the `/reports`, `/audit-logs` and `/agency/*` pages, and the agency portal were removed — audit and reporting are administrator-only now. Sections referencing them have been deleted or folded into the admin roles.
+- **Verified by `playwright-cli` (live stack)**: login admin/social_worker (redirects `/admin`, `/dashboard`), the case list with search + status columns, case detail for a Solo Parent case (seven-step stepper — the category step injected — plus the sealed-then-unlocked path), Intervention & Requirements step with the program-linked requirement checklist, the admin dashboard, and the production build (nginx + hardened headers) serving login → `/admin` with zero console errors.
+- **Verified by an earlier Playwright run (`test-results/e2e-2026-09-21/`)**: cases list, request-review (social_worker), closed-case view, IRF list + detail, access-card view + printed PNG/PDF, approvals pipeline, `in_review` step 3, add-intervention form and the logged entry, and the CSR / GIS / IRF PDF exports.
+- **The case stepper is 6 or 7–8 steps, not 5**: the common template is `assessment, enrollments, interventions, referrals, evaluate, closure`; statutory categories inject a category step (`protection_order`, `solo_parent`, `discernment`, `adoption`) and/or `court_hearings` — see §3.6.
+- **Analytics is feature-flagged off by default** (`VITE_ENABLE_ANALYTICS`); its route only exists in preview builds.
+
+
 
 ## Roles & Credentials
 
-Seeded by `npm run seed` (run from `kapwa-server/`) — 26 accounts. `ana.claimant@test.com` has TOTP MFA pre-enabled with the documented demo secret `JBSWY3DPEHPK3PXP` (base32 of "Hello!"); enroll it in any authenticator app.
+Seeded by `npm run seed` (run from `kapwa-server/`) — 21 accounts: 8 `social_worker`, 3 `admin`, 3 `coordinator` (one per barangay: `coordinator.<slug>@mswdo.test`), 7 `claimant`. `ana.claimant@test.com` has TOTP MFA pre-enabled with the documented demo secret `JBSWY3DPEHPK3PXP` (base32 of "Hello!"); enroll it in any authenticator app.
 
 | Role | Seed account | Password | Redirect after login | Key nav items |
 |------|--------------|----------|----------------------|---------------|
-| admin | admin@mswdo.test | admin123 | `/admin` | Dashboard, Intake, Referrals, Cases, Beneficiaries, Tracker, Approvals, Announcements, Admin Panel, Programs |
-| social_worker | worker1@mswdo.test, worker2@mswdo.test | worker123 | `/dashboard` | Dashboard, Intake, Referrals, Cases, Beneficiaries, Tracker, Approvals, Announcements |
-| coordinator | coordinator.bigte@mswdo.test (one per barangay: `coordinator.<slug>@mswdo.test`) | coordinator123 | `/coordinator/dashboard` | Barangay Coordinator, Referrals, Access Cards, Announcements |
+| admin | admin@mswdo.test | admin123 | `/admin` (Admin Panel) | Dashboard, Intake, Referrals, Cases, Beneficiaries, Tracker, Approvals, Announcements, Admin Panel, Programs |
+| social_worker | worker1@mswdo.test … worker5@mswdo.test, worker.<name>@mswdo.test | worker123 | `/dashboard` | Dashboard, Intake, Referrals, Cases, Beneficiaries, Tracker, Approvals, Announcements |
+| coordinator | coordinator.bigte@mswdo.test (one per barangay: `coordinator.<slug>@mswdo.test`) | coordinator123 | `/coordinator` (dashboard) | Barangay Coordinator, Referrals, Access Cards, Announcements |
 | claimant | pedro.claimant@test.com | claimant123 | `/my-dashboard` | My Dashboard, My Access Card |
 | claimant (MFA) | ana.claimant@test.com | claimant123 | `/my-dashboard` after TOTP code | same as claimant |
-| mayor | mayor@mswdo.test | mayor123 | `/reports` | Reports |
-| auditor | auditor@mswdo.test | auditor123 | `/audit-logs` | Audit Logs |
-| agency_staff | rhu.staff@norzagaray.test (also wcpd/peso/dilg/dswd/deped `.staff@norzagaray.test`) | rhu123 (etc.) | `/agency/dashboard` | Dashboard, Inter-Agency Referrals, Card Activities, Agency Profile |
+
+Redirects follow `ROLE_REDIRECT_MAP` in `client/src/lib/role-access.ts` — only these four roles exist in `UserRole`, and the `/reports`, `/audit-logs` and `/agency/*` destinations are gone.
 
 ---
 
@@ -28,13 +39,10 @@ Seeded by `npm run seed` (run from `kapwa-server/`) — 26 accounts. `ana.claima
 | 1.3 | Login coordinator | coordinator.bigte@mswdo.test | Redirect to `/coordinator/dashboard`; Barangay Coordinator nav |
 | 1.4 | Login claimant | pedro.claimant@test.com | Redirect to `/my-dashboard` |
 | 1.5 | Login MFA claimant | ana.claimant@test.com → MFA challenge → enter current TOTP code | Redirect to `/my-dashboard`; a wrong code stays on the challenge |
-| 1.6 | Login mayor | mayor@mswdo.test | Redirect to `/reports` |
-| 1.7 | Login auditor | auditor@mswdo.test | Redirect to `/audit-logs` |
-| 1.8 | Login agency staff | rhu.staff@norzagaray.test | Redirect to `/agency/dashboard`; Agency Portal nav |
-| 1.9 | Invalid credentials | Wrong password | Stays on `/login`, 401, error toast |
-| 1.10 | Logout | Click avatar → Logout | Returned to landing page; a protected route now redirects to `/login` |
-| 1.11 | Register claimant | Navigate `/register`, fill the form, submit | Success with email-verification prompt (`emailDelivered`); login is rejected until `POST /auth/verify-email` |
-| 1.12 | Forgot password | Navigate `/forgot-password`, enter email | Success message (`emailDelivered`; account existence never revealed); reset link works once via `/reset-password` |
+| 1.6 | Invalid credentials | Wrong password | Stays on `/login`, 401, error toast |
+| 1.7 | Logout | Click avatar → Logout | Returned to landing page; a protected route now redirects to `/login` |
+| 1.8 | Register claimant | Navigate `/register`, fill the form, submit | Success with email-verification prompt (`emailDelivered`); login is rejected until `POST /auth/verify-email` |
+| 1.9 | Forgot password | Navigate `/forgot-password`, enter email | Success message (`emailDelivered`; account existence never revealed); reset link works once via `/reset-password` |
 
 ## 2. Dashboard
 
@@ -63,7 +71,7 @@ Roles: admin/social_worker. Statuses: `enrolled → assessed → in_review → a
 | 3.3 | Filters | Select Status / Barangay / Category / Gender / Age Range / SLA | Table filters per param |
 | 3.4 | Date range | Pick Date From / Date To | Table filters by date range |
 | 3.5 | View case | Click a row | Navigates to `/cases/:id`; sidebar shows beneficiary, household, access card, renewal link |
-| 3.6 | Stepper | View the case stepper | 5 steps across 3 phases: Phase-In (Assess & Interview), Implementation (Intervention & Requirements, Inter-agency Referrals), Phase-Out (Evaluate Help Given, Case Study & Closure); locked steps are not clickable |
+| 3.6 | Stepper | View the case stepper | `COMMON_STEP_KEYS` = 6 steps: 1 Assess & Interview, 2 Program Enrollments, 3 Intervention & Requirements, 4 Inter-agency Referrals, 5 Evaluate Help Given, 6 Case Study & Closure. Statutory categories inject more: VAWC adds 2 court-hearings + 2 protection-order; CICL adds court-hearings + discernment; Solo Parent adds solo-parent; Adoption adds court-hearings + adoption — up to 8 steps. Locked steps are not clickable and a sealed step reads-only its card |
 | 3.7 | Save assessment | Assessment step → fill → save | `PATCH /cases/:id/assessment` persists |
 | 3.8 | Add intervention | Interventions step → add | `POST /cases/:id/interventions` lists the entry and auto-logs it to the household access card |
 | 3.9 | Request review | Click Request Review | `PATCH /cases/:id/request-review` (social_worker only): `enrolled → assessed`; blocked 400 until assessment fields exist; other roles 403 |
@@ -148,8 +156,7 @@ Household-tied; persist across intake → renewal → closure. No `/access-cards
 | 8.4 | Staff card view | Navigate `/beneficiary/:id/access-card` | Card + ledger filtered by category |
 | 8.5 | Print / PDF | Navigate `/beneficiary/:id/card/print` or click Download PDF | `GET /access-cards/beneficiary/:id/access-card-pdf` — 2-page A4 with NHTS-PR id; claimant's own card hides the button |
 | 8.6 | Coordinator cards | Login coordinator → `/coordinator/access-cards` | Barangay-scoped card management |
-| 8.7 | Agency activities | Login agency staff → `/agency/card-activities` | Services rendered by the agency |
-| 8.8 | Claimant card | Login claimant → `/my-access-card` | Own card summary + service history |
+| 8.7 | Claimant card | Login claimant → `/my-access-card` | Own card summary + service history |
 
 ## 9. Admin Panel
 
@@ -160,7 +167,7 @@ Household-tied; persist across intake → renewal → closure. No `/access-cards
 | 9.3 | Create user | `/admin/users/new` — camelCase name parts + agency | Provisions a one-time set-password link (no temp password); no delete endpoint exists |
 | 9.4 | Disable / enable user | Toggle a user | `PATCH /users/:id/disable\|enable`; a disabled account is rejected at login |
 | 9.5 | Sync Queue tab | Open Sync Queue tab | Applied/pending/conflict/failed entries (`GET /sync/conflicts/:deviceId`); Resolve writes `conflict_reason`/`resolved_at` |
-| 9.6 | Audit Log tab | Open Audit Log tab | Real fields, action filter, refresh, pagination (`GET /audit/logs`) |
+| 9.6 | Audit Log tab | Open Audit Log tab | Real fields, action filter, refresh, pagination (`GET /audit/logs`); this is the only surface — audit was administrator-only once the `auditor` role was removed (`/audit/verify-all`, `/audit/consent-ledger` are also admin-only) |
 | 9.7 | Contact Messages tab | Open Contact Messages tab | Contact-form submissions listed |
 
 ## 10. Settings
@@ -229,14 +236,11 @@ Filing has no dedicated page — documents live inside the case view (and intake
 | # | Test | Steps | Assert |
 |---|------|-------|--------|
 | 15.1 | List loads | Login → `/approvals` (admin/social_worker) | Cases pending a decision |
-| 15.2 | Approve | Select a case → sign the signature pad → Approve | `PATCH /cases/:id/approve` (admin) moves the case to `active` |
+| 15.2 | Approve | Select a case → Approve | `PATCH /cases/:id/approve` (admin) moves the case to `active`; the approval carries no typed signature — the authenticated caller *is* the approver (see `ApproveCaseSchema`: `{ status }` only) |
 | 15.3 | Disburse | Select a case → Disburse | `PATCH /cases/:id/disburse` moves it to `transitioning` |
-| 15.4 | Bulk approve | Select multiple → Bulk Approve | Bulk dialog processes the selection |
-| 15.5 | Bulk export | Select cases → Bulk Export | `POST /cases/bulk-export` downloads `cases-bulk-export.csv` (masked by default) |
-
 ## 16. Daily Tracker
 
-Roles: admin, social_worker, mayor, auditor.
+Roles: admin, social_worker (route guard on `/tracker`; the `mayor`/`auditor` readers are gone).
 
 | # | Test | Steps | Assert |
 |---|------|-------|--------|
@@ -245,16 +249,14 @@ Roles: admin, social_worker, mayor, auditor.
 | 16.3 | Status filter | Pick a status | Table filters |
 | 16.4 | Stats | Check the stats cards | This Week Cases + Today Entries (`GET /cases/tracker/stats`) |
 
-## 17. Referrals & Agency Portal
+## 17. Referrals & Inter-Agency (the agency portal is gone)
 
 | # | Test | Steps | Assert |
 |---|------|-------|--------|
 | 17.1 | Coordinator referral | `/coordinator/referrals/new` → fill → submit | `POST /referrals`; appears in `GET /referrals/mine` with status `pending` |
 | 17.2 | Worker accept | `/referrals` → Accept | `PATCH /referrals/:id/accept` hands off to a pre-filled intake with `sourceReferral`; a second intake for an already-converted referral is refused |
 | 17.3 | Worker decline | Decline → enter reason | `PATCH /referrals/:id/decline`; reason required; leaves the pending list |
-| 17.4 | Agency dashboard | Login agency staff → `/agency/dashboard` | Agency portal loads (`GET /agency-portal/dashboard`) |
-| 17.5 | Inter-agency referrals | `/agency/referrals` + detail | Referrals tied to access cards; incoming inbox respects consent; detail also readable by admin/social_worker |
-| 17.6 | Agency profile | `/agency/profile` | Agency details + settings |
+| 17.4 | Inter-agency endorsement | On a case, issue or view the endorsement letter | `POST /inter-agency-referrals/case/:caseId/endorsement-letter` and `GET /inter-agency-referrals/case/:caseId` — admin/social_worker only; there is no agency-staff portal for them (the `agency_staff` role was removed) |
 
 ## 18. 4Ps Compliance & Payouts
 
@@ -271,25 +273,23 @@ Roles: admin/social_worker/coordinator (client pages `/cases/:caseId/4ps-complia
 
 ## 19. Role-Based Access Control
 
-Redirect targets follow `ROLE_REDIRECT_MAP` (admin→`/admin`, social_worker→`/dashboard`, coordinator→`/coordinator`, claimant→`/my-dashboard`, mayor→`/reports`, auditor→`/audit-logs`, agency_staff→`/agency/dashboard`).
+Redirect targets follow `ROLE_REDIRECT_MAP` (admin→`/admin`, social_worker→`/dashboard`, coordinator→`/coordinator`, claimant→`/my-dashboard`).
 
 | # | Test | Steps | Assert |
 |---|------|-------|--------|
 | 19.1 | Worker blocked from Admin | Login worker → navigate `/admin`, `/admin/programs`, `/admin/users/new` | Redirect away (role-guarded) |
 | 19.2 | Claimant dashboard | Login claimant → `/my-dashboard` | Claimant-specific view; claimant tokens get 403 on staff endpoints |
 | 19.3 | Claimant access card | Navigate `/my-access-card` | Own card data; print/download button hidden |
-| 19.4 | Mayor reports | Login mayor → `/reports` | Reports dashboard (zero-PII aggregates) |
-| 19.5 | Auditor logs | Login auditor → `/audit-logs` | Audit viewer (`/audit/logs`, `/audit/verify-all`, `/audit/consent-ledger`) |
-| 19.6 | Coordinator portal | Login coordinator → `/coordinator*` | Dashboard (barangay-scoped), referrals, access cards |
-| 19.7 | Agency portal | Login agency staff → `/agency/*` | Dashboard, referrals, card activities, profile; referral detail also admin/social_worker |
-| 19.8 | FSM role matrix | Trigger transitions as non-allowed roles | `request-review` social_worker-only; `approve`/`override-status` admin-only; everyone else 403 |
+| 19.4 | Coordinator portal | Login coordinator → `/coordinator*` | Dashboard (barangay-scoped), referrals, access cards |
+| 19.5 | FSM role matrix | Trigger transitions as non-allowed roles | `request-review` social_worker-only; `approve`/`override-status` admin-only; everyone else 403 |
+| 19.6 | Analytics gated | Build with `VITE_ENABLE_ANALYTICS=true`, visit `/analytics` | Route exists only in preview builds and is admin/social_worker-only; it is off in ordinary builds |
 
 ## 20. Edge Cases
 
 | # | Test | Steps | Assert |
 |---|------|-------|--------|
 | 20.1 | Token refresh | Let the access token expire, then act | Silent refresh (401 interceptor) retries the request; session persists |
-| 20.2 | CSRF | POST/PATCH without a matching `X-CSRF-Token` (vs `csrf-token` cookie) | 403; login/register/refresh/forgot/reset/verify-email/contact-messages are exempt |
+| 20.2 | CSRF | POST/PATCH without a matching `X-CSRF-Token` (vs `csrf-token` cookie) | 403; exempt paths are exactly the bootstrapping ones in `csrf.guard.ts`: `/auth/login`, `/auth/login/otp-verify`, `/auth/register`, `/auth/refresh`, `/auth/mfa/verify`, `/auth/mfa/email/verify`, `/auth/mfa/email/resend`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`, `/auth/confirm-email-change`, `/contact-messages` |
 | 20.3 | Rate limiting | Rapid repeated requests | 429 after the configured limit (default 60 requests / 60 s) |
 | 20.4 | Empty state | View a module with no data | Empty-state message renders (no crash) |
 | 20.5 | Offline queue | Go offline → log an intake/transition → reconnect | Change queues ("You are offline — N change(s) pending sync") and uploads via `POST /sync/v1`; a transport failure leaves entries `pending` for the 30 s retry; definitive 4xx marks them `failed` (manually retryable) |
@@ -304,7 +304,7 @@ Redirect targets follow `ROLE_REDIRECT_MAP` (admin→`/admin`, social_worker→`
 Run from `kapwa-server/`:
 
 ```bash
-npm run seed          # 26 accounts (roles & credentials above); enables TOTP on ana.claimant@test.com
+npm run seed          # 21 accounts (four roles, credentials above); enables TOTP on ana.claimant@test.com
 npm run seed:programs # program metadata (categories, waiting periods, required documents, workflows)
 npm run seed:demo     # demo beneficiaries / cases / entities for populated screens
 ```
@@ -313,18 +313,29 @@ Start the stack: server `npm run start:dev` (port 3000), client `npm run dev` (p
 
 ## Playwright Commands Reference
 
-Base URL: `http://localhost:3001`. Prefer the agent-browser skill / Playwright MCP for scripting.
+Drive the browser with **`playwright-cli`** (the `@playwright/cli` package). Base URL: `http://localhost:3001`. After every command the tool prints a snapshot with element refs — use those refs for the next click/type.
 
 | Action | Command |
 |--------|---------|
-| Navigate | `playwright_navigate url: "http://localhost:3001/login"` |
-| Snapshot | `playwright_snapshot` → find element refs |
-| Type | `playwright_type ref: ..., text: "..."` |
-| Click | `playwright_click ref: ...` |
-| Fill form | `playwright_fill selector: "[name=email]", value: "..."` |
-| Select | `playwright_select_option ref: ..., values: [...]` |
-| Screenshot | `playwright_take_screenshot filename: "page.png"` |
-| Console | `playwright_console_messages` (filter `level: "error"`) |
-| Wait | `playwright_wait_for_selector ref: ...` |
-| Hover | `playwright_hover ref: ...` |
-| Assert text | `playwright_assert_text ref: ..., text: "..."` |
+| Open a browser session | `playwright-cli open http://localhost:3001/login` |
+| Navigate | `playwright-cli goto http://localhost:3001/cases` |
+| Snapshot (get refs) | `playwright-cli snapshot` |
+| Search snapshot for text | `playwright-cli find "Sign In"` / `playwright-cli find --regex "/Sign (in|up)/i"` |
+| Fill a field | `playwright-cli fill e5 "admin@mswdo.test" --submit` |
+| Click | `playwright-cli click e9` |
+| Type, then press Enter | `playwright-cli type "query"` ; `playwright-cli press Enter` |
+| Select an option | `playwright-cli select e12 "active"` |
+| Evaluate JS in the page | `playwright-cli eval "location.pathname"` |
+| Console messages (errors) | `playwright-cli console error` |
+| Screenshot | `playwright-cli screenshot --filename=page.png` |
+| Element attribute | `playwright-cli eval "el => el.getAttribute('href')" e5` |
+| Resize window | `playwright-cli resize 1920 1080` |
+| Save / load auth state | `playwright-cli state-save auth.json` / `playwright-cli state-load auth.json` |
+| Generate a locator | `playwright-cli generate-locator e9 --raw` |
+
+Notes that save debugging time:
+
+- Prefer `goto` over `open` mid-flow; `open` starts a fresh page each time.
+- `playwright-cli console error` is the fast check that a step did not throw.
+- For a step that navigates, `eval "location.pathname"` is the cheapest redirect assertion.
+- Snapshots land in `.playwright-cli/`; `--filename` pins a path when you want to diff two states.
