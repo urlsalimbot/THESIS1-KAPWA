@@ -2,7 +2,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { useSWRConfig } from 'swr';
 import { useTranslation } from 'react-i18next';
-import { api, csrfHeaders } from '../lib/api';
+import { api, csrfHeaders, downloadFilingDoc, filingDocIdFromUrl } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { Link } from 'react-router-dom';
 import { PageShell } from '@/components/PageShell';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { statusLabel } from '@/i18n/display';
 import { formatDate } from '../lib/format';
+import { toast } from 'sonner';
 
 interface ServiceRecord {
   id: string; type: string; date: string; amount: number; status: string;
@@ -23,6 +24,10 @@ interface MyCaseDetail {
   createdAt: string; updatedAt?: string;
   amountAssistance: number | null;
   assignedWorkerName: string | null;
+  // System-issued paperwork. Null until an MSWDO admin issues it, which can
+  // only happen once the case is active.
+  certificateUrl?: string | null;
+  pettyCashVoucherUrl?: string | null;
 }
 
 interface ConsentRecord {
@@ -45,6 +50,33 @@ export function ClaimantDashboardPage() {
   const [uploading, setUploading] = useState(false);
   const [granting, setGranting] = useState(false);
   const loading = !servicesData && !consents.length;
+
+  /**
+   * Open one of the system-issued documents. The raw stored URL cannot be
+   * handed to the browser: the filing route sits behind the Bearer token, so a
+   * bare navigation would arrive unauthenticated. Extract the id and download
+   * through the authenticated helper instead — same path the case view uses.
+   */
+  async function viewGeneratedDoc(url: string | null | undefined, fallbackName: string) {
+    const docId = url ? filingDocIdFromUrl(url) : null;
+    if (!docId) {
+      toast.error(t('claims.downloadFailed', 'Download failed'));
+      return;
+    }
+    try {
+      await downloadFilingDoc(docId, fallbackName);
+    } catch {
+      toast.error(t('claims.downloadFailed', 'Download failed'));
+    }
+  }
+
+  async function downloadUploaded(id: string, name: string) {
+    try {
+      await downloadFilingDoc(id, name);
+    } catch {
+      toast.error(t('claims.downloadFailed', 'Download failed'));
+    }
+  }
 
   async function uploadRequirement(file: File, requirementKey: string) {
     if (!caseId) return;
@@ -303,20 +335,73 @@ export function ClaimantDashboardPage() {
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDoc(f); e.target.value = ''; }}
             />
           </label>
-          {myDocs.length === 0 ? (
-            <p className="text-xs text-muted-foreground">{t('claims.noDocuments', 'No documents uploaded yet.')}</p>
-          ) : (
-            <ul className="divide-y text-sm">
-              {myDocs.map((d: any) => (
-                <li key={d.id} className="flex items-center justify-between py-2">
-                  <span className="truncate">{d.originalName || d.fileName}</span>
-                  <span className="text-xs text-muted-foreground">{d.category}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* Every document filed against this case — uploaded by the claimant or
+              by the office. The list route already scopes a caseId the claimant
+              owns to that case alone, so nothing here can widen past their own
+              file. Approval documents are excluded because they are issued, not
+              uploaded, and have their own card below. */}
+          {(() => {
+            const uploaded = (myDocs as any[]).filter((d) => d.category !== 'approval_document');
+            if (uploaded.length === 0) {
+              return <p className="text-xs text-muted-foreground">{t('claims.noDocuments', 'No documents uploaded yet.')}</p>;
+            }
+            return (
+              <ul className="divide-y text-sm">
+                {uploaded.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 flex-1 truncate">{d.originalName || d.fileName}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{d.category}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => downloadUploaded(d.id, d.originalName || d.fileName || 'document')}
+                    >
+                      {t('claims.download', 'Download')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
         </CardContent>
       </Card>
+
+      {/* System-issued paperwork, kept beside the uploads rather than mixed into
+          them so the reader never has to work out which file the office attached
+          and which the system issued — the same split the case view makes. */}
+      {myCase && (myCase.certificateUrl || myCase.pettyCashVoucherUrl) && (
+        <Card>
+          <div className="border-b px-4 py-3">
+            <h2 className="font-semibold text-sm text-primary">{t('claims.generatedDocuments', 'Generated Documents')}</h2>
+          </div>
+          <CardContent className="p-4 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              {t('claims.generatedDocumentsHint', 'Issued by the system at approval, not uploaded.')}
+            </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+              {myCase.certificateUrl && (
+                <button
+                  type="button"
+                  onClick={() => viewGeneratedDoc(myCase.certificateUrl, 'certificate-of-eligibility.pdf')}
+                  className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t('claims.viewCertificate', 'View Certificate of Eligibility')}
+                </button>
+              )}
+              {myCase.pettyCashVoucherUrl && (
+                <button
+                  type="button"
+                  onClick={() => viewGeneratedDoc(myCase.pettyCashVoucherUrl, 'petty-cash-voucher.pdf')}
+                  className="inline-flex items-center gap-1.5 rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t('claims.viewPettyCashVoucher', 'View Petty Cash Voucher')}
+                </button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <div className="border-b px-4 py-3">

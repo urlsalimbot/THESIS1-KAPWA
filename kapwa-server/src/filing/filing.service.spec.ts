@@ -62,6 +62,45 @@ describe('FilingService', () => {
       expect(result).toHaveProperty('id', 'doc-1');
     });
 
+    /**
+     * The claimant ownership rule, pinned because the two routes once disagreed
+     * about it: the list bound on `beneficiaries.user_id` while upload compared
+     * `beneficiaries.person_id` to the caller's. A claimant whose account and
+     * beneficiary profile are separate person records could therefore LIST their
+     * case's documents and was refused with 403 uploading to the same case —
+     * which is why a claimant-uploaded document could never exist.
+     */
+    it('lets a claimant upload to a case whose beneficiary their account owns', async () => {
+      const file = { originalname: 'doc.pdf', mimetype: 'application/pdf', size: 5000, buffer: Buffer.from('x') };
+      caseRepoMock.findOne.mockResolvedValue({ id: 'c1', beneficiaryId: 'ben-1' });
+      docRepoMock.query.mockResolvedValue([{ id: 'ben-1' }]);
+      docRepoMock.save.mockResolvedValue({ id: 'doc-1' });
+
+      await expect(service.upload(file, { caseId: 'c1', category: 'claimant_upload', userRole: 'claimant', userId: 'u1' }))
+        .resolves.toHaveProperty('id', 'doc-1');
+      // Ownership comes from the shared helper's `beneficiaries.user_id` /
+      // `beneficiary_claimants` query — never a person-id comparison.
+      expect(docRepoMock.query).toHaveBeenCalledWith(expect.stringContaining('beneficiaries'), ['u1']);
+    });
+
+    it('refuses a claimant uploading to a case they do not own', async () => {
+      const file = { originalname: 'doc.pdf', mimetype: 'application/pdf', size: 5000, buffer: Buffer.from('x') };
+      caseRepoMock.findOne.mockResolvedValue({ id: 'c1', beneficiaryId: 'ben-someone-else' });
+      docRepoMock.query.mockResolvedValue([{ id: 'ben-1' }]);
+
+      await expect(service.upload(file, { caseId: 'c1', category: 'claimant_upload', userRole: 'claimant', userId: 'u1' }))
+        .rejects.toThrow(/own case/);
+    });
+
+    it('refuses a claimant upload when the account owns no beneficiary', async () => {
+      const file = { originalname: 'doc.pdf', mimetype: 'application/pdf', size: 5000, buffer: Buffer.from('x') };
+      caseRepoMock.findOne.mockResolvedValue({ id: 'c1', beneficiaryId: 'ben-1' });
+      docRepoMock.query.mockResolvedValue([]);
+
+      await expect(service.upload(file, { caseId: 'c1', category: 'claimant_upload', userRole: 'claimant', userId: 'u1' }))
+        .rejects.toThrow(/own case/);
+    });
+
     it('rejects a claimant tagging an announcement photo', async () => {
       const file = { originalname: 'photo.jpg', mimetype: 'image/jpeg', size: 5000, buffer: Buffer.from('x') };
       await expect(service.upload(file, { category: 'announcement_photo', announcementId: 'ann-1', userRole: 'claimant' }))

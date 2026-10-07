@@ -428,6 +428,13 @@ export class BeneficiariesService {
         assignedWorkerName: worker
           ? worker.fullName || [worker.firstName, worker.lastName].filter(Boolean).join(' ')
           : latestCase.assignedWorkerName || null,
+        // The system-issued COE/PCV, so a claimant can open their own paperwork
+        // from the dashboard instead of only an MSWDO workstation seeing it.
+        // Same shape the case view returns; the download route already grants
+        // `claimant`, and `isPhotoAccessAllowed` admits `approval_document` for
+        // that role, so no new access is being opened here.
+        certificateUrl: latestCase.certificateUrl || null,
+        pettyCashVoucherUrl: latestCase.pettyCashVoucherUrl || null,
       },
     };
   }

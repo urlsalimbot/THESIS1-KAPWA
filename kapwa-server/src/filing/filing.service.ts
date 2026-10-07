@@ -30,9 +30,18 @@ export class FilingService {
     }
 
     if (metadata.userRole === 'claimant' && metadata.caseId) {
-      const c = await this.caseRepo.findOne({ where: { id: metadata.caseId }, relations: ['beneficiary'] });
+      const c = await this.caseRepo.findOne({ where: { id: metadata.caseId } });
       if (!c) throw new NotFoundException('Case not found');
-      if (!metadata.personId || c.beneficiary?.personId !== metadata.personId) {
+      // Resolved through the same helper the list route uses, deliberately. This
+      // used to compare `beneficiaries.person_id` with the caller's, while the
+      // list bound on `beneficiaries.user_id` ∪ `beneficiary_claimants` — so a
+      // claimant whose account and beneficiary profile are separate person
+      // records could READ their case's documents and got a 403 uploading to
+      // it. One ownership rule, both routes.
+      const owned = metadata.userId
+        ? await this.ownedBeneficiaryIds(metadata.userId)
+        : [];
+      if (!c.beneficiaryId || !owned.includes(c.beneficiaryId)) {
         throw new ForbiddenException('You can only upload to your own case');
       }
     }
@@ -138,6 +147,31 @@ export class FilingService {
     return this.docRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
+  /**
+   * The beneficiaries a claimant user may act on: the one bound to their account
+   * as its own (`beneficiaries.user_id`) plus any bound through a claimant link
+   * (`beneficiary_claimants`).
+   *
+   * This is the single ownership rule for claimant filing access — both the list
+   * route and the upload route resolve it here. They used to disagree: the list
+   * bound on `user_id` while the upload compared `beneficiaries.person_id` to the
+   * caller's, so a claimant whose account and beneficiary profile are separate
+   * person records could read their case's documents and was refused 403 on
+   * upload. Deriving both from one query is what stops the pair drifting apart
+   * again.
+   */
+  private async ownedBeneficiaryIds(userId: string): Promise<string[]> {
+    const rows: Array<{ id: string }> = await this.docRepo.query(
+      `SELECT b.id FROM beneficiaries b WHERE b.user_id = $1::uuid
+       UNION
+       SELECT bc.beneficiary_id FROM beneficiary_claimants bc
+         JOIN users u ON u.person_id = bc.claimant_id
+        WHERE u.id = $1`,
+      [userId],
+    );
+    return rows.map((r) => r.id);
+  }
+
   async findAll(caseId?: string, beneficiaryId?: string, role?: string, claimantUserId?: string) {
     const where: FindOptionsWhere<DocumentVault> = {};
     if (caseId) where.caseId = caseId;
@@ -153,15 +187,7 @@ export class FilingService {
     // Claimants may only list documents belonging to a beneficiary they own —
     // a caller-supplied caseId/beneficiaryId must never widen that.
     if (claimantUserId) {
-      const rows: Array<{ id: string }> = await this.docRepo.query(
-        `SELECT b.id FROM beneficiaries b WHERE b.user_id = $1::uuid
-         UNION
-         SELECT bc.beneficiary_id FROM beneficiary_claimants bc
-           JOIN users u ON u.person_id = bc.claimant_id
-          WHERE u.id = $1`,
-        [claimantUserId],
-      );
-      const allowed = rows.map((r) => r.id);
+      const allowed = await this.ownedBeneficiaryIds(claimantUserId);
       if (allowed.length === 0) return [];
       if (caseId) {
         const owns = await this.docRepo.query(
