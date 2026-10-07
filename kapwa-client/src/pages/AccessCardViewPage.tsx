@@ -194,7 +194,11 @@ export function AccessCardViewPage() {
             {fullName ? fullName.charAt(0) : '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
+            {/* `flex-wrap` so the badge and PDF button drop under the name on a
+                narrow screen instead of pushing the identity block past the
+                card's edge — the card clips, so the overflow was invisible and
+                unreachable rather than merely scrolled. */}
+            <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <h2 className="text-lg font-bold text-foreground truncate">{fullName}</h2>
                 <p className="font-mono text-sm text-primary">{cardData.code}</p>
@@ -252,10 +256,13 @@ export function AccessCardViewPage() {
 
         <div className="px-4 pb-2 flex gap-1 overflow-x-auto">
           {ACCESS_CARD_CATEGORY_TABS.map(tab => (
+            // `shrink-0`: the strip scrolls (`overflow-x-auto`), but a flex
+            // child still shrinks to fit before the parent ever scrolls —
+            // without this the labels were squeezed to 44px and clipped.
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -268,7 +275,9 @@ export function AccessCardViewPage() {
 
         {showAddForm && (
           <form onSubmit={handleAddEntry} className="mx-4 mb-3 p-3 rounded-lg border bg-muted/30 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            {/* Single column on a phone: at 375px two columns leave ~155px for
+                a category picker whose labels are long. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label htmlFor="access-card-category" className="text-xs font-medium">{t('accessCard.category', 'Category')}</label>
                 <AccessCardCategorySelect
@@ -301,7 +310,9 @@ export function AccessCardViewPage() {
                 required
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            {/* Three columns of ~103px at 375px would strangle an agency
+                select listing "DSWD — Department of Social Welfare…". */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label htmlFor="access-card-cost" className="text-xs font-medium">{t('accessCard.cost', 'Cost (₱)')}</label>
                 <input id="access-card-cost" type="number" className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm" value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))} />
