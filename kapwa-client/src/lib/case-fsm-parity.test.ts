@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { CASE_TRANSITION_ROLES } from './role-access';
-import { STATUS_INDEX, STEP_FLOORS } from '@/components/case-view/CaseStepper';
+import { STATUS_INDEX, STEP_FLOORS, STEP_PHASE } from '@/components/case-view/CaseStepper';
 import { INTERVENTION_TYPES, PROGRAM_TYPES } from '@/lib/constants';
 
 /**
@@ -158,6 +158,25 @@ it('STEP_FLOORS equals the server CASE_STEP_FLOORS, key for key', () => {
     const keys = [...new Set([...Object.keys(STEP_FLOORS), ...Object.keys(floors)])];
     for (const key of keys) {
       expect({ key, floor: STEP_FLOORS[key] ?? null }).toEqual({ key, floor: floors[key] ?? null });
+    }
+  });
+
+  /**
+   * The phase map, which the two gates that read a *phase* depend on. The
+   * `active -> transitioning` gate asks for `stepsInPhase(…, 'implementation')`
+   * on both sides; if the two maps disagreed, the server could demand a seal the
+   * client does not show as open (or vice versa) and the confirm dialog would
+   * name a different set than the 400.
+   */
+  it('STEP_PHASE equals the server STEP_PHASE, key for key', () => {
+    const body = objectLiteral(serverSource('case-step-labels.ts'), 'STEP_PHASE');
+    const phases: Record<string, string> = {};
+    for (const [, key, value] of body.matchAll(/([A-Za-z_]+):\s*'(\w+)'/g)) phases[key] = value;
+    expect(Object.keys(phases).length).toBeGreaterThan(0);
+    expect(sorted(STEP_PHASE)).toEqual(sorted(phases));
+    const keys = [...new Set([...Object.keys(STEP_PHASE), ...Object.keys(phases)])];
+    for (const key of keys) {
+      expect({ key, phase: STEP_PHASE[key] ?? null }).toEqual({ key, phase: phases[key] ?? null });
     }
   });
 

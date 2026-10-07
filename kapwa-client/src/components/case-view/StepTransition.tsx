@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { isSelfSufficient } from '@/lib/self-reliance';
 import { formatDate } from '../../lib/format';
 import { StepLockBar, type StepLock } from './StepLockBar';
-import { stepsDueAt, STEP_LABEL_KEYS } from './CaseStepper';
+import { stepsInPhase, STEP_LABEL_KEYS } from './CaseStepper';
 
 interface FollowUpVisit {
   date: string;
@@ -511,18 +511,20 @@ function TransitionButton({ caseId, caseData, mutate }: { caseId: string; caseDa
 
   /**
    * The Implementation phase's gate — the client half of `assertStepsSealed` on
-   * `active -> transitioning`. Reads the same floor-derived `stepsDueAt` the
-   * review and close gates read, so this and the server cannot ask for different
-   * sets: at `active` that is every step but `closure`.
+   * `active -> transitioning`. Reads `stepsInPhase(…, 'implementation')`, the
+   * same phase-filtered set the server asks for, so the two cannot disagree:
+   * interventions, referrals and court hearings, each floored at ≤ `active` and
+   * therefore each sealable here. Deliberately *not* `stepsDueAt('active')` —
+   * that set also holds `evaluate`, which is Phase-Out work owed before `closed`.
    *
-   * Deliberately NOT exempting `admin`, unlike those two gates: the server
-   * exempts admin from the review and close gates because a case must be able to
-   * move at all, but `CASE_FSM_ROLES[ACTIVE]` is empty, so this edge admits
-   * `admin` and nobody else. Exempting the only role that can take it would gate
-   * nobody — which is why the button names the open steps rather than greying
-   * out silently and letting the worker meet a 400.
+   * Deliberately NOT exempting `admin`, unlike the review and close gates: the
+   * server exempts admin from those because a case must be able to move at all,
+   * but `CASE_FSM_ROLES[ACTIVE]` is empty, so this edge admits `admin` and
+   * nobody else. Exempting the only role that can take it would gate nobody —
+   * which is why the button names the open steps rather than greying out
+   * silently and letting the caller meet a 400.
    */
-  const openSteps = stepsDueAt(caseData?.status, caseData?.caseCategory)
+  const openSteps = stepsInPhase(caseData?.caseCategory, 'implementation')
     .filter((key) => !((caseData?.stepLocks ?? []) as StepLock[]).some((l) => l?.stepKey === key));
 
   async function handleTransition() {

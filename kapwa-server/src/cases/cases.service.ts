@@ -15,7 +15,7 @@ import { InterventionRequiredDocument } from './intervention-required-document.e
 // boot, which no unit test can see. The labels are all this file needs, and an
 // error that spells a step differently from the stepper costs the worker a trip
 // to the UI to find out what is open.
-import { CASE_STEP_LABELS, stepsDueAt, stepsForCategory } from './case-step-labels';
+import { CASE_STEP_LABELS, stepsDueAt, stepsForCategory, stepsInPhase } from './case-step-labels';
 import { isValidTransition, canTransition } from './case-fsm';
 import { CaseHistory } from './case-history.entity';
 import { CasesExportService } from './cases-export.service';
@@ -555,18 +555,21 @@ export class CasesService {
       // the only one with no seal gate, so a case could be transitioned with its
       // Court Hearings never sealed by anyone.
       //
-      // `stepsDueAt(c.status, ...)` is the same floor-derived set the other two
-      // gates read: at `active`(3) that is every step but `closure`, which is
-      // exactly the set the seal endpoint will accept here (court hearings and
-      // Evaluate are floored at 3, `closure` at 4). Named rather than written
-      // out, so a floor change cannot desynchronise gate and endpoint.
+      // Phrased as a *phase* rather than `stepsDueAt('active')`. That set is
+      // floored, and at `active` it also contains `evaluate` — Phase-Out work,
+      // owed before `closed` instead. Demanding it here would seal Phase-Out
+      // during Implementation and leave only `closure` for the phase that owns
+      // it. `stepsInPhase` filters the case's own template, so a category with
+      // no `discernment` is never asked for one, and every member is floored at
+      // ≤ 3 — sealable at this status, which is what `assertStepsSealed`
+      // requires of any set it is handed.
       //
       // No admin exemption, unlike the two gates above: `CASE_FSM_ROLES[ACTIVE]`
       // is empty, so this edge admits `admin` and nobody else — exempting the
       // only role that can take it would bind no one. The comment above this
       // block that called a gate here useless was describing the absence; this
       // is what makes it real.
-      this.assertStepsSealed(c, stepsDueAt(c.status, c.caseCategory),
+      this.assertStepsSealed(c, stepsInPhase(c.caseCategory, 'implementation'),
         'transitioning out of the implementation phase');
     }
   }

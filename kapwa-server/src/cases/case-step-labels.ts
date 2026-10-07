@@ -135,11 +135,61 @@ export const CASE_STEP_FLOORS: Record<string, number> = {
   //     sealed — an unsatisfiable gate, the exact shape of the `evaluate`/
   //     `closure` bug fixed in `5964197`.
   //
-  // The `active -> transitioning` gate picks it back up via `stepsDueAt('active')`.
+  // The `active -> transitioning` gate picks it back up as a member of the
+  // Implementation phase (see `STEP_PHASE` / `stepsInPhase` below).
   court_hearings: 3,
   evaluate: 3,
   closure: 4,
 };
+
+/**
+ * The lifecycle phase each step belongs to — the client's `STEP_PHASE` in
+ * `CaseStepper.tsx`, restated here so a *server* gate can name a phase without
+ * importing a React module. `case-fsm-parity.test.ts` fails if the two drift.
+ *
+ * The three gates read different things on purpose:
+ *
+ *   `assessed -> in_review`    `stepsDueAt('assessed')`       — floored, so the
+ *       set can never name a step that is not yet sealable.
+ *   `active -> transitioning`  `stepsInPhase(…, 'implementation')` — phrased as a
+ *       phase, because what leaves this edge is *the phase*, and a floor-derived
+ *       set at `active` would also swallow `evaluate`, whose work belongs to
+ *       Phase-Out and is owed before `closed` instead.
+ *   `transitioning -> closed`  `stepsDueAt('transitioning')`  — floored, and at
+ *       this status every step is due anyway, so it covers Phase-Out (evaluate,
+ *       closure) plus a cheap re-check of everything earlier.
+ *
+ * Court Hearings is Implementation work: it sits in this phase, is sealed by the
+ * `active` edge, and is not owed at review.
+ */
+export const STEP_PHASE: Record<string, 'phaseIn' | 'implementation' | 'phaseOut'> = {
+  assessment: 'phaseIn',
+  enrollments: 'phaseIn',
+  discernment: 'phaseIn',
+  protection_order: 'phaseIn',
+  solo_parent: 'phaseIn',
+  adoption: 'phaseIn',
+  court_hearings: 'implementation',
+  interventions: 'implementation',
+  referrals: 'implementation',
+  evaluate: 'phaseOut',
+  closure: 'phaseOut',
+};
+
+/**
+ * The template steps belonging to one lifecycle phase, in template order.
+ *
+ * Derived from `STEP_PHASE` rather than a hand-typed key list, and it filters
+ * `stepsForCategory` rather than the phase map itself, so a phase gate still
+ * asks only for steps the case's category actually has — a common-template case
+ * is never asked for a `discernment` seal it has no panel to create.
+ */
+export function stepsInPhase(
+  category: string | null | undefined,
+  phase: 'phaseIn' | 'implementation' | 'phaseOut',
+): string[] {
+  return stepsForCategory(category).filter((k) => (STEP_PHASE[k] ?? 'phaseIn') === phase);
+}
 
 /**
  * The steps that are *due* at a lifecycle position: the Phase-In and

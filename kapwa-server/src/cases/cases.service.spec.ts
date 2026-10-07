@@ -1143,6 +1143,27 @@ describe('FSM — disburse', () => {
       .rejects.toThrow(/Court Hearings/);
   });
 
+  // The phase boundary, not the floor. `evaluate` is Phase-Out work: it is owed
+  // before `closed`, not before a case leaves `active`. Demanding it here would
+  // seal Phase-Out while still in Implementation and leave `transitioning -> closed`
+  // with only `closure` to ask for — the mirror of the `not.toContain('Evaluate
+  // Help Given')` assertion the review gate already makes for the same reason.
+  it('does not demand Evaluate before transitioning — Phase-Out is owed before closed', async () => {
+    const existing = { id: '1', status: CaseStatus.ACTIVE, caseCategory: 'Children in Conflict with the Law (CICL)', assignedWorkerId: 'w1', controlNo: 'KAPWA-001', beneficiaryId: 'b1', selfRelianceLevel: 3, sustainabilityPlan: 'livelihood', referralNotNeeded: true, updatedAt: new Date() } as Case;
+    repoMock.findOne.mockResolvedValue(existing);
+    repoMock.save.mockResolvedValue({ ...existing, status: CaseStatus.TRANSITIONING });
+    // Implementation sealed; `evaluate` deliberately left open.
+    stepLocksRepoMock.find.mockResolvedValue(
+      ['interventions', 'referrals', 'court_hearings'].map((key) => ({
+        id: `lock-${key}`, caseId: '1', stepKey: key, lockedBy: 'u1',
+        lockedByName: 'Juan Dela Cruz', lockedAt: new Date('2026-10-01'),
+      })),
+    );
+
+    const result = await service.disburse('1', CaseStatus.TRANSITIONING, 'admin');
+    expect(result.status).toBe(CaseStatus.TRANSITIONING);
+  });
+
   it('should throw when disburse called by social_worker', async () => {
     const existing = { id: '1', status: CaseStatus.ACTIVE, selfRelianceLevel: 3, sustainabilityPlan: 'livelihood', referralNotNeeded: true, updatedAt: new Date() } as Case;
     repoMock.findOne.mockResolvedValue(existing);

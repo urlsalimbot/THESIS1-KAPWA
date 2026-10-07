@@ -197,6 +197,23 @@ export function stepsDueAt(
   return stepsForCategory(category).filter((key) => (STEP_FLOORS[key] ?? 0) <= index);
 }
 
+/**
+ * The template steps belonging to one lifecycle phase — the client half of the
+ * server's `stepsInPhase` in `case-step-labels.ts`, kept identical by
+ * `case-fsm-parity.test.ts`.
+ *
+ * The `active -> transitioning` control reads this rather than `stepsDueAt`:
+ * that set is floored and at `active` it also contains `evaluate`, which is
+ * Phase-Out work owed before `closed`. Filtering the case's own template also
+ * means a category with no `discernment` is never named for one.
+ */
+export function stepsInPhase(
+  category: string | null | undefined,
+  phase: 'phaseIn' | 'implementation' | 'phaseOut',
+): string[] {
+  return stepsForCategory(category).filter((key) => (STEP_PHASE[key] ?? 'phaseIn') === phase);
+}
+
 function statusAtLeast(caseData: any, min: number): boolean {
   const status = caseData?.status;
   const index = status == null ? undefined : STATUS_INDEX[status];
