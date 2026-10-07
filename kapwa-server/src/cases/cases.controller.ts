@@ -69,6 +69,9 @@ export class CasesController {
     @Query('search') search?: string,
     @Query('barangay') barangay?: string,
     @Query('category') category?: string,
+    // The case's own category (CICL, VAWC, …) — distinct from `category`, which
+    // filters the beneficiary's client category (Indigent, Senior Citizen, …).
+    @Query('caseCategory') caseCategory?: string,
     @Query('gender') gender?: string,
     @Query('ageRange') ageRange?: string,
     @Query('sla') sla?: string,
@@ -76,7 +79,7 @@ export class CasesController {
     @Query('dateTo') dateTo?: string,
     @Query('beneficiaryId') beneficiaryId?: string,
   ) {
-    return this.casesService.findAll(page, limit, { status, search, barangay, category, gender, ageRange, sla, dateFrom, dateTo, beneficiaryId: beneficiaryId || undefined });
+    return this.casesService.findAll(page, limit, { status, search, barangay, category, caseCategory, gender, ageRange, sla, dateFrom, dateTo, beneficiaryId: beneficiaryId || undefined });
   }
 
   @Get('intervention-documents')

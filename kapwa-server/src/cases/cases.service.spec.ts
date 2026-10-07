@@ -453,6 +453,27 @@ describe('CasesService', () => {
       expect(seniorSql).toBe("person.dob <= NOW() - INTERVAL '60 years'");
     });
 
+    /**
+     * The case's own category is a separate axis from the client-category filter
+     * above: narrowing to CICL must not also return every Indigent case. Matched
+     * exactly rather than by substring, so "Adoption & Foster Care Case" cannot
+     * sweep up a case merely containing those words.
+     */
+    it('pushes caseCategory as an exact match on the case column', async () => {
+      const qbMock = repoMock.createQueryBuilder();
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAll(1, 10, { caseCategory: 'Children in Conflict with the Law (CICL)' });
+
+      const calls = (qbMock.andWhere as jest.Mock).mock.calls as Array<[string, Record<string, string>]>;
+      const caseCat = calls.find(([sql]) => sql.includes('c.case_category'));
+      expect(caseCat).toBeDefined();
+      expect(caseCat![0]).toContain('c.case_category = :caseCategory');
+      expect(caseCat![1]).toEqual({ caseCategory: 'Children in Conflict with the Law (CICL)' });
+      // Must not fall through to the client-category column.
+      expect(calls.some(([sql]) => sql.includes('c.client_category'))).toBe(false);
+    });
+
     it('matches control numbers in the search filter (Tracker search)', async () => {
       const cases = [{ id: '1', controlNo: 'KAPWA-2026-00020' }] as Case[];
       const qbMock = repoMock.createQueryBuilder();
@@ -503,20 +524,38 @@ describe('CasesService', () => {
       ] as Case[];
       const qbMock = repoMock.createQueryBuilder();
       qbMock.getManyAndCount.mockResolvedValue([cases, 2]);
-      // Two grouped queries in one batch: interventions first, referrals second.
+      // Four grouped queries in one batch: interventions, referrals, enrollments
+      // and court hearings — each mocked `once`, in that order.
       (repoMock.manager as any).query = jest.fn()
         .mockResolvedValueOnce([{ case_id: '1', count: 3 }])
-        .mockResolvedValueOnce([{ case_id: '2', count: 1 }]);
+        .mockResolvedValueOnce([{ case_id: '2', count: 1 }])
+        .mockResolvedValueOnce([{ case_id: '1', count: 2 }])
+        .mockResolvedValueOnce([{ case_id: '2', count: 4 }]);
 
       const result = await service.findAll(1, 10);
 
       expect(Object.keys(result.data[0] as object).sort()).toContain('interAgencyReferralCount');
       expect((result.data[0] as any).interAgencyReferralCount).toBe(0);
       expect((result.data[1] as any).interAgencyReferralCount).toBe(1);
+      // The two counts the approval pipeline's chips read and that the list used
+      // to omit entirely — with them missing, a case holding enrollments or
+      // hearings still drew both steps as pending forever.
+      expect((result.data[0] as any).enrollmentCount).toBe(2);
+      expect((result.data[1] as any).enrollmentCount).toBe(0);
+      expect((result.data[0] as any).courtHearingCount).toBe(0);
+      expect((result.data[1] as any).courtHearingCount).toBe(4);
       // The count is read from the referrals table, scoped to this page's ids.
       const [referralSql, referralParams] = (repoMock.manager.query as jest.Mock).mock.calls[1];
       expect(referralSql).toContain('inter_agency_referrals');
       expect(referralParams).toEqual([['1', '2']]);
+      // Each new count queries its own table in the same batch, and the hearing
+      // count ignores cancelled hearings — a decision not to hold one is not a
+      // hearing on file.
+      const calls = (repoMock.manager.query as jest.Mock).mock.calls;
+      expect(calls[2][0]).toContain('program_enrollments');
+      expect(calls[3][0]).toContain('case_events');
+      expect(calls[3][0]).toContain('court_hearing');
+      expect(calls[3][0]).toContain("status <> 'cancelled'");
     });
 
     /**
@@ -553,9 +592,10 @@ describe('CasesService', () => {
 
       await service.findAll(1, 10);
 
-      // Two calls total for three cases: a per-case count would be an N+1, and
-      // the `?? 0` below would never fire.
-      expect(repoMock.manager.query).toHaveBeenCalledTimes(2);
+      // Four calls total — one grouped query per count — whether there are three
+      // cases or three hundred: a per-case count would be an N+1, and the `?? 0`
+      // fallback would never fire.
+      expect(repoMock.manager.query).toHaveBeenCalledTimes(4);
     });
 
     it('computes sla filter over a candidate set and paginates in memory', async () => {

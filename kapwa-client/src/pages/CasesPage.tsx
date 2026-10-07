@@ -5,7 +5,7 @@ import useSWR, { mutate } from 'swr';
 import { api } from '../lib/api';
 import { queryKeys } from '../lib/query-keys';
 import { formatDateTime, middleInitial } from '../lib/format';
-import { BARANGAYS, CLIENT_CATEGORIES_V2 } from '../lib/constants';
+import { BARANGAYS, CLIENT_CATEGORIES_V2, CASE_CATEGORY_GROUPS } from '../lib/constants';
 import { statusLabel, categoryLabel } from '@/i18n/display';
 import { Search, Download, AlertTriangle, Eye } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
@@ -129,6 +129,9 @@ export function CasesPage() {
   const urlSearch = searchParams.get('search') || '';
   const urlBarangay = searchParams.get('barangay') || '';
   const urlCategory = searchParams.get('category') || '';
+  // The case's own category (CICL, VAWC, …) — a separate dimension from
+  // `urlCategory`, which is the beneficiary's client category.
+  const urlCaseCategory = searchParams.get('caseCategory') || '';
   const urlStatus = searchParams.get('status') || '';
   const urlGender = searchParams.get('gender') || '';
   const urlDateFrom = searchParams.get('dateFrom') || '';
@@ -152,7 +155,7 @@ export function CasesPage() {
 
   useEffect(() => {
     setSearchInput(urlSearch);
-  }, [urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlDateFrom, urlDateTo]);
+  }, [urlSearch, urlBarangay, urlCategory, urlCaseCategory, urlStatus, urlGender, urlDateFrom, urlDateTo]);
 
   function handleSearch() {
     if (searchInput !== urlSearch) {
@@ -169,11 +172,12 @@ export function CasesPage() {
     if (urlStatus) p.status = urlStatus;
     if (urlBarangay) p.barangay = urlBarangay;
     if (urlCategory) p.category = urlCategory;
+    if (urlCaseCategory) p.caseCategory = urlCaseCategory;
     if (urlGender) p.gender = urlGender;
     if (urlDateFrom) p.dateFrom = urlDateFrom;
     if (urlDateTo) p.dateTo = urlDateTo;
     return p;
-  }, [urlPage, urlLimit, urlSearch, urlBarangay, urlCategory, urlStatus, urlGender, urlDateFrom, urlDateTo]);
+  }, [urlPage, urlLimit, urlSearch, urlBarangay, urlCategory, urlCaseCategory, urlStatus, urlGender, urlDateFrom, urlDateTo]);
 
   const { data: caseResponse, isLoading, error, mutate } = useSWR<{ data: Record<string, unknown>[]; total: number }>(
     queryKeys.cases.list(listParams),
@@ -186,6 +190,7 @@ export function CasesPage() {
   const uniqueBarangays = useMemo(() => [...new Set(allCases.map(c => c.barangay).filter(Boolean))], [allCases]);
   const uniqueCategories = useMemo(() => [...new Set(allCases.map(c => c.category).filter(Boolean))], [allCases]);
   const uniqueGenders = useMemo(() => [...new Set(allCases.map(c => c.gender).filter(Boolean))], [allCases]);
+  const uniqueCaseCategories = useMemo(() => [...new Set(allCases.map(c => c.caseCategory).filter(Boolean))], [allCases]);
 
   // Options cover every possible value: the canonical vocabulary first, plus any
   // extra value present in the loaded rows so nothing on screen is unfilterable.
@@ -199,17 +204,31 @@ export function CasesPage() {
     ...[...CLIENT_CATEGORIES_V2, ...uniqueCategories.filter(c => !(CLIENT_CATEGORIES_V2 as readonly string[]).includes(c))].map(c => ({ value: c, label: categoryLabel(t, c) })),
   ], [uniqueCategories, t]);
 
+  // The stored subtype *is* the display text ('Children in Conflict with the Law
+  // (CICL)'), so no label lookup — same as the case view renders it. Canonical
+  // groups first so the dropdown offers every category the app can assign even
+  // when the loaded page happens to contain none of them; without that the
+  // options would shrink as you filter and you could never switch again.
+  const caseCategoryOptions = useMemo(() => {
+    const canonical = CASE_CATEGORY_GROUPS.flatMap((g) => g.items);
+    return [
+      { value: '', label: t('cases.allCaseCategories', 'All Case Categories') },
+      ...[...canonical, ...uniqueCaseCategories.filter((c) => !canonical.includes(c))].map((c) => ({ value: c, label: c })),
+    ];
+  }, [uniqueCaseCategories, t]);
+
   const genderOptions = useMemo(() => [
     { value: '', label: t('cases.allGenders', 'All Genders') },
     ...[...GENDERS, ...uniqueGenders.filter(g => !(GENDERS as readonly string[]).includes(g))].map(g => ({ value: g, label: g })),
   ], [uniqueGenders, t]);
 
-  const hasAnyFilter = Boolean(urlSearch || urlBarangay || urlCategory || urlStatus || urlGender || urlDateFrom || urlDateTo);
+  const hasAnyFilter = Boolean(urlSearch || urlBarangay || urlCategory || urlCaseCategory || urlStatus || urlGender || urlDateFrom || urlDateTo);
 
   const clearFilters = useCallback(() => {
     setSearchInput('');
     updateURL({
       search: undefined, barangay: undefined, category: undefined,
+      caseCategory: undefined,
       status: undefined, gender: undefined,
       dateFrom: undefined, dateTo: undefined, page: undefined,
     });
@@ -265,6 +284,11 @@ export function CasesPage() {
             options={barangayOptions} className="w-40" />
           <FilterSelect label={t('cases.category', 'Category')} value={urlCategory} onChange={(v) => updateURL({ category: v || undefined, page: '1' })}
             options={categoryOptions} className="w-44" />
+          {/* The case's own category — CICL, VAWC, CNSP … — which is a different
+              axis from the client-category filter above (Indigent, Senior
+              Citizen …). Long stored values, hence the wider control. */}
+          <FilterSelect label={t('cases.caseCategory', 'Case Category')} value={urlCaseCategory} onChange={(v) => updateURL({ caseCategory: v || undefined, page: '1' })}
+            options={caseCategoryOptions} className="w-60" />
           <FilterSelect label={t('cases.status', 'Status')} value={urlStatus} onChange={(v) => updateURL({ status: v || undefined, page: '1' })}
             options={[{ value: '', label: t('cases.allStatuses', 'All Statuses') }, ...STATUS_KEYS.map(k => ({ value: k, label: statusLabel(t, k) }))]} className="w-36" />
           <FilterSelect label={t('cases.gender', 'Gender')} value={urlGender} onChange={(v) => updateURL({ gender: v || undefined, page: '1' })}

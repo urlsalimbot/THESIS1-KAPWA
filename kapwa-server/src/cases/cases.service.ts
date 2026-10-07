@@ -138,10 +138,23 @@ export class CasesService {
   // "no referral" for a case that has one — the two surfaces of one predicate
   // disagreeing, which is precisely what the shared fixture exists to prevent.
   // The same two queries, so the cost is unchanged per page.
+  /**
+   * Stamps the per-case counts the stepper's done-predicate reads but that are
+   * not columns on `cases`: `interventionCount`, `interAgencyReferralCount`,
+   * `enrollmentCount` and `courtHearingCount`.
+   *
+   * The last two were missing, and the approval pipeline has no other way to
+   * learn them — it renders straight from `GET /cases`, so a case with
+   * enrollments or hearings on file still drew those two chips as pending and a
+   * phase never read as closed no matter what had actually been accomplished.
+   *
+   * `courtHearingCount` counts non-cancelled hearings only, matching the case
+   * view's own derivation: a cancelled hearing is a decision not to hold it.
+   */
   private async attachInterventionCounts(cases: Case[]): Promise<Case[]> {
     if (cases.length === 0) return cases;
     const ids = cases.map((c) => c.id);
-    const [interventionRows, referralRows] = await Promise.all([
+    const [interventionRows, referralRows, enrollmentRows, hearingRows] = await Promise.all([
       this.caseRepo.manager.query(
         `SELECT case_id, COUNT(*)::int AS count FROM case_interventions
          WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
@@ -152,17 +165,32 @@ export class CasesService {
          WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
         [ids],
       ),
+      this.caseRepo.manager.query(
+        `SELECT case_id, COUNT(*)::int AS count FROM program_enrollments
+         WHERE case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
+        [ids],
+      ),
+      this.caseRepo.manager.query(
+        `SELECT case_id, COUNT(*)::int AS count FROM case_events
+         WHERE event_type = 'court_hearing' AND status <> 'cancelled'
+           AND case_id::uuid = ANY($1::uuid[]) GROUP BY case_id`,
+        [ids],
+      ),
     ]);
     const counts = new Map((interventionRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
     const referralCounts = new Map((referralRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
+    const enrollmentCounts = new Map((enrollmentRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
+    const hearingCounts = new Map((hearingRows as any[]).map((r: any) => [r.case_id, Number(r.count)]));
     for (const c of cases) {
       (c as any).interventionCount = counts.get(c.id) ?? 0;
       c.interAgencyReferralCount = referralCounts.get(c.id) ?? 0;
+      (c as any).enrollmentCount = enrollmentCounts.get(c.id) ?? 0;
+      (c as any).courtHearingCount = hearingCounts.get(c.id) ?? 0;
     }
     return cases;
   }
 
-  async findAll(page = 1, limit = 10, filters?: { status?: CaseStatus; search?: string; barangay?: string; category?: string; gender?: string; ageRange?: string; sla?: string; dateFrom?: string; dateTo?: string; beneficiaryId?: string }) {
+  async findAll(page = 1, limit = 10, filters?: { status?: CaseStatus; search?: string; barangay?: string; category?: string; caseCategory?: string; gender?: string; ageRange?: string; sla?: string; dateFrom?: string; dateTo?: string; beneficiaryId?: string }) {
     const qb = this.caseRepo.createQueryBuilder('c')
       .leftJoinAndSelect('c.beneficiary', 'beneficiary')
       .leftJoinAndSelect('beneficiary.person', 'person')
@@ -215,6 +243,12 @@ export class CasesService {
     }
     if (filters?.category) {
       qb.andWhere('c.client_category ILIKE :category', { category: `%${filters.category}%` });
+    }
+    // The case's own category (CICL, VAWC, CNSP, …), matched exactly rather than
+    // by substring: the filter offers whole stored values, and a substring would
+    // make "Adoption & Foster Care Case" sweep up anything containing those words.
+    if (filters?.caseCategory) {
+      qb.andWhere('c.case_category = :caseCategory', { caseCategory: filters.caseCategory });
     }
 
     qb.orderBy('c.createdAt', 'DESC');

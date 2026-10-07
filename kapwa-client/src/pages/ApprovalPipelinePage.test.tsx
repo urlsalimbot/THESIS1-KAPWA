@@ -62,6 +62,32 @@ const { mockApiGet, mockApiPost, mockApiPut, mockCases } = vi.hoisted(() => ({
       beneficiary: { firstName: 'Cara', surname: 'Diaz' },
       updatedAt: '2026-06-24T00:00:00Z',
     },
+    // Every count and field the chips read, supplied. This pins the regression:
+    // the page used to pass a literal `0` for enrollments and nothing at all for
+    // court hearings, so a case that had accomplished both still drew those steps
+    // as pending and no phase ever read as closed.
+    {
+      id: 'C-006',
+      controlNo: 'NORZ-2026-0006',
+      status: 'active',
+      caseCategory: 'Children in Conflict with the Law (CICL)',
+      serviceRequested: ['Financial Assistance'],
+      certificateUrl: null,
+      pettyCashVoucherUrl: null,
+      beneficiary: { firstName: 'Eva', surname: 'Lopez' },
+      updatedAt: '2026-06-23T00:00:00Z',
+      problemsPresented: 'Presented',
+      clientCategory: 'Indigent',
+      socialWorkerAssessment: 'Assessed',
+      discernmentAssessedAt: '2026-06-20',
+      discernmentResult: 'discerned',
+      interventionCount: 2,
+      interAgencyReferralCount: 1,
+      enrollmentCount: 3,
+      courtHearingCount: 2,
+      selfRelianceLevel: 3,
+      sustainabilityPlan: 'Sari-sari store',
+    },
   ],
 }));
 
@@ -130,6 +156,29 @@ describe('ApprovalPipelinePage', () => {
       expect({ controlNo: c.controlNo, count: screen.queryAllByText(c.controlNo).length })
         .toEqual({ controlNo: c.controlNo, count: 1 });
     }
+  });
+
+  // The counts the page used to omit: `enrollmentCount` was a literal 0 and
+  // `courtHearingCount` was never passed, so a case that had accomplished both
+  // still drew those steps as pending and no phase ever read as closed.
+  it('marks every accomplished step done, including enrollments and court hearings', async () => {
+    renderWithSWR(<ApprovalPipelinePage />);
+    const label = await screen.findByText('NORZ-2026-0006');
+    const card = label.closest('div.cursor-pointer') as HTMLElement;
+    expect(card).toBeTruthy();
+
+    // CICL carries 8 steps: assessment, discernment, enrollments, interventions,
+    // referrals, court hearings, evaluate, closure.
+    const chips = [...card.querySelectorAll('span.rounded-full')];
+    expect(chips).toHaveLength(8);
+
+    const done = chips.filter((c) => c.className.includes('bg-primary'));
+    const pending = chips.filter((c) => c.className.includes('bg-muted'));
+    // Everything accomplished reads as done; only Closure is left, floored at
+    // `transitioning` while the case is still active.
+    expect(done).toHaveLength(7);
+    expect(pending).toHaveLength(1);
+    expect(pending[0].textContent?.trim()).toBe('8');
   });
 
   // The header count comes from the same array as the cards beneath it, so they

@@ -14,19 +14,20 @@ import { Badge } from '@/components/ui/badge';
 /**
  * One row of `GET /cases`, as this page reads it.
  *
- * The two count fields are not columns on `cases`: `interventionCount` and
- * `interAgencyReferralCount` are stamped per case by
- * `CasesService.attachInterventionCounts`, which is why the approval pipeline can
- * draw its chips from the same `stepperStepDone` as the case view's stepper and
- * still answer correctly about step 2. Both names are declared on the server's
- * `Case` entity and compared there-and-here by `case-fsm-parity.test.ts`, so a
- * rename on either side is a failing test rather than a page quietly reading
- * `undefined`.
+ * The four count fields are not columns on `cases`: `interventionCount`,
+ * `interAgencyReferralCount`, `enrollmentCount` and `courtHearingCount` are
+ * stamped per case by `CasesService.attachInterventionCounts`, which is why the
+ * approval pipeline can draw its chips from the same `stepperStepDone` as the
+ * case view's stepper and still answer correctly about steps 2, 3 and the court
+ * hearings step. The first two names are declared on the server's `Case` entity
+ * and compared there-and-here by `case-fsm-parity.test.ts`, so a rename on either
+ * side is a failing test rather than a page quietly reading `undefined`.
  */
 interface ApprovalCase {
   id: string;
   controlNo: string;
   status: string;
+  caseCategory?: string;
   serviceRequested?: string[];
   requirementsChecklist?: Record<string, boolean>;
   certificateUrl?: string;
@@ -42,6 +43,13 @@ interface ApprovalCase {
   // from the same grouped query as `interventionCount`
   // (`CasesService.attachInterventionCounts`).
   interAgencyReferralCount?: number;
+  // Stamped by the same `CasesService.attachInterventionCounts`. Both were
+  // absent from this page's `stepperStatus` call — `enrollmentCount` was
+  // hard-coded to 0 and `courtHearingCount` never passed — so a case with
+  // enrollments or hearings on file still drew those two chips as pending and no
+  // phase ever read as closed however much had been accomplished.
+  enrollmentCount?: number;
+  courtHearingCount?: number;
   selfRelianceLevel?: number;
   sustainabilityPlan?: string;
   clientSignature?: string;
@@ -120,7 +128,11 @@ export function ApprovalPipelinePage() {
                 {group.label}
                 <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.items.length}</span>
               </h2>
-              <div className="space-y-3">
+              {/* Each column scrolls on its own. Phase-In now carries every
+                  pre-review status, so an unbounded list would push the other
+                  two columns below the fold and the board would stop reading as
+                  three parallel phases. */}
+              <div className="space-y-3 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
                 {group.items.map(c => (
                   <div
                     key={c.id}
@@ -152,13 +164,15 @@ export function ApprovalPipelinePage() {
 
                     {/* Case stepper progress — mirrors the case view stepper */}
                     <div className="flex items-center gap-1 mb-2 flex-wrap">
-                      {/* `interAgencyReferralCount` comes from the same grouped query as
-                        `interventionCount` (see `attachInterventionCounts`), because step 2
-                        asks for the referral count rather than reading `case.referrals` —
-                        passing nothing here would report "no referral" for a case that has
-                        one, on a card drawn from the same predicate as the case view. */}
-                      {Object.values(stepperStatus(c, c.interventionCount ?? 0, 0, {
+                      {/* All four counts come from the same grouped queries as
+                          `attachInterventionCounts`, because the predicate asks for counts
+                          rather than reading a column: step 2 wants the referral count not
+                          `case.referrals`, step 3 the enrollment count, and the hearings step
+                          its own count. Passing nothing — or a literal 0 — reports the step as
+                          pending on a card drawn from the very predicate the case view trusts. */}
+                      {Object.values(stepperStatus(c, c.interventionCount ?? 0, c.enrollmentCount ?? 0, {
                         interAgencyReferralCount: c.interAgencyReferralCount ?? 0,
+                        courtHearingCount: c.courtHearingCount ?? 0,
                       })).map((done, si) => (
                         <span
                           key={si}

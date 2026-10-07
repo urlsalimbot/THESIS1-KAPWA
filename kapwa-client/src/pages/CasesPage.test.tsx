@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
 import { axe } from 'vitest-axe';
@@ -183,7 +183,12 @@ describe('CasesPage', () => {
         </MemoryRouter>
       </SWRConfig>,
     );
-    expect(await screen.findByText('Case Category')).toBeTruthy();
-    expect(await screen.findByText('Individual in Crisis Situation (AICS)')).toBeTruthy();
+    // Scoped to the table, and awaited — the original assertion waited for the
+    // header to render. The "Case Category" *filter* now shares the header's
+    // label and lists the same subtype values, so both unscoped queries below
+    // would match two legitimate elements and throw.
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('Case Category')).toBeTruthy();
+    expect(within(table).getByText('Individual in Crisis Situation (AICS)')).toBeTruthy();
   });
 });
