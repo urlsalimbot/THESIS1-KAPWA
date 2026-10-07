@@ -8,145 +8,94 @@ import {
   NodeProps,
   useNodesState,
   useEdgesState,
-  type Node,
-  type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import {
+  computeFamilyTreeLayout,
+  NODE_WIDTH,
+  type FamilyFlowNode,
+  type FamilyFlowEdge,
+  type FamilyMemberNode,
+} from './family-tree-layout';
 
-export interface FamilyMemberNode extends Record<string, unknown> {
-  id: string;
-  fullName: string;
-  relationship: string;
-  age: number;
-  statusIncome?: string;
-  isPrimary: boolean;
-  depth: number;
-}
-
-type FamilyFlowNode = Node<FamilyMemberNode>;
-type FamilyFlowEdge = Edge;
+// Re-exported so callers keep importing the member shape from this component.
+export type { FamilyMemberNode } from './family-tree-layout';
 
 interface FamilyTreeGraphProps {
   members: FamilyMemberNode[];
   primary: FamilyMemberNode | null;
 }
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 72;
-const LAYER_GAP_Y = 100;
-const NODE_GAP_X = 24;
-
-function computeLayout(members: FamilyMemberNode[], primary: FamilyMemberNode | null): { nodes: FamilyFlowNode[]; edges: FamilyFlowEdge[] } {
-  const all = primary ? [primary, ...members.filter(m => m.id !== primary.id)] : [...members];
-  const byDepth: Record<number, FamilyMemberNode[]> = {};
-  all.forEach(m => {
-    if (!byDepth[m.depth]) byDepth[m.depth] = [];
-    byDepth[m.depth].push(m);
-  });
-  const depths = Object.keys(byDepth).map(Number).sort();
-  const nodes: FamilyFlowNode[] = [];
-  const edges: FamilyFlowEdge[] = [];
-
-  depths.forEach((depth) => {
-    const layer = byDepth[depth];
-    const totalWidth = (layer.length - 1) * (NODE_WIDTH + NODE_GAP_X);
-    const startX = -totalWidth / 2;
-    layer.forEach((m, i) => {
-      nodes.push({
-        id: m.id,
-        type: 'familyMember' as const,
-        position: { x: startX + i * (NODE_WIDTH + NODE_GAP_X), y: depth * (NODE_HEIGHT + LAYER_GAP_Y) },
-        data: m,
-      });
-    });
-  });
-
-  if (primary) {
-    all.forEach(m => {
-      if (m.id !== primary.id) {
-        edges.push({
-          id: `e-${primary.id}-${m.id}`,
-          source: primary.id,
-          target: m.id,
-          label: m.relationship,
-          type: 'smoothstep',
-          animated: m.depth <= 1,
-          style: { stroke: '#3D5A80', strokeWidth: 1.5 },
-          labelStyle: { fill: '#5C5A56', fontSize: 10, fontWeight: 500 },
-          labelBgStyle: { fill: '#FFFFFF', fillOpacity: 0.9 },
-          labelBgPadding: [4, 2] as [number, number],
-          labelBgBorderRadius: 4,
-        } satisfies FamilyFlowEdge);
-      }
-    });
-  }
-
-  return { nodes, edges };
-}
-
-const edgeTypeColors: Record<string, string> = {
-  Spouse: '#C8553D',
-  Child: '#3D5A80',
-  Parent: '#1B3A5C',
-  Sibling: '#5C5A56',
-};
-
-const edgeTypeLabels: Record<string, string> = {
-  Spouse: 'Spouse',
-  Child: 'Child',
-  Parent: 'Parent',
-  Sibling: 'Sibling',
-  Grandparent: 'Grandparent',
-  Grandchild: 'Grandchild',
-  Other: 'Relative',
-};
-
 function FamilyMemberNode({ data }: NodeProps<FamilyFlowNode>) {
   const { t } = useTranslation();
-  const initial = data.fullName.charAt(0).toUpperCase();
+  const member = data as FamilyMemberNode;
+  const initial = (member.fullName || '?').charAt(0).toUpperCase();
   return (
     <div
       className={`
         flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md
-        ${data.isPrimary ? 'border-primary ring-1 ring-primary/20' : 'border-border'}
+        ${member.isPrimary ? 'border-primary ring-1 ring-primary/20' : 'border-border'}
       `}
       style={{ width: NODE_WIDTH }}
     >
       <div
         className={`
           flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold
-          ${data.isPrimary ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}
+          ${member.isPrimary ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}
         `}
       >
         {initial}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold text-foreground">{data.fullName}</p>
+        <p className="truncate text-xs font-semibold text-foreground">{member.fullName}</p>
         <p className="truncate text-[10px] text-muted-foreground">
-          {data.relationship} &middot; {data.age} {t('family.yrs', 'yrs')}
+          {member.relationship} &middot; {member.age} {t('family.yrs', 'yrs')}
         </p>
-        {data.statusIncome && (
-          <p className="truncate text-[9px] text-muted-foreground">{data.statusIncome}</p>
+        {member.statusIncome && (
+          <p className="truncate text-[9px] text-muted-foreground">{member.statusIncome}</p>
         )}
       </div>
+      {/* Descent lines leave the bottom and arrive at the top; a marriage or a
+          sibling bond runs sideways between the left and right handles. */}
       <Handle type="target" position={Position.Top} className="!border-border !bg-background" />
       <Handle type="source" position={Position.Bottom} className="!border-border !bg-background" />
+      <Handle id="left" type="target" position={Position.Left} className="!border-border !bg-background" />
+      <Handle id="right" type="source" position={Position.Right} className="!border-border !bg-background" />
     </div>
   );
 }
 
-const nodeTypes = { familyMember: FamilyMemberNode };
+/** Quiet caption in the gutter beside each generation. */
+function LayerLabel({ data }: NodeProps<FamilyFlowNode>) {
+  const { t } = useTranslation();
+  const layerKey = (data as { layerKey?: string }).layerKey ?? '';
+  const caption = t(`family.layer.${layerKey}`, {
+    grandparents: 'Grandparents',
+    parents: 'Parents',
+    household: 'This household',
+    children: 'Children',
+    grandchildren: 'Grandchildren',
+  }[layerKey] ?? '');
+  return (
+    <div className="pointer-events-none select-none whitespace-nowrap text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+      {caption}
+    </div>
+  );
+}
+
+const nodeTypes = { familyMember: FamilyMemberNode, layerLabel: LayerLabel };
 
 export function FamilyTreeGraph({ members, primary }: FamilyTreeGraphProps) {
   const { t } = useTranslation();
-  const layout = useMemo(() => computeLayout(members, primary), [members, primary]);
+  const layout = useMemo(() => computeFamilyTreeLayout(members, primary), [members, primary]);
   const [nodes, setNodes, onNodesChange] = useNodesState<FamilyFlowNode>(layout.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<FamilyFlowEdge>(layout.edges);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: FamilyFlowNode) => {
+    if (node.type === 'layerLabel') return;
     setSelectedId(prev => prev === node.id ? null : node.id);
   }, []);
 
