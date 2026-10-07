@@ -15,12 +15,30 @@
 	}
 
 	# Security headers (applied to all responses)
+	#
+	# `-Server` strips Caddy's own Server header for the same reason nginx.conf
+	# sets `server_tokens off` — neither should advertise its version (ZAP 10036).
+	#
+	# CSP: same policy as the deployed SPA (kapwa-client/nginx-security-headers.conf).
+	# script-src stays 'self' — the Vite production build emits external module
+	# scripts only. style-src-elem pins sonner's and Radix ScrollArea's injected
+	# stylesheets by SHA-256 rather than allowing 'unsafe-inline'; style-src-attr
+	# covers Radix's inline style attributes (popper positioning). Both Google
+	# Fonts hosts are allowed for index.css's Geist + Source Sans 3 import.
+	# Keep in step with kapwa-client/nginx-security-headers.conf — same policy,
+	# same hashes.
 	header {
+		-Server
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-elem 'self' https://fonts.googleapis.com 'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY=' 'sha256-vGQdhYJbTuF+M8iCn1IZCHpdkiICocWHDq4qnQF4Rjw=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; style-src-attr 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:"
 		X-XSS-Protection "1; mode=block"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# Site isolation against Spectre-style speculative reads (ZAP 90004).
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Embedder-Policy "require-corp"
+		Cross-Origin-Resource-Policy "same-origin"
 	}
 
 	# Non-API routes: serve API / socket / health first
@@ -54,7 +72,19 @@
 }
 
 # Production configuration (uncomment and customize):
+#
+# This is the only layer that can clear ZAP's "HTTP Only Site" medium: a site
+# served over plain HTTP is HTTP-only no matter which application headers it
+# sends. Caddy obtains the certificate automatically from a hostname, and
+# redirects :80 to :443 on its own once `tls` is present. Strict-Transport-Security
+# is added here rather than in the :80 block above on purpose — sending HSTS over
+# plain HTTP pins browsers to HTTPS for the domain, which would break the ngrok /
+# local development tunnel the block above is for.
+#
 # kapwa.software, www.kapwa.software {
 #     tls admin@kapwa.software
-#     # ... same handlers as above ...
+#
+#     header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+#
+#     # ... same rate_limit, header, handle and log blocks as above ...
 # }

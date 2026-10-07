@@ -53,7 +53,10 @@ services:
     build:
       context: ./kapwa-client
       args:
-        VITE_API_URL: /api
+        # The NestJS API is URI-versioned (`/api/v1/…`). `/api` 404s on every
+        # call; kapwa-server/docker-compose.yml and deploy-aws.sh already use
+        # `/api/v1` — this default has to match them.
+        VITE_API_URL: /api/v1
     ports:
       - "80:80"
     depends_on:
