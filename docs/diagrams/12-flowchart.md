@@ -64,6 +64,16 @@ standard ones rather than an approximation.
 | F14 | Claimant self-service and consent | A claimant signing in | Records protected per their choice | §4.14 |
 | F15 | Reporting and audit | A period to report on | A filed, auditable report | §4.15 |
 | F16 | Field capture and later submission | Notes taken away from the office | Settled records back in the office | §4.16 |
+| F17 | Publishing a notice | Something the public should know | A notice on display, or retired | §4.17 |
+| F18 | Public inquiry and reply | A visitor writing to the office | An answered inquiry | §4.18 |
+| F19 | Messaging about a case | Someone involved in a case wants to write | An exchange kept with the case | §4.19 |
+| F20 | Programme catalogue upkeep | A review of what the office offers | A catalogue the staff can work from | §4.20 |
+| F21 | Staff account administration | A new member of staff | An account with the right reach | §4.21 |
+| F22 | Recovering a forgotten password | A person who cannot sign in | A new secret phrase in use | §4.22 |
+| F23 | Personal details and preferences | A person changing their own account | The account reflecting their choice | §4.23 |
+| F24 | Barangay coordinator files a referral | A barangay officer knows a family in need | A settled referral | §4.24 |
+| F25 | Daily case monitoring | A working day begins | Cases accounted for | §4.25 |
+| F26 | Household upkeep after intake | A household's circumstances change | A current household record | §4.26 |
 
 ---
 
@@ -555,6 +565,336 @@ digraph F16_field_capture {
   fair -> sort [label="No"];
   sort -> send;
   fair -> book [label="Yes"];
+  book -> done;
+}
+```
+
+### 4.17 F17 — Publishing a notice
+
+```dot
+digraph F17_notice {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="The office has something the public should know"];
+  draft [shape=parallelogram, label="Write the notice and choose its wording"];
+  pics  [shape=diamond, label="Are there pictures to go with it?"];
+  attach[shape=box, label="Attach the pictures"];
+  when  [shape=parallelogram, label="Set when it should appear and for how long"];
+  show  [shape=box, label="Place it on the public pages"];
+  top   [shape=diamond, label="Does it deserve the top of the list?"];
+  pin   [shape=box, label="Keep it at the top"];
+  expire[shape=diamond, label="Is its time up, or is it no longer true?"];
+  down  [shape=box, label="Take it down"];
+  done  [shape=terminator, label="The notice is on display, or retired"];
+
+  start -> draft -> pics;
+  pics -> attach [label="Yes"];
+  attach -> when;
+  pics -> when [label="No"];
+  when -> show -> top;
+  top -> pin [label="Yes"];
+  pin -> expire;
+  top -> expire [label="No"];
+  expire -> down [label="Yes"];
+  down -> done;
+  expire -> done [label="No"];
+}
+```
+
+### 4.18 F18 — Public inquiry and reply
+
+```dot
+digraph F18_inquiry {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="A visitor writes to the office"];
+  send  [shape=parallelogram, label="Send the inquiry from the public page"];
+  list  [shape=box, label="It joins the inquiry list, with the waiting count"];
+  need  [shape=diamond, label="Does it call for an answer?"];
+  aside [shape=box, label="Set it aside as read"];
+  write [shape=parallelogram, label="Write the answer with the visitor's words to hand"];
+  reply [shape=box, label="Send the answer"];
+  mark  [shape=box, label="Mark the inquiry as answered"];
+  done  [shape=terminator, label="The inquiry is closed"];
+
+  start -> send -> list -> need;
+  need -> aside [label="No"];
+  aside -> mark;
+  need -> write [label="Yes"];
+  write -> reply -> mark;
+  mark -> done;
+}
+```
+
+### 4.19 F19 — Messaging about a case
+
+```dot
+digraph F19_messaging {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="Someone involved in a case wants to write"];
+  open  [shape=box, label="Open the exchange with that person"];
+  keep  [shape=cylinder, label="The words exchanged so far"];
+  write [shape=parallelogram, label="Write the message"];
+  post  [shape=box, label="Send it"];
+  waits [shape=box, label="It waits, marked unread, for the other person"];
+  seen  [shape=diamond, label="Has the other person opened it?"];
+  clear [shape=box, label="The unread mark clears when they read it"];
+  filed [shape=cylinder, label="The exchange kept with the case"];
+  done  [shape=terminator, label="The exchange is part of the case history"];
+
+  start -> open -> keep -> write -> post -> waits -> seen;
+  seen -> clear [label="Yes"];
+  clear -> filed;
+  seen -> waits [label="No"];
+  filed -> done;
+}
+```
+
+### 4.20 F20 — Programme catalogue upkeep
+
+```dot
+digraph F20_catalogue {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="The office reviews what it offers"];
+  what  [shape=diamond, label="A new programme, a change, or one to set aside?"];
+  add   [shape=parallelogram, label="Write its name, purpose and basis"];
+  amend [shape=box, label="Correct the programme's details"];
+  scope [shape=parallelogram, label="Choose the services it renders and the documents it requires"];
+  keep  [shape=box, label="Keep it in the catalogue the staff work from"];
+  shown [shape=box, label="It appears wherever a programme may be chosen"];
+  pull  [shape=box, label="It stops being offered to new cases"];
+  done  [shape=terminator, label="The catalogue matches what the office offers"];
+
+  start -> what;
+  what -> add [label="New"];
+  what -> amend [label="Change"];
+  what -> pull [label="Set aside"];
+  add -> scope;
+  amend -> scope;
+  scope -> keep -> shown -> done;
+  pull -> keep;
+}
+```
+
+### 4.21 F21 — Staff account administration
+
+```dot
+digraph F21_staff {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="A new member of staff joins the office"];
+  take  [shape=parallelogram, label="Take their name, contact details and the role they will hold"];
+  reach [shape=diamond, label="Do they serve one barangay or the whole municipality?"];
+  post  [shape=box, label="Note the barangay they answer for"];
+  wide  [shape=box, label="Note that they may work anywhere in the municipality"];
+  make  [shape=box, label="Prepare the account and its first secret phrase"];
+  hand  [shape=box, label="Hand over the sign-in details"];
+  work  [shape=box, label="They work within what their role and coverage allow"];
+  leave [shape=diamond, label="Do they leave the office?"];
+  off   [shape=box, label="Switch the account off, keeping its history"];
+  back  [shape=diamond, label="Do they come back?"];
+  on    [shape=box, label="Switch it on again for the same person"];
+  done  [shape=terminator, label="The account reflects who is actually in the office"];
+
+  start -> take -> reach;
+  reach -> post [label="One barangay"];
+  reach -> wide [label="The municipality"];
+  post -> make;
+  wide -> make;
+  make -> hand -> work -> leave;
+  leave -> off [label="Yes"];
+  leave -> done [label="No"];
+  off -> back;
+  back -> on [label="Yes"];
+  on -> done;
+  back -> done [label="No"];
+}
+```
+
+### 4.22 F22 — Recovering a forgotten password
+
+```dot
+digraph F22_forgotten {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="A person cannot remember their secret phrase"];
+  tell  [shape=parallelogram, label="Give the account name they sign in with"];
+  send  [shape=box, label="Send a message with a way to choose a new one"];
+  fresh [shape=diamond, label="Is the message used while it is current?"];
+  again [shape=box, label="Ask for a fresh message when the old one has lapsed"];
+  pick  [shape=parallelogram, label="Choose a new secret phrase"];
+  rule  [shape=diamond, label="Does it meet what the office requires?"];
+  say   [shape=box, label="Say what is missing and let them try again"];
+  keep  [shape=box, label="Keep the new phrase"];
+  done  [shape=terminator, label="They can sign in again"];
+
+  start -> tell -> send -> fresh;
+  fresh -> again [label="No"];
+  again -> send;
+  fresh -> pick [label="Yes"];
+  pick -> rule;
+  rule -> say [label="No"];
+  say -> pick;
+  rule -> keep [label="Yes"];
+  keep -> done;
+}
+```
+
+### 4.23 F23 — Personal details and preferences
+
+```dot
+digraph F23_mydetails {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="A person wants to change something of their own"];
+  what  [shape=diamond, label="What do they want to change?"];
+  phrase[shape=parallelogram, label="Give the secret phrase in use and the new one"];
+  reach [shape=parallelogram, label="Give the new address or telephone number"];
+  check [shape=diamond, label="Is the phrase in use correct?"];
+  no    [shape=box, label="Refuse the change and say why"];
+  move  [shape=diamond, label="Does the new address have to be confirmed?"];
+  conf  [shape=box, label="Send a message to the new address to confirm it"];
+  second[shape=box, label="Set up or remove the second check"];
+  notice[shape=parallelogram, label="Choose which notices arrive, and how"];
+  save  [shape=box, label="Keep the change"];
+  done  [shape=terminator, label="The account shows what they chose"];
+
+  start -> what;
+  what -> phrase [label="The secret phrase"];
+  what -> reach [label="Contact details"];
+  what -> second [label="The second check"];
+  what -> notice [label="Notices"];
+  phrase -> check;
+  check -> no [label="No"];
+  no -> done;
+  check -> save [label="Yes"];
+  reach -> move;
+  move -> conf [label="Yes"];
+  conf -> save;
+  move -> save [label="No"];
+  second -> check;
+  notice -> save;
+  save -> done;
+}
+```
+
+### 4.24 F24 — Barangay coordinator files a referral
+
+```dot
+digraph F24_coordinator_referral {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="A barangay officer knows a family in need"];
+  take  [shape=parallelogram, label="Take the family's particulars and what they need"];
+  file  [shape=box, label="File the referral to the office"];
+  wait  [shape=box, label="It waits in the office's referral list"];
+  weigh [shape=box, label="The office weighs it against the help it has"];
+  take2 [shape=diamond, label="Does the office take the family in?"];
+  why   [shape=parallelogram, label="Write why not, and what the family may try instead"];
+  open  [shape=box, label="The family is taken in and a case begins"];
+  seen  [shape=box, label="The officer sees how their referral ended"];
+  done  [shape=terminator, label="The referral is settled either way"];
+
+  start -> take -> file -> wait -> weigh -> take2;
+  take2 -> why [label="No"];
+  why -> seen;
+  take2 -> open [label="Yes"];
+  open -> seen;
+  seen -> done;
+}
+```
+
+### 4.25 F25 — Daily case monitoring
+
+```dot
+digraph F25_monitoring {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="A working day begins at the office"];
+  open  [shape=box, label="Open the day's list of cases"];
+  late  [shape=diamond, label="Is anything past the time it was promised?"];
+  nudge [shape=box, label="Remind the worker who holds that case"];
+  watch [shape=box, label="Keep the case in view until it moves"];
+  count [shape=parallelogram, label="Count the work of the day or the period"];
+  fit   [shape=diamond, label="Does the count agree with the records?"];
+  look  [shape=box, label="Go back over the records behind the count"];
+  done  [shape=terminator, label="The office knows where its cases stand"];
+
+  start -> open -> late;
+  late -> nudge [label="Yes"];
+  nudge -> watch;
+  late -> watch [label="No"];
+  watch -> count -> fit;
+  fit -> look [label="No"];
+  look -> count;
+  fit -> done [label="Yes"];
+}
+```
+
+### 4.26 F26 — Household upkeep after intake
+
+```dot
+digraph F26_household_upkeep {
+  rankdir=TB;
+  graph [dpi=400, bgcolor="white", fontname="Helvetica", ranksep=0.45, nodesep=0.35, margin=0.12];
+  node  [fontname="Helvetica", fontsize=10, fontcolor="#111111"];
+  edge  [fontname="Helvetica", fontsize=9, fontcolor="#111111", color="#111111", penwidth=1.0, arrowsize=0.7];
+
+  start [shape=terminator, label="A household's circumstances change"];
+  what  [shape=diamond, label="What changed?"];
+  add   [shape=parallelogram, label="Take the particulars of the member joining"];
+  join  [shape=box, label="Add them to the household"];
+  fix   [shape=parallelogram, label="Correct what the record says about a member"];
+  out   [shape=box, label="Note that a member is no longer with the household"];
+  stand [shape=diamond, label="Does the household's standing change?"];
+  mark  [shape=parallelogram, label="Note the new standing, its income or its listing"];
+  card  [shape=diamond, label="Does the family access card need changing?"];
+  print [shape=box, label="Print the card again for the household"];
+  book  [shape=cylinder, label="The household register"];
+  done  [shape=terminator, label="The household record is current"];
+
+  start -> what;
+  what -> add [label="Someone joins"];
+  what -> fix [label="A detail is wrong"];
+  what -> out [label="Someone leaves"];
+  add -> join -> stand;
+  fix -> stand;
+  out -> stand;
+  stand -> mark [label="Yes"];
+  mark -> card;
+  stand -> card [label="No"];
+  card -> print [label="Yes"];
+  print -> book;
+  card -> book [label="No"];
   book -> done;
 }
 ```
