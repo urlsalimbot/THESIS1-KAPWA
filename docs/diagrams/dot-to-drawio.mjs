@@ -24,6 +24,38 @@ const ENTITY_FILL = '#cfe2f3';
 const STROKE = '#111111';
 const PX = 96 / 72; // points → draw.io pixels
 
+// draw.io styles for the standard ANSI/ISO (ISO 5807) flowchart symbols, plus
+// the DFD shapes the other diagrams use. The exporter maps each Graphviz shape
+// onto the draw.io counterpart so the drawn symbol is the standard one.
+const STYLES = {
+  'flow-terminator': `rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=${ENTITY_FILL};strokeColor=${STROKE};fontSize=11;`,
+  'flow-process': `rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=${STROKE};fontSize=11;`,
+  'flow-decision': `rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=${STROKE};fontSize=11;`,
+  'flow-data': 'shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;' +
+    `fillColor=#ffffff;strokeColor=${STROKE};fontSize=11;`,
+  'flow-stored': 'shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;' +
+    `fillColor=#f5f5f5;strokeColor=${STROKE};fontSize=11;`,
+  'flow-note': 'shape=note;whiteSpace=wrap;html=1;size=14;backgroundOutline=1;' +
+    `fillColor=#fff9c4;strokeColor=${STROKE};fontSize=10;align=left;`,
+  'flow-connector': `ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#ffffff;strokeColor=${STROKE};fontSize=11;`,
+  'dfd-entity': `rounded=0;whiteSpace=wrap;html=1;fillColor=${ENTITY_FILL};strokeColor=${STROKE};fontSize=11;`,
+};
+
+/** Graphviz shape → standard flowchart symbol. */
+const SHAPE_TO_SYMBOL = {
+  terminator: 'flow-terminator',
+  stadium: 'flow-terminator',
+  diamond: 'flow-decision',
+  parallelogram: 'flow-data',
+  cylinder: 'flow-stored',
+  note: 'flow-note',
+  ellipse: 'flow-connector',
+  circle: 'flow-connector',
+  box: 'flow-process',
+  rect: 'flow-process',
+  rectangle: 'flow-process',
+};
+
 function xmlEsc(s) {
   return String(s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -40,26 +72,39 @@ function parseDot(code) {
   while ((m = blockRe.exec(code))) {
     const id = m[1];
     const attrs = m[2];
-    if (/shape=box/.test(attrs)) {
-      const label = /label=<(.*?)>/.exec(attrs);
-      nodes.set(id, { kind: 'entity', label: label ? label[1].trim() : id });
-      continue;
-    }
     if (/<TABLE/.test(attrs)) {
       const cells = [...attrs.matchAll(/<TD[^>]*>([\s\S]*?)<\/TD>/g)].map((c) => c[1].trim());
       const isStore = /CELLBORDER="1"/.test(attrs);
-      if (isStore) {
-        nodes.set(id, { kind: 'store', band: cells[0] ?? '', name: cells[1] ?? '' });
-      } else {
-        nodes.set(id, { kind: 'process', band: cells[0] ?? '', name: cells[1] ?? '' });
-      }
+      nodes.set(id, isStore
+        ? { kind: 'dfd-store', band: cells[0] ?? '', name: cells[1] ?? '' }
+        : { kind: 'dfd-process', band: cells[0] ?? '', name: cells[1] ?? '' });
+      continue;
     }
+    const shape = /shape=([A-Za-z0-9_]+)/.exec(attrs)?.[1] ?? 'box';
+    // Labels may be HTML-like (label=<...>) or quoted (label="...").
+    const htmlLabel = /label=<(.*?)>/.exec(attrs);
+    const quotedLabel = /label="((?:[^"\\]|\\.)*)"/.exec(attrs);
+    const value = (htmlLabel ? htmlLabel[1] : quotedLabel ? quotedLabel[1] : id).trim();
+    // A filled box is a DFD external entity; a plain box is a process step.
+    const filled = /style=filled/.test(attrs) && /fillcolor="#cfe2f3"/i.test(attrs);
+    if (shape === 'box' && filled) {
+      nodes.set(id, { kind: 'dfd-entity', label: value });
+      continue;
+    }
+    nodes.set(id, { kind: 'flow', style: SHAPE_TO_SYMBOL[shape] ?? 'flow-process', label: value });
   }
 
-  const edgeRe = /(?:^|\n)\s*([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)(?:\s*\[(.*?)\])?\s*;/g;
+  // Edge statements may chain: a -> b -> c; — split every hop. Labels sit in
+  // the statement's attribute list and (per Graphviz) apply to its last hop.
+  const edgeRe = /(?:^|\n)\s*([A-Za-z0-9_]+(?:\s*->\s*[A-Za-z0-9_]+)+)(\s*\[([\s\S]*?)\])?\s*;/g;
   while ((m = edgeRe.exec(code))) {
-    const labelM = m[3] ? /label=<(.*?)>/.exec(m[3]) : null;
-    edges.push({ from: m[1], to: m[2], label: labelM ? labelM[1].trim() : '' });
+    const ids = m[1].split('->').map((s) => s.trim());
+    const attrs = m[3] ?? '';
+    const labelM = /label="((?:[^"\\]|\\.)*)"/.exec(attrs) ?? /label=<(.*?)>/.exec(attrs);
+    const label = labelM ? labelM[1].trim() : '';
+    for (let i = 0; i < ids.length - 1; i++) {
+      edges.push({ from: ids[i], to: ids[i + 1], label: i === ids.length - 2 ? label : '' });
+    }
   }
 
   return { nodes, edges };
@@ -107,9 +152,11 @@ export function dotToDrawio(code, pageName) {
     })();
     const rect = toDrawioRect(pos, Number(o.width), Number(o.height), bbH);
 
-    if (node.kind === 'entity') {
-      cells.push(cell(name, node.label, `rounded=0;whiteSpace=wrap;html=1;fillColor=${ENTITY_FILL};strokeColor=${STROKE};fontSize=11;`, rect));
-    } else if (node.kind === 'process') {
+    if (node.kind === 'flow') {
+      cells.push(cell(name, node.label, STYLES[node.style] ?? STYLES['flow-process'], rect));
+    } else if (node.kind === 'dfd-entity') {
+      cells.push(cell(name, node.label, STYLES['dfd-entity'], rect));
+    } else if (node.kind === 'dfd-process') {
       // Top band holds the number; the body is a child label with the name.
       const bandH = 22;
       cells.push(cell(
@@ -127,7 +174,7 @@ export function dotToDrawio(code, pageName) {
         { x: 6, y: bandH + 2, w: Math.max(40, rect.w - 12), h: Math.max(20, rect.h - bandH - 6) },
         name,
       ));
-    } else {
+    } else if (node.kind === 'dfd-store') {
       // Store: swimlane with the band on the left (horizontal=1 rotates it).
       const bandW = 34;
       cells.push(cell(
