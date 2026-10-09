@@ -86,6 +86,17 @@ describe('computeEligibility', () => {
     expect(out[20].eligibility).toBe('allowed');
   });
 
+  it('lets exactly one row through when a pair of identical rows shares no DB identity', () => {
+    const out = computeEligibility({
+      today: TODAY,
+      rows: [row(2), row(9, { pairedRowIndex: 2 })],
+      interventionsByPerson: {},
+    });
+    expect(out[2].eligibility).toBe('allowed');
+    expect(out[9]).toMatchObject({ eligibility: 'disqualified' });
+    expect(out[9].reason).toContain('Row 2');
+  });
+
   it('an unmatched row is always allowed', () => {
     const out = computeEligibility({ today: TODAY, rows: [row(2)], interventionsByPerson: {} });
     expect(out[2].eligibility).toBe('allowed');

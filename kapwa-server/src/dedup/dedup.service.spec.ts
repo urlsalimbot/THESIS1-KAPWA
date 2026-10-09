@@ -151,6 +151,17 @@ describe('DedupService', () => {
     expect(options.where.eligibility_decision).toBeDefined();
   });
 
+  it('upload deprioritizes the later row of an intra-list duplicate pair', async () => {
+    opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'defined', columnMap: map, matchThreshold: 0.75, interventionType: 'food_pack' });
+    const adapter: any = { sim: (a: string, b: string) => (a === b ? 1 : 0), searchSimilar: jest.fn().mockResolvedValue([]) };
+    const dupCsv = 'Last Name,First Name,Middle Name,Birthday,Barangay,Remarks\nReyes,Pedro,Poblete,1988-03-21,Bigte,AICS\nReyes,Pedro,Poblete,1988-03-21,Bigte,AICS\n';
+    const service2 = new DedupService(opsRepo as any, rowsRepo as any, matchesRepo as any, adapter as any);
+    await service2.upload('op1', Buffer.from(dupCsv), 'dup.csv', 'user-1');
+    const savedRows = (rowsRepo.save.mock.calls as any[]).flatMap((c) => c[0]);
+    expect(savedRows.map((r: any) => r.status)).toEqual(['no_match', 'deprioritized']);
+    expect(savedRows[1].eligibilityReason).toContain('Row 2');
+  });
+
   it('agrees a waived row into service once all its matches are decided', async () => {
     opsRepo.findOne.mockResolvedValue({ id: 'op1', status: 'reviewing', interventionType: 'food_pack' });
     rowsRepo.findOne.mockResolvedValue({ id: 'r1', operationId: 'op1', eligibility: 'disqualified', status: 'deprioritized' });

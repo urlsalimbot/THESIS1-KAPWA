@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common';
-
 /**
  * Serving-eligibility rules for a client-import list (2026-10-09):
  *
@@ -27,6 +25,8 @@ export interface EligibilityRowInput {
   /** Household surfaced by a household candidate (members included). */
   householdId?: string;
   householdPersonIds?: string[];
+  /** The EARLIER row this row is paired with inside the same list. */
+  pairedRowIndex?: number;
 }
 
 export interface PersonIntervention {
@@ -63,6 +63,20 @@ export function computeEligibility(input: EligibilityInput): Record<number, Elig
   const order = (a: number, b: number): number => a - b;
   const personGroup = new Map<string, number>();
   const householdGroup = new Map<string, number>();
+  // Intra-list pairs share the same identity ("duplicate, deprioritize"):
+  // the later row anchors to whatever the earliest row of the chain anchored
+  // to (its person, its household, or the chain's first row itself).
+  const pairAnchor = (r: EligibilityRowInput): string | number | undefined => {
+    let cur = r;
+    const seen = new Set<number>();
+    while (cur.pairedRowIndex !== undefined && !seen.has(cur.rowIndex)) {
+      seen.add(cur.rowIndex);
+      const earlier = input.rows.find((o) => o.rowIndex === cur.pairedRowIndex);
+      if (!earlier) break;
+      cur = earlier;
+    }
+    return cur.personId ?? cur.householdId ?? cur.pairedRowIndex ?? cur.rowIndex;
+  };
 
   const sorted = [...input.rows].sort((a, b) => order(a.rowIndex, b.rowIndex));
   for (const r of sorted) {
@@ -97,12 +111,26 @@ export function computeEligibility(input: EligibilityInput): Record<number, Elig
         firstIdx = householdGroup.get(r.householdId);
         if (firstIdx !== undefined) groupKind = 'household';
       }
+      // No DB identity: an intra-list duplicate pair still shares one — the
+      // later row anchors to whatever the earlier row anchored to.
+      if (firstIdx === undefined) {
+        const anchor = pairAnchor(r);
+        if (anchor !== undefined) {
+          const key = String(anchor);
+          firstIdx = personGroup.get(key) ?? householdGroup.get(key);
+          groupKind = 'person';
+        }
+      }
       if (firstIdx !== undefined && firstIdx !== r.rowIndex) {
         disqualified = true;
-        reason = `Row ${firstIdx} in this list is the same ${groupKind ?? 'person'} — only one gets through`;
+        reason = `Row ${firstIdx} in this list is the same ${groupKind === 'household' ? 'household' : 'person'} — only one gets through`;
       } else {
         if (r.personId && !personGroup.has(r.personId)) personGroup.set(r.personId, r.rowIndex);
         if (r.householdId && !householdGroup.has(r.householdId)) householdGroup.set(r.householdId, r.rowIndex);
+        const anchor = pairAnchor(r);
+        const anchorKey = String(anchor !== undefined ? anchor : r.rowIndex);
+        if (!personGroup.has(anchorKey)) personGroup.set(anchorKey, r.rowIndex);
+        if (!householdGroup.has(anchorKey)) householdGroup.set(anchorKey, r.rowIndex);
       }
     }
 

@@ -269,12 +269,20 @@ export class DedupService {
         : [];
     const householdOf = new Map(rowHouseholds.map((h) => [h.matchedPersonId, h.id]));
     const membersOf = new Map(rowHouseholds.map((h) => [h.matchedPersonId, h.memberPersonIds]));
-    const rowEvidence = parsed.rows.map((r, i) => ({
-      rowIndex: r.rowIndex,
-      personId: perRowMatches[i],
-      householdId: perRowMatches[i] ? householdOf.get(perRowMatches[i]) : undefined,
-      householdPersonIds: perRowMatches[i] ? membersOf.get(perRowMatches[i]) ?? [] : [],
-    }));
+    const rowIndexByToken = new Map(rowInputs.map((ri) => [ri.id, ri.rowIndex]));
+    const rowEvidence = parsed.rows.map((r, i) => {
+      const cands = candidatesByRow.get(rowIds[i]) ?? [];
+      const pairCand = cands.find((c) => c.targetType === 'import_row' && c.targetImportRowId);
+      return {
+        rowIndex: r.rowIndex,
+        personId: perRowMatches[i],
+        householdId: perRowMatches[i] ? householdOf.get(perRowMatches[i]) : undefined,
+        householdPersonIds: perRowMatches[i] ? membersOf.get(perRowMatches[i]) ?? [] : [],
+        // The intra-list pair shares the identity: the later row anchors to
+        // the earlier one's group ("only one gets through").
+        pairedRowIndex: pairCand ? rowIndexByToken.get(pairCand.targetImportRowId!) : undefined,
+      };
+    });
     const personIds = [...new Set(rowEvidence.flatMap((ev) => [ev.personId, ...ev.householdPersonIds].filter(Boolean)))];
     const interventionRows: any[] = personIds.length
       ? await this.rowsRepo.manager.query(

@@ -1,4 +1,4 @@
-import { personSignals, dedupScore, rarityWeight, DEDUP_THRESHOLD_DEFAULT } from './dedup-matcher.service';
+import { personSignals, dedupScore, DEDUP_THRESHOLD_DEFAULT } from './dedup-matcher.service';
 import { trigramSim } from './dedup-adapter';
 import { sweep, RowInput, PersonRepo, HouseholdRepo, InterventionRepo } from './dedup-match-sweep.service';
 import { parseImportFile, ColumnMapError, ColumnMap } from './dedup-parse.service';
@@ -11,7 +11,6 @@ import { parseImportFile, ColumnMapError, ColumnMap } from './dedup-parse.servic
  * an exact match below threshold) the test documents it explicitly.
  */
 
-const wUnique = { surname: 0, firstName: 0, middleName: 0, dob: 0, barangay: 0 };
 
 describe('trigramSim — similarity extremes', () => {
   it('is 1 for identical strings regardless of case', () => {
@@ -133,20 +132,20 @@ describe('dedupScore — exact weights and bounds', () => {
 
   it('is 0 when nothing agrees', () => {
     const s = personSignals({ lastName: 'Reyes', firstName: 'Pedro' }, { lastName: 'Lopez', firstName: 'Anna' }, trigramSim);
-    expect(dedupScore(s, wUnique, false)).toBe(0);
+    expect(dedupScore(s, false)).toBe(0);
   });
 
   it('gives each single signal its bare weight (dob .25, barangay .1, middle .05, pii .1)', () => {
-    expect(dedupScore(signs({ dob: '1988-03-21' }, { dob: '1988-03-21' }), wUnique, false)).toBeCloseTo(0.25);
-    expect(dedupScore(signs({ barangay: 'Bigte' }, { barangay: 'Bigte' }), wUnique, false)).toBeCloseTo(0.1);
-    expect(dedupScore(signs({ middleName: 'Poblete' }, { middleName: 'Poblete' }), wUnique, false)).toBeCloseTo(0.05);
-    expect(dedupScore(signs({ philsys: '123456789012' }, { philsys: '123456789012' }), wUnique, false)).toBeCloseTo(0.1);
+    expect(dedupScore(signs({ dob: '1988-03-21' }, { dob: '1988-03-21' }), false)).toBeCloseTo(0.25);
+    expect(dedupScore(signs({ barangay: 'Bigte' }, { barangay: 'Bigte' }), false)).toBeCloseTo(0.1);
+    expect(dedupScore(signs({ middleName: 'Poblete' }, { middleName: 'Poblete' }), false)).toBeCloseTo(0.05);
+    expect(dedupScore(signs({ philsys: '123456789012' }, { philsys: '123456789012' }), false)).toBeCloseTo(0.1);
   });
 
   it('name+dob alone reaches threshold exactly (0.75); nothing else is needed', () => {
     const s = personSignals({ lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21' }, { lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21' }, trigramSim);
-    expect(dedupScore(s, wUnique, false)).toBeCloseTo(0.75);
-    expect(dedupScore(s, wUnique, false)).toBeGreaterThanOrEqual(DEDUP_THRESHOLD_DEFAULT);
+    expect(dedupScore(s, false)).toBeCloseTo(0.75);
+    expect(dedupScore(s, false)).toBeGreaterThanOrEqual(DEDUP_THRESHOLD_DEFAULT);
   });
 
   it('caps at 1 when pii/household bonuses overflow the full agreement', () => {
@@ -155,27 +154,22 @@ describe('dedupScore — exact weights and bounds', () => {
       { lastName: 'Reyes', firstName: 'Pedro', middleName: 'Poblete', dob: '1988-03-21', barangay: 'Bigte', phone: '09171000005' },
       trigramSim,
     );
-    expect(dedupScore(full, wUnique, false)).toBeCloseTo(1);
-    expect(dedupScore(full, wUnique, true)).toBeCloseTo(1); // 1.1 → clamped
+    expect(dedupScore(full, false)).toBeCloseTo(1);
+    expect(dedupScore(full, true)).toBeCloseTo(1); // 1.1 → clamped
   });
 
-  it('attenuates an exact match when values are common (count 1 → rareMul 0.75)', () => {
-    const common = { surname: 1, firstName: 1, middleName: 1, dob: 1, barangay: 1 };
+  it('identity agreement is frequency-independent: repeated values still clear the threshold', () => {
+    // Regression: occurrence-based rarity counted across a whole 400-row list,
+    // so duplicate-heavy batches attenuated exact duplicates BELOW threshold
+    // and everything reported "No match". Frequency must not throttle identity.
     const s = personSignals(
       { lastName: 'Reyes', firstName: 'Pedro', middleName: 'Poblete', dob: '1988-03-21', barangay: 'Bigte' },
       { lastName: 'Reyes', firstName: 'Pedro', middleName: 'Poblete', dob: '1988-03-21', barangay: 'Bigte' },
       trigramSim,
     );
-    const score = dedupScore(s, common, false);
-    expect(score).toBeCloseTo(0.675); // 0.9 × 0.75
-    expect(score).toBeLessThan(DEDUP_THRESHOLD_DEFAULT); // the twin-identity hole
-  });
-
-  it('rarityWeight floors toward 0 for huge counts and rareMul approaches 0.5', () => {
-    expect(rarityWeight(0)).toBe(1);
-    expect(rarityWeight(1)).toBe(0.5);
-    expect(rarityWeight(9)).toBe(0.1);
-    expect(rarityWeight(1_000_000)).toBeLessThan(1e-5);
+    const score = dedupScore(s, false);
+    expect(score).toBeCloseTo(0.9);
+    expect(score).toBeGreaterThanOrEqual(DEDUP_THRESHOLD_DEFAULT);
   });
 });
 
@@ -246,11 +240,7 @@ describe('sweep — orchestration edge cases', () => {
     expect(scores).toEqual([...scores].sort((a, b) => b - a));
   });
 
-  it('identical twin persons in the DB attenuate an exact match below threshold', async () => {
-    // The E2E surfaced this: two identical Reyes/Pedro rows in the person
-    // table make the name+dob agreement "common", pushing a true exact match
-    // below 0.75 — no candidate is raised and the row would be created as a
-    // third duplicate. PINNED behavior, known tension (see ledger ruling).
+  it('identical twin persons in the DB each raise a candidate (frequency is neutral)', async () => {
     const repos = makeRepos({
       persons: () => [
         { id: 'p1', lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte' },
@@ -263,17 +253,14 @@ describe('sweep — orchestration edge cases', () => {
       sim: trigramSim,
       ...repos,
     });
-    expect(out.candidates).toEqual([]);
-    expect(out.rowStatus.r1).toBe('no_match');
+    expect(out.candidates).toHaveLength(2);
+    expect(out.rowStatus.r1).toBe('pending');
   });
 
-  it('an identical twin INSIDE the file and one in the DB leaves NO candidate at all', async () => {
-    // r1 and r2 are the same person, and the DB has an identical person p9.
-    // Every rarity count sees the attribute three times, so BOTH the
-    // db_person match (0.6375) and the intra-file pair (0.6375) fall below
-    // 0.75 — the row reaches the review grid with no decision surface and is
-    // created as a THIRD duplicate at finalize. PINNED behavior; the known
-    // tension from the E2E seed-twins, now also inside the file.
+  it('an identical twin INSIDE the file and one in the DB both surface (pairs + person)', async () => {
+    // r1 and r2 are the same person and the DB has an identical person p9:
+    // the pair candidate AND the person match both form. The eligibility
+    // engine (not the sweep) then applies "only one gets through".
     const repos = makeRepos({
       persons: () => [{ id: 'p9', lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21', barangay: 'Bigte' }],
     });
@@ -286,9 +273,11 @@ describe('sweep — orchestration edge cases', () => {
       sim: trigramSim,
       ...repos,
     });
-    expect(out.candidates).toEqual([]);
-    expect(out.rowStatus.r1).toBe('no_match');
-    expect(out.rowStatus.r2).toBe('no_match');
+    const r2Cands = out.candidates.filter((c) => c.rowId === 'r2');
+    expect(r2Cands.some((c) => c.targetType === 'import_row')).toBe(true);
+    expect(r2Cands.some((c) => c.targetType === 'db_person')).toBe(true);
+    expect(out.rowStatus.r1).toBe('pending');
+    expect(out.rowStatus.r2).toBe('pending');
   });
 
   it('the intra-file pair alone (no DB twin) still surfaces as an import_row candidate', async () => {

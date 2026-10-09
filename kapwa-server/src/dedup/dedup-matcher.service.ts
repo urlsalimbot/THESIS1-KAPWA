@@ -15,14 +15,6 @@ export interface PersonSignals extends MatchSignals {
   birthdayMatch: boolean;
 }
 
-export interface FrequencyWeights {
-  surname: number;
-  firstName: number;
-  middleName: number;
-  dob: number;
-  barangay: number;
-}
-
 export const DEDUP_THRESHOLD_DEFAULT = 0.75;
 
 export interface PersonLike {
@@ -35,17 +27,6 @@ export interface PersonLike {
   email?: string | null;
   philsys?: string | null;
 }
-
-/** Standardized array of weight values. */
-export const RARITY_BANDS: (0 | 1)[] = [0, 1];
-
-/** Rarity factor for an attribute value occurring `count` times: 1/(1+count). */
-export function rarityWeight(count: number): number {
-  return 1 / (1 + count);
-}
-
-/** How much an agreeing attribute is worth given its observed count. */
-const rareMul = (count: number): number => 0.5 + 0.5 * rarityWeight(count);
 
 const norm = (s?: string | null): string => (s ?? '').trim().toLowerCase();
 const digits = (s?: string | null): string => {
@@ -101,23 +82,25 @@ export function personSignals(
 }
 
 /**
- * Fellegi-Sunter-flavoured score in [0,1]. Rarity multiplies how much an
- * agreeing attribute is worth (0.5..1 scale via `0.5 + 0.5 * rarityWeight`),
- * so a common surname agreement counts less than a rare one. `householdServed`
- * is a strong corroborator (+0.10, as the spec's strongest dedupe signal).
+ * Fellegi-Sunter-flavoured score in [0,1] with PLAIN weights — frequency does
+ * not enter the score. Rarity-based attenuation was retired: it counted
+ * occurrences across the whole import (hundreds of rows), so duplicate-heavy
+ * lists ballooned the counts and even exact duplicates fell below threshold —
+ * "person matching doesn't work, 400-row lists say no matches". Identity
+ * agreement must be frequency-independent: a duplicate name is still a
+ * duplicate. `householdServed` stays a corroborator (+0.10).
  */
-export function dedupScore(s: PersonSignals, w: FrequencyWeights, householdServed: boolean): number {
-  const nameScore =
-    (s.simSurname * rareMul(w.surname) + s.simFirstName * rareMul(w.firstName)) / 2;
+export function dedupScore(s: PersonSignals, householdServed: boolean): number {
+  const nameScore = (s.simSurname + s.simFirstName) / 2;
   // Baseline reality drives the weights: import rows usually declare no phone/
   // email/philsys and only sometimes a middle name, so name + dob + barangay
   // must be able to clear the default threshold on their own (0.5+0.25+0.1 =
   // 0.85); the optional signals stay meaningful but secondary.
   let score =
     0.5 * nameScore +
-    0.25 * (s.dobMatch ? rareMul(w.dob) : 0) +
-    0.1 * (s.barangayMatch ? rareMul(w.barangay) : 0) +
-    0.05 * (s.middleNameMatch ? rareMul(w.middleName) : 0) +
+    0.25 * (s.dobMatch ? 1 : 0) +
+    0.1 * (s.barangayMatch ? 1 : 0) +
+    0.05 * (s.middleNameMatch ? 1 : 0) +
     0.1 * (s.phoneMatch || s.emailMatch || s.philsysMatch ? 1 : 0);
   if (householdServed) score += 0.1;
   return Math.min(1, Math.max(0, score));
