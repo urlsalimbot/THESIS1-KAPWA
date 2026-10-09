@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ArrowLeft, FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { api } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { queryKeys } from '../lib/query-keys';
 import { DataTable } from '@/components/data-table/DataTable';
+import { RowDecisionCard, type DedupCandidate, type DedupRow } from '@/components/dedup/RowDecisionCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,20 @@ interface OperationsResponse {
 interface OperationDetail extends DedupOperation {
   pending: number;
   totalRows: number;
+}
+
+interface RowsResponse {
+  data: DedupRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+interface MatchesResponse {
+  data: DedupCandidate[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 const BASELINE_FIELDS = [
@@ -389,25 +404,160 @@ function DefineUploadView({
   );
 }
 
-/** Review shell — the candidate grid and decisions land here (Task 12). */
+/** Review grid: paginated rows; each row's candidates load lazily on expand. */
 function ReviewView({ operationId, onBack }: { operationId: string; onBack: () => void }) {
-  const { data } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId));
+  const { mutate } = useSWRConfig();
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
+  const { data: detail } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId));
+  const { data: rowsData, isLoading } = useSWR(
+    ['clientDedup', 'rows', operationId, pagination.pageIndex + 1, pagination.pageSize] as const,
+    () =>
+      api.get<RowsResponse>(
+        `/client-dedup/operations/${operationId}/rows?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`,
+      ),
+  );
+  const rows = rowsData?.data ?? [];
+  const expandedRow = rows.find((r) => r.id === expandedRowId) ?? null;
+
+  const refresh = () => mutate((key) => Array.isArray(key) && key[0] === 'clientDedup');
+
+  const columns = useMemo<ColumnDef<DedupRow>[]>(
+    () => [
+      {
+        accessorKey: 'rowIndex',
+        header: '#',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.rowIndex}</span>,
+      },
+      {
+        id: 'client',
+        header: 'Client',
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">
+              {[row.original.lastName, row.original.firstName].filter(Boolean).join(', ')}
+              {row.original.middleName ? ` ${row.original.middleName}` : ''}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {row.original.dob ?? '—'} · {row.original.barangay ?? '—'}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        cell: ({ row }) => <RowStatusChip status={row.original.status} />,
+      },
+      {
+        id: 'remarks',
+        header: 'Remarks',
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">{row.original.remarks ?? '—'}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) =>
+          row.original.status === 'no_match' ? null : (
+            <Button
+              size="sm"
+              variant={expandedRowId === row.original.id ? 'secondary' : 'outline'}
+              onClick={() =>
+                setExpandedRowId(expandedRowId === row.original.id ? null : row.original.id)
+              }
+            >
+              {expandedRowId === row.original.id ? 'Close' : 'Review matches'}
+            </Button>
+          ),
+      },
+    ],
+    [expandedRowId],
+  );
+
   return (
     <div className="space-y-4" data-testid="review-view">
-      <Button variant="ghost" size="sm" onClick={onBack}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to operations
-      </Button>
-      <Card>
-        <CardHeader>
-          <CardTitle>{data?.source ?? 'Review'}</CardTitle>
-          <CardDescription>
-            {data ? `${data.pending} pending · ${data.totalRows} rows` : 'Loading review…'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          The candidate matches for each row load here.
-        </CardContent>
-      </Card>
+      <div className="flex items-start justify-between gap-4">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to operations
+        </Button>
+        <div className="text-right text-sm text-muted-foreground">
+          <div className="font-medium text-foreground">{detail?.source ?? 'Review'}</div>
+          {detail ? (
+            <div>
+              {detail.pending} pending · {detail.totalRows} rows
+            </div>
+          ) : null}
+        </div>
+      </div>
+      <DataTable
+        columns={columns}
+        data={rows}
+        rowCount={rowsData?.total ?? 0}
+        loading={isLoading}
+        pagination={pagination}
+        sorting={[]}
+        onPaginationChange={setPagination}
+      />
+      {expandedRow && (
+        <ExpandedRowPanel operationId={operationId} row={expandedRow} onChanged={refresh} />
+      )}
     </div>
+  );
+}
+
+function RowStatusChip({ status }: { status: DedupRow['status'] }) {
+  const config: Record<DedupRow['status'], { label: string; className: string }> = {
+    no_match: { label: 'No match', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+    pending: { label: 'Pending review', className: 'border-slate-200 bg-slate-100 text-slate-700' },
+    retained: { label: 'Retained', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+    primary: { label: 'Primary — kept', className: 'border-sky-200 bg-sky-50 text-sky-700' },
+    deprioritized: { label: 'Deprioritized', className: 'border-amber-200 bg-amber-50 text-amber-800' },
+  };
+  const { label, className } = config[status];
+  return (
+    <Badge variant="outline" className={className}>
+      {label}
+    </Badge>
+  );
+}
+
+function ExpandedRowPanel({
+  operationId,
+  row,
+  onChanged,
+}: {
+  operationId: string;
+  row: DedupRow;
+  onChanged: () => Promise<unknown> | void;
+}) {
+  const { data, isLoading } = useSWR(
+    ['clientDedup', 'matches', row.id] as const,
+    () =>
+      api.get<MatchesResponse>(
+        `/client-dedup/operations/${operationId}/rows/${row.id}/matches?page=1&limit=20`,
+      ),
+  );
+  return (
+    <RowDecisionCard
+      row={row}
+      candidates={data?.data ?? []}
+      loading={isLoading}
+      onDecide={async (matchId, keep, remark) => {
+        await api.post(
+          `/client-dedup/operations/${operationId}/matches/${matchId}/decision`,
+          remark ? { keep, remark } : { keep },
+        );
+        toast.success(keep === 'import_row' ? 'Row retained.' : 'Duplicate deprioritized.');
+        await onChanged();
+      }}
+      onRevert={async (matchId) => {
+        await api.post(`/client-dedup/operations/${operationId}/matches/${matchId}/revert`);
+        toast.success('Decision reverted.');
+        await onChanged();
+      }}
+    />
   );
 }

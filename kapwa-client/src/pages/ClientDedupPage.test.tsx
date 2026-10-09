@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
@@ -34,7 +34,7 @@ const OPERATIONS_RESPONSE = {
   data: [
     {
       id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing',
-      createdAt: '2026-10-01T00:00:00Z', pending: 3, noMatch: 1, decided: 8, totalRows: 12,
+      createdAt: '2026-10-01T00:00:00Z', pending: 1, noMatch: 1, decided: 0, totalRows: 2,
     },
     {
       id: 'op2', source: 'Batch 0.xlsx', status: 'finalized',
@@ -44,15 +44,56 @@ const OPERATIONS_RESPONSE = {
   total: 2, page: 1, limit: 10,
 };
 
+const ROW_NO_MATCH = {
+  id: 'r1', rowIndex: 1, lastName: 'Reyes', firstName: 'Pedro', dob: '1988-03-21',
+  barangay: 'Bigte', status: 'no_match', remarks: 'AICS',
+};
+const ROW_PENDING = {
+  id: 'r2', rowIndex: 2, lastName: 'Reyes', firstName: 'Pedro', middleName: 'P.',
+  dob: '1988-03-21', barangay: 'Bigte', status: 'pending',
+};
+
+const ROWS_PENDING = { data: [ROW_NO_MATCH, ROW_PENDING], total: 2, page: 1, limit: 10 };
+const ROWS_DECIDED = {
+  data: [
+    { ...ROW_NO_MATCH, status: 'primary' },
+    { ...ROW_PENDING, status: 'deprioritized', remarks: 'Deprioritized — duplicate of row r1: Same person.' },
+  ],
+  total: 2, page: 1, limit: 10,
+};
+
+const MATCH_PAIR = {
+  id: 'm3', targetType: 'import_row', score: 0.82, status: 'pending', signals: {},
+  pairedRow: { id: 'r1', rowIndex: 1, lastName: 'Reyes', firstName: 'Pedro' },
+};
+const MATCHES_PENDING = { data: [MATCH_PAIR], total: 1, page: 1, limit: 20 };
+const MATCHES_DECIDED = { data: [{ ...MATCH_PAIR, status: 'deprioritized', remark: 'Same person.' }], total: 1, page: 1, limit: 20 };
+
+let rowsCall: number;
+let matchesCall: number;
+
 describe('ClientDedupPage', () => {
   beforeEach(async () => {
+    rowsCall = 0;
+    matchesCall = 0;
     mockApiGet.mockReset();
     mockApiPost.mockReset();
     mockApiUpload.mockReset();
     mockApiGet.mockImplementation((key: unknown) => {
       const k = String(key);
-      if (k.includes('/client-dedup/operations/op9')) {
+      if (k.includes('clientDedup,detail,op9')) {
         return Promise.resolve({ id: 'op9', source: 'Batch 2.xlsx', status: 'reviewing', pending: 4, totalRows: 10 });
+      }
+      if (k.includes('clientDedup,detail,op1')) {
+        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: 1, totalRows: 2 });
+      }
+      if (k.includes('/rows') && k.includes('/matches')) {
+        matchesCall += 1;
+        return Promise.resolve(matchesCall === 1 ? MATCHES_PENDING : MATCHES_DECIDED);
+      }
+      if (k.includes('/rows')) {
+        rowsCall += 1;
+        return Promise.resolve(rowsCall === 1 ? ROWS_PENDING : ROWS_DECIDED);
       }
       if (k.includes('/client-dedup/operations')) return Promise.resolve(OPERATIONS_RESPONSE);
       return Promise.resolve(null);
@@ -64,8 +105,8 @@ describe('ClientDedupPage', () => {
     renderWithSWR(<ClientDedupPage />);
     expect(await screen.findByText('Batch 1.xlsx')).toBeTruthy();
     expect(screen.getByText(/reviewing/i)).toBeTruthy();
-    expect(screen.getByText(/3 pending/i)).toBeTruthy();
-    expect(screen.getByText(/12 rows/i)).toBeTruthy();
+    expect(screen.getByText(/1 pending/i)).toBeTruthy();
+    expect(screen.getByText(/2 rows/i)).toBeTruthy();
     expect(screen.getByText('Batch 0.xlsx')).toBeTruthy();
     expect(screen.getByText(/finalized/i)).toBeTruthy();
   });
@@ -121,5 +162,73 @@ describe('ClientDedupPage', () => {
     expect(formData.get('file')).toBe(file);
 
     expect(await screen.findByTestId('review-view')).toBeTruthy();
+  });
+
+  async function openReview() {
+    renderWithSWR(<ClientDedupPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Review' }));
+    return screen.findByTestId('review-view');
+  }
+
+  it('keeps no-match rows unexpandable and expands a pending row into its candidates', async () => {
+    await openReview();
+    expect(await screen.findByText('No match')).toBeTruthy();
+
+    const expandButtons = screen.getAllByRole('button', { name: /review matches/i });
+    expect(expandButtons).toHaveLength(1);
+
+    await userEvent.click(expandButtons[0]);
+    expect(await screen.findByRole('button', { name: /keep import row 1 \(b\)/i })).toBeTruthy();
+    expect(screen.getByText(/82%/)).toBeTruthy();
+  });
+
+  it('records an intra-import decision and re-renders the pair under the kept row', async () => {
+    mockApiPost.mockResolvedValue({});
+    await openReview();
+    await userEvent.click(await screen.findByRole('button', { name: /review matches/i }));
+
+    await userEvent.click(await screen.findByRole('button', { name: /keep import row 1 \(b\)/i }));
+    await userEvent.type(screen.getByPlaceholderText(/why is this a duplicate/i), 'Same person.');
+    await userEvent.click(screen.getByRole('button', { name: /save decision/i }));
+
+    await waitFor(() =>
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/client-dedup/operations/op1/matches/m3/decision',
+        { keep: 'other_import_row', remark: 'Same person.' },
+      ),
+    );
+    const chip = await screen.findAllByText(/^deprioritized$/i);
+    expect(chip.length).toBeGreaterThan(0);
+    expect(screen.getByText(/primary — kept/i)).toBeTruthy();
+  });
+
+  it('reverts a decision and returns the row to pending', async () => {
+    mockApiPost.mockResolvedValue({});
+    mockApiGet.mockImplementation((key: unknown) => {
+      const k = String(key);
+      if (k.includes('clientDedup,detail,op1')) {
+        return Promise.resolve({ id: 'op1', source: 'Batch 1.xlsx', status: 'reviewing', pending: 0, totalRows: 2 });
+      }
+      if (k.includes('/rows') && k.includes('/matches')) {
+        matchesCall += 1;
+        return Promise.resolve(matchesCall === 1 ? MATCHES_DECIDED : MATCHES_PENDING);
+      }
+      if (k.includes('/rows')) {
+        rowsCall += 1;
+        return Promise.resolve(rowsCall === 1 ? ROWS_DECIDED : ROWS_PENDING);
+      }
+      if (k.includes('/client-dedup/operations')) return Promise.resolve(OPERATIONS_RESPONSE);
+      return Promise.resolve(null);
+    });
+
+    await openReview();
+    const expandButtons = await screen.findAllByRole('button', { name: /review matches/i });
+    await userEvent.click(expandButtons[1]);
+    await userEvent.click(await screen.findByRole('button', { name: /revert decision/i }));
+
+    await waitFor(() =>
+      expect(mockApiPost).toHaveBeenCalledWith('/client-dedup/operations/op1/matches/m3/revert'),
+    );
+    expect(await screen.findByText(/^pending review$/i)).toBeTruthy();
   });
 });

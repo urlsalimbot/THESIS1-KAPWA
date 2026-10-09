@@ -483,20 +483,6 @@ export class DedupService {
     const householdIds = matches.map((m) => m.targetHouseholdId).filter(Boolean) as string[];
     const importRowIds = matches.map((m) => m.targetImportRowId).filter(Boolean) as string[];
 
-    const people: any[] = personIds.length
-      ? await this.rowsRepo.query(
-          `SELECT p.id, p.surname AS "lastName", p.first_name AS "firstName", p.middle_name AS "middleName",
-                  to_char(p.dob, 'YYYY-MM-DD') AS dob,
-                  (SELECT a.barangay FROM person_addresses a WHERE a.person_id = p.id AND a.address_type = 'current'
-                    ORDER BY a.is_primary DESC NULLS LAST LIMIT 1) AS barangay
-             FROM persons p WHERE p.id::text = ANY($1::text[])`, [personIds])
-      : [];
-    const cases: any[] = personIds.length
-      ? await this.rowsRepo.query(
-          `SELECT b.person_id::text AS person_id, c.control_no AS "controlNo", c.status
-             FROM beneficiaries b JOIN cases c ON c.beneficiary_id = b.id
-            WHERE b.person_id::text = ANY($1::text[]) ORDER BY c.created_at DESC`, [personIds])
-      : [];
     const households: any[] = householdIds.length
       ? await this.rowsRepo.query(
           `SELECT h.id, ARRAY_AGG(hm.person_id::text) AS "memberPersonIds"
@@ -504,10 +490,28 @@ export class DedupService {
             WHERE h.id::text = ANY($1::text[]) GROUP BY h.id`, [householdIds])
       : [];
     const memberIds = [...new Set(households.flatMap((h) => h.memberPersonIds ?? []))] as string[];
-    const interventions: any[] = memberIds.length
+    // Names/cases/interventions are needed for both the person targets and the
+    // household members shown on the household card.
+    const identities = [...new Set([...personIds, ...memberIds])];
+
+    const people: any[] = identities.length
+      ? await this.rowsRepo.query(
+          `SELECT p.id, p.surname AS "lastName", p.first_name AS "firstName", p.middle_name AS "middleName",
+                  to_char(p.dob, 'YYYY-MM-DD') AS dob,
+                  (SELECT a.barangay FROM person_addresses a WHERE a.person_id = p.id AND a.address_type = 'current'
+                    ORDER BY a.is_primary DESC NULLS LAST LIMIT 1) AS barangay
+             FROM persons p WHERE p.id::text = ANY($1::text[])`, [identities])
+      : [];
+    const cases: any[] = identities.length
+      ? await this.rowsRepo.query(
+          `SELECT b.person_id::text AS person_id, c.control_no AS "controlNo", c.status
+             FROM beneficiaries b JOIN cases c ON c.beneficiary_id = b.id
+            WHERE b.person_id::text = ANY($1::text[]) ORDER BY c.created_at DESC`, [identities])
+      : [];
+    const interventions: any[] = identities.length
       ? await this.rowsRepo.query(
           `SELECT i.person_id::text AS person_id, COUNT(*)::int AS count
-             FROM case_interventions i WHERE i.person_id::text = ANY($1::text[]) GROUP BY i.person_id`, [memberIds])
+             FROM case_interventions i WHERE i.person_id::text = ANY($1::text[]) GROUP BY i.person_id`, [identities])
       : [];
     const importRows: any[] = importRowIds.length
       ? await this.rowsRepo.query(
@@ -516,9 +520,14 @@ export class DedupService {
       : [];
 
     const interventionBy = new Map(interventions.map((i) => [i.person_id, Number(i.count)]));
+    const memberName = (mid: string) => {
+      const p = people.find((row) => row.id === mid);
+      return p ? { lastName: p.lastName, firstName: p.firstName } : {};
+    };
     const data = matches.map((m) => ({
       ...m,
       person: people.find((p) => p.id === m.targetPersonId) ?? null,
+      interventions: interventionBy.get(m.targetPersonId as string) ?? 0,
       cases: cases.filter((c) => c.person_id === m.targetPersonId),
       household: households.find((h) => h.id === m.targetHouseholdId)
         ? {
@@ -528,6 +537,7 @@ export class DedupService {
               .find((h) => h.id === m.targetHouseholdId)
               .memberPersonIds.map((mid: string) => ({
                 personId: mid,
+                ...memberName(mid),
                 interventions: interventionBy.get(mid) ?? 0,
                 cases: cases.filter((c) => c.person_id === mid),
               })),
