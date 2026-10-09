@@ -384,6 +384,8 @@ export class DedupService {
                 } as any));
               }
               result.barangayUpdates++;
+              row.remarks = [row.originalRemarks, `Barangay updated to ${row.barangay}`]
+                .filter(Boolean).join(' | ');
               if (beneficiaryId) {
                 await this.recordRemark(
                   beneficiaryId,

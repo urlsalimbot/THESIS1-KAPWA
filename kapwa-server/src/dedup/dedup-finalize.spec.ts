@@ -65,6 +65,7 @@ describe('DedupService.finalize', () => {
 
     expect(result.updated).toBe(1);
     expect(result.barangayUpdates).toBe(1);
+    expect((rowsRepo.save.mock.calls.find((c: any) => c[0].id === 'r1') as any)[0].remarks).toMatch(/Barangay updated to Partida/);
     const savedAddress = addressRepo.save.mock.calls[0][0];
     expect(savedAddress.barangay).toBe('Partida');
     expect(remarksRepo.save.mock.calls[0][0]).toMatchObject({ beneficiaryId: 'ben-9', kind: 'barangay_update' });
