@@ -5,6 +5,9 @@ import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryR
 import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
 import { sweep, RowInput } from './dedup-match-sweep.service';
 import { DedupAdapter } from './dedup-adapter';
+import { ILike } from 'typeorm';
+
+export const DEDUP_ADAPTER = 'DEDUP_ADAPTER';
 import { Person } from '../beneficiaries/person.entity';
 import { Beneficiary } from '../beneficiaries/beneficiary.entity';
 import { PersonAddress } from '../beneficiaries/person-address.entity';
@@ -29,6 +32,7 @@ export class DedupService {
     private readonly rowsRepo: Repository<ClientImportRow>,
     @InjectRepository(ClientImportMatch)
     private readonly matchesRepo: Repository<ClientImportMatch>,
+    @Inject(DEDUP_ADAPTER)
     private readonly adapter: DedupAdapter,
     @Optional()
     private readonly remarksService?: BeneficiaryRemarksService,
@@ -410,5 +414,96 @@ export class DedupService {
     });
 
     return result;
+  }
+
+  /** Review pagination (spec §5): rows with filters, newest first by row index. */
+  async rows(operationId: string, page = 1, limit = 20, status?: string, search?: string) {
+    const where: Record<string, unknown> = { operationId };
+    if (status === 'pending' || status === 'no_match' || status === 'deprioritized' || status === 'retained' || status === 'primary') {
+      where.status = status;
+    }
+    if (search) where.lastName = ILike(`%${search}%`);
+    const [data, total] = await this.rowsRepo.findAndCount({
+      where,
+      order: { rowIndex: 'ASC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total, page, limit };
+  }
+
+  /**
+   * A row's candidate matches, enriched for the review cards: person targets
+   * carry their case list, household targets their members and received
+   * interventions (the `householdServed` evidence), import-row targets the
+   * paired row's identity.
+   */
+  async rowMatches(operationId: string, rowId: string, page = 1, limit = 20) {
+    const row = await this.rowsRepo.findOne({ where: { id: rowId, operationId } });
+    if (!row) throw new NotFoundException('Row not found');
+    const [matches, total] = await this.matchesRepo.findAndCount({
+      where: { rowId },
+      order: { score: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const personIds = matches.map((m) => m.targetPersonId).filter(Boolean) as string[];
+    const householdIds = matches.map((m) => m.targetHouseholdId).filter(Boolean) as string[];
+    const importRowIds = matches.map((m) => m.targetImportRowId).filter(Boolean) as string[];
+
+    const people: any[] = personIds.length
+      ? await this.rowsRepo.query(
+          `SELECT p.id, p.surname AS "lastName", p.first_name AS "firstName", p.middle_name AS "middleName",
+                  to_char(p.dob, 'YYYY-MM-DD') AS dob,
+                  (SELECT a.barangay FROM person_addresses a WHERE a.person_id = p.id AND a.address_type = 'current'
+                    ORDER BY a.is_primary DESC NULLS LAST LIMIT 1) AS barangay
+             FROM persons p WHERE p.id::text = ANY($1::text[])`, [personIds])
+      : [];
+    const cases: any[] = personIds.length
+      ? await this.rowsRepo.query(
+          `SELECT b.person_id::text AS person_id, c.control_no AS "controlNo", c.status
+             FROM beneficiaries b JOIN cases c ON c.beneficiary_id = b.id
+            WHERE b.person_id::text = ANY($1::text[]) ORDER BY c.created_at DESC`, [personIds])
+      : [];
+    const households: any[] = householdIds.length
+      ? await this.rowsRepo.query(
+          `SELECT h.id, ARRAY_AGG(hm.person_id::text) AS "memberPersonIds"
+             FROM households h JOIN household_memberships hm ON hm.household_id = h.id
+            WHERE h.id::text = ANY($1::text[]) GROUP BY h.id`, [householdIds])
+      : [];
+    const memberIds = [...new Set(households.flatMap((h) => h.memberPersonIds ?? []))] as string[];
+    const interventions: any[] = memberIds.length
+      ? await this.rowsRepo.query(
+          `SELECT i.person_id::text AS person_id, COUNT(*)::int AS count
+             FROM case_interventions i WHERE i.person_id::text = ANY($1::text[]) GROUP BY i.person_id`, [memberIds])
+      : [];
+    const importRows: any[] = importRowIds.length
+      ? await this.rowsRepo.query(
+          `SELECT id, row_index AS "rowIndex", last_name AS "lastName", first_name AS "firstName", dob, barangay
+             FROM client_import_rows WHERE id::text = ANY($1::text[])`, [importRowIds])
+      : [];
+
+    const interventionBy = new Map(interventions.map((i) => [i.person_id, Number(i.count)]));
+    const data = matches.map((m) => ({
+      ...m,
+      person: people.find((p) => p.id === m.targetPersonId) ?? null,
+      cases: cases.filter((c) => c.person_id === m.targetPersonId),
+      household: households.find((h) => h.id === m.targetHouseholdId)
+        ? {
+            id: m.targetHouseholdId,
+            memberPersonIds: households.find((h) => h.id === m.targetHouseholdId).memberPersonIds,
+            members: households
+              .find((h) => h.id === m.targetHouseholdId)
+              .memberPersonIds.map((mid: string) => ({
+                personId: mid,
+                interventions: interventionBy.get(mid) ?? 0,
+                cases: cases.filter((c) => c.person_id === mid),
+              })),
+          }
+        : null,
+      pairedRow: importRows.find((r) => r.id === m.targetImportRowId) ?? null,
+    }));
+    return { data, total, page, limit };
   }
 }

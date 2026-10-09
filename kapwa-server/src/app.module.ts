@@ -18,6 +18,7 @@ import { AuditModule } from './audit/audit.module';
 import { ExportModule } from './export/export.module';
 import { ReportsModule } from './reports/reports.module';
 import { FilingModule } from './filing/filing.module';
+import { DedupModule } from './dedup/dedup.module';
 import { UsersModule } from './users/users.module';
 import { AccessCardsModule } from './access-cards/access-cards.module';
 import { CaseInterventionsModule } from './case-interventions/case-interventions.module';
@@ -93,6 +94,7 @@ import { AppController } from './app.controller';
     ExportModule,
     ReportsModule,
     FilingModule,
+    DedupModule,
     UsersModule,
     AccessCardsModule,
     CaseInterventionsModule,
