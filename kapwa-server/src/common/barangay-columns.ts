@@ -29,4 +29,7 @@ export const BARANGAY_COLUMNS: BarangayColumn[] = [
   { table: 'referrals', column: 'barangay' },
   // The audit copy on every card service, written from the user's scope.
   { table: 'access_card_services', column: 'source_barangay' },
+  // The source list's barangay, kept verbatim on each deduplication row so the
+  // review grid shows the claimed address (the import itself, not KAPWA).
+  { table: 'client_import_rows', column: 'barangay' },
 ];

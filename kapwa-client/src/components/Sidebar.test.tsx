@@ -72,6 +72,22 @@ describe('Sidebar', () => {
     expect(activeHrefs()).toEqual(['/cases']);
   });
 
+  it('offers Client Deduplication to staff roles', () => {
+    mockRole.current = 'social_worker';
+    renderWithRouter(<Sidebar />);
+    expect(screen.getByRole('link', { name: /client deduplication/i })).toBeTruthy();
+    document.body.innerHTML = '';
+    mockRole.current = 'admin';
+    renderWithRouter(<Sidebar />);
+    expect(screen.getByRole('link', { name: /client deduplication/i })).toBeTruthy();
+  });
+
+  it('hides Client Deduplication from claimants', () => {
+    mockRole.current = 'claimant';
+    renderWithRouter(<Sidebar />);
+    expect(screen.queryByRole('link', { name: /client deduplication/i })).toBeNull();
+  });
+
   it('has no axe violations', async () => {
     const { container } = renderWithRouter(<Sidebar />);
     const results = await axe(container);

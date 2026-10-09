@@ -26,6 +26,7 @@ const CaseViewPage = lazy(() => import('./pages/CaseViewPage').then(m => ({ defa
 const SearchResultsPage = lazy(() => import('./pages/SearchResultsPage').then(m => ({ default: m.SearchResultsPage })));
 const BeneficiariesPage = lazy(() => import('./pages/BeneficiariesPage').then(m => ({ default: m.BeneficiariesPage })));
 const BeneficiaryViewPage = lazy(() => import('./pages/BeneficiaryViewPage').then(m => ({ default: m.BeneficiaryViewPage })));
+const ClientDedupPage = lazy(() => import('./pages/ClientDedupPage').then(m => ({ default: m.default })));
 const MessagesPage = lazy(() => import('./pages/MessagesPage').then(m => ({ default: m.MessagesPage })));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const CaseTrackerPage = lazy(() => import('./pages/CaseTrackerPage').then(m => ({ default: m.CaseTrackerPage })));
@@ -126,6 +127,7 @@ export const router = createBrowserRouter([
     : []),
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
+  { path: '/client-dedup', element: <Private roles={['admin','social_worker']}><ClientDedupPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker']}><CaseTrackerPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
   { path: '/admin/users/new', element: <Private roles={['admin']}><NewUserPage /></Private> },
