@@ -521,4 +521,26 @@ ol[data-sonner-toaster][data-sonner-theme='system'] {
   overflow-wrap: anywhere;
 }
 
+/* Radix injects `[data-radix-select-viewport]{scrollbar-width:none}` and a
+   matching `::-webkit-scrollbar{display:none}` rule, so a select list holding
+   more options than fit — e.g. the program picker in the case stepper — scrolls
+   but shows no scrollbar and reads as unscrollable. Restore a visible vertical
+   scrollbar. The doubled attribute selector outranks Radix's single-attribute
+   rules no matter which stylesheet the browser orders last. */
+[data-radix-select-viewport][data-radix-select-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+[data-radix-select-viewport][data-radix-select-viewport]::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+[data-radix-select-viewport][data-radix-select-viewport]::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 9999px;
+}
+[data-radix-select-viewport][data-radix-select-viewport]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 
