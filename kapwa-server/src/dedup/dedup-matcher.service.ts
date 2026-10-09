@@ -109,12 +109,16 @@ export function personSignals(
 export function dedupScore(s: PersonSignals, w: FrequencyWeights, householdServed: boolean): number {
   const nameScore =
     (s.simSurname * rareMul(w.surname) + s.simFirstName * rareMul(w.firstName)) / 2;
+  // Baseline reality drives the weights: import rows usually declare no phone/
+  // email/philsys and only sometimes a middle name, so name + dob + barangay
+  // must be able to clear the default threshold on their own (0.5+0.25+0.1 =
+  // 0.85); the optional signals stay meaningful but secondary.
   let score =
-    0.4 * nameScore +
-    0.15 * (s.middleNameMatch ? rareMul(w.middleName) : 0) +
-    0.2 * (s.dobMatch ? rareMul(w.dob) : 0) +
+    0.5 * nameScore +
+    0.25 * (s.dobMatch ? rareMul(w.dob) : 0) +
     0.1 * (s.barangayMatch ? rareMul(w.barangay) : 0) +
-    0.15 * (s.phoneMatch || s.emailMatch || s.philsysMatch ? 1 : 0);
+    0.05 * (s.middleNameMatch ? rareMul(w.middleName) : 0) +
+    0.1 * (s.phoneMatch || s.emailMatch || s.philsysMatch ? 1 : 0);
   if (householdServed) score += 0.1;
   return Math.min(1, Math.max(0, score));
 }
