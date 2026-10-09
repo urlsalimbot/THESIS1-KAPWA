@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Optional, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ClientImportOperation, ClientImportRow, ClientImportMatch } from './dedup.entity';
+import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryRemark } from './dedup.entity';
 import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
 import { sweep, RowInput } from './dedup-match-sweep.service';
 import { DedupAdapter } from './dedup-adapter';
@@ -20,7 +20,102 @@ export class DedupService {
     @InjectRepository(ClientImportMatch)
     private readonly matchesRepo: Repository<ClientImportMatch>,
     private readonly adapter: DedupAdapter,
+    @Optional()
+    @InjectRepository(BeneficiaryRemark)
+    private readonly remarksRepo?: Repository<BeneficiaryRemark>,
   ) {}
+
+  /** A row's status derives from its matches: pending wins, then deprioritized,
+   *  then an intra-import winner (primary), else it was retained against an
+   *  existing record. A row with no matches never needs a decision. */
+  private async deriveRowStatus(rowId: string): Promise<ClientImportRow['status']> {
+    const matches = await this.matchesRepo.find({ where: { rowId } });
+    if (matches.length === 0) return 'no_match';
+    if (matches.some((m) => m.status === 'pending')) return 'pending';
+    if (matches.some((m) => m.status === 'deprioritized')) return 'deprioritized';
+    if (matches.some((m) => m.targetType === 'import_row')) return 'primary';
+    return 'retained';
+  }
+
+  async decide(
+    operationId: string,
+    matchId: string,
+    body: { keep: 'import_row' | 'existing_record' | 'other_import_row'; remark?: string },
+    actorId: string,
+  ) {
+    const op = await this.opsRepo.findOne({ where: { id: operationId } });
+    if (!op) throw new NotFoundException('Operation not found');
+    if (op.status !== 'reviewing') throw new BadRequestException('Operation is not in review');
+    const match = await this.matchesRepo.findOne({ where: { id: matchId } });
+    if (!match) throw new NotFoundException('Match not found');
+    const remark = (body.remark ?? '').trim();
+    if (body.keep !== 'import_row' && remark === '') {
+      throw new BadRequestException('A remark is required when deprioritizing a duplicate');
+    }
+    const row = await this.rowsRepo.findOne({ where: { id: match.rowId } });
+    if (!row) throw new NotFoundException('Row not found');
+
+    const now = new Date();
+    match.status = body.keep === 'import_row' ? 'primary' : 'deprioritized';
+    if (remark) match.remark = remark;
+    match.decidedBy = actorId;
+    match.decidedAt = now;
+    await this.matchesRepo.save(match);
+
+    row.decidedBy = actorId;
+    row.decidedAt = now;
+    if (body.keep === 'import_row') {
+      row.matchedPersonId = match.targetPersonId ?? row.matchedPersonId;
+      row.remarks = [row.originalRemarks, remark].filter(Boolean).join(' | ') || undefined;
+    } else {
+      const dupOf = match.targetType === 'import_row' ? `row ${match.targetImportRowId}` : 'an existing record';
+      row.remarks = [row.originalRemarks, `Deprioritized — duplicate of ${dupOf}${remark ? `: ${remark}` : ''}`]
+        .filter(Boolean).join(' | ');
+      if (body.keep === 'other_import_row' && match.targetImportRowId) {
+        const paired = await this.rowsRepo.findOne({ where: { id: match.targetImportRowId } });
+        if (paired) {
+          paired.status = 'primary';
+          await this.rowsRepo.save(paired);
+        }
+      }
+    }
+    row.status = await this.deriveRowStatus(row.id);
+    await this.rowsRepo.save(row);
+
+    // The decision is traceable on the record that survives.
+    if (body.keep !== 'import_row' && match.targetPersonId && this.remarksRepo) {
+      const bens = await this.rowsRepo.query('SELECT id FROM beneficiaries WHERE person_id = $1 LIMIT 1', [match.targetPersonId]);
+      const beneficiaryId = bens?.[0]?.id;
+      if (beneficiaryId) {
+        await this.remarksRepo.save(this.remarksRepo.create({
+          beneficiaryId,
+          operationId,
+          kind: 'decision',
+          remark,
+          source: op.source,
+          authoredBy: actorId,
+        }));
+      }
+    }
+    return { row, match };
+  }
+
+  async revert(operationId: string, matchId: string) {
+    const op = await this.opsRepo.findOne({ where: { id: operationId } });
+    if (!op) throw new NotFoundException('Operation not found');
+    if (op.status !== 'reviewing') throw new BadRequestException('Operation is not in review');
+    const match = await this.matchesRepo.findOne({ where: { id: matchId } });
+    if (!match) throw new NotFoundException('Match not found');
+    match.status = 'pending';
+    match.decidedAt = undefined;
+    await this.matchesRepo.save(match);
+    const row = await this.rowsRepo.findOne({ where: { id: match.rowId } });
+    if (row) {
+      row.status = await this.deriveRowStatus(row.id);
+      await this.rowsRepo.save(row);
+    }
+    return { row, match };
+  }
 
   async create(input: { source: string; columnMap: ColumnMap; matchThreshold?: number }, actorId: string) {
     const op = this.opsRepo.create({
