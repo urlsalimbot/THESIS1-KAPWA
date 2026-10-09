@@ -165,5 +165,18 @@ export async function parseImportFile(
     });
   });
 
+  // Required baseline: a client without a name or a birthday cannot become a
+  // person row (persons.dob is NOT NULL), so the upload fails closed here with
+  // row-level detail rather than half-loading or failing later at finalize.
+  const problems: string[] = [];
+  for (const r of rows) {
+    if (!r.lastName) problems.push(`Row ${r.rowIndex}: missing Last Name`);
+    if (!r.firstName) problems.push(`Row ${r.rowIndex}: missing First Name`);
+    if (!r.dob) problems.push(`Row ${r.rowIndex}: missing Birthday`);
+  }
+  if (problems.length > 0) {
+    throw new ColumnMapError(`The file has ${problems.length} row problem(s): ${problems.join('; ')}`);
+  }
+
   return { rows };
 }

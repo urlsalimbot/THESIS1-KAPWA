@@ -60,4 +60,9 @@ describe('parseImportFile', () => {
     const out = await parseImportFile(Buffer.from(csv), 'list.csv', map);
     expect(out.rows[0].extraData).toMatchObject({ Visits: 2, 'Visited On': '2026-09-01' });
   });
+
+  it('rejects rows missing a required baseline value, naming the row', async () => {
+    const csv = 'Last Name,First Name,Middle Name,Birthday,Barangay,Remarks\nReyes,Pedro,,,Bigte,AICS\n';
+    await expect(parseImportFile(Buffer.from(csv), 'list.csv', baseMap)).rejects.toThrow(/Row 2.*Birthday/);
+  });
 });

@@ -1,10 +1,19 @@
-import { Injectable, Optional, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Optional, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientImportOperation, ClientImportRow, ClientImportMatch, BeneficiaryRemark } from './dedup.entity';
 import { parseImportFile, ColumnMap, ColumnMapError } from './dedup-parse.service';
 import { sweep, RowInput } from './dedup-match-sweep.service';
 import { DedupAdapter } from './dedup-adapter';
+import { Person } from '../beneficiaries/person.entity';
+import { Beneficiary } from '../beneficiaries/beneficiary.entity';
+import { PersonAddress } from '../beneficiaries/person-address.entity';
+
+/** Writes the stored priority-list Excel (Task 8 supplies the implementation). */
+export interface DedupOutputWriter {
+  write(op: ClientImportOperation, rows: ClientImportRow[]): Promise<string>;
+}
+export const DEDUP_OUTPUT_WRITER = 'DEDUP_OUTPUT_WRITER';
 
 /**
  * Operations lifecycle: define the column map, upload + parse + match, list,
@@ -23,7 +32,31 @@ export class DedupService {
     @Optional()
     @InjectRepository(BeneficiaryRemark)
     private readonly remarksRepo?: Repository<BeneficiaryRemark>,
+    @Optional()
+    @InjectRepository(Person)
+    private readonly personRepo?: Repository<Person>,
+    @Optional()
+    @InjectRepository(Beneficiary)
+    private readonly beneficiaryRepo?: Repository<Beneficiary>,
+    @Optional()
+    @InjectRepository(PersonAddress)
+    private readonly addressRepo?: Repository<PersonAddress>,
+    @Optional()
+    @Inject(DEDUP_OUTPUT_WRITER)
+    private readonly outputWriter?: DedupOutputWriter,
   ) {}
+
+  private async recordRemark(
+    beneficiaryId: string,
+    operationId: string,
+    kind: 'import' | 'decision' | 'barangay_update' | 'manual',
+    remark: string,
+    source: string | undefined,
+    authoredBy: string,
+  ): Promise<void> {
+    if (!this.remarksRepo) return;
+    await this.remarksRepo.save(this.remarksRepo.create({ beneficiaryId, operationId, kind, remark, source, authoredBy }));
+  }
 
   /** A row's status derives from its matches: pending wins, then deprioritized,
    *  then an intra-import winner (primary), else it was retained against an
@@ -263,5 +296,124 @@ export class DedupService {
       decided: (byStatus.retained ?? 0) + (byStatus.primary ?? 0) + (byStatus.deprioritized ?? 0),
       totalRows: Object.values(byStatus).reduce((a, b) => a + b, 0),
     };
+  }
+
+  /**
+   * Finalize: refuses while anything is pending, then saves in ONE transaction —
+   * new rows become persons + beneficiaries, retained rows update the existing
+   * record (barangay changes recorded), deprioritized rows create nothing.
+   * Idempotent by status: a finalized operation cannot be finalized again, and a
+   * failure anywhere rolls the whole save back with the status untouched.
+   */
+  async finalize(operationId: string, actorId: string) {
+    const op = await this.opsRepo.findOne({ where: { id: operationId } });
+    if (!op) throw new NotFoundException('Operation not found');
+    if (op.status !== 'reviewing') {
+      throw new BadRequestException(`Operation is not in review (status: ${op.status})`);
+    }
+
+    const pending: Array<{ id: string }> = await this.rowsRepo.query(
+      `SELECT r.id FROM client_import_rows r
+        WHERE r.operation_id = $1
+          AND EXISTS (SELECT 1 FROM client_import_matches m
+                       WHERE m.row_id = r.id AND m.status = 'pending')`,
+      [operationId],
+    );
+    if (pending.length > 0) {
+      throw new BadRequestException(`Cannot finalize: ${pending.length} match(es) are still pending`);
+    }
+
+    const rows = await this.rowsRepo.find({ where: { operationId }, order: { rowIndex: 'ASC' } });
+    const result = { created: 0, updated: 0, deprioritized: 0, barangayUpdates: 0 };
+
+    await this.rowsRepo.manager.transaction(async () => {
+      for (const row of rows) {
+        if (row.status === 'no_match' || row.status === 'primary') {
+          // Gender is optional in the schema and usually absent from an import;
+          // the person is created without it (own insert, not createBeneficiary).
+          const person: any = this.personRepo!.create({
+            surname: row.lastName,
+            firstName: row.firstName,
+            middleName: row.middleName ?? undefined,
+            dob: row.dob ? new Date(row.dob) : undefined,
+            gender: undefined,
+          } as any);
+          person.addresses = [
+            this.addressRepo!.create({
+              addressType: 'current',
+              barangay: row.barangay,
+              raw: row.barangay,
+              isPrimary: true,
+            } as any),
+          ];
+          const savedPerson: any = await this.personRepo!.save(person);
+          const savedBen: any = await this.beneficiaryRepo!.save(
+            this.beneficiaryRepo!.create({ personId: savedPerson.id } as any),
+          );
+          row.matchedPersonId = savedPerson.id;
+          row.beneficiaryId = savedBen.id;
+          await this.rowsRepo.save(row);
+          await this.recordRemark(savedBen.id, operationId, 'import', row.originalRemarks ?? 'Imported client', op.source, actorId);
+          result.created++;
+        } else if (row.status === 'retained') {
+          const person = await this.personRepo!.findOne({ where: { id: row.matchedPersonId }, relations: ['addresses'] });
+          if (!person) continue;
+          if (row.lastName) (person as any).surname = row.lastName;
+          if (row.firstName) (person as any).firstName = row.firstName;
+          if (row.middleName) (person as any).middleName = row.middleName;
+          const benRows: Array<{ id: string }> = await this.rowsRepo.query(
+            'SELECT id FROM beneficiaries WHERE person_id = $1 LIMIT 1',
+            [row.matchedPersonId],
+          );
+          const beneficiaryId = benRows?.[0]?.id;
+          if (row.barangay) {
+            const addresses = ((person as any).addresses ?? []) as Array<any>;
+            const current = addresses.find((a) => a.addressType === 'current');
+            if (!current || (current.barangay ?? '') !== row.barangay) {
+              if (current) {
+                current.barangay = row.barangay;
+                current.raw = row.barangay;
+                await this.addressRepo!.save(current);
+              } else {
+                await this.addressRepo!.save(this.addressRepo!.create({
+                  personId: person.id,
+                  addressType: 'current',
+                  barangay: row.barangay,
+                  raw: row.barangay,
+                  isPrimary: true,
+                } as any));
+              }
+              result.barangayUpdates++;
+              if (beneficiaryId) {
+                await this.recordRemark(
+                  beneficiaryId,
+                  operationId,
+                  'barangay_update',
+                  `Barangay updated to ${row.barangay} from import`,
+                  op.source,
+                  actorId,
+                );
+              }
+            }
+          }
+          await this.personRepo!.save(person);
+          if (beneficiaryId) row.beneficiaryId = beneficiaryId;
+          await this.rowsRepo.save(row);
+          result.updated++;
+        } else {
+          // deprioritized: nothing is created; the decision remark was recorded
+          // against the surviving record in Task 6.
+          result.deprioritized++;
+        }
+      }
+
+      op.accomplisher = actorId;
+      op.finalizedAt = new Date();
+      op.status = 'finalized';
+      if (this.outputWriter) op.outputFile = await this.outputWriter.write(op, rows as ClientImportRow[]);
+      await this.opsRepo.save(op);
+    });
+
+    return result;
   }
 }
