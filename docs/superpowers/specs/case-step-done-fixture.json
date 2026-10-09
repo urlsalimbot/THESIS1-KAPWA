@@ -695,6 +695,19 @@
     "step": "court_hearings"
   },
   {
+    "name": "court_hearings done: one recorded hearing while in review (review is past the floor)",
+    "caseData": {
+      "status": "in_review",
+      "caseCategory": "Children in Conflict with the Law (CICL)"
+    },
+    "interventionCount": 0,
+    "opts": {
+      "courtHearingCount": 1
+    },
+    "expected": true,
+    "step": "court_hearings"
+  },
+  {
     "name": "court_hearings floored: a recorded hearing while still phase-in is not done",
     "caseData": {
       "status": "enrolled",

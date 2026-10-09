@@ -340,13 +340,13 @@ describe('CaseStepper rendering', () => {
     expect(stepButton('Evaluate Help Given').getAttribute('aria-disabled')).toBe('true');
   });
 
-  // The phase rule, on its own. Court Hearings is implementation work and stays
-  // shut for the whole of Phase-In (enrolled / assessed / in_review) *even when*
-  // the referral is done — without the floor precondition the index rule would
-  // open it the moment `referrals` completes, which is exactly what the ordering
-  // fix on its own did not cover.
-  it.each(['enrolled', 'assessed', 'in_review'])(
-    'keeps Court Hearings disabled through Phase-In (%s) even once the referral is done',
+  // The phase rule, on its own. Court Hearings is floored at `in_review`: it
+  // stays shut through the early Phase-In statuses (`enrolled` / `assessed`)
+  // *even when* the referral is done — without the floor precondition the index
+  // rule would open it the moment `referrals` completes, which is exactly what
+  // the ordering fix on its own did not cover.
+  it.each(['enrolled', 'assessed'])(
+    'keeps Court Hearings disabled below review (%s) even once the referral is done',
     (status) => {
       render(
         <CaseStepper
@@ -364,9 +364,30 @@ describe('CaseStepper rendering', () => {
     },
   );
 
-  // …and the same case once it is active: the floor is met, the referral is on
-  // file, and the step opens. This is the other half of the requirement.
-  it.each(['active', 'transitioning'])(
+  it('refuses the click on a below-floor step instead of opening it', () => {
+    const onClick = vi.fn();
+    render(
+      <CaseStepper
+        currentStep="referrals"
+        onStepClick={onClick}
+        caseData={{ ...cicl, status: 'assessed', referralNotNeeded: true }}
+        interventionCount={1}
+        enrollmentCount={1}
+        requirementsMet={true}
+        referralNotNeeded
+      />,
+    );
+    // The entry is styled disabled, but the button is not `disabled`, so a
+    // stray click still reaches the handler. It must not open the step: that
+    // click-through is how a worker reached Court Hearings below its floor,
+    // recorded a hearing, and then found the Lock dead.
+    stepButton('Court Hearings').click();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  // …and from `in_review` on: the floor is met, the referral is on file, and the
+  // step opens — a hearing recorded before admin approval is sealable there.
+  it.each(['in_review', 'active', 'transitioning'])(
     'opens Court Hearings at %s once the referral is done',
     (status) => {
       render(

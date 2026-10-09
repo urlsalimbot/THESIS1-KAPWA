@@ -121,23 +121,25 @@ export const CASE_STEP_FLOORS: Record<string, number> = {
   protection_order: 0,
   solo_parent: 0,
   adoption: 0,
-  // Court hearings are *implementation* work: the office attends a hearing on a
-  // case that is already active, not on one still being triaged. Floored at
-  // `active`(3) for two reasons that are really one:
+  // Court hearings are *implementation* work, but the hearings themselves are
+  // attended while the case is still being reviewed: a legal case can have a
+  // hearing recorded before the admin moves it to `active`, and only `admin`
+  // may take `in_review -> active` (`CASE_FSM_ROLES[IN_REVIEW]` is empty). While
+  // this sat at `active`(3) that combination stranded the worker — the hearing
+  // was on file, the Lock was disabled, and the only way to make it live was an
+  // admin action nobody had taken. Floored at `in_review`(2) instead, the
+  // earliest status a hearing can legitimately exist at:
   //
-  //  1. Before `active` the step is Phase-In-inaccessible — the seal endpoint
-  //     rejects it with a 400 and the client's reachability rule keeps the
-  //     stepper entry disabled, so a worker cannot record hearings against a
-  //     case that has not been handed up for review yet.
-  //  2. It drops out of `stepsDueAt('assessed')`, which is the set the
-  //     `assessed -> in_review` gate demands. Left at 0 that gate required a
-  //     sealable-only-at-`active` step while the same step was refusing to be
-  //     sealed — an unsatisfiable gate, the exact shape of the `evaluate`/
-  //     `closure` bug fixed in `5964197`.
+  //  1. Still above `assessed`(1), so it drops out of
+  //     `stepsDueAt('assessed')` — the set the `assessed -> in_review` gate
+  //     demands. At 0 that gate required a step whose hearing does not exist yet,
+  //     the unsatisfiable-gate shape fixed in `5964197`.
+  //  2. At or below `in_review`, so `stepDone`'s `statusAtLeast` accepts the seal
+  //     once a hearing is recorded — the exact case the Lock was refusing.
   //
-  // The `active -> transitioning` gate picks it back up as a member of the
+  // The `active -> transitioning` gate still picks it back up as a member of the
   // Implementation phase (see `STEP_PHASE` / `stepsInPhase` below).
-  court_hearings: 3,
+  court_hearings: 2,
   evaluate: 3,
   closure: 4,
 };
@@ -159,8 +161,9 @@ export const CASE_STEP_FLOORS: Record<string, number> = {
  *       this status every step is due anyway, so it covers Phase-Out (evaluate,
  *       closure) plus a cheap re-check of everything earlier.
  *
- * Court Hearings is Implementation work: it sits in this phase, is sealed by the
- * `active` edge, and is not owed at review.
+ * Court Hearings is Implementation work: it sits in this phase and the
+ * `active -> transitioning` gate demands it, though a hearing recorded before
+ * the admin activates the case may already be sealed from `in_review`.
  */
 export const STEP_PHASE: Record<string, 'phaseIn' | 'implementation' | 'phaseOut'> = {
   assessment: 'phaseIn',

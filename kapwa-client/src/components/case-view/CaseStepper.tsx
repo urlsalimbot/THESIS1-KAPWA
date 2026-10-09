@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { statusLabel } from '@/i18n/display';
 
 // Extra data the case view has (programs docs, referral decision) but the
 // approval-pipeline cards do not — steps fall back to their simple checks
@@ -161,11 +162,13 @@ export const STEP_FLOORS: Record<string, number> = {
   protection_order: 0,
   solo_parent: 0,
   adoption: 0,
-  // Court hearings: implementation work, floored at `active`(3) — the server's
-  // `CASE_STEP_FLOORS` says the same and `case-fsm-parity.test.ts` fails if the
-  // two drift. Below `active` the Lock button is disabled and, with the
-  // reachability rule below, so is the stepper entry itself.
-  court_hearings: 3,
+  // Court hearings: implementation work, but floored at `in_review`(2) so a
+  // hearing recorded before the admin activates the case can still be sealed —
+  // only `admin` may take `in_review -> active`, so an `active` floor left the
+  // worker's Lock permanently disabled. The server's `CASE_STEP_FLOORS` says the
+  // same and `case-fsm-parity.test.ts` fails if the two drift. Below `in_review`
+  // the Lock button is disabled.
+  court_hearings: 2,
   evaluate: 3,
   closure: 4,
 };
@@ -363,6 +366,22 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
   function handleClick(key: string) {
     const i = idxOf(key);
     const done = doneFor(key);
+    // A step cannot be opened before the case reaches its own lifecycle floor,
+    // whatever the index rule below would allow: `isClickable` already renders
+    // the entry disabled, and letting the click through anyway is how a worker
+    // reached Court Hearings below its floor, recorded a hearing, and then found
+    // the Lock permanently disabled. Name the status that opens it, the same way
+    // the Lock's own hint does.
+    const floor = STEP_FLOORS[key] ?? 0;
+    if (!statusAtLeast(caseData, floor)) {
+      const required = statusForFloor(floor);
+      toast.error(t('caseView.stepper.stepNotAvailable', 'Step not available'), {
+        description: required
+          ? t('caseView.lock.notDueHint', 'This step opens once the case reaches {{status}}.', { status: statusLabel(t, required) })
+          : t('caseView.stepper.accomplishStepFirst', 'Accomplish current step first.'),
+      });
+      return;
+    }
     // Interventions and referrals are issued in parallel: with the assessment
     // done, Service Delivery is reachable regardless of whether an intervention
     // exists, because a case may be referral-only.
@@ -432,13 +451,12 @@ export function CaseStepper({ currentStep, onStepClick, caseData, interventionCo
                   const implementationDone =
                     doneFor('interventions') && doneFor('referrals');
                   // A step cannot be opened before the case reaches its own
-                  // lifecycle floor. This is what keeps Court Hearings shut
-                  // through Phase-In (`enrolled`/`assessed`/`in_review`) even
-                  // once an earlier step would otherwise hand reachability
-                  // forward, and what keeps Evaluate and Closure in their
-                  // phases. `done` already implies the floor — `stepperStepDone`
-                  // floors before it reads any data — so gating on it can never
-                  // hide a step that is already accomplished.
+                  // lifecycle floor — what keeps Court Hearings shut through the
+                  // early Phase-In statuses (`enrolled`/`assessed`), and Evaluate
+                  // and Closure in their phases. `done` already implies the floor
+                  // — `stepperStepDone` floors before it reads any data — so
+                  // gating on it can never hide a step that is already
+                  // accomplished.
                   const reachedFloor = statusAtLeast(caseData, STEP_FLOORS[step.key] ?? 0);
                   const isClickable = reachedFloor && (done || (step.key === 'referrals' && doneFor('assessment')) || (idxOf(step.key) <= highestReachable + 1 && (!['evaluate', 'closure'].includes(step.key) || implementationDone)));
                   return (

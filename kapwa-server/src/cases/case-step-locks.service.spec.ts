@@ -289,11 +289,28 @@ describe('CaseStepLocksService', () => {
     expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
   });
 
-  it('names the lifecycle floor, not the work, when a recorded hearing is sealed below active', async () => {
+  it('names the lifecycle floor, not the work, when a recorded hearing is sealed below review', async () => {
     // Everything this step asks for is on file — one non-cancelled hearing — so
     // the only thing refusing the seal is the case's position. Calling that
     // "not complete yet" sends the worker back to work they already did; the
     // message has to name the status the case must reach.
+    findById.mockResolvedValue({
+      id: 'c1',
+      status: 'assessed',
+      caseCategory: 'Children in Conflict with the Law (CICL)',
+    } as unknown as Case);
+    courtHearingCount.mockResolvedValue(1);
+
+    await expect(service.lock('c1', 'court_hearings', swUser)).rejects.toThrow(/reaches in_review/i);
+    // Still refused before any write.
+    expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
+  });
+
+  it('seals a recorded hearing while the case is still in review', async () => {
+    // The prod case: a legal case can have a hearing on file before the admin
+    // activates it, and only `admin` may take `in_review -> active`
+    // (`CASE_FSM_ROLES[IN_REVIEW]` is empty). Refusing the seal there parked the
+    // worker's Lock behind an action they could not take.
     findById.mockResolvedValue({
       id: 'c1',
       status: 'in_review',
@@ -301,9 +318,8 @@ describe('CaseStepLocksService', () => {
     } as unknown as Case);
     courtHearingCount.mockResolvedValue(1);
 
-    await expect(service.lock('c1', 'court_hearings', swUser)).rejects.toThrow(/reaches active/i);
-    // Still refused before any write.
-    expect(lockRepo.insertQb.execute).not.toHaveBeenCalled();
+    const saved = await service.lock('c1', 'court_hearings', swUser);
+    expect(saved.stepKey).toBe('court_hearings');
   });
 
   it('locks a done step and snapshots the locker name', async () => {
