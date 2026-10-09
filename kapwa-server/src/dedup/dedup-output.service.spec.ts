@@ -1,4 +1,7 @@
-import { outputGrid } from './dedup-output.service';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { outputGrid, exportDir, DedupOutputService } from './dedup-output.service';
 import { ClientImportOperation, ClientImportRow } from './dedup.entity';
 
 const op = {
@@ -43,5 +46,34 @@ describe('outputGrid', () => {
     ]);
     expect(grid[1][grid[1].length - 1]).toBe('Updated; barangay updated');
     expect(grid[2][grid[2].length - 1]).toBe('No match');
+  });
+});
+
+
+describe('DedupOutputService writer', () => {
+  const op = { id: 'op-x', source: 's', interventionType: 'food_pack', columnMap: { baseline: { lastName: 'Last Name', firstName: 'First Name', middleName: 'Middle Name', birthDate: 'Birthday', barangay: 'Barangay', remarks: 'Remarks' }, extras: [] } } as unknown as ClientImportOperation;
+  const rows = [{ id: 'r1', rowIndex: 2, lastName: 'Reyes', firstName: 'Pedro', status: 'no_match' }] as ClientImportRow[];
+
+  it('honours DEDUP_EXPORT_DIR and stores an absolute path', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dedup-export-'));
+    process.env.DEDUP_EXPORT_DIR = dir;
+    const written = await new DedupOutputService().write(op, rows);
+    expect(path.dirname(written)).toBe(dir);
+    expect(path.isAbsolute(written)).toBe(true);
+    expect(fs.existsSync(written)).toBe(true);
+    expect(path.basename(written)).toBe(`client-dedup-${op.id}.xlsx`);
+    delete process.env.DEDUP_EXPORT_DIR;
+  });
+
+  it('skips kernel-filesystem paths (recursive mkdir under /proc can hang)', () => {
+    process.env.DEDUP_EXPORT_DIR = '/proc/definitely-not-writable/kapwa';
+    try {
+      const dir = exportDir();
+      expect(dir.startsWith('/proc/')).toBe(false);
+      expect(dir.startsWith('/sys/')).toBe(false);
+      expect(fs.existsSync(dir)).toBe(true);
+    } finally {
+      delete process.env.DEDUP_EXPORT_DIR;
+    }
   });
 });

@@ -1,10 +1,41 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { ClientImportOperation, ClientImportRow } from './dedup.entity';
 import { DedupOutputWriter } from './dedup.service';
 
-const EXPORT_DIR = path.resolve(process.cwd(), 'exports/client-dedup');
+/**
+ * Resolves (once) the first WRITABLE export directory: an explicit
+ * DEDUP_EXPORT_DIR wins, then cwd/exports/client-dedup, then the OS temp dir.
+ * Production runs as a non-root user (/app is not writable) — the fallback
+ * keeps finalize functional instead of dying with EACCES on mkdir. Kernel
+ * virtual filesystems are skipped outright: recursive mkdir under /proc can
+ * block indefinitely.
+ */
+const KERNEL_FS_PREFIXES = ['/proc/', '/sys/', '/dev/'];
+let cachedExportDir: string | undefined;
+export function exportDir(): string {
+  if (cachedExportDir) return cachedExportDir;
+  const candidates = [
+    process.env.DEDUP_EXPORT_DIR,
+    path.resolve(process.cwd(), 'exports/client-dedup'),
+    path.join(os.tmpdir(), 'kapwa-exports/client-dedup'),
+  ].filter((c): c is string => Boolean(c));
+  for (const dir of candidates) {
+    if (KERNEL_FS_PREFIXES.some((p) => dir.startsWith(p))) continue;
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.accessSync(dir, fs.constants.W_OK);
+      cachedExportDir = dir;
+      return dir;
+    } catch {
+      // Permission or read-only filesystem — try the next candidate.
+    }
+  }
+  cachedExportDir = path.join(os.tmpdir(), 'kapwa-exports/client-dedup');
+  return cachedExportDir;
+}
 
 /** Status cell text, mirroring the review grid's chips. */
 function statusText(row: ClientImportRow): string {
@@ -63,9 +94,12 @@ export class DedupOutputService implements DedupOutputWriter {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Priority List');
     for (const line of outputGrid(op, rows)) sheet.addRow(line);
-    fs.mkdirSync(EXPORT_DIR, { recursive: true });
-    const file = path.join(EXPORT_DIR, `client-dedup-${op.id}.xlsx`);
+    const dir = exportDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `client-dedup-${op.id}.xlsx`);
     await workbook.xlsx.writeFile(file);
-    return path.relative(process.cwd(), file);
+    // Absolute path: the download endpoint re-resolves against cwd, and an
+    // absolute input to path.resolve is returned unchanged.
+    return file;
   }
 }
