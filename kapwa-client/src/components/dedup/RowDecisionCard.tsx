@@ -63,6 +63,8 @@ interface RowDecisionCardProps {
   row: DedupRow;
   candidates: DedupCandidate[];
   loading?: boolean;
+  /** Render without the card wrapper/header — for embedding inside a dialog. */
+  embedded?: boolean;
   onDecide: (matchId: string, keep: KeepChoice, remark?: string) => void | Promise<void>;
   onRevert: (matchId: string) => void | Promise<void>;
 }
@@ -81,12 +83,31 @@ function decisionTitle(keep: KeepChoice, c: DedupCandidate): string {
   return c.targetType === 'import_row' ? 'Keep this row (A)' : 'Retain this row';
 }
 
+/** Card chrome when standalone, plain spacing when embedded in a dialog. */
+function Wrap({ embedded, row, children }: { embedded: boolean; row: DedupRow; children: React.ReactNode }) {
+  if (embedded) return <div className="space-y-4">{children}</div>;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          Row {row.rowIndex} — {row.lastName ?? ''}, {row.firstName ?? ''} {row.middleName ?? ''}
+        </CardTitle>
+        <CardDescription>
+          {[row.dob ?? '—', row.barangay ?? '—'].join(' · ')}
+          {row.remarks ? ` — ${row.remarks}` : ''}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">{children}</CardContent>
+    </Card>
+  );
+}
+
 /**
  * One import row's decision surface: every candidate with its evidence, a
  * dialog for the retain/deprioritize choice (with the mandatory remark for
  * deprioritizing), and revert for already-decided candidates.
  */
-export function RowDecisionCard({ row, candidates, loading = false, onDecide, onRevert }: RowDecisionCardProps) {
+export function RowDecisionCard({ row, candidates, loading = false, onDecide, onRevert, embedded = false }: RowDecisionCardProps) {
   const [pending, setPending] = useState<{ matchId: string; keep: KeepChoice } | null>(null);
   const [remark, setRemark] = useState('');
   const [busy, setBusy] = useState(false);
@@ -108,34 +129,24 @@ export function RowDecisionCard({ row, candidates, loading = false, onDecide, on
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          Row {row.rowIndex} — {row.lastName ?? ''}, {row.firstName ?? ''} {row.middleName ?? ''}
-        </CardTitle>
-        <CardDescription>
-          {[row.dob ?? '—', row.barangay ?? '—'].join(' · ')}
-          {row.remarks ? ` — ${row.remarks}` : ''}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading candidates…</p>
-        ) : candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No candidate matches for this row.</p>
-        ) : (
-          candidates.map((c) => (
-            <CandidateCard
-              key={c.id}
-              candidate={c}
-              onSelect={(keep) => {
-                setPending({ matchId: c.id, keep });
-                setRemark('');
-              }}
-              onRevert={onRevert}
-            />
-          ))
-        )}
+    <Wrap embedded={embedded} row={row}>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading candidates…</p>
+      ) : candidates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No candidate matches for this row.</p>
+      ) : (
+        candidates.map((c) => (
+          <CandidateCard
+            key={c.id}
+            candidate={c}
+            onSelect={(keep) => {
+              setPending({ matchId: c.id, keep });
+              setRemark('');
+            }}
+            onRevert={onRevert}
+          />
+        ))
+      )}
 
         <Dialog
           open={pending !== null}
@@ -182,8 +193,7 @@ export function RowDecisionCard({ row, candidates, loading = false, onDecide, on
             </DialogContent>
           )}
         </Dialog>
-      </CardContent>
-    </Card>
+    </Wrap>
   );
 }
 

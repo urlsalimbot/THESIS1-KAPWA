@@ -13,6 +13,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -491,19 +494,13 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
         header: '',
         cell: ({ row }) =>
           row.original.status === 'no_match' ? null : (
-            <Button
-              size="sm"
-              variant={expandedRowId === row.original.id ? 'secondary' : 'outline'}
-              onClick={() =>
-                setExpandedRowId(expandedRowId === row.original.id ? null : row.original.id)
-              }
-            >
-              {expandedRowId === row.original.id ? 'Close' : 'Review matches'}
+            <Button size="sm" variant="outline" onClick={() => setExpandedRowId(row.original.id)}>
+              Review matches
             </Button>
           ),
       },
     ],
-    [expandedRowId],
+    [],
   );
 
   if (summary || detail?.status === 'finalized') {
@@ -528,10 +525,6 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
         sorting={[]}
         onPaginationChange={setPagination}
       />
-      {expandedRow && (
-        <ExpandedRowPanel operationId={operationId} row={expandedRow} onChanged={refresh} />
-      )}
-
       <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur">
         <span className="text-sm text-muted-foreground">
           {pendingCount} pending decision{pendingCount === 1 ? '' : 's'}
@@ -548,6 +541,29 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
           {finalizing ? 'Finalizing…' : 'Finalize & save priority list'}
         </Button>
       </div>
+
+      {expandedRow && (
+        <Dialog
+          open={expandedRowId !== null}
+          onOpenChange={(open) => {
+            if (!open) setExpandedRowId(null);
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Row {expandedRow.rowIndex} — {expandedRow.lastName ?? ''},{' '}
+                {expandedRow.firstName ?? ''} {expandedRow.middleName ?? ''}
+              </DialogTitle>
+              <DialogDescription>
+                {[expandedRow.dob ?? '—', expandedRow.barangay ?? '—'].join(' · ')}
+                {expandedRow.remarks ? ` — ${expandedRow.remarks}` : ''}
+              </DialogDescription>
+            </DialogHeader>
+            <ExpandedRowPanel operationId={operationId} row={expandedRow} onChanged={refresh} embedded />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
@@ -656,10 +672,12 @@ function ExpandedRowPanel({
   operationId,
   row,
   onChanged,
+  embedded = false,
 }: {
   operationId: string;
   row: DedupRow;
   onChanged: () => Promise<unknown> | void;
+  embedded?: boolean;
 }) {
   const { data, isLoading } = useSWR(
     ['clientDedup', 'matches', row.id] as const,
@@ -673,6 +691,7 @@ function ExpandedRowPanel({
       row={row}
       candidates={data?.data ?? []}
       loading={isLoading}
+      embedded={embedded}
       onDecide={async (matchId, keep, remark) => {
         await api.post(
           `/client-dedup/operations/${operationId}/matches/${matchId}/decision`,
