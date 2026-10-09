@@ -132,7 +132,7 @@ export function AdminPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="users" className="mt-6 space-y-4">
+        <TabsContent value="users" className="mt-6 space-y-4 [@media(max-height:820px)]:mt-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="rounded-full bg-primary/50/10 p-2">
@@ -147,7 +147,7 @@ export function AdminPage() {
           <UsersPanel />
         </TabsContent>
 
-        <TabsContent value="sync" className="space-y-4 mt-6">
+        <TabsContent value="sync" className="space-y-4 mt-6 [@media(max-height:820px)]:mt-4">
           <Card className="shadow-sm border-border/60">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -201,7 +201,7 @@ export function AdminPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="audit" className="space-y-4 mt-6">
+        <TabsContent value="audit" className="space-y-4 mt-6 [@media(max-height:820px)]:mt-4">
           <Card className="shadow-sm border-border/60">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-2">

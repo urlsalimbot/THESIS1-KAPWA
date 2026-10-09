@@ -260,7 +260,7 @@ export function DashboardPage() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 [@media(max-height:820px)]:mt-3 [@media(max-height:820px)]:gap-3">
         <div className="lg:col-span-2"><CaseStatusChart data={data?.byStatus || []} /></div>
         <div className="lg:col-span-1"><ActivityCalendar data={dailyCounts ?? null} year={now.getFullYear()} month={now.getMonth() + 1} /></div>
         <div className="lg:col-span-2"><TrendsChart range={range} /></div>

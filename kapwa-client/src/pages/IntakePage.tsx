@@ -793,7 +793,7 @@ export function IntakePage() {
           {t('intake.fromReferral', 'From referral: {{reason}}', { reason: sourceReferral.reason })}
         </div>
       )}
-      <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-5xl space-y-6 [@media(max-height:820px)]:space-y-4">
         {/* Section I: Beneficiary */}
         <div className="relative rounded-lg border bg-card shadow-sm">
           <div className="border-b bg-muted/30 px-4 py-2.5 flex items-center gap-2">

@@ -71,7 +71,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
           </svg>
           <input
             aria-label="Search beneficiaries"
-            class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-48 pl-8"
+            class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background [@media(max-height:820px)]:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-48 pl-8"
             placeholder="Search by name..."
             type="text"
             value=""
@@ -435,7 +435,7 @@ exports[`BeneficiariesPage > snapshot: BeneficiariesPage rendered DOM with searc
         </div>
       </div>
       <div
-        class="flex items-center justify-between gap-4 px-2 py-4"
+        class="flex items-center justify-between gap-4 px-2 py-4 [@media(max-height:820px)]:py-2"
       >
         <div
           class="flex items-center gap-3"
