@@ -22,8 +22,8 @@ describe('DedupController', () => {
 
   it('creates an operation with the caller as author', async () => {
     dedup.create.mockResolvedValue({ id: 'op1' });
-    await controller.create({ source: 'Batch 1.xlsx', columnMap: {} as any }, req);
-    expect(dedup.create).toHaveBeenCalledWith({ source: 'Batch 1.xlsx', columnMap: {} }, 'u1');
+    await controller.create({ source: 'Batch 1.xlsx', columnMap: {} as any, interventionType: 'food_pack' }, req);
+    expect(dedup.create).toHaveBeenCalledWith({ source: 'Batch 1.xlsx', columnMap: {}, interventionType: 'food_pack' }, 'u1');
   });
 
   it('requires a file for upload', async () => {
