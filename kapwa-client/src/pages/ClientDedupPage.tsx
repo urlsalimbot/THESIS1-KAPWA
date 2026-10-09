@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import useSWR, { useSWRConfig } from 'swr';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Download, FileSpreadsheet, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, downloadClientDedupOutput } from '../lib/api';
 import { formatDate } from '../lib/format';
+import { INTERVENTION_TYPES } from '../lib/constants';
 import { queryKeys } from '../lib/query-keys';
 import { PageShell } from '@/components/PageShell';
 import { DataTable } from '@/components/data-table/DataTable';
@@ -20,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -46,6 +48,7 @@ interface OperationsResponse {
 
 interface OperationDetail extends DedupOperation {
   pending: number;
+  disqualified: number;
   totalRows: number;
 }
 
@@ -91,7 +94,7 @@ interface ExtraField {
   sourceColumn: string;
 }
 
-type View = { kind: 'list' } | { kind: 'define' } | { kind: 'review'; operationId: string };
+type View = { kind: 'list' } | { kind: 'define' };
 
 const STATUS_LABELS: Record<DedupOperation['status'], string> = {
   defined: 'Defined',
@@ -108,6 +111,10 @@ const STATUS_VARIANTS: Record<DedupOperation['status'], 'default' | 'secondary' 
 function emptyDraft() {
   return {
     source: '',
+    // The intervention this list serves: an INTERVENTION_TYPES code, or a
+    // custom label when 'Others' is chosen.
+    interventionType: '',
+    interventionTypeCustom: '',
     baseline: {
       lastName: 'Last Name',
       firstName: 'First Name',
@@ -120,24 +127,38 @@ function emptyDraft() {
   };
 }
 
-export default function ClientDedupPage() {
-  const [view, setView] = useState<View>({ kind: 'list' });
+const OTHER_TYPE = '__other__';
 
-  if (view.kind === 'define') {
+function typeLabel(code: string): string {
+  return code.replace(/_/g, ' ').replace(/^./, (c: string) => c.toUpperCase());
+}
+
+export default function ClientDedupPage() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  // The list and the define wizard are local state; the REVIEW of an operation
+  // lives at /client-dedup/:operationId so reloads, back/forward and deep
+  // links keep the reviewer in place.
+  const [formView, setFormView] = useState<'list' | 'define'>('list');
+
+  if (formView === 'define') {
     return (
       <DefineUploadView
-        onBack={() => setView({ kind: 'list' })}
-        onUploaded={(operationId) => setView({ kind: 'review', operationId })}
+        onBack={() => setFormView('list')}
+        onUploaded={(operationId) => {
+          setFormView('list');
+          navigate(`/client-dedup/${operationId}`);
+        }}
       />
     );
   }
-  if (view.kind === 'review') {
-    return <ReviewView operationId={view.operationId} onBack={() => setView({ kind: 'list' })} />;
+  if (id) {
+    return <ReviewView operationId={id} onBack={() => navigate('/client-dedup')} />;
   }
   return (
     <OperationsList
-      onDefine={() => setView({ kind: 'define' })}
-      onOpen={(operationId) => setView({ kind: 'review', operationId })}
+      onDefine={() => setFormView('define')}
+      onOpen={(operationId) => navigate(`/client-dedup/${operationId}`)}
     />
   );
 }
@@ -240,9 +261,16 @@ function DefineUploadView({
       extras: d.extras.map((e, i) => (i === index ? { ...e, ...patch } : e)),
     }));
 
+  const effectiveInterventionType =
+    draft.interventionType === OTHER_TYPE ? draft.interventionTypeCustom.trim() : draft.interventionType;
+
   async function handleCreateAndUpload() {
     if (draft.source.trim() === '') {
       toast.error('Name this list — e.g. the file name or the batch it came from.');
+      return;
+    }
+    if (effectiveInterventionType === '') {
+      toast.error('Pick the intervention type this list serves.');
       return;
     }
     if (!file) {
@@ -255,6 +283,7 @@ function DefineUploadView({
       if (!operationId) {
         const created = await api.post<{ id: string }>('/client-dedup/operations', {
           source: draft.source.trim(),
+          interventionType: effectiveInterventionType,
           columnMap: {
             baseline: draft.baseline,
             extras: draft.extras.map((e) => ({
@@ -282,11 +311,18 @@ function DefineUploadView({
 
   return (
     <PageShell
-      title="Define the client list"
-      description="Match each declared row to the column that carries it in the file. The six baseline rows are required; declare any extra field your list includes."
+      title="New deduplication"
+      description="An import run is a batch serving: it declares the intervention type, then matches clients against prior servings."
       backTo={{ label: 'Operations', onClick: onBack }}
     >
       <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold leading-tight">Define the client list</CardTitle>
+          <CardDescription>
+            Match each declared row to the column that carries it in the file. The six baseline
+            rows are required; declare any extra field your list includes.
+          </CardDescription>
+        </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="dedup-source">List name</Label>
@@ -296,6 +332,36 @@ function DefineUploadView({
               onChange={(e) => setDraft((d) => ({ ...d, source: e.target.value }))}
               placeholder="e.g. Batch 2 — Poblacion, October"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dedup-type">Intervention type</Label>
+            <Select
+              value={draft.interventionType}
+              onValueChange={(value) =>
+                setDraft((d) => ({ ...d, interventionType: value, interventionTypeCustom: '' }))
+              }
+            >
+              <SelectTrigger id="dedup-type" aria-label="Intervention type">
+                <SelectValue placeholder="Pick the intervention this list serves" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72 overflow-y-auto">
+                {INTERVENTION_TYPES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {typeLabel(code)}
+                  </SelectItem>
+                ))}
+                <SelectItem value={OTHER_TYPE}>Others…</SelectItem>
+              </SelectContent>
+            </Select>
+            {draft.interventionType === OTHER_TYPE && (
+              <Input
+                value={draft.interventionTypeCustom}
+                onChange={(e) => setDraft((d) => ({ ...d, interventionTypeCustom: e.target.value }))}
+                placeholder="e.g. Gift cards for senior citizens"
+                aria-label="Other intervention type"
+              />
+            )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -419,20 +485,23 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
   const [summary, setSummary] = useState<FinalizeSummary | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'matched' | 'no_match' | 'disqualified'>('all');
 
   const { data: detail } = useSWR<OperationDetail>(queryKeys.clientDedup.detail(operationId), () =>
     api.get<OperationDetail>(`/client-dedup/operations/${operationId}`),
   );
   const { data: rowsData, isLoading } = useSWR(
-    ['clientDedup', 'rows', operationId, pagination.pageIndex + 1, pagination.pageSize] as const,
+    ['clientDedup', 'rows', operationId, pagination.pageIndex + 1, pagination.pageSize, reviewFilter] as const,
     () =>
       api.get<RowsResponse>(
-        `/client-dedup/operations/${operationId}/rows?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}`,
+        `/client-dedup/operations/${operationId}/rows?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}` +
+          (reviewFilter !== 'all' ? `&filter=${reviewFilter}` : ''),
       ),
   );
   const rows = rowsData?.data ?? [];
   const expandedRow = rows.find((r) => r.id === expandedRowId) ?? null;
   const pendingCount = detail?.pending ?? 0;
+  const disqualifiedCount = detail?.disqualified ?? 0;
 
   const refresh = () => mutate((key) => Array.isArray(key) && key[0] === 'clientDedup');
 
@@ -480,7 +549,7 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       {
         id: 'status',
         header: 'Status',
-        cell: ({ row }) => <RowStatusChip status={row.original.status} />,
+        cell: ({ row }) => <RowStatusChip row={row.original} />,
       },
       {
         id: 'remarks',
@@ -516,6 +585,28 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
         description={detail ? `${detail.pending} pending · ${detail.totalRows} rows` : undefined}
         backTo={{ label: 'Operations', onClick: onBack }}
       >
+      <div className="flex items-center justify-between gap-3">
+        <Select
+          value={reviewFilter}
+          onValueChange={(value) => {
+            setReviewFilter(value as typeof reviewFilter);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+        >
+          <SelectTrigger aria-label="Review filter" className="w-[15rem]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All rows</SelectItem>
+            <SelectItem value="matched">With matches</SelectItem>
+            <SelectItem value="no_match">No match only</SelectItem>
+            <SelectItem value="disqualified">Disqualified — review</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground">
+          {rowsData?.total ?? 0} row{(rowsData?.total ?? 0) === 1 ? '' : 's'}
+        </span>
+      </div>
       <DataTable
         columns={columns}
         data={rows}
@@ -527,14 +618,14 @@ function ReviewView({ operationId, onBack }: { operationId: string; onBack: () =
       />
       <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur">
         <span className="text-sm text-muted-foreground">
-          {pendingCount} pending decision{pendingCount === 1 ? '' : 's'}
+          {pendingCount} pending {disqualifiedCount} disqualified
         </span>
         <Button
           onClick={() => setConfirmOpen(true)}
-          disabled={pendingCount > 0 || finalizing}
+          disabled={pendingCount > 0 || disqualifiedCount > 0 || finalizing}
           title={
-            pendingCount > 0
-              ? `${pendingCount} match${pendingCount === 1 ? '' : 'es'} still pending — decide every one before finalizing`
+            pendingCount > 0 || disqualifiedCount > 0
+              ? `${pendingCount} match${pendingCount === 1 ? '' : 'es'} pending and ${disqualifiedCount} disqualified row${disqualifiedCount === 1 ? '' : 's'} awaiting decision`
               : undefined
           }
         >
@@ -612,23 +703,27 @@ function OutputView({
   return (
     <div data-testid="output-view">
       <PageShell
-        title="Priority list ready"
-        description={detail?.source ?? 'Finalized import'}
+        title={detail?.source ?? 'Finalized import'}
+        description="The priority list is written to Excel — download it below."
         backTo={{ label: 'Operations', onClick: onBack }}
       >
       <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold leading-tight">Priority list ready</CardTitle>
+          <CardDescription>
+            {summary
+              ? 'What this batch saved or set aside.'
+              : 'This import was finalized earlier. Download the stored priority list below.'}
+          </CardDescription>
+        </CardHeader>
         <CardContent className="space-y-4">
-          {summary ? (
+          {summary && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="New records saved" value={summary.created} testId="stat-created" />
               <Stat label="Existing records updated" value={summary.updated} testId="stat-updated" />
               <Stat label="Rows deprioritized" value={summary.deprioritized} testId="stat-deprioritized" />
               <Stat label="Barangay updates" value={summary.barangayUpdates} testId="stat-barangay" />
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              This import was finalized earlier. Download the stored priority list below.
-            </p>
           )}
           <Button onClick={download} disabled={downloading}>
             <Download className="mr-2 h-4 w-4" />
@@ -652,15 +747,24 @@ function Stat({ label, value, testId }: { label: string; value: number; testId: 
   );
 }
 
-function RowStatusChip({ status }: { status: DedupRow['status'] }) {
+function RowStatusChip({ row }: { row: DedupRow }) {
+  // A disqualification IS a deprioritization: until the operator decides, it
+  // reads 'Disqualified — review needed'; afterwards it reads 'Deprioritized'.
+  const panReview =
+    row.status === 'deprioritized' && row.eligibility === 'disqualified' && !row.eligibilityDecision;
   const config: Record<DedupRow['status'], { label: string; className: string }> = {
     no_match: { label: 'No match', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
     pending: { label: 'Pending review', className: 'border-slate-200 bg-slate-100 text-slate-700' },
     retained: { label: 'Retained', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
     primary: { label: 'Primary — kept', className: 'border-sky-200 bg-sky-50 text-sky-700' },
-    deprioritized: { label: 'Deprioritized', className: 'border-amber-200 bg-amber-50 text-amber-800' },
+    deprioritized: {
+      label: panReview ? 'Disqualified — review needed' : 'Deprioritized',
+      className: panReview
+        ? 'border-rose-200 bg-rose-50 text-rose-800'
+        : 'border-amber-200 bg-amber-50 text-amber-800',
+    },
   };
-  const { label, className } = config[status];
+  const { label, className } = config[row.status];
   return (
     <Badge variant="outline" className={className}>
       {label}
@@ -692,17 +796,23 @@ function ExpandedRowPanel({
       candidates={data?.data ?? []}
       loading={isLoading}
       embedded={embedded}
-      onDecide={async (matchId, keep, remark) => {
-        await api.post(
-          `/client-dedup/operations/${operationId}/matches/${matchId}/decision`,
-          remark ? { keep, remark } : { keep },
+      onEligibility={async (decision: 'waive' | 'confirm') => {
+        await api.post(`/client-dedup/operations/${operationId}/rows/${row.id}/eligibility`, {
+          decision,
+        });
+        toast.success(
+          decision === 'waive'
+            ? 'Row waived — it will be served this batch.'
+            : 'Disqualification confirmed — the row stays deprioritized.',
         );
-        toast.success(keep === 'import_row' ? 'Row retained.' : 'Duplicate deprioritized.');
         await onChanged();
       }}
-      onRevert={async (matchId) => {
-        await api.post(`/client-dedup/operations/${operationId}/matches/${matchId}/revert`);
-        toast.success('Decision reverted.');
+      onMatchEligibility={async (matchId: string, decision: 'waive' | 'confirm') => {
+        await api.post(`/client-dedup/operations/${operationId}/rows/${row.id}/eligibility`, {
+          decision,
+          matchId,
+        });
+        toast.success(decision === 'waive' ? 'Match waived.' : 'Match confirmed as disqualified.');
         await onChanged();
       }}
     />

@@ -5,11 +5,13 @@ import { RowDecisionCard, type DedupCandidate, type DedupRow } from './RowDecisi
 
 const row: DedupRow = {
   id: 'r2', rowIndex: 2, lastName: 'Reyes', firstName: 'Pedro', middleName: 'P.',
-  dob: '1988-03-21', barangay: 'Bigte', status: 'pending',
+  dob: '1988-03-21', barangay: 'Bigte', status: 'deprioritized',
+  eligibility: 'disqualified',
+  eligibilityReason: 'Received food_pack on 2026-09-25 — within the last 30 days',
 };
 
 const personCandidate: DedupCandidate = {
-  id: 'm1', targetType: 'db_person', score: 0.91, status: 'pending', signals: {},
+  id: 'm1', targetType: 'db_person', score: 0.91, status: 'primary', signals: {},
   person: { id: 'p1', lastName: 'Reyes', firstName: 'Pedro', middleName: 'P.', dob: '1988-03-21', barangay: 'Bigte' },
   interventions: 2,
   cases: [{ controlNo: 'C-2026-001', status: 'active' }, { controlNo: 'C-2026-002', status: 'closed' }],
@@ -20,24 +22,20 @@ const personCandidate: DedupCandidate = {
 };
 
 describe('RowDecisionCard', () => {
-  it('renders a person candidate with its control numbers and intervention count', () => {
-    render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={vi.fn()} onRevert={vi.fn()} />);
+  it('renders the matched candidate as evidence with cases, interventions and recent remarks', () => {
+    render(<RowDecisionCard row={row} candidates={[personCandidate]} onEligibility={vi.fn()} />);
     expect(screen.getByText(/C-2026-001/)).toBeTruthy();
-    expect(screen.getByText(/C-2026-002/)).toBeTruthy();
     expect(screen.getByText(/2 interventions/i)).toBeTruthy();
-  });
-
-  it('shows the existing record’s recent remark history while deciding', () => {
-    render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={vi.fn()} onRevert={vi.fn()} />);
     expect(screen.getByText(/recent remarks/i)).toBeTruthy();
     expect(screen.getByText(/Same person\./)).toBeTruthy();
     expect(screen.getByText('Decision')).toBeTruthy();
     expect(screen.getByText('Batch 1.xlsx · Juan Dela Cruz')).toBeTruthy();
+    expect(screen.getByText('Matched')).toBeTruthy();
   });
 
-  it('shows the household-served badge and each member with their interventions', () => {
+  it('shows the household-served badge and each member; no remarks section', () => {
     const household: DedupCandidate = {
-      id: 'm2', targetType: 'household', score: 0.88, status: 'pending', signals: { householdServed: true },
+      id: 'm2', targetType: 'household', score: 0.88, status: 'primary', signals: { householdServed: true },
       household: {
         id: 'h1', memberPersonIds: ['p9'],
         members: [
@@ -45,7 +43,7 @@ describe('RowDecisionCard', () => {
         ],
       },
     };
-    render(<RowDecisionCard row={row} candidates={[household]} onDecide={vi.fn()} onRevert={vi.fn()} />);
+    render(<RowDecisionCard row={row} candidates={[household]} onEligibility={vi.fn()} />);
     expect(screen.getByText(/household already served/i)).toBeTruthy();
     expect(screen.getByText(/Maria/)).toBeTruthy();
     expect(screen.getByText(/C-2026-009/)).toBeTruthy();
@@ -53,74 +51,79 @@ describe('RowDecisionCard', () => {
     expect(screen.queryByText(/recent remarks/i)).toBeNull();
   });
 
-  it('opens a dialog for the deprioritizing choice and requires a remark before saving', async () => {
-    const onDecide = vi.fn().mockResolvedValue(undefined);
-    render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={onDecide} onRevert={vi.fn()} />);
+  it('shows the disqualification with its reason and offers waive/confirm while undecided', async () => {
+    const onEligibility = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibilityDecision: undefined }}
+        candidates={[personCandidate]}
+        onEligibility={onEligibility}
+      />,
+    );
+    expect(screen.getByText(/Disqualified — review needed/i)).toBeTruthy();
+    expect(screen.getByText(/within the last 30 days/)).toBeTruthy();
 
-    await userEvent.click(screen.getByRole('button', { name: /duplicate/i }));
-    expect(await screen.findByRole('dialog')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /duplicate & deprioritize/i })).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /waive — serve anyway/i }));
+    expect(onEligibility).toHaveBeenCalledWith('waive');
 
-    const save = screen.getByRole('button', { name: /save decision/i }) as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
-
-    await userEvent.type(screen.getByPlaceholderText(/why is this a duplicate/i), 'Same person — same control number.');
-    expect(save.disabled).toBe(false);
-    await userEvent.click(save);
-    expect(onDecide).toHaveBeenCalledWith('m1', 'existing_record', 'Same person — same control number.');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /confirm disqualified/i }));
+    expect(onEligibility).toHaveBeenCalledWith('confirm');
   });
 
-  it('cancelling the dialog posts nothing', async () => {
-    const onDecide = vi.fn().mockResolvedValue(undefined);
-    render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={onDecide} onRevert={vi.fn()} />);
+  it('offers no buttons once the disqualification is decided', () => {
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibilityDecision: 'confirm' }}
+        candidates={[personCandidate]}
+        onEligibility={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/confirmed, not served/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /waive/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /confirm disqualified/i })).toBeNull();
 
-    await userEvent.click(screen.getByRole('button', { name: /duplicate/i }));
-    await userEvent.click(await screen.findByRole('button', { name: /^cancel$/i }));
-
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(onDecide).not.toHaveBeenCalled();
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibilityDecision: 'waive', status: 'retained' }}
+        candidates={[personCandidate]}
+        onEligibility={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/waived, served after review/i)).toBeTruthy();
   });
 
-  it('dedupes this row against a paired import row; keeping the pair requires a remark', async () => {
-    const onDecide = vi.fn().mockResolvedValue(undefined);
-    const pair: DedupCandidate = {
-      id: 'm3', targetType: 'import_row', score: 0.82, status: 'pending', signals: {},
-      pairedRow: { id: 'r1', rowIndex: 1, lastName: 'Reyes', firstName: 'Pedro' },
-    };
-    render(<RowDecisionCard row={row} candidates={[pair]} onDecide={onDecide} onRevert={vi.fn()} />);
-
-    expect(screen.getByRole('button', { name: /^retain$/i })).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: /duplicate — keep import row 1/i }));
-    const save = await screen.findByRole('button', { name: /save decision/i }) as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
-    await userEvent.type(screen.getByPlaceholderText(/why is this a duplicate/i), 'Row 1 is the original list entry.');
-    await userEvent.click(save);
-    expect(onDecide).toHaveBeenCalledWith('m3', 'other_import_row', 'Row 1 is the original list entry.');
+  it('requires a decision on every pending match of a disqualified row', async () => {
+    const onMatchEligibility = vi.fn().mockResolvedValue(undefined);
+    const pending: DedupCandidate = { ...personCandidate, status: 'pending' };
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibilityDecision: undefined }}
+        candidates={[pending]}
+        onEligibility={vi.fn()}
+        onMatchEligibility={onMatchEligibility}
+      />,
+    );
+    expect(screen.getByText('Review needed')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /^waive$/i }));
+    expect(onMatchEligibility).toHaveBeenCalledWith('m1', 'waive');
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+    expect(onMatchEligibility).toHaveBeenCalledWith('m1', 'confirm');
   });
 
-  it('lets a kept row be saved without a remark', async () => {
-    const onDecide = vi.fn().mockResolvedValue(undefined);
-    render(<RowDecisionCard row={row} candidates={[personCandidate]} onDecide={onDecide} onRevert={vi.fn()} />);
-    await userEvent.click(screen.getByRole('button', { name: /^retain$/i }));
-    const save = await screen.findByRole('button', { name: /save decision/i }) as HTMLButtonElement;
-    expect(save.disabled).toBe(false);
-    await userEvent.click(save);
-    expect(onDecide).toHaveBeenCalledWith('m1', 'import_row', undefined);
-  });
-
-  it('reverts a decided candidate', async () => {
-    const onRevert = vi.fn().mockResolvedValue(undefined);
-    const decided: DedupCandidate = { ...personCandidate, status: 'deprioritized', remark: 'Same person.' };
-    render(<RowDecisionCard row={row} candidates={[decided]} onDecide={vi.fn()} onRevert={onRevert} />);
-    expect(screen.getByText(/deprioritized/i)).toBeTruthy();
-    expect(screen.getByText('Same person.')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: /revert decision/i }));
-    expect(onRevert).toHaveBeenCalledWith('m1');
+  it('shows no disqualification panel for allowed rows', () => {
+    render(
+      <RowDecisionCard
+        row={{ ...row, eligibility: 'allowed', eligibilityReason: undefined, status: 'retained' }}
+        candidates={[personCandidate]}
+        onEligibility={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/review needed/i)).toBeNull();
+    expect(screen.queryByText(/Disqualified/i)).toBeNull();
   });
 
   it('says so when a row has no candidate matches', () => {
-    render(<RowDecisionCard row={row} candidates={[]} onDecide={vi.fn()} onRevert={vi.fn()} />);
+    render(<RowDecisionCard row={row} candidates={[]} onEligibility={vi.fn()} />);
     expect(screen.getByText(/no candidate matches/i)).toBeTruthy();
   });
 });

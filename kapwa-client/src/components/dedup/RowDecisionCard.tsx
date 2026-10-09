@@ -3,12 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 
-export type KeepChoice = 'import_row' | 'existing_record' | 'other_import_row';
 export type DedupRowStatus = 'pending' | 'no_match' | 'retained' | 'primary' | 'deprioritized';
 
 export interface DedupRow {
@@ -21,19 +16,15 @@ export interface DedupRow {
   barangay?: string;
   remarks?: string;
   status: DedupRowStatus;
+  /** Serving outcome under the eligibility rules; absent on legacy rows. */
+  eligibility?: 'allowed' | 'disqualified';
+  eligibilityReason?: string;
+  eligibilityDecision?: 'waive' | 'confirm';
 }
 
 interface CandidateCase {
   controlNo?: string;
   status?: string;
-}
-
-export interface CandidateRemark {
-  kind: 'import' | 'decision' | 'barangay_update' | 'manual';
-  remark: string;
-  source?: string | null;
-  authorName?: string | null;
-  createdAt: string;
 }
 
 interface CandidateMember {
@@ -44,7 +35,15 @@ interface CandidateMember {
   cases?: CandidateCase[];
 }
 
-/** A matcher-surfaced candidate, enriched by the API for these cards. */
+export interface CandidateRemark {
+  kind: 'import' | 'decision' | 'barangay_update' | 'manual';
+  remark: string;
+  source?: string | null;
+  authorName?: string | null;
+  createdAt: string;
+}
+
+/** A matcher-surfaced candidate — evidence for the eligibility review. */
 export interface DedupCandidate {
   id: string;
   targetType: 'db_person' | 'import_row' | 'household';
@@ -75,8 +74,11 @@ interface RowDecisionCardProps {
   loading?: boolean;
   /** Render without the card wrapper/header — for embedding inside a dialog. */
   embedded?: boolean;
-  onDecide: (matchId: string, keep: KeepChoice, remark?: string) => void | Promise<void>;
-  onRevert: (matchId: string) => void | Promise<void>;
+  /** Operator review of a disqualified row: waive (serve anyway) or confirm. */
+  onEligibility?: (decision: 'waive' | 'confirm') => void | Promise<void>;
+  /** Decide ONE match of a disqualified row (aggregate action decides all). */
+  onMatchEligibility?: (matchId: string, decision: 'waive' | 'confirm') => void | Promise<void>;
+  busy?: boolean;
 }
 
 function targetLabel(c: DedupCandidate): string {
@@ -85,16 +87,112 @@ function targetLabel(c: DedupCandidate): string {
   return 'Duplicate row in this import';
 }
 
-function decisionTitle(keep: KeepChoice): string {
-  // The two row-level outcomes: keep this row, or deprioritize it as a
-  // duplicate of a candidate ("no matches → retain" vs "duplicate →
-  // deprioritize"); the target of the duplicate is shown in the card above.
-  return keep === 'import_row' ? 'Retain this row' : 'Duplicate & deprioritize';
-}
+/**
+ * One import row's review surface under the eligibility rules: candidates are
+ * evidence (person/household/import-row identity with their signals), and the
+ * row-level interaction is the DISQUALIFICATION review — a disqualified row
+ * stays in the list as deprioritized until the operator waives or confirms it
+ * (finalize is blocked until then).
+ */
+export function RowDecisionCard({
+  row,
+  candidates,
+  loading = false,
+  embedded = false,
+  onEligibility,
+  onMatchEligibility,
+  busy = false,
+}: RowDecisionCardProps) {
+  const disqualifiedUndecided = row.eligibility === 'disqualified' && !row.eligibilityDecision;
 
-/** Card chrome when standalone, plain spacing when embedded in a dialog. */
-function Wrap({ embedded, row, children }: { embedded: boolean; row: DedupRow; children: React.ReactNode }) {
-  if (embedded) return <div className="space-y-4">{children}</div>;
+  const content = (
+    <div className="space-y-4">
+      {row.eligibility === 'disqualified' && (
+        <div
+          className={`space-y-2 rounded-md border p-3 ${
+            disqualifiedUndecided
+              ? 'border-amber-200 bg-amber-50 text-amber-900'
+              : 'border-border bg-muted/40 text-muted-foreground'
+          }`}
+        >
+          <div className="flex items-start gap-2 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <div className="font-medium">
+                {row.eligibilityDecision === 'confirm'
+                  ? 'Disqualified — confirmed, not served this batch'
+                  : row.eligibilityDecision === 'waive'
+                    ? 'Disqualified — waived, served after review'
+                    : 'Disqualified — review needed'}
+              </div>
+              {row.eligibilityReason && (
+                <p className="mt-0.5 text-xs opacity-90">{row.eligibilityReason}</p>
+              )}
+            </div>
+          </div>
+          {disqualifiedUndecided && onEligibility && (
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" variant="outline" onClick={() => onEligibility('waive')} disabled={busy}>
+                Waive — serve anyway
+              </Button>
+              <Button size="sm" variant="default" onClick={() => onEligibility('confirm')} disabled={busy}>
+                Confirm disqualified
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading candidates…</p>
+      ) : candidates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No candidate matches for this row.</p>
+      ) : (
+        candidates.map((c) => (
+          <div key={c.id} className="space-y-2 rounded-md border p-3" data-testid={`candidate-${c.id}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">{targetLabel(c)}</span>
+              <span className="text-xs text-muted-foreground">
+                {Math.round(Number(c.score) * 100)}% match
+              </span>
+            </div>
+            <CandidateBody candidate={c} />
+            <div className="flex items-center justify-between gap-2">
+              <Badge variant="secondary">
+                {c.status === 'pending'
+                  ? 'Review needed'
+                  : c.status === 'deprioritized'
+                    ? 'Deprioritized'
+                    : 'Matched'}
+              </Badge>
+              {c.status === 'pending' && onMatchEligibility && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onMatchEligibility(c.id, 'waive')}
+                    disabled={busy}
+                  >
+                    Waive
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => onMatchEligibility(c.id, 'confirm')}
+                    disabled={busy}
+                  >
+                    Confirm
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  if (embedded) return content;
   return (
     <Card>
       <CardHeader>
@@ -106,151 +204,8 @@ function Wrap({ embedded, row, children }: { embedded: boolean; row: DedupRow; c
           {row.remarks ? ` — ${row.remarks}` : ''}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
-  );
-}
-
-/**
- * One import row's decision surface: every candidate with its evidence, a
- * dialog for the retain/deprioritize choice (with the mandatory remark for
- * deprioritizing), and revert for already-decided candidates.
- */
-export function RowDecisionCard({ row, candidates, loading = false, onDecide, onRevert, embedded = false }: RowDecisionCardProps) {
-  const [pending, setPending] = useState<{ matchId: string; keep: KeepChoice } | null>(null);
-  const [remark, setRemark] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const needsRemark = pending !== null && pending.keep !== 'import_row';
-  const canSave = pending !== null && (!needsRemark || remark.trim() !== '');
-  const selected = pending ? candidates.find((c) => c.id === pending.matchId) ?? null : null;
-
-  async function save() {
-    if (!pending || !canSave) return;
-    setBusy(true);
-    try {
-      await onDecide(pending.matchId, pending.keep, remark.trim() || undefined);
-      setPending(null);
-      setRemark('');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Wrap embedded={embedded} row={row}>
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading candidates…</p>
-      ) : candidates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No candidate matches for this row.</p>
-      ) : (
-        candidates.map((c) => (
-          <CandidateCard
-            key={c.id}
-            candidate={c}
-            onSelect={(keep) => {
-              setPending({ matchId: c.id, keep });
-              setRemark('');
-            }}
-            onRevert={onRevert}
-          />
-        ))
-      )}
-
-        <Dialog
-          open={pending !== null}
-          onOpenChange={(open) => {
-            if (!open) {
-              setPending(null);
-              setRemark('');
-            }
-          }}
-        >
-          {pending && selected && (
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{decisionTitle(pending.keep)}</DialogTitle>
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>{targetLabel(selected)}</span>
-                  <span>{Math.round(Number(selected.score) * 100)}% match</span>
-                </div>
-                <DialogDescription>
-                  {pending.keep === 'import_row'
-                    ? 'This row stays in the list and is saved as its own client record.'
-                    : 'This import row is pushed below as a duplicate of the kept record — a remark is required.'}
-                </DialogDescription>
-              </DialogHeader>
-              <CandidateBody candidate={selected} />
-              <div className="space-y-2">
-                <Textarea
-                  value={remark}
-                  onChange={(e) => setRemark(e.target.value)}
-                  placeholder={needsRemark ? 'Why is this a duplicate? (required)' : 'Note (optional)'}
-                  rows={3}
-                />
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" size="sm">
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <Button size="sm" onClick={save} disabled={!canSave || busy}>
-                  Save decision
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          )}
-        </Dialog>
-    </Wrap>
-  );
-}
-
-function CandidateCard({
-  candidate: c,
-  onSelect,
-  onRevert,
-}: {
-  candidate: DedupCandidate;
-  onSelect: (keep: KeepChoice) => void;
-  onRevert: (matchId: string) => void | Promise<void>;
-}) {
-  return (
-    <div className="space-y-2 rounded-md border p-3" data-testid={`candidate-${c.id}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">{targetLabel(c)}</span>
-        <span className="text-xs text-muted-foreground">{Math.round(Number(c.score) * 100)}% match</span>
-      </div>
-      <CandidateBody candidate={c} />
-      {c.status === 'pending' ? (
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="sm" variant="outline" onClick={() => onSelect('import_row')}>
-            Retain
-          </Button>
-          {c.targetType === 'import_row' ? (
-            <Button size="sm" variant="outline" onClick={() => onSelect('other_import_row')}>
-              Duplicate — keep import row {c.pairedRow?.rowIndex ?? '?'}
-            </Button>
-          ) : (
-            <Button size="sm" variant="outline" onClick={() => onSelect('existing_record')}>
-              Duplicate
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-1 pt-1">
-          <Badge variant={c.status === 'primary' ? 'default' : 'secondary'}>
-            {c.status === 'primary' ? 'Kept' : 'Deprioritized'}
-          </Badge>
-          {c.remark && <p className="text-xs text-muted-foreground">{c.remark}</p>}
-          <div>
-            <Button size="sm" variant="link" className="px-0" onClick={() => onRevert(c.id)}>
-              Revert decision
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 

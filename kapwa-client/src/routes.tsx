@@ -128,6 +128,7 @@ export const router = createBrowserRouter([
   { path: '/beneficiaries', element: <Private roles={['admin','social_worker']}><BeneficiariesPage /></Private> },
   { path: '/beneficiaries/:id', element: <Private roles={['admin','social_worker']}><BeneficiaryViewPage /></Private> },
   { path: '/client-dedup', element: <Private roles={['admin','social_worker']}><ClientDedupPage /></Private> },
+  { path: '/client-dedup/:id', element: <Private roles={['admin','social_worker']}><ClientDedupPage /></Private> },
   { path: '/tracker', element: <Private roles={['admin','social_worker']}><CaseTrackerPage /></Private> },
   { path: '/admin', element: <Private roles={['admin']}><AdminPage /></Private> },
   { path: '/admin/users/new', element: <Private roles={['admin']}><NewUserPage /></Private> },
