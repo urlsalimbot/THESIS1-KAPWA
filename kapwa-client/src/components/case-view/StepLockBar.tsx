@@ -6,7 +6,8 @@ import { api } from '@/lib/api';
 import { humanizeError } from '@/lib/errors';
 import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { stepperStepDone, type StepperProgressOpts } from './CaseStepper';
+import { stepperStepDone, statusAtLeast, statusForFloor, STEP_FLOORS, type StepperProgressOpts } from './CaseStepper';
+import { statusLabel } from '@/i18n/display';
 
 /** The `case.stepLocks` row as `findById` serializes it. */
 export interface StepLock {
@@ -111,7 +112,19 @@ export function StepLockBar({
 
   const done = stepperStepDone(stepKey, caseData, interventionCount, enrollmentCount, opts ?? {});
   const path = `/cases/${caseId}/steps/${stepKey}/lock`;
-  const notDoneHint = t('caseView.lock.notDoneHint', 'Complete this step before sealing it.');
+  // Two different reasons disable the button, and they ask for opposite things.
+  // Below the step's lifecycle floor the work is not owed yet — a case at
+  // `in_review` with a recorded hearing was the complaint this answers. Only
+  // once the case is far enough along does "finish this step" tell the truth.
+  const floor = STEP_FLOORS[stepKey] ?? 0;
+  const requiredStatus = statusForFloor(floor);
+  const notDoneHint = !statusAtLeast(caseData, floor) && requiredStatus
+    ? t(
+        'caseView.lock.notDueHint',
+        'This step opens once the case reaches {{status}}.',
+        { status: statusLabel(t, requiredStatus) },
+      )
+    : t('caseView.lock.notDoneHint', 'Complete this step before sealing it.');
   const lock = mine && sameRow(mine.parentRow, locked ?? null) ? mine.row : locked;
 
   /**

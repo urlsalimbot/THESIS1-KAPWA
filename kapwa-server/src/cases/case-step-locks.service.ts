@@ -135,9 +135,7 @@ export class CaseStepLocksService {
 
     const done = await this.isStepDone(caseId, stepKey);
     if (!done) {
-      throw new BadRequestException(
-        `"${CASE_STEP_LABELS[stepKey]}" is not complete yet — finish it before sealing it.`,
-      );
+      throw new BadRequestException(await this.notDoneReason(caseId, stepKey));
     }
 
     const { raw } = await this.repo
@@ -168,6 +166,27 @@ export class CaseStepLocksService {
       lockedByName: row.locked_by_name ?? this.displayName(caller),
       lockedAt: row.locked_at,
     } as DeepPartial<CaseStepLock>);
+  }
+
+  /**
+   * Why a seal was refused, in the caller's terms. `stepDone` folds two
+   * questions into one boolean — is the case far enough along, and is the work
+   * recorded — and a caller only hears the boolean. A worker who has recorded
+   * the hearing is then told to "finish" it, which is the one instruction they
+   * cannot obey. The floor is read separately here on the failure path only, so
+   * the success path keeps its single case fetch. (A step outside the case's
+   * template never reaches this: `isStepDone` rejects it first.)
+   */
+  private async notDoneReason(caseId: string, stepKey: string): Promise<string> {
+    const label = CASE_STEP_LABELS[stepKey];
+    const floor = CASE_STEP_FLOORS[stepKey] ?? 0;
+    const c = await this.cases.findById(caseId);
+    const index = c.status == null ? undefined : CASE_STATUS_INDEX[c.status];
+    if (index !== undefined && index < floor) {
+      const required = Object.keys(CASE_STATUS_INDEX).find((k) => CASE_STATUS_INDEX[k] === floor);
+      return `"${label}" cannot be sealed yet — it opens once the case reaches ${required} (the case is ${c.status}).`;
+    }
+    return `"${label}" is not complete yet — finish it before sealing it.`;
   }
 
   /**

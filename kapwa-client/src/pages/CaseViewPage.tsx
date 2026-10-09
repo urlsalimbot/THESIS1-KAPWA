@@ -30,7 +30,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { FamilyGraph } from '../components/family/FamilyGraph';
-import { CaseStepper, stepperStepDone, stepperStatus, stepsForCategory, StepperProgressOpts } from '@/components/case-view/CaseStepper';
+import { CaseStepper, stepperStepDone, stepperStatus, stepsForCategory, statusAtLeast, STEP_FLOORS, StepperProgressOpts } from '@/components/case-view/CaseStepper';
 import { CaseActionBar } from '@/components/case-view/CaseActionBar';
 import { stepLockKey, type StepLock } from '@/components/case-view/StepLockBar';
 import { isFourPsCase } from '@/components/case-view/FourPsComplianceSection';
@@ -92,12 +92,20 @@ const STATUS_BADGES: Record<string, 'default' | 'secondary' | 'outline' | 'destr
   aftercare: 'secondary',
 };
 
-function findFirstPendingStep(caseData: any, interventionCount: number, enrollmentCount: number, opts: StepperProgressOpts = {}): string {
+/**
+ * The step a freshly-opened case should show. Only steps the lifecycle has
+ * actually reached are candidates: a step floored above the case's status is
+ * not yet sealable, and the stepper's own entry for it is disabled. Scanning
+ * every template step stranded a worker on Court Hearings before the case was
+ * Active — a hearing could be recorded, but its Lock never came alive. When
+ * nothing due is pending the view lands on the last step the case reached, so
+ * it shows the finished phase instead of a step that cannot be sealed yet.
+ */
+export function findFirstPendingStep(caseData: any, interventionCount: number, enrollmentCount: number, opts: StepperProgressOpts = {}): string {
   const template = stepsForCategory(caseData?.caseCategory);
-  for (const key of template) {
-    if (!stepperStepDone(key, caseData, interventionCount, enrollmentCount, opts)) return key;
-  }
-  return 'closure';
+  const due = template.filter((key) => statusAtLeast(caseData, STEP_FLOORS[key] ?? 0));
+  const pending = due.find((key) => !stepperStepDone(key, caseData, interventionCount, enrollmentCount, opts));
+  return pending ?? due[due.length - 1] ?? template[0] ?? 'closure';
 }
 
 const STATUS_LABELS: Record<string, string> = {

@@ -216,12 +216,22 @@ export function stepsInPhase(
   return stepsForCategory(category).filter((key) => (STEP_PHASE[key] ?? 'phaseIn') === phase);
 }
 
-function statusAtLeast(caseData: any, min: number): boolean {
+export function statusAtLeast(caseData: any, min: number): boolean {
   const status = caseData?.status;
   const index = status == null ? undefined : STATUS_INDEX[status];
   // Unknown/missing status (e.g. a partial payload) does not cap the step.
   if (index === undefined) return true;
   return index >= min;
+}
+
+/**
+ * The lifecycle status a step's floor names — `3` -> `active`. The "this step
+ * opens once the case reaches …" copy needs to name that status: a worker who
+ * has recorded the hearing has to hear that the *case* is what holds the Lock,
+ * not the work they already finished.
+ */
+export function statusForFloor(min: number): string | undefined {
+  return Object.keys(STATUS_INDEX).find((status) => STATUS_INDEX[status] === min);
 }
 
 // Shared done-status per stepper step — reused by the case view stepper, the

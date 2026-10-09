@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SWRConfig, mutate } from 'swr';
-import { CaseViewPage } from './CaseViewPage';
+import { CaseViewPage, findFirstPendingStep } from './CaseViewPage';
 
 const { mockApiGet, mockApiPatch, mockGetFilingObjectUrl, mockUseAuth, mockDownloadGisPdf, mockDownloadFilingDoc } = vi.hoisted(() => ({
   mockApiGet: vi.fn(),
@@ -1233,5 +1233,40 @@ describe('CaseViewPage — every step starts at the top', () => {
     // Wait for the case page to render (claimants do not see the control number).
     await vi.waitFor(() => expect(document.querySelectorAll('button').length).toBeGreaterThan(0));
     expect(screen.queryByRole('button', { name: /Crisis Mode/i })).toBeNull();
+  });
+});
+
+describe('findFirstPendingStep', () => {
+  // A legal case whose Phase-In work is all done sits at `in_review` awaiting
+  // admin approval. Court Hearings is implementation work, floored at `active`,
+  // so it is not yet sealable — but the predicate floors it, so a scan over the
+  // whole template reads it as "pending" and parks the view there. That is the
+  // Court Hearings dead end: a hearing can be recorded, its Lock never opens.
+  const phaseInDone = {
+    status: 'in_review',
+    caseCategory: 'Children in Conflict with the Law (CICL)',
+    problemsPresented: 'a',
+    socialWorkerAssessment: 's',
+    clientCategory: 'b',
+    discernmentAssessedAt: '2026-01-01',
+    discernmentResult: 'referred',
+  };
+
+  it('does not open a step above the case status', () => {
+    const opened = findFirstPendingStep(phaseInDone, 1, 1, { interAgencyReferralCount: 1 });
+    expect(opened).not.toBe('court_hearings');
+    // Nothing due is pending, so the view rests on the last step the case
+    // actually reached rather than a step it cannot seal yet.
+    expect(opened).toBe('referrals');
+  });
+
+  it('opens Court Hearings once the case is active and no hearing is on file', () => {
+    const opened = findFirstPendingStep(
+      { ...phaseInDone, status: 'active' },
+      1,
+      1,
+      { interAgencyReferralCount: 1 },
+    );
+    expect(opened).toBe('court_hearings');
   });
 });
